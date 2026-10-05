@@ -1,0 +1,206 @@
+# Master Plan — Color readout (bs-01)
+
+**Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
+**Status:** Not started — next CORE-1 (blocked by G-1: approve the spec)
+**Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
+**Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
+
+> First feature of the app. Its scaffold and shells bootstrap the whole Flutter project and the cross-cutting
+> accessibility services (Speech, Haptics, label-contract widgets) that every later feature reuses.
+
+## Gap analysis (against greenfield — no prior commit)
+
+Nothing exists at the base: no repo, no Flutter project, no color-science, no UI. Every AC is net-new. The
+per-AC "Missing" column is what the behavior stage must build.
+
+| AC | Scenario | Exists today | Missing |
+|---|---|---|---|
+| AC-1 | Lightness prominent + grayscale + Munsell value | — | L extraction, Munsell value, grayscale render, size-prominence layout |
+| AC-2 | Numeric lightness + value word | — | value-word derivation from L (e.g. "middle value") |
+| AC-3 | Plain-language colour name large | — | ISCC-NBS nearest-name derivation; large name header |
+| AC-4 | Warm sample described "warm" | — | hue→temperature-word derivation relative to a neutral |
+| AC-5 | Colour-space selector (LCh/Munsell/sRGB/CIELAB), one at a time | — | sRGB/hex, CIELCh, Munsell, CIELAB conversions; exclusive selector |
+| AC-6 | Measured value badged "Measured" | — | provenance model + badge rendering (Measured tier) |
+| AC-7 | Estimated value badged + note | — | provenance Estimated tier + "Seeded by a model…" note |
+| AC-8 | Speak whole readout | — | Speech/TTS service; spoken decomposition (name, value, temperature, hue words, chroma, hue angle) |
+| AC-9 | Carry reading into comparison slot A | — | nav handoff to Comparison (stub) with sample in slot A |
+| AC-10 | Carry reading into comparison slot B | — | nav handoff to Comparison (stub) with sample in slot B |
+| AC-11 | Start recipe search from reading | — | nav handoff to Recipes (stub) with sample as target |
+| AC-12 | Just-captured reading confirmed w/ haptic | — | Haptics service; just-captured state + acknowledge |
+
+## Build order
+
+| Stage | Phases |
+|---|---|
+| 1 Scaffold | CORE-1 |
+| 2 Component shells | CORE-2, COLOR-1, A11Y-1, READOUT-1 |
+| 3 Acceptance tests | ITEST-1, ITEST-2, ITEST-3, ITEST-4 (test review, G-2) |
+| 4 Behavior | COLOR-2 *(enabler)*, COLOR-3 *(enabler)*, READOUT-2, READOUT-3, READOUT-4, READOUT-5, READOUT-6, A11Y-2 |
+| 5 Sign-off | SIGNOFF-1 |
+
+## Acceptance criteria coverage
+
+| AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
+|---|---|---|---|---|
+| AC-1 | Lightness is displayed as the prominent value with a grayscale preview | ITEST-2 `TestAC01_LightnessProminent` | COLOR-2, READOUT-2 | ⬜ Todo |
+| AC-2 | The numeric lightness is paired with a plain-language value word | ITEST-2 `TestAC02_ValueWord` | COLOR-3, READOUT-2 | ⬜ Todo |
+| AC-3 | A plain-language colour name is shown large | ITEST-2 `TestAC03_ColourName` | COLOR-3, READOUT-3 | ⬜ Todo |
+| AC-4 | A warm sample is described as warm in words | ITEST-2 `TestAC04_Temperature` | COLOR-3, READOUT-3 | ⬜ Todo |
+| AC-5 | The painter selects a colour space and sees the sample in that space | ITEST-2 `TestAC05_ColourSpaceSelector` | COLOR-2, READOUT-4 | ⬜ Todo |
+| AC-6 | A measured value is badged Measured | ITEST-2 `TestAC06_MeasuredBadge` | READOUT-5 | ⬜ Todo |
+| AC-7 | An unverified seeded value is badged Estimated and labelled not yet verified | ITEST-2 `TestAC07_EstimatedBadge` | READOUT-5 | ⬜ Todo |
+| AC-8 | The painter hears the whole readout spoken | ITEST-3 `TestAC08_SpeakReadout` | COLOR-3, A11Y-2 | ⬜ Todo |
+| AC-9 | The painter uses the reading as comparison sample A | ITEST-3 `TestAC09_CompareAsA` | READOUT-6 | ⬜ Todo |
+| AC-10 | The painter uses the reading as comparison sample B | ITEST-3 `TestAC10_CompareAsB` | READOUT-6 | ⬜ Todo |
+| AC-11 | The painter starts a recipe search from the reading | ITEST-3 `TestAC11_FindRecipes` | READOUT-6 | ⬜ Todo |
+| AC-12 | A just-captured reading is confirmed with a haptic and acknowledged | ITEST-3 `TestAC12_JustCaptured` | A11Y-2 | ⬜ Todo |
+
+## Design decisions
+
+| # | Decision | Why |
+|---|---|---|
+| D-1 | Flutter single codebase; bs-01 is pure-Dart logic + widgets (no native capture yet) | SI D1; the Readout screen consumes a `Sample`, capture is bs-02 |
+| D-2 | Color-science behind a `ColorScience` interface; pick an established conversions lib for sRGB/CIELAB/CIELCh (SI D4), bundle lookup data for Munsell + ISCC-NBS naming | Hand-rolled color math is error-prone; Munsell/ISCC-NBS need reference tables; interface keeps the lib swappable |
+| D-3 | `Sample` carries a `Provenance` (Measured / Calculated / Estimated / Confirmed) as a required, non-null field, stored append-ready for the future P2P layer | SI D9 — provenance enforced in the model, not UI policy |
+| D-4 | Accessibility services (`Speech`, `Haptics`) and label-contract widgets (`ColorChip`, badges) are app-injected shared services, bootstrapped by bs-01 | SI Accessibility is a cross-cutting architectural concern; bs-01 is the first consumer |
+| D-5 | bs-01 owns thin **stub** Comparison and Recipes screens as navigation targets; the real screens are bs-03 / bs-04 | AC-9/10/11 observe navigation handoff; the stub is the read endpoint the acceptance test finds |
+| D-6 | Acceptance suite = Flutter `integration_test` driving the assembled app via `WidgetTester`; platform TTS/haptics faked by recording services | Tests go through the real UI surface; only platform sinks (infrastructure) are faked |
+
+## Acceptance integration test plan
+
+Module plan: [modules/ITEST.md](modules/ITEST.md).
+
+**Where it lives and how it runs:** `integration_test/` (Flutter `integration_test` package). Default:
+`flutter test integration_test/` (pending ACs skipped). Run-pending: `BS01_RUN_PENDING=1 flutter test integration_test/`
+(executes pending tests). Single lane (widget tests are not parallel-safe within a process).
+**Where assertions look:** the rendered widget tree via `WidgetTester` finders (text, keys, semantics labels,
+relative font sizes); the recording `FakeSpeech` utterance log; the recording `FakeHaptics` event log; the
+current route and its passed arguments (observed via the stub target screens' rendered content).
+**What is real and what is faked:** the whole app is assembled through the one production `buildApp(deps)`
+entry; color-science, controllers, widgets, navigation and provenance logic are real. Faked (infrastructure
+only): the platform TTS sink (`FakeSpeech` records utterances) and the platform haptic sink (`FakeHaptics`
+records pulses). No color math is faked.
+
+**Fixtures:**
+
+| Fixture | Shape |
+|---|---|
+| `SAMPLE_TERRACOTTA` | name "Warm Terracotta"; CIELCh L58 C34 h42; Munsell 10R 5.5/6; provenance Measured. Drives AC-1,2,3,4,5,8,9,10 |
+| `SAMPLE_OLIVE` | name "Deep Olive Green"; used as recipe target / capture subject. Drives AC-11, AC-12 |
+| `SAMPLE_COOL` | a cool sample at hue ~250°; **control** for AC-4 (must read "cool", not "warm") |
+| `SAMPLE_MEASURED` | a sample read with a spectrophotometer → provenance Measured. Drives AC-6 |
+| `SAMPLE_ESTIMATED` | a model-seeded, unverified value → provenance Estimated. Drives AC-7 |
+
+**Test catalogue:**
+
+| AC | Given: built via public flows → checked by | When | Then: exact assertions (negative Thens: after <settle point>) | Rejects |
+|---|---|---|---|---|
+| AC-1 | Open Readout on `SAMPLE_TERRACOTTA` → assert screen shows reading for "Warm Terracotta"; assert L is 58 | readout shown | the "58" Lightness widget's font size > every other reading's font size (exact ordering, not just present); a grayscale-preview widget is present; Munsell value "5.5" shown beside the Lightness | an impl that renders L at equal/!largest size; one with no grayscale preview; one omitting Munsell value |
+| AC-2 | Open Readout on a sample with L58 → assert L shown as 58 | value reading shown | a value word (e.g. "middle value") is shown adjacent to the number | shows the number only; shows a word unrelated to L (control: a dark sample L~15 reads "low/dark value", a light L~90 reads "high/light value") |
+| AC-3 | Open Readout on sample whose nearest name is "Warm Terracotta" → assert sample loaded | readout shown | "Warm Terracotta" shown as a large header at the top; font size ≥ all other text | name absent; name shown small/not at top (assert top-of-tree + largest-text) |
+| AC-4 | Open Readout on sample at hue 42° → assert hue is 42 | readout shown | temperature stated as the word "warm" | emits a hue angle/number instead of a word; always emits "warm" (control: `SAMPLE_COOL` hue~250° → "cool") |
+| AC-5 | Open Readout on `SAMPLE_TERRACOTTA` → assert loaded | select each `<space>` in turn | the shown values equal the row's `<shown>` (LCh: L58 C34 h42; Munsell 10R 5.5/6; sRGB: a triplet + hex; CIELAB: L,a,b); the other three spaces' value strings are **not** present after the switch settles | shows all spaces at once (no exclusivity); shows wrong values for a space; selector that never hides the previous space |
+| AC-6 | Open Readout on `SAMPLE_MEASURED` (spectrophotometer) → assert provenance == Measured in model | readout shown | the provenance badge text is "Measured" | badges everything identically (control vs AC-7); no badge |
+| AC-7 | Open Readout on `SAMPLE_ESTIMATED` (model-seeded, unverified) → assert provenance == Estimated | readout shown | badge reads "Estimated — not yet verified"; the note "Seeded by a model. Treat as a starting point." is shown | shows "Estimated" without the note; shows "Measured"; (control: `SAMPLE_MEASURED` has no note) |
+| AC-8 | Open Readout on `SAMPLE_TERRACOTTA` → assert loaded; `FakeSpeech` log empty | ask to speak this readout | `FakeSpeech` received exactly one utterance containing the name, the value, the temperature word, the hue in words, the chroma, and the hue angle (assert each substring) | speaks only the name; speaks a hex/swatch; omits any required component (each checked separately) |
+| AC-9 | Open Readout on `SAMPLE_TERRACOTTA` → assert loaded; assert not already on Comparison | use reading as comparison sample A | current screen is Comparison; its slot **A** shows "Warm Terracotta"; slot B empty | puts the sample in slot B; navigates without carrying the sample; doesn't navigate (control: AC-10 asserts slot B) |
+| AC-10 | Open Readout on `SAMPLE_TERRACOTTA` → assert loaded | use reading as comparison sample B | current screen is Comparison; slot **B** shows "Warm Terracotta"; slot A empty | puts it in slot A; wrong/empty sample (control pair with AC-9) |
+| AC-11 | Open Readout on `SAMPLE_OLIVE` → assert loaded | ask to find mixing recipes | current screen is Recipes; the target shows "Deep Olive Green" | navigates with no target set; wrong sample as target |
+| AC-12 | Capture `SAMPLE_OLIVE` then open its Readout → assert just-captured marker present; `FakeHaptics` log has one confirm pulse | acknowledge the captured reading | **before** acknowledge: marker present (settle = readout rendered); **after** acknowledge: marker gone; control: a non-fresh readout shows no marker and fires no haptic | no haptic on capture; marker never set; marker never clears after acknowledge |
+
+**Red baseline** and **test augmentations:** tracked in [modules/ITEST.md](modules/ITEST.md).
+Pre-seeded augmentations: AC-1's "largest reading" size-ordering is strengthened by READOUT-4 once the
+colour-space readings also render (more readings to out-rank); AC-5's exclusivity control is confirmed by
+READOUT-4.
+
+## Modules
+
+| Module | Plan | Purpose | Depends on | Status |
+|---|---|---|---|---|
+| CORE | [modules/CORE.md](modules/CORE.md) | Project scaffold, domain model (`Sample`, `Provenance`, coordinates), app assembly, navigation + stub Compare/Recipes screens | — | ⬜ Todo |
+| COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | ⬜ Todo |
+| A11Y | [modules/A11Y.md](modules/A11Y.md) | Cross-cutting accessibility: `Speech`/`Haptics` services + label-contract widgets; speak-readout + haptic behavior | CORE | ⬜ Todo |
+| READOUT | [modules/READOUT.md](modules/READOUT.md) | Readout screen UI + controller; renders value/name/temperature/spaces/provenance; carries into compare/recipes | CORE, COLOR, A11Y | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+
+## Dependency graph
+
+```mermaid
+graph LR
+  CORE-1 --> CORE-2 & COLOR-1 & A11Y-1
+  CORE-2 & COLOR-1 & A11Y-1 --> READOUT-1
+  READOUT-1 --> ITEST-1 --> ITEST-2 & ITEST-3
+  ITEST-2 & ITEST-3 --> ITEST-4
+  ITEST-4 -->|G-2| COLOR-2 & COLOR-3 & READOUT-5 & READOUT-6
+  COLOR-2 --> READOUT-2 & READOUT-4
+  COLOR-3 --> READOUT-2 & READOUT-3 & A11Y-2
+  READOUT-2 & READOUT-3 & READOUT-4 & READOUT-5 & READOUT-6 & A11Y-2 --> SIGNOFF-1
+```
+
+**Parallel windows:** shells `{CORE-2, COLOR-1, A11Y-1}` run concurrently (disjoint files), then READOUT-1.
+`{ITEST-2, ITEST-3}` concurrently. Enablers `{COLOR-2, COLOR-3}` concurrently after G-2. **Merge-risky:**
+READOUT-2..6 and A11Y-2 all edit the Readout screen widget / controller — run them serially (or split the
+screen into per-region files first); A11Y-2 also touches the readout controller.
+
+## Open gates
+
+| Gate | Kind | Decision needed | Blocks | Status |
+|---|---|---|---|---|
+| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CORE-1 | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
+
+Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
+
+## Known flakes
+
+| Test | Symptom | Rate (runs) | Measured at | Owner | Status |
+|---|---|---|---|---|---|
+| — | none yet | | | | |
+
+## Session log
+
+| # | Phase | Target | Status | Tokens | Time | Notes |
+|---|---|---|---|---|---|---|
+| 1 | CORE-1 | scaffold: flutter project, test + coverage gate, baseline | ⬜ Next | | | blocked by G-1 |
+| 2 | CORE-2 | shell: domain model, app assembly, navigation + stub screens | ⬜ Todo | | | ∥ COLOR-1, A11Y-1 |
+| 3 | COLOR-1 | shell: `ColorScience` interface + stub impl, lib dep | ⬜ Todo | | | ∥ CORE-2, A11Y-1 |
+| 4 | A11Y-1 | shell: `Speech`/`Haptics` interfaces + no-op, label widgets | ⬜ Todo | | | ∥ CORE-2, COLOR-1 |
+| 5 | READOUT-1 | shell: Readout screen scaffold + controller (placeholder data) | ⬜ Todo | | | after other shells |
+| 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
+| 7 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
+| 8 | ITEST-3 | acceptance-tests: AC-8..12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
+| 9 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 10 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ⬜ Todo | | | ∥ COLOR-3 |
+| 11 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ⬜ Todo | | | ∥ COLOR-2 |
+| 12 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ⬜ Todo | | | |
+| 13 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ⬜ Todo | | | |
+| 14 | READOUT-4 | behavior: AC-5 (colour-space selector) | ⬜ Todo | | | |
+| 15 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ⬜ Todo | | | |
+| 16 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ⬜ Todo | | | |
+| 17 | A11Y-2 | behavior: AC-8, AC-12 (speak + haptic/just-captured) | ⬜ Todo | | | |
+| 18 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+
+*Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
+when the row is marked done.
+
+## Next phase
+
+CORE-1 (scaffold) is next but **blocked by G-1** — the owner must approve `bs-01-color-readout.feature`
+(resolve with `/feature-next-phase --gate bs-01-color-readout G-1 approved`). G-1 also needs the Flutter SDK
+installed on the build machine (not on PATH as of planning). Once G-1 is resolved, CORE-1 runs; after it, the
+three shells `{CORE-2, COLOR-1, A11Y-1}` open in parallel.
+
+## Token usage
+
+<!-- One row per session, appended as that session's last edit (SKILL.md § Token usage). -->
+
+| Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| PLAN | 45358853 | 2026-10-05 10:51 EDT | 12:04 | 1h 12m | 11m 22s | claude-opus-4-8 | 38 | 158,309 | 1,522,221 | 43,633 | 1,724,201 | plan written: 18 phases, 5 modules, 12 ACs; G-1/G-2 open |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 12:04** | **1h 12m** | **11m 22s** |  | **38** | **158,309** | **1,522,221** | **43,633** | **1,724,201** |  |
+
+## Sign-off
+
+| Round | Packet | At code | Grades | Decision |
+|---|---|---|---|---|
+| 1 | [signoff/round-1.md](signoff/round-1.md) | — | — | ⏸ Awaiting |
