@@ -1,6 +1,6 @@
 # Module COLOR — color-science layer
 
-**Status:** Not started
+**Status:** In progress — Phase 1 (shell) done
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/color_science/` — `color_science.dart` (interface), `color_science_impl.dart`,
 `conversions.dart`, `naming.dart` (ISCC-NBS), `words.dart` (value + temperature words), `decomposition.dart`
@@ -11,7 +11,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 2,633,008 | 7m 21s (7m 21s) |
 | 2 | behavior | — (enabler: conversions consumed by AC-1, AC-5) | ⬜ Todo | | |
 | 3 | behavior | — (enabler: name/value-word/temperature/decomposition consumed by AC-2,3,4,8) | ⬜ Todo | | |
 
@@ -45,9 +45,36 @@
   `flutter test` green; app still builds (`main.dart` unchanged).
 - **Acceptance gate:** *(n/a — shell)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** `lib/color_science/color_science.dart` — the `ColorScience` interface (11 members:
+  `toSRGB`/`toHex`/`toCIELCh`/`toMunsell`/`toCIELAB`, `lightness`, `grayscaleOf`, `nearestName`,
+  `valueWord`, `temperatureWord`, `decompose`) plus the value types `SRGBColor`, `CIELCh`, `MunsellColor`
+  (const, with `==`/`hashCode`/`toString`, matching the domain idiom; `MunsellColor.notation`).
+- `lib/color_science/color_science_impl.dart` — `ColorScienceImpl implements ColorScience`, every member
+  throws `UnimplementedError` via a `_pending(member, phase)` helper naming the phase (COLOR-2 conversions,
+  COLOR-3 naming/words/decompose). No behaviour. `buildApp` registration deferred to CORE-3 (D-7).
+- **Dependency (D-2):** added `color_models ^2.0.0` (pure-Dart: meta, num_utilities, powers; SDK
+  `>=2.17.0 <4.0.0`, compatible). Its `LabColor.fromList([L,a,b]).toRgbColor()` is the seam COLOR-2 uses;
+  documented in the impl, not yet imported (kept out to stay analyze-clean until consumed).
+- **Gate:** `flutter analyze` clean; `flutter test` green (46 tests, +12 this phase); coverage gate PASS —
+  100% line coverage on the 2 new files (9 touched vs `main`, all 100%). `main.dart` unchanged; app builds.
+- **Fix passes:** 0/3 (one analyze fix for `unrelated_type_equality_checks` in a test, pre-first-run).
+- **Augmentations / exclusions:** none.
+
+### Checkpoint / Handoff
+
+- **Frozen interface:** `ColorScience` (see members above). All conversion inputs take `ColorCoordinates`
+  (canonical CIELAB); `valueWord(double lightness)` and `temperatureWord(double hue)` take primitives;
+  `decompose(Sample)` takes the whole sample (needs name). COLOR-2/COLOR-3 fill `ColorScienceImpl`'s bodies
+  against these signatures — change a signature only via this interface.
+- **Value types:** `SRGBColor{red,green,blue:int}`, `CIELCh{lightness,chroma,hue:double}`,
+  `MunsellColor{hue:String, value,chroma:double}` + `notation`. READOUT consumes these.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main`.
+- **Next (CORE-3):** register `const ColorScienceImpl()` into `buildApp`. **Next (COLOR-2):** import
+  `package:color_models/color_models.dart`, implement conversions/`lightness`/`grayscaleOf`; needs G-2.
+- **Known gap:** every `ColorScienceImpl` member throws until COLOR-2/COLOR-3 — expected for the shell.
 
 ## Phase 2 — Enabler: colour-space conversions
 

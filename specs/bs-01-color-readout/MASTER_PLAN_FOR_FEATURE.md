@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — CORE-2 done (domain + router + stubs); next COLOR-1 ∥ A11Y-1 (parallel), then CORE-3
+**Status:** In progress — COLOR-1 done (ColorScience interface + stub + `color_models` dep); next A11Y-1, then CORE-3
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -119,7 +119,7 @@ READOUT-4.
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | CORE | [modules/CORE.md](modules/CORE.md) | Project scaffold, domain model (`Sample`, `Provenance`, coordinates), app assembly, navigation + stub Compare/Recipes screens | — | 🔄 In progress |
-| COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | ⬜ Todo |
+| COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | 🔄 In progress |
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Cross-cutting accessibility: `Speech`/`Haptics` services + label-contract widgets; speak-readout + haptic behavior | CORE | ⬜ Todo |
 | READOUT | [modules/READOUT.md](modules/READOUT.md) | Readout screen UI + controller; renders value/name/temperature/spaces/provenance; carries into compare/recipes | CORE, COLOR, A11Y | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
@@ -169,8 +169,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | CORE-1 | scaffold: flutter project, test + coverage gate, baseline | ✅ Done | 4,803,956 | 12m 33s (13m 49s) | G-1 resolved; gate proven; Flutter 3.47.6 installed |
 | 2 | CORE-2 | shell: domain model (`Sample`/`Provenance`/`ColorCoordinates`), router + stub Compare/Recipes screens | ✅ Done | 6,628,852 | 22m 29s (28m 18s) | root shell; incl. D-7 restructure |
-| 3 | COLOR-1 | shell: `ColorScience` interface + stub impl, lib dep | ⬜ Next | | | ∥ A11Y-1 (after CORE-2) |
-| 4 | A11Y-1 | shell: `Speech`/`Haptics` interfaces + no-op, label widgets | ⬜ Todo | | | ∥ COLOR-1 (after CORE-2) |
+| 3 | COLOR-1 | shell: `ColorScience` interface + stub impl, lib dep | ✅ Done | 2,633,008 | 7m 21s (7m 21s) | `color_models` dep added; impl throws until COLOR-2/3 |
+| 4 | A11Y-1 | shell: `Speech`/`Haptics` interfaces + no-op, label widgets | ⬜ Next | | | ∥ COLOR-1 done (after CORE-2) |
 | 5 | CORE-3 | shell: `buildApp` assembly + register stub services + wire `main.dart` to Readout route | ⬜ Todo | | | after CORE-2, COLOR-1, A11Y-1 |
 | 6 | READOUT-1 | shell: Readout screen scaffold + controller (placeholder data) | ⬜ Todo | | | after CORE-3 |
 | 7 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
@@ -192,15 +192,15 @@ when the row is marked done.
 
 ## Next phase
 
-CORE-2 (domain + router + stub screens) is **done**; this session also restructured the shells (D-7: split
-`buildApp` out into new CORE-3) to break a domain↔interface cycle. Now startable **in parallel** (own disjoint
-files, both depend only on CORE-2, both defer their `buildApp` registration to CORE-3):
+COLOR-1 is **done** (`ColorScience` interface + value types, stub `ColorScienceImpl` throwing until
+COLOR-2/3, `color_models ^2.0.0` dependency added). Startable now:
 
-- **COLOR-1** — `lib/color_science/` + conversions dep in `pubspec.yaml`.
-- **A11Y-1** — `lib/a11y/` + `lib/widgets/`.
+- **A11Y-1** — `lib/a11y/` (`Speech`/`Haptics` interfaces + no-op impls) + `lib/widgets/` (label-contract
+  widgets). Depends only on CORE-2; disjoint from the COLOR files; defers its `buildApp` registration to
+  CORE-3. The last remaining shell before assembly.
 
-Run them as two `--parallel` worker sessions (worktrees). After **both** land, **CORE-3** assembles `buildApp`
-+ wires `main.dart`, then READOUT-1. G-2 (approve acceptance tests) is still open but only blocks the behavior
+After A11Y-1 lands, **CORE-3** assembles `buildApp` (registering `ColorScienceImpl` + the A11Y services) and
+wires `main.dart`, then **READOUT-1**. G-2 (approve acceptance tests) stays open but only blocks the behavior
 stage.
 
 ## Token usage
@@ -212,7 +212,8 @@ stage.
 | PLAN | 45358853 | 2026-10-05 10:51 EDT | 12:04 | 1h 12m | 11m 22s | claude-opus-4-8 | 38 | 158,309 | 1,522,221 | 43,633 | 1,724,201 | plan written: 18 phases, 5 modules, 12 ACs; G-1/G-2 open |
 | CORE-1 | 9566cc01 | 2026-10-05 16:43 EDT | 16:57 | 13m 49s | 12m 33s | claude-opus-4-8 | 118 | 82,528 | 4,691,763 | 29,547 | 4,803,956 | scaffold complete — analyze clean, 2 tests green, coverage gate proven (PASS clean / FAIL on planted gap); G-1 resolved; Flutter 3.47.6 installed |
 | CORE-2 | 3b711674 | 2026-10-05 17:00 EDT | 17:29 | 28m 18s | 22m 29s | claude-opus-4-8 | 94 | 149,678 | 6,389,064 | 90,016 | 6,628,852 | ✅ gate passed — domain + router + stubs; analyze clean, 34 tests, 100% line coverage (7 files); 2 fix passes; incl. D-7 restructure (split CORE-3; COLOR-1/A11Y-1 re-pointed to CORE-2) |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 17:29** | **1h 54m** | **46m 24s** |  | **250** | **390,515** | **12,603,048** | **163,196** | **13,157,009** |  |
+| COLOR-1 | 6298ac89 | 2026-10-05 17:46 EDT | 17:54 | 7m 21s | 7m 21s | claude-opus-4-8 | 62 | 75,780 | 2,529,781 | 27,385 | 2,633,008 | ✅ gate passed — ColorScience interface + value types + stub impl; color_models ^2.0.0 dep added; analyze clean, 46 tests green, 100% line coverage (2 new files); 0 fix passes |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 17:54** | **2h 01m** | **53m 45s** |  | **312** | **466,295** | **15,132,829** | **190,581** | **15,790,017** |  |
 
 ## Sign-off
 
