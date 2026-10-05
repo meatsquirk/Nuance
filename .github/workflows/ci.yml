@@ -1,0 +1,32 @@
+# CI stub established by bs-01 CORE-1 (scaffold). Runs the unit suite with
+# coverage and enforces the 100%-line coverage gate on touched lib files.
+# Acceptance (integration) suites are wired in later stages.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # coverage gate diffs touched files against the base
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Unit tests with coverage
+        run: flutter test --coverage
+
+      - name: Coverage gate (100% line coverage on touched lib files)
+        run: dart run tool/coverage_gate.dart origin/${{ github.base_ref || 'main' }}

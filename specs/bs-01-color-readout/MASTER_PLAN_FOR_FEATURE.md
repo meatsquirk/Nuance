@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** Not started — next CORE-1 (blocked by G-1: approve the spec)
+**Status:** In progress — CORE-1 done; next the shells {CORE-2, COLOR-1, A11Y-1} (parallel)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -117,7 +117,7 @@ READOUT-4.
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| CORE | [modules/CORE.md](modules/CORE.md) | Project scaffold, domain model (`Sample`, `Provenance`, coordinates), app assembly, navigation + stub Compare/Recipes screens | — | ⬜ Todo |
+| CORE | [modules/CORE.md](modules/CORE.md) | Project scaffold, domain model (`Sample`, `Provenance`, coordinates), app assembly, navigation + stub Compare/Recipes screens | — | 🔄 In progress |
 | COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | ⬜ Todo |
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Cross-cutting accessibility: `Speech`/`Haptics` services + label-contract widgets; speak-readout + haptic behavior | CORE | ⬜ Todo |
 | READOUT | [modules/READOUT.md](modules/READOUT.md) | Readout screen UI + controller; renders value/name/temperature/spaces/provenance; carries into compare/recipes | CORE, COLOR, A11Y | ⬜ Todo |
@@ -146,7 +146,7 @@ screen into per-region files first); A11Y-2 also touches the readout controller.
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CORE-1 | Open |
+| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CORE-1 | ✅ Resolved 2026-10-05: approved — owner Matt Quirk. Spec first line records approval. |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -161,8 +161,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | CORE-1 | scaffold: flutter project, test + coverage gate, baseline | ⬜ Next | | | blocked by G-1 |
-| 2 | CORE-2 | shell: domain model, app assembly, navigation + stub screens | ⬜ Todo | | | ∥ COLOR-1, A11Y-1 |
+| 1 | CORE-1 | scaffold: flutter project, test + coverage gate, baseline | ✅ Done | 4,803,956 | 12m 33s (13m 49s) | G-1 resolved; gate proven; Flutter 3.47.6 installed |
+| 2 | CORE-2 | shell: domain model, app assembly, navigation + stub screens | ⬜ Next | | | ∥ COLOR-1, A11Y-1 |
 | 3 | COLOR-1 | shell: `ColorScience` interface + stub impl, lib dep | ⬜ Todo | | | ∥ CORE-2, A11Y-1 |
 | 4 | A11Y-1 | shell: `Speech`/`Haptics` interfaces + no-op, label widgets | ⬜ Todo | | | ∥ CORE-2, COLOR-1 |
 | 5 | READOUT-1 | shell: Readout screen scaffold + controller (placeholder data) | ⬜ Todo | | | after other shells |
@@ -185,10 +185,11 @@ when the row is marked done.
 
 ## Next phase
 
-CORE-1 (scaffold) is next but **blocked by G-1** — the owner must approve `bs-01-color-readout.feature`
-(resolve with `/feature-next-phase --gate bs-01-color-readout G-1 approved`). G-1 also needs the Flutter SDK
-installed on the build machine (not on PATH as of planning). Once G-1 is resolved, CORE-1 runs; after it, the
-three shells `{CORE-2, COLOR-1, A11Y-1}` open in parallel.
+CORE-1 (scaffold) is **done** — Flutter project + coverage gate + CI stub landed, G-1 resolved, Flutter
+3.47.6 installed to `~/development/flutter` (prepend its `bin` to PATH). The three shells
+`{CORE-2, COLOR-1, A11Y-1}` are now all startable and own disjoint files, so they can run concurrently in
+separate sessions (`--parallel`). READOUT-1 follows once all three land. G-2 (approve acceptance tests) is
+still open but only blocks the behavior stage, not these shells.
 
 ## Token usage
 
@@ -197,7 +198,8 @@ three shells `{CORE-2, COLOR-1, A11Y-1}` open in parallel.
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 45358853 | 2026-10-05 10:51 EDT | 12:04 | 1h 12m | 11m 22s | claude-opus-4-8 | 38 | 158,309 | 1,522,221 | 43,633 | 1,724,201 | plan written: 18 phases, 5 modules, 12 ACs; G-1/G-2 open |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 12:04** | **1h 12m** | **11m 22s** |  | **38** | **158,309** | **1,522,221** | **43,633** | **1,724,201** |  |
+| CORE-1 | 9566cc01 | 2026-10-05 16:43 EDT | 16:57 | 13m 49s | 12m 33s | claude-opus-4-8 | 118 | 82,528 | 4,691,763 | 29,547 | 4,803,956 | scaffold complete — analyze clean, 2 tests green, coverage gate proven (PASS clean / FAIL on planted gap); G-1 resolved; Flutter 3.47.6 installed |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 16:57** | **1h 25m** | **23m 55s** |  | **156** | **240,837** | **6,213,984** | **73,180** | **6,528,157** |  |
 
 ## Sign-off
 
