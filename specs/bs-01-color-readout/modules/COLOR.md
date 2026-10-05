@@ -32,15 +32,17 @@
 
 - **Kind:** shell
 - **Target AC:** —
-- **Depends on:** CORE-1 · **Blocks:** READOUT-1, ITEST-1, COLOR-2, COLOR-3
+- **Depends on:** CORE-2 *(the interface declares `decompose(Sample)` and takes `ColorCoordinates`, so it
+  needs CORE-2's `lib/domain/` types — D-7)* · **Blocks:** CORE-3, READOUT-1, ITEST-1, COLOR-2, COLOR-3
 - **Files:** `lib/color_science/color_science.dart`, `color_science_impl.dart` (stub returning fixed/throwing
-  values), `pubspec.yaml` (add the conversions lib dependency, D-2).
+  values), `pubspec.yaml` (add the conversions lib dependency, D-2). *(Does **not** touch `build_app.dart`.)*
 - **Tasks:**
-  1. Declare the `ColorScience` interface above.
+  1. Declare the `ColorScience` interface above (importing the CORE-2 domain types it references).
   2. Add the chosen conversions library as a dependency; a stub impl wires it but returns placeholder results
      (no real naming/words/decomposition yet). No behaviour.
-  3. Register the stub in `buildApp`.
-- **Exit criteria:** unit gate passes; `flutter test` green; app still builds.
+  3. *(Registration in `buildApp` is **deferred to CORE-3**, where `buildApp` is created — D-7.)*
+- **Exit criteria:** unit gate passes (100% line coverage on touched files); `flutter analyze` clean;
+  `flutter test` green; app still builds (`main.dart` unchanged).
 - **Acceptance gate:** *(n/a — shell)*
 
 ### Result  <!-- filled on completion -->

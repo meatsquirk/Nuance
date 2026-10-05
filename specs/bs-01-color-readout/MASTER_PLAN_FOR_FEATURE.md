@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — CORE-1 done; next the shells {CORE-2, COLOR-1, A11Y-1} (parallel)
+**Status:** In progress — CORE-2 done (domain + router + stubs); next COLOR-1 ∥ A11Y-1 (parallel), then CORE-3
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -33,7 +33,7 @@ per-AC "Missing" column is what the behavior stage must build.
 | Stage | Phases |
 |---|---|
 | 1 Scaffold | CORE-1 |
-| 2 Component shells | CORE-2, COLOR-1, A11Y-1, READOUT-1 |
+| 2 Component shells | CORE-2 (domain + router + stubs), COLOR-1 ∥ A11Y-1, CORE-3 (buildApp assembly), READOUT-1 |
 | 3 Acceptance tests | ITEST-1, ITEST-2, ITEST-3, ITEST-4 (test review, G-2) |
 | 4 Behavior | COLOR-2 *(enabler)*, COLOR-3 *(enabler)*, READOUT-2, READOUT-3, READOUT-4, READOUT-5, READOUT-6, A11Y-2 |
 | 5 Sign-off | SIGNOFF-1 |
@@ -65,6 +65,7 @@ per-AC "Missing" column is what the behavior stage must build.
 | D-4 | Accessibility services (`Speech`, `Haptics`) and label-contract widgets (`ColorChip`, badges) are app-injected shared services, bootstrapped by bs-01 | SI Accessibility is a cross-cutting architectural concern; bs-01 is the first consumer |
 | D-5 | bs-01 owns thin **stub** Comparison and Recipes screens as navigation targets; the real screens are bs-03 / bs-04 | AC-9/10/11 observe navigation handoff; the stub is the read endpoint the acceptance test finds |
 | D-6 | Acceptance suite = Flutter `integration_test` driving the assembled app via `WidgetTester`; platform TTS/haptics faked by recording services | Tests go through the real UI surface; only platform sinks (infrastructure) are faked |
+| D-7 | Split the old CORE-2 shell into CORE-2 (domain + router + stub screens) and CORE-3 (`buildApp` assembly + service registration + `main.dart` wiring) | Breaks a dependency cycle: COLOR-1/A11Y-1 reference domain types (`Sample`, `Provenance`) so need CORE-2, while `buildApp` injects their interfaces so needs them — assembly must come after both. COLOR-1/A11Y-1 defer their "register in buildApp" step to CORE-3 |
 
 ## Acceptance integration test plan
 
@@ -127,8 +128,10 @@ READOUT-4.
 
 ```mermaid
 graph LR
-  CORE-1 --> CORE-2 & COLOR-1 & A11Y-1
-  CORE-2 & COLOR-1 & A11Y-1 --> READOUT-1
+  CORE-1 --> CORE-2
+  CORE-2 --> COLOR-1 & A11Y-1
+  CORE-2 & COLOR-1 & A11Y-1 --> CORE-3
+  CORE-3 --> READOUT-1
   READOUT-1 --> ITEST-1 --> ITEST-2 & ITEST-3
   ITEST-2 & ITEST-3 --> ITEST-4
   ITEST-4 -->|G-2| COLOR-2 & COLOR-3 & READOUT-5 & READOUT-6
@@ -137,7 +140,10 @@ graph LR
   READOUT-2 & READOUT-3 & READOUT-4 & READOUT-5 & READOUT-6 & A11Y-2 --> SIGNOFF-1
 ```
 
-**Parallel windows:** shells `{CORE-2, COLOR-1, A11Y-1}` run concurrently (disjoint files), then READOUT-1.
+**Parallel windows:** CORE-2 (domain + router + stubs) runs first alone — it is the root the others compile
+against. Then `{COLOR-1, A11Y-1}` run concurrently (disjoint files: `lib/color_science/` vs
+`lib/a11y/`+`lib/widgets/`; only COLOR-1 touches `pubspec.yaml`; neither touches `build_app.dart` since
+registration is deferred). Then CORE-3 (buildApp assembly) alone, then READOUT-1.
 `{ITEST-2, ITEST-3}` concurrently. Enablers `{COLOR-2, COLOR-3}` concurrently after G-2. **Merge-risky:**
 READOUT-2..6 and A11Y-2 all edit the Readout screen widget / controller — run them serially (or split the
 screen into per-region files first); A11Y-2 also touches the readout controller.
@@ -162,34 +168,40 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | CORE-1 | scaffold: flutter project, test + coverage gate, baseline | ✅ Done | 4,803,956 | 12m 33s (13m 49s) | G-1 resolved; gate proven; Flutter 3.47.6 installed |
-| 2 | CORE-2 | shell: domain model, app assembly, navigation + stub screens | ⬜ Next | | | ∥ COLOR-1, A11Y-1 |
-| 3 | COLOR-1 | shell: `ColorScience` interface + stub impl, lib dep | ⬜ Todo | | | ∥ CORE-2, A11Y-1 |
-| 4 | A11Y-1 | shell: `Speech`/`Haptics` interfaces + no-op, label widgets | ⬜ Todo | | | ∥ CORE-2, COLOR-1 |
-| 5 | READOUT-1 | shell: Readout screen scaffold + controller (placeholder data) | ⬜ Todo | | | after other shells |
-| 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
-| 7 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
-| 8 | ITEST-3 | acceptance-tests: AC-8..12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
-| 9 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
-| 10 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ⬜ Todo | | | ∥ COLOR-3 |
-| 11 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ⬜ Todo | | | ∥ COLOR-2 |
-| 12 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ⬜ Todo | | | |
-| 13 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ⬜ Todo | | | |
-| 14 | READOUT-4 | behavior: AC-5 (colour-space selector) | ⬜ Todo | | | |
-| 15 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ⬜ Todo | | | |
-| 16 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ⬜ Todo | | | |
-| 17 | A11Y-2 | behavior: AC-8, AC-12 (speak + haptic/just-captured) | ⬜ Todo | | | |
-| 18 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+| 2 | CORE-2 | shell: domain model (`Sample`/`Provenance`/`ColorCoordinates`), router + stub Compare/Recipes screens | ✅ Done | 6,628,852 | 22m 29s (28m 18s) | root shell; incl. D-7 restructure |
+| 3 | COLOR-1 | shell: `ColorScience` interface + stub impl, lib dep | ⬜ Next | | | ∥ A11Y-1 (after CORE-2) |
+| 4 | A11Y-1 | shell: `Speech`/`Haptics` interfaces + no-op, label widgets | ⬜ Todo | | | ∥ COLOR-1 (after CORE-2) |
+| 5 | CORE-3 | shell: `buildApp` assembly + register stub services + wire `main.dart` to Readout route | ⬜ Todo | | | after CORE-2, COLOR-1, A11Y-1 |
+| 6 | READOUT-1 | shell: Readout screen scaffold + controller (placeholder data) | ⬜ Todo | | | after CORE-3 |
+| 7 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
+| 8 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
+| 9 | ITEST-3 | acceptance-tests: AC-8..12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
+| 10 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ⬜ Todo | | | ∥ COLOR-3 |
+| 12 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ⬜ Todo | | | ∥ COLOR-2 |
+| 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ⬜ Todo | | | |
+| 14 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ⬜ Todo | | | |
+| 15 | READOUT-4 | behavior: AC-5 (colour-space selector) | ⬜ Todo | | | |
+| 16 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ⬜ Todo | | | |
+| 17 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ⬜ Todo | | | |
+| 18 | A11Y-2 | behavior: AC-8, AC-12 (speak + haptic/just-captured) | ⬜ Todo | | | |
+| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-CORE-1 (scaffold) is **done** — Flutter project + coverage gate + CI stub landed, G-1 resolved, Flutter
-3.47.6 installed to `~/development/flutter` (prepend its `bin` to PATH). The three shells
-`{CORE-2, COLOR-1, A11Y-1}` are now all startable and own disjoint files, so they can run concurrently in
-separate sessions (`--parallel`). READOUT-1 follows once all three land. G-2 (approve acceptance tests) is
-still open but only blocks the behavior stage, not these shells.
+CORE-2 (domain + router + stub screens) is **done**; this session also restructured the shells (D-7: split
+`buildApp` out into new CORE-3) to break a domain↔interface cycle. Now startable **in parallel** (own disjoint
+files, both depend only on CORE-2, both defer their `buildApp` registration to CORE-3):
+
+- **COLOR-1** — `lib/color_science/` + conversions dep in `pubspec.yaml`.
+- **A11Y-1** — `lib/a11y/` + `lib/widgets/`.
+
+Run them as two `--parallel` worker sessions (worktrees). After **both** land, **CORE-3** assembles `buildApp`
++ wires `main.dart`, then READOUT-1. G-2 (approve acceptance tests) is still open but only blocks the behavior
+stage.
 
 ## Token usage
 
@@ -199,7 +211,8 @@ still open but only blocks the behavior stage, not these shells.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 45358853 | 2026-10-05 10:51 EDT | 12:04 | 1h 12m | 11m 22s | claude-opus-4-8 | 38 | 158,309 | 1,522,221 | 43,633 | 1,724,201 | plan written: 18 phases, 5 modules, 12 ACs; G-1/G-2 open |
 | CORE-1 | 9566cc01 | 2026-10-05 16:43 EDT | 16:57 | 13m 49s | 12m 33s | claude-opus-4-8 | 118 | 82,528 | 4,691,763 | 29,547 | 4,803,956 | scaffold complete — analyze clean, 2 tests green, coverage gate proven (PASS clean / FAIL on planted gap); G-1 resolved; Flutter 3.47.6 installed |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 16:57** | **1h 25m** | **23m 55s** |  | **156** | **240,837** | **6,213,984** | **73,180** | **6,528,157** |  |
+| CORE-2 | 3b711674 | 2026-10-05 17:00 EDT | 17:29 | 28m 18s | 22m 29s | claude-opus-4-8 | 94 | 149,678 | 6,389,064 | 90,016 | 6,628,852 | ✅ gate passed — domain + router + stubs; analyze clean, 34 tests, 100% line coverage (7 files); 2 fix passes; incl. D-7 restructure (split CORE-3; COLOR-1/A11Y-1 re-pointed to CORE-2) |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 17:29** | **1h 54m** | **46m 24s** |  | **250** | **390,515** | **12,603,048** | **163,196** | **13,157,009** |  |
 
 ## Sign-off
 

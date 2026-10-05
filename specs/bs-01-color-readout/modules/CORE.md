@@ -1,6 +1,6 @@
 # Module CORE — scaffold, domain model, app assembly, navigation
 
-**Status:** In progress — CORE-1 done; CORE-2 next
+**Status:** In progress — CORE-2 done; CORE-3 next (runs after COLOR-1 ∥ A11Y-1)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** the Flutter project root (`pubspec.yaml`, `analysis_options.yaml`, `.gitignore`),
 `lib/domain/` (`sample.dart`, `provenance.dart`, `color_coordinates.dart`), `lib/app/` (`build_app.dart`,
@@ -13,7 +13,8 @@ routing), `lib/compare/compare_stub.dart`, `lib/recipes/recipes_stub.dart`, the 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 4,803,956 | 12m 33s (13m 49s) |
-| 2 | shell | — | ⬜ Todo | | |
+| 2 | shell | — | ✅ Done | 6,628,852 | 22m 29s (28m 18s) |
+| 3 | shell | — | ⬜ Todo | | |
 
 ## Interface reconciliation
 
@@ -27,7 +28,9 @@ routing), `lib/compare/compare_stub.dart`, `lib/recipes/recipes_stub.dart`, the 
   the acceptance tests can observe the handoff; bs-03 / bs-04 replace the stubs with the real screens via the
   same route arguments.
 - **`buildApp(deps)`**: the single production assembly entry (injects `ColorScience`, `Speech`, `Haptics`).
-  ITEST-1 calls the same entry, swapping only the faked platform sinks.
+  ITEST-1 calls the same entry, swapping only the faked platform sinks. **Lands in CORE-3**, not CORE-2:
+  it injects the `ColorScience`/`Speech`/`Haptics` interfaces (COLOR-1 / A11Y-1), so it must follow them,
+  whereas the domain + router it assembles land in CORE-2 first. Breaking this cycle is design decision D-7.
 
 ## Open gates
 
@@ -101,24 +104,76 @@ Tokens 4,803,956 · time 12m 33s active (13m 49s wall).
   `ColorCoordinates`), `buildApp`, router with typed routes + stub
   Comparison/Recipes screens. Keep every new `lib` file at 100% line coverage.
 
-## Phase 2 — Shell: domain, assembly, navigation, stub screens
+## Phase 2 — Shell: domain model, router + stub screens
+
+> Rescoped by D-7: this phase is the **root shell** — domain types + navigation only, no `buildApp`
+> (that moves to CORE-3). It depends on nothing from COLOR/A11Y, so COLOR-1 and A11Y-1 compile against it.
 
 - **Kind:** shell
 - **Target AC:** —
-- **Depends on:** CORE-1 · **Blocks:** READOUT-1, ITEST-1, READOUT-5 (provenance types), READOUT-6 (nav)
+- **Depends on:** CORE-1 · **Blocks:** COLOR-1, A11Y-1, CORE-3, READOUT-5 (provenance types), READOUT-6 (nav)
 - **Files:** `lib/domain/sample.dart`, `lib/domain/provenance.dart`, `lib/domain/color_coordinates.dart`,
-  `lib/app/build_app.dart`, `lib/app/router.dart`, `lib/compare/compare_stub.dart`,
-  `lib/recipes/recipes_stub.dart`.
+  `lib/app/router.dart`, `lib/compare/compare_stub.dart`, `lib/recipes/recipes_stub.dart`.
+  *(`lib/app/build_app.dart` and `main.dart` wiring are CORE-3.)*
 - **Tasks:**
   1. Define `Sample`, `ColorCoordinates` (canonical CIELAB + helpers to hold derived spaces), `Provenance`
      (tiers + labels + note), and the append-ready evidence list (behaviour deferred; shape only).
-  2. `buildApp(deps)` assembles the app with injected `ColorScience`/`Speech`/`Haptics` (interfaces from
-     COLOR-1 / A11Y-1); production `main.dart` calls it with real impls.
-  3. Routing with typed `toComparison(sample, slot)` / `toRecipes(target)`; **stub** Comparison and Recipes
+  2. Routing with typed `toComparison(sample, slot)` / `toRecipes(target)`; **stub** Comparison and Recipes
      screens that render the passed sample + slot/target as findable text (the read endpoint for AC-9/10/11).
-     Behaviour unchanged elsewhere.
-- **Exit criteria:** unit gate passes on the new domain code; `flutter test` green; app builds and launches
-  to a placeholder Readout route.
+     These need only the domain types. Behaviour unchanged elsewhere; `main.dart` stays the CORE-1 placeholder.
+- **Exit criteria:** unit/widget gate passes on the new domain + router + stub code (100% line coverage on
+  touched `lib` files); `flutter analyze` clean; `flutter test` green; app still builds (placeholder home
+  unchanged — assembly to the Readout route is CORE-3).
+- **Acceptance gate:** *(n/a — shell)*
+
+### Result
+
+- Landed: domain layer — `Sample` (name nullable, required non-null `Provenance`, `justCaptured`,
+  append-ready `EvidencePoint` list, `copyWith`), `ColorCoordinates` (canonical CIELAB L\*/a\*/b\*),
+  `Provenance` (4 tiers + `label` + optional note); typed `AppRouter.toComparison(sample, slot)` /
+  `toRecipes(target)` with `ComparisonSlot`; stub `ComparisonStubScreen` / `RecipesStubScreen` rendering the
+  handed-off sample as findable text (read endpoint for AC-9/10/11). `main.dart`/`buildApp` untouched — CORE-3.
+- Also (D-7): split the old CORE-2 into this phase + new CORE-3; COLOR-1/A11Y-1 re-pointed to depend on
+  CORE-2 and defer their `buildApp` registration to CORE-3. Master plan + COLOR/A11Y module plans updated.
+- Fix passes: 2/3 · Suites run: unit/widget (this feature) only; no acceptance suite yet (stage 3).
+- Tests: 34 passing · Coverage (touched files): 100% line on 7 files (Dart emits line coverage only; every
+  branch exercised by a test per the review requirement) · Acceptance: n/a (shell).
+- Test grades: n/a (shell) · Augmentations made: none · Justified exclusions: none.
+- Closed by: gate pass.
+- Tokens: 3b711674: in 94 · cache write 149,678 · cache read 6,389,064 · out 90,016 · total 6,628,852
+  (claude-opus-4-8) · 2026-10-05 17:00 EDT → 17:29 · wall 28m 18s · active 22m 29s · **Phase total:
+  6,628,852 tokens, 22m 29s active (28m 18s wall)**
+
+### Checkpoint / Handoff
+
+- **Frozen:** `lib/domain/` types (`Sample`, `ColorCoordinates`, `Provenance`, `EvidencePoint`),
+  `lib/app/router.dart` (`AppRouter`, `ComparisonSlot`), and the stub screens
+  (`ComparisonStubScreen{sampleA,sampleB}`, `RecipesStubScreen{target}`). COLOR-1/A11Y-1 import the domain
+  types; CORE-3 wires `AppRouter` into `buildApp` and registers services.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main`.
+- **Known gaps:** none. `buildApp` + `main.dart` wiring deferred to CORE-3; `main.dart` is still the CORE-1
+  placeholder, so the app does not yet launch to the Readout route.
+- **Next phase should:** run **COLOR-1 ∥ A11Y-1** (both depend on CORE-2, own disjoint files, defer `buildApp`
+  registration to CORE-3). Then **CORE-3** assembles `buildApp` from the domain + both interface stubs.
+
+## Phase 3 — Shell: `buildApp` assembly, service registration, main wiring
+
+> Added by D-7. The assembly half of the old CORE-2. Runs after CORE-2 (domain + router) **and** COLOR-1 +
+> A11Y-1 (the interfaces it injects). This is where COLOR-1/A11Y-1's deferred "register in buildApp" lands.
+
+- **Kind:** shell
+- **Target AC:** —
+- **Depends on:** CORE-2, COLOR-1, A11Y-1 · **Blocks:** READOUT-1, ITEST-1
+- **Files:** `lib/app/build_app.dart`, `lib/main.dart`.
+- **Tasks:**
+  1. `buildApp(deps)` — the single production assembly entry — wires the CORE-2 router into a `MaterialApp`
+     and injects `ColorScience` (COLOR-1 stub), `Speech` + `Haptics` (A11Y-1 stubs). ITEST-1 calls the same
+     entry, swapping only the faked platform sinks.
+  2. Register the COLOR-1 / A11Y-1 stub services in `buildApp` (their Phase-1 phases deferred this step here).
+  3. `main.dart` calls `buildApp` with the real/placeholder impls and launches to a placeholder Readout route.
+- **Exit criteria:** unit/widget gate (100% line coverage on touched `lib` files); `flutter analyze` clean;
+  `flutter test` green; app builds and launches to the placeholder Readout route via `buildApp`.
 - **Acceptance gate:** *(n/a — shell)*
 
 ### Result  <!-- filled on completion -->
