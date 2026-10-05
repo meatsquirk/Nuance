@@ -1,6 +1,6 @@
 # Module CORE — scaffold, domain model, app assembly, navigation
 
-**Status:** In progress — CORE-2 done; CORE-3 next (runs after COLOR-1 ∥ A11Y-1)
+**Status:** Done — CORE-1..3 complete; `buildApp` assembles the app and opens on the placeholder Readout route
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** the Flutter project root (`pubspec.yaml`, `analysis_options.yaml`, `.gitignore`),
 `lib/domain/` (`sample.dart`, `provenance.dart`, `color_coordinates.dart`), `lib/app/` (`build_app.dart`,
@@ -14,7 +14,7 @@ routing), `lib/compare/compare_stub.dart`, `lib/recipes/recipes_stub.dart`, the 
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 4,803,956 | 12m 33s (13m 49s) |
 | 2 | shell | — | ✅ Done | 6,628,852 | 22m 29s (28m 18s) |
-| 3 | shell | — | ⬜ Todo | | |
+| 3 | shell | — | ✅ Done | 2,455,251 | 4m 44s (4m 44s) |
 
 ## Interface reconciliation
 
@@ -176,6 +176,46 @@ Tokens 4,803,956 · time 12m 33s active (13m 49s wall).
   `flutter test` green; app builds and launches to the placeholder Readout route via `buildApp`.
 - **Acceptance gate:** *(n/a — shell)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- Landed: `lib/app/build_app.dart` — `AppDependencies` (immutable holder: `colorScience`, `speech`,
+  `haptics`, `router` defaulting to `const AppRouter()`), `AppScope` (an `InheritedWidget` exposing the deps
+  via `AppScope.of(context)`), and `buildApp(deps)` — the single production assembly entry — wrapping a
+  `MaterialApp` in `AppScope` and opening on a private `_ReadoutPlaceholder` (the placeholder Readout route
+  READOUT-1 replaces). `lib/main.dart` rewritten: `main()` → `runApp(buildApp(productionDependencies()))`;
+  `productionDependencies()` wires `ColorScienceImpl` + `NoopSpeech` + `NoopHaptics` (D-1 no native sinks).
+  COLOR-1/A11Y-1's deferred "register in buildApp" step (D-7) is now discharged.
+- Also: updated `test/smoke_test.dart` (the old `PaintColorAssistantApp` it asserted no longer exists) — it
+  now checks `productionDependencies()` wiring and that `main()` boots to the `Readout` route; added
+  `test/app/build_app_test.dart` (buildApp route + AppScope injection + `updateShouldNotify` both branches).
+- Fix passes: 1/3 — first run failed `updateShouldNotify is true`: two `const AppDependencies` are
+  canonicalised to one object, so the "changed" branch needs genuinely distinct (non-`const`) instances;
+  added a `_freshDeps()` helper. Code unchanged; test corrected.
+- Suites run: unit/widget (this feature) only; no acceptance suite yet (stage 3).
+- Tests: 72 passing · Coverage (touched files): 100% line on all 15 touched `lib` files, incl. the two new/
+  changed (`build_app.dart`, `main.dart`) — Dart emits line coverage only; every branch exercised by a test
+  per the review requirement (`updateShouldNotify` true/false, router default vs. injected). Acceptance: n/a.
+- Test grades: n/a (shell) · Augmentations made: none · Justified exclusions: none.
+- App launch: the widget test boots `main()` → `buildApp` → `MaterialApp` showing `Readout`; `flutter analyze`
+  clean. No full platform build run (CORE-1 proved the build pipeline; launch proven by the widget test).
+- Closed by: gate pass.
+- Tokens: 2,455,251 · time: 4m 44s active (4m 44s wall). **Phase total: 2,455,251 tokens, 4m 44s.**
+
+### Checkpoint / Handoff
+
+- **Frozen:** `lib/app/build_app.dart` — `AppDependencies{colorScience, speech, haptics, router}`,
+  `AppScope.of(context) → AppDependencies`, and `Widget buildApp(AppDependencies deps)` (opens on the Readout
+  route). `lib/main.dart` — `main()` + `productionDependencies() → AppDependencies`. The Readout destination
+  is a private `_ReadoutPlaceholder` inside `build_app.dart` — **READOUT-1 replaces the `home:` of the
+  `MaterialApp`** (and may lift the route out) with the real Readout screen behind this same entry; neither
+  `main.dart` nor the harness changes.
+- **Injection seam for later phases:** the Readout controller (READOUT-1) reads services via
+  `AppScope.of(context)` rather than constructing them, so the same screen runs against the production stubs
+  and ITEST-1's fakes. ITEST-1 calls `buildApp` with an `AppDependencies` whose `speech`/`haptics` (and, if
+  needed, `colorScience`) are recording fakes (D-6).
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main`.
+- **Known gaps:** none. The Readout route renders only a `Readout` marker until READOUT-1.
+- **Next phase should:** run **READOUT-1** (Readout screen scaffold + controller; last shell) — depends on
+  CORE-3 (done), COLOR-1, A11Y-1 (done). After READOUT-1 the ITEST stage (ITEST-1) is unblocked. G-2 (approve
+  acceptance tests) stays open and blocks only the behavior stage.
