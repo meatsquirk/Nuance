@@ -2,23 +2,29 @@ import '../domain/color_coordinates.dart';
 import '../domain/sample.dart';
 import 'color_science.dart';
 import 'conversions.dart' as conv;
+import 'decomposition.dart' as decomposition;
+import 'naming.dart' as naming;
+import 'words.dart' as words;
 
-/// The [ColorScience] implementation.
+/// The production [ColorScience] implementation.
 ///
-/// The colour-space conversions ([toSRGB], [toHex], [toCIELCh], [toMunsell],
-/// [toCIELAB], [lightness], [grayscaleOf]) delegate to the pure functions in
-/// `conversions.dart` (COLOR-2; `color_models` for sRGB/CIELAB/CIELCh and a
-/// bundled calibrated Munsell table — D-2). The plain-language derivations
-/// ([nearestName], [valueWord], [temperatureWord], [decompose]) are still
-/// pending COLOR-3.
+/// Behaviour is filled in against this same class across the COLOR enablers:
 ///
-/// Registered into `buildApp` by CORE-3 (D-7); construction stays `const`.
+/// * COLOR-2 — [toSRGB], [toHex], [toCIELCh], [toMunsell], [toCIELAB],
+///   [lightness], [grayscaleOf] (colour-space conversions), delegating to the
+///   pure functions in `conversions.dart` (`color_models` for sRGB/CIELAB/
+///   CIELCh and a bundled calibrated Munsell table — D-2);
+/// * COLOR-3 — [nearestName] (naming), [valueWord] / [temperatureWord]
+///   (words) and [decompose] (spoken decomposition), delegating to
+///   `naming.dart`, `words.dart` and `decomposition.dart`.
+///
+/// Both enablers have landed, so every member now delegates to its pure
+/// conversion/derivation function.
+///
+/// Registered into `buildApp` by CORE-3 (registration is deferred out of the
+/// shell — D-7); construction stays `const`.
 class ColorScienceImpl implements ColorScience {
   const ColorScienceImpl();
-
-  /// Signals that [member] is not built yet and names the phase that builds it.
-  static Never _pending(String member, String phase) =>
-      throw UnimplementedError('ColorScience.$member is implemented in $phase.');
 
   @override
   SRGBColor toSRGB(ColorCoordinates lab) => conv.labToSrgb(lab);
@@ -42,15 +48,14 @@ class ColorScienceImpl implements ColorScience {
   SRGBColor grayscaleOf(ColorCoordinates lab) => conv.grayscaleOf(lab);
 
   @override
-  String nearestName(ColorCoordinates lab) =>
-      _pending('nearestName', 'COLOR-3');
+  String nearestName(ColorCoordinates lab) => naming.nearestColorName(lab);
 
   @override
-  String valueWord(double lightness) => _pending('valueWord', 'COLOR-3');
+  String valueWord(double lightness) => words.valueWord(lightness);
 
   @override
-  String temperatureWord(double hue) => _pending('temperatureWord', 'COLOR-3');
+  String temperatureWord(double hue) => words.temperatureWord(hue);
 
   @override
-  String decompose(Sample sample) => _pending('decompose', 'COLOR-3');
+  String decompose(Sample sample) => decomposition.decompose(sample);
 }

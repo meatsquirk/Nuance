@@ -64,7 +64,9 @@ flutter:
 
   assets:
     # Bundled colour reference data (COLOR module). munsell.csv is the
-    # Munsell hue ↔ CIELAB-angle table mirrored by conversions.dart.
+    # Munsell hue ↔ CIELAB-angle table mirrored by conversions.dart (COLOR-2);
+    # iscc_nbs.csv is the named-colour catalogue mirrored by kNamedColors in
+    # naming.dart (COLOR-3). The whole directory is bundled.
     - assets/color/
 
   # To add assets to your application, add an assets section, like this:

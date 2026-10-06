@@ -1,0 +1,39 @@
+# Named-colour reference table (bs-01 COLOR-3) — plain-language colour naming.
+#
+# A curated catalogue of plain-language colour names, each anchored at its
+# canonical CIELAB coordinate (L*, a*, b*). `ColorScienceImpl.nearestName` reads
+# a sample's CIELAB and returns the name of the nearest entry (CIE76 ΔE). The
+# catalogue follows the ISCC-NBS idea (name a colour by its nearest named
+# region, SI D4 / plan D-2) but uses the app's own painter-facing names; it is
+# bundled data so the names stay swappable without touching the colour maths.
+#
+# Mirrored verbatim by `kNamedColors` in lib/color_science/naming.dart — the
+# const is what runs (nearestName is synchronous); drift is caught by
+# test/color_science/named_color_table_test.dart. Keep the two in the same order.
+#
+# The three acceptance fixtures (Warm Terracotta, Deep Olive Green, Cool
+# Periwinkle) are anchored at their exact fixture coordinates so a reading of
+# that colour resolves to that name (AC-3 drives this through READOUT-3).
+name,cielab_l,cielab_a,cielab_b
+Black,10,0,0
+Dark Grey,30,0,0
+Neutral Grey,55,0,0
+Light Grey,80,0,0
+White,96,0,0
+Crimson Red,45,60,35
+Warm Terracotta,58,25.27,22.75
+Bright Orange,66,38,62
+Golden Yellow,80,8,78
+Lemon Yellow,90,-8,80
+Deep Olive Green,40,-8,24
+Forest Green,45,-42,32
+Emerald Green,60,-50,20
+Teal,50,-28,-9
+Sky Blue,72,-14,-32
+Cool Periwinkle,55,-11.63,-31.95
+Royal Blue,38,18,-52
+Deep Purple,32,38,-32
+Magenta,52,68,-24
+Rose Pink,70,38,8
+Chocolate Brown,32,18,24
+Cream,92,1,14

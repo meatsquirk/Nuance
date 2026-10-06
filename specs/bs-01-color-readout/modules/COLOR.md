@@ -1,6 +1,6 @@
 # Module COLOR — color-science layer
 
-**Status:** In progress — Phase 2 (colour-space conversions) done; next Phase 3
+**Status:** In progress — Phase 2 (conversions) + Phase 3 (naming/words/decomposition) done; both enablers complete, module ready for the READOUT/A11Y behaviour phases
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/color_science/` — `color_science.dart` (interface), `color_science_impl.dart`,
 `conversions.dart`, `naming.dart` (ISCC-NBS), `words.dart` (value + temperature words), `decomposition.dart`
@@ -13,7 +13,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 2,633,008 | 7m 21s (7m 21s) |
 | 2 | behavior | — (enabler: conversions consumed by AC-1, AC-5) | ✅ Done | 8,261,518 | 41m 20s (29m 42s) |
-| 3 | behavior | — (enabler: name/value-word/temperature/decomposition consumed by AC-2,3,4,8) | ⬜ Todo | | |
+| 3 | behavior | — (enabler: name/value-word/temperature/decomposition consumed by AC-2,3,4,8) | ✅ Done | 9,382,074 | 27m 50s (27m 50s) |
 
 ## Interface reconciliation
 
@@ -154,6 +154,52 @@
 - **Acceptance gate:** *(enabler)* suite stays green; the precondition failures it unblocks disappear in
   run-pending mode.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed** (3 new lib files + impl wiring + 1 asset):
+  - `lib/color_science/naming.dart` — `nearestColorName(lab)`: nearest entry in a curated named-colour
+    catalogue `kNamedColors` (22 entries) by least CIE76 ΔE (compared squared). The three acceptance
+    fixtures are anchored at their exact coordinates so a reading resolves to its name (AC-3 via READOUT-3).
+  - `lib/color_science/words.dart` — `valueWord(L)` (five even bands → "very low/low/middle/high/very high
+    value", lightness clamped 0–100), `temperatureWord(hue)` (warm/cool/neutral by exact arc distance from
+    the ~60° warm / ~240° cool poles — a 60° cut = the cos-half-angle split, computed as an arc to avoid fp
+    boundary fragility), `hueFamilyWord(hue)` (8 perceptual families red→magenta).
+  - `lib/color_science/decomposition.dart` — `decompose(sample)`: one spoken statement with the name
+    (`sample.name ?? nearestColorName`), value (L), temperature word, hue family, chroma and hue angle;
+    chroma/angle derived straight from CIELAB (√(a²+b²), atan2) so it does **not** depend on COLOR-2. A
+    near-achromatic sample (chroma rounds to 0) is spoken as a neutral grey with no hue.
+  - `color_science_impl.dart` — the four COLOR-3 members now delegate (COLOR-2's seven still `_pending`);
+    `pubspec.yaml` registers `assets/color/`; `assets/color/iscc_nbs.csv` is the catalogue, mirrored by
+    `kNamedColors` and guarded by `named_color_table_test.dart`.
+- **Gate:** `flutter analyze` clean; `flutter test --coverage` green — **120 unit tests (+6)**; coverage gate
+  **100% line on all 4 touched lib files** (base 9d906e7). Acceptance (iPhone 17 sim): **default green**
+  (12 ACs pending, 5 harness/guard pass); **run-pending red baseline unchanged** — +5 harness green, −12 ACs
+  fail on Thens, **0 UnimplementedError / panics** (the enabler adds no UI call site, so the suite is
+  behaviourally unchanged from the ITEST-4 baseline). Grade gate **n/a** (enabler un-pends no AC).
+- **Fix passes: 2/3** — (1) `temperatureWord` boundary hues 180°/300° fell just inside the cosine ≤ −0.5
+  threshold by fp and read "neutral"; reframed to exact integer-degree arc distance. (2) removing the now-unused
+  `dart:math` import left a dangling library doc comment (lint); converted the file header to `//`. One
+  pre-first-run analyze fix (unused import in `decomposition.dart`), not counted.
+- **Augmentations / exclusions:** none. No `// coverage:ignore` used.
+
+### Checkpoint / Handoff
+
+- **Frozen (public) surface for consumers:**
+  - `ColorScience.nearestName / valueWord / temperatureWord / decompose` now real (via
+    `naming.dart` / `words.dart` / `decomposition.dart`). READOUT-2 uses `valueWord` (AC-2); READOUT-3 uses
+    `nearestName` for the derived name (AC-3) and `temperatureWord` for the temperature line (AC-4); A11Y-2
+    speaks `decompose(sample)` as one utterance (AC-8).
+  - **Contracts consumers can rely on** (unit-proven): `valueWord(58)`→"middle value",
+    `temperatureWord(42)`→"warm", `temperatureWord(250)`→"cool", `hueFamilyWord(42)`→"orange";
+    `nearestName` resolves SAMPLE_TERRACOTTA→"Warm Terracotta", OLIVE→"Deep Olive Green",
+    COOL→"Cool Periwinkle"; `decompose(SAMPLE_TERRACOTTA)` contains "Warm Terracotta", "58", a "warm" distinct
+    from the name, "orange", "34", "42".
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart <BASE>` · acceptance on a
+  booted sim: `flutter test integration_test/ -d <udid>` (default) and `… --dart-define=BS01_RUN_PENDING=true`
+  (run-pending). Plain `flutter test integration_test/` with no `-d` is a false green (0 tests).
+- **Merge note (parallel):** this branch is based on 9d906e7 (pre-COLOR-2). It and COLOR-2 both edit
+  `color_science_impl.dart` (disjoint members — trivial) and `pubspec.yaml` (both add an identical
+  `assets/color/` block under `flutter:` — a trivial conflict to resolve once). No other overlap.
+- **Known gap:** COLOR-2's seven conversion members still throw on this branch (they land on the COLOR-2
+  branch); nothing on this branch calls them.

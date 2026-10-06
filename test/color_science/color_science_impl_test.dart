@@ -15,15 +15,6 @@ const _sample = Sample(
   name: 'Warm Terracotta',
 );
 
-/// Matches an [UnimplementedError] whose message names [member] and [phase].
-Matcher _pendingFor(String member, String phase) => throwsA(
-      isA<UnimplementedError>().having(
-        (e) => e.message,
-        'message',
-        allOf(contains('ColorScience.$member'), contains(phase)),
-      ),
-    );
-
 void main() {
   const impl = ColorScienceImpl();
 
@@ -72,14 +63,31 @@ void main() {
     });
   });
 
-  group('COLOR-3 members are still pending, pointing at COLOR-3', () {
-    test('naming / words / decomposition throw UnimplementedError', () {
+  group('COLOR-3 naming / words / decomposition surface through the impl', () {
+    test('nearestName resolves the catalogue (terracotta → "Warm Terracotta")',
+        () {
       expect(
-          () => impl.nearestName(_terracotta), _pendingFor('nearestName', 'COLOR-3'));
-      expect(() => impl.valueWord(58), _pendingFor('valueWord', 'COLOR-3'));
-      expect(() => impl.temperatureWord(42),
-          _pendingFor('temperatureWord', 'COLOR-3'));
-      expect(() => impl.decompose(_sample), _pendingFor('decompose', 'COLOR-3'));
+        impl.nearestName(const ColorCoordinates(lightness: 58, a: 25.27, b: 22.75)),
+        'Warm Terracotta',
+      );
+    });
+
+    test('valueWord bands the lightness', () {
+      expect(impl.valueWord(58).toLowerCase(), contains('middle'));
+    });
+
+    test('temperatureWord states the temperature in words', () {
+      expect(impl.temperatureWord(42), 'warm');
+      expect(impl.temperatureWord(250), 'cool');
+    });
+
+    test('decompose states the name, value, temperature, hue, chroma, angle',
+        () {
+      final spoken = impl.decompose(_sample);
+      expect(spoken, contains('Warm Terracotta'));
+      expect(spoken, contains('58'));
+      expect(spoken.toLowerCase().replaceAll('warm terracotta', ''),
+          contains('warm'));
     });
   });
 }
