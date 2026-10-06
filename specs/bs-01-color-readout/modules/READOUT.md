@@ -1,6 +1,6 @@
 # Module READOUT — Readout screen UI + controller
 
-**Status:** In progress — READOUT-4 done (colour-space selector: AC-5 green); next READOUT-5 (provenance badges)
+**Status:** In progress — READOUT-5 done (provenance badges: AC-6, AC-7 green); next READOUT-6 (navigation handoffs)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` — `readout_screen.dart` and per-region widgets
 (`value_region.dart`, `name_header.dart`, `temperature_line.dart`, `space_selector.dart`,
@@ -19,7 +19,7 @@
 | 2 | behavior | AC-1, AC-2 | ✅ Done | 10,406,545 | 58m 47s (58m 48s) |
 | 3 | behavior | AC-3, AC-4 | ✅ Done | 8,419,171 | 15m 59s (15m 59s) |
 | 4 | behavior | AC-5 | ✅ Done | 7,596,426 | 12m 20s (12m 20s) |
-| 5 | behavior | AC-6, AC-7 | ⬜ Todo | | |
+| 5 | behavior | AC-6, AC-7 | ✅ Done | 6,292,987 | 16m 03s (16m 03s) |
 | 6 | behavior | AC-9, AC-10, AC-11 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -320,9 +320,55 @@
 - **Acceptance gate:** un-pend AC-6, AC-7; `TestAC06_*`, `TestAC07_*` green in run-pending (+ earlier ACs).
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+**READOUT-5 done (2026-10-06).** The provenance region now renders the sample's trust tier as a
+plain-language badge (never colour alone): a **measured** reading reads "Measured" with no caveat (AC-6); an
+**estimated** reading reads "Estimated — not yet verified" with the note "Seeded by a model. Treat as a
+starting point." beneath it (AC-7). Label + note are folded into one semantics announcement.
+
+- **What landed:** `lib/readout/provenance_region.dart` — `labelFor(provenance)` (estimated → the "— not yet
+  verified" qualifier; every other tier → the bare `Provenance.label`) and `noteFor(provenance)` (estimated →
+  the seeded-value caveat; else null), rendered under `regionKey` via `Semantics(excludeSemantics) + Column`.
+- **Design note:** the "— not yet verified" qualifier and the caveat are **presentation** concerns owned by
+  the region — the domain `Provenance.label` carries only the bare tier word (shared by every surface). The
+  shell's `ProvenanceBadge` widget renders `Provenance.label` as-is, so it can't carry the display qualifier;
+  the region renders directly (mirroring the badge's text-only, folded-semantics a11y contract). `ProvenanceBadge`
+  keeps its own passing unit test and stays available as a general component.
+- **Unit:** `test/readout/provenance_region_test.dart` — all 4 tiers (label + note presence/absence), the two
+  widget renders, and both semantics-announcement branches. `flutter analyze`: clean. Coverage gate on the one
+  touched lib file: **100%** line (both ternary branches covered).
+- **Acceptance:** AC-6/AC-7 un-pended (removed from `harness.dart` `pendingACs`); default
+  `flutter test integration_test/ -d <udid>` → **+12 ~5** green (AC-1..7 pass; AC-8..12 still pending/skipped).
+  `TestAC06`/`TestAC07` green.
+- **Test change (non-weakening, no AC test touched):** `integration_test/harness_test.dart` — the two
+  pending-gate **self-tests** encode the un-pended set; un-pending AC-6/AC-7 required adding them to `unpended`
+  and swapping the "still pending" example (AC-6 → AC-8, still owned by A11Y-2). These are harness guard tests,
+  not AC tests.
+- **Grade gate:** independent fresh re-grade of every un-pended AC test (AC-1..7) against live behaviour →
+  **7×A, 0×B**, no regressions (AC-1/AC-3 prominence still holds — the new region text renders at ~14px, far
+  below the 48px lightness/name). Grid: `../behavior-test-completeness-bs-01-color-readout.md`.
+- **Augmentations:** none assigned; none newly enabled. **Fix passes:** 1/3 (harness self-tests updated after
+  the first run; AC-6/AC-7 passed on the first run).
+- **Tokens:** 6,292,987 (claude-opus-4-8) · **Time:** 16m 03s active (16m 03s wall). **Phase total: 6,292,987 tokens, 16m 03s.**
+
+### Checkpoint / Handoff
+
+- **Frozen additions:** `ProvenanceRegion.labelFor(Provenance)` / `noteFor(Provenance)` /
+  `estimatedNote` (`@visibleForTesting` statics) — the tier→display mapping. The region renders under
+  `ProvenanceRegion.regionKey` and reads live from `controller.sample.provenance`.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart <base>`. Acceptance: boot
+  the sim once (`xcrun simctl boot 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), then default
+  `flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; run-pending adds
+  `--dart-define=BS01_RUN_PENDING=true`. Un-pend an AC by deleting its `pendingACs` row in `harness.dart`
+  **and** updating the two `harness_test.dart` pending-gate self-tests (`unpended` set + the "still pending"
+  example). Plain `flutter test integration_test/` (no `-d`) is a false green.
+- **Known gaps (later phases):** action controls stay disabled — compare/recipes → READOUT-6 (AC-9/10/11);
+  speak + just-captured → A11Y-2 (AC-8/12).
+- **Next phase should:** run **READOUT-6** (AC-9/10/11 navigation handoffs) — edits the actions bar /
+  controller navigation. All READOUT behaviour phases edit the Readout screen/controller — **merge-risky, run
+  serially**. No open augmentations remain. A11Y-2 (AC-8/12) is the other startable serial phase.
 
 ## Phase 6 — Behavior: navigation handoffs (AC-9, AC-10, AC-11)
 

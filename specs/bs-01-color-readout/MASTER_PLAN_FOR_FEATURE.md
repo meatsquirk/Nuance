@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — READOUT-4 done (AC-5 green); next READOUT-5 (provenance badges). READOUT/A11Y behaviour phases run serially.
+**Status:** In progress — READOUT-5 done (AC-6, AC-7 green); next READOUT-6 (navigation handoffs). READOUT/A11Y behaviour phases run serially.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -47,8 +47,8 @@ per-AC "Missing" column is what the behavior stage must build.
 | AC-3 | A plain-language colour name is shown large | ITEST-2 `TestAC03_ColourName` | COLOR-3, READOUT-3 | ✅ Done |
 | AC-4 | A warm sample is described as warm in words | ITEST-2 `TestAC04_Temperature` | COLOR-3, READOUT-3 | ✅ Done |
 | AC-5 | The painter selects a colour space and sees the sample in that space | ITEST-2 `TestAC05_ColourSpaceSelector` | COLOR-2, READOUT-4 | ✅ Done |
-| AC-6 | A measured value is badged Measured | ITEST-2 `TestAC06_MeasuredBadge` | READOUT-5 | ⬜ Todo |
-| AC-7 | An unverified seeded value is badged Estimated and labelled not yet verified | ITEST-2 `TestAC07_EstimatedBadge` | READOUT-5 | ⬜ Todo |
+| AC-6 | A measured value is badged Measured | ITEST-2 `TestAC06_MeasuredBadge` | READOUT-5 | ✅ Done |
+| AC-7 | An unverified seeded value is badged Estimated and labelled not yet verified | ITEST-2 `TestAC07_EstimatedBadge` | READOUT-5 | ✅ Done |
 | AC-8 | The painter hears the whole readout spoken | ITEST-3 `TestAC08_SpeakReadout` | COLOR-3, A11Y-2 | ⬜ Todo |
 | AC-9 | The painter uses the reading as comparison sample A | ITEST-3 `TestAC09_CompareAsA` | READOUT-6 | ⬜ Todo |
 | AC-10 | The painter uses the reading as comparison sample B | ITEST-3 `TestAC10_CompareAsB` | READOUT-6 | ⬜ Todo |
@@ -190,8 +190,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ✅ Done | 10,406,545 | 58m 47s (58m 48s) | AC-1/AC-2 green on sim; A/A grades; +`load`/`didUpdateWidget` so a re-injected sample updates in place |
 | 14 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ✅ Done | 8,419,171 | 15m 59s (15m 59s) | AC-3/AC-4 green on sim (4×A re-grade); name header prominent + derived nearest name; temperature word; key moved to Semantics wrapper; 1 fix pass |
 | 15 | READOUT-4 | behavior: AC-5 (colour-space selector) | ✅ Done | 7,596,426 | 12m 20s (12m 20s) | AC-5 green on sim (5×A re-grade of AC-1..5); per-space exclusive readout; sRGB-triplet augmentation closed; 100% coverage on 2 touched files; 0 fix passes |
-| 16 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ⬜ Next | | | |
-| 17 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ⬜ Todo | | | |
+| 16 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ✅ Done | 6,292,987 | 16m 03s (16m 03s) | AC-6/AC-7 green on sim (7×A re-grade of AC-1..7); Measured / "Estimated — not yet verified" + seeded-value note, derived from tier; 100% coverage on 1 touched file; 1 fix pass (harness pending-gate self-tests) |
+| 17 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ⬜ Next | | | |
 | 18 | A11Y-2 | behavior: AC-8, AC-12 (speak + haptic/just-captured) | ⬜ Todo | | | |
 | 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -200,17 +200,18 @@ when the row is marked done.
 
 ## Next phase
 
-**READOUT-4 done (2026-10-06).** AC-5 is green on the simulator (independent 5×A re-grade of all un-pended
-tests AC-1..5). The colour-space selector now renders the selected space's values exclusively (CIELCh / Munsell
-/ sRGB / CIELAB), one at a time. 5/12 ACs un-pended. The last open augmentation (AC-5 sRGB triplet) is closed;
-none remain.
+**READOUT-5 done (2026-10-06).** AC-6, AC-7 green on the simulator (independent 7×A re-grade of all un-pended
+tests AC-1..7). The provenance region now badges the sample's trust tier in words: "Measured" (AC-6) and
+"Estimated — not yet verified" + the "Seeded by a model. Treat as a starting point." note (AC-7), derived from
+the tier. 7/12 ACs un-pended. No open augmentations remain.
 
-- **Next: READOUT-5** (AC-6 Measured badge + AC-7 Estimated badge & note) — edits `provenance_region.dart`.
-- **Startable (serial — all edit the Readout screen/controller):** READOUT-5 (AC-6/7), READOUT-6 (AC-9/10/11),
-  A11Y-2 (AC-8/12). One per session; never pair two in parallel.
+- **Next: READOUT-6** (AC-9/10/11 navigation handoffs) — edits the actions bar + controller navigation.
+- **Startable (serial — all edit the Readout screen/controller):** READOUT-6 (AC-9/10/11), A11Y-2 (AC-8/12).
+  One per session; never pair two in parallel.
 - **Runner:** boot the sim (`xcrun simctl boot 5AB9D06D-…`); un-pend an AC by deleting its `pendingACs` row in
-  `harness.dart`; default `flutter test integration_test/ -d <udid>` (pending ACs skip); run-pending adds
-  `--dart-define=BS01_RUN_PENDING=true`. Plain `flutter test integration_test/` (no `-d`) is a false green.
+  `harness.dart` **and** updating the two `harness_test.dart` pending-gate self-tests (`unpended` set + the
+  "still pending" example); default `flutter test integration_test/ -d <udid>` (pending ACs skip); run-pending
+  adds `--dart-define=BS01_RUN_PENDING=true`. Plain `flutter test integration_test/` (no `-d`) is a false green.
 
 ## Token usage
 
@@ -236,7 +237,8 @@ none remain.
 | PHASE | 920e046f | 2026-10-06 11:43 EDT | 12:42 | 58m 48s | 58m 47s | claude-opus-4-8 | 138 | 232,372 | 10,103,922 | 70,113 | 10,406,545 | READOUT-2 done: AC-1, AC-2 green on sim (A/A grades); value region renders prominent lightness + grayscale + Munsell value + value word; +load/didUpdateWidget for re-injected sample; 100% coverage on 3 touched files; 1 fix pass |
 | PHASE | 00215ace | 2026-10-06 15:32 EDT | 15:48 | 15m 59s | 15m 59s | claude-opus-4-8 | 142 | 239,051 | 8,129,554 | 50,424 | 8,419,171 | READOUT-3 done: AC-3 (derived nearest name, prominent header) + AC-4 (temperature word) green on sim; independent 4×A re-grade of all un-pended tests; 100% coverage on 3 touched files; 1 fix pass |
 | PHASE | 24155326 | 2026-10-06 15:53 EDT | 16:06 | 12m 20s | 12m 20s | claude-opus-4-8 | 140 | 218,865 | 7,337,780 | 39,641 | 7,596,426 | READOUT-4 done: AC-5 green on sim (5×A re-grade of AC-1..5); per-space exclusive readout (CIELCh/Munsell/sRGB/CIELAB); sRGB-triplet augmentation closed; 168 unit green, 100% coverage on 2 touched files; 0 fix passes |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 16:06** | **7h 23m** | **5h 19m** |  | **1,742** | **2,639,909** | **95,844,527** | **851,195** | **99,337,373** |  |
+| READOUT-5 | 01fd90f6 | 2026-10-06 16:10 EDT | 16:26 | 16m 03s | 16m 03s | claude-opus-4-8 | 128 | 188,957 | 6,061,544 | 42,358 | 6,292,987 | AC-6, AC-7 green on sim; 7×A re-grade (AC-1..7); 100% coverage on 1 touched file; 1 fix pass |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 16:26** | **7h 40m** | **5h 35m** |  | **1,870** | **2,828,866** | **101,906,071** | **893,553** | **105,630,360** |  |
 
 ## Sign-off
 

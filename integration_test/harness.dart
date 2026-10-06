@@ -96,8 +96,6 @@ const Sample SAMPLE_ESTIMATED = Sample(
 /// ACs (their bodies, which assert un-built behaviour, never run); set
 /// `BS01_RUN_PENDING=1` to execute them (the red-baseline / un-pend run).
 const Map<String, String> pendingACs = {
-  'AC-6': 'READOUT-5',
-  'AC-7': 'READOUT-5',
   'AC-8': 'A11Y-2',
   'AC-9': 'READOUT-6',
   'AC-10': 'READOUT-6',

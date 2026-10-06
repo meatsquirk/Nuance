@@ -114,3 +114,43 @@ per the behaviour-phase grade gate. Grades **every** un-pended test AC-1..AC-5 (
   and a hex-only impl now fails the present-check. The spec's "a triplet **and** a hex value" is now asserted at
   full grain. **Borderline closed — AC-5 is a clean A.**
 - **Counts:** 5×A, 0×B. No B to fix; no augmentations outstanding.
+
+## Re-grade — READOUT-5 (AC-6, AC-7 un-pended)
+
+Graded 2026-10-06 by an independent fresh grader (fresh context) against the **live behaviour** (real `buildApp`
++ `ColorScienceImpl`; `ProvenanceRegion` reads `controller.sample.provenance` and derives label/note from the
+`ProvenanceTier` with no colour math, so AC-1..AC-7 run live and nothing throws), per the behaviour-phase grade
+gate. Grades **every** un-pended test AC-1..AC-7 (AC-8..AC-12 remain pending, owned by A11Y-2/READOUT-6).
+
+- **AC-6 — `AC-6` measured badge: A** (G1,G2,G4,G5,G6). Given checked on surface ("Measured Reading" shown) and
+  input (`SAMPLE_MEASURED.provenance.tier == ProvenanceTier.measured`). Then scoped to `ProvenanceRegion.regionKey`
+  (not whole-screen — so the name "Measured Reading" cannot vacuously satisfy `contains('Measured')`): asserts
+  `contains('Measured')` and, as the tier discriminators, `isNot('not yet verified')` + `isNot('Seeded by a
+  model')`. **Discriminates:** live `labelFor(measured)` → `provenance.label` = "Measured", `noteFor(measured)`
+  → null, so the region renders Text("Measured") only — a note-on-every-reading impl renders "Seeded by a
+  model…" and fails the `isNot`; an empty region fails `contains('Measured')`. The one wrong impl AC-6 cannot
+  catch alone — "badge every tier Measured" (feeds only a measured fixture) — is backstopped by AC-7's positive
+  `contains('Estimated')`/`'not yet verified'`, the catalogue's intended control pairing; within G6 since AC-6's
+  own negatives already reject the estimated note on a measured reading.
+- **AC-7 — `AC-7` estimated badge: A** (G1,G3,G4,G5,G6). Given checked on surface ("Estimated Reading" shown)
+  and input (`tier == ProvenanceTier.estimated`). Then (region-scoped): `contains('Estimated')` **and**
+  `contains('not yet verified')` **and** the **exact** note `'Seeded by a model. Treat as a starting point.'`
+  (full grain). Carries its own in-test measured control — `SAMPLE_MEASURED` re-loaded and settled shows
+  `isNot('Seeded by a model')` (G3), tying the note to the Estimated tier. **Discriminates:** live
+  `labelFor(estimated)` → "Estimated — not yet verified" (region owns the "— not yet verified" qualifier;
+  `Provenance.label` is the bare "Estimated"), `noteFor(estimated)` → `estimatedNote` constant = the exact note,
+  so the region renders both Texts. A badge-everything-"Measured" impl fails `contains('Estimated')`; a
+  note-less impl fails the exact-note check; a note-on-every-reading impl fails the measured control.
+- **AC-6/AC-7 control-pairing check:** confirmed against live values — measured fixture ⇒ {"Measured", no note};
+  estimated fixture ⇒ {"Estimated — not yet verified", exact note}. The two wrong impls the gate names each die:
+  "badge every tier Measured" ⇒ AC-7 positive fails; "print the note on every reading" ⇒ AC-6 `isNot('Seeded by
+  a model')` fails (and AC-7's measured control fails). The pair must stay maintained together (noted, per G6).
+- **AC-1..AC-5:** no downgrade, no regression. READOUT-5 touched only `lib/readout/provenance_region.dart`,
+  `integration_test/harness.dart` (pending map) and `integration_test/harness_test.dart` (gate self-tests). The
+  provenance region is rendered inside the Readout `ListView` (`readout_screen.dart:85`) with its two `Text`s at
+  the inherited body size (~14, no explicit `fontSize`), well under the `prominentFontSize` = 48 of the lightness
+  number and name — so AC-1's strict `greaterThan` (lightness > every other body paragraph) and AC-3's `>=`
+  (name ≥ every other body paragraph) both still hold with the now-populated region text in the comparison set.
+  Pending-gate self-tests stay consistent: `harness_test.dart` `unpended = {AC-1..AC-7}` is the exact complement
+  of `pendingACs = {AC-8, AC-9, AC-10, AC-11, AC-12}` across all 12, each pending owner in `behaviorPhases`.
+- **Counts:** 7×A, 0×B. No B to fix; no augmentations outstanding.
