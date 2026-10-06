@@ -198,6 +198,71 @@ void main() {
     });
   });
 
+  group('ReadoutController colour-space readout (AC-5)', () {
+    // Warm Terracotta — the AC-5 fixture (L58, a25.27, b22.75).
+    ReadoutController terracotta() => _controllerFor(
+          const Sample(
+            coordinates: ColorCoordinates(lightness: 58, a: 25.27, b: 22.75),
+            provenance: _provenance,
+          ),
+        );
+
+    test('CIELCh formats L, C and rounded hue in degrees', () {
+      expect(
+        terracotta().readoutForSpace(ReadoutSpace.cielch),
+        'L 58, C 34, h 42°',
+      );
+    });
+
+    test('Munsell formats the notation, dropping a redundant .0 chroma', () {
+      // value 5.5 keeps its fraction; chroma 6.0 renders as "6" (the familiar
+      // "10R 5.5/6" the spec shows), not "6.0".
+      expect(
+        terracotta().readoutForSpace(ReadoutSpace.munsell),
+        '10R 5.5/6',
+      );
+    });
+
+    test('sRGB formats the 8-bit triplet and the hex value', () {
+      expect(
+        terracotta().readoutForSpace(ReadoutSpace.srgb),
+        '192, 122, 101  #c07a65',
+      );
+    });
+
+    test('CIELAB formats the canonical L, a, b coordinates', () {
+      expect(
+        terracotta().readoutForSpace(ReadoutSpace.cielab),
+        'L 58, a 25.27, b 22.75',
+      );
+    });
+
+    test('spaceReadout tracks the selected space (one at a time)', () {
+      final controller = terracotta();
+      // Defaults to CIELCh; selecting another space replaces the reading, so
+      // the previous space is no longer shown.
+      expect(controller.spaceReadout, 'L 58, C 34, h 42°');
+      controller.selectSpace(ReadoutSpace.srgb);
+      expect(controller.spaceReadout, '192, 122, 101  #c07a65');
+      expect(controller.spaceReadout, isNot(contains('°')));
+    });
+
+    test('spaceReadout tracks a reloaded sample', () {
+      final controller = terracotta();
+      controller.load(
+        const Sample(
+          coordinates: ColorCoordinates(lightness: 40, a: -8, b: 24),
+          provenance: _provenance,
+        ),
+      );
+      // The CIELAB readout now reflects the olive sample's own coordinates.
+      expect(
+        controller.readoutForSpace(ReadoutSpace.cielab),
+        'L 40, a -8.00, b 24.00',
+      );
+    });
+  });
+
   group('ReadoutController temperature word (AC-4)', () {
     ReadoutController controllerAt(double a, double b) => _controllerFor(
           Sample(

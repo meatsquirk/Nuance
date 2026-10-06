@@ -48,6 +48,10 @@ Future<void> _pumpScreen(
   );
 }
 
+/// The text currently rendered in the colour-space values region.
+String _spaceValues(WidgetTester tester) =>
+    tester.widget<Text>(find.byKey(SpaceSelector.valuesKey)).data ?? '';
+
 void main() {
   testWidgets('lays out every region with a stable anchor', (tester) async {
     await _pumpScreen(tester);
@@ -99,15 +103,19 @@ void main() {
     for (final space in ReadoutSpace.values) {
       expect(find.text(SpaceSelector.labelFor(space)), findsOneWidget);
     }
-    expect(find.text('CIELCh values —'), findsOneWidget);
+    // Starts on CIELCh: the values region shows the cylindrical readout (the
+    // degree-marked hue identifies it) and nothing from the other spaces.
+    expect(_spaceValues(tester), contains('°'));
   });
 
-  testWidgets('selecting a space updates the shown space', (tester) async {
+  testWidgets('selecting a space shows it and hides the previous one',
+      (tester) async {
     await _pumpScreen(tester);
     await tester.tap(find.text('Munsell'));
     await tester.pump();
-    expect(find.text('Munsell values —'), findsOneWidget);
-    expect(find.text('CIELCh values —'), findsNothing);
+    // Munsell notation is now shown; the CIELCh degree marker is gone.
+    expect(_spaceValues(tester), contains('10R'));
+    expect(_spaceValues(tester), isNot(contains('°')));
   });
 
   testWidgets('every action control is a disabled placeholder',
@@ -139,7 +147,7 @@ void main() {
     await tester.pumpWidget(tree(_freshDeps()));
     await tester.pump();
     // The selection survives, proving the controller was not re-created.
-    expect(find.text('Munsell values —'), findsOneWidget);
+    expect(_spaceValues(tester), contains('10R'));
   });
 
   testWidgets('disposes its controller when removed', (tester) async {

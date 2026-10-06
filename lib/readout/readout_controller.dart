@@ -8,9 +8,8 @@ import '../domain/sample.dart';
 
 /// The colour spaces the readout can show, one at a time (AC-5).
 ///
-/// The shell renders the selector over these four options; the exclusive
-/// show-one-hide-the-rest behaviour and each space's real values land in
-/// READOUT-4.
+/// The selector renders over these four options; selecting one shows that
+/// space's values (see [ReadoutController.readoutForSpace]) and hides the rest.
 enum ReadoutSpace {
   /// Cylindrical CIELCh (L\*, C\*, h).
   cielch,
@@ -105,10 +104,51 @@ class ReadoutController extends ChangeNotifier {
   /// accompanies the value reading (AC-1).
   SRGBColor get grayscale => colorScience.grayscaleOf(_sample.coordinates);
 
+  /// The selected colour space's values, formatted for display (AC-5).
+  ///
+  /// The selector shows only this space's reading; selecting another space
+  /// replaces it, so the other spaces are no longer shown (the one-at-a-time
+  /// rule). Derived live, so it tracks [selectedSpace] and [load].
+  String get spaceReadout => readoutForSpace(_selectedSpace);
+
+  /// Formats [space]'s values from the current sample (AC-5).
+  ///
+  /// Exposed so each space's formatting is unit-testable independently of the
+  /// selection state. Each space reads through [ColorScience]:
+  ///
+  /// * CIELCh — `L <l>, C <c>, h <h>°` (the cylindrical readout, rounded);
+  /// * Munsell — the familiar `<hue> <value>/<chroma>` notation (e.g. `10R 5.5/6`);
+  /// * sRGB — the 8-bit `r, g, b` triplet and the `#rrggbb` hex value;
+  /// * CIELAB — `L <l>, a <a>, b <b>` (the canonical coordinates).
+  String readoutForSpace(ReadoutSpace space) {
+    switch (space) {
+      case ReadoutSpace.cielch:
+        final lch = colorScience.toCIELCh(_sample.coordinates);
+        return 'L ${lch.lightness.round()}, C ${lch.chroma.round()}, '
+            'h ${lch.hue.round()}°';
+      case ReadoutSpace.munsell:
+        final m = colorScience.toMunsell(_sample.coordinates);
+        return '${m.hue} ${_trimZero(m.value)}/${_trimZero(m.chroma)}';
+      case ReadoutSpace.srgb:
+        final rgb = colorScience.toSRGB(_sample.coordinates);
+        final hex = colorScience.toHex(_sample.coordinates);
+        return '${rgb.red}, ${rgb.green}, ${rgb.blue}  $hex';
+      case ReadoutSpace.cielab:
+        final lab = colorScience.toCIELAB(_sample.coordinates);
+        return 'L ${lab.lightness.round()}, a ${lab.a.toStringAsFixed(2)}, '
+            'b ${lab.b.toStringAsFixed(2)}';
+    }
+  }
+
+  /// Renders [v] without a redundant trailing `.0` (e.g. `6.0` → `6`, `5.5`
+  /// stays `5.5`), so the Munsell notation reads as the familiar `10R 5.5/6`.
+  static String _trimZero(double v) =>
+      v == v.roundToDouble() ? v.round().toString() : v.toString();
+
   /// Shows [space] in the selector, hiding the others.
   ///
-  /// The shell tracks the selection and notifies; the exclusive rendering of
-  /// each space's values (AC-5) lands in READOUT-4.
+  /// Tracks the selection and notifies; [spaceReadout] then renders only the
+  /// newly selected space, so the others are no longer shown (AC-5).
   void selectSpace(ReadoutSpace space) {
     if (space == _selectedSpace) return;
     _selectedSpace = space;

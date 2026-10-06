@@ -4,17 +4,17 @@ import 'readout_controller.dart';
 
 /// The colour-space selector: picks which space the readout shows (AC-5).
 ///
-/// Shell state: the four space options render as a button set and selecting one
-/// updates [ReadoutController.selectedSpace] (the seam READOUT-4 builds on). The
-/// region shows only a placeholder for the selected space — the real per-space
-/// values and the exclusive show-one-hide-the-rest rendering land in READOUT-4.
+/// The four space options render as a button set; selecting one updates
+/// [ReadoutController.selectedSpace] and the region below shows that space's
+/// values ([ReadoutController.spaceReadout]) and only that space's — the
+/// one-at-a-time rule: the other three are no longer shown.
 class SpaceSelector extends StatelessWidget {
   const SpaceSelector({required this.controller, super.key});
 
   /// Stable anchor for the selector.
   static const Key selectorKey = ValueKey('readout-space-selector');
 
-  /// Stable anchor for the selected-space value placeholder.
+  /// Stable anchor for the selected space's rendered values.
   static const Key valuesKey = ValueKey('readout-space-values');
 
   /// The controller holding (and updating) the selected space.
@@ -52,7 +52,7 @@ class SpaceSelector extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Text('${labelFor(controller.selectedSpace)} values —', key: valuesKey),
+        Text(controller.spaceReadout, key: valuesKey),
       ],
     );
   }

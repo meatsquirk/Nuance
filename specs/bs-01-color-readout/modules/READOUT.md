@@ -1,6 +1,6 @@
 # Module READOUT — Readout screen UI + controller
 
-**Status:** In progress — READOUT-3 done (name header + temperature: AC-3, AC-4 green); next READOUT-4 (colour-space selector)
+**Status:** In progress — READOUT-4 done (colour-space selector: AC-5 green); next READOUT-5 (provenance badges)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` — `readout_screen.dart` and per-region widgets
 (`value_region.dart`, `name_header.dart`, `temperature_line.dart`, `space_selector.dart`,
@@ -18,7 +18,7 @@
 | 1 | shell | — | ✅ Done | 7,613,743 | 14m 38s (14m 38s) |
 | 2 | behavior | AC-1, AC-2 | ✅ Done | 10,406,545 | 58m 47s (58m 48s) |
 | 3 | behavior | AC-3, AC-4 | ✅ Done | 8,419,171 | 15m 59s (15m 59s) |
-| 4 | behavior | AC-5 | ⬜ Todo | | |
+| 4 | behavior | AC-5 | ✅ Done | 7,596,426 | 12m 20s (12m 20s) |
 | 5 | behavior | AC-6, AC-7 | ⬜ Todo | | |
 | 6 | behavior | AC-9, AC-10, AC-11 | ⬜ Todo | | |
 
@@ -251,9 +251,61 @@
 - **Acceptance gate:** un-pend AC-5; `TestAC05_ColourSpaceSelector` green in run-pending (+ earlier ACs).
 - **Augments:** make AC-1's pre-seeded augmentation (value out-ranks the now-rendered space readings).
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** `readout_controller.dart` gained `spaceReadout` (the selected space's formatted values) and
+  `readoutForSpace(space)` (formats any space; exposed for unit testing each space's formatting). Each space
+  reads through `ColorScience`: CIELCh → `L 58, C 34, h 42°` (rounded); Munsell → `10R 5.5/6` (the familiar
+  notation, a `_trimZero` helper dropping a redundant `.0` chroma); sRGB → `192, 122, 101  #c07a65` (8-bit
+  triplet **and** hex); CIELAB → `L 58, a 25.27, b 22.75`. `space_selector.dart` now renders
+  `controller.spaceReadout` under `valuesKey` — only the selected space, so selecting another replaces it and
+  the others are no longer shown (the one-at-a-time rule, AC-5). Stale READOUT-4-pending doc comments on the
+  `ReadoutSpace` enum and the selector updated to describe the landed behaviour.
+- **AC-5 augmentation made (own AC, G6):** added `RegExp(r'\b\d{1,3},\s*\d{1,3},\s*\d{1,3}\b')` to the sRGB
+  `present` list in `readout_test.dart`, so the test now asserts the spec's "a triplet **and** a hex value"
+  (was hex only — the ITEST-2 borderline). Discriminates: the pre-READOUT-4 placeholder (`sRGB values —`) has
+  no triplet, so it would have failed before. Closes the one open augmentation; ITEST.md updated.
+- **AC-1 pre-seed decision:** confirmed **dropped** (already ❌ in ITEST-2). AC-1's "largest reading" is a
+  font-*size* check — the now-rendered space readings render at body ~14 vs the prominent 48, so the generic
+  "larger than every other body reading" already out-ranks them; a size augmentation adds no new assertion.
+- **Test-infra change (recorded):** AC-5 un-pended in `harness.dart`; `harness_test.dart` `unpended` set →
+  `{AC-1..AC-5}` and the pending-gate example switched from AC-5 (now landed) to AC-6 (still pending), keeping
+  the complement invariant non-vacuous. `readout_screen_test.dart`: the three widget tests that asserted the
+  old placeholder (`'CIELCh values —'` / `'Munsell values —'`) now assert the real readout via a `_spaceValues`
+  helper (CIELCh shows `°`; Munsell shows `10R` and no `°`).
+- **Gates:** `flutter analyze` clean; unit **168 pass** (+6: four per-space formats, `spaceReadout` tracks
+  selection, tracks a reloaded sample); coverage gate **100% line** on both touched lib files (PASS). Branch
+  coverage proven by design — all four `switch` cases and both `_trimZero` branches (5.5 non-integer, 6.0
+  integer) exercised. Acceptance (iOS sim `5AB9D06D…`, default mode): **AC-5 green**; AC-1..AC-4 stay green;
+  AC-6..12 skipped/pending; harness smoke + pending-gate + fakes green.
+- **Test grades:** independent fresh grader re-graded **all** un-pended tests live (AC-1..AC-5): **5×A, 0×B**.
+  AC-5 borderline closed to a clean A by the triplet augmentation; no downgrades. Grid:
+  `behavior-test-completeness-bs-01-color-readout.md` (§ Re-grade — READOUT-4).
+- **Augmentations made:** AC-5 sRGB triplet (above). **Carried:** none — the last open augmentation is now
+  closed. Justified exclusions: none.
+- **Fix passes: 0/3** — analyze, unit+coverage and acceptance all green on the first full run (the screen/
+  harness test updates were made alongside the behaviour, before the gate run).
+- **Closed by:** gate pass.
+- **Tokens:** 7,596,426 (claude-opus-4-8) · **Time:** 12m 20s active (12m 20s wall). **Phase total: 7,596,426 tokens, 12m 20s.**
+
+### Checkpoint / Handoff
+
+- **Frozen additions (for the later behaviour phases):**
+  - `ReadoutController.spaceReadout` (String — the selected space's values) and
+    `readoutForSpace(ReadoutSpace)` (formats any space). The selector renders `spaceReadout` under
+    `SpaceSelector.valuesKey`, exclusively (one space at a time).
+  - Formats are frozen: CIELCh `L <l>, C <c>, h <h>°` (rounded); Munsell `<hue> <value>/<chroma>` (`.0`
+    trimmed); sRGB `<r>, <g>, <b>  <#hex>`; CIELAB `L <l>, a <a.aa>, b <b.bb>`.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart <base>`. Acceptance:
+  boot the sim once (`xcrun simctl boot 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), then default
+  `flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; run-pending adds
+  `--dart-define=BS01_RUN_PENDING=true`.
+- **Known gaps (later phases):** provenance region is still a placeholder (AC-6/7 → READOUT-5); action
+  controls stay disabled (compare/recipes → READOUT-6; speak + just-captured → A11Y-2).
+- **Next phase should:** run **READOUT-5** (AC-6 Measured badge + AC-7 Estimated badge & note) — edits
+  `provenance_region.dart`. All READOUT behaviour phases edit the Readout screen/controller — **merge-risky,
+  run serially**. No open augmentations remain.
 
 ## Phase 5 — Behavior: provenance badges (AC-6, AC-7)
 

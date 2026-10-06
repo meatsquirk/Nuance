@@ -72,3 +72,45 @@ per the behaviour-phase grade gate. Grades **every** un-pended AC test (AC-1..AC
   `greaterThan` valid; were the name header not excluded, 48 > 48 would fail. The now-prominent name does not
   affect AC-1's strict-largest-over-the-value-reading claim.
 - **Counts:** 4×A, 0×B. No B to fix; no augmentations due this phase.
+
+## Re-grade — READOUT-4 (AC-5 un-pended)
+
+Graded 2026-10-06 by an independent fresh grader (fresh context) against the **live behaviour** (real `buildApp`
++ `ColorScienceImpl` — every member delegates to a real pure function, so AC-1..AC-5 run live, nothing throws),
+per the behaviour-phase grade gate. Grades **every** un-pended test AC-1..AC-5 (AC-6..AC-12 remain pending).
+
+- **AC-1 — `TestAC01_LightnessProminent`: A** (G1,G2,G4,G5,G6). Givens on surface ("Warm Terracotta" shown) +
+  input (`coordinates.lightness == 58`). **Discriminates:** `lightness`=58 at `prominentFontSize` 48; the newly
+  rendered space readings (`SpaceSelector.valuesKey` Text + the four `ChoiceChip` labels) all sit at body size
+  ~14, and the strict `greaterThan` over *every* non-excluded body paragraph out-ranks them — so the READOUT-4
+  readings do not threaten "largest" and the pre-seed augmentation stays redundant. Grayscale (`grayscaleKey`)
+  and Munsell "5.5" (rendered "Munsell value 5.5") both asserted; a non-prominent/grayscale-less/Munsell-less
+  impl fails.
+- **AC-2 — `TestAC02_ValueWord`: A** (G1,G2,G4,G5,G6). **Discriminates:** `valueWord(58)`="middle value",
+  `valueWord(15)`="very low value" (matches `\b(low|dark)\b`, not "middle"), `valueWord(90)`="very high value"
+  (contains "high", not "middle"); the L15/L90 controls force derivation from L and reject a constant "middle".
+- **AC-3 — `TestAC03_ColourName`: A** (G1,G2,G4,G5,G6). `unnamed.name == null` checked on the `Sample` surface;
+  `nameText` = `name ?? nearestName(...)`. **Discriminates:** `kNamedColors` holds an exact anchor
+  `(58, 25.27, 22.75)` = fixture coords (ΔE 0, global min), so the derived name is "Warm Terracotta"; an
+  echo-`Sample.name` impl shows null/placeholder and fails, a not-derived impl fails. Name at 48 `>=` every
+  other body paragraph (correctly `>=`, value number also 48) and header-above-value-region (top).
+- **AC-4 — `TestAC04_Temperature`: A** (G1,G2,G4,G5,G6). **Discriminates:** `temperatureWord(42)`="warm"
+  (arc to warm pole 60° = 18° ≤ 60°); `contains('warm')` **and** `isNot(contains('42'))` rejects the raw angle;
+  SAMPLE_COOL (hue ≈250° → arc to cool pole 240° = 10° → "cool", `isNot('warm')`) rejects "always warm".
+- **AC-5 — `TestAC05_ColourSpaceSelector`: A** (G1,G3,G4,G5,G6) — **prior borderline closed to a clean A.**
+  Present-checks all match the live `readoutForSpace` at full grain: CIELCh "L 58, C 34, h 42°" (58/34/42/°),
+  Munsell "10R 5.5/6" (`10R`, `5.5/6`), sRGB "192, 122, 101  #c07a65" (triplet **and** hex), CIELAB
+  "L 58, a 25.27, b 22.75" (58/25.27/22.75). **Exclusivity stays collision-safe after the triplet:** the four
+  cross-space signatures are unchanged (`°|deg`, `10R`, `#`+6 hex, `25.27`) — the triplet was added only to
+  sRGB's `present` list, never as a signature — and each signature is absent from the other three live outputs
+  (checked each: no `°`/`10R`/`#hex`/`25.27` bleeds across), so "space Y no longer shown" is unambiguous after
+  each `whenSelectSpace` settle (G3), with the four-space loop as the control that the reading changes.
+  **Discriminates** against the pre-READOUT-4 placeholder "<space> values —": that string contains none of the
+  present patterns (no 58/34/42/°, no 10R, no triplet/hex, no 25.27), so every space's present-check fails it;
+  it also rejects a show-all-at-once impl (exclusivity) and wrong values.
+- **AC-5 sRGB-triplet verdict:** the prior A (borderline) carried one G4 gap — only the hex was asserted, so an
+  impl rendering the hex but omitting the triplet would pass. READOUT-4 added
+  `RegExp(r'\b\d{1,3},\s*\d{1,3},\s*\d{1,3}\b')` to sRGB's `present` list; it matches the live "192, 122, 101"
+  and a hex-only impl now fails the present-check. The spec's "a triplet **and** a hex value" is now asserted at
+  full grain. **Borderline closed — AC-5 is a clean A.**
+- **Counts:** 5×A, 0×B. No B to fix; no augmentations outstanding.

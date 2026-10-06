@@ -259,8 +259,14 @@ void main() {
         signature: RegExp('10R'),
       ),
       _SpaceCase(
+        // AC-5 augmentation (READOUT-4): the spec's sRGB row is "a triplet AND
+        // a hex value". With the real per-space values rendered, assert both —
+        // the 8-bit r,g,b triplet as well as the hex — not the hex alone.
         space: ReadoutSpace.srgb,
-        present: [RegExp(r'#[0-9a-fA-F]{6}')],
+        present: [
+          RegExp(r'\b\d{1,3},\s*\d{1,3},\s*\d{1,3}\b'),
+          RegExp(r'#[0-9a-fA-F]{6}'),
+        ],
         signature: RegExp(r'#[0-9a-fA-F]{6}'),
       ),
       _SpaceCase(
