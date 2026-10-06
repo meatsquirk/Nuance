@@ -1,19 +1,24 @@
 import '../domain/color_coordinates.dart';
 import '../domain/sample.dart';
 import 'color_science.dart';
+import 'decomposition.dart' as decomposition;
+import 'naming.dart' as naming;
+import 'words.dart' as words;
 
-/// Placeholder [ColorScience] implementation for the shell stage (COLOR-1).
+/// The production [ColorScience] implementation.
 ///
-/// Every method throws [UnimplementedError]: COLOR-1 only declares the interface
-/// and wires the conversions dependency (D-2, `color_models` — its `LabColor`
-/// will drive the sRGB / CIELAB / CIELCh maths). The behaviour is filled in
-/// later against this same class:
+/// Behaviour is filled in against this same class across the COLOR enablers:
 ///
 /// * COLOR-2 — [toSRGB], [toHex], [toCIELCh], [toMunsell], [toCIELAB],
-///   [lightness], [grayscaleOf];
-/// * COLOR-3 — [nearestName], [valueWord], [temperatureWord], [decompose].
+///   [lightness], [grayscaleOf] (conversions, via `color_models`);
+/// * COLOR-3 — [nearestName] (naming), [valueWord] / [temperatureWord]
+///   (words) and [decompose] (spoken decomposition), delegating to
+///   `naming.dart`, `words.dart` and `decomposition.dart`.
 ///
-/// Registered into `buildApp` by CORE-3 (registration is deferred out of this
+/// Members whose enabler has not landed yet throw [UnimplementedError] via
+/// [_pending], naming the phase that fills them.
+///
+/// Registered into `buildApp` by CORE-3 (registration is deferred out of the
 /// shell — D-7).
 class ColorScienceImpl implements ColorScience {
   const ColorScienceImpl();
@@ -47,15 +52,14 @@ class ColorScienceImpl implements ColorScience {
       _pending('grayscaleOf', 'COLOR-2');
 
   @override
-  String nearestName(ColorCoordinates lab) =>
-      _pending('nearestName', 'COLOR-3');
+  String nearestName(ColorCoordinates lab) => naming.nearestColorName(lab);
 
   @override
-  String valueWord(double lightness) => _pending('valueWord', 'COLOR-3');
+  String valueWord(double lightness) => words.valueWord(lightness);
 
   @override
-  String temperatureWord(double hue) => _pending('temperatureWord', 'COLOR-3');
+  String temperatureWord(double hue) => words.temperatureWord(hue);
 
   @override
-  String decompose(Sample sample) => _pending('decompose', 'COLOR-3');
+  String decompose(Sample sample) => decomposition.decompose(sample);
 }
