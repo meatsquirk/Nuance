@@ -22,6 +22,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -342,6 +343,175 @@ void main() {
   // ITEST-3 — speak / navigation / just-captured (AC-8..AC-12)
   // (added here by ITEST-3; ∥ with the display group above)
   // ===========================================================================
+
+  // AC-8 — Asking to speak the readout produces one spoken utterance that states
+  // every required component of the reading: the name, the value, the
+  // temperature word, the hue in words, the chroma and the hue angle. The
+  // utterance is derived (COLOR-3 `decompose` + A11Y-2 speak action), so a shell
+  // that speaks nothing, or speaks only the name/a swatch, fails.
+  acTestWidgets('AC-8', 'Speaking the readout states name, value, temperature, hue words, chroma, angle',
+      (tester) async {
+    // Given: reading "Warm Terracotta" (L58, C34, h42°) and nothing spoken yet.
+    //  - the sample is loaded: its name renders on the readout (public surface);
+    //  - the FakeSpeech log is empty — the before state the When changes;
+    //  - the fixture's inputs are the values the Then's substrings are about.
+    final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA);
+    expect(find.text('Warm Terracotta'), findsOneWidget,
+        reason: 'AC-8 Given: the terracotta sample must be the one shown');
+    expect(harness.speech.utterances, isEmpty,
+        reason: 'AC-8 Given: nothing is spoken until the painter asks');
+    expect(SAMPLE_TERRACOTTA.coordinates.lightness, 58,
+        reason: 'AC-8 Given: the fixture under test has value (Lightness) 58');
+    expect(_hueDegrees(SAMPLE_TERRACOTTA.coordinates), closeTo(42, 0.5),
+        reason: 'AC-8 Given: the fixture under test is at hue ~42°');
+    expect(_chroma(SAMPLE_TERRACOTTA.coordinates), closeTo(34, 0.5),
+        reason: 'AC-8 Given: the fixture under test has chroma ~34');
+
+    // When: the painter asks to speak this readout.
+    await harness.whenSpeak();
+
+    // Then: exactly one utterance was spoken (the whole readout, not a stream of
+    // fragments), and that one utterance states each required component.
+    expect(harness.speech.utterances, hasLength(1),
+        reason: 'AC-8: asking to speak produces one utterance for the whole '
+            'readout (A11Y-2)');
+    final spoken = harness.speech.utterances.single;
+    final lower = spoken.toLowerCase();
+    expect(spoken, contains('Warm Terracotta'),
+        reason: 'AC-8: the spoken output states the name (A11Y-2)');
+    expect(spoken, contains('58'),
+        reason: 'AC-8: the spoken output states the value — Lightness 58 (A11Y-2)');
+    // Strip the name before checking the temperature word: the name "Warm
+    // Terracotta" already contains "warm", so an impl that omits the *separate*
+    // temperature word would otherwise pass vacuously on the name alone.
+    final withoutName = lower.replaceAll('warm terracotta', '');
+    expect(withoutName, contains('warm'),
+        reason: 'AC-8: the spoken output states the temperature word "warm", '
+            'distinct from the name (COLOR-3/A11Y-2)');
+    expect(lower, matches(RegExp(r'\b(orange|red)\b')),
+        reason: 'AC-8: the spoken output states the hue in words (a warm hue '
+            'family — "orange"/"red" for h42°/10R), not just the angle '
+            '(COLOR-3/A11Y-2)');
+    expect(spoken, contains('34'),
+        reason: 'AC-8: the spoken output states the chroma — C34 (COLOR-3/A11Y-2)');
+    expect(spoken, contains('42'),
+        reason: 'AC-8: the spoken output states the hue angle — 42° (A11Y-2)');
+  });
+
+  // AC-9 — Carrying the reading into comparison slot A navigates to the
+  // Comparison screen with the sample in slot A (and slot B empty). Control pair
+  // with AC-10: this one proves slot A, AC-10 proves slot B, so an impl that
+  // always uses one slot fails exactly one of the pair.
+  acTestWidgets('AC-9', 'Using the reading as comparison A opens Comparison with it in slot A',
+      (tester) async {
+    // Given: reading "Warm Terracotta", not already on the Comparison screen.
+    final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA);
+    expect(find.text('Warm Terracotta'), findsOneWidget,
+        reason: 'AC-9 Given: the terracotta sample must be the one shown');
+    expect(find.text('Comparison'), findsNothing,
+        reason: 'AC-9 Given: the painter starts on the Readout, not Comparison');
+
+    // When: the painter uses the reading as comparison sample A.
+    await harness.whenCompareAs(ComparisonSlot.a);
+
+    // Then: the Comparison screen is shown with "Warm Terracotta" in slot A and
+    // slot B empty (so the handoff carried the sample, into the chosen slot).
+    expect(find.text('Comparison'), findsOneWidget,
+        reason: 'AC-9: the Comparison screen must be shown (READOUT-6)');
+    expect(find.text('Slot A: Warm Terracotta'), findsOneWidget,
+        reason: 'AC-9: "Warm Terracotta" must be carried into slot A (READOUT-6)');
+    expect(find.text('Slot B: (empty)'), findsOneWidget,
+        reason: 'AC-9: only slot A is filled — slot B stays empty (READOUT-6)');
+  });
+
+  // AC-10 — Carrying the reading into comparison slot B navigates to the
+  // Comparison screen with the sample in slot B (and slot A empty). Control pair
+  // with AC-9.
+  acTestWidgets('AC-10', 'Using the reading as comparison B opens Comparison with it in slot B',
+      (tester) async {
+    // Given: reading "Warm Terracotta", not already on the Comparison screen.
+    final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA);
+    expect(find.text('Warm Terracotta'), findsOneWidget,
+        reason: 'AC-10 Given: the terracotta sample must be the one shown');
+    expect(find.text('Comparison'), findsNothing,
+        reason: 'AC-10 Given: the painter starts on the Readout, not Comparison');
+
+    // When: the painter uses the reading as comparison sample B.
+    await harness.whenCompareAs(ComparisonSlot.b);
+
+    // Then: the Comparison screen is shown with "Warm Terracotta" in slot B and
+    // slot A empty.
+    expect(find.text('Comparison'), findsOneWidget,
+        reason: 'AC-10: the Comparison screen must be shown (READOUT-6)');
+    expect(find.text('Slot B: Warm Terracotta'), findsOneWidget,
+        reason: 'AC-10: "Warm Terracotta" must be carried into slot B (READOUT-6)');
+    expect(find.text('Slot A: (empty)'), findsOneWidget,
+        reason: 'AC-10: only slot B is filled — slot A stays empty (READOUT-6)');
+  });
+
+  // AC-11 — Asking to find mixing recipes navigates to the Recipes screen with
+  // the reading as the mixing target.
+  acTestWidgets('AC-11', 'Finding recipes opens the Recipes screen with the reading as the target',
+      (tester) async {
+    // Given: reading "Deep Olive Green", not already on the Recipes screen.
+    final harness = await givenReadoutOf(tester, SAMPLE_OLIVE);
+    expect(find.text('Deep Olive Green'), findsOneWidget,
+        reason: 'AC-11 Given: the olive sample must be the one shown');
+    expect(find.text('Recipes'), findsNothing,
+        reason: 'AC-11 Given: the painter starts on the Readout, not Recipes');
+
+    // When: the painter asks to find mixing recipes for the reading.
+    await harness.whenFindRecipes();
+
+    // Then: the Recipes screen is shown with "Deep Olive Green" as the target
+    // (so the handoff set a target, and the right sample).
+    expect(find.text('Recipes'), findsOneWidget,
+        reason: 'AC-11: the Recipes screen must be shown (READOUT-6)');
+    expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget,
+        reason: 'AC-11: "Deep Olive Green" must be the recipe target (READOUT-6)');
+  });
+
+  // AC-12 — A freshly captured reading fires one haptic confirmation on landing
+  // and is marked "just captured" until the painter acknowledges it, when both
+  // the marker clears. Control: a non-fresh reading fires no haptic and shows no
+  // marker, so the confirmation is tied to the just-captured state (not always
+  // on).
+  acTestWidgets('AC-12', 'A just-captured reading confirms with a haptic and a marker until acknowledged',
+      (tester) async {
+    // Given: the painter has just captured "Deep Olive Green" and its readout is
+    // shown. bs-01 has no capture flow (that is bs-02), so the harness simulates
+    // a capture by marking the injected sample just-captured; the readout then
+    // renders exactly as it would straight after a capture.
+    final harness = await givenJustCapturedReadoutOf(tester, SAMPLE_OLIVE);
+    expect(find.text('Deep Olive Green'), findsOneWidget,
+        reason: 'AC-12 Given: the just-captured olive sample must be the one shown');
+
+    // Then: a haptic confirmation fired exactly once that the reading landed
+    // (settle = the readout has rendered), and the reading is marked "just
+    // captured".
+    expect(harness.haptics.confirmations, 1,
+        reason: 'AC-12: a just-captured reading fires one haptic confirmation on '
+            'landing (A11Y-2)');
+    expect(find.textContaining(RegExp('just[ -]?captured', caseSensitive: false)),
+        findsWidgets,
+        reason: 'AC-12: the reading is marked "just captured" (A11Y-2)');
+
+    // ...until the painter acknowledges it: after acknowledging (settle), the
+    // marker is gone — the before/after pair shows the marker can change.
+    await harness.whenAcknowledge();
+    expect(find.textContaining(RegExp('just[ -]?captured', caseSensitive: false)),
+        findsNothing,
+        reason: 'AC-12: acknowledging clears the just-captured marker (A11Y-2)');
+
+    // Control: a reading that was NOT just captured fires no haptic and shows no
+    // marker — so the confirmation and marker are tied to the fresh capture.
+    final notFresh = await givenReadoutOf(tester, SAMPLE_OLIVE);
+    expect(notFresh.haptics.confirmations, 0,
+        reason: 'AC-12 control: a non-fresh reading fires no haptic confirmation');
+    expect(find.textContaining(RegExp('just[ -]?captured', caseSensitive: false)),
+        findsNothing,
+        reason: 'AC-12 control: a non-fresh reading shows no just-captured marker');
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +544,9 @@ double _hueDegrees(ColorCoordinates c) {
   final deg = math.atan2(c.b, c.a) * 180 / math.pi;
   return deg < 0 ? deg + 360 : deg;
 }
+
+/// The CIELCh chroma (C\*) of CIELAB [c] — `hypot(a*, b*)`.
+double _chroma(ColorCoordinates c) => math.sqrt(c.a * c.a + c.b * c.b);
 
 /// One colour-space row for the AC-5 selector test: the space, the value
 /// patterns that must be [present] once selected, and the collision-safe

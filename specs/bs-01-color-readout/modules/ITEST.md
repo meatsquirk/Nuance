@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1, ITEST-2 done (AC-1..7 pending + red baseline, grade A); next ITEST-3 → ITEST-4
+**Status:** In progress — ITEST-1/2/3 done (AC-1..12 pending + red baseline, grade all A); next ITEST-4 (test review, G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/` — `harness.dart` (Given/When/Then vocabulary, fixtures, pending
 gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake_speech.dart`,
@@ -13,7 +13,7 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 7,980,954 | 29m 01s (1h 13m) |
 | 2 | acceptance-tests | AC-1..AC-7 | ✅ Done | 6,226,248 | 27m 50s |
-| 3 | acceptance-tests | AC-8..AC-12 | ⬜ Todo | | |
+| 3 | acceptance-tests | AC-8..AC-12 | ✅ Done | 6,061,969 | 17m 53s |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -195,9 +195,56 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 - **Exit criteria:** as ITEST-2.
 - **Acceptance gate:** *(AC-test)* suite green with new tests pending; red baseline recorded; grade gate passed.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed** in `integration_test/readout_test.dart` — the **actions group** (AC-8..AC-12), one pending test
+  per AC via `acTestWidgets`, driving the real `buildApp` through the harness vocabulary (added
+  `import app/router.dart` for `ComparisonSlot`, and a `_chroma` helper beside `_hueDegrees`). Each asserts the
+  catalogue's Then tightly: **AC-8** — one utterance (`hasLength(1)`) stating name "Warm Terracotta", value
+  "58", temperature "warm" (asserted against the **name-stripped** utterance so the name's "Warm" can't satisfy
+  it), hue in words (`\b(orange|red)\b`), chroma "34", hue angle "42", with the fixture's L/hue/chroma asserted
+  as Givens; **AC-9/AC-10** — a control pair asserting the Comparison screen with the sample in the chosen slot
+  **and** the other slot `(empty)` (exact stub strings), rejecting "always slot X"; **AC-11** — the Recipes
+  screen with the exact "Recipe target: Deep Olive Green"; **AC-12** — one haptic pulse on render
+  (`confirmations == 1`) + a visible "just captured" marker, cleared after acknowledge, with a non-fresh control
+  (fresh `FakeHaptics`, `confirmations == 0`, no marker).
+- **Red baseline:** all 5 execute under `--dart-define=BS01_RUN_PENDING=true` and **fail on a Then** (none
+  panics), each naming its owning phase — rows in the Red baseline table above (AC-8/AC-12 → A11Y-2,
+  AC-9/10/11 → READOUT-6). All Givens pass today (sample shown; empty speech log; not-on-destination).
+- **Acceptance gate:** default run green (5 harness/guard pass, **12** ACs pending-skipped); red baseline
+  recorded. **Suites:** acceptance (this feature, both modes) on iPhone 17 sim (iOS 26.5); unit 92 green on
+  host; coverage gate **PASS** (only `readout_test.dart` touched — test-only, nothing to gate); `flutter
+  analyze` clean.
+- **Test grades: A** (5×A, 0×B) — graded by a fresh independent subagent against G1–G6; grid at
+  `specs/bs-01-color-readout/behavior-test-completeness-bs-01-color-readout.md`. **AC-8 was graded B (G5)** —
+  `lower.contains('warm')` was vacuously satisfied by the name "Warm Terracotta"; **fixed** by asserting the
+  temperature word against the name-stripped utterance, re-graded A. Augmentations: none new.
+  Exclusions: none.
+- **Fix passes: 1/3** — the AC-8 G5 fix (name-stripped temperature assertion). No code moved for the others.
+- Tokens: 6,061,969 (claude-opus-4-8) · Time: 17m 53s active (17m 53s wall). **Phase total: 6,061,969 tokens, 17m 53s.**
+
+### Checkpoint / Handoff
+
+- **The whole AC catalogue (AC-1..AC-12) is now written and pending**, grade all A; ITEST-4 (test review, G-2)
+  assembles the packet from the two grade summaries + the Red baseline table. No AC-test phases remain.
+- **Behaviour-phase anchors added by ITEST-3** (assert against these exactly):
+  - **AC-8 (A11Y-2 + COLOR-3):** the speak action produces **exactly one** `Speech.speak` call whose text
+    contains the name, the value number `58`, the temperature word `warm` (**distinct from the name** — the
+    test strips "Warm Terracotta" before checking), a hue word matching `orange|red`, the chroma `34` and the
+    hue angle `42`. COLOR-3's `decompose(sample)` must emit all six components in one string.
+  - **AC-9/AC-10/AC-11 (READOUT-6):** the compare/recipes actions navigate so the stub screens render —
+    Comparison shows `Slot A: <name>` / `Slot B: <name>` (unfilled slot = `(empty)`); Recipes shows
+    `Recipe target: <name>`. The actions must carry the sample into the **chosen** slot / as the target.
+  - **AC-12 (A11Y-2):** a just-captured readout must (a) fire `Haptics.confirm()` **exactly once** on first
+    render, and (b) render a visible "just captured" marker (text matching `just[ -]?captured`, case-insensitive
+    — **no lib key exists for it yet; A11Y-2 must add the marker text/semantics**) that clears when
+    `acknowledge()` runs. A non-fresh readout fires no haptic and shows no marker.
+- **Run-pending mode unchanged:** `flutter test integration_test/ -d <udid> --dart-define=BS01_RUN_PENDING=true`
+  (default run omits the define; export `PATH="$HOME/development/flutter/bin:$PATH"`, boot sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` first). CI's un-pend job must pass the dart-define.
+- **Known gaps:** AC-8..AC-12 stay red until A11Y-2 / READOUT-6 land (behind G-2). No new augmentations; the
+  one open augmentation (AC-5 sRGB triplet, READOUT-4) is unchanged.
+- **Next phase:** ITEST-4 (test review, **G-2**) — the stage's last phase; it gates the whole behaviour stage.
 
 ## Phase 4 — Test review (G-2)
 
@@ -231,11 +278,11 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 | AC-5 | AC-5 (ColourSpaceSelector) | FAIL (Then) | space values absent (shows "CIELCh values —") | READOUT-4 | A |
 | AC-6 | AC-6 (MeasuredBadge) | FAIL (Then) | "Measured" absent (shows "Provenance —") | READOUT-5 | A |
 | AC-7 | AC-7 (EstimatedBadge) | FAIL (Then) | "Estimated"/note absent (shows "Provenance —") | READOUT-5 | A |
-| AC-8 | TestAC08_SpeakReadout | (to record) | Then: utterance components | A11Y-2 | |
-| AC-9 | TestAC09_CompareAsA | (to record) | Then: slot A carries sample | READOUT-6 | |
-| AC-10 | TestAC10_CompareAsB | (to record) | Then: slot B carries sample | READOUT-6 | |
-| AC-11 | TestAC11_FindRecipes | (to record) | Then: Recipes target set | READOUT-6 | |
-| AC-12 | TestAC12_JustCaptured | (to record) | Then: haptic + marker lifecycle | A11Y-2 | |
+| AC-8 | AC-8 (SpeakReadout) | FAIL (Then) | `speech.utterances` length 0 ≠ 1 (speak action not wired) | A11Y-2 | A |
+| AC-9 | AC-9 (CompareAsA) | FAIL (Then) | Comparison screen not shown (no nav handoff) | READOUT-6 | A |
+| AC-10 | AC-10 (CompareAsB) | FAIL (Then) | Comparison screen not shown (no nav handoff) | READOUT-6 | A |
+| AC-11 | AC-11 (FindRecipes) | FAIL (Then) | Recipes screen not shown (no nav handoff) | READOUT-6 | A |
+| AC-12 | AC-12 (JustCaptured) | FAIL (Then) | `haptics.confirmations` 0 ≠ 1 (no haptic on render) | A11Y-2 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
