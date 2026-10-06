@@ -125,8 +125,22 @@ const Set<String> behaviorPhases = {
   'A11Y-2',
 };
 
+/// Run-pending mode requested at build time via `--dart-define`.
+///
+/// `flutter test integration_test/` runs the tests in the app process *on the
+/// device/simulator*, which does not inherit the host shell's environment — so
+/// a `BS01_RUN_PENDING=1` env var set on the host never reaches [runPending]
+/// there. A compile-time `--dart-define=BS01_RUN_PENDING=true` does. (The
+/// `Platform.environment` path below still serves any host-process run.)
+const bool _runPendingDefine =
+    bool.fromEnvironment('BS01_RUN_PENDING', defaultValue: false);
+
 /// Whether pending ACs should execute (the run-pending mode).
-bool get runPending => Platform.environment['BS01_RUN_PENDING'] == '1';
+///
+/// On-device: pass `--dart-define=BS01_RUN_PENDING=true`. Host-process runs may
+/// also set the `BS01_RUN_PENDING=1` environment variable.
+bool get runPending =>
+    _runPendingDefine || Platform.environment['BS01_RUN_PENDING'] == '1';
 
 /// The reason to skip [acId] in this run, or null if it should execute.
 ///
@@ -140,7 +154,7 @@ String? pendingSkipReason(String acId, {bool? forceRunPending}) {
   final owner = pendingACs[acId];
   if (owner == null) return null;
   if (forceRunPending ?? runPending) return null;
-  return 'pending $owner — set BS01_RUN_PENDING=1 to run';
+  return 'pending $owner — --dart-define=BS01_RUN_PENDING=true to run';
 }
 
 /// Registers an AC acceptance test wired to the pending gate.

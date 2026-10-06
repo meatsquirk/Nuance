@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 done (harness, fixtures, pending gate, smoke); next ITEST-2 ∥ ITEST-3
+**Status:** In progress — ITEST-1, ITEST-2 done (AC-1..7 pending + red baseline, grade A); next ITEST-3 → ITEST-4
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/` — `harness.dart` (Given/When/Then vocabulary, fixtures, pending
 gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake_speech.dart`,
@@ -12,7 +12,7 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 7,980,954 | 29m 01s (1h 13m) |
-| 2 | acceptance-tests | AC-1..AC-7 | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1..AC-7 | ✅ Done | 6,226,248 | 27m 50s |
 | 3 | acceptance-tests | AC-8..AC-12 | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -27,9 +27,13 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
   `integration_test/` to **on-device** execution — plain `flutter test integration_test/` finds no device and
   exits 0 having run **zero** tests (a false green). The suite therefore runs on a **booted iOS simulator**:
   `flutter test integration_test/ -d <udid>` (default — pending ACs skipped) and
-  `BS01_RUN_PENDING=1 flutter test integration_test/ -d <udid>` (run-pending). D-6 (integration_test package)
-  is kept; host-headless is not available here (the project has no desktop platform folder). **CI must add an
-  emulator** before wiring the acceptance job (the `ci.yml` unit job is unaffected).
+  `flutter test integration_test/ -d <udid> --dart-define=BS01_RUN_PENDING=true` (run-pending). D-6
+  (integration_test package) is kept; host-headless is not available here (the project has no desktop platform
+  folder). **CI must add an emulator** and **pass the dart-define** for the run-pending/un-pend job before
+  wiring the acceptance job (the `ci.yml` unit job is unaffected). *(ITEST-2 finding: the old env-var form
+  `BS01_RUN_PENDING=1 flutter test …` silently skipped pending tests on-device — the simulator app process
+  does not inherit the host shell env; `runPending` now reads the compile-time dart-define, with the host-env
+  path kept for any host-process run.)*
 - **Observation points:** AC-1/2/3/4/5/6/7 — rendered text, keys, relative font sizes on the Readout screen;
   AC-5 also asserts the other spaces' value strings are absent after a switch; AC-8 — the `FakeSpeech`
   utterance log; AC-9/10/11 — the current route = the stub Comparison/Recipes screen rendering the carried
@@ -125,9 +129,59 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
   precondition naming its owning phase; grade grid all A (or *B pending <phase>* with an augmentation row).
 - **Acceptance gate:** *(AC-test)* suite green with new tests pending; red baseline recorded; grade gate passed.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed** `integration_test/readout_test.dart` — the display group: one pending test per AC-1..AC-7 via
+  `acTestWidgets`, driving the real `buildApp` through the harness vocabulary. Each asserts the catalogue's
+  Then tightly and carries its control: AC-1 Lightness is the **strictly largest** body reading (every
+  RichText except the name header + action labels) with grayscale + Munsell 5.5; AC-2 value word tied to L
+  via dark(L15→"low/dark")/light(L90→"high") controls, rejecting "always middle"; AC-3 forces the name to be
+  **derived** (input sample has no name → shell shows "Unnamed sample") and asserts top-position + largest
+  font; AC-4 asserts the word "warm" and rejects the hue angle, with a cool (hue 250°) control; AC-5 selects
+  each space and checks its values present + the other three absent via collision-safe signatures
+  (`°`/`10R`/`#`hex/`25.27`); AC-6/AC-7 assert the exact Measured / "Estimated — not yet verified" +
+  "Seeded by a model…" strings, each with a cross-tier control.
+- **Harness fix (recorded):** the run-pending mode never actually executed a pending body on-device —
+  `flutter test integration_test/` runs in the app process on the simulator, which does **not** inherit the
+  host shell env, so `BS01_RUN_PENDING=1` never reached `runPending` there (ITEST-1's guard test only
+  exercised the `forceRunPending` override, so the gap was latent). `harness.dart#runPending` now also honours
+  a compile-time `--dart-define=BS01_RUN_PENDING=true`; the host-env path is kept. **Run-pending command is
+  now:** `flutter test integration_test/ -d <udid> --dart-define=BS01_RUN_PENDING=true`.
+- **Red baseline:** all 7 execute under the dart-define and **fail on a Then** (none panics), each naming its
+  owning phase — rows below. Given preconditions (sample loaded, L58/hue42/tier, name-null) all pass today.
+- **Acceptance gate:** default run green (5 harness/guard pass, 7 ACs pending-skipped); red baseline recorded.
+  **Suites:** acceptance (this feature, both modes) on iPhone 17 sim; unit 92 green on host; coverage gate
+  **PASS** (no `lib/` touched — test-only); `flutter analyze` clean.
+- **Test grades: A** (7×A, 0×B) — graded by a fresh independent subagent against G1–G6; grid at
+  `specs/bs-01-color-readout/behavior-test-completeness-bs-01-color-readout.md`. AC-5 is a borderline A (sRGB
+  asserts the hex but not also a triplet — folded into READOUT-4 as an augmentation, below). The pre-seeded
+  TestAC01 size augmentation is **dropped** — AC-1 already out-ranks every reading incl. the space readings.
+- **Fix passes: 0/3** — the one iteration was the run-pending propagation discovery (harness dart-define fix),
+  resolved before any grade.
+- Tokens: 6,226,248 (claude-opus-4-8) · Time: 27m 50s active (27m 50s wall). **Phase total: 6,226,248 tokens, 27m 50s.**
+
+### Checkpoint / Handoff
+
+- **Frozen for ITEST-3 and the behaviour phases:**
+  - `integration_test/readout_test.dart` has one `main()`; the **display group (AC-1..AC-7)** occupies the top
+    region, and the helpers (`_paragraphsUnder` / `_paragraphsUnder2` → RichText render objects under a
+    key/finder; `_plainTextUnder` → joined plain text; `_fontSize`; `_hueDegrees`; `_SpaceCase`) sit at the
+    file bottom. ITEST-3 adds the **actions group (AC-8..AC-12)** inside `main()` at the marked region below
+    the display group, reusing or extending these helpers.
+  - **Un-pend contract unchanged:** delete the AC's row from `pendingACs` in `harness.dart`.
+- **Run-pending mode (CHANGED):** use `--dart-define=BS01_RUN_PENDING=true`, **not** the env var, on-device.
+  Full commands: default `flutter test integration_test/ -d <udid>`; red-baseline/un-pend
+  `flutter test integration_test/ -d <udid> --dart-define=BS01_RUN_PENDING=true`. (Export
+  `export PATH="$HOME/development/flutter/bin:$PATH"`; sim udid `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; boot
+  first.) **CI's acceptance job must pass the dart-define** or pending ACs silently skip.
+- **For the behaviour phases:** the display tests assert against these exact anchors — ValueRegion (`58`,
+  `5.5`, grayscaleKey), NameHeader (derived name, largest + top), TemperatureLine (`warm`/`cool`, no angle),
+  SpaceSelector.valuesKey (per-space values + exclusivity signatures `°`/`10R`/`#`hex/`25.27`),
+  ProvenanceRegion (exact Measured / Estimated strings + note). READOUT-4 should render hue with a degree
+  indicator and CIELAB a*/b* as `25.27`/`22.75` to satisfy AC-5, and add the sRGB triplet augmentation.
+- **Known gaps:** AC-8..AC-12 not written yet (ITEST-3). The 7 display ACs stay red until their owning phases
+  (READOUT-2/3/4/5, with COLOR-2/3 enablers) land.
+- **Next phase:** ITEST-3 (AC-8..AC-12) → ITEST-4 (test review, **G-2**).
 
 ## Phase 3 — AC tests: speak, navigation, just-captured (AC-8..AC-12)
 
@@ -170,13 +224,13 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_LightnessProminent | (to record) | Then: L largest / Munsell value | READOUT-2 | |
-| AC-2 | TestAC02_ValueWord | (to record) | Then: value word present | READOUT-2 | |
-| AC-3 | TestAC03_ColourName | (to record) | Then: large name header | READOUT-3 | |
-| AC-4 | TestAC04_Temperature | (to record) | Then: temperature word | READOUT-3 | |
-| AC-5 | TestAC05_ColourSpaceSelector | (to record) | Then: space values + exclusivity | READOUT-4 | |
-| AC-6 | TestAC06_MeasuredBadge | (to record) | Then: "Measured" badge | READOUT-5 | |
-| AC-7 | TestAC07_EstimatedBadge | (to record) | Then: "Estimated…" + note | READOUT-5 | |
+| AC-1 | AC-1 (LightnessProminent) | FAIL (Then) | Lightness 58 not rendered in value region | READOUT-2 | A |
+| AC-2 | AC-2 (ValueWord) | FAIL (Then) | value word "middle" absent | READOUT-2 | A |
+| AC-3 | AC-3 (ColourName) | FAIL (Then) | derived name not in header (Givens pass) | READOUT-3 | A |
+| AC-4 | AC-4 (Temperature) | FAIL (Then) | word "warm" absent (shows "Temperature —") | READOUT-3 | A |
+| AC-5 | AC-5 (ColourSpaceSelector) | FAIL (Then) | space values absent (shows "CIELCh values —") | READOUT-4 | A |
+| AC-6 | AC-6 (MeasuredBadge) | FAIL (Then) | "Measured" absent (shows "Provenance —") | READOUT-5 | A |
+| AC-7 | AC-7 (EstimatedBadge) | FAIL (Then) | "Estimated"/note absent (shows "Provenance —") | READOUT-5 | A |
 | AC-8 | TestAC08_SpeakReadout | (to record) | Then: utterance components | A11Y-2 | |
 | AC-9 | TestAC09_CompareAsA | (to record) | Then: slot A carries sample | READOUT-6 | |
 | AC-10 | TestAC10_CompareAsB | (to record) | Then: slot B carries sample | READOUT-6 | |
@@ -187,4 +241,5 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC01 | until the colour-space readings render (READOUT-4), fewer readings exist to prove Lightness is *largest* | READOUT-4 | assert L font size > each space reading too | ⬜ Open |
+| TestAC01 | ~~until the colour-space readings render, fewer readings exist to prove Lightness is *largest*~~ | READOUT-4 | — | ❌ Dropped (ITEST-2): AC-1 already asserts L strictly larger than **every** body reading (incl. space readings once rendered); READOUT-4 adds no new assertion, so it fails the "would have failed before" discriminate test. |
+| TestAC05 | the spec's sRGB row is "a triplet **and** a hex"; the test asserts the hex only (no exact triplet value in the spec, so G4 doesn't bite — graded A) | READOUT-4 | add a triplet pattern (three 0–255 ints) to the sRGB `present` list once READOUT-4 fixes the format | ⬜ Open |
