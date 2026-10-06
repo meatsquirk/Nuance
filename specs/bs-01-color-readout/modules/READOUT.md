@@ -1,6 +1,6 @@
 # Module READOUT — Readout screen UI + controller
 
-**Status:** In progress — READOUT-5 done (provenance badges: AC-6, AC-7 green); next READOUT-6 (navigation handoffs)
+**Status:** ✅ Complete — all six phases done (READOUT-6 landed AC-9/AC-10/AC-11, the navigation handoffs)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` — `readout_screen.dart` and per-region widgets
 (`value_region.dart`, `name_header.dart`, `temperature_line.dart`, `space_selector.dart`,
@@ -20,7 +20,7 @@
 | 3 | behavior | AC-3, AC-4 | ✅ Done | 8,419,171 | 15m 59s (15m 59s) |
 | 4 | behavior | AC-5 | ✅ Done | 7,596,426 | 12m 20s (12m 20s) |
 | 5 | behavior | AC-6, AC-7 | ✅ Done | 6,292,987 | 16m 03s (16m 03s) |
-| 6 | behavior | AC-9, AC-10, AC-11 | ⬜ Todo | | |
+| 6 | behavior | AC-9, AC-10, AC-11 | ✅ Done | 5,667,325 | 10m 50s |
 
 ## Interface reconciliation
 
@@ -382,6 +382,56 @@ starting point." beneath it (AC-7). Label + note are folded into one semantics a
 - **Acceptance gate:** un-pend AC-9, AC-10, AC-11; `TestAC09/10/11_*` green in run-pending (+ earlier ACs).
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+**READOUT-6 done (2026-10-06).** The actions bar now wires the three navigation handoffs: **Compare as A** and
+**Compare as B** open the Comparison screen with the reading in the chosen slot (AC-9/AC-10), and **Find mixing
+recipes** opens the Recipes screen with the reading as the target (AC-11). Speak + Acknowledge stay disabled
+placeholders (A11Y-2). READOUT module complete.
+
+- **What landed:** `readout_controller.dart` gained `comparisonRoute(ComparisonSlot)` → `router.toComparison(
+  _sample, slot)` and `recipesRoute()` → `router.toRecipes(_sample)` (the handoffs read the *current* sample,
+  so they track `load()`). `actions_bar.dart` enabled the three navigation buttons, each pushing its route via
+  `Navigator.of(context)`; speak/acknowledge keep `onPressed: null`. Import of `../app/router.dart` added for
+  `ComparisonSlot`; the controller's import widened to `package:flutter/widgets.dart` for `Route`.
+- **Unit:** +8 — 4 controller tests (comparisonRoute A/B carry the sample + slot, recipesRoute targets the
+  sample, a handoff after `load()` carries the reloaded sample) via a recording `AppRouter` subclass; 3
+  ActionsBar widget tests tapping each button and asserting the stub-screen handoff. `readout_screen_test.dart`
+  "disabled placeholder" test rewritten: compare-A/B + recipes now **enabled**, speak + acknowledge still
+  disabled. `flutter analyze` clean; **184 unit tests pass**; coverage gate **100% line** on both touched lib
+  files.
+- **Acceptance (iOS sim `5AB9D06D…`, default mode):** AC-9/AC-10/AC-11 un-pended → **green**; AC-1..7 stay
+  green; AC-8/AC-12 skip (pending A11Y-2); harness smoke + pending-gate + fakes green (15 pass, 2 skip).
+- **Test-infra change (recorded):** AC-9/10/11 rows removed from `harness.dart` `pendingACs` (now `{AC-8,
+  AC-12}`); `harness_test.dart` `unpended` set extended to include AC-9/10/11 (the "still pending" example
+  stays AC-8, owned by A11Y-2) — keeps the complement-across-12 invariant non-vacuous. No AC test weakened.
+- **Grade gate:** independent fresh re-grade of every un-pended AC test (AC-1..7, AC-9, AC-10, AC-11) against
+  live behaviour → **10×A, 0×B, no downgrades**. AC-9/10/11 verified adversarially: the exact filled+empty slot
+  strings reject always-one-slot / carry-nothing / wrong-sample (AC-9↔AC-10 a control pair); AC-11's exact
+  "Recipe target: Deep Olive Green" rejects no-target/wrong-sample. Grid:
+  `../behavior-test-completeness-bs-01-color-readout.md` (§ Re-grade — READOUT-6).
+- **Augmentations:** none assigned; none newly enabled. **Justified exclusions:** none. **Fix passes: 0/3** —
+  analyze, unit+coverage and acceptance all green on the first full run.
+- **Closed by:** gate pass.
+- **Tokens:** 5,667,325 (claude-opus-4-8) · **Time:** 10m 50s active (10m 50s wall). **Phase total: 5,667,325 tokens, 10m 50s.**
+
+### Checkpoint / Handoff
+
+- **Frozen additions:** `ReadoutController.comparisonRoute(ComparisonSlot)` and `ReadoutController.recipesRoute()`
+  build the handoff routes from the *current* sample (via the injected `AppRouter`); the actions bar pushes
+  them with `Navigator.of(context)`. Compare-A/B + find-recipes controls are now enabled; speak + acknowledge
+  remain disabled until A11Y-2.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart <base>`. Acceptance: boot
+  the sim once (`xcrun simctl boot 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), then default
+  `flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; run-pending adds
+  `--dart-define=BS01_RUN_PENDING=true`. Un-pend an AC by deleting its `pendingACs` row in `harness.dart`
+  **and** updating the two `harness_test.dart` pending-gate self-tests (`unpended` set + the "still pending"
+  example). Plain `flutter test integration_test/` (no `-d`) is a false green.
+- **Known gaps (later phases):** speak + just-captured/haptic action controls stay disabled → A11Y-2 (AC-8,
+  AC-12), the last behaviour phase. The Comparison/Recipes destinations are bs-01 stubs (bs-03/bs-04 replace
+  them behind the same typed routes).
+- **Next phase should:** run **A11Y-2** (AC-8 speak + AC-12 haptic/just-captured) — the last startable
+  behaviour phase, edits the Readout screen/controller + actions bar (speak/acknowledge) and the A11Y services,
+  **merge-risky with READOUT** so still serial. Once A11Y-2 lands, all 12 ACs are green and **SIGNOFF-1** is
+  startable. No open augmentations remain.

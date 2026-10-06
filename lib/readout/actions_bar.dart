@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../app/router.dart';
 import 'readout_controller.dart';
 
 /// The actions bar: speak the readout, carry it into a comparison, start a
 /// recipe search, acknowledge a fresh capture (AC-8, AC-9, AC-10, AC-11, AC-12).
 ///
-/// Shell placeholder: every action renders as a labelled, findable control with
-/// a stable anchor, but none is wired yet — each stays disabled until its
-/// behaviour phase connects it (speak + acknowledge → A11Y-2; compare-as-A/B and
-/// find-recipes → READOUT-6). The shell implements no handoff.
+/// The navigation handoffs are wired here (READOUT-6): "compare as A"/"B" push
+/// the comparison route with the reading in the chosen slot (AC-9, AC-10), and
+/// "find mixing recipes" pushes the recipes route with the reading as the target
+/// (AC-11). Speak + acknowledge stay disabled placeholders until A11Y-2 connects
+/// them (AC-8, AC-12).
 class ActionsBar extends StatelessWidget {
   const ActionsBar({required this.controller, super.key});
 
@@ -30,8 +32,8 @@ class ActionsBar extends StatelessWidget {
   /// Stable anchor for the "acknowledge captured reading" action (A11Y-2).
   static const Key acknowledgeKey = ValueKey('readout-action-acknowledge');
 
-  /// The controller the behaviour phases drive the actions through (unused in
-  /// the shell — the controls are disabled placeholders here).
+  /// The controller the actions drive through: its [ReadoutController.sample]
+  /// is the reading carried into the comparison / recipes handoffs.
   final ReadoutController controller;
 
   @override
@@ -39,29 +41,32 @@ class ActionsBar extends StatelessWidget {
     return Wrap(
       key: barKey,
       spacing: 8,
-      children: const [
-        // Wired by the behaviour phases; disabled placeholders in the shell.
-        OutlinedButton(
+      children: [
+        // Speak + acknowledge are wired in A11Y-2; disabled placeholders here.
+        const OutlinedButton(
           key: speakKey,
           onPressed: null,
           child: Text('Speak this readout'),
         ),
         OutlinedButton(
           key: compareAKey,
-          onPressed: null,
-          child: Text('Compare as A'),
+          onPressed: () => Navigator.of(context)
+              .push(controller.comparisonRoute(ComparisonSlot.a)),
+          child: const Text('Compare as A'),
         ),
         OutlinedButton(
           key: compareBKey,
-          onPressed: null,
-          child: Text('Compare as B'),
+          onPressed: () => Navigator.of(context)
+              .push(controller.comparisonRoute(ComparisonSlot.b)),
+          child: const Text('Compare as B'),
         ),
         OutlinedButton(
           key: recipesKey,
-          onPressed: null,
-          child: Text('Find mixing recipes'),
+          onPressed: () =>
+              Navigator.of(context).push(controller.recipesRoute()),
+          child: const Text('Find mixing recipes'),
         ),
-        OutlinedButton(
+        const OutlinedButton(
           key: acknowledgeKey,
           onPressed: null,
           child: Text('Acknowledge'),

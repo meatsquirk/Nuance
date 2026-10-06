@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import '../a11y/haptics.dart';
 import '../a11y/speech.dart';
@@ -57,7 +57,8 @@ class ReadoutController extends ChangeNotifier {
   /// Haptic sink the just-captured confirmation drives (wired in A11Y-2).
   final Haptics haptics;
 
-  /// Typed navigation into comparison / recipes (wired in READOUT-6).
+  /// Typed navigation into comparison / recipes (the actions bar pushes the
+  /// routes [comparisonRoute] / [recipesRoute] build).
   final AppRouter router;
 
   ReadoutSpace _selectedSpace;
@@ -144,6 +145,20 @@ class ReadoutController extends ChangeNotifier {
   /// stays `5.5`), so the Munsell notation reads as the familiar `10R 5.5/6`.
   static String _trimZero(double v) =>
       v == v.roundToDouble() ? v.round().toString() : v.toString();
+
+  /// A route that carries this reading into comparison [slot] (AC-9, AC-10).
+  ///
+  /// The actions bar pushes it when the painter chooses "compare as A"/"B"; the
+  /// current [sample] is placed into the chosen slot, so the Comparison screen
+  /// opens with this reading there (and the other slot empty).
+  Route<void> comparisonRoute(ComparisonSlot slot) =>
+      router.toComparison(_sample, slot);
+
+  /// A route to a recipe search with this reading as the mixing target (AC-11).
+  ///
+  /// The actions bar pushes it when the painter asks to find mixing recipes; the
+  /// current [sample] becomes the Recipes screen's target.
+  Route<void> recipesRoute() => router.toRecipes(_sample);
 
   /// Shows [space] in the selector, hiding the others.
   ///

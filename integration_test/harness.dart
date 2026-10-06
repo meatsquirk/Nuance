@@ -97,9 +97,6 @@ const Sample SAMPLE_ESTIMATED = Sample(
 /// `BS01_RUN_PENDING=1` to execute them (the red-baseline / un-pend run).
 const Map<String, String> pendingACs = {
   'AC-8': 'A11Y-2',
-  'AC-9': 'READOUT-6',
-  'AC-10': 'READOUT-6',
-  'AC-11': 'READOUT-6',
   'AC-12': 'A11Y-2',
 };
 

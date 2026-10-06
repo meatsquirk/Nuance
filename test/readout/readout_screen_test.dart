@@ -118,18 +118,27 @@ void main() {
     expect(_spaceValues(tester), isNot(contains('°')));
   });
 
-  testWidgets('every action control is a disabled placeholder',
-      (tester) async {
+  testWidgets('enables the navigation actions; speak and acknowledge stay '
+      'disabled (A11Y-2)', (tester) async {
     await _pumpScreen(tester);
+    // READOUT-6 wired the handoffs: compare-as-A/B and find-recipes are live.
     for (final key in const [
-      ActionsBar.speakKey,
       ActionsBar.compareAKey,
       ActionsBar.compareBKey,
       ActionsBar.recipesKey,
+    ]) {
+      final button = tester.widget<OutlinedButton>(find.byKey(key));
+      expect(button.enabled, isTrue,
+          reason: 'the navigation handoff $key must be enabled (READOUT-6)');
+    }
+    // Speak + acknowledge are still A11Y-2's to wire.
+    for (final key in const [
+      ActionsBar.speakKey,
       ActionsBar.acknowledgeKey,
     ]) {
       final button = tester.widget<OutlinedButton>(find.byKey(key));
-      expect(button.enabled, isFalse);
+      expect(button.enabled, isFalse,
+          reason: '$key stays a disabled placeholder until A11Y-2');
     }
   });
 

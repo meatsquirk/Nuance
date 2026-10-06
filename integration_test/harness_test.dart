@@ -58,8 +58,11 @@ void main() {
     // pending map. This set grows one behaviour phase at a time; the pending map
     // is its exact complement across the 12 ACs. READOUT-2 un-pended AC-1/AC-2;
     // READOUT-3 un-pended AC-3/AC-4; READOUT-4 un-pended AC-5; READOUT-5
-    // un-pended AC-6/AC-7.
-    const unpended = {'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7'};
+    // un-pended AC-6/AC-7; READOUT-6 un-pended AC-9/AC-10/AC-11.
+    const unpended = {
+      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', // earlier phases
+      'AC-9', 'AC-10', 'AC-11', // READOUT-6 (this phase)
+    };
 
     test('pending map is the exact complement of the un-pended ACs across all 12, '
         'each owned by a real behaviour phase', () {

@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
@@ -11,13 +12,36 @@ import 'package:paint_color_assistant/readout/readout_controller.dart';
 const _coords = ColorCoordinates(lightness: 58, a: 36, b: 34);
 const _provenance = Provenance(ProvenanceTier.measured);
 
-ReadoutController _controllerFor(Sample sample) => ReadoutController(
+ReadoutController _controllerFor(Sample sample, {AppRouter? router}) =>
+    ReadoutController(
       sample: sample,
       colorScience: const ColorScienceImpl(),
       speech: const NoopSpeech(),
       haptics: const NoopHaptics(),
-      router: const AppRouter(),
+      router: router ?? const AppRouter(),
     );
+
+/// An [AppRouter] that records the arguments each navigation handoff is built
+/// with, so the controller's route calls can be asserted without a widget tree.
+class _RecordingRouter extends AppRouter {
+  Sample? comparisonSample;
+  ComparisonSlot? comparisonSlot;
+  Sample? recipesTarget;
+  Route<void>? lastRoute;
+
+  @override
+  Route<void> toComparison(Sample sample, ComparisonSlot slot) {
+    comparisonSample = sample;
+    comparisonSlot = slot;
+    return lastRoute = super.toComparison(sample, slot);
+  }
+
+  @override
+  Route<void> toRecipes(Sample target) {
+    recipesTarget = target;
+    return lastRoute = super.toRecipes(target);
+  }
+}
 
 void main() {
   group('ReadoutController', () {
@@ -286,6 +310,57 @@ void main() {
       // Hue ≈ 150° (a green transition) — equidistant enough from both poles to
       // read "neutral", the axis temperature is stated relative to.
       expect(controllerAt(-17.32, 10).temperatureWord, 'neutral');
+    });
+  });
+
+  group('navigation handoffs', () {
+    const sample = Sample(
+      name: 'Warm Terracotta',
+      coordinates: _coords,
+      provenance: _provenance,
+    );
+
+    test('comparisonRoute(a) carries this sample into slot A (AC-9)', () {
+      final router = _RecordingRouter();
+      final controller = _controllerFor(sample, router: router);
+      final route = controller.comparisonRoute(ComparisonSlot.a);
+      expect(router.comparisonSample, same(controller.sample));
+      expect(router.comparisonSlot, ComparisonSlot.a);
+      expect(route, same(router.lastRoute));
+    });
+
+    test('comparisonRoute(b) carries this sample into slot B (AC-10)', () {
+      final router = _RecordingRouter();
+      final controller = _controllerFor(sample, router: router);
+      final route = controller.comparisonRoute(ComparisonSlot.b);
+      expect(router.comparisonSample, same(controller.sample));
+      expect(router.comparisonSlot, ComparisonSlot.b);
+      expect(route, same(router.lastRoute));
+    });
+
+    test('recipesRoute() makes this sample the recipe target (AC-11)', () {
+      final router = _RecordingRouter();
+      final controller = _controllerFor(sample, router: router);
+      final route = controller.recipesRoute();
+      expect(router.recipesTarget, same(controller.sample));
+      expect(router.comparisonSample, isNull,
+          reason: 'finding recipes is not a comparison handoff');
+      expect(route, same(router.lastRoute));
+    });
+
+    test('a handoff built after a load() carries the reloaded sample', () {
+      // The reading can be replaced in place (bs-02 capture, D-1); the handoff
+      // must carry whatever sample is current, not the one built with.
+      final router = _RecordingRouter();
+      final controller = _controllerFor(sample, router: router);
+      const next = Sample(
+        name: 'Deep Olive Green',
+        coordinates: ColorCoordinates(lightness: 40, a: -12, b: 28),
+        provenance: _provenance,
+      );
+      controller.load(next);
+      controller.recipesRoute();
+      expect(router.recipesTarget, same(next));
     });
   });
 }
