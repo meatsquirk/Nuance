@@ -118,28 +118,50 @@ void main() {
     expect(_spaceValues(tester), isNot(contains('°')));
   });
 
-  testWidgets('enables the navigation actions; speak and acknowledge stay '
-      'disabled (A11Y-2)', (tester) async {
-    await _pumpScreen(tester);
-    // READOUT-6 wired the handoffs: compare-as-A/B and find-recipes are live.
+  testWidgets('enables the navigation and speak actions; acknowledge only for '
+      'a just-captured reading (A11Y-2)', (tester) async {
+    await _pumpScreen(tester); // _sample is not just-captured
+    // READOUT-6 wired the handoffs and A11Y-2 wired speak: all are live.
     for (final key in const [
       ActionsBar.compareAKey,
       ActionsBar.compareBKey,
       ActionsBar.recipesKey,
+      ActionsBar.speakKey,
     ]) {
       final button = tester.widget<OutlinedButton>(find.byKey(key));
       expect(button.enabled, isTrue,
-          reason: 'the navigation handoff $key must be enabled (READOUT-6)');
+          reason: 'the action $key must be enabled');
     }
-    // Speak + acknowledge are still A11Y-2's to wire.
-    for (final key in const [
-      ActionsBar.speakKey,
-      ActionsBar.acknowledgeKey,
-    ]) {
-      final button = tester.widget<OutlinedButton>(find.byKey(key));
-      expect(button.enabled, isFalse,
-          reason: '$key stays a disabled placeholder until A11Y-2');
-    }
+    // Nothing was just captured: no marker, and Acknowledge is disabled.
+    expect(find.byKey(ActionsBar.justCapturedKey), findsNothing);
+    expect(
+      tester.widget<OutlinedButton>(find.byKey(ActionsBar.acknowledgeKey)).enabled,
+      isFalse,
+      reason: 'Acknowledge is disabled when nothing was just captured',
+    );
+  });
+
+  testWidgets('a just-captured reading shows the marker and enables Acknowledge '
+      '(AC-12)', (tester) async {
+    await _pumpScreen(
+      tester,
+      sample: const Sample(
+        name: 'Deep Olive Green',
+        coordinates: ColorCoordinates(lightness: 40, a: -8, b: 24),
+        provenance: Provenance(ProvenanceTier.measured),
+        justCaptured: true,
+      ),
+    );
+    expect(find.byKey(ActionsBar.justCapturedKey), findsOneWidget);
+    expect(
+      tester.widget<OutlinedButton>(find.byKey(ActionsBar.acknowledgeKey)).enabled,
+      isTrue,
+    );
+
+    // Acknowledging clears the marker in place.
+    await tester.tap(find.byKey(ActionsBar.acknowledgeKey));
+    await tester.pump();
+    expect(find.byKey(ActionsBar.justCapturedKey), findsNothing);
   });
 
   testWidgets('keeps its controller across a dependency change',

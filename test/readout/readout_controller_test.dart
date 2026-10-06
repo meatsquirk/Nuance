@@ -12,12 +12,35 @@ import 'package:paint_color_assistant/readout/readout_controller.dart';
 const _coords = ColorCoordinates(lightness: 58, a: 36, b: 34);
 const _provenance = Provenance(ProvenanceTier.measured);
 
-ReadoutController _controllerFor(Sample sample, {AppRouter? router}) =>
+/// A [Speech] that records each utterance, so the speak action (AC-8) can be
+/// asserted without a widget tree.
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
+}
+
+/// A [Haptics] that counts confirmation pulses, so the just-captured
+/// confirmation (AC-12) can be asserted without a widget tree.
+class _CountingHaptics implements Haptics {
+  int confirmations = 0;
+
+  @override
+  Future<void> confirm() async => confirmations++;
+}
+
+ReadoutController _controllerFor(
+  Sample sample, {
+  AppRouter? router,
+  Speech? speech,
+  Haptics? haptics,
+}) =>
     ReadoutController(
       sample: sample,
       colorScience: const ColorScienceImpl(),
-      speech: const NoopSpeech(),
-      haptics: const NoopHaptics(),
+      speech: speech ?? const NoopSpeech(),
+      haptics: haptics ?? const NoopHaptics(),
       router: router ?? const AppRouter(),
     );
 
@@ -310,6 +333,112 @@ void main() {
       // Hue ≈ 150° (a green transition) — equidistant enough from both poles to
       // read "neutral", the axis temperature is stated relative to.
       expect(controllerAt(-17.32, 10).temperatureWord, 'neutral');
+    });
+  });
+
+  group('speak action (AC-8)', () {
+    const terracotta = Sample(
+      name: 'Warm Terracotta',
+      coordinates: ColorCoordinates(lightness: 58, a: 25.27, b: 22.75),
+      provenance: _provenance,
+    );
+
+    test('speak sends the whole-readout decomposition to Speech exactly once',
+        () async {
+      final speech = _RecordingSpeech();
+      final controller = _controllerFor(terracotta, speech: speech);
+
+      await controller.speak();
+
+      // One utterance, and it is the ColorScience decomposition of the reading
+      // (name, value, temperature, hue words, chroma, hue angle) — not a swatch
+      // or a fragment stream.
+      expect(speech.utterances, hasLength(1));
+      expect(
+        speech.utterances.single,
+        const ColorScienceImpl().decompose(terracotta),
+      );
+    });
+
+    test('speak does not notify (it changes no readable state)', () async {
+      final controller = _controllerFor(terracotta, speech: _RecordingSpeech());
+      var notified = 0;
+      controller.addListener(() => notified++);
+      await controller.speak();
+      expect(notified, 0);
+    });
+
+    test('speak reflects the current sample after a load()', () async {
+      final speech = _RecordingSpeech();
+      final controller = _controllerFor(terracotta, speech: speech);
+      const olive = Sample(
+        name: 'Deep Olive Green',
+        coordinates: ColorCoordinates(lightness: 40, a: -8, b: 24),
+        provenance: _provenance,
+      );
+      controller.load(olive);
+
+      await controller.speak();
+
+      expect(
+        speech.utterances.single,
+        const ColorScienceImpl().decompose(olive),
+      );
+    });
+  });
+
+  group('just-captured haptic confirmation (AC-12)', () {
+    const fresh = Sample(
+      coordinates: _coords,
+      provenance: _provenance,
+      justCaptured: true,
+    );
+    const notFresh = Sample(coordinates: _coords, provenance: _provenance);
+
+    test('a just-captured reading fires one haptic confirmation on construction',
+        () {
+      final haptics = _CountingHaptics();
+      _controllerFor(fresh, haptics: haptics);
+      expect(haptics.confirmations, 1);
+    });
+
+    test('a non-fresh reading fires no haptic on construction', () {
+      final haptics = _CountingHaptics();
+      _controllerFor(notFresh, haptics: haptics);
+      expect(haptics.confirmations, 0);
+    });
+
+    test('loading a just-captured reading fires one haptic as it lands', () {
+      final haptics = _CountingHaptics();
+      final controller = _controllerFor(notFresh, haptics: haptics);
+      expect(haptics.confirmations, 0, reason: 'nothing fresh yet');
+
+      controller.load(fresh);
+
+      expect(haptics.confirmations, 1);
+    });
+
+    test('loading a non-fresh reading fires no haptic (control)', () {
+      final haptics = _CountingHaptics();
+      final controller = _controllerFor(notFresh, haptics: haptics);
+      controller.load(
+        const Sample(
+          coordinates: ColorCoordinates(lightness: 40, a: -8, b: 24),
+          provenance: _provenance,
+        ),
+      );
+      expect(haptics.confirmations, 0);
+    });
+
+    test('acknowledging a fresh reading fires no further haptic', () {
+      final haptics = _CountingHaptics();
+      final controller = _controllerFor(fresh, haptics: haptics);
+      expect(haptics.confirmations, 1);
+
+      controller.acknowledge();
+
+      expect(controller.justCaptured, isFalse);
+      expect(haptics.confirmations, 1, reason: 'acknowledge clears, not pulses');
     });
   });
 

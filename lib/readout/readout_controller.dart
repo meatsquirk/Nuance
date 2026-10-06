@@ -27,12 +27,11 @@ enum ReadoutSpace {
 /// Holds the [Sample] the Readout screen presents and the view state over it.
 ///
 /// A thin seam the screen is a view over (READOUT module interface): it carries
-/// the current sample, the injected services the behaviour phases derive through
-/// ([ColorScience] → READOUT-2/4, [Speech] → A11Y-2, [AppRouter] → READOUT-6),
-/// the selected colour space (→ READOUT-4) and the just-captured state (→
-/// A11Y-2). This shell phase wires the seam and holds the state; **no colour is
-/// derived here** — the [ColorScience] stub throws until COLOR-2/3, so the shell
-/// reads only the sample's own fields and shows placeholders for the rest.
+/// the current sample, the injected services it derives and drives through
+/// ([ColorScience] for every reading, [Speech] for [speak], [Haptics] for the
+/// just-captured confirmation, [AppRouter] for the navigation handoffs), the
+/// selected colour space and the just-captured state. The screen is a pure view
+/// over this controller; all derivation and the spoken/haptic actions live here.
 class ReadoutController extends ChangeNotifier {
   /// Creates a controller over [sample] with the app-injected services.
   ReadoutController({
@@ -43,7 +42,11 @@ class ReadoutController extends ChangeNotifier {
     required this.router,
   })  : // The field is private (_sample); the public named parameter is `sample`.
         _sample = sample, // ignore: prefer_initializing_formals
-        _selectedSpace = ReadoutSpace.cielch;
+        _selectedSpace = ReadoutSpace.cielch {
+    // A reading that arrives already just-captured confirms with a haptic as the
+    // readout first lands (AC-12), exactly as [load] does for a later capture.
+    _confirmIfJustCaptured();
+  }
 
   Sample _sample;
 
@@ -51,10 +54,10 @@ class ReadoutController extends ChangeNotifier {
   /// behaviour phases; the shell does not call it — the stub throws).
   final ColorScience colorScience;
 
-  /// Spoken-output sink the speak action drives (wired in A11Y-2).
+  /// Spoken-output sink the [speak] action drives (AC-8).
   final Speech speech;
 
-  /// Haptic sink the just-captured confirmation drives (wired in A11Y-2).
+  /// Haptic sink the just-captured confirmation drives (AC-12).
   final Haptics haptics;
 
   /// Typed navigation into comparison / recipes (the actions bar pushes the
@@ -146,6 +149,15 @@ class ReadoutController extends ChangeNotifier {
   static String _trimZero(double v) =>
       v == v.roundToDouble() ? v.round().toString() : v.toString();
 
+  /// Speaks the whole readout as a single utterance (AC-8).
+  ///
+  /// Builds the spoken decomposition of the current sample — its name, value,
+  /// temperature word, hue in words, chroma and hue angle — via
+  /// [ColorScience.decompose] and sends it to [Speech.speak] exactly once, so the
+  /// painter hears the entire reading as one utterance rather than a stream of
+  /// fragments. The action does not change the reading, so it does not notify.
+  Future<void> speak() => speech.speak(colorScience.decompose(_sample));
+
   /// A route that carries this reading into comparison [slot] (AC-9, AC-10).
   ///
   /// The actions bar pushes it when the painter chooses "compare as A"/"B"; the
@@ -175,20 +187,36 @@ class ReadoutController extends ChangeNotifier {
   /// The screen calls this when a different sample is injected into the same
   /// Readout (e.g. a new capture replacing the app's initial sample on the
   /// running app — bs-02, D-1); the selected colour space is kept. A re-load of
-  /// the same sample instance is a no-op.
+  /// the same sample instance is a no-op. A just-captured sample confirms with a
+  /// haptic as the new reading lands (AC-12).
   void load(Sample sample) {
     if (identical(sample, _sample)) return;
     _sample = sample;
+    _confirmIfJustCaptured();
     notifyListeners();
   }
 
   /// Acknowledges a just-captured reading, clearing its [justCaptured] marker.
   ///
-  /// The haptic confirmation fired on first render (AC-12) is wired in A11Y-2;
-  /// the shell only clears the marker so the acknowledge control has a seam.
+  /// The marker is shown until the painter acknowledges the fresh capture, when
+  /// it clears (AC-12); acknowledging a reading that is not just-captured is a
+  /// no-op. No further haptic fires — [_confirmIfJustCaptured] pulses only when a
+  /// fresh reading first lands, never on acknowledge or a plain rebuild.
   void acknowledge() {
     if (!_sample.justCaptured) return;
     _sample = _sample.copyWith(justCaptured: false);
     notifyListeners();
+  }
+
+  /// Fires one haptic confirmation when the current reading is just-captured.
+  ///
+  /// Called as a reading first becomes current — on construction and on [load] —
+  /// so a freshly captured reading pulses [Haptics.confirm] exactly once as it
+  /// lands (AC-12); a non-fresh reading fires nothing. Rebuilds don't call this,
+  /// so the pulse is tied to the capture, not repeated on every render.
+  void _confirmIfJustCaptured() {
+    if (_sample.justCaptured) {
+      haptics.confirm();
+    }
   }
 }

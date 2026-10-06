@@ -9,8 +9,10 @@ import 'readout_controller.dart';
 /// The navigation handoffs are wired here (READOUT-6): "compare as A"/"B" push
 /// the comparison route with the reading in the chosen slot (AC-9, AC-10), and
 /// "find mixing recipes" pushes the recipes route with the reading as the target
-/// (AC-11). Speak + acknowledge stay disabled placeholders until A11Y-2 connects
-/// them (AC-8, AC-12).
+/// (AC-11). "Speak this readout" drives [ReadoutController.speak] (AC-8); when the
+/// reading is just-captured a "Just captured" marker shows and "Acknowledge"
+/// clears it via [ReadoutController.acknowledge] (AC-12) — otherwise acknowledge
+/// is disabled (A11Y-2).
 class ActionsBar extends StatelessWidget {
   const ActionsBar({required this.controller, super.key});
 
@@ -32,6 +34,10 @@ class ActionsBar extends StatelessWidget {
   /// Stable anchor for the "acknowledge captured reading" action (A11Y-2).
   static const Key acknowledgeKey = ValueKey('readout-action-acknowledge');
 
+  /// Stable anchor for the "just captured" marker shown until acknowledged
+  /// (A11Y-2, AC-12).
+  static const Key justCapturedKey = ValueKey('readout-just-captured');
+
   /// The controller the actions drive through: its [ReadoutController.sample]
   /// is the reading carried into the comparison / recipes handoffs.
   final ReadoutController controller;
@@ -41,12 +47,12 @@ class ActionsBar extends StatelessWidget {
     return Wrap(
       key: barKey,
       spacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        // Speak + acknowledge are wired in A11Y-2; disabled placeholders here.
-        const OutlinedButton(
+        OutlinedButton(
           key: speakKey,
-          onPressed: null,
-          child: Text('Speak this readout'),
+          onPressed: () => controller.speak(),
+          child: const Text('Speak this readout'),
         ),
         OutlinedButton(
           key: compareAKey,
@@ -66,10 +72,14 @@ class ActionsBar extends StatelessWidget {
               Navigator.of(context).push(controller.recipesRoute()),
           child: const Text('Find mixing recipes'),
         ),
-        const OutlinedButton(
+        // A freshly captured reading shows the marker and enables Acknowledge;
+        // otherwise the marker is absent and Acknowledge is disabled (AC-12).
+        if (controller.justCaptured)
+          const Text('Just captured', key: justCapturedKey),
+        OutlinedButton(
           key: acknowledgeKey,
-          onPressed: null,
-          child: Text('Acknowledge'),
+          onPressed: controller.justCaptured ? controller.acknowledge : null,
+          child: const Text('Acknowledge'),
         ),
       ],
     );

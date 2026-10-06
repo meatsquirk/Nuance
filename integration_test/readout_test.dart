@@ -505,6 +505,19 @@ void main() {
         findsWidgets,
         reason: 'AC-12: the reading is marked "just captured" (A11Y-2)');
 
+    // A rebuild while the reading is STILL just-captured fires no further haptic
+    // — the confirmation is tied to the capture landing, not to every render.
+    // Force a rebuild (select another colour space) and re-assert the count is
+    // still one: this rejects a confirm() wired into build() rather than the
+    // capture (which would reach 2 here).
+    await harness.whenSelectSpace(ReadoutSpace.munsell);
+    expect(harness.haptics.confirmations, 1,
+        reason: 'AC-12: a rebuild while still fresh fires no further haptic '
+            '(the confirmation is tied to the capture, not the render)');
+    expect(find.textContaining(RegExp('just[ -]?captured', caseSensitive: false)),
+        findsWidgets,
+        reason: 'AC-12: the marker persists across a rebuild until acknowledged');
+
     // ...until the painter acknowledges it: after acknowledging (settle), the
     // marker is gone — the before/after pair shows the marker can change.
     await harness.whenAcknowledge();

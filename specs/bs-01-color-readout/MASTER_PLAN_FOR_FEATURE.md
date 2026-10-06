@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — READOUT-6 done (AC-9/10/11 green; READOUT module complete). 10/12 ACs green; next A11Y-2 (AC-8/12), the last behaviour phase, then SIGNOFF-1.
+**Status:** In progress — A11Y-2 done; all 12 ACs green (independent 12×A grade). Behaviour stage complete; next SIGNOFF-1.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -49,11 +49,11 @@ per-AC "Missing" column is what the behavior stage must build.
 | AC-5 | The painter selects a colour space and sees the sample in that space | ITEST-2 `TestAC05_ColourSpaceSelector` | COLOR-2, READOUT-4 | ✅ Done |
 | AC-6 | A measured value is badged Measured | ITEST-2 `TestAC06_MeasuredBadge` | READOUT-5 | ✅ Done |
 | AC-7 | An unverified seeded value is badged Estimated and labelled not yet verified | ITEST-2 `TestAC07_EstimatedBadge` | READOUT-5 | ✅ Done |
-| AC-8 | The painter hears the whole readout spoken | ITEST-3 `TestAC08_SpeakReadout` | COLOR-3, A11Y-2 | ⬜ Todo |
+| AC-8 | The painter hears the whole readout spoken | ITEST-3 `TestAC08_SpeakReadout` | COLOR-3, A11Y-2 | ✅ Done |
 | AC-9 | The painter uses the reading as comparison sample A | ITEST-3 `TestAC09_CompareAsA` | READOUT-6 | ✅ Done |
 | AC-10 | The painter uses the reading as comparison sample B | ITEST-3 `TestAC10_CompareAsB` | READOUT-6 | ✅ Done |
 | AC-11 | The painter starts a recipe search from the reading | ITEST-3 `TestAC11_FindRecipes` | READOUT-6 | ✅ Done |
-| AC-12 | A just-captured reading is confirmed with a haptic and acknowledged | ITEST-3 `TestAC12_JustCaptured` | A11Y-2 | ⬜ Todo |
+| AC-12 | A just-captured reading is confirmed with a haptic and acknowledged | ITEST-3 `TestAC12_JustCaptured` | A11Y-2 | ✅ Done |
 
 ## Design decisions
 
@@ -128,7 +128,7 @@ No open augmentations remain.
 |---|---|---|---|---|
 | CORE | [modules/CORE.md](modules/CORE.md) | Project scaffold, domain model (`Sample`, `Provenance`, coordinates), app assembly, navigation + stub Compare/Recipes screens | — | ✅ Done |
 | COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | ✅ Done |
-| A11Y | [modules/A11Y.md](modules/A11Y.md) | Cross-cutting accessibility: `Speech`/`Haptics` services + label-contract widgets; speak-readout + haptic behavior | CORE | 🔄 In progress |
+| A11Y | [modules/A11Y.md](modules/A11Y.md) | Cross-cutting accessibility: `Speech`/`Haptics` services + label-contract widgets; speak-readout + haptic behavior | CORE | ✅ Done |
 | READOUT | [modules/READOUT.md](modules/READOUT.md) | Readout screen UI + controller; renders value/name/temperature/spaces/provenance; carries into compare/recipes | CORE, COLOR, A11Y | ✅ Done |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done |
 
@@ -192,27 +192,27 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 15 | READOUT-4 | behavior: AC-5 (colour-space selector) | ✅ Done | 7,596,426 | 12m 20s (12m 20s) | AC-5 green on sim (5×A re-grade of AC-1..5); per-space exclusive readout; sRGB-triplet augmentation closed; 100% coverage on 2 touched files; 0 fix passes |
 | 16 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ✅ Done | 6,292,987 | 16m 03s (16m 03s) | AC-6/AC-7 green on sim (7×A re-grade of AC-1..7); Measured / "Estimated — not yet verified" + seeded-value note, derived from tier; 100% coverage on 1 touched file; 1 fix pass (harness pending-gate self-tests) |
 | 17 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ✅ Done | 5,667,325 | 10m 50s (10m 50s) | AC-9/10/11 green on sim (10×A re-grade of all un-pended AC-1..7,9,10,11); compare-A/B + find-recipes handoffs wired via controller routes; READOUT module complete; 100% coverage on 2 touched files; 0 fix passes |
-| 18 | A11Y-2 | behavior: AC-8, AC-12 (speak + haptic/just-captured) | ⬜ Next | | | |
-| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+| 18 | A11Y-2 | behavior: AC-8, AC-12 (speak + haptic/just-captured) | ✅ Done | 9,660,964 | 20m 19s (20m 19s) | AC-8 (speak) + AC-12 (haptic/just-captured) green on sim; independent 12×A re-grade of all ACs; AC-12 hardened (per-build confirm) per grader; 100% coverage on 2 touched files; 0 fix passes |
+| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**READOUT-6 done (2026-10-06).** AC-9/AC-10/AC-11 green on the simulator (independent 10×A re-grade of all
-un-pended tests AC-1..7, 9, 10, 11). The actions bar carries the reading into a comparison (slot A / slot B)
-and into a recipe search via `ReadoutController.comparisonRoute`/`recipesRoute`. **READOUT module complete.**
-10/12 ACs green; only AC-8 (speak) and AC-12 (haptic/just-captured) remain, both owned by A11Y-2.
+**A11Y-2 done (2026-10-06).** AC-8 (speak the whole readout) and AC-12 (haptic confirmation + just-captured
+marker + acknowledge) green on the simulator. **The behaviour stage is complete — all 12 ACs green**, with an
+independent fresh-grader re-grade of every un-pended test at **12×A, 0×B**. `pendingACs` is now empty; the
+AC-12 test was hardened (per the grader) to reject a per-build `confirm()`.
 
-- **Next: A11Y-2** (AC-8 + AC-12) — the last behaviour phase. Edits the Readout screen/controller + actions bar
-  (wires speak + acknowledge) and the A11Y services. Merge-risky with READOUT → still serial; it is the only
-  startable behaviour phase. After it, **SIGNOFF-1** is startable (all 12 ACs green).
-- **Runner:** boot the sim (`xcrun simctl boot 5AB9D06D-…`); un-pend an AC by deleting its `pendingACs` row in
-  `harness.dart` **and** updating the two `harness_test.dart` pending-gate self-tests (`unpended` set + the
-  "still pending" example); default `flutter test integration_test/ -d <udid>` (pending ACs skip); run-pending
-  adds `--dart-define=BS01_RUN_PENDING=true`. Plain `flutter test integration_test/` (no `-d`) is a false green.
-- No open augmentations remain.
+- **Next: SIGNOFF-1** — the only remaining phase (sign-off stage). Assemble the sign-off packet + summary page
+  from the completed feature, then a human decides (the agent never approves). Runs the full cross-feature
+  regression per `references/verification.md` § *Which suites*.
+- All five modules (CORE, COLOR, A11Y, READOUT, ITEST) are ✅ Done. No open gates, no open augmentations.
+- **Runner reminder for SIGNOFF-1's regression:** boot the sim
+  (`xcrun simctl boot 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`); `flutter test integration_test/ -d <udid>`
+  (all 12 ACs now run by default — nothing pending); `flutter test --coverage` for unit. Plain
+  `flutter test integration_test/` (no `-d`) is a false green.
 
 ## Token usage
 
@@ -240,7 +240,8 @@ and into a recipe search via `ReadoutController.comparisonRoute`/`recipesRoute`.
 | PHASE | 24155326 | 2026-10-06 15:53 EDT | 16:06 | 12m 20s | 12m 20s | claude-opus-4-8 | 140 | 218,865 | 7,337,780 | 39,641 | 7,596,426 | READOUT-4 done: AC-5 green on sim (5×A re-grade of AC-1..5); per-space exclusive readout (CIELCh/Munsell/sRGB/CIELAB); sRGB-triplet augmentation closed; 168 unit green, 100% coverage on 2 touched files; 0 fix passes |
 | READOUT-5 | 01fd90f6 | 2026-10-06 16:10 EDT | 16:26 | 16m 03s | 16m 03s | claude-opus-4-8 | 128 | 188,957 | 6,061,544 | 42,358 | 6,292,987 | AC-6, AC-7 green on sim; 7×A re-grade (AC-1..7); 100% coverage on 1 touched file; 1 fix pass |
 | PHASE | 9cbbf3fb | 2026-10-06 17:13 EDT | 17:24 | 10m 50s | 10m 50s | claude-opus-4-8 | 112 | 196,389 | 5,438,199 | 32,625 | 5,667,325 | READOUT-6 done: AC-9/10/11 (navigation handoffs) green on sim; 10×A re-grade; READOUT module complete; 100% coverage on 2 touched files; 0 fix passes |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 17:24** | **7h 50m** | **5h 46m** |  | **1,982** | **3,025,255** | **107,344,270** | **926,178** | **111,297,685** |  |
+| A11Y-2 | 8888fb9f | 2026-10-06 17:34 EDT | 17:55 | 20m 19s | 20m 19s | claude-opus-4-8 | 158 | 269,591 | 9,334,887 | 56,328 | 9,660,964 | AC-8 (speak) + AC-12 (haptic/just-captured) green on sim; 12×A independent re-grade; AC-12 hardened; 100% coverage on 2 touched files; 0 fix passes |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 17:55** | **8h 11m** | **6h 06m** |  | **2,140** | **3,294,846** | **116,679,157** | **982,506** | **120,958,649** |  |
 
 ## Sign-off
 

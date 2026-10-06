@@ -96,8 +96,9 @@ const Sample SAMPLE_ESTIMATED = Sample(
 /// ACs (their bodies, which assert un-built behaviour, never run); set
 /// `BS01_RUN_PENDING=1` to execute them (the red-baseline / un-pend run).
 const Map<String, String> pendingACs = {
-  'AC-8': 'A11Y-2',
-  'AC-12': 'A11Y-2',
+  // All 12 ACs are now un-pended: A11Y-2 landed AC-8 (speak) and AC-12
+  // (haptic + just-captured), the last behaviour phase, so the gate is fully
+  // open and every AC runs by default.
 };
 
 /// The behaviour phases allowed to own a pending AC.

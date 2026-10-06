@@ -58,10 +58,12 @@ void main() {
     // pending map. This set grows one behaviour phase at a time; the pending map
     // is its exact complement across the 12 ACs. READOUT-2 un-pended AC-1/AC-2;
     // READOUT-3 un-pended AC-3/AC-4; READOUT-4 un-pended AC-5; READOUT-5
-    // un-pended AC-6/AC-7; READOUT-6 un-pended AC-9/AC-10/AC-11.
+    // un-pended AC-6/AC-7; READOUT-6 un-pended AC-9/AC-10/AC-11; A11Y-2 un-pended
+    // AC-8/AC-12 — the final phase, so every AC is now un-pended.
     const unpended = {
       'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', // earlier phases
-      'AC-9', 'AC-10', 'AC-11', // READOUT-6 (this phase)
+      'AC-9', 'AC-10', 'AC-11', // READOUT-6
+      'AC-8', 'AC-12', // A11Y-2 (this phase)
     };
 
     test('pending map is the exact complement of the un-pended ACs across all 12, '
@@ -86,15 +88,19 @@ void main() {
       }
     });
 
-    test('skips a pending AC by default; runs it under BS01_RUN_PENDING', () {
-      // Assert both modes deterministically (override the ambient env), so this
-      // run exercises both branches and an inverted gate fails either way.
-      // AC-8 is still pending (present in the map).
-      expect(pendingSkipReason('AC-8', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-8', forceRunPending: true), isNull);
-      // An un-pended AC (AC-6, now landed) always runs, in either mode.
-      expect(pendingSkipReason('AC-6', forceRunPending: false), isNull);
-      expect(pendingSkipReason('AC-6', forceRunPending: true), isNull);
+    test('with every AC un-pended, the gate runs each one in both modes', () {
+      // The feature is fully built: no AC is pending, so the gate admits every
+      // one in either mode — the fully open end state. This fails if an AC were
+      // re-pended, or if the gate inverted to skip an un-pended AC.
+      expect(pendingACs, isEmpty,
+          reason: 'A11Y-2 un-pended the final ACs; nothing stays pending');
+      for (var n = 1; n <= 12; n++) {
+        final ac = 'AC-$n';
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is un-pended and must run even in default mode');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac must run in run-pending mode');
+      }
       // An AC absent from the map also always runs, in either mode.
       expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
