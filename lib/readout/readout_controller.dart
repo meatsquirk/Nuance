@@ -78,6 +78,22 @@ class ReadoutController extends ChangeNotifier {
   /// shows the sample's own [Sample.name] when present.
   String get nameText => _sample.name ?? 'Unnamed sample';
 
+  /// The sample's perceptual lightness (CIELAB L\*) — the prominent reading the
+  /// value region shows largest (AC-1).
+  double get lightness => colorScience.lightness(_sample.coordinates);
+
+  /// The plain-language value word paired with [lightness] (e.g. "middle
+  /// value"), derived from the lightness so it tracks the number (AC-2).
+  String get valueWord => colorScience.valueWord(lightness);
+
+  /// The sample in Munsell notation; the value region shows its Munsell
+  /// [MunsellColor.value] beside the lightness (AC-1).
+  MunsellColor get munsell => colorScience.toMunsell(_sample.coordinates);
+
+  /// The sample's lightness shown as a neutral — the grayscale preview that
+  /// accompanies the value reading (AC-1).
+  SRGBColor get grayscale => colorScience.grayscaleOf(_sample.coordinates);
+
   /// Shows [space] in the selector, hiding the others.
   ///
   /// The shell tracks the selection and notifies; the exclusive rendering of
@@ -85,6 +101,18 @@ class ReadoutController extends ChangeNotifier {
   void selectSpace(ReadoutSpace space) {
     if (space == _selectedSpace) return;
     _selectedSpace = space;
+    notifyListeners();
+  }
+
+  /// Replaces the sample being read, notifying listeners.
+  ///
+  /// The screen calls this when a different sample is injected into the same
+  /// Readout (e.g. a new capture replacing the app's initial sample on the
+  /// running app — bs-02, D-1); the selected colour space is kept. A re-load of
+  /// the same sample instance is a no-op.
+  void load(Sample sample) {
+    if (identical(sample, _sample)) return;
+    _sample = sample;
     notifyListeners();
   }
 

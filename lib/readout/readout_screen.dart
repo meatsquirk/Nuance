@@ -47,6 +47,16 @@ class _ReadoutScreenState extends State<ReadoutScreen> {
   }
 
   @override
+  void didUpdateWidget(ReadoutScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A different sample injected into the same screen (e.g. a new capture
+    // replacing the initial sample — bs-02) updates the reading in place.
+    if (!identical(widget.sample, oldWidget.sample)) {
+      _controller!.load(widget.sample);
+    }
+  }
+
+  @override
   void dispose() {
     _controller?.dispose();
     super.dispose();

@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — COLOR enablers (COLOR-2 conversions + COLOR-3 naming/words/decomposition) done and reconciled; next the READOUT/A11Y behaviour phases (run serially)
+**Status:** In progress — READOUT-2 done (AC-1, AC-2 green); next READOUT-3 (name + temperature). READOUT/A11Y behaviour phases run serially.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -42,8 +42,8 @@ per-AC "Missing" column is what the behavior stage must build.
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | Lightness is displayed as the prominent value with a grayscale preview | ITEST-2 `TestAC01_LightnessProminent` | COLOR-2, READOUT-2 | ⬜ Todo |
-| AC-2 | The numeric lightness is paired with a plain-language value word | ITEST-2 `TestAC02_ValueWord` | COLOR-3, READOUT-2 | ⬜ Todo |
+| AC-1 | Lightness is displayed as the prominent value with a grayscale preview | ITEST-2 `TestAC01_LightnessProminent` | COLOR-2, READOUT-2 | ✅ Done |
+| AC-2 | The numeric lightness is paired with a plain-language value word | ITEST-2 `TestAC02_ValueWord` | COLOR-3, READOUT-2 | ✅ Done |
 | AC-3 | A plain-language colour name is shown large | ITEST-2 `TestAC03_ColourName` | COLOR-3, READOUT-3 | ⬜ Todo |
 | AC-4 | A warm sample is described as warm in words | ITEST-2 `TestAC04_Temperature` | COLOR-3, READOUT-3 | ⬜ Todo |
 | AC-5 | The painter selects a colour space and sees the sample in that space | ITEST-2 `TestAC05_ColourSpaceSelector` | COLOR-2, READOUT-4 | ⬜ Todo |
@@ -186,8 +186,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 10 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,057,046 | 2m 20s | packet assembled; G-2 approved 2026-10-06 (owner Matt Quirk); behaviour stage unblocked |
 | 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ✅ Done | 8,261,518 | 41m 20s (29m 42s) | conversions.dart + calibrated Munsell table; terracotta → 10R 5.5/6 |
 | 12 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ✅ Done | 9,382,074 | 27m 50s (27m 50s) | naming.dart/words.dart/decomposition.dart + iscc_nbs.csv; indep. of COLOR-2 |
-| 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ⬜ Next | | | both enablers merged; first READOUT behaviour phase |
-| 14 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ⬜ Todo | | | |
+| 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ✅ Done | 10,406,545 | 58m 47s (58m 48s) | AC-1/AC-2 green on sim; A/A grades; +`load`/`didUpdateWidget` so a re-injected sample updates in place |
+| 14 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ⬜ Next | | | |
 | 15 | READOUT-4 | behavior: AC-5 (colour-space selector) | ⬜ Todo | | | |
 | 16 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ⬜ Todo | | | |
 | 17 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ⬜ Todo | | | |
@@ -199,22 +199,17 @@ when the row is marked done.
 
 ## Next phase
 
-**Both COLOR enablers done and reconciled (2026-10-06).** COLOR-2 (conversions) and COLOR-3
-(naming/words/decomposition) are merged into the feature branch; the COLOR module is complete. The behaviour
-stage is open and every READOUT/A11Y phase is now unblocked. No AC has un-pended yet (enablers own no AC).
+**READOUT-2 done (2026-10-06).** AC-1 and AC-2 are green on the simulator (A/A grades); the value region
+renders the prominent lightness, grayscale preview, Munsell value and value word. 2/12 ACs un-pended.
 
-- **Startable now (choose one — they are merge-risky with each other):** READOUT-2 (AC-1/AC-2), READOUT-3
-  (AC-3/AC-4), READOUT-4 (AC-5), READOUT-5 (AC-6/AC-7), READOUT-6 (AC-9/10/11), A11Y-2 (AC-8/AC-12). All edit
-  the Readout screen/controller, so **run them serially** (or split the screen into per-region files first).
-  Don't pair two of them in parallel sessions.
-- **Enabler → AC mapping:** `valueWord`→AC-2 (READOUT-2); `nearestName`→AC-3 and `temperatureWord`→AC-4
-  (READOUT-3); conversions→AC-1/AC-5 (READOUT-2/READOUT-4); `decompose`→AC-8 (A11Y-2). READOUT-4 (AC-5) and
-  READOUT-5 (AC-6/7) / READOUT-6 (AC-9/10/11) have everything they need.
-- **Runner** (every behaviour phase): boot the sim first; un-pend an AC by deleting its row from `pendingACs`
-  in `harness.dart` and run with `flutter test integration_test/ -d <udid> --dart-define=BS01_RUN_PENDING=true`
-  (plain `flutter test integration_test/` with no `-d` is a false green); CI must add an emulator and pass the
-  define before the acceptance job is wired.
-- **Carry-forward augmentation:** AC-5 sRGB triplet, owned by READOUT-4.
+- **Next: READOUT-3** (AC-3 name + AC-4 temperature) — edits `name_header.dart` + `temperature_line.dart`.
+- **Startable (serial — all edit the Readout screen/controller):** READOUT-3, READOUT-4 (AC-5), READOUT-5
+  (AC-6/7), READOUT-6 (AC-9/10/11), A11Y-2 (AC-8/12). One per session; never pair two in parallel.
+- **Runner:** boot the sim (`xcrun simctl boot 5AB9D06D-…`); un-pend an AC by deleting its `pendingACs` row in
+  `harness.dart`; default `flutter test integration_test/ -d <udid>` (pending ACs skip); run-pending adds
+  `--dart-define=BS01_RUN_PENDING=true`. Plain `flutter test integration_test/` (no `-d`) is a false green.
+- **Carry-forward:** AC-5 sRGB-triplet tightening (READOUT-4); AC-1's pre-seed is redundant — drop it with a
+  note when READOUT-4 lands.
 
 ## Token usage
 
@@ -237,7 +232,8 @@ stage is open and every READOUT/A11Y phase is now unblocked. No AC has un-pended
 | PHASE | a3dfdce4 | 2026-10-06 07:35 EDT | 08:17 | 41m 20s | 29m 42s | claude-opus-4-8 | 124 | 160,285 | 8,019,359 | 81,750 | 8,261,518 | COLOR-2 done: conversions + calibrated Munsell table; acceptance default green, red baseline held |
 | PHASE | f5c57438 | 2026-10-06 08:28 EDT | 08:56 | 27m 50s | 27m 50s | claude-opus-4-8 | 128 | 179,263 | 9,120,314 | 82,369 | 9,382,074 | COLOR-3 done: naming/words/decomposition enabler; 120 unit green, 100% touched-file coverage; acceptance default green, red baseline held |
 | RECONCILE | ee089be3 | 2026-10-06 10:57 EDT | 11:10 | 13m 24s | 13m 24s | claude-opus-4-8 | 90 | 96,654 | 3,732,837 | 33,730 | 3,863,311 | merged COLOR-2 + COLOR-3 enabler branches into feature branch (4 trivial conflicts resolved); applied both rollups; analyze clean, 147 unit tests green, coverage gate PASS (provenance.dart const-ctor flake: red once, green on re-run); COLOR module complete; READOUT-2 now Next |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 11:10** | **5h 56m** | **3h 52m** |  | **1,322** | **1,949,621** | **70,273,271** | **691,017** | **72,915,231** |  |
+| PHASE | 920e046f | 2026-10-06 11:43 EDT | 12:42 | 58m 48s | 58m 47s | claude-opus-4-8 | 138 | 232,372 | 10,103,922 | 70,113 | 10,406,545 | READOUT-2 done: AC-1, AC-2 green on sim (A/A grades); value region renders prominent lightness + grayscale + Munsell value + value word; +load/didUpdateWidget for re-injected sample; 100% coverage on 3 touched files; 1 fix pass |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 12:42** | **6h 55m** | **4h 51m** |  | **1,460** | **2,181,993** | **80,377,193** | **761,130** | **83,321,776** |  |
 
 ## Sign-off
 

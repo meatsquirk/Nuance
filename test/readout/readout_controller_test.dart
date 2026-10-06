@@ -129,4 +129,69 @@ void main() {
       expect(notified, 0);
     });
   });
+
+  group('ReadoutController value readings (AC-1, AC-2)', () {
+    ReadoutController controllerAtLightness(double l) => _controllerFor(
+          Sample(
+            coordinates: ColorCoordinates(lightness: l, a: 25.27, b: 22.75),
+            provenance: _provenance,
+          ),
+        );
+
+    test('lightness is the sample CIELAB L*', () {
+      expect(controllerAtLightness(58).lightness, 58);
+    });
+
+    test('valueWord tracks the lightness (low / middle / high)', () {
+      // The word is derived from the lightness, not a constant (AC-2 control).
+      expect(controllerAtLightness(58).valueWord, 'middle value');
+      expect(controllerAtLightness(15).valueWord, 'very low value');
+      expect(controllerAtLightness(90).valueWord, 'very high value');
+    });
+
+    test('munsell exposes the sample Munsell notation (value 5.5 at L58)', () {
+      final munsell = controllerAtLightness(58).munsell;
+      expect(munsell.value, 5.5);
+      expect(munsell.hue, '10R');
+    });
+
+    test('grayscale is a neutral (equal RGB channels) preview', () {
+      final gray = controllerAtLightness(58).grayscale;
+      expect(gray.red, gray.green);
+      expect(gray.green, gray.blue);
+    });
+
+    test('load replaces the sample and the derived readings, and notifies', () {
+      final controller = controllerAtLightness(58);
+      expect(controller.valueWord, 'middle value');
+      var notified = 0;
+      controller.addListener(() => notified++);
+
+      controller.load(
+        const Sample(
+          coordinates: ColorCoordinates(lightness: 15, a: 25.27, b: 22.75),
+          provenance: _provenance,
+        ),
+      );
+
+      expect(controller.lightness, 15);
+      expect(controller.valueWord, 'very low value');
+      expect(notified, 1);
+    });
+
+    test('load of the same sample instance is a no-op', () {
+      const sample = Sample(
+        coordinates: ColorCoordinates(lightness: 58, a: 25.27, b: 22.75),
+        provenance: _provenance,
+      );
+      final controller = _controllerFor(sample);
+      var notified = 0;
+      controller.addListener(() => notified++);
+
+      controller.load(sample);
+
+      expect(controller.sample, same(sample));
+      expect(notified, 0);
+    });
+  });
 }

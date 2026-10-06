@@ -1,6 +1,6 @@
 # Module READOUT — Readout screen UI + controller
 
-**Status:** In progress — READOUT-1 done (screen + controller shell; every region laid out with placeholder content); next READOUT-2 (behavior, blocked by G-2)
+**Status:** In progress — READOUT-2 done (value region: AC-1, AC-2 green); next READOUT-3 (name + temperature)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` — `readout_screen.dart` and per-region widgets
 (`value_region.dart`, `name_header.dart`, `temperature_line.dart`, `space_selector.dart`,
@@ -16,7 +16,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 7,613,743 | 14m 38s (14m 38s) |
-| 2 | behavior | AC-1, AC-2 | ⬜ Todo | | |
+| 2 | behavior | AC-1, AC-2 | ✅ Done | 10,406,545 | 58m 47s (58m 48s) |
 | 3 | behavior | AC-3, AC-4 | ⬜ Todo | | |
 | 4 | behavior | AC-5 | ⬜ Todo | | |
 | 5 | behavior | AC-6, AC-7 | ⬜ Todo | | |
@@ -116,9 +116,57 @@
 - **Augments:** `TestAC01_LightnessProminent`: once READOUT-4 lands, strengthen the "largest reading" check
   to out-rank the colour-space readings too (add a row).
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** `value_region.dart` renders the value region — Lightness as the prominent reading
+  (`ValueRegion.prominentFontSize` = 48, bold) paired with its value word via the `ValueReading` widget; a
+  grayscale preview swatch coloured from the sample's neutral (`controller.grayscale`); and the Munsell value
+  beside the number ("Munsell value 5.5"). `readout_controller.dart` exposes the derived readings `lightness`,
+  `valueWord`, `munsell` (`MunsellColor`) and `grayscale` (`SRGBColor`), each delegating to the injected
+  `ColorScience`. Lightness displays rounded (spec "Lightness 58"); Munsell value drops a redundant ".0".
+- **Scope extension (recorded):** added `ReadoutController.load(Sample)` (identity-guarded, notifies) and
+  `ReadoutScreen.didUpdateWidget` so a sample injected into the live screen updates the reading in place —
+  touches `readout_screen.dart` (module-owned) beyond the two listed files. **Why:** the acceptance harness
+  re-pumps each scenario sample into the *same* screen position; the shell built its controller once and
+  ignored a changed `widget.sample`, so AC-2's L15/L90 controls read the first sample (L58). Aligns with
+  D-1/bs-02 ("capture replaces the running app's initial sample").
+- **Test-infra change (recorded):** AC-1, AC-2 un-pended in `harness.dart`; `harness_test.dart` pending-gate
+  tests rewritten to assert the pending map is the exact complement of the un-pended set across all 12 ACs
+  (kept non-vacuous). **Why:** the "all 12 pending" invariant changes as behaviour un-pends ACs.
+- **Gates:** unit 159 pass (+12); coverage gate **100% line** on the 3 touched lib files (PASS); `flutter
+  analyze` clean. Acceptance (iOS sim `5AB9D06D…`, default mode): **AC-1, AC-2 green**; AC-3..12
+  skipped/pending; harness smoke + pending-gate + fake tests green.
+- **Test grades:** AC-1 **A**, AC-2 **A** (independent fresh grader; both discriminate against the live code —
+  not green-vacuous). No B to fix.
+- **Augmentations made:** none. AC-1's pre-seeded "largest reading" augmentation is **redundant** — the test's
+  generic "larger than every other body reading" already out-ranks the colour-space readings READOUT-4 will
+  render (confirmed by the grader and the ITEST-2 grid). Carried: AC-5 sRGB-triplet tightening still owned by
+  READOUT-4. Justified exclusions: none.
+- **Fix passes: 1/3** — first acceptance run: AC-2's L15 control failed (stale sample on re-pump); fixed with
+  `load()`/`didUpdateWidget`; re-run green. The implementation moved to green on that pass.
+- **Closed by:** gate pass.
+- **Tokens:** 10,406,545 · **Time:** 58m 47s (58m 48s).
+
+### Checkpoint / Handoff
+
+- **Frozen additions (for the later behaviour phases):**
+  - `ReadoutController` now also exposes `lightness` (double), `valueWord` (String), `munsell`
+    (`MunsellColor`), `grayscale` (`SRGBColor`), and `load(Sample)` — identity-guarded, notifies, keeps the
+    selected space. The screen reloads the controller on a changed `widget.sample` (`didUpdateWidget`).
+  - `ValueRegion.prominentFontSize` = 48 is the value-region prominence constant. The region renders:
+    grayscale swatch (`grayscaleKey`) + `ValueReading(number: rounded L, word: valueWord)` + a "Munsell
+    value <v>" line.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart <base>`. Acceptance:
+  boot the sim once (`xcrun simctl boot 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), then default
+  `flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; run-pending adds
+  `--dart-define=BS01_RUN_PENDING=true`.
+- **Known gaps (later phases):** the name header still shows the stored/placeholder name (AC-3 → READOUT-3);
+  temperature line, colour-space selector and provenance region are still placeholders (READOUT-3/4/5); the
+  action controls stay disabled (A11Y-2 / READOUT-6).
+- **Next phase should:** run **READOUT-3** (AC-3 name + AC-4 temperature) — edits `name_header.dart` and
+  `temperature_line.dart`. All READOUT behaviour phases edit the Readout screen/controller — **merge-risky,
+  run serially**. When READOUT-4 lands, the AC-1 pre-seed can be dropped with a note (confirmed redundant).
 
 ## Phase 3 — Behavior: name header + temperature (AC-3, AC-4)
 

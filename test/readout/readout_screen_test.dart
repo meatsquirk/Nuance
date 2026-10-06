@@ -140,4 +140,31 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     expect(find.byType(ReadoutScreen), findsNothing);
   });
+
+  testWidgets('reflects a newly injected sample in place', (tester) async {
+    // A different sample injected into the same screen position (bs-02 capture
+    // replaces the running app's sample — D-1) updates the reading.
+    const dark = Sample(
+      name: 'Warm Terracotta',
+      coordinates: ColorCoordinates(lightness: 15, a: 25.27, b: 22.75),
+      provenance: Provenance(ProvenanceTier.measured),
+    );
+    const light = Sample(
+      name: 'Warm Terracotta',
+      coordinates: ColorCoordinates(lightness: 90, a: 25.27, b: 22.75),
+      provenance: Provenance(ProvenanceTier.measured),
+    );
+    Widget tree(Sample sample) => AppScope(
+          dependencies: _deps(),
+          child: MaterialApp(home: ReadoutScreen(sample: sample)),
+        );
+
+    await tester.pumpWidget(tree(dark));
+    expect(find.text('very low value'), findsOneWidget);
+
+    await tester.pumpWidget(tree(light));
+    await tester.pump();
+    expect(find.text('very high value'), findsOneWidget);
+    expect(find.text('very low value'), findsNothing);
+  });
 }

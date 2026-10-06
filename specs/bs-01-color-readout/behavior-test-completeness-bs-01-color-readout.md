@@ -33,3 +33,12 @@ Grades the assertions as written, i.e. the behaviour each pending test will exer
   - **AC-6 relies on AC-7 as its positive contrast.** AC-6 feeds only a measured sample; the "always Measured" wrong impl is caught by AC-7's positive Estimated assertion, not by AC-6 alone. This is the catalogue's intended control pairing and is within G6 (AC-6's own negatives already reject the estimated note on a measured reading), so it holds — noted only so the pair is maintained together.
   - All negative Thens (AC-2 dark/light, AC-4 cool, AC-5 exclusivity, AC-6/AC-7 note) are asserted after a settle point and paired with a positive that shows the reading can change (G3 satisfied throughout).
   - Gate recommendation: ITEST-2 (AC-1..AC-7) passes the grade-A bar; behaviour coding (COLOR-2/3, READOUT-2..5) may begin. The AC-5 sRGB-triplet tightening can be folded into READOUT-4 without re-gating.
+
+## Re-grade — READOUT-2 (AC-1, AC-2 un-pended)
+
+Graded 2026-10-06 by an independent fresh grader against the **live behaviour** (real `buildApp` + `ColorScienceImpl`), per the behaviour-phase grade gate.
+
+- **AC-1 — `TestAC01_LightnessProminent`: A** (G1,G2,G4,G5,G6). Given checked on surface + input; asserts the spec's exact values at the raw observable ("58" in the value region, Munsell "5.5" beside it, lightness font strictly larger than every other body reading). **Discriminates:** traced against the impl — `lightness`=58, `munsell.value`=5.5, number at `prominentFontSize` 48 vs ~14 others; a non-prominent / grayscale-less / Munsell-less impl fails.
+- **AC-2 — `TestAC02_ValueWord`: A** (G1,G2,G4,G5,G6). G2 is load-bearing and satisfied by the L15/L90 controls (word must be *derived* from L). **Discriminates:** `valueWord(58)`="middle value", `valueWord(15)`="very low value", `valueWord(90)`="very high value"; a constant-"middle" impl fails both controls.
+- **B-fixes needed:** none; no downgrade from the ITEST-2 grid. The AC-1 pre-seeded augmentation is confirmed redundant (the generic "larger than every other body reading" already out-ranks the colour-space readings READOUT-4 will add).
+- **Counts:** 2×A, 0×B.
