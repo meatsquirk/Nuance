@@ -1,6 +1,6 @@
 # Module READOUT — Readout screen UI + controller
 
-**Status:** In progress — READOUT-2 done (value region: AC-1, AC-2 green); next READOUT-3 (name + temperature)
+**Status:** In progress — READOUT-3 done (name header + temperature: AC-3, AC-4 green); next READOUT-4 (colour-space selector)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` — `readout_screen.dart` and per-region widgets
 (`value_region.dart`, `name_header.dart`, `temperature_line.dart`, `space_selector.dart`,
@@ -17,7 +17,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 7,613,743 | 14m 38s (14m 38s) |
 | 2 | behavior | AC-1, AC-2 | ✅ Done | 10,406,545 | 58m 47s (58m 48s) |
-| 3 | behavior | AC-3, AC-4 | ⬜ Todo | | |
+| 3 | behavior | AC-3, AC-4 | ✅ Done | 8,419,171 | 15m 59s (15m 59s) |
 | 4 | behavior | AC-5 | ⬜ Todo | | |
 | 5 | behavior | AC-6, AC-7 | ⬜ Todo | | |
 | 6 | behavior | AC-9, AC-10, AC-11 | ⬜ Todo | | |
@@ -180,9 +180,64 @@
 - **Acceptance gate:** un-pend AC-3, AC-4; `TestAC03_*`, `TestAC04_*` green in run-pending (+ earlier ACs).
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** `name_header.dart` renders the colour name at `ValueRegion.prominentFontSize` (48, bold) inside
+  a keyed `Semantics(header: true)` wrapper, so the name is the largest text at the top and marked a heading
+  for assistive tech (SI Accessibility, AC-3). `temperature_line.dart` renders `"Temperature: <word>"` from
+  the controller (AC-4). `readout_controller.dart` now derives both: `nameText` = `_sample.name ??
+  colorScience.nearestName(coordinates)` (an un-named sample shows the nearest ISCC-NBS name, not a
+  placeholder); `temperatureWord` = `colorScience.temperatureWord(toCIELCh(coordinates).hue)`.
+- **Structural fix (recorded):** the shell kept `NameHeader.headerKey` on the name `Text` itself; the AC-3
+  finder is `find.descendant(of: byKey(headerKey), matching: find.text('Warm Terracotta'))`, which excludes
+  the matched root — so the name must be a *descendant* of the keyed widget. Moved the key onto the wrapping
+  `Semantics` with the `Text` as its child. No behaviour change; the readout_screen widget test's
+  descendant check now resolves too.
+- **AC test change (recorded, non-weakening):** removed the AC-3 Given
+  `expect(find.text('Unnamed sample'), findsOneWidget)` from `readout_test.dart`. **Why:** it asserted the
+  shell placeholder, which the derived-name behaviour (AC-3) necessarily replaces — the two could never both
+  hold. The "no stored name" Given is still established by the retained `expect(unnamed.name, isNull)` on the
+  public `Sample` surface; the Then still rejects both an echo-of-`Sample.name` impl and a not-derived impl.
+  Independent grader confirmed no loss of discriminating power.
+- **Test-infra change (recorded):** AC-3, AC-4 un-pended in `harness.dart`; `harness_test.dart` pending-gate
+  example switched from AC-3 (now landed) to AC-5 (still pending), and the un-pended set extended to
+  `{AC-1, AC-2, AC-3, AC-4}` — keeps the complement invariant non-vacuous.
+- **Gates:** unit 162 pass (+3: controller temperatureWord warm/cool/neutral; screen unnamed→derived; grid);
+  coverage gate **100% line** on the 3 touched lib files (PASS); `flutter analyze` clean. Acceptance
+  (iOS sim `5AB9D06D…`, default mode): **AC-3, AC-4 green**; AC-1, AC-2 stay green; AC-5..12 skipped/pending;
+  harness smoke + pending-gate + fake tests green.
+- **Test grades:** independent fresh grader re-graded **all** un-pended tests live: AC-1 **A**, AC-2 **A**,
+  AC-3 **A**, AC-4 **A** (4×A, 0×B). No downgrade; AC-1's name-header exclusion confirmed intact (name 48 ==
+  value 48, so the exclusion is load-bearing). Grid: `behavior-test-completeness-bs-01-color-readout.md`.
+- **Augmentations made:** none (none due this phase). Carried: AC-5 sRGB-triplet tightening (READOUT-4);
+  AC-1's pre-seed remains confirmed redundant. Justified exclusions: none.
+- **Fix passes: 1/3** — first unit run: the readout_screen unnamed-sample test failed on the
+  `find.descendant` root-exclusion (key on the `Text`); fixed by keying the `Semantics` wrapper. Re-run green.
+  Implementation moved to green on that pass.
+- **Closed by:** gate pass.
+- **Tokens:** 8,419,171 (claude-opus-4-8) · **Time:** 15m 59s active (15m 59s wall). **Phase total: 8,419,171 tokens, 15m 59s.**
+
+### Checkpoint / Handoff
+
+- **Frozen additions (for the later behaviour phases):**
+  - `ReadoutController` now also exposes `nameText` (derived: stored name, else nearest ISCC-NBS name) and
+    `temperatureWord` (String: "warm"/"cool"/"neutral", from the CIELCh hue).
+  - `NameHeader.nameStyle` is `TextStyle(fontSize: ValueRegion.prominentFontSize /* 48 */, bold)`; the key
+    `NameHeader.headerKey` is on a wrapping `Semantics(header: true)`, with the name `Text` as its child —
+    finders that look *inside* the header (descendant / paragraphsUnder) rely on this.
+  - `TemperatureLine` renders `"Temperature: <word>"` keyed `TemperatureLine.lineKey`.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart <base>`. Acceptance:
+  boot the sim once (`xcrun simctl boot 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), then default
+  `flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; run-pending adds
+  `--dart-define=BS01_RUN_PENDING=true`.
+- **Known gaps (later phases):** colour-space selector shows placeholder per-space values (AC-5 → READOUT-4);
+  provenance region is still a placeholder (AC-6/7 → READOUT-5); action controls stay disabled (speak +
+  just-captured → A11Y-2; compare/recipes → READOUT-6).
+- **Next phase should:** run **READOUT-4** (AC-5 colour-space selector) — edits `space_selector.dart` +
+  `readout_controller.dart`, and makes AC-1's (redundant) pre-seed augmentation decision: the generic
+  largest-reading check already out-ranks the now-rendered space readings, so drop the pre-seed row with a
+  note. All READOUT behaviour phases edit the Readout screen/controller — **merge-risky, run serially**.
 
 ## Phase 4 — Behavior: colour-space selector (AC-5)
 

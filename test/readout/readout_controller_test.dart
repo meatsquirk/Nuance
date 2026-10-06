@@ -59,11 +59,14 @@ void main() {
       expect(controller.nameText, 'Warm Terracotta');
     });
 
-    test('nameText falls back when the sample is unnamed', () {
+    test('nameText derives the nearest colour name when the sample is unnamed',
+        () {
+      // No stored name → the name is the nearest ISCC-NBS colour to _coords
+      // (L58, a36, b34), which is "Warm Terracotta" (AC-3).
       final controller = _controllerFor(
         const Sample(coordinates: _coords, provenance: _provenance),
       );
-      expect(controller.nameText, 'Unnamed sample');
+      expect(controller.nameText, 'Warm Terracotta');
     });
 
     test('justCaptured reflects the sample', () {
@@ -192,6 +195,32 @@ void main() {
 
       expect(controller.sample, same(sample));
       expect(notified, 0);
+    });
+  });
+
+  group('ReadoutController temperature word (AC-4)', () {
+    ReadoutController controllerAt(double a, double b) => _controllerFor(
+          Sample(
+            coordinates: ColorCoordinates(lightness: 55, a: a, b: b),
+            provenance: _provenance,
+          ),
+        );
+
+    test('a warm sample (hue ~42°) reads "warm"', () {
+      // The terracotta a*/b* — hue ≈ 42°, within 60° of the warm pole.
+      expect(controllerAt(25.27, 22.75).temperatureWord, 'warm');
+    });
+
+    test('a cool sample (hue ~250°) reads "cool" — the SAMPLE_COOL control', () {
+      // The cool-fixture a*/b* — hue ≈ 250°, within 60° of the cool pole; the
+      // temperature word is derived from the hue, never "always warm".
+      expect(controllerAt(-11.63, -31.95).temperatureWord, 'cool');
+    });
+
+    test('a transitional sample (hue ~150°) reads "neutral"', () {
+      // Hue ≈ 150° (a green transition) — equidistant enough from both poles to
+      // read "neutral", the axis temperature is stated relative to.
+      expect(controllerAt(-17.32, 10).temperatureWord, 'neutral');
     });
   });
 }

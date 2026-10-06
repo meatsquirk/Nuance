@@ -165,9 +165,12 @@ void main() {
     );
     expect(unnamed.name, isNull,
         reason: 'AC-3 Given: the sample carries no name — the name is derived');
+    // The "no stored name" Given is established by the null-name assertion above
+    // (the public Sample surface): since the name is null, any name the header
+    // shows can only be derived, so a shell echoing Sample.name still fails the
+    // Then. (This replaces the earlier shell-only check for the "Unnamed sample"
+    // placeholder, which the derived-name behaviour necessarily removes.)
     await givenReadoutOf(tester, unnamed);
-    expect(find.text('Unnamed sample'), findsOneWidget,
-        reason: 'AC-3 Given: the shell shows no stored name for this sample');
 
     // When: the readout is shown.
     // Then: the derived name "Warm Terracotta" is shown in the name header, at

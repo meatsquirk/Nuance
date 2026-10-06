@@ -72,11 +72,22 @@ class ReadoutController extends ChangeNotifier {
   /// Whether this reading was just captured and not yet acknowledged (AC-12).
   bool get justCaptured => _sample.justCaptured;
 
-  /// The sample's plain-language name, or a placeholder until it is named.
+  /// The sample's plain-language name shown large at the top (AC-3).
   ///
-  /// The nearest-name derivation (AC-3) lands in COLOR-3 / READOUT-3; the shell
-  /// shows the sample's own [Sample.name] when present.
-  String get nameText => _sample.name ?? 'Unnamed sample';
+  /// The sample's own [Sample.name] when it carries one; otherwise the nearest
+  /// ISCC-NBS colour name derived from its coordinates, so an un-named sample
+  /// still reads as a real colour name rather than a placeholder.
+  String get nameText =>
+      _sample.name ?? colorScience.nearestName(_sample.coordinates);
+
+  /// The sample's temperature stated as a plain-language word — "warm", "cool"
+  /// or "neutral" (AC-4).
+  ///
+  /// Derived from the sample's hue angle (its CIELCh hue) relative to the
+  /// neutral axis, so the temperature reads as a word that tracks the colour and
+  /// is never the raw hue angle.
+  String get temperatureWord => colorScience
+      .temperatureWord(colorScience.toCIELCh(_sample.coordinates).hue);
 
   /// The sample's perceptual lightness (CIELAB L\*) — the prominent reading the
   /// value region shows largest (AC-1).

@@ -57,7 +57,8 @@ void main() {
     // ACs whose behaviour has landed (un-pended) and so are no longer in the
     // pending map. This set grows one behaviour phase at a time; the pending map
     // is its exact complement across the 12 ACs. (READOUT-2 un-pended AC-1/AC-2.)
-    const unpended = {'AC-1', 'AC-2'};
+    // READOUT-2 un-pended AC-1/AC-2; READOUT-3 un-pended AC-3/AC-4.
+    const unpended = {'AC-1', 'AC-2', 'AC-3', 'AC-4'};
 
     test('pending map is the exact complement of the un-pended ACs across all 12, '
         'each owned by a real behaviour phase', () {
@@ -84,19 +85,19 @@ void main() {
     test('skips a pending AC by default; runs it under BS01_RUN_PENDING', () {
       // Assert both modes deterministically (override the ambient env), so this
       // run exercises both branches and an inverted gate fails either way.
-      // AC-3 is still pending (present in the map).
-      expect(pendingSkipReason('AC-3', forceRunPending: false), isNotNull);
+      // AC-5 is still pending (present in the map).
+      expect(pendingSkipReason('AC-5', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-5', forceRunPending: true), isNull);
+      // An un-pended AC (AC-3, now landed) always runs, in either mode.
+      expect(pendingSkipReason('AC-3', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-3', forceRunPending: true), isNull);
-      // An un-pended AC (AC-1, now landed) always runs, in either mode.
-      expect(pendingSkipReason('AC-1', forceRunPending: false), isNull);
-      expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
       // An AC absent from the map also always runs, in either mode.
       expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
       // The ambient path (used by acTestWidgets) agrees with the current mode.
       expect(
-        pendingSkipReason('AC-3'),
-        pendingSkipReason('AC-3', forceRunPending: runPending),
+        pendingSkipReason('AC-5'),
+        pendingSkipReason('AC-5', forceRunPending: runPending),
       );
     });
   });

@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — READOUT-2 done (AC-1, AC-2 green); next READOUT-3 (name + temperature). READOUT/A11Y behaviour phases run serially.
+**Status:** In progress — READOUT-3 done (AC-3, AC-4 green); next READOUT-4 (colour-space selector). READOUT/A11Y behaviour phases run serially.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -44,8 +44,8 @@ per-AC "Missing" column is what the behavior stage must build.
 |---|---|---|---|---|
 | AC-1 | Lightness is displayed as the prominent value with a grayscale preview | ITEST-2 `TestAC01_LightnessProminent` | COLOR-2, READOUT-2 | ✅ Done |
 | AC-2 | The numeric lightness is paired with a plain-language value word | ITEST-2 `TestAC02_ValueWord` | COLOR-3, READOUT-2 | ✅ Done |
-| AC-3 | A plain-language colour name is shown large | ITEST-2 `TestAC03_ColourName` | COLOR-3, READOUT-3 | ⬜ Todo |
-| AC-4 | A warm sample is described as warm in words | ITEST-2 `TestAC04_Temperature` | COLOR-3, READOUT-3 | ⬜ Todo |
+| AC-3 | A plain-language colour name is shown large | ITEST-2 `TestAC03_ColourName` | COLOR-3, READOUT-3 | ✅ Done |
+| AC-4 | A warm sample is described as warm in words | ITEST-2 `TestAC04_Temperature` | COLOR-3, READOUT-3 | ✅ Done |
 | AC-5 | The painter selects a colour space and sees the sample in that space | ITEST-2 `TestAC05_ColourSpaceSelector` | COLOR-2, READOUT-4 | ⬜ Todo |
 | AC-6 | A measured value is badged Measured | ITEST-2 `TestAC06_MeasuredBadge` | READOUT-5 | ⬜ Todo |
 | AC-7 | An unverified seeded value is badged Estimated and labelled not yet verified | ITEST-2 `TestAC07_EstimatedBadge` | READOUT-5 | ⬜ Todo |
@@ -187,8 +187,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ✅ Done | 8,261,518 | 41m 20s (29m 42s) | conversions.dart + calibrated Munsell table; terracotta → 10R 5.5/6 |
 | 12 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ✅ Done | 9,382,074 | 27m 50s (27m 50s) | naming.dart/words.dart/decomposition.dart + iscc_nbs.csv; indep. of COLOR-2 |
 | 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ✅ Done | 10,406,545 | 58m 47s (58m 48s) | AC-1/AC-2 green on sim; A/A grades; +`load`/`didUpdateWidget` so a re-injected sample updates in place |
-| 14 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ⬜ Next | | | |
-| 15 | READOUT-4 | behavior: AC-5 (colour-space selector) | ⬜ Todo | | | |
+| 14 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ✅ Done | 8,419,171 | 15m 59s (15m 59s) | AC-3/AC-4 green on sim (4×A re-grade); name header prominent + derived nearest name; temperature word; key moved to Semantics wrapper; 1 fix pass |
+| 15 | READOUT-4 | behavior: AC-5 (colour-space selector) | ⬜ Next | | | |
 | 16 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ⬜ Todo | | | |
 | 17 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ⬜ Todo | | | |
 | 18 | A11Y-2 | behavior: AC-8, AC-12 (speak + haptic/just-captured) | ⬜ Todo | | | |
@@ -199,17 +199,18 @@ when the row is marked done.
 
 ## Next phase
 
-**READOUT-2 done (2026-10-06).** AC-1 and AC-2 are green on the simulator (A/A grades); the value region
-renders the prominent lightness, grayscale preview, Munsell value and value word. 2/12 ACs un-pended.
+**READOUT-3 done (2026-10-06).** AC-3 and AC-4 are green on the simulator (independent 4×A re-grade of all
+un-pended tests); the name header shows the derived nearest ISCC-NBS name, large at the top, and the
+temperature line states the warmth as a word. 4/12 ACs un-pended.
 
-- **Next: READOUT-3** (AC-3 name + AC-4 temperature) — edits `name_header.dart` + `temperature_line.dart`.
-- **Startable (serial — all edit the Readout screen/controller):** READOUT-3, READOUT-4 (AC-5), READOUT-5
-  (AC-6/7), READOUT-6 (AC-9/10/11), A11Y-2 (AC-8/12). One per session; never pair two in parallel.
+- **Next: READOUT-4** (AC-5 colour-space selector) — edits `space_selector.dart` + `readout_controller.dart`.
+- **Startable (serial — all edit the Readout screen/controller):** READOUT-4 (AC-5), READOUT-5 (AC-6/7),
+  READOUT-6 (AC-9/10/11), A11Y-2 (AC-8/12). One per session; never pair two in parallel.
 - **Runner:** boot the sim (`xcrun simctl boot 5AB9D06D-…`); un-pend an AC by deleting its `pendingACs` row in
   `harness.dart`; default `flutter test integration_test/ -d <udid>` (pending ACs skip); run-pending adds
   `--dart-define=BS01_RUN_PENDING=true`. Plain `flutter test integration_test/` (no `-d`) is a false green.
-- **Carry-forward:** AC-5 sRGB-triplet tightening (READOUT-4); AC-1's pre-seed is redundant — drop it with a
-  note when READOUT-4 lands.
+- **Carry-forward:** AC-5 sRGB-triplet tightening is READOUT-4's own; AC-1's pre-seed is redundant (the
+  generic largest-reading check already out-ranks the space readings) — drop that row with a note in READOUT-4.
 
 ## Token usage
 
@@ -233,7 +234,8 @@ renders the prominent lightness, grayscale preview, Munsell value and value word
 | PHASE | f5c57438 | 2026-10-06 08:28 EDT | 08:56 | 27m 50s | 27m 50s | claude-opus-4-8 | 128 | 179,263 | 9,120,314 | 82,369 | 9,382,074 | COLOR-3 done: naming/words/decomposition enabler; 120 unit green, 100% touched-file coverage; acceptance default green, red baseline held |
 | RECONCILE | ee089be3 | 2026-10-06 10:57 EDT | 11:10 | 13m 24s | 13m 24s | claude-opus-4-8 | 90 | 96,654 | 3,732,837 | 33,730 | 3,863,311 | merged COLOR-2 + COLOR-3 enabler branches into feature branch (4 trivial conflicts resolved); applied both rollups; analyze clean, 147 unit tests green, coverage gate PASS (provenance.dart const-ctor flake: red once, green on re-run); COLOR module complete; READOUT-2 now Next |
 | PHASE | 920e046f | 2026-10-06 11:43 EDT | 12:42 | 58m 48s | 58m 47s | claude-opus-4-8 | 138 | 232,372 | 10,103,922 | 70,113 | 10,406,545 | READOUT-2 done: AC-1, AC-2 green on sim (A/A grades); value region renders prominent lightness + grayscale + Munsell value + value word; +load/didUpdateWidget for re-injected sample; 100% coverage on 3 touched files; 1 fix pass |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 12:42** | **6h 55m** | **4h 51m** |  | **1,460** | **2,181,993** | **80,377,193** | **761,130** | **83,321,776** |  |
+| PHASE | 00215ace | 2026-10-06 15:32 EDT | 15:48 | 15m 59s | 15m 59s | claude-opus-4-8 | 142 | 239,051 | 8,129,554 | 50,424 | 8,419,171 | READOUT-3 done: AC-3 (derived nearest name, prominent header) + AC-4 (temperature word) green on sim; independent 4×A re-grade of all un-pended tests; 100% coverage on 3 touched files; 1 fix pass |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 15:48** | **7h 11m** | **5h 07m** |  | **1,602** | **2,421,044** | **88,506,747** | **811,554** | **91,740,947** |  |
 
 ## Sign-off
 

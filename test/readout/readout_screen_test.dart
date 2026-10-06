@@ -73,8 +73,10 @@ void main() {
     expect(find.text('Warm Terracotta'), findsOneWidget);
   });
 
-  testWidgets('falls back to a placeholder name for an unnamed sample',
+  testWidgets('derives the nearest colour name for an unnamed sample',
       (tester) async {
+    // No stored name → the header shows the nearest ISCC-NBS colour name
+    // derived from the coordinates (L58, a36, b34 → "Warm Terracotta"), AC-3.
     await _pumpScreen(
       tester,
       sample: const Sample(
@@ -82,7 +84,13 @@ void main() {
         provenance: Provenance(ProvenanceTier.measured),
       ),
     );
-    expect(find.text('Unnamed sample'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(NameHeader.headerKey),
+        matching: find.text('Warm Terracotta'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('offers the four colour spaces and starts on CIELCh',

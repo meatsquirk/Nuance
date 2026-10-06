@@ -42,3 +42,33 @@ Graded 2026-10-06 by an independent fresh grader against the **live behaviour** 
 - **AC-2 — `TestAC02_ValueWord`: A** (G1,G2,G4,G5,G6). G2 is load-bearing and satisfied by the L15/L90 controls (word must be *derived* from L). **Discriminates:** `valueWord(58)`="middle value", `valueWord(15)`="very low value", `valueWord(90)`="very high value"; a constant-"middle" impl fails both controls.
 - **B-fixes needed:** none; no downgrade from the ITEST-2 grid. The AC-1 pre-seeded augmentation is confirmed redundant (the generic "larger than every other body reading" already out-ranks the colour-space readings READOUT-4 will add).
 - **Counts:** 2×A, 0×B.
+
+## Re-grade — READOUT-3 (AC-3, AC-4 un-pended)
+
+Graded 2026-10-06 by an independent fresh grader against the **live behaviour** (real `buildApp` +
+`ColorScienceImpl` — every member delegates to a real pure function, so AC-3/AC-4 run live and do not throw),
+per the behaviour-phase grade gate. Grades **every** un-pended AC test (AC-1..AC-4), not only the two landed.
+
+- **AC-3 — `TestAC03_ColourName`: A** (G1,G2,G4,G5,G6). The derived-name point holds: `unnamed.name == null`
+  is checked on the public `Sample` surface before the When; `nameText` = `_sample.name ?? nearestName(...)`
+  so a null name derives via `nearestColorName`. **Discriminates:** the Then requires the *derived* "Warm
+  Terracotta" under the header, so (a) a shell echoing `Sample.name` shows null/placeholder → fails, (b) a
+  not-derived/placeholder impl → fails. "Warm Terracotta" is the genuine nearest — `kNamedColors` holds an
+  exact anchor `(58, 25.27, 22.75)` identical to the fixture coords (ΔE 0, global min). Prominence at full
+  grain: header-above-value-region (top) and name font `>=` every other body paragraph (correctly `>=`, since
+  the value number is also 48). **Test change this phase (non-weakening):** the earlier
+  `expect(find.text('Unnamed sample'), findsOneWidget)` shell-placeholder Given was removed — the derived-name
+  behaviour necessarily removes that placeholder, and the "no stored name" Given is still established by the
+  retained `expect(unnamed.name, isNull)`. Grader confirmed the removal does **not** weaken discriminating
+  power (both the echo-impl and the not-derived impl still fail the Then).
+- **AC-4 — `TestAC04_Temperature`: A** (G1,G2,G4,G5,G6). Given: name shown + hue `closeTo(42, 0.5)` on input.
+  Then on the temperature line ("Temperature: warm"): `contains('warm')` **and** `isNot(contains('42'))` —
+  rejects the raw hue angle (G4). **Discriminates:** `temperatureWord(42)`="warm"; the SAMPLE_COOL control
+  (hue `closeTo(250,1)` → `temperatureWord(250)`="cool", `isNot(contains('warm'))`) proves derivation from hue
+  and rejects "always warm" (G2/G5). One AC (confined to the temperature line).
+- **AC-1, AC-2:** no downgrade. The AC-1 name-header exclusion is confirmed **intact and load-bearing** —
+  `NameHeader.nameStyle.fontSize == ValueRegion.prominentFontSize == 48` and the lightness number is also 48,
+  so the exclusion set (name header + actions bar + lightness paragraphs) is what keeps AC-1's strict
+  `greaterThan` valid; were the name header not excluded, 48 > 48 would fail. The now-prominent name does not
+  affect AC-1's strict-largest-over-the-value-reading claim.
+- **Counts:** 4×A, 0×B. No B to fix; no augmentations due this phase.
