@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** ⏸ Awaiting review — ITEST-4 packet assembled; G-2 awaiting decision (blocks the whole behaviour stage)
+**Status:** In progress — G-2 approved; next COLOR-2 ∥ COLOR-3 (behaviour enablers)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -129,7 +129,7 @@ READOUT-4.
 | COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | 🔄 In progress |
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Cross-cutting accessibility: `Speech`/`Haptics` services + label-contract widgets; speak-readout + haptic behavior | CORE | 🔄 In progress |
 | READOUT | [modules/READOUT.md](modules/READOUT.md) | Readout screen UI + controller; renders value/name/temperature/spaces/provenance; carries into compare/recipes | CORE, COLOR, A11Y | 🔄 In progress |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done |
 
 ## Dependency graph
 
@@ -160,7 +160,7 @@ screen into per-region files first); A11Y-2 also touches the readout controller.
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CORE-1 | ✅ Resolved 2026-10-05: approved — owner Matt Quirk. Spec first line records approval. |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision (ITEST-4 packet assembled 2026-10-06) |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-06 07:13 EDT: approved — owner Matt Quirk. 12 tests approved as-is; behaviour stage unblocked. |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -183,8 +183,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 7,980,954 | 29m 01s (1h 13m) | harness + fakes + smoke green on iOS sim; grade A; runner → sim (owner decision, D-6) |
 | 8 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ✅ Done | 6,226,248 | 27m 50s | 7×A; red baseline (Then) recorded; run-pending → dart-define |
 | 9 | ITEST-3 | acceptance-tests: AC-8..12 (pending) + red baseline | ✅ Done | 6,061,969 | 17m 53s | 5×A (AC-8 B→A, G5 fix); red baseline (Then) recorded |
-| 10 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,057,046 | 2m 20s | packet assembled; G-2 awaiting decision; behaviour stage blocked until recorded |
-| 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ⬜ Todo | | | ∥ COLOR-3 |
+| 10 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,057,046 | 2m 20s | packet assembled; G-2 approved 2026-10-06 (owner Matt Quirk); behaviour stage unblocked |
+| 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ⬜ Next | | | ∥ COLOR-3 (both startable) |
 | 12 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ⬜ Todo | | | ∥ COLOR-2 |
 | 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ⬜ Todo | | | |
 | 14 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ⬜ Todo | | | |
@@ -199,19 +199,19 @@ when the row is marked done.
 
 ## Next phase
 
-**Awaiting the G-2 human decision.** ITEST-4 is done bar the gate: the review packet is assembled in
-[modules/ITEST.md](modules/ITEST.md) (per-AC Given/When/Then/Rejects, red-baseline summary, augmentations,
-grid path + 12×A counts, what to look at first). The whole AC catalogue (AC-1..AC-12) is written, pending and
-graded A; all 12 fail at the red baseline on a Then naming their owning phase.
+**G-2 approved 2026-10-06 (owner Matt Quirk).** The behaviour stage is open. ITEST-4 is ✅ Done and the ITEST
+module complete; the whole AC catalogue (AC-1..AC-12) is written, pending and graded 12×A, each red at the
+baseline on a Then naming its owning phase.
 
-- **No phase is startable** until G-2 is recorded — it blocks the entire behaviour stage (COLOR-2/3,
-  READOUT-2..6, A11Y-2).
-- **Record the decision:** `/feature-next-phase --gate bs-01-color-readout G-2 approved | "<changes>"`.
-  On **approved**: COLOR-2 ∥ COLOR-3 (enablers) become startable. On **changes requested**: each item becomes
-  an `ITEST` change phase, then a fresh review.
-- **Runner note** for every behaviour phase: boot the sim first; un-pend ACs run with
-  `--dart-define=BS01_RUN_PENDING=true`; CI must add an emulator and pass the define before the acceptance job
-  is wired.
+- **Startable now (parallel):** COLOR-2 ∥ COLOR-3 — the two enablers (the plan's parallel window; disjoint, no
+  AC un-pends yet). They unblock READOUT-2/3/4 and A11Y-2.
+- **Also unblocked but merge-risky:** READOUT-5 (AC-6/7) and READOUT-6 (AC-9/10/11) have no COLOR dependency,
+  but they and READOUT-2/3/4 + A11Y-2 all edit the Readout screen/controller — run those serially (or split
+  the screen per-region first). Don't pair them with each other.
+- **Runner** (every behaviour phase): boot the sim first; un-pend an AC by deleting its row from `pendingACs`
+  in `harness.dart` and run with `--dart-define=BS01_RUN_PENDING=true`; CI must add an emulator and pass the
+  define before the acceptance job is wired.
+- **Carry-forward augmentation:** AC-5 sRGB triplet, owned by READOUT-4.
 
 ## Token usage
 
@@ -230,7 +230,8 @@ graded A; all 12 fail at the red baseline on a Then naming their owning phase.
 | ITEST-2 | 6e55de65 | 2026-10-05 23:42 EDT | 2026-10-06 00:10 | 27m 50s | 27m 50s | claude-opus-4-8 | 104 | 228,634 | 5,929,899 | 67,611 | 6,226,248 | AC-1..7 pending + red baseline (Then, each names owning phase); grade 7×A; default green; run-pending fixed to dart-define |
 | ITEST-3 | 7c0d4d84 | 2026-10-06 05:43 EDT | 06:01 | 17m 53s | 17m 53s | claude-opus-4-8 | 112 | 214,214 | 5,803,717 | 43,926 | 6,061,969 | AC-8..12 pending + red baseline (Then, each names owning phase); grade 5×A (AC-8 B→A, G5 fix); default green; unit 92 green; coverage PASS (test-only) |
 | ITEST-4 | 88faaf7f | 2026-10-06 06:53 EDT | 06:55 | 2m 20s | 2m 20s | claude-opus-4-8 | 30 | 60,755 | 986,637 | 9,624 | 1,057,046 | test-review packet assembled; phase ⏸ Awaiting review; G-2 awaiting decision (blocks behaviour stage); no code touched |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 06:55** | **4h 29m** | **2h 38m** |  | **948** | **1,446,047** | **48,224,067** | **477,760** | **50,148,822** |  |
+| SIGNOFF-DECISION | c9c05f74 | 2026-10-06 07:10 EDT | 07:14 | 4m 28s | 3m 39s | claude-opus-4-8 | 32 | 67,372 | 1,176,694 | 15,408 | 1,259,506 | ITEST-4 approved — G-2 resolved; behaviour stage unblocked (owner Matt Quirk) |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 07:14** | **4h 34m** | **2h 41m** |  | **980** | **1,513,419** | **49,400,761** | **493,168** | **51,408,328** |  |
 
 ## Sign-off
 

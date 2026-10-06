@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ⏸ Awaiting review — ITEST-1/2/3 done, ITEST-4 packet assembled; G-2 awaiting decision (blocks the behaviour stage)
+**Status:** ✅ Done — ITEST-1/2/3/4 done; G-2 approved 2026-10-06 (owner Matt Quirk); behaviour stage unblocked
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/` — `harness.dart` (Given/When/Then vocabulary, fixtures, pending
 gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake_speech.dart`,
@@ -14,7 +14,7 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 | 1 | acceptance-tests | — (harness) | ✅ Done | 7,980,954 | 29m 01s (1h 13m) |
 | 2 | acceptance-tests | AC-1..AC-7 | ✅ Done | 6,226,248 | 27m 50s |
 | 3 | acceptance-tests | AC-8..AC-12 | ✅ Done | 6,061,969 | 17m 53s |
-| 4 | test-review | — (G-2) | ⏸ Awaiting review | 1,057,046 | 2m 20s |
+| 4 | test-review | — (G-2) | ✅ Done | 1,057,046 | 2m 20s |
 
 ## Interface reconciliation
 - **Boundary:** the assembled app via the one production `buildApp(deps)` entry, driven by `WidgetTester`.
@@ -45,8 +45,9 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
   only in run-pending mode (`BS01_RUN_PENDING=1`). **Un-pending an AC = delete its row from `pendingACs`.**
 
 ## Open gates
-- **G-2 (approve acceptance tests)** — *awaiting decision* (ITEST-4 packet assembled 2026-10-06). This
-  module's exit gate; blocks every behavior phase until a human records the decision via `--gate`.
+- **G-2 (approve acceptance tests)** — ✅ Resolved 2026-10-06 07:13 EDT: **approved** — owner Matt Quirk.
+  The 12 acceptance tests (ITEST-4 packet) approved as-is; the behaviour stage is unblocked (COLOR-2 ∥
+  COLOR-3 first). This module's exit gate.
 
 ## Phase 1 — Harness
 
