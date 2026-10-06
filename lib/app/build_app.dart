@@ -3,7 +3,25 @@ import 'package:flutter/material.dart';
 import '../a11y/haptics.dart';
 import '../a11y/speech.dart';
 import '../color_science/color_science.dart';
+import '../domain/color_coordinates.dart';
+import '../domain/provenance.dart';
+import '../domain/sample.dart';
+import '../readout/readout_screen.dart';
 import 'router.dart';
+
+/// The sample the shipped bs-01 app opens the Readout screen on.
+///
+/// bs-01 ships the reading surface before capture exists (capture is bs-02,
+/// D-1), so there is no painter-supplied sample yet. This fixed sample gives the
+/// Readout a subject to render until bs-02 wires capture into
+/// [AppDependencies.initialSample]. It is a plain [Sample] (canonical CIELAB +
+/// provenance) with no derived values pre-computed — every presentable form is
+/// derived by the COLOR behaviour phases from these coordinates.
+const Sample demoSample = Sample(
+  name: 'Warm Terracotta',
+  coordinates: ColorCoordinates(lightness: 58, a: 36, b: 34),
+  provenance: Provenance(ProvenanceTier.measured),
+);
 
 /// The app-wide services assembled once at startup and injected down the tree.
 ///
@@ -17,6 +35,7 @@ class AppDependencies {
     required this.speech,
     required this.haptics,
     this.router = const AppRouter(),
+    this.initialSample = demoSample,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -30,6 +49,13 @@ class AppDependencies {
 
   /// Typed navigation into the comparison / recipes destinations.
   final AppRouter router;
+
+  /// The sample the app opens the Readout screen on.
+  ///
+  /// bs-01 has no capture yet (D-1), so production defaults to [demoSample]; the
+  /// acceptance harness injects a fixture here to read each scenario's sample
+  /// through this same [buildApp] entry (capture replaces it in bs-02).
+  final Sample initialSample;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -65,34 +91,17 @@ class AppScope extends InheritedWidget {
 /// Builds the root widget of the Paint Color Assistant.
 ///
 /// The single production assembly entry (D-7): it injects [deps] via [AppScope]
-/// and wires the router into a [MaterialApp] that opens on the Readout route.
-/// For this shell phase the Readout destination is the [_ReadoutPlaceholder]
-/// below; READOUT-1 replaces it with the real Readout screen behind this same
-/// entry, so neither `main.dart` nor the acceptance harness changes.
+/// and wires the router into a [MaterialApp] that opens on the [ReadoutScreen]
+/// for [AppDependencies.initialSample]. `main.dart` and the acceptance harness
+/// both construct the app through this entry, differing only in the injected
+/// services and the initial sample.
 Widget buildApp(AppDependencies deps) {
   return AppScope(
     dependencies: deps,
     child: MaterialApp(
       title: 'Paint Color Assistant',
       theme: ThemeData(useMaterial3: true),
-      home: const _ReadoutPlaceholder(),
+      home: ReadoutScreen(sample: deps.initialSample),
     ),
   );
-}
-
-/// The bs-01 placeholder for the Readout route, replaced by READOUT-1.
-///
-/// It exists so [buildApp] opens on the Readout destination now; it renders only
-/// a marker so there is a route to launch to before the real screen lands.
-class _ReadoutPlaceholder extends StatelessWidget {
-  const _ReadoutPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Readout'),
-      ),
-    );
-  }
 }

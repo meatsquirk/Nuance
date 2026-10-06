@@ -1,6 +1,6 @@
 # Module READOUT — Readout screen UI + controller
 
-**Status:** Not started
+**Status:** In progress — READOUT-1 done (screen + controller shell; every region laid out with placeholder content); next READOUT-2 (behavior, blocked by G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` — `readout_screen.dart` and per-region widgets
 (`value_region.dart`, `name_header.dart`, `temperature_line.dart`, `space_selector.dart`,
@@ -15,7 +15,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 7,613,743 | 14m 38s (14m 38s) |
 | 2 | behavior | AC-1, AC-2 | ⬜ Todo | | |
 | 3 | behavior | AC-3, AC-4 | ⬜ Todo | | |
 | 4 | behavior | AC-5 | ⬜ Todo | | |
@@ -50,9 +50,58 @@
   ITEST finders have anchors); behaviour unchanged.
 - **Acceptance gate:** *(n/a — shell)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- Landed: `lib/readout/` — `ReadoutController` (ChangeNotifier holding the `Sample` + injected
+  `ColorScience`/`Speech`/`Haptics`/`AppRouter`, the `selectedSpace` (`ReadoutSpace` enum, default CIELCh)
+  and a just-captured seam: `selectSpace`, `acknowledge`, `nameText`); `ReadoutScreen` (StatefulWidget that
+  builds the controller once from `AppScope.of(context)` and disposes it) laying out six region widgets —
+  `NameHeader`, `ValueRegion` (value + grayscale slot + Munsell placeholder), `TemperatureLine`,
+  `SpaceSelector` (four-space `ChoiceChip` set, selection wired; per-space values placeholder), `ProvenanceRegion`,
+  `ActionsBar` (five findable controls: speak / compare-A / compare-B / find-recipes / acknowledge). Every
+  region/control carries a stable `ValueKey` anchor (e.g. `readout-value-region`, `readout-action-speak`).
+- **No AC behaviour implemented** (lifecycle: behaviour follows the test review / G-2). Colour derivations are
+  placeholders (the `ColorScience` stub throws until COLOR-2/3); the action controls are **disabled**
+  placeholders until their behaviour phase wires them (speak + acknowledge → A11Y-2; compare-A/B + recipes →
+  READOUT-6). The space selector toggles view state only — real per-space values + exclusivity are READOUT-4.
+- `build_app.dart`: `buildApp` now opens on `ReadoutScreen(sample: deps.initialSample)` (replacing
+  `_ReadoutPlaceholder`); added `AppDependencies.initialSample` (optional, defaults to new `demoSample` const)
+  as the seam the acceptance harness injects a fixture through — `buildApp(deps)` signature unchanged (D-7).
+- Fix passes: 2/3 — (1) a `prefer_initializing_formals` lint on the private `_sample` field (resolved with a
+  scoped `// ignore`); (2) the coverage gate failed with "NO COVERAGE DATA" on a const-only `demo_sample.dart`
+  (Dart emits no lcov record for a compile-time-const-only library) — folded `demoSample` into `build_app.dart`.
+  Implementation moved toward green each pass.
+- Suites run: unit/widget (this feature) only; no acceptance suite yet (stage 3). `flutter analyze` clean.
+- Tests: 92 passing (+20) · Coverage (touched files): 100% line on all 23 touched `lib` files, incl. the 7
+  new readout files + changed `build_app.dart` (Dart emits line coverage only; every branch exercised by a
+  test per the review requirement — `selectSpace`/`acknowledge` both branches, `nameText` named/unnamed, all
+  four `SpaceSelector.labelFor` cases, the controller-reuse guard in `didChangeDependencies`). Acceptance: n/a.
+- Test grades: n/a (shell) · Augmentations made: none · Justified exclusions: none.
+- Closed by: gate pass.
+- Tokens: 7,613,743 (claude-opus-4-8) · Time: 14m 38s active (14m 38s wall). **Phase total: 7,613,743 tokens, 14m 38s.**
+
+### Checkpoint / Handoff
+
+- **Frozen for the behaviour phases:**
+  - `ReadoutController{sample, colorScience, speech, haptics, router, selectedSpace, justCaptured, nameText,
+    selectSpace(space), acknowledge()}` — a `ChangeNotifier`; the screen is a `ListenableBuilder` over it.
+  - `ReadoutSpace { cielch, munsell, srgb, cielab }` (+ `SpaceSelector.labelFor`).
+  - Region widgets each take `{required ReadoutController controller}`: `NameHeader` (`headerKey`),
+    `ValueRegion` (`regionKey`, `grayscaleKey`), `TemperatureLine` (`lineKey`), `SpaceSelector`
+    (`selectorKey`, `valuesKey`), `ProvenanceRegion` (`regionKey`), `ActionsBar` (`barKey`, `speakKey`,
+    `compareAKey`, `compareBKey`, `recipesKey`, `acknowledgeKey`). **These key constants are the acceptance
+    finders' anchors** — ITEST reads them; behaviour phases fill each region's real content behind them.
+  - `AppDependencies.initialSample` (defaults to `demoSample`) — ITEST-1 injects a fixture here; `buildApp`
+    passes it to `ReadoutScreen(sample:)`.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main`.
+- **Known gaps (all intended for later phases):** colour derivations throw (COLOR-2/3); value/Munsell/
+  temperature/space/provenance regions show placeholder text; action controls are disabled; the selector
+  shows a placeholder, not real per-space values. No AC is satisfied yet.
+- **Next phase should:** the ITEST stage is now unblocked — run **ITEST-1** (harness over the wired shell:
+  fixtures, `buildApp` with faked `Speech`/`Haptics`, the pending gate, smoke). G-2 (approve acceptance tests)
+  stays open and blocks the behaviour stage (READOUT-2..6, A11Y-2, COLOR-2/3). Behaviour phases edit the
+  Readout screen/controller — **merge-risky, run serially**.
 
 ## Phase 2 — Behavior: value region (AC-1, AC-2)
 

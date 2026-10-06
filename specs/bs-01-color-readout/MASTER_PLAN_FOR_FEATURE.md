@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — CORE-3 done (`buildApp` assembly); next READOUT-1 (Readout screen shell, last shell)
+**Status:** In progress — READOUT-1 done (Readout screen + controller shell, last shell); next ITEST-1 (acceptance harness)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -121,7 +121,7 @@ READOUT-4.
 | CORE | [modules/CORE.md](modules/CORE.md) | Project scaffold, domain model (`Sample`, `Provenance`, coordinates), app assembly, navigation + stub Compare/Recipes screens | — | ✅ Done |
 | COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | 🔄 In progress |
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Cross-cutting accessibility: `Speech`/`Haptics` services + label-contract widgets; speak-readout + haptic behavior | CORE | 🔄 In progress |
-| READOUT | [modules/READOUT.md](modules/READOUT.md) | Readout screen UI + controller; renders value/name/temperature/spaces/provenance; carries into compare/recipes | CORE, COLOR, A11Y | ⬜ Todo |
+| READOUT | [modules/READOUT.md](modules/READOUT.md) | Readout screen UI + controller; renders value/name/temperature/spaces/provenance; carries into compare/recipes | CORE, COLOR, A11Y | 🔄 In progress |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
 ## Dependency graph
@@ -172,8 +172,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | COLOR-1 | shell: `ColorScience` interface + stub impl, lib dep | ✅ Done | 2,633,008 | 7m 21s (7m 21s) | `color_models` dep added; impl throws until COLOR-2/3 |
 | 4 | A11Y-1 | shell: `Speech`/`Haptics` interfaces + no-op, label widgets | ✅ Done | 2,963,594 | 7m 55s | services + 3 label-contract widgets; 100% cov on 14 files; 1 fix pass |
 | 5 | CORE-3 | shell: `buildApp` assembly + register stub services + wire `main.dart` to Readout route | ✅ Done | 2,455,251 | 4m 44s (4m 44s) | `AppDependencies`+`AppScope`+`buildApp`; opens on placeholder Readout route; 1 fix pass |
-| 6 | READOUT-1 | shell: Readout screen scaffold + controller (placeholder data) | ⬜ Next | | | after CORE-3 — done; last shell before ITEST stage |
-| 7 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
+| 6 | READOUT-1 | shell: Readout screen scaffold + controller (placeholder data) | ✅ Done | 7,613,743 | 14m 38s | screen + controller + 6 region widgets; every region/action keyed as a finder anchor; `initialSample` seam added; 92 tests, 100% cov |
+| 7 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Next | | | last shell done — ITEST stage open |
 | 8 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 9 | ITEST-3 | acceptance-tests: AC-8..12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
 | 10 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
@@ -192,16 +192,15 @@ when the row is marked done.
 
 ## Next phase
 
-CORE-3 is **done** — `buildApp` assembles the app via `AppDependencies`/`AppScope` and opens on the
-placeholder Readout route. Startable now (sequential — single open path):
+READOUT-1 is **done** — all shells complete; the Readout screen + controller render every region behind
+keyed finder anchors, and `AppDependencies.initialSample` is the seam the harness injects a fixture through.
+Stage 3 (acceptance tests) is now open:
 
-- **READOUT-1** — the last shell. Create `lib/readout/` (`readout_screen.dart`, per-region widget files,
-  `readout_controller.dart`): lay out every region with placeholder content; the controller holds a `Sample`
-  and reads services via `AppScope.of(context)` (no real derivations — calls the COLOR/A11Y stubs). Replace
-  the `MaterialApp` `home:` (the `_ReadoutPlaceholder` in `build_app.dart`) with the real screen.
-
-After READOUT-1, the ITEST stage opens (ITEST-1 harness → ITEST-2 ∥ ITEST-3 → ITEST-4 test review, G-2).
-G-2 (approve acceptance tests) stays open but blocks only the behavior stage.
+- **ITEST-1** — the acceptance harness: the `integration_test/` runner over the wired shell (fixtures, `buildApp`
+  with faked `Speech`/`Haptics` recording sinks, the pending gate skipping un-built ACs, a smoke test). Then
+  **ITEST-2 ∥ ITEST-3** (one pending test per AC + red baseline) → **ITEST-4** (test review, **G-2**).
+- G-2 (approve acceptance tests) stays open; it blocks the whole behavior stage (COLOR-2/3, READOUT-2..6, A11Y-2)
+  but not the ITEST phases.
 
 ## Token usage
 
@@ -215,7 +214,8 @@ G-2 (approve acceptance tests) stays open but blocks only the behavior stage.
 | COLOR-1 | 6298ac89 | 2026-10-05 17:46 EDT | 17:54 | 7m 21s | 7m 21s | claude-opus-4-8 | 62 | 75,780 | 2,529,781 | 27,385 | 2,633,008 | ✅ gate passed — ColorScience interface + value types + stub impl; color_models ^2.0.0 dep added; analyze clean, 46 tests green, 100% line coverage (2 new files); 0 fix passes |
 | A11Y-1 | bd246d4f | 2026-10-05 18:06 EDT | 18:14 | 7m 55s | 7m 55s | claude-opus-4-8 | 68 | 79,687 | 2,856,787 | 27,052 | 2,963,594 | gate passed — Speech/Haptics interfaces + no-op impls + 3 label-contract widgets; analyze clean, 65 tests green, 100% line coverage (14 files, 5 new); 1 fix pass (firstBaseline→baseline) |
 | CORE-3 | 4ec73d65 | 2026-10-05 19:31 EDT | 19:35 | 4m 44s | 4m 44s | claude-opus-4-8 | 68 | 71,787 | 2,367,231 | 16,165 | 2,455,251 | gate passed — buildApp assembly (AppDependencies/AppScope) + main.dart wired; opens on placeholder Readout route; analyze clean, 72 tests green, 100% line coverage (build_app.dart + main.dart); 1 fix pass (const-canonicalisation in updateShouldNotify test) |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 19:35** | **2h 14m** | **1h 06m** |  | **448** | **617,769** | **20,356,847** | **233,798** | **21,208,862** |  |
+| READOUT-1 | 6fc2089c | 2026-10-05 20:20 EDT | 20:35 | 14m 38s | 14m 38s | claude-opus-4-8 | 140 | 125,169 | 7,435,436 | 52,998 | 7,613,743 | gate passed — Readout screen + controller shell; analyze clean, 92 tests green, 100% line coverage on 23 touched lib files (7 new readout + build_app.dart); 2 fix passes (lint + const-only coverage); no AC behaviour (pre-G-2) |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 20:35** | **2h 28m** | **1h 21m** |  | **588** | **742,938** | **27,792,283** | **286,796** | **28,822,605** |  |
 
 ## Sign-off
 

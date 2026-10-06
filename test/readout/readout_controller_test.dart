@@ -1,0 +1,132 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/haptics.dart';
+import 'package:paint_color_assistant/a11y/speech.dart';
+import 'package:paint_color_assistant/app/router.dart';
+import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/domain/provenance.dart';
+import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/readout/readout_controller.dart';
+
+const _coords = ColorCoordinates(lightness: 58, a: 36, b: 34);
+const _provenance = Provenance(ProvenanceTier.measured);
+
+ReadoutController _controllerFor(Sample sample) => ReadoutController(
+      sample: sample,
+      colorScience: const ColorScienceImpl(),
+      speech: const NoopSpeech(),
+      haptics: const NoopHaptics(),
+      router: const AppRouter(),
+    );
+
+void main() {
+  group('ReadoutController', () {
+    test('holds the sample and the injected services', () {
+      const sample = Sample(coordinates: _coords, provenance: _provenance);
+      const colorScience = ColorScienceImpl();
+      const speech = NoopSpeech();
+      const haptics = NoopHaptics();
+      const router = AppRouter();
+      final controller = ReadoutController(
+        sample: sample,
+        colorScience: colorScience,
+        speech: speech,
+        haptics: haptics,
+        router: router,
+      );
+      expect(controller.sample, same(sample));
+      expect(controller.colorScience, same(colorScience));
+      expect(controller.speech, same(speech));
+      expect(controller.haptics, same(haptics));
+      expect(controller.router, same(router));
+    });
+
+    test('starts on the CIELCh space', () {
+      final controller = _controllerFor(
+        const Sample(coordinates: _coords, provenance: _provenance),
+      );
+      expect(controller.selectedSpace, ReadoutSpace.cielch);
+    });
+
+    test('nameText uses the sample name when present', () {
+      final controller = _controllerFor(
+        const Sample(
+          name: 'Warm Terracotta',
+          coordinates: _coords,
+          provenance: _provenance,
+        ),
+      );
+      expect(controller.nameText, 'Warm Terracotta');
+    });
+
+    test('nameText falls back when the sample is unnamed', () {
+      final controller = _controllerFor(
+        const Sample(coordinates: _coords, provenance: _provenance),
+      );
+      expect(controller.nameText, 'Unnamed sample');
+    });
+
+    test('justCaptured reflects the sample', () {
+      final fresh = _controllerFor(
+        const Sample(
+          coordinates: _coords,
+          provenance: _provenance,
+          justCaptured: true,
+        ),
+      );
+      final old = _controllerFor(
+        const Sample(coordinates: _coords, provenance: _provenance),
+      );
+      expect(fresh.justCaptured, isTrue);
+      expect(old.justCaptured, isFalse);
+    });
+
+    test('selectSpace changes the space and notifies', () {
+      final controller = _controllerFor(
+        const Sample(coordinates: _coords, provenance: _provenance),
+      );
+      var notified = 0;
+      controller.addListener(() => notified++);
+      controller.selectSpace(ReadoutSpace.munsell);
+      expect(controller.selectedSpace, ReadoutSpace.munsell);
+      expect(notified, 1);
+    });
+
+    test('selectSpace to the current space is a no-op', () {
+      final controller = _controllerFor(
+        const Sample(coordinates: _coords, provenance: _provenance),
+      );
+      var notified = 0;
+      controller.addListener(() => notified++);
+      controller.selectSpace(ReadoutSpace.cielch);
+      expect(controller.selectedSpace, ReadoutSpace.cielch);
+      expect(notified, 0);
+    });
+
+    test('acknowledge clears the just-captured marker and notifies', () {
+      final controller = _controllerFor(
+        const Sample(
+          coordinates: _coords,
+          provenance: _provenance,
+          justCaptured: true,
+        ),
+      );
+      var notified = 0;
+      controller.addListener(() => notified++);
+      controller.acknowledge();
+      expect(controller.justCaptured, isFalse);
+      expect(notified, 1);
+    });
+
+    test('acknowledge on an already-acknowledged reading is a no-op', () {
+      final controller = _controllerFor(
+        const Sample(coordinates: _coords, provenance: _provenance),
+      );
+      var notified = 0;
+      controller.addListener(() => notified++);
+      controller.acknowledge();
+      expect(controller.justCaptured, isFalse);
+      expect(notified, 0);
+    });
+  });
+}

@@ -5,6 +5,10 @@ import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/domain/provenance.dart';
+import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/readout/readout_screen.dart';
 
 AppDependencies _deps() => const AppDependencies(
       colorScience: ColorScienceImpl(),
@@ -26,6 +30,25 @@ void main() {
       expect(_deps().router, isA<AppRouter>());
     });
 
+    test('defaults the initial sample to the demo sample', () {
+      expect(_deps().initialSample, same(demoSample));
+    });
+
+    test('keeps an explicitly injected initial sample', () {
+      const sample = Sample(
+        name: 'Deep Olive Green',
+        coordinates: ColorCoordinates(lightness: 40, a: -8, b: 24),
+        provenance: Provenance(ProvenanceTier.measured),
+      );
+      const deps = AppDependencies(
+        colorScience: ColorScienceImpl(),
+        speech: NoopSpeech(),
+        haptics: NoopHaptics(),
+        initialSample: sample,
+      );
+      expect(deps.initialSample, same(sample));
+    });
+
     test('keeps an explicitly injected router', () {
       const router = AppRouter();
       final deps = AppDependencies(
@@ -39,11 +62,34 @@ void main() {
   });
 
   group('buildApp', () {
-    testWidgets('opens on the Readout route inside a MaterialApp',
+    testWidgets('opens on the Readout screen inside a MaterialApp',
         (tester) async {
       await tester.pumpWidget(buildApp(_deps()));
       expect(find.byType(MaterialApp), findsOneWidget);
+      expect(find.byType(ReadoutScreen), findsOneWidget);
       expect(find.text('Readout'), findsOneWidget);
+    });
+
+    testWidgets('opens the Readout on the injected initial sample',
+        (tester) async {
+      const sample = Sample(
+        name: 'Deep Olive Green',
+        coordinates: ColorCoordinates(lightness: 40, a: -8, b: 24),
+        provenance: Provenance(ProvenanceTier.measured),
+      );
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: const NoopSpeech(),
+            haptics: const NoopHaptics(),
+            initialSample: sample,
+          ),
+        ),
+      );
+      final screen = tester.widget<ReadoutScreen>(find.byType(ReadoutScreen));
+      expect(screen.sample, same(sample));
+      expect(find.text('Deep Olive Green'), findsOneWidget);
     });
 
     testWidgets('injects the dependencies via AppScope', (tester) async {
@@ -53,7 +99,7 @@ void main() {
         buildApp(deps),
       );
       // Reach the scope from a descendant context below the MaterialApp.
-      final context = tester.element(find.text('Readout'));
+      final context = tester.element(find.byType(ReadoutScreen));
       seen = AppScope.of(context);
       expect(identical(seen, deps), isTrue);
     });
