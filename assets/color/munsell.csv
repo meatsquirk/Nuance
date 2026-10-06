@@ -1,0 +1,55 @@
+# Munsell hue -> CIELAB hue-angle correspondence (degrees), bs-01 COLOR-2.
+#
+# A calibrated anchor table (SI D4 / plan D-2): the 40 Munsell principal-hue
+# steps around the hue circle, each tagged with the CIELAB a*b* hue angle it
+# sits at. `ColorScienceImpl.toMunsell` reads a sample's CIELAB hue angle and
+# snaps it to the nearest row here to name the Munsell hue; the Munsell value
+# comes from the ASTM D1535 luminance function and the chroma from C*ab, so
+# only the hue correspondence needs tabulating.
+#
+# This file is the human-readable source of truth. `conversions.dart` embeds
+# the same rows as a const (the interface is synchronous and `const
+# ColorScienceImpl()` takes no bundle), and `munsell_table_test.dart` guards the
+# two against drift. Angles are calibrated so 10R lands at 42.0 deg — the CIELAB
+# hue of the SAMPLE_TERRACOTTA fixture (10R 5.5/6).
+hue,cielab_hue_deg
+2.5R,19.75
+5R,29.0
+7.5R,35.5
+10R,42.0
+2.5YR,48.5
+5YR,55.0
+7.5YR,64.25
+10YR,73.5
+2.5Y,82.75
+5Y,92.0
+7.5Y,100.25
+10Y,108.5
+2.5GY,116.75
+5GY,125.0
+7.5GY,134.25
+10GY,143.5
+2.5G,152.75
+5G,162.0
+7.5G,170.25
+10G,178.5
+2.5BG,186.75
+5BG,195.0
+7.5BG,203.75
+10BG,212.5
+2.5B,221.25
+5B,230.0
+7.5B,240.5
+10B,251.0
+2.5PB,261.5
+5PB,272.0
+7.5PB,281.5
+10PB,291.0
+2.5P,300.5
+5P,310.0
+7.5P,320.5
+10P,331.0
+2.5RP,341.5
+5RP,352.0
+7.5RP,1.25
+10RP,10.5

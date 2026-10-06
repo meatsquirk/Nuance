@@ -1,20 +1,18 @@
 import '../domain/color_coordinates.dart';
 import '../domain/sample.dart';
 import 'color_science.dart';
+import 'conversions.dart' as conv;
 
-/// Placeholder [ColorScience] implementation for the shell stage (COLOR-1).
+/// The [ColorScience] implementation.
 ///
-/// Every method throws [UnimplementedError]: COLOR-1 only declares the interface
-/// and wires the conversions dependency (D-2, `color_models` — its `LabColor`
-/// will drive the sRGB / CIELAB / CIELCh maths). The behaviour is filled in
-/// later against this same class:
+/// The colour-space conversions ([toSRGB], [toHex], [toCIELCh], [toMunsell],
+/// [toCIELAB], [lightness], [grayscaleOf]) delegate to the pure functions in
+/// `conversions.dart` (COLOR-2; `color_models` for sRGB/CIELAB/CIELCh and a
+/// bundled calibrated Munsell table — D-2). The plain-language derivations
+/// ([nearestName], [valueWord], [temperatureWord], [decompose]) are still
+/// pending COLOR-3.
 ///
-/// * COLOR-2 — [toSRGB], [toHex], [toCIELCh], [toMunsell], [toCIELAB],
-///   [lightness], [grayscaleOf];
-/// * COLOR-3 — [nearestName], [valueWord], [temperatureWord], [decompose].
-///
-/// Registered into `buildApp` by CORE-3 (registration is deferred out of this
-/// shell — D-7).
+/// Registered into `buildApp` by CORE-3 (D-7); construction stays `const`.
 class ColorScienceImpl implements ColorScience {
   const ColorScienceImpl();
 
@@ -23,28 +21,25 @@ class ColorScienceImpl implements ColorScience {
       throw UnimplementedError('ColorScience.$member is implemented in $phase.');
 
   @override
-  SRGBColor toSRGB(ColorCoordinates lab) => _pending('toSRGB', 'COLOR-2');
+  SRGBColor toSRGB(ColorCoordinates lab) => conv.labToSrgb(lab);
 
   @override
-  String toHex(ColorCoordinates lab) => _pending('toHex', 'COLOR-2');
+  String toHex(ColorCoordinates lab) => conv.labToHex(lab);
 
   @override
-  CIELCh toCIELCh(ColorCoordinates lab) => _pending('toCIELCh', 'COLOR-2');
+  CIELCh toCIELCh(ColorCoordinates lab) => conv.labToCielch(lab);
 
   @override
-  MunsellColor toMunsell(ColorCoordinates lab) =>
-      _pending('toMunsell', 'COLOR-2');
+  MunsellColor toMunsell(ColorCoordinates lab) => conv.labToMunsell(lab);
 
   @override
-  ColorCoordinates toCIELAB(ColorCoordinates lab) =>
-      _pending('toCIELAB', 'COLOR-2');
+  ColorCoordinates toCIELAB(ColorCoordinates lab) => conv.labToCielab(lab);
 
   @override
-  double lightness(ColorCoordinates lab) => _pending('lightness', 'COLOR-2');
+  double lightness(ColorCoordinates lab) => conv.lightnessOf(lab);
 
   @override
-  SRGBColor grayscaleOf(ColorCoordinates lab) =>
-      _pending('grayscaleOf', 'COLOR-2');
+  SRGBColor grayscaleOf(ColorCoordinates lab) => conv.grayscaleOf(lab);
 
   @override
   String nearestName(ColorCoordinates lab) =>

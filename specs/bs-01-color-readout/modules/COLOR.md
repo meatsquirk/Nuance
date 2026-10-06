@@ -1,6 +1,6 @@
 # Module COLOR — color-science layer
 
-**Status:** In progress — Phase 1 (shell) done
+**Status:** In progress — Phase 2 (colour-space conversions) done; next Phase 3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/color_science/` — `color_science.dart` (interface), `color_science_impl.dart`,
 `conversions.dart`, `naming.dart` (ISCC-NBS), `words.dart` (value + temperature words), `decomposition.dart`
@@ -12,7 +12,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 2,633,008 | 7m 21s (7m 21s) |
-| 2 | behavior | — (enabler: conversions consumed by AC-1, AC-5) | ⬜ Todo | | |
+| 2 | behavior | — (enabler: conversions consumed by AC-1, AC-5) | ✅ Done | 8,261,518 | 41m 20s (29m 42s) |
 | 3 | behavior | — (enabler: name/value-word/temperature/decomposition consumed by AC-2,3,4,8) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -92,9 +92,47 @@
 - **Acceptance gate:** *(enabler)* suite stays green; the AC-1/AC-5 conversion-precondition failures it
   unblocks disappear in run-pending mode.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** `lib/color_science/conversions.dart` — pure CIELAB→(sRGB/hex, CIELCh, CIELAB, lightness,
+  grayscale, Munsell) conversions; the 7 COLOR-2 members of `ColorScienceImpl` now delegate to them
+  (`const ColorScienceImpl()` unchanged; COLOR-3's 4 members still pending). sRGB/hex/CIELCh/CIELAB via
+  `color_models` (SI D4). **Munsell** (owner decision 2026-10-06, *calibrated anchor table*): value from the
+  ASTM D1535 luminance function of L\* (bisection-inverted), hue from the nearest tabulated CIELAB hue angle,
+  chroma from C\*ab/5.5 → nearest step; neutral (`N`) when chroma rounds to 0.
+- **Bundled data:** `assets/color/munsell.csv` — 40 Munsell principal-hue steps → CIELAB hue angles,
+  calibrated so 10R = 42°. Declared in `pubspec.yaml` (`assets/color/`). The interface is synchronous and
+  `const ColorScienceImpl()` takes no bundle, so the runtime copy is the `kMunsellHueAnchors` const mirroring
+  the CSV; `munsell_table_test.dart` guards the two against drift.
+- **Frozen fixture reproduced:** SAMPLE_TERRACOTTA `CIELAB(58, 25.27, 22.75)` → CIELCh `58 / 34.0 / 42.0`,
+  Munsell **`10R 5.5/6`** (L\*58 → value 5.694 → 5.5; C\*34 → chroma 6). Asserted in both unit suites.
+- **Gate:** `flutter analyze` clean; `flutter test --coverage` green (**119 tests**, +23 this phase); coverage
+  gate **100% line** on the 2 touched lib files; every branch exercised (both luminance branches, angle
+  wrap, neutral vs chromatic, gamut/lightness clamps). Acceptance (iPhone 17 sim, iOS 26.5): **default green**
+  (12 ACs pending, 5 harness + smoke pass); **run-pending** 12 ACs fail on Then/behaviour assertions (red
+  baseline, owned by READOUT/A11Y) with **zero** conversion `UnimplementedError` — the AC-1/AC-5 conversion
+  preconditions are satisfied.
+- **Grade gate:** n/a — enabler un-pends no AC (no AC test graded this phase).
+- **Fix passes:** 0/3 (one pre-first-run compile fix: `SRGBColor` import in `conversions_test.dart`).
+- **Augmentations / exclusions:** none. Carry-forward AC-5 sRGB-triplet augmentation stays owned by READOUT-4.
+
+### Checkpoint / Handoff
+
+- **Frozen interface:** unchanged — `const ColorScienceImpl()` still the only constructor. COLOR-2 methods
+  delegate to top-level functions in `conversions.dart` (`labToSrgb`, `labToHex`, `labToCielch`,
+  `labToCielab`, `lightnessOf`, `grayscaleOf`, `labToMunsell`, plus `munsellValueFromLightness`). Readout
+  calls go through `ColorScience`, not these functions directly.
+- **Munsell contract:** value rounds to the nearest 0.5; chroma to the nearest integer step; hue is one of
+  the 40 principal steps. To retune, edit `assets/color/munsell.csv` **and** `kMunsellHueAnchors` together
+  (the mirror test fails otherwise). `_chromaPerStep = 5.5` is the C\*ab-per-chroma scale.
+- **Verification commands** (PATH export first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart <base>` · acceptance on a
+  booted sim: `flutter test integration_test/ -d <udid>` (default) and `… --dart-define=BS01_RUN_PENDING=true`
+  (red baseline). Sim used: iPhone 17 `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Next (READOUT-4, AC-5):** unblocked — render the four spaces from `toCIELCh`/`toMunsell`/`toSRGB`+`toHex`/
+  `toCIELAB`. **Next (READOUT-2, AC-1/AC-2):** needs COLOR-2 (lightness, grayscale, Munsell value) **and**
+  COLOR-3 (value word). **Known gap:** COLOR-3 members (`nearestName`, `valueWord`, `temperatureWord`,
+  `decompose`) still throw.
 
 ## Phase 3 — Enabler: naming, value/temperature words, decomposition
 
