@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — READOUT-1 done (Readout screen + controller shell, last shell); next ITEST-1 (acceptance harness)
+**Status:** In progress — ITEST-1 done (acceptance harness; suite runs on an iOS simulator); next ITEST-2 ∥ ITEST-3
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -64,16 +64,21 @@ per-AC "Missing" column is what the behavior stage must build.
 | D-3 | `Sample` carries a `Provenance` (Measured / Calculated / Estimated / Confirmed) as a required, non-null field, stored append-ready for the future P2P layer | SI D9 — provenance enforced in the model, not UI policy |
 | D-4 | Accessibility services (`Speech`, `Haptics`) and label-contract widgets (`ColorChip`, badges) are app-injected shared services, bootstrapped by bs-01 | SI Accessibility is a cross-cutting architectural concern; bs-01 is the first consumer |
 | D-5 | bs-01 owns thin **stub** Comparison and Recipes screens as navigation targets; the real screens are bs-03 / bs-04 | AC-9/10/11 observe navigation handoff; the stub is the read endpoint the acceptance test finds |
-| D-6 | Acceptance suite = Flutter `integration_test` driving the assembled app via `WidgetTester`; platform TTS/haptics faked by recording services | Tests go through the real UI surface; only platform sinks (infrastructure) are faked |
+| D-6 | Acceptance suite = Flutter `integration_test` driving the assembled app via `WidgetTester`; platform TTS/haptics faked by recording services. **Runs on a booted iOS simulator** (`flutter test integration_test/ -d <udid>`) — ITEST-1 found `flutter test` routes the `integration_test/` dir to on-device execution, so with no device the plain command exits 0 having run **zero** tests (false green); host-headless isn't available (no desktop platform folder). Owner chose the simulator path 2026-10-05 (over host widget-tests / desktop device). CI must add an emulator. | Tests go through the real UI surface; only platform sinks (infrastructure) are faked |
 | D-7 | Split the old CORE-2 shell into CORE-2 (domain + router + stub screens) and CORE-3 (`buildApp` assembly + service registration + `main.dart` wiring) | Breaks a dependency cycle: COLOR-1/A11Y-1 reference domain types (`Sample`, `Provenance`) so need CORE-2, while `buildApp` injects their interfaces so needs them — assembly must come after both. COLOR-1/A11Y-1 defer their "register in buildApp" step to CORE-3 |
 
 ## Acceptance integration test plan
 
 Module plan: [modules/ITEST.md](modules/ITEST.md).
 
-**Where it lives and how it runs:** `integration_test/` (Flutter `integration_test` package). Default:
-`flutter test integration_test/` (pending ACs skipped). Run-pending: `BS01_RUN_PENDING=1 flutter test integration_test/`
-(executes pending tests). Single lane (widget tests are not parallel-safe within a process).
+**Where it lives and how it runs:** `integration_test/` (Flutter `integration_test` package), **on a booted
+iOS simulator** (the dir forces on-device execution — ITEST-1 finding, D-6). Boot once
+(`xcrun simctl boot <udid>`; iPhone 17 = `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`). Default:
+`flutter test integration_test/ -d <udid>` (pending ACs skipped). Run-pending:
+`BS01_RUN_PENDING=1 flutter test integration_test/ -d <udid>` (executes pending tests). Single lane (widget
+tests are not parallel-safe within a process; and one simulator). First build ~80s; later runs ~20s.
+One import — `integration_test/harness.dart` — carries the fixtures, pending gate (`acTestWidgets`,
+un-pend by deleting the AC's `pendingACs` row) and the Given/When/Then vocabulary.
 **Where assertions look:** the rendered widget tree via `WidgetTester` finders (text, keys, semantics labels,
 relative font sizes); the recording `FakeSpeech` utterance log; the recording `FakeHaptics` event log; the
 current route and its passed arguments (observed via the stub target screens' rendered content).
@@ -173,8 +178,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | A11Y-1 | shell: `Speech`/`Haptics` interfaces + no-op, label widgets | ✅ Done | 2,963,594 | 7m 55s | services + 3 label-contract widgets; 100% cov on 14 files; 1 fix pass |
 | 5 | CORE-3 | shell: `buildApp` assembly + register stub services + wire `main.dart` to Readout route | ✅ Done | 2,455,251 | 4m 44s (4m 44s) | `AppDependencies`+`AppScope`+`buildApp`; opens on placeholder Readout route; 1 fix pass |
 | 6 | READOUT-1 | shell: Readout screen scaffold + controller (placeholder data) | ✅ Done | 7,613,743 | 14m 38s | screen + controller + 6 region widgets; every region/action keyed as a finder anchor; `initialSample` seam added; 92 tests, 100% cov |
-| 7 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Next | | | last shell done — ITEST stage open |
-| 8 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
+| 7 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 7,980,954 | 29m 01s (1h 13m) | harness + fakes + smoke green on iOS sim; grade A; runner → sim (owner decision, D-6) |
+| 8 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
 | 9 | ITEST-3 | acceptance-tests: AC-8..12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
 | 10 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ⬜ Todo | | | ∥ COLOR-3 |
@@ -192,15 +197,17 @@ when the row is marked done.
 
 ## Next phase
 
-READOUT-1 is **done** — all shells complete; the Readout screen + controller render every region behind
-keyed finder anchors, and `AppDependencies.initialSample` is the seam the harness injects a fixture through.
-Stage 3 (acceptance tests) is now open:
+ITEST-1 is **done** — the acceptance harness (fixtures, pending gate, Given/When/Then vocabulary, fakes) and a
+smoke test are green on a booted iOS simulator; grade A. The suite runs via
+`flutter test integration_test/ -d <udid>` (the `integration_test/` dir forces on-device, D-6).
 
-- **ITEST-1** — the acceptance harness: the `integration_test/` runner over the wired shell (fixtures, `buildApp`
-  with faked `Speech`/`Haptics` recording sinks, the pending gate skipping un-built ACs, a smoke test). Then
-  **ITEST-2 ∥ ITEST-3** (one pending test per AC + red baseline) → **ITEST-4** (test review, **G-2**).
-- G-2 (approve acceptance tests) stays open; it blocks the whole behavior stage (COLOR-2/3, READOUT-2..6, A11Y-2)
-  but not the ITEST phases.
+- **ITEST-2 (AC-1..7) ∥ ITEST-3 (AC-8..12)** — one *pending* test per AC + the red baseline, both writing
+  split regions of `integration_test/readout_test.dart` (import `harness.dart`; register with `acTestWidgets`).
+  They can run concurrently (disjoint file regions). Then **ITEST-4** (test review, **G-2**).
+- G-2 (approve acceptance tests) stays open; it blocks the whole behavior stage (COLOR-2/3, READOUT-2..6,
+  A11Y-2) but not the ITEST phases.
+- Runner note for every ITEST/behavior phase: boot the sim first; CI must add an emulator before the
+  acceptance job is wired.
 
 ## Token usage
 
@@ -215,7 +222,8 @@ Stage 3 (acceptance tests) is now open:
 | A11Y-1 | bd246d4f | 2026-10-05 18:06 EDT | 18:14 | 7m 55s | 7m 55s | claude-opus-4-8 | 68 | 79,687 | 2,856,787 | 27,052 | 2,963,594 | gate passed — Speech/Haptics interfaces + no-op impls + 3 label-contract widgets; analyze clean, 65 tests green, 100% line coverage (14 files, 5 new); 1 fix pass (firstBaseline→baseline) |
 | CORE-3 | 4ec73d65 | 2026-10-05 19:31 EDT | 19:35 | 4m 44s | 4m 44s | claude-opus-4-8 | 68 | 71,787 | 2,367,231 | 16,165 | 2,455,251 | gate passed — buildApp assembly (AppDependencies/AppScope) + main.dart wired; opens on placeholder Readout route; analyze clean, 72 tests green, 100% line coverage (build_app.dart + main.dart); 1 fix pass (const-canonicalisation in updateShouldNotify test) |
 | READOUT-1 | 6fc2089c | 2026-10-05 20:20 EDT | 20:35 | 14m 38s | 14m 38s | claude-opus-4-8 | 140 | 125,169 | 7,435,436 | 52,998 | 7,613,743 | gate passed — Readout screen + controller shell; analyze clean, 92 tests green, 100% line coverage on 23 touched lib files (7 new readout + build_app.dart); 2 fix passes (lint + const-only coverage); no AC behaviour (pre-G-2) |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 20:35** | **2h 28m** | **1h 21m** |  | **588** | **742,938** | **27,792,283** | **286,796** | **28,822,605** |  |
+| ITEST-1 | fe74d129 | 2026-10-05 22:00 EDT | 23:13 | 1h 13m | 29m 01s | claude-opus-4-8 | 114 | 199,506 | 7,711,531 | 69,803 | 7,980,954 | gate passed — acceptance harness + fakes + smoke green on iOS sim (both pending modes); 12-AC pending gate; unit 92 green; coverage gate PASS (no lib touched); analyze clean; grade A; runner → iOS simulator (owner decision, D-6 kept) |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-05 23:13** | **3h 41m** | **1h 50m** |  | **702** | **942,444** | **35,503,814** | **356,599** | **36,803,559** |  |
 
 ## Sign-off
 

@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 done (harness, fixtures, pending gate, smoke); next ITEST-2 ∥ ITEST-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/` — `harness.dart` (Given/When/Then vocabulary, fixtures, pending
 gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake_speech.dart`,
@@ -11,22 +11,34 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | acceptance-tests | — (harness) | ⬜ Todo | | |
+| 1 | acceptance-tests | — (harness) | ✅ Done | 7,980,954 | 29m 01s (1h 13m) |
 | 2 | acceptance-tests | AC-1..AC-7 | ⬜ Todo | | |
 | 3 | acceptance-tests | AC-8..AC-12 | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
 - **Boundary:** the assembled app via the one production `buildApp(deps)` entry, driven by `WidgetTester`.
-  Real: color-science, controllers, widgets, routing, provenance. Faked (infrastructure only): `FakeSpeech`
-  (records utterances) and `FakeHaptics` (records pulses) — the platform TTS/vibrator sinks.
+  Real: color-science (`ColorScienceImpl` — no color math faked), controllers, widgets, routing, provenance.
+  Faked (infrastructure only): `FakeSpeech` (records utterances) and `FakeHaptics` (counts pulses) — the
+  platform TTS/vibrator sinks. A single import, `integration_test/harness.dart`, carries the whole vocabulary
+  (it re-exports the fakes); `givenReadoutOf(tester, sample)` boots the app on a fixture and returns a
+  `ReadoutHarness{tester, speech, haptics}` with the `when…` actions.
+- **Runner (ITEST-1 finding; owner decision 2026-10-05):** `flutter test` routes anything under
+  `integration_test/` to **on-device** execution — plain `flutter test integration_test/` finds no device and
+  exits 0 having run **zero** tests (a false green). The suite therefore runs on a **booted iOS simulator**:
+  `flutter test integration_test/ -d <udid>` (default — pending ACs skipped) and
+  `BS01_RUN_PENDING=1 flutter test integration_test/ -d <udid>` (run-pending). D-6 (integration_test package)
+  is kept; host-headless is not available here (the project has no desktop platform folder). **CI must add an
+  emulator** before wiring the acceptance job (the `ci.yml` unit job is unaffected).
 - **Observation points:** AC-1/2/3/4/5/6/7 — rendered text, keys, relative font sizes on the Readout screen;
   AC-5 also asserts the other spaces' value strings are absent after a switch; AC-8 — the `FakeSpeech`
   utterance log; AC-9/10/11 — the current route = the stub Comparison/Recipes screen rendering the carried
   sample in the right slot/target; AC-12 — `FakeHaptics` log + the just-captured marker before/after acknowledge.
-- **Pending gate:** a `pendingACs` map (AC → owning phase) + a helper `ac('AC-n')` that calls
-  `markTestSkipped('AC-n pending <phase>')` unless `BS01_RUN_PENDING=1`. Un-pending an AC = delete its map row.
-  Default `flutter test integration_test/` skips pending; run-pending executes them.
+- **Pending gate (as built):** a `const pendingACs` map (AC → owning phase) + `acTestWidgets(acId,
+  description, body)`, which registers the AC test through `testWidgets`' native `skip:` (cleaner than the
+  planned `markTestSkipped`, and it stops a not-yet-built body from *running*, so a pending AC is skipped not
+  failed). `pendingSkipReason(acId, {forceRunPending})` decides: an un-mapped AC always runs; a mapped AC runs
+  only in run-pending mode (`BS01_RUN_PENDING=1`). **Un-pending an AC = delete its row from `pendingACs`.**
 
 ## Open gates
 - **G-2 (approve acceptance tests)** is this module's exit gate (ITEST-4), blocking every behavior phase.
@@ -50,9 +62,55 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
   tests graded A.
 - **Acceptance gate:** smoke green; pending gate in place (12 pending).
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed** `integration_test/`: `harness.dart` — 5 fixtures (`SAMPLE_TERRACOTTA/OLIVE/COOL/MEASURED/
+  ESTIMATED`, stored in canonical CIELAB; terracotta's a*/b* are the exact polar form of its CIELCh L58 C34
+  h42); the pending gate (`const pendingACs` = all 12 ACs → owning phase, `acTestWidgets`, `pendingSkipReason`
+  over native `skip:`); the Given/When/Then vocabulary (`givenReadoutOf`, `givenJustCapturedReadoutOf`,
+  `ReadoutHarness.whenSelectSpace/whenSpeak/whenCompareAs/whenFindRecipes/whenAcknowledge`) driving the real
+  `buildApp` with faked `Speech`/`Haptics` and real `ColorScienceImpl`. `fakes/fake_speech.dart` (records
+  utterances) + `fakes/fake_haptics.dart` (counts confirms). `harness_test.dart` — never-pending smoke test
+  (booted app renders every region/control anchor + empty speech/haptics log) and guard tests (pending map =
+  exactly 12 ACs each owned by a real phase; mode gate both branches; fakes record).
+- **Runner (owner decision):** `integration_test/` forces on-device, so the suite runs on a booted iOS
+  simulator — `flutter test integration_test/ -d <udid>`; the old plain command was a false green (0 tests).
+  D-6 kept; CI needs an emulator (see Interface reconciliation).
+- **Acceptance gate:** smoke green on iPhone 17 sim (iOS 26.5); pending gate in place (12 pending); default
+  run skips the 12, `BS01_RUN_PENDING=1` run executes them — both green (5 harness/guard tests).
+- **Suites:** acceptance (this feature, both modes) on the sim; unit suite 92 green on host; coverage gate
+  **PASS** (no `lib/` files touched — harness is test-only); `flutter analyze` clean.
+- **Test grades: A** — graded by a fresh subagent against the scaffold rubric (no vacuous passes, honest
+  comments, deterministic, discriminating); one strengthening applied post-grade (the mode test now asserts
+  both gate branches env-independently via `forceRunPending`). Augmentations: none. Exclusions: none.
+- **Fix passes: 0/3** — the suite was green the first time it actually ran; the only iteration was the runner
+  discovery (false green → simulator, resolved by the owner decision, no code fix) and the post-grade test
+  strengthening.
+- Tokens: 7,980,954 (claude-opus-4-8) · Time: 29m 01s active (1h 13m wall; 44m waiting on the owner
+  decision is excluded). **Phase total: 7,980,954 tokens, 29m 01s.**
+
+### Checkpoint / Handoff
+
+- **Frozen for ITEST-2/3** (one import — `import 'harness.dart';` — re-exports the fakes):
+  - Fixtures: `SAMPLE_TERRACOTTA, SAMPLE_OLIVE, SAMPLE_COOL, SAMPLE_MEASURED, SAMPLE_ESTIMATED`.
+  - Pending gate: `acTestWidgets('AC-n', '<desc>', (tester) async {…})` registers an AC test; **un-pend by
+    deleting that AC's row from `pendingACs`** in `harness.dart`. `pendingSkipReason`/`runPending` back it.
+  - Vocabulary: `await givenReadoutOf(tester, sample)` → `ReadoutHarness{tester, speech, haptics}`;
+    `givenJustCapturedReadoutOf(tester, sample)` for AC-12; `ReadoutHarness.whenSelectSpace(space)` /
+    `whenSpeak()` / `whenCompareAs(slot)` / `whenFindRecipes()` / `whenAcknowledge()`.
+  - The AC tests go in `integration_test/readout_test.dart` (ITEST-2 = display group AC-1..7; ITEST-3 =
+    actions group AC-8..12) — split file regions so the two phases stay ∥.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  boot the sim `xcrun simctl boot <udid>` (iPhone 17 = `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`) then
+  `xcrun simctl bootstatus <udid> -b`; `flutter analyze`; unit+coverage `flutter test --coverage` +
+  `dart run tool/coverage_gate.dart <base>`; acceptance default `flutter test integration_test/ -d <udid>`;
+  red-baseline `BS01_RUN_PENDING=1 flutter test integration_test/ -d <udid>`; shut down with
+  `xcrun simctl shutdown <udid>`. First sim build is slow (~80s Xcode build); later runs ~20s.
+- **Known gaps:** the AC tests don't exist yet (ITEST-2/3). `givenReadoutOf` renders safely because the shell
+  calls no `ColorScience` method (the stub still throws until COLOR-2/3), so pending AC bodies will fail at the
+  red baseline on Given/Then assertions — not on panics.
+- **Next phase:** ITEST-2 (AC-1..7) ∥ ITEST-3 (AC-8..12) → ITEST-4 (test review, **G-2**). G-2 still blocks the
+  whole behavior stage.
 
 ## Phase 2 — AC tests: readout display (AC-1..AC-7)
 
