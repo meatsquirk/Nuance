@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — ITEST-3 done (AC-1..12 pending + red baseline, grade all A); next ITEST-4 (test review, G-2)
+**Status:** ⏸ Awaiting review — ITEST-4 packet assembled; G-2 awaiting decision (blocks the whole behaviour stage)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -160,7 +160,7 @@ screen into per-region files first); A11Y-2 also touches the readout controller.
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CORE-1 | ✅ Resolved 2026-10-05: approved — owner Matt Quirk. Spec first line records approval. |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision (ITEST-4 packet assembled 2026-10-06) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -183,7 +183,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 7,980,954 | 29m 01s (1h 13m) | harness + fakes + smoke green on iOS sim; grade A; runner → sim (owner decision, D-6) |
 | 8 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ✅ Done | 6,226,248 | 27m 50s | 7×A; red baseline (Then) recorded; run-pending → dart-define |
 | 9 | ITEST-3 | acceptance-tests: AC-8..12 (pending) + red baseline | ✅ Done | 6,061,969 | 17m 53s | 5×A (AC-8 B→A, G5 fix); red baseline (Then) recorded |
-| 10 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | preconditions met: AC-1..12 pending, grid all A |
+| 10 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,057,046 | 2m 20s | packet assembled; G-2 awaiting decision; behaviour stage blocked until recorded |
 | 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ⬜ Todo | | | ∥ COLOR-3 |
 | 12 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ⬜ Todo | | | ∥ COLOR-2 |
 | 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ⬜ Todo | | | |
@@ -199,22 +199,19 @@ when the row is marked done.
 
 ## Next phase
 
-ITEST-3 is **done** — AC-8..AC-12 written as pending tests in the actions group of
-`integration_test/readout_test.dart`, grade all A (5×A; AC-8 was B on a vacuous temperature assertion and was
-fixed to assert against the name-stripped utterance). Red baseline recorded (each fails on a Then naming its
-phase). The **whole AC catalogue (AC-1..AC-12) is now written and pending**; default suite green (12 skipped,
-5 harness pass); unit 92 green; coverage gate PASS (test-only).
+**Awaiting the G-2 human decision.** ITEST-4 is done bar the gate: the review packet is assembled in
+[modules/ITEST.md](modules/ITEST.md) (per-AC Given/When/Then/Rejects, red-baseline summary, augmentations,
+grid path + 12×A counts, what to look at first). The whole AC catalogue (AC-1..AC-12) is written, pending and
+graded A; all 12 fail at the red baseline on a Then naming their owning phase.
 
-- **ITEST-4 (test review, G-2)** — the stage's last phase and the only one left before behaviour. Assemble the
-  review packet (per-AC: test name, Given checks, When, Then + Rejects; red-baseline summary; augmentations +
-  owning phase; grid path + counts; what to look at first), set the phase `⏸ Awaiting review` and G-2
-  *awaiting decision*, then stop for the human decision via
-  `/feature-next-phase --gate bs-01-color-readout G-2 approved | "<changes>"`.
-- **G-2 stays open** and blocks the whole behaviour stage (COLOR-2/3, READOUT-2..6, A11Y-2) — not ITEST-4
-  itself. No behaviour phase can start until a human approves the tests.
-- **Runner note** for ITEST-4 (full cross-feature regression) and every behaviour phase: boot the sim first;
-  run-pending uses `--dart-define=BS01_RUN_PENDING=true`; CI must add an emulator and pass the define before
-  the acceptance job is wired.
+- **No phase is startable** until G-2 is recorded — it blocks the entire behaviour stage (COLOR-2/3,
+  READOUT-2..6, A11Y-2).
+- **Record the decision:** `/feature-next-phase --gate bs-01-color-readout G-2 approved | "<changes>"`.
+  On **approved**: COLOR-2 ∥ COLOR-3 (enablers) become startable. On **changes requested**: each item becomes
+  an `ITEST` change phase, then a fresh review.
+- **Runner note** for every behaviour phase: boot the sim first; un-pend ACs run with
+  `--dart-define=BS01_RUN_PENDING=true`; CI must add an emulator and pass the define before the acceptance job
+  is wired.
 
 ## Token usage
 
@@ -232,7 +229,8 @@ phase). The **whole AC catalogue (AC-1..AC-12) is now written and pending**; def
 | ITEST-1 | fe74d129 | 2026-10-05 22:00 EDT | 23:13 | 1h 13m | 29m 01s | claude-opus-4-8 | 114 | 199,506 | 7,711,531 | 69,803 | 7,980,954 | gate passed — acceptance harness + fakes + smoke green on iOS sim (both pending modes); 12-AC pending gate; unit 92 green; coverage gate PASS (no lib touched); analyze clean; grade A; runner → iOS simulator (owner decision, D-6 kept) |
 | ITEST-2 | 6e55de65 | 2026-10-05 23:42 EDT | 2026-10-06 00:10 | 27m 50s | 27m 50s | claude-opus-4-8 | 104 | 228,634 | 5,929,899 | 67,611 | 6,226,248 | AC-1..7 pending + red baseline (Then, each names owning phase); grade 7×A; default green; run-pending fixed to dart-define |
 | ITEST-3 | 7c0d4d84 | 2026-10-06 05:43 EDT | 06:01 | 17m 53s | 17m 53s | claude-opus-4-8 | 112 | 214,214 | 5,803,717 | 43,926 | 6,061,969 | AC-8..12 pending + red baseline (Then, each names owning phase); grade 5×A (AC-8 B→A, G5 fix); default green; unit 92 green; coverage PASS (test-only) |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 06:01** | **4h 27m** | **2h 35m** |  | **918** | **1,385,292** | **47,237,430** | **468,136** | **49,091,776** |  |
+| ITEST-4 | 88faaf7f | 2026-10-06 06:53 EDT | 06:55 | 2m 20s | 2m 20s | claude-opus-4-8 | 30 | 60,755 | 986,637 | 9,624 | 1,057,046 | test-review packet assembled; phase ⏸ Awaiting review; G-2 awaiting decision (blocks behaviour stage); no code touched |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 06:55** | **4h 29m** | **2h 38m** |  | **948** | **1,446,047** | **48,224,067** | **477,760** | **50,148,822** |  |
 
 ## Sign-off
 

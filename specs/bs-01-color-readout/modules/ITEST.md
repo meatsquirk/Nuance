@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1/2/3 done (AC-1..12 pending + red baseline, grade all A); next ITEST-4 (test review, G-2)
+**Status:** ⏸ Awaiting review — ITEST-1/2/3 done, ITEST-4 packet assembled; G-2 awaiting decision (blocks the behaviour stage)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/` — `harness.dart` (Given/When/Then vocabulary, fixtures, pending
 gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake_speech.dart`,
@@ -14,7 +14,7 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 | 1 | acceptance-tests | — (harness) | ✅ Done | 7,980,954 | 29m 01s (1h 13m) |
 | 2 | acceptance-tests | AC-1..AC-7 | ✅ Done | 6,226,248 | 27m 50s |
 | 3 | acceptance-tests | AC-8..AC-12 | ✅ Done | 6,061,969 | 17m 53s |
-| 4 | test-review | — (G-2) | ⬜ Todo | | |
+| 4 | test-review | — (G-2) | ⏸ Awaiting review | 1,057,046 | 2m 20s |
 
 ## Interface reconciliation
 - **Boundary:** the assembled app via the one production `buildApp(deps)` entry, driven by `WidgetTester`.
@@ -45,7 +45,8 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
   only in run-pending mode (`BS01_RUN_PENDING=1`). **Un-pending an AC = delete its row from `pendingACs`.**
 
 ## Open gates
-- **G-2 (approve acceptance tests)** is this module's exit gate (ITEST-4), blocking every behavior phase.
+- **G-2 (approve acceptance tests)** — *awaiting decision* (ITEST-4 packet assembled 2026-10-06). This
+  module's exit gate; blocks every behavior phase until a human records the decision via `--gate`.
 
 ## Phase 1 — Harness
 
@@ -261,11 +262,108 @@ gate, `buildApp` driver, fakes), `readout_test.dart` (the AC tests), `fakes/fake
 - **Exit criteria:** packet written; human decision recorded via `--gate`.
 - **Acceptance gate:** *(decision — human)*
 
-### Packet  <!-- filled by ITEST-4 -->
+### Packet
 
-### Result  <!-- filled on completion -->
+**For the reviewer — what this packet asks.** Approve (or request changes to) the 12 acceptance tests that
+define "done" for bs-01-color-readout **before** any behaviour is coded. Each test is written and *pending*
+(skipped in the default run; executed under `--dart-define=BS01_RUN_PENDING=true`). All 12 pass their Givens
+today and fail on a Then that names the phase owing the behaviour (the Red baseline table below). The grade
+grid (independent fresh grader, 2026-10-06) is **12×A, 0×B** —
+`specs/bs-01-color-readout/behavior-test-completeness-bs-01-color-readout.md`.
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+**Boundary under test:** the real assembled app via the single production `buildApp(deps)`, driven by
+`WidgetTester`. Real color-science (`ColorScienceImpl`), controllers, widgets, routing, provenance. Faked —
+infrastructure only — `FakeSpeech` (records utterances) and `FakeHaptics` (counts pulses). Tests live in
+`integration_test/readout_test.dart`; vocabulary + fixtures in `integration_test/harness.dart`.
+
+**Look at first:** (1) **AC-5** — the one borderline A (sRGB triplet unasserted; hex only). Augmentation open,
+assigned to READOUT-4 — confirm you accept shipping the hex-only assertion until then. (2) **AC-8** — hue
+asserted as a *family* (`orange|red`), not an exact word; and it was caught+fixed from a B (the name
+"Warm Terracotta" vacuously satisfied the "warm" check — now asserted against the name-stripped utterance).
+(3) **AC-12** — the "just captured" marker is asserted by **visible text** (`just[ -]?captured`); no lib key
+exists yet, so A11Y-2 must add the marker text/semantics.
+
+Per-AC (test name · Given · When · Then + Rejects):
+
+- **AC-1 · TestAC01_LightnessProminent** — *Given* SAMPLE_TERRACOTTA shown, `coordinates.lightness == 58`.
+  *When* readout rendered. *Then* the Lightness reading (value `58`, grayscale swatch via `grayscaleKey`,
+  Munsell value `5.5`) is the **strictly largest** body paragraph (name header + action labels excluded).
+  *Rejects* not-largest, missing grayscale, missing Munsell value. Name prominence excluded (owned by AC-3).
+- **AC-2 · TestAC02_ValueWord** — *Given* L58 on input. *When* rendered. *Then* a "middle" value word in the
+  value region. *Rejects* "always middle" via dark (L15→`low|dark`) and light (L90→`high`) controls; collision
+  handled (`high` not `light`; word boundaries on `low|dark`).
+- **AC-3 · TestAC03_ColourName** — *Given* the sample carries **no** name (shell shows "Unnamed sample").
+  *When* rendered. *Then* a **derived** name in the header, above the value region and `>=` every other body
+  paragraph. *Rejects* name-absent, name-small, name-not-at-top, and any shell echoing `Sample.name`.
+- **AC-4 · TestAC04_Temperature** — *Given* hue ≈ 42° on input, sample shown. *When* rendered. *Then* the
+  **word** "warm" on the temperature line and `isNot(contains('42'))`. *Rejects* the hue angle (G4) and
+  "always warm" via a cool (hue ≈ 250°) control.
+- **AC-5 · TestAC05_ColourSpaceSelector** — *Given* sample shown. *When* `whenSelectSpace` for each space.
+  *Then* the selected space's values present and the other three absent, via collision-safe signatures
+  (`°|deg`, `10R`, `#`+6 hex, `25.27`). *Rejects* stale values after a switch. **Gap (borderline A):** sRGB
+  triplet unasserted (hex only) — spec fixes no exact triplet → augmentation, not a rule failure.
+- **AC-6 · TestAC06_MeasuredBadge** — *Given* `provenance.tier == measured`, "Measured Reading" shown.
+  *When* rendered. *Then* exact badge word "Measured" and `isNot` the Estimated strings. *Rejects* badging
+  every tier alike; pairs with AC-7.
+- **AC-7 · TestAC07_EstimatedBadge** — *Given* estimated tier on input + surface. *When* rendered. *Then*
+  "Estimated", "not yet verified", and the exact note "Seeded by a model. Treat as a starting point." with an
+  in-test SAMPLE_MEASURED control showing no note. *Rejects* "Estimated without note", "Measured", "note on
+  every reading".
+- **AC-8 · TestAC08_SpeakReadout** — *Given* name shown, `speech.utterances` empty, L58/hue≈42/chroma≈34 on
+  input. *When* `whenSpeak()`. *Then* **exactly one** utterance (`hasLength(1)`) containing the name, value
+  `58`, temperature word `warm` (asserted against the **name-stripped** utterance), a hue word `orange|red`,
+  chroma `34`, hue angle `42`. *Rejects* fragment streams and omission of any component. COLOR-3's
+  `decompose(sample)` must emit all six in one string.
+- **AC-9 · TestAC09_CompareAsA** — *Given* name shown, Comparison not already open. *When* `whenCompareAs(A)`.
+  *Then* Comparison screen with "Slot A: Warm Terracotta" + "Slot B: (empty)". *Rejects* "always slot B",
+  "fills both", "navigates without carrying". Control pair with AC-10.
+- **AC-10 · TestAC10_CompareAsB** — mirror of AC-9 (slot B filled, A empty). The pair rejects any
+  "always slot X" impl — each fails exactly one.
+- **AC-11 · TestAC11_FindRecipes** — *Given* "Deep Olive Green" shown, Recipes not open. *When*
+  `whenFindRecipes()`. *Then* Recipes screen with exact "Recipe target: Deep Olive Green". *Rejects*
+  "no target set" (→ "(unnamed)") and "wrong sample".
+- **AC-12 · TestAC12_JustCaptured** — *Given* a just-captured readout (`copyWith(justCaptured: true)`), name
+  shown. *When* first render, then `whenAcknowledge()`. *Then* `haptics.confirmations == 1` on render and a
+  visible "just captured" marker, cleared after acknowledge; a non-fresh control fires no haptic and shows no
+  marker. *Rejects* "no haptic", "fires on every rebuild", marker-never-set/never-clears/always-on.
+
+**Red baseline summary:** all 12 execute under the dart-define and fail on a **Then** (none panics), each
+naming its owning phase — full table below. Givens (sample loaded, L/hue/chroma, tier, name-null, empty
+speech/haptics, not-on-destination) all pass today.
+
+**Augmentations:** one open — **AC-5 sRGB triplet**, closed by **READOUT-4** (add a three-int 0–255 pattern to
+the sRGB present list once the format lands). The pre-seeded TestAC01 size augmentation was **dropped** in
+ITEST-2 (AC-1 already out-ranks every reading). Full table below.
+
+**Grid:** `specs/bs-01-color-readout/behavior-test-completeness-bs-01-color-readout.md` — 12 rows, **12×A**
+(AC-5 borderline A), 0×B. One B was found and fixed during authoring (AC-8, G5).
+
+**Decision requested (G-2):** approve these 12 tests to unblock the behaviour stage, or request changes.
+Record with: `/feature-next-phase --gate bs-01-color-readout G-2 approved | "<changes>"`.
+
+### Result
+
+- **Assembled the ITEST-4 review packet** (above) from the two AC-test phases' Results, the whole-suite grade
+  grid (12×A, 0×B; AC-5 borderline A), the Red baseline table (12/12 fail on a Then, each naming its owning
+  phase) and the augmentations table (one open — AC-5 sRGB triplet → READOUT-4). No product or test code
+  changed; this phase documents and gates.
+- **Phase set `⏸ Awaiting review`; G-2 set *awaiting decision*.** Behaviour stage (COLOR-2/3, READOUT-2..6,
+  A11Y-2) stays blocked until a human records the G-2 decision.
+- **Gates:** acceptance/unit/coverage not re-run — no code touched; the suite state is the one ITEST-2/3
+  recorded (default run green with 12 pending; unit 92 green; coverage PASS test-only).
+- Tokens: 1,057,046 (claude-opus-4-8) · Time: 2m 20s active (2m 20s wall). **Phase total: 1,057,046 tokens, 2m 20s.**
+
+### Checkpoint / Handoff
+
+- **Awaiting the human G-2 decision.** On **approved**: G-2 resolves, this phase flips to ✅ Done, and the
+  behaviour stage opens — COLOR-2 and COLOR-3 (enablers) are the first startable phases, then READOUT-2..6 and
+  A11Y-2 un-pend their ACs (delete the AC's row from `pendingACs` in `harness.dart`). On **changes requested**:
+  each item becomes an `ITEST` change phase before the behaviour stage, followed by a fresh review.
+- **Un-pend contract:** delete the AC's row from `const pendingACs` in `integration_test/harness.dart`; the
+  behaviour phase then un-skips and must pass. Behaviour phases run on the booted sim with
+  `--dart-define=BS01_RUN_PENDING=true` for the ACs they un-pend; CI's acceptance job must pass the define.
+- **Carry-forward augmentation:** AC-5 sRGB triplet, owned by READOUT-4.
+- **Next phase:** none until G-2 is recorded. After approval → COLOR-2 ∥ COLOR-3 (enablers).
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
