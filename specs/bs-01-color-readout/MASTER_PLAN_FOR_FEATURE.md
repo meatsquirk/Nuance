@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** In progress — G-2 approved; next COLOR-2 ∥ COLOR-3 (behaviour enablers)
+**Status:** In progress — COLOR enablers (COLOR-2 conversions + COLOR-3 naming/words/decomposition) done and reconciled; next the READOUT/A11Y behaviour phases (run serially)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -126,7 +126,7 @@ READOUT-4.
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | CORE | [modules/CORE.md](modules/CORE.md) | Project scaffold, domain model (`Sample`, `Provenance`, coordinates), app assembly, navigation + stub Compare/Recipes screens | — | ✅ Done |
-| COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | 🔄 In progress |
+| COLOR | [modules/COLOR.md](modules/COLOR.md) | Color-science: conversions, ISCC-NBS naming, value/temperature words, spoken decomposition, behind `ColorScience` | CORE | ✅ Done |
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Cross-cutting accessibility: `Speech`/`Haptics` services + label-contract widgets; speak-readout + haptic behavior | CORE | 🔄 In progress |
 | READOUT | [modules/READOUT.md](modules/READOUT.md) | Readout screen UI + controller; renders value/name/temperature/spaces/provenance; carries into compare/recipes | CORE, COLOR, A11Y | 🔄 In progress |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done |
@@ -168,7 +168,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | Test | Symptom | Rate (runs) | Measured at | Owner | Status |
 |---|---|---|---|---|---|
-| — | none yet | | | | |
+| coverage_gate — `lib/domain/provenance.dart` L23 (`const Provenance(...)`) | const constructor is const-folded in const call sites, so some `flutter test --coverage` runs record its line as uncovered → gate reports FAIL on a file the phase never touched | 1 of 2 observed (not quantified) | 88c5add | any phase running the coverage gate | open — re-run `flutter test --coverage` once; green on re-run ⇒ ignore (untouched pre-existing line, D-3/SI D9) |
 
 ## Session log
 
@@ -184,9 +184,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 8 | ITEST-2 | acceptance-tests: AC-1..7 (pending) + red baseline | ✅ Done | 6,226,248 | 27m 50s | 7×A; red baseline (Then) recorded; run-pending → dart-define |
 | 9 | ITEST-3 | acceptance-tests: AC-8..12 (pending) + red baseline | ✅ Done | 6,061,969 | 17m 53s | 5×A (AC-8 B→A, G5 fix); red baseline (Then) recorded |
 | 10 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,057,046 | 2m 20s | packet assembled; G-2 approved 2026-10-06 (owner Matt Quirk); behaviour stage unblocked |
-| 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ⬜ Next | | | ∥ COLOR-3 (both startable) |
-| 12 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ⬜ Todo | | | ∥ COLOR-2 |
-| 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ⬜ Todo | | | |
+| 11 | COLOR-2 | behavior/enabler: sRGB/CIELCh/Munsell/CIELAB conversions | ✅ Done | 8,261,518 | 41m 20s (29m 42s) | conversions.dart + calibrated Munsell table; terracotta → 10R 5.5/6 |
+| 12 | COLOR-3 | behavior/enabler: name, value word, temperature, decomposition | ✅ Done | 9,382,074 | 27m 50s (27m 50s) | naming.dart/words.dart/decomposition.dart + iscc_nbs.csv; indep. of COLOR-2 |
+| 13 | READOUT-2 | behavior: AC-1, AC-2 (value region) | ⬜ Next | | | both enablers merged; first READOUT behaviour phase |
 | 14 | READOUT-3 | behavior: AC-3, AC-4 (name + temperature) | ⬜ Todo | | | |
 | 15 | READOUT-4 | behavior: AC-5 (colour-space selector) | ⬜ Todo | | | |
 | 16 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ⬜ Todo | | | |
@@ -199,17 +199,20 @@ when the row is marked done.
 
 ## Next phase
 
-**G-2 approved 2026-10-06 (owner Matt Quirk).** The behaviour stage is open. ITEST-4 is ✅ Done and the ITEST
-module complete; the whole AC catalogue (AC-1..AC-12) is written, pending and graded 12×A, each red at the
-baseline on a Then naming its owning phase.
+**Both COLOR enablers done and reconciled (2026-10-06).** COLOR-2 (conversions) and COLOR-3
+(naming/words/decomposition) are merged into the feature branch; the COLOR module is complete. The behaviour
+stage is open and every READOUT/A11Y phase is now unblocked. No AC has un-pended yet (enablers own no AC).
 
-- **Startable now (parallel):** COLOR-2 ∥ COLOR-3 — the two enablers (the plan's parallel window; disjoint, no
-  AC un-pends yet). They unblock READOUT-2/3/4 and A11Y-2.
-- **Also unblocked but merge-risky:** READOUT-5 (AC-6/7) and READOUT-6 (AC-9/10/11) have no COLOR dependency,
-  but they and READOUT-2/3/4 + A11Y-2 all edit the Readout screen/controller — run those serially (or split
-  the screen per-region first). Don't pair them with each other.
+- **Startable now (choose one — they are merge-risky with each other):** READOUT-2 (AC-1/AC-2), READOUT-3
+  (AC-3/AC-4), READOUT-4 (AC-5), READOUT-5 (AC-6/AC-7), READOUT-6 (AC-9/10/11), A11Y-2 (AC-8/AC-12). All edit
+  the Readout screen/controller, so **run them serially** (or split the screen into per-region files first).
+  Don't pair two of them in parallel sessions.
+- **Enabler → AC mapping:** `valueWord`→AC-2 (READOUT-2); `nearestName`→AC-3 and `temperatureWord`→AC-4
+  (READOUT-3); conversions→AC-1/AC-5 (READOUT-2/READOUT-4); `decompose`→AC-8 (A11Y-2). READOUT-4 (AC-5) and
+  READOUT-5 (AC-6/7) / READOUT-6 (AC-9/10/11) have everything they need.
 - **Runner** (every behaviour phase): boot the sim first; un-pend an AC by deleting its row from `pendingACs`
-  in `harness.dart` and run with `--dart-define=BS01_RUN_PENDING=true`; CI must add an emulator and pass the
+  in `harness.dart` and run with `flutter test integration_test/ -d <udid> --dart-define=BS01_RUN_PENDING=true`
+  (plain `flutter test integration_test/` with no `-d` is a false green); CI must add an emulator and pass the
   define before the acceptance job is wired.
 - **Carry-forward augmentation:** AC-5 sRGB triplet, owned by READOUT-4.
 
@@ -231,7 +234,10 @@ baseline on a Then naming its owning phase.
 | ITEST-3 | 7c0d4d84 | 2026-10-06 05:43 EDT | 06:01 | 17m 53s | 17m 53s | claude-opus-4-8 | 112 | 214,214 | 5,803,717 | 43,926 | 6,061,969 | AC-8..12 pending + red baseline (Then, each names owning phase); grade 5×A (AC-8 B→A, G5 fix); default green; unit 92 green; coverage PASS (test-only) |
 | ITEST-4 | 88faaf7f | 2026-10-06 06:53 EDT | 06:55 | 2m 20s | 2m 20s | claude-opus-4-8 | 30 | 60,755 | 986,637 | 9,624 | 1,057,046 | test-review packet assembled; phase ⏸ Awaiting review; G-2 awaiting decision (blocks behaviour stage); no code touched |
 | SIGNOFF-DECISION | c9c05f74 | 2026-10-06 07:10 EDT | 07:14 | 4m 28s | 3m 39s | claude-opus-4-8 | 32 | 67,372 | 1,176,694 | 15,408 | 1,259,506 | ITEST-4 approved — G-2 resolved; behaviour stage unblocked (owner Matt Quirk) |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 07:14** | **4h 34m** | **2h 41m** |  | **980** | **1,513,419** | **49,400,761** | **493,168** | **51,408,328** |  |
+| PHASE | a3dfdce4 | 2026-10-06 07:35 EDT | 08:17 | 41m 20s | 29m 42s | claude-opus-4-8 | 124 | 160,285 | 8,019,359 | 81,750 | 8,261,518 | COLOR-2 done: conversions + calibrated Munsell table; acceptance default green, red baseline held |
+| PHASE | f5c57438 | 2026-10-06 08:28 EDT | 08:56 | 27m 50s | 27m 50s | claude-opus-4-8 | 128 | 179,263 | 9,120,314 | 82,369 | 9,382,074 | COLOR-3 done: naming/words/decomposition enabler; 120 unit green, 100% touched-file coverage; acceptance default green, red baseline held |
+| RECONCILE | ee089be3 | 2026-10-06 10:57 EDT | 11:10 | 13m 24s | 13m 24s | claude-opus-4-8 | 90 | 96,654 | 3,732,837 | 33,730 | 3,863,311 | merged COLOR-2 + COLOR-3 enabler branches into feature branch (4 trivial conflicts resolved); applied both rollups; analyze clean, 147 unit tests green, coverage gate PASS (provenance.dart const-ctor flake: red once, green on re-run); COLOR module complete; READOUT-2 now Next |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 11:10** | **5h 56m** | **3h 52m** |  | **1,322** | **1,949,621** | **70,273,271** | **691,017** | **72,915,231** |  |
 
 ## Sign-off
 
