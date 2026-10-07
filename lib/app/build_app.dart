@@ -7,7 +7,7 @@ import '../a11y/speech.dart';
 import '../color_science/color_science.dart';
 import '../compare/comparison_controller.dart';
 import '../compare/comparison_read_endpoint.dart';
-import '../compare/comparison_state.dart';
+import '../compare/comparison_screen.dart';
 import '../compare/sample_source.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
@@ -179,11 +179,10 @@ Widget buildApp(AppDependencies deps) {
 /// even when pushed outside an [AppScope] (bs-01's handoff tests); [initialA] /
 /// [initialB] carry that sample into its slot.
 ///
-/// This COMPARE-2 shell renders the two slots as a findable placeholder body —
-/// enough for the entry and the handoff to assemble and the existing suites to
-/// stay green. **SCREEN-1** replaces that body with the real `ComparisonScreen`
-/// composing the wireframe regions (E3–E8, E49); the controller ownership and
-/// the read endpoint stay here.
+/// It renders the real [ComparisonScreen] (SCREEN-1) — the wireframe regions
+/// E3–E8 and the sample picker E49 — composed over the owned controller. Those
+/// regions are shells (placeholders and disabled controls) until their behaviour
+/// phases fill them; the controller ownership and the read endpoint stay here.
 class ComparisonHomeScreen extends StatefulWidget {
   /// Creates the comparison home over the given catalogue / profile / detector,
   /// optionally pre-placing [initialA] / [initialB] into their slots.
@@ -235,34 +234,7 @@ class _ComparisonHomeScreenState extends State<ComparisonHomeScreen> {
     return ComparisonReadEndpoint(
       key: ComparisonReadEndpoint.endpointKey,
       controller: _controller,
-      child: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) => _ComparisonShellBody(state: _controller.state),
-      ),
-    );
-  }
-}
-
-/// The COMPARE-2 placeholder body: the two slots as findable text, matching
-/// bs-01's handoff rendering (`Slot A: <name>` / `Slot B: (empty)`) so the
-/// existing suites stay green. Replaced by SCREEN-1's region composition.
-class _ComparisonShellBody extends StatelessWidget {
-  const _ComparisonShellBody({required this.state});
-
-  final ComparisonState state;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Comparison')),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Text('Slot A: ${state.slotA?.name ?? '(empty)'}'),
-            Text('Slot B: ${state.slotB?.name ?? '(empty)'}'),
-          ],
-        ),
-      ),
+      child: ComparisonScreen(controller: _controller),
     );
   }
 }
