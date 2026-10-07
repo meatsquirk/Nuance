@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** In progress — ITEST-4 ⏸ awaiting review: packet assembled, G-3 awaiting decision (blocks every behaviour phase until decided)
+**Status:** In progress — acceptance stage complete, G-3 approved; behaviour stage open (SOURCE-2 ∥ CAPTURE-3 startable)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -154,7 +154,7 @@ coordinate with any live bs-01 nav work.
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CAPTURE-1 | ✅ Resolved 2026-10-06: approved — owner Matt Quirk. Spec first line records approval. |
 | G-2 | dependency | bs-01 shared foundation merged to `main`: Flutter project, `Sample`/`Provenance`, `buildApp`, `Haptics`/`Speech`, color-science (ΔE00 + conversions), coverage-gate tool, `integration_test`, and the Readout screen rendering a sample's name (AC-11 opens it). Carries bs-01 CORE-1's Flutter-SDK-on-machine install. Closed by bs-01 sign-off (or at least CORE, A11Y, READOUT shells + name render merged) | CAPTURE-1, all shells | ✅ Resolved 2026-10-06: bs-01 signed off and fast-forward-merged to `main` at c793839 (full foundation incl. Readout name render). |
-| G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision 2026-10-07: packet assembled under `modules/ITEST.md` Phase 4; whole-suite 10×A + AC-6 B-pending-CAPTURE-5, full regression green |
+| G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-07 07:04 EDT: approved — Matt Quirk. Packet accepted (10×A + AC-6 B-pending-CAPTURE-5); AC-6's deferred strengthening accepted. Behaviour stage un-blocked; ITEST-4 → Done. |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -175,7 +175,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (11 ACs), smoke | ✅ Done | 6,008,655 | 17m 53s (17m 53s) | harness + fakes + scaffold suite; 7 scaffold green, 24 integ, 282 unit, 100% cov |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,9,10 (pending) + red baseline | ✅ Done | 9,320,845 | 27m 06s (27m 06s) | 5×A; AC-1 un-pended green-at-baseline |
 | 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,11 (pending) + red baseline | ✅ Done | 13,046,220 | 41m 18s (41m 18s) | 5×A + AC-6 B-pending-CAPTURE-5; default 9 green + 10 pending; baseline clean; SCENE_CARD/DIM hardened for real ΔE00 |
-| 8 | ITEST-4 | test-review: packet; G-3 | ⏸ Awaiting review | 2,964,016 | 6m 38s (6m 38s) | packet assembled (per-AC + red baseline + AC-6→CAPTURE-5 augmentation + grid); full regression green; G-3 awaiting decision |
+| 8 | ITEST-4 | test-review: packet; G-3 | ✅ Done | 2,964,016 | 6m 38s (6m 38s) | packet assembled (per-AC + red baseline + AC-6→CAPTURE-5 augmentation + grid); full regression green; **G-3 approved 2026-10-07 — Matt Quirk** |
 | 9 | SOURCE-2 | behavior: AC-2 — frame feed + point/area-average sampling, default 5 px | ⬜ Todo | | | ∥ CAPTURE-3 |
 | 10 | SOURCE-3 | behavior: AC-9 — photo import + sample point on image | ⬜ Todo | | | after SOURCE-2 |
 | 11 | CAPTURE-3 | behavior: AC-4, AC-5 — lock lifecycle + stability settling | ⬜ Todo | | | ∥ SOURCE-2 |
@@ -191,15 +191,12 @@ when the row is marked done.
 
 ## Next phase
 
-**Blocked on the human G-3 decision.** ITEST-4's review packet is assembled under Phase 4 of
-`modules/ITEST.md`; the phase is `⏸ Awaiting review` and G-3 is *awaiting decision*. No phase can start until
-G-3 is recorded — every behaviour phase is gated on it.
+**G-3 approved (2026-10-07 — Matt Quirk); the behaviour stage is open.** ITEST-4 is Done; no gate now blocks
+behaviour. Run each phase in its own session (`/clear` first).
 
-- **Record the decision:** `/feature-next-phase --gate bs-02-sample-capture G-3 approved | "<changes>"`.
-  *Approved* un-blocks the behaviour stage; *changes* turns each item into an `ITEST` change phase + a fresh
-  review.
-- **After G-3 approved**, startable concurrently: **SOURCE-2** (AC-2) ∥ **CAPTURE-3** (AC-4,5) — disjoint
-  files (source/sampling vs controller/live-view lock).
+- **Startable now, concurrently:** **SOURCE-2** (AC-2) ∥ **CAPTURE-3** (AC-4,5) — disjoint files
+  (source/sampling vs controller/live-view lock). Use `--parallel` for separate worktrees, or run them in
+  sequence. All other behaviour phases wait on these (see the session-log dependency notes).
 - Whole-suite grade grid: **10×A + AC-6 B-pending-CAPTURE-5** (augmentation owned by CAPTURE-5). Pending gate
   holds **10** ACs; AC-1 un-pended green (ITEST-2). Full regression green at packet time.
 - **Carried for the behaviour phases** — from ITEST-2: SOURCE-2 drives `currentSample` passively from the live
@@ -212,9 +209,8 @@ G-3 is recorded — every behaviour phase is gated on it.
   augmentation; **CAPTURE-6** keeps the `CaptureReadEndpoint` reachable across the Readout push (else AC-11's
   `harness.state` read throws).
 
-Run next (fresh session, after `/clear`): record G-3 via
-`/feature-next-phase --gate bs-02-sample-capture G-3 approved | "<changes>"`, then
-`/feature-next-phase bs-02-sample-capture` picks up the first unblocked behaviour phase.
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-02-sample-capture` picks up the first
+unblocked behaviour phase (SOURCE-2 or CAPTURE-3), or name one explicitly / use `--parallel` to run both.
 
 ## Token usage
 
@@ -232,7 +228,8 @@ Run next (fresh session, after `/clear`): record G-3 via
 | ITEST-2 | f1da3c29 | 2026-10-07 04:59 EDT | 05:26 | 27m 06s | 27m 06s | claude-opus-4-8 | 134 | 298,372 | 8,939,030 | 83,309 | 9,320,845 | AC-1,2,3,9,10 pending tests written; grade 5×A; AC-1 un-pended green-at-baseline; red baseline clean Thens; default 8 green + 4 pending, unit 282, coverage 100% |
 | ITEST-3 | a848191b | 2026-10-07 05:27 EDT | 06:09 | 41m 18s | 41m 18s | claude-opus-4-8 | 146 | 496,027 | 12,422,788 | 127,259 | 13,046,220 | AC-4,5,6,7,8,11 pending tests + red baseline; grade 5×A + AC-6 B-pending-CAPTURE-5; default 9 green/10 pending; SCENE_CARD/DIM hardened for real ΔE00; fix passes 1/3 |
 | ITEST-4 | 582163ee | 2026-10-07 06:14 EDT | 06:21 | 6m 38s | 6m 38s | claude-opus-4-8 | 60 | 93,196 | 2,854,010 | 16,750 | 2,964,016 | packet assembled; G-3 awaiting decision; full regression green (26 integ +10 pending, 282 unit, 100% cov) |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 06:21** | **2h 39m** | **2h 39m** |  | **890** | **1,715,334** | **54,060,705** | **530,236** | **56,307,165** |  |
+| SIGNOFF-DECISION | b18d823b | 2026-10-07 07:03 EDT | 07:05 | 2m 42s | 2m 15s | claude-opus-4-8 | 40 | 48,864 | 1,266,110 | 9,237 | 1,324,251 | ITEST-4 approved |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 07:05** | **2h 42m** | **2h 41m** |  | **930** | **1,764,198** | **55,326,815** | **539,473** | **57,631,416** |  |
 
 ## Sign-off
 

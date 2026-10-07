@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ITEST-4 ⏸ awaiting review — packet assembled, G-3 awaiting decision; blocks every behaviour phase until decided
+**Status:** Done — all 4 phases complete; G-3 approved 2026-10-07, behaviour stage un-blocked
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/capture_test.dart` (AC tests), `integration_test/capture_harness.dart` (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the capture source), `integration_test/fakes/fake_capture_source.dart`; reuses bs-01's `integration_test/fakes/fake_haptics.dart`.
 **Depends on:** all shell phases (SOURCE-1, CAPTURE-2, SCREEN-1) · **Blocks:** every behavior phase (via G-3)
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness) | ✅ Done | 6,008,655 | 17m 53s (17m 53s) |
 | 2 | acceptance-tests | AC-1,2,3,9,10 | ✅ Done | 9,320,845 | 27m 06s (27m 06s) |
 | 3 | acceptance-tests | AC-4,5,6,7,8,11 | ✅ Done | 13,046,220 | 41m 18s (41m 18s) |
-| 4 | test-review | — (G-3) | ⏸ Awaiting review | | |
+| 4 | test-review | — (G-3) | ✅ Done | | |
 
 ## Interface reconciliation
 - **Boundary:** the assembled app via bs-01's production `buildApp(deps)` (Capture route added by CAPTURE-2),
@@ -30,9 +30,10 @@
   `flutter test integration_test/capture_test.dart` skips pending; run-pending executes them.
 
 ## Open gates
-- **G-3 (approve acceptance tests)** — *awaiting decision* (2026-10-07): ITEST-4's packet is assembled under
-  Phase 4; this module's exit gate, blocking every behaviour phase until decided via
-  `/feature-next-phase --gate bs-02-sample-capture G-3 approved | "<changes>"`.
+- **G-3 (approve acceptance tests)** — ✅ Resolved 2026-10-07 07:04 EDT: **approved** — Matt Quirk. The
+  ITEST-4 packet (11 AC tests, grid 10×A + AC-6 *B pending CAPTURE-5*) is accepted as the gate for behaviour;
+  AC-6's one deferred strengthening is accepted (augmentation closes it at CAPTURE-5). No spec/intent
+  amendment. Behaviour stage un-blocked; ITEST-4 → Done.
 
 ## Phase 1 — Harness
 
@@ -419,9 +420,16 @@ Thens; AC-4/AC-7/AC-11 on Given preconditions naming CAPTURE-3/CAPTURE-4/CAPTURE
 |---|---|---|---|
 | `TestAC06_LowLightApproximate` | only one reachable accuracy tier until the reference-card path lands, so the test can't prove low light *specifically* downgrades vs a single always-on tier | **CAPTURE-5** | the calibrated-vs-approximate control (fixtures ready: `SCENE_CARD` raw ΔE00 ~4.6, `SCENE_DIM` raw ΔE00 ~5.1): a `SCENE_CARD` calibrated capture reads **calibrated** (ΔE00 ≤ 3) while the card-less `SCENE_DIM` capture reads **approximate** (ΔE00 ~5, ≤ 8) — then re-grade AC-6 → A |
 
-### Result  <!-- filled on completion -->
+### Result
+G-3 **approved** 2026-10-07 07:04 EDT — Matt Quirk (recorded via `--gate`). Packet accepted as assembled:
+11 AC tests, whole-suite grid **10×A + AC-6 B-pending-CAPTURE-5**, clean red baseline, full regression green.
+No tests changed; AC-6's deferred strengthening accepted (augmentation owned by CAPTURE-5). Phase → Done.
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Checkpoint / Handoff
+Behaviour stage un-blocked. Startable concurrently in separate sessions: **SOURCE-2** (AC-2) ∥ **CAPTURE-3**
+(AC-4,5) — disjoint files. Each behaviour phase un-pends its AC(s), makes its augmentations, re-grades every
+un-pended AC test, and holds the suite green with only later phases' ACs still pending. Carried handoffs from
+ITEST-2/ITEST-3 stand (see the master plan's "Next phase").
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
