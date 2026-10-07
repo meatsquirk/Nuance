@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** In progress — COMPARE-1 done; next DIFF-1 / CVD-1 (shells, startable in parallel; G-4 still open, blocks ITEST-3/DIFF-2 only)
+**Status:** In progress — DIFF-1 done; next CVD-1 (shell; then COMPARE-2). G-3 (tests) and G-4 (AC-4 ΔE00 literal) still open — neither blocks CVD-1.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -131,7 +131,7 @@ distance) — **DIFF-2** augments it with a near-identical control pair that rea
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DIFF | [modules/DIFF.md](modules/DIFF.md) | Color-science comparison: CIEDE2000 ΔE00, plain-verdict bands, the LCh relational decomposition (ΔL*/ΔC*/Δh° + direction, "Same …") | bs-01 color-science | ⬜ Todo |
+| DIFF | [modules/DIFF.md](modules/DIFF.md) | Color-science comparison: CIEDE2000 ΔE00, plain-verdict bands, the LCh relational decomposition (ΔL*/ΔC*/Δh° + direction, "Same …") | bs-01 color-science | 🔄 In progress |
 | CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | ⬜ Todo |
 | COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | 🔄 In progress (COMPARE-1 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ⬜ Todo |
@@ -188,8 +188,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | COMPARE-1 | scaffold: branch from main, baseline, confirm coverage gate, BS03 pending runner | ✅ Done | 2,185,042 | 9m 04s (42m 14s) | branch cut from c793839; analyze clean; unit 196 / integration 17 green; gate PASS clean / FAIL on planted gap; BS03 pending runner in place |
-| 2 | DIFF-1 | shell: comparison color-science signatures (`Comparison`, ΔE00, verdict, decompose) | ⬜ Next | | | ∥ CVD-1 — startable now |
-| 3 | CVD-1 | shell: `CvdProfile` + `ConfusionCheck` signature + inject into deps | ⬜ Todo | | | ∥ DIFF-1 — startable now |
+| 2 | DIFF-1 | shell: comparison color-science signatures (`Comparison`, ΔE00, verdict, decompose) | ✅ Done | 2,538,094 | 6m 48s | `Comparison` + pure `compare` + 5 stubs; unit 202 green; coverage 100% on touched file; integ 17 green |
+| 3 | CVD-1 | shell: `CvdProfile` + `ConfusionCheck` signature + inject into deps | ⬜ Next | | | ∥ (DIFF-1 done) — startable now |
 | 4 | COMPARE-2 | shell: `ComparisonController`/state + `SampleSource` + read endpoint + comparison entry/route | ⬜ Todo | | | after DIFF-1, CVD-1 |
 | 5 | SCREEN-1 | shell: Comparison screen scaffold (E3–E8, E49 placeholders) bound to controller | ⬜ Todo | | | after COMPARE-2 |
 | 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
@@ -210,21 +210,18 @@ when the row is marked done.
 
 ## Next phase
 
-**COMPARE-1 (scaffold) done.** Branch `feat/bs-03-relative-comparison` cut from `main` @ c793839 (clean bs-01
-foundation; plan files brought across from the bs-02 branch, user-approved). Baseline green (unit 196 /
-integration 17); coverage gate proven both ways; `integration_test/bs03/pending.dart` in place.
+**DIFF-1 (shell) done.** `lib/compare/difference.dart` now holds the `Comparison` value type, a pure
+placeholder `compare(Sample a, Sample b)`, and the five private stubs DIFF-2/DIFF-3 fill. Unit 202 green,
+100% coverage on the touched file; analyze + integration (17) green. No G-3/G-4 dependency.
 
-- **Startable now (parallel):** **DIFF-1 ∥ CVD-1** — the two shell phases, disjoint dirs
-  (`lib/compare/difference.dart` ∥ `lib/accessibility/`). Neither needs G-3 or G-4. Run each in its own
-  session (`/clear` first; `--parallel` for a worktree).
+- **Startable now:** **CVD-1** — the remaining shell (`lib/accessibility/`, disjoint from DIFF). Needs
+  neither G-3 nor G-4. Then **COMPARE-2** (needs DIFF-1 **and** CVD-1).
 - **G-4 (spec-data reconciliation)** still open — stated ΔE00 "14.2" vs computed ≈ 13.05. Blocks **ITEST-3**
-  (AC-4 literal) and **DIFF-2** only; shells do not need it. Settle before ITEST-3.
+  (AC-4 literal) and **DIFF-2** only. Settle before ITEST-3.
 - **G-3** (approve acceptance tests) still open; blocks every behaviour phase (from COMPARE-3).
-- **Branch note:** bs-03 is independent of bs-02 (D-1). bs-02 is still in flight on its own branch; nothing to
-  merge here.
+- **Branch note:** bs-03 is independent of bs-02 (D-1); nothing to merge here.
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up DIFF-1
-(or name CVD-1 / add `--parallel` to run them concurrently).
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up CVD-1.
 
 ## Token usage
 
@@ -236,7 +233,8 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-co
 | PLAN | e128d86e | 2026-10-07 07:43 EDT | 07:56 | 13m 02s | 13m 02s | claude-opus-4-8 | 58 | 148,483 | 3,657,272 | 62,473 | 3,868,286 | plan written: 17 phases, 5 modules, 12 ACs; G-1/G-3 open; G-4 raised (overall ΔE00 14.2 vs computed 13.05) |
 | GATE-DECISION | e128d86e | 2026-10-07 08:15 EDT | 08:15 | 0m 53s | 0m 53s | claude-opus-4-8 | 12 | 2,866 | 1,105,647 | 3,198 | 1,111,723 | G-1 approved (owner Matt Quirk); spec first line stamped; COMPARE-1 unblocked. G-4 still open |
 | COMPARE-1 | ea5add91 | 2026-10-07 08:16 EDT | 08:59 | 42m 14s | 9m 04s | claude-opus-4-8 | 56 | 70,489 | 2,089,423 | 25,074 | 2,185,042 | scaffold complete — branch cut from c793839; analyze clean; unit 196 / integration 17 green; coverage gate PASS clean / FAIL on planted gap; BS03 pending runner in place |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 08:59** | **56m 09s** | **22m 59s** |  | **126** | **221,838** | **6,852,342** | **90,745** | **7,165,051** |  |
+| DIFF-1 | b1e7c329 | 2026-10-07 09:13 EDT | 09:19 | 6m 48s | 6m 48s | claude-opus-4-8 | 68 | 66,234 | 2,453,513 | 18,279 | 2,538,094 | shell: Comparison type + pure compare placeholder + 5 stubs; unit 202 green, 100% coverage on touched file, integration 17 green; fix passes 0/3 |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 09:19** | **1h 02m** | **29m 47s** |  | **194** | **288,072** | **9,305,855** | **109,024** | **9,703,145** |  |
 
 ## Sign-off
 

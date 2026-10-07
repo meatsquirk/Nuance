@@ -1,6 +1,6 @@
 # Module DIFF — comparison color-science
 
-**Status:** Not started
+**Status:** In progress
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/compare/difference.dart` (ΔE00, verdict, the `Comparison` / `RelationalStatement`
 value types, the LCh decomposition). Reuses bs-01's `lib/color_science/words.dart` (`hueFamilyWord`) and
@@ -12,7 +12,7 @@ comparison-difference regions in SCREEN
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 2,538,094 | 6m 48s |
 | 2 | behavior | AC-4 | ⬜ Todo | | |
 | 3 | behavior | AC-5, AC-6 | ⬜ Todo | | |
 
@@ -51,9 +51,48 @@ comparison-difference regions in SCREEN
   file — the placeholder has no branches); existing suites stay green.
 - **Acceptance gate:** *(shell — none)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed `lib/compare/difference.dart`: the `Comparison` value type
+(`{ deltaE00, verdict, lightness, saturation, hue }`) with const ctor, value
+equality (`==`/`hashCode`), `toString`; a pure `compare(Sample a, Sample b)`
+entry returning a fixed, branch-free placeholder; and the five private stubs
+the behaviour phases fill — `_deltaE00`/`_verdictBand` (DIFF-2) and
+`_lightnessLine`/`_saturationLine`/`_hueLine` (DIFF-3). Dartdoc names the AC and
+the D-2/D-3 basis on each surface. No real math.
+
+- **Tests:** `test/compare/difference_test.dart` (6 new) — equality true/false
+  per field, non-`Comparison` inequality, field getters + `toString`, and the
+  placeholder `compare` output.
+- **Unit gate:** 202 green (196 → 202, +6). **Coverage:** `dart run
+  tool/coverage_gate.dart main` → 100% on the one touched file
+  (`lib/compare/difference.dart`), PASS (placeholder has no branches).
+- **Existing suites green:** `flutter analyze` clean; `flutter test` 202 green;
+  `flutter test integration_test/` 17 green (bs-01 readout + harness, iOS sim).
+- **Acceptance gate:** none (shell). **Augmentations:** none.
+- **Fix passes:** 0/3 (passed first run). **Tokens / Time:** 2,538,094 / 6m 48s.
+
+### Checkpoint / Handoff
+
+- **Frozen for consumers (COMPARE-2, DIFF-2, DIFF-3):** `Comparison` with named
+  fields `deltaE00` (double), `verdict`, `lightness`, `saturation`, `hue`
+  (String); value equality. Entry `Comparison compare(Sample a, Sample b)`,
+  pure. Import `package:paint_color_assistant/compare/difference.dart`.
+- **To fill in behaviour phases (same file):** DIFF-2 implements `_deltaE00`
+  (CIEDE2000, mirror the verified `_deltaE00` in
+  `integration_test/capture_test.dart`) and `_verdictBand`; DIFF-3 implements
+  the three dimension-line stubs (LCh ΔL\*/ΔC\*ab/signed Δh° + `hueFamilyWord`,
+  with the "Same …" zero-delta branch). Each returns a placeholder today.
+- **Verification commands** (export PATH first —
+  `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+  `flutter test --coverage` · `flutter test integration_test/` ·
+  `dart run tool/coverage_gate.dart main`.
+- **Known gaps:** placeholder values only — `compare` returns ΔE00 0.0 and empty
+  strings until DIFF-2/DIFF-3. **G-4** still blocks DIFF-2 (the AC-4 ΔE00
+  literal). Carry-over bs-01 flake: a const-ctor line can intermittently read
+  uncovered on `--coverage`; re-run once.
+- **Next:** DIFF-2 (needs G-4 + COMPARE-3 Givens); CVD-1 is the other startable
+  shell, disjoint dir.
 
 ## Phase 2 — Overall difference: ΔE00 + plain verdict (DIFF-2)
 
