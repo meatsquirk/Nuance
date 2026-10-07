@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1/2/3 done (ITEST-3: AC-4,5,6,7,8,11 pending tests + red baseline, grade 5×A + AC-6 B-pending-CAPTURE-5); next ITEST-4 (test review, G-3)
+**Status:** ITEST-4 ⏸ awaiting review — packet assembled, G-3 awaiting decision; blocks every behaviour phase until decided
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/capture_test.dart` (AC tests), `integration_test/capture_harness.dart` (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the capture source), `integration_test/fakes/fake_capture_source.dart`; reuses bs-01's `integration_test/fakes/fake_haptics.dart`.
 **Depends on:** all shell phases (SOURCE-1, CAPTURE-2, SCREEN-1) · **Blocks:** every behavior phase (via G-3)
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness) | ✅ Done | 6,008,655 | 17m 53s (17m 53s) |
 | 2 | acceptance-tests | AC-1,2,3,9,10 | ✅ Done | 9,320,845 | 27m 06s (27m 06s) |
 | 3 | acceptance-tests | AC-4,5,6,7,8,11 | ✅ Done | 13,046,220 | 41m 18s (41m 18s) |
-| 4 | test-review | — (G-3) | ⬜ Next | | |
+| 4 | test-review | — (G-3) | ⏸ Awaiting review | | |
 
 ## Interface reconciliation
 - **Boundary:** the assembled app via bs-01's production `buildApp(deps)` (Capture route added by CAPTURE-2),
@@ -30,7 +30,9 @@
   `flutter test integration_test/capture_test.dart` skips pending; run-pending executes them.
 
 ## Open gates
-- **G-3 (approve acceptance tests)** is this module's exit gate (ITEST-4), blocking every behavior phase.
+- **G-3 (approve acceptance tests)** — *awaiting decision* (2026-10-07): ITEST-4's packet is assembled under
+  Phase 4; this module's exit gate, blocking every behaviour phase until decided via
+  `/feature-next-phase --gate bs-02-sample-capture G-3 approved | "<changes>"`.
 
 ## Phase 1 — Harness
 
@@ -282,7 +284,140 @@ Fix passes **1/3** (AC-8 fixture vacuity, found by the grade gate). Tokens 13,04
 - **Exit criteria:** packet written; human decision recorded via `--gate`.
 - **Acceptance gate:** *(decision — human)*
 
-### Packet  <!-- filled by ITEST-4 -->
+### Packet
+
+**For the reviewer (G-3): approve the acceptance tests before any behaviour is coded.** The eleven AC tests
+below live in `integration_test/capture_test.dart`, each driving the **real assembled app** (bs-01's
+production `buildApp`, Capture route) through the ITEST-1 harness. Only infrastructure is faked:
+`FakeCaptureSource` (software frames + known ground-truth colour, counts frame reads) and bs-01's
+`FakeHaptics`. Sampling, lock/settle, accuracy/calibration, the screen, routing, commit and the bs-01 Readout
+are all real. One AC runs live today (AC-1, un-pended as green at baseline); the other ten are **pending** and
+red at baseline, each failing on a Then or a Given precondition naming the phase that will make it pass.
+
+**Look at these first (the judgement calls behind the grades):**
+1. **AC-6 is graded `B pending CAPTURE-5`** — the one non-A row, by design. With only one reachable accuracy
+   tier until the reference-card path exists, the test can prove a low-light commit is *approximate within
+   ΔE00 8 and not refused*, but not that low light *specifically* downgrades vs a single always-on tier. The
+   augmentation (below) closes it at CAPTURE-5 and re-grades it A. Approving the packet accepts this one
+   deferred strengthening, not a weak test.
+2. **AC-3's `whenSelectRadius(px)`** currently taps the single E18 placeholder for every radius; its
+   directional-pull Thens only bite once SCREEN-2 retargets the helper to per-option 1/5/21 anchors (carried
+   in the handoff). Assertions as written are correct against the intended behaviour.
+3. **`tester.takeException()` consumes** in AC-4/6/7/8/10/11 are bounded to `UnimplementedError`/`null` — any
+   other exception type still fails the test — so they move the baseline red onto the real Then without
+   masking a genuine failure.
+4. **AC-8 fixture hardening** — `SCENE_CARD` was given a raw frame ΔE00 4.56 off truth (ITEST-3 fix pass), so
+   only a real normalisation lands the `≤ 3` Then; a relabel-only calibrate fails it. A never-pending guard
+   pins `SCENE_CARD`/`SCENE_DIM` raw readings clearly off ground truth so the ΔE Thens can't silently regress.
+
+**Grade grid:** `specs/bs-02-sample-capture/behavior-test-completeness-bs-02-sample-capture.md` — whole-suite
+**10×A + AC-6 B-pending-CAPTURE-5** (ITEST-2: 5×A; ITEST-3: 5×A + AC-6 B-pending), each phase graded by an
+independent fresh grader. No other B to fix.
+
+**Suite state at packet time (full cross-feature regression, 2026-10-07, Flutter 3.47.6):** `flutter analyze`
+clean; `flutter test integration_test/` **26 pass + 10 pending-skipped** (17 bs-01 + bs-02 smoke + 7 guards +
+AC-1; the 10 pending ACs skipped by default); unit **282 pass**; coverage gate `dart run
+tool/coverage_gate.dart main` **PASS 100%** on touched files. Nothing to fix before the decision.
+
+#### Per-AC (test · Given checks · When · Then + Rejects)
+
+- **AC-1 · `TestAC01_Eyedropper`** *(live — un-pended, owner SCREEN-2)*
+  - **Given:** Capture screen shown on `SCENE_OLIVE` — `AppBar 'Capture'` + `liveViewKey` both present.
+  - **When:** the live view is shown (on open).
+  - **Then:** a centre-point eyedropper + reticle are present and the reticle centre equals the feed centre on
+    both axes (ε 0.5). **Rejects:** an absent marker; an off-centre / top-left / `Positioned` marker.
+
+- **AC-2 · `TestAC02_AreaAverage5px`** *(pending → SOURCE-2)*
+  - **Given:** live view on `SCENE_CENTRE_VARIED`; default radius 5 px asserted via the read endpoint
+    (`state.radiusPx == 5`).
+  - **When:** the feed samples under the centre reticle (`pump` — passive, no explicit sample action).
+  - **Then:** `currentSample` ≈ the inner-disc colour, nearer the disc than the centre pixel **and** than the
+    outer band. **Rejects:** a single-pixel/point read (pulls to the centre distractor); a wider/wrong radius
+    (pulls to the outer band). Fixture regions are ~200+ L1 apart vs tolerance 45.
+
+- **AC-3 · `TestAC03_RadiusSelector`** *(pending → SCREEN-2 + SOURCE-2)*
+  - **Given:** live view on `SCENE_CENTRE_VARIED`.
+  - **When:** select each radius {1,5,21} px via `whenSelectRadius` (E18).
+  - **Then:** reticle `getSize` == {8,20,44} px square (ε 0.5) **and** the three averages are distinct, the
+    1 px nearer the centre distractor than the 5 px, the 21 px nearer the outer band than the 5 px.
+    **Rejects:** an unchanged reticle (placeholder 20 px); an average that ignores the radius (all three equal).
+
+- **AC-4 · `TestAC04_LockSettles`** *(pending → CAPTURE-3)*
+  - **Given:** `SCENE_OLIVE`, `lockState == auto`; pump the frame-driven counter until "SETTLING 6/12" (at
+    baseline it never leaves 0/12 — Given precondition reds cleanly naming CAPTURE-3).
+  - **When:** `whenLock()` (E16).
+  - **Then:** indicator reads exactly "AE · AWB · AF LOCKED", stability "STABLE 12/12", `lockState == locked`,
+    `stabilityText == 'STABLE 12/12'`. **Rejects:** an unchanged indicator; a reading that never settles; a
+    partial AE/AWB/AF lock.
+
+- **AC-5 · `TestAC05_SettlingWarns`** *(pending → CAPTURE-3)*
+  - **Given:** `SCENE_OLIVE`, `lockState == auto`.
+  - **When:** pump frames to "SETTLING 6/12" without locking.
+  - **Then:** indicator reads "SETTLING 6/12", `isStable == false`, no "STABLE 12/12", lock control present +
+    enabled. Negative Thens taken at a settle point (counter advanced 0→6 proves the reading is live).
+    **Rejects:** STABLE shown before a lock; a missing/disabled lock control.
+
+- **AC-6 · `TestAC06_LowLightApproximate`** *(pending → CAPTURE-4; grade **B pending CAPTURE-5**)*
+  - **Given:** `SCENE_DIM`; `source.lighting == low` and `referenceCardPresent == false` via the endpoint.
+  - **When:** `whenCommit()` (E20).
+  - **Then:** low-light warning shown (flag + `warningKey`); a sample **is** committed; `accuracy ==
+    approximate`; committed colour within ΔE00 8 of ground truth. **Rejects:** refusing the capture in dim
+    light; no warning; leaving it calibrated with no card. **Limit:** can't yet prove low light *specifically*
+    downgrades — see the augmentation.
+
+- **AC-7 · `TestAC07_DismissWarning`** *(pending → CAPTURE-4)*
+  - **Given:** a low-light warning raised through the real commit flow on `SCENE_DIM`; `warningKey` present,
+    accuracy approximate before the dismiss.
+  - **When:** `whenDismissWarning()` (E15).
+  - **Then:** warning cleared (`warningKey` findsNothing + flag false) while accuracy stays approximate.
+    Negative Then settled against a reading that demonstrably changed (warning present → absent). **Rejects:**
+    a dismiss that also clears/upgrades the accuracy; a warning that reappears.
+
+- **AC-8 · `TestAC08_CardCalibrates`** *(pending → CAPTURE-5)*
+  - **Given:** `SCENE_CARD`, `source.referenceCardPresent == true` (raw frame ΔE00 4.56 off truth).
+  - **When:** `whenCalibrate()` (E17), then `whenCommit()` (E20).
+  - **Then:** live accuracy label flips to "Calibrated"; committed colour within ΔE00 3 of ground truth;
+    committed `accuracy == calibrated`. **Rejects:** a calibrate that no-ops the colour (stays ΔE00 4.56 > 3);
+    an accuracy that stays approximate.
+
+- **AC-9 · `TestAC09_SampleFromPhoto`** *(pending → SOURCE-3)*
+  - **Given:** `SCENE_OLIVE` live view; `PHOTO_SWATCH` with a known colour at P ≠ the image centre (asserted
+    on the fixture).
+  - **When:** `whenImportPhoto(PHOTO_SWATCH)` (E19) + sample P.
+  - **Then:** `currentSample` ≈ the colour at P, nearer P than the image centre **and** than the olive live
+    camera. **Rejects:** sampling the image centre (wrong point); sampling the live camera instead of the
+    imported photo.
+
+- **AC-10 · `TestAC10_ValueOnly`** *(pending → SCREEN-3)*
+  - **Given:** `SCENE_OLIVE` in colour; `valueOnly == false`, E21 reads exactly "Value", no `ColorFiltered`
+    ancestor over `liveViewKey` (the paired control proving the reading can change — G3).
+  - **When:** `whenToggleValueOnly()` (E21).
+  - **Then:** `valueOnly == true`, a `ColorFiltered` ancestor over the feed, E21 reads exactly "✓ Value".
+    **Rejects:** feed left in colour; label unchanged; greyscaling an unrelated widget (filter must be an
+    ancestor of `liveViewKey`).
+
+- **AC-11 · `TestAC11_CommitOpensReadout`** *(pending → CAPTURE-6; Given needs CAPTURE-3)*
+  - **Given:** `SCENE_MULTIFRAME` (noisy frames whose mean is ground truth); no haptic fired; `whenLock()` to
+    reach "STABLE 12/12" (baseline reds on this precondition naming CAPTURE-3).
+  - **When:** `whenCommit()` (E20).
+  - **Then:** `framesAveraged > 1`; committed colour within ΔE00 8 of ground truth (per-frame noise averages
+    out); exactly one haptic; the Readout route shows "Deep Olive Green" under `NameHeader`. **Rejects:** a
+    single-frame commit (by count); no haptic / a double pulse; navigating without the sample or with the
+    wrong name.
+
+#### Red-baseline summary (run-pending mode)
+
+Every pending test reds on a **Then** or a **Given precondition naming its owning phase** — never a panic,
+compile error or harness error (deferred `UnimplementedError`s are consumed via bounded `takeException`):
+AC-2/AC-9 on `currentSample` null; AC-3 on the reticle size (shell 20 px); AC-5/AC-6/AC-8/AC-10 on their
+Thens; AC-4/AC-7/AC-11 on Given preconditions naming CAPTURE-3/CAPTURE-4/CAPTURE-3. AC-1 is green at baseline
+(un-pended) and runs in the default suite. Full per-test rows: the **Red baseline** table below.
+
+#### Augmentation scheduled
+
+| AC test | Limited because | Closed by | Add |
+|---|---|---|---|
+| `TestAC06_LowLightApproximate` | only one reachable accuracy tier until the reference-card path lands, so the test can't prove low light *specifically* downgrades vs a single always-on tier | **CAPTURE-5** | the calibrated-vs-approximate control (fixtures ready: `SCENE_CARD` raw ΔE00 ~4.6, `SCENE_DIM` raw ΔE00 ~5.1): a `SCENE_CARD` calibrated capture reads **calibrated** (ΔE00 ≤ 3) while the card-less `SCENE_DIM` capture reads **approximate** (ΔE00 ~5, ≤ 8) — then re-grade AC-6 → A |
 
 ### Result  <!-- filled on completion -->
 
