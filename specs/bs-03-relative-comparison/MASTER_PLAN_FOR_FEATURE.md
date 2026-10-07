@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** In progress — both shells DIFF-1 + CVD-1 done; next COMPARE-2 (shell). G-3 (tests) and G-4 (AC-4 ΔE00 literal) still open — neither blocks COMPARE-2.
+**Status:** In progress — COMPARE-2 (shell) done; next SCREEN-1 (shell). G-3 (tests) and G-4 (AC-4 ΔE00 literal) still open — neither blocks SCREEN-1.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -133,7 +133,7 @@ distance) — **DIFF-2** augments it with a near-identical control pair that rea
 |---|---|---|---|---|
 | DIFF | [modules/DIFF.md](modules/DIFF.md) | Color-science comparison: CIEDE2000 ΔE00, plain-verdict bands, the LCh relational decomposition (ΔL*/ΔC*/Δh° + direction, "Same …") | bs-01 color-science | 🔄 In progress |
 | CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | 🔄 In progress (CVD-1 done) |
-| COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | 🔄 In progress (COMPARE-1 done) |
+| COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | 🔄 In progress (COMPARE-2 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
@@ -190,8 +190,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 1 | COMPARE-1 | scaffold: branch from main, baseline, confirm coverage gate, BS03 pending runner | ✅ Done | 2,185,042 | 9m 04s (42m 14s) | branch cut from c793839; analyze clean; unit 196 / integration 17 green; gate PASS clean / FAIL on planted gap; BS03 pending runner in place |
 | 2 | DIFF-1 | shell: comparison color-science signatures (`Comparison`, ΔE00, verdict, decompose) | ✅ Done | 2,538,094 | 6m 48s | `Comparison` + pure `compare` + 5 stubs; unit 202 green; coverage 100% on touched file; integ 17 green |
 | 3 | CVD-1 | shell: `CvdProfile` + `ConfusionCheck` signature + inject into deps | ✅ Done | 3,816,225 | 8m 30s | `CvdProfile`/`CvdType` + `ConfusionCheck`/`NoopConfusionCheck` + deps wiring; unit 215 green; coverage 100% on touched files; analyze + integ 17 green |
-| 4 | COMPARE-2 | shell: `ComparisonController`/state + `SampleSource` + read endpoint + comparison entry/route | ⬜ Next | | | after DIFF-1, CVD-1 (both done) |
-| 5 | SCREEN-1 | shell: Comparison screen scaffold (E3–E8, E49 placeholders) bound to controller | ⬜ Todo | | | after COMPARE-2 |
+| 4 | COMPARE-2 | shell: `ComparisonController`/state + `SampleSource` + read endpoint + comparison entry/route | ✅ Done | 12,364,300 | 25m 01s | controller/state/source/read-endpoint + comparison entry + `toComparison`→real screen (replaced `compare_stub`); unit 241 green, 100% coverage on 9 touched files, integ 17 green (bs-01 AC-9/10 on the real screen); analyze clean; 1/3 fix passes |
+| 5 | SCREEN-1 | shell: Comparison screen scaffold (E3–E8, E49 placeholders) bound to controller | ⬜ Next | | | after COMPARE-2 (done) |
 | 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
 | 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 8 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 (AC-4 literal needs G-4) |
@@ -210,20 +210,26 @@ when the row is marked done.
 
 ## Next phase
 
-**CVD-1 (shell) done.** `lib/a11y/cvd/` now holds `CvdProfile`/`CvdType` and the `ConfusionCheck` interface
-with an inert `NoopConfusionCheck`; `AppDependencies` injects `cvdProfile` (default deutan) and
-`confusionCheck` (default noop) through `AppScope`, behaviour unchanged. Unit 215 green, 100% coverage on all
-touched files; analyze + integration (17) green. No G-3/G-4 dependency. Both shells (DIFF-1, CVD-1) are done.
+**COMPARE-2 (shell) done.** `lib/compare/` now holds the `ComparisonController` (derives the pair via DIFF
+`compare` + CVD `confusable`; `selectA`/`selectB`/`swap`/`openReadout` declared, deferred to COMPARE-3/5/6),
+`ComparisonState`, `SampleSource` (+ empty in-memory catalogue) and `ComparisonReadEndpoint`.
+`AppDependencies` gains `sampleSource` (D-7) + `comparisonEntry` (D-8); `buildApp` opens on the new
+`ComparisonHomeScreen` when the entry is set; `AppRouter.toComparison` now routes to it (the render-only
+`compare_stub` is deleted). Unit 241 green, 100% coverage on all 9 touched files; analyze + integration (17)
+green — bs-01's AC-9/AC-10 now land on the real screen with behaviour preserved.
 
-- **Startable now:** **COMPARE-2** — shell: `ComparisonController`/state, `SampleSource` + in-memory
-  catalogue, `ComparisonReadEndpoint`, and the `buildApp` comparison entry/route. Needs DIFF-1 **and** CVD-1
-  (both done); needs neither G-3 nor G-4. Then **SCREEN-1** (serial, after COMPARE-2).
+- **Startable now:** **SCREEN-1** — shell: replace `_ComparisonShellBody` with the real `ComparisonScreen`
+  composing the five per-region widgets (slots/difference/statement/confusion/actions; E3–E8, E49), bound to
+  the controller + read endpoint. Serial (only startable phase); needs COMPARE-2 (done); no G-3/G-4
+  dependency. After SCREEN-1 the acceptance-test stage opens (ITEST-1).
+- **Deviation to carry:** `AppRouter.toReadout` does **not** exist in bs-01 (gap analysis assumed it did);
+  `openReadout` is deferred to COMPARE-6, which adds `toReadout`.
 - **G-4 (spec-data reconciliation)** still open — stated ΔE00 "14.2" vs computed ≈ 13.05. Blocks **ITEST-3**
   (AC-4 literal) and **DIFF-2** only. Settle before ITEST-3.
 - **G-3** (approve acceptance tests) still open; blocks every behaviour phase (from COMPARE-3).
 - **Branch note:** bs-03 is independent of bs-02 (D-1); nothing to merge here.
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up COMPARE-2.
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up SCREEN-1.
 
 ## Token usage
 
@@ -237,7 +243,9 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-co
 | COMPARE-1 | ea5add91 | 2026-10-07 08:16 EDT | 08:59 | 42m 14s | 9m 04s | claude-opus-4-8 | 56 | 70,489 | 2,089,423 | 25,074 | 2,185,042 | scaffold complete — branch cut from c793839; analyze clean; unit 196 / integration 17 green; coverage gate PASS clean / FAIL on planted gap; BS03 pending runner in place |
 | DIFF-1 | b1e7c329 | 2026-10-07 09:13 EDT | 09:19 | 6m 48s | 6m 48s | claude-opus-4-8 | 68 | 66,234 | 2,453,513 | 18,279 | 2,538,094 | shell: Comparison type + pure compare placeholder + 5 stubs; unit 202 green, 100% coverage on touched file, integration 17 green; fix passes 0/3 |
 | CVD-1 | 14a0d9b4 | 2026-10-07 09:22 EDT | 09:31 | 8m 30s | 8m 30s | claude-opus-4-8 | 92 | 77,648 | 3,715,605 | 22,880 | 3,816,225 | shell done: CvdProfile/ConfusionCheck + deps wiring; unit 215 green; coverage 100% touched; analyze + integ 17 green; 0/3 fix passes |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 09:31** | **1h 11m** | **38m 17s** |  | **286** | **365,720** | **13,021,460** | **131,904** | **13,519,370** |  |
+| COMPARE-2 | 73fe7631 | 2026-10-07 10:20 EDT | 10:45 | 25m 01s | 25m 01s | claude-opus-4-8 | 158 | 196,228 | 12,070,968 | 96,946 | 12,364,300 | shell: ComparisonController/state + SampleSource + ComparisonReadEndpoint + comparison entry/route; replaced compare_stub; unit 241 green, 100% coverage on 9 touched files, integ 17 green (incl. bs-01 AC-9/10 on the real screen), analyze clean; 1/3 fix passes |
+| RECONCILE | 646b2ffe | 2026-10-07 11:18 EDT | 11:22 | 3m 57s | 3m 57s | claude-opus-4-8 | 26 | 13,125 | 1,974,880 | 8,891 | 1,996,922 | fast-forwarded COMPARE-2 shell into feat/bs-03-relative-comparison (3279f0f), verified green (241 unit/100% cov/17 integ/analyze clean); applied COMPARE-2 rollup to master plan |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 11:22** | **1h 40m** | **1h 07m** |  | **470** | **575,073** | **27,067,308** | **237,741** | **27,880,592** |  |
 
 ## Sign-off
 
