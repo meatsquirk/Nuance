@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** Not started — next COMPARE-1 (blocked by G-1 spec approval; G-4 spec-data gate open)
+**Status:** Not started — next COMPARE-1 (startable; G-1 approved; G-4 spec-data gate still open, blocks ITEST-3/DIFF-2 only)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -170,7 +170,7 @@ every other behaviour Given needs it; edits `slots_region`/`statement_region`), 
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | COMPARE-1 | Open |
+| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | COMPARE-1 | ✅ Resolved 2026-10-07 08:15 EDT: approved — Matt Quirk (owner). Spec first line records approval. COMPARE-1 unblocked |
 | G-2 | dependency | bs-01 shared foundation merged to `main`: `Sample`/`ColorCoordinates`, `buildApp`/`AppScope`, `Speech` + `FakeSpeech`, the Readout screen rendering a name, `AppRouter.toComparison`/`.toReadout`, color-science (LCh), the coverage-gate tool and `integration_test`. Closed by bs-01 sign-off | COMPARE-1, all shells | ✅ Resolved 2026-10-06: bs-01 signed off and merged to `main` at c793839 (full foundation). bs-02 is **not** required (D-1) |
 | G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-4 | decision | **Spec-data reconciliation (routed to the spec author).** AC-4 asserts the overall reads "delta-E00 14.2", but the stated LCh coordinates — A (L 58, C 34, h 42°) and B (L 70, C 25, h 60°) — compute to **CIEDE2000 ΔE00 ≈ 13.05** (verified in plan mode; the decomposition deltas 12 / 9 / 18° match the spec exactly). Decide: (a) correct the expected string to the computed value (≈ "delta-E00 13.1"), or (b) supply the exact CIELAB fixture coordinates that yield 14.2. Amend the spec and `SAMPLE_A/B` fixtures with the answer | ITEST-3 (AC-4 literal), DIFF-2 | Open |
@@ -210,16 +210,16 @@ when the row is marked done.
 
 ## Next phase
 
-**Not started.** Two gates must be settled before behaviour, and one before the scaffold:
+**G-1 approved (2026-10-07 — Matt Quirk); COMPARE-1 is startable.** The spec's first line records approval.
 
-- **G-1 (approve the spec)** blocks **COMPARE-1** (the scaffold). The `.feature` is still "Draft: awaiting
-  owner approval" — approve it (record approval as its first line) and the scaffold can run.
-- **G-4 (spec-data reconciliation)** — the stated ΔE00 "14.2" does not match the stated LCh coordinates
-  (which give ≈ 13.05). Decide before **ITEST-3** finalizes AC-4's literal and before **DIFF-2**. Low-urgency
-  for scaffold/shells.
-- First phase to run: **COMPARE-1** once G-1 is approved. Run each phase in its own session (`/clear` first).
+- **Startable now:** **COMPARE-1** (scaffold — branch from `main` @ c793839, baseline, confirm coverage gate,
+  BS03 pending runner). Run each phase in its own session (`/clear` first).
+- **G-4 (spec-data reconciliation)** still open — the stated ΔE00 "14.2" vs the computed ≈ 13.05. It blocks
+  **ITEST-3** (AC-4 literal) and **DIFF-2** only; scaffold and shells do not need it. Settle before ITEST-3.
+- **Branch coordination:** this plan is committed on `feat/bs-02-sample-capture`; COMPARE-1 branches bs-03
+  from `main`, so bring the plan to its branch (merge bs-02 to main first, or branch from this commit).
 
-Run next (after G-1, fresh session): `/feature-next-phase bs-03-relative-comparison` picks up COMPARE-1.
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up COMPARE-1.
 
 ## Token usage
 
@@ -229,7 +229,8 @@ Run next (after G-1, fresh session): `/feature-next-phase bs-03-relative-compari
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | _pending_ | | | | | claude-opus-4-8 | | | | | | plan written: 17 phases, 5 modules, 12 ACs; G-1/G-3 open, G-4 raised (ΔE00 14.2 vs 13.05) |
 | PLAN | e128d86e | 2026-10-07 07:43 EDT | 07:56 | 13m 02s | 13m 02s | claude-opus-4-8 | 58 | 148,483 | 3,657,272 | 62,473 | 3,868,286 | plan written: 17 phases, 5 modules, 12 ACs; G-1/G-3 open; G-4 raised (overall ΔE00 14.2 vs computed 13.05) |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 07:56** | **13m 02s** | **13m 02s** |  | **58** | **148,483** | **3,657,272** | **62,473** | **3,868,286** |  |
+| GATE-DECISION | e128d86e | 2026-10-07 08:15 EDT | 08:15 | 0m 53s | 0m 53s | claude-opus-4-8 | 12 | 2,866 | 1,105,647 | 3,198 | 1,111,723 | G-1 approved (owner Matt Quirk); spec first line stamped; COMPARE-1 unblocked. G-4 still open |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 08:15** | **13m 55s** | **13m 55s** |  | **70** | **151,349** | **4,762,919** | **65,671** | **4,980,009** |  |
 
 ## Sign-off
 
