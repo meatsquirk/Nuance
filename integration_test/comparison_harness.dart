@@ -258,14 +258,39 @@ class ComparisonHarness {
   /// entry for [name]. The shell's control is inert until COMPARE-3 drives the
   /// picker over [ComparisonController.savedSamples]; ITEST-2 wires this against
   /// that picker as the selection flow lands.
-  Future<void> whenChooseA(String name) => _choose('Choose sample A', name);
+  Future<void> whenChooseA(String name) => _choose(ComparisonSlot.a, name);
 
   /// Chooses the saved sample named [name] into slot B (E5 → picker E49).
-  Future<void> whenChooseB(String name) => _choose('Choose sample B', name);
+  Future<void> whenChooseB(String name) => _choose(ComparisonSlot.b, name);
 
-  Future<void> _choose(String control, String name) async {
-    await tester.tap(find.widgetWithText(TextButton, control));
+  /// Opens the sample picker for [slot] from its Choose-sample control (E3/E5 →
+  /// E49) without choosing an entry, so a test can assert what the picker lists
+  /// (AC-1's Given) before picking. The shell's control is inert and opens
+  /// nothing; COMPARE-3 opens the real picker over
+  /// [ComparisonController.savedSamples]. Tapping the inert control is a no-op
+  /// (`warnIfMissed: false` since a disabled control absorbs no pointer).
+  Future<void> whenOpenPicker(ComparisonSlot slot) async {
+    final label =
+        slot == ComparisonSlot.a ? 'Choose sample A' : 'Choose sample B';
+    await tester.tap(
+      find.widgetWithText(TextButton, label),
+      warnIfMissed: false,
+    );
     await tester.pumpAndSettle();
+  }
+
+  Future<void> _choose(ComparisonSlot slot, String name) async {
+    await whenOpenPicker(slot);
+    // The picker (E49) must list the catalogue for the painter to choose from.
+    // Until COMPARE-3 drives it the Choose control is inert and the picker never
+    // opens, so this precondition fails cleanly (naming the owner) rather than
+    // the next line tapping a sample entry that is not in the tree.
+    expect(
+      find.text(name),
+      findsWidgets,
+      reason:
+          'the sample picker must list "$name" to choose it (COMPARE-3 E49)',
+    );
     await tester.tap(find.text(name).last);
     await tester.pumpAndSettle();
   }

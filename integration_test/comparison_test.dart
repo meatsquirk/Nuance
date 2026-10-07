@@ -15,8 +15,11 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/compare/actions_bar.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/confusion_region.dart';
@@ -24,6 +27,7 @@ import 'package:paint_color_assistant/compare/difference_region.dart';
 import 'package:paint_color_assistant/compare/slots_region.dart';
 import 'package:paint_color_assistant/compare/statement_region.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/readout/name_header.dart';
 
 import 'comparison_harness.dart';
 
@@ -34,6 +38,16 @@ double _hueDeg(ColorCoordinates c) {
   if (h < 0) h += 360.0;
   return h;
 }
+
+/// The joined plain text of every paragraph rendered under the widget keyed
+/// [key] (empty string if none) — used to read a comparison region's text
+/// regardless of how many `Text`s it is split across.
+String _plainTextUnder(WidgetTester tester, Key key) => tester
+    .renderObjectList<RenderParagraph>(
+      find.descendant(of: find.byKey(key), matching: find.byType(RichText)),
+    )
+    .map((p) => p.text.toPlainText())
+    .join(' ');
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -226,5 +240,233 @@ void main() {
         closeTo(0, 1e-9),
       );
     });
+  });
+
+  // ===========================================================================
+  // ITEST-2 — selection / swap / open-readout / invite (AC-1,2,3,10,11,12)
+  // ===========================================================================
+  //
+  // One *pending* test per AC, driving the real assembled app through the
+  // harness vocabulary. The default run skips these; under
+  // `--dart-define=BS03_RUN_PENDING=true` they execute (the red baseline) and
+  // must fail on a Then — or a Given precondition naming the phase that builds
+  // it — never panic. Each un-pends when its owning phase deletes its row in
+  // `bs03/pending.dart` (AC-1/2/12 → COMPARE-3, AC-3 → COMPARE-5, AC-10/11 →
+  // COMPARE-6). Selection (COMPARE-3) is the first behaviour every other Given
+  // here builds on, so until it lands these fail at the "picker lists the
+  // sample" precondition. (ITEST-3 adds AC-4..AC-9 below this group.)
+
+  // AC-1 — Choosing a saved sample as A fills slot A with the sample *and* its
+  // L/C/h reading (E3 → picker E49). The numbers are part of the Then, so a slot
+  // that shows only the name fails.
+  acTestWidgets('AC-1',
+      'Choosing sample A fills slot A with the sample and its L/C/h',
+      (tester) async {
+    // Given: Comparison open on the catalogue, slot A empty, and the picker
+    // lists the saved samples to choose from (opened from Choose sample A).
+    final h = await givenComparison(tester);
+    expect(h.state.slotA, isNull, reason: 'AC-1 Given: slot A starts empty');
+    await h.whenOpenPicker(ComparisonSlot.a);
+    for (final sample in CATALOGUE) {
+      expect(find.text(sample.name!), findsWidgets,
+          reason: 'AC-1 Given: the picker must list the saved sample '
+              '"${sample.name}" (COMPARE-3 drives E49)');
+    }
+
+    // When: the painter chooses "Warm Terracotta" as sample A.
+    await tester.tap(find.text('Warm Terracotta').last);
+    await tester.pumpAndSettle();
+
+    // Then: the pick populates slot A (and only slot A) with Warm Terracotta,
+    // and slot A shows the name together with "L 58, C 34, h 42 degrees".
+    expect(h.state.slotA?.name, 'Warm Terracotta',
+        reason: 'AC-1: choosing A populates slot A with Warm Terracotta '
+            '(COMPARE-3)');
+    expect(h.state.slotB, isNull,
+        reason: 'AC-1: choosing A does not fill slot B');
+    final slots = _plainTextUnder(tester, SlotsRegion.regionKey);
+    expect(slots, contains('Slot A: Warm Terracotta'),
+        reason: 'AC-1: slot A shows the sample name (COMPARE-3)');
+    expect(slots, contains('L 58, C 34, h 42 degrees'),
+        reason: 'AC-1: slot A shows "L 58, C 34, h 42 degrees" — the name '
+            'without the numbers is not enough (COMPARE-3)');
+  });
+
+  // AC-2 — Choosing a saved sample as B fills slot B with the sample and its
+  // L/C/h, leaving slot A unchanged (so the B pick does not land in slot A).
+  acTestWidgets('AC-2',
+      'Choosing sample B fills slot B with the sample and its L/C/h',
+      (tester) async {
+    // Given: sample A is "Warm Terracotta", chosen through the AC-1 flow.
+    final h = await givenComparison(tester);
+    await h.whenChooseA('Warm Terracotta');
+    expect(h.state.slotA?.name, 'Warm Terracotta',
+        reason: 'AC-2 Given: slot A is Warm Terracotta via the selection flow '
+            '(COMPARE-3)');
+    expect(h.state.slotB, isNull,
+        reason: 'AC-2 Given: slot B is still empty before the B pick');
+
+    // When: the painter chooses "Raw Sienna Light" as sample B.
+    await h.whenChooseB('Raw Sienna Light');
+
+    // Then: slot B holds Raw Sienna Light with its L/C/h, and slot A is
+    // unchanged (the B pick did not land in slot A).
+    expect(h.state.slotB?.name, 'Raw Sienna Light',
+        reason: 'AC-2: choosing B populates slot B (COMPARE-3)');
+    expect(h.state.slotA?.name, 'Warm Terracotta',
+        reason: 'AC-2: the B pick does not overwrite slot A (COMPARE-3)');
+    final slots = _plainTextUnder(tester, SlotsRegion.regionKey);
+    expect(slots, contains('Slot B: Raw Sienna Light'),
+        reason: 'AC-2: slot B shows the sample name (COMPARE-3)');
+    expect(slots, contains('L 70, C 25, h 60 degrees'),
+        reason: 'AC-2: slot B shows "L 70, C 25, h 60 degrees" (COMPARE-3)');
+  });
+
+  // AC-3 — Swapping exchanges the two samples and re-expresses the relational
+  // statement from the new A to the new B. The direction word must flip
+  // ("Lighter by 12" → "Darker by 12"): a swap that relabels the slots but
+  // leaves the statement, or that no-ops, fails.
+  acTestWidgets('AC-3',
+      'Swapping exchanges the samples and re-expresses the difference',
+      (tester) async {
+    // Given: A = Warm Terracotta, B = Raw Sienna Light, with the statement
+    // present and reading A→B ("Lighter by 12", L 58 → L 70 — DIFF-3).
+    final h = await givenComparison(tester);
+    await h.whenChooseA('Warm Terracotta');
+    await h.whenChooseB('Raw Sienna Light');
+    expect(h.state.slotA?.name, 'Warm Terracotta',
+        reason: 'AC-3 Given: slot A is Warm Terracotta (COMPARE-3)');
+    expect(h.state.slotB?.name, 'Raw Sienna Light',
+        reason: 'AC-3 Given: slot B is Raw Sienna Light (COMPARE-3)');
+    expect(_plainTextUnder(tester, StatementRegion.regionKey),
+        contains('Lighter by 12'),
+        reason: 'AC-3 Given: the A→B statement reads "Lighter by 12" (DIFF-3)');
+
+    // When: the painter swaps A and B.
+    await h.whenSwap();
+
+    // Then: the slots are exchanged and the statement is re-expressed new-A →
+    // new-B — now "Darker by 12" (L 70 → L 58), no longer "Lighter by 12".
+    expect(h.state.slotA?.name, 'Raw Sienna Light',
+        reason: 'AC-3: slot A becomes Raw Sienna Light after the swap '
+            '(COMPARE-5)');
+    expect(h.state.slotB?.name, 'Warm Terracotta',
+        reason: 'AC-3: slot B becomes Warm Terracotta after the swap '
+            '(COMPARE-5)');
+    expect(_plainTextUnder(tester, SlotsRegion.regionKey),
+        contains('Slot A: Raw Sienna Light'),
+        reason: 'AC-3: slot A renders the swapped sample (COMPARE-5)');
+    final statement = _plainTextUnder(tester, StatementRegion.regionKey);
+    expect(statement, contains('Darker by 12'),
+        reason: 'AC-3: the statement re-expresses new-A → new-B — "Darker by '
+            '12" (COMPARE-5)');
+    expect(statement, isNot(contains('Lighter by 12')),
+        reason: 'AC-3: the statement must change direction, not stay "Lighter '
+            'by 12" (rejects a swap that relabels the slots but leaves the '
+            'statement)');
+  });
+
+  // AC-10 — Opening the readout for A navigates to the Readout screen showing
+  // sample A (E7). Control pair with AC-11 (which proves B): an impl that always
+  // opens one slot fails exactly one of the pair.
+  acTestWidgets('AC-10',
+      'Opening the readout for A shows the Readout for sample A',
+      (tester) async {
+    // Given: sample A is "Warm Terracotta", on the Comparison screen.
+    final h = await givenComparison(tester);
+    await h.whenChooseA('Warm Terracotta');
+    expect(h.state.slotA?.name, 'Warm Terracotta',
+        reason: 'AC-10 Given: slot A is Warm Terracotta (COMPARE-3)');
+    expect(find.text('Readout'), findsNothing,
+        reason: 'AC-10 Given: the painter starts on Comparison, not Readout');
+
+    // When: the painter opens the readout for sample A.
+    await h.whenOpenReadout(ComparisonSlot.a);
+
+    // Then: the Readout screen is shown for "Warm Terracotta" (its name in the
+    // readout header), not for sample B or the wrong sample.
+    expect(find.text('Readout'), findsOneWidget,
+        reason: 'AC-10: the Readout screen is shown (COMPARE-6 wires '
+            'toReadout)');
+    expect(
+      find.descendant(
+        of: find.byKey(NameHeader.headerKey),
+        matching: find.text('Warm Terracotta'),
+      ),
+      findsOneWidget,
+      reason: 'AC-10: the Readout is shown for Warm Terracotta (COMPARE-6)',
+    );
+  });
+
+  // AC-11 — Opening the readout for B navigates to the Readout screen showing
+  // sample B (E8). Control pair with AC-10.
+  acTestWidgets('AC-11',
+      'Opening the readout for B shows the Readout for sample B',
+      (tester) async {
+    // Given: sample B is "Raw Sienna Light", on the Comparison screen.
+    final h = await givenComparison(tester);
+    await h.whenChooseB('Raw Sienna Light');
+    expect(h.state.slotB?.name, 'Raw Sienna Light',
+        reason: 'AC-11 Given: slot B is Raw Sienna Light (COMPARE-3)');
+    expect(find.text('Readout'), findsNothing,
+        reason: 'AC-11 Given: the painter starts on Comparison, not Readout');
+
+    // When: the painter opens the readout for sample B.
+    await h.whenOpenReadout(ComparisonSlot.b);
+
+    // Then: the Readout screen is shown for "Raw Sienna Light".
+    expect(find.text('Readout'), findsOneWidget,
+        reason: 'AC-11: the Readout screen is shown (COMPARE-6 wires '
+            'toReadout)');
+    expect(
+      find.descendant(
+        of: find.byKey(NameHeader.headerKey),
+        matching: find.text('Raw Sienna Light'),
+      ),
+      findsOneWidget,
+      reason: 'AC-11: the Readout is shown for Raw Sienna Light (COMPARE-6)',
+    );
+  });
+
+  // AC-12 — With sample A chosen but no sample B, no relational statement is
+  // shown and the screen invites the painter to choose sample B (an enabled
+  // choose-B affordance). A statement computed against one sample, or a missing
+  // invite, fails.
+  acTestWidgets('AC-12', 'With no second sample, the comparison invites one',
+      (tester) async {
+    // Given: sample A is "Warm Terracotta" and no sample B has been chosen.
+    final h = await givenComparison(tester);
+    await h.whenChooseA('Warm Terracotta');
+    expect(h.state.slotA?.name, 'Warm Terracotta',
+        reason: 'AC-12 Given: slot A is Warm Terracotta (COMPARE-3)');
+    expect(h.state.slotB, isNull,
+        reason: 'AC-12 Given: no sample B has been chosen');
+
+    // When: the Comparison screen is shown (givenComparison settled it).
+
+    // Then: no relational statement is shown — a single sample yields no
+    // reading — and an enabled choose-sample-B invite is on the screen.
+    expect(h.state.hasBothSlots, isFalse,
+        reason: 'AC-12: with one slot empty there is no pair');
+    expect(h.state.comparison, isNull,
+        reason: 'AC-12: no relational reading is derived from one sample');
+    final statement = _plainTextUnder(tester, StatementRegion.regionKey);
+    for (final word in const [
+      'Lighter',
+      'Darker',
+      'saturated',
+      'shifted',
+      'Same',
+    ]) {
+      expect(statement, isNot(contains(word)),
+          reason: 'AC-12: no relational-statement line ("$word") is shown with '
+              'only one sample');
+    }
+    final chooseB = find.widgetWithText(TextButton, 'Choose sample B');
+    expect(chooseB, findsWidgets,
+        reason: 'AC-12: a choose-sample-B control is on the screen');
+    expect(tester.widget<TextButton>(chooseB.first).enabled, isTrue,
+        reason: 'AC-12: the screen invites choosing sample B — the choose-B '
+            'control is enabled (COMPARE-3)');
   });
 }

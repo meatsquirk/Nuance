@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3
+**Status:** In progress — ITEST-1 + ITEST-2 (AC-1,2,3,10,11,12) done; next ITEST-3 (AC-4..9), then ITEST-4 (review, G-3)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/comparison_test.dart` (AC tests), `integration_test/comparison_harness.dart`
 (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the comparison entry); reuses
@@ -12,7 +12,7 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 5,939,625 | 19m 08s |
-| 2 | acceptance-tests | AC-1,2,3,10,11,12 | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1,2,3,10,11,12 | ✅ Done | 7,878,822 | 27m 54s |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9 | ⬜ Todo | | |
 | 4 | test-review | — (G-3) | ⬜ Todo | | |
 
@@ -127,9 +127,73 @@ file; coordinate the shared `comparison_test.dart` / harness-vocabulary edits.
 - **Acceptance gate:** *(acceptance-tests — suite green with new tests pending; red baseline recorded; grade
   gate passed)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+**Landed.** One *pending* `acTestWidgets` per AC in `integration_test/comparison_test.dart` (new "ITEST-2 —
+selection / swap / open-readout / invite" group), driving the real assembled app via the harness:
+- **AC-1** `TestAC01_ChooseA` — opens the picker (E3→E49), asserts it lists all 5 catalogue samples (Given),
+  picks "Warm Terracotta", asserts `state.slotA` = it / `slotB` null and the slots region renders
+  `Slot A: Warm Terracotta` **and** the exact `L 58, C 34, h 42 degrees` (name-only slot rejected).
+- **AC-2** `TestAC02_ChooseB` — Given A via the AC-1 flow (asserted), chooses B, asserts `slotB` = Raw Sienna
+  Light, `slotA` unchanged (B-into-A rejected), slots show `L 70, C 25, h 60 degrees`.
+- **AC-3** `TestAC03_Swap` — Given A+B with the A→B statement reading `Lighter by 12` (DIFF-3 precondition);
+  swaps; asserts slots exchanged (read endpoint + `Slot A: Raw Sienna Light`) and the statement flips to
+  `Darker by 12` **and** `isNot(Lighter by 12)` (rejects a relabel-only / no-op swap).
+- **AC-10/AC-11** `TestAC10_OpenReadoutA` / `TestAC11_OpenReadoutB` — a control pair: each selects the one
+  slot, opens its readout, asserts the Readout screen (`find.text('Readout')`) shows the sample's name in
+  `NameHeader.headerKey` (wrong-sample / no-nav rejected; the pair rejects an always-one-slot impl).
+- **AC-12** `TestAC12_InviteSecond` — Given A only; asserts `hasBothSlots` false, `comparison` null, no
+  decomposition line in the statement region, and an **enabled** `Choose sample B` control (rejects a
+  one-sample statement and the inert shell button).
+
+**Harness vocabulary** (comparison_harness.dart): added `whenOpenPicker(slot)` (open E3/E5 without picking,
+for AC-1's Given) and made `_choose` baseline-safe — it opens the picker then `expect`s the picker lists the
+name (reason names COMPARE-3) **before** tapping the entry, so a not-yet-built picker fails on that
+precondition instead of panicking on a missing widget. `whenChooseA/B` now take a `ComparisonSlot`.
+
+**Gates.** `flutter analyze` clean. Unit **247 green**; coverage gate **PASS** (no touched `lib/**` — tests
+only). Acceptance default `flutter test integration_test/comparison_test.dart` **green: 10 pass + 6 pending
+(skipped)**. Red baseline (`--dart-define=BS03_RUN_PENDING=true`) **10 pass / 6 fail**, each on a clean
+`expect` (see *Red baseline*), no panic/compile error. **Grades: 6×A, 0×B** — graded by an independent fresh
+subagent against G1–G6; grid appended at `../behavior-test-completeness-bs-03-relative-comparison.md`.
+**Fix passes: 0/3.** No coverage exclusions. No augmentation rows assigned to ITEST-2's ACs (the one
+pre-seeded augmentation, TestAC04, is ITEST-3/DIFF-2's).
+
+**Deviations / notes.** All six fail at the **COMPARE-3 selection** Given precondition at baseline (the
+picker lists nothing in the shell): AC-1/2/12 fail at their own owning phase; AC-3 (COMPARE-5) and
+AC-10/11 (COMPARE-6) stack on COMPARE-3's selection first, and AC-3 also stacks DIFF-3's `Lighter by 12`
+Given — honest and acceptable (a Given precondition naming its owning phase). **Toolchain gotcha** (see
+Checkpoint): `coord.sh with-lock` runs its command from `FNP_COORD_REPO` (the primary checkout), so a
+worktree integration run must `cd` into the worktree inside the locked command or it silently tests the
+primary's committed file.
+
+### Checkpoint / Handoff
+
+**Frozen for ITEST-3 and the behaviour phases:**
+- The six ITEST-2 tests live in the "ITEST-2 — …" group at the end of `comparison_test.dart`'s `main`.
+  ITEST-3 appends its AC-4..AC-9 group below them (shared file — merge-risky pair; keep edits anchored).
+- Harness additions ITEST-3 inherits: `whenOpenPicker(ComparisonSlot)`; `whenChooseA/B(name)` now open the
+  picker, **assert it lists `name`** (reason: COMPARE-3), then pick — so any AC whose Given chooses a sample
+  fails cleanly at that precondition until COMPARE-3 lands, not with a panic.
+- Behaviour-phase contracts these tests pin (un-pend by deleting the AC's row in `bs03/pending.dart`):
+  COMPARE-3 must render `Slot A: <name>` / `Slot B: <name>` **and** `L 58, C 34, h 42 degrees` style lines,
+  drive the E49 picker over `savedSamples`, enable the Choose-B control + suppress the statement with one
+  slot; COMPARE-5's swap must re-express direction (`Lighter`↔`Darker`); COMPARE-6 wires `AppRouter.toReadout`
+  so Open-readout pushes the bs-01 Readout showing the sample's stored name.
+
+**⚠ Verification in a worktree (parallel sessions).** `coord.sh with-lock` first `cd`s to `$FNP_COORD_REPO`
+(the primary checkout, where the shared lock lives), then runs your command **there** — so a bare
+`flutter test …` under the lock tests the *primary's committed* code, not your worktree. Run integration
+tests as:
+`$C with-lock <FEATURE> <PHASE> --wait 900 -- bash -c "cd <WORKTREE> && flutter test <args>"`.
+(Unit tests / `flutter analyze` were run directly in the worktree, no lock needed — shared lane.)
+
+**Verification commands** (`export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+`flutter test --coverage` · `dart run tool/coverage_gate.dart <base>` · default + run-pending integration as
+above (iOS sim, exclusive lane). `--dart-define=BS03_RUN_PENDING=true` **does** reach the sim binary
+(verified) — the earlier "+10 all passed, nothing skipped" was the with-lock cwd bug, not the define.
+
+**Next:** ITEST-3 (AC-4,5,6,7,8,9) — the remaining AC-test phase; then ITEST-4 (test review, G-3).
 
 ## Phase 3 — AC-4,5,6,7,8,9 (ITEST-3)
 
@@ -172,18 +236,18 @@ file; coordinate the shared `comparison_test.dart` / harness-vocabulary edits.
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_ChooseA | _TBD ITEST-2_ | | COMPARE-3 | |
-| AC-2 | TestAC02_ChooseB | _TBD ITEST-2_ | | COMPARE-3 | |
-| AC-3 | TestAC03_Swap | _TBD ITEST-2_ | | COMPARE-5 | |
+| AC-1 | TestAC01_ChooseA | ❌ fails | Given: picker lists the saved samples (COMPARE-3 E49) — `find.text('Warm Terracotta')` findsWidgets | COMPARE-3 | A |
+| AC-2 | TestAC02_ChooseB | ❌ fails | Given: choose A via the picker (COMPARE-3) — `_choose` picker-lists-"Warm Terracotta" precondition | COMPARE-3 | A |
+| AC-3 | TestAC03_Swap | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (stacks before swap/DIFF-3 Then) | COMPARE-5 | A |
 | AC-4 | TestAC04_OverallDelta | _TBD ITEST-3_ | | DIFF-2 | |
 | AC-5 | TestAC05_Decompose | _TBD ITEST-3_ | | DIFF-3 | |
 | AC-6 | TestAC06_SameHue | _TBD ITEST-3_ | | DIFF-3 | |
 | AC-7 | TestAC07_ConfusionFlagged | _TBD ITEST-3_ | | CVD-2 | |
 | AC-8 | TestAC08_NotConfusable | _TBD ITEST-3_ | | CVD-2 | |
 | AC-9 | TestAC09_SpeakIncludesWarning | _TBD ITEST-3_ | | CVD-3 | |
-| AC-10 | TestAC10_OpenReadoutA | _TBD ITEST-2_ | | COMPARE-6 | |
-| AC-11 | TestAC11_OpenReadoutB | _TBD ITEST-2_ | | COMPARE-6 | |
-| AC-12 | TestAC12_InviteSecond | _TBD ITEST-2_ | | COMPARE-3 | |
+| AC-10 | TestAC10_OpenReadoutA | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (stacks before the COMPARE-6 Then) | COMPARE-6 | A |
+| AC-11 | TestAC11_OpenReadoutB | ❌ fails | Given: choose B (COMPARE-3) — picker-lists-"Raw Sienna Light" precondition | COMPARE-6 | A |
+| AC-12 | TestAC12_InviteSecond | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (before the invite Then) | COMPARE-3 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
