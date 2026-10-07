@@ -1,6 +1,6 @@
 # Module CAPTURE — scaffold, capture controller, accuracy, commit
 
-**Status:** Not started
+**Status:** In progress — CAPTURE-1 (scaffold) done; branch `feat/bs-02-sample-capture`, baseline green, BS02 pending runner wired
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`, `lib/capture/capture_accuracy.dart`, `lib/capture/capture_read_endpoint.dart`; edits to bs-01's `lib/app/build_app.dart` and `lib/app/router.dart` (add the Capture route); the BS02 pending-runner wiring the scaffold adds.
 **Depends on:** SOURCE (consumes `CaptureSource` + sampling), bs-01 `Haptics` + Readout route · **Blocks:** SCREEN, ITEST, every capture behavior
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | scaffold | — | ⬜ Todo | | |
+| 1 | scaffold | — | ✅ Done | 2,239,601 | 8m 15s (8m 15s) |
 | 2 | shell | — | ⬜ Todo | | |
 | 3 | behavior | AC-4, AC-5 | ⬜ Todo | | |
 | 4 | behavior | AC-6, AC-7 | ⬜ Todo | | |
@@ -57,9 +57,58 @@
   and fails on a planted gap; baseline recorded.
 - **Acceptance gate:** *(n/a — scaffold)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed: feature branch `feat/bs-02-sample-capture` cut from `main` (b3bcc38). No
+product code — bs-01's Flutter project, `tool/coverage_gate.dart` and
+`integration_test/` runner are all reused as-is. One new file,
+`integration_test/bs02/pending.dart`: the bs-02 mirror of bs-01's BS01 pending
+mechanism, keyed to `BS02_RUN_PENDING` (`pendingACs` seeded empty for ITEST-1 to
+fill with the 11 ACs, `behaviorPhases` = the 8 bs-02 behaviour phases,
+`runPending` / `pendingSkipReason` / `acTestWidgets`). Namespaced under
+`integration_test/bs02/` so it never collides with bs-01's flat
+`harness.dart` / `readout_test.dart`.
+
+Naming note: the plan sketched the per-AC registrar as `ac('AC-n')`; kept bs-01's
+exact name `acTestWidgets(acId, description, body)` instead, so the repo has one
+pending-gate convention and ITEST-1/2/3 inherit the known bs-01 shape verbatim.
+
+Verification (Flutter 3.47.6 / Dart 3.13.5, `~/development/flutter/bin` on PATH):
+`flutter analyze` clean (no issues). Baseline `flutter test` green — 196 unit
+tests. Baseline `flutter test integration_test/` green — 17 tests across bs-01's
+`harness_test.dart` + `readout_test.dart`. Coverage gate proven both ways:
+PASS on the clean tree (no touched `lib/**.dart` → "nothing to gate", exit 0);
+FAIL (exit 1) on a planted uncovered line in `lib/main.dart` ("3/4 lines
+covered — uncovered lines: 32"), then reverted clean.
+
+No lib code touched → coverage gate not applicable to this phase's own output
+(integration_test files are outside the gate's `lib/**` scope). Fix passes: 0/3
+(first full run clean). No augmentations, no exclusions. No gates resolved this
+session (G-1/G-2 already resolved; G-3 remains open for the ITEST test review).
+Tokens 2,239,601 · time 8m 15s (8m 15s).
+
+### Checkpoint / Handoff
+
+- **Flutter SDK:** at `~/development/flutter` (stable, 3.47.6). Not on the
+  default PATH — prepend `export PATH="$HOME/development/flutter/bin:$PATH"`
+  before any `flutter`/`dart` command.
+- **Verification commands** (repo root, with the PATH export):
+  - `flutter analyze`
+  - `flutter test --coverage`  → writes `coverage/lcov.info` (gitignored)
+  - `flutter test integration_test/`  → bs-01 + (later) bs-02 acceptance suites
+  - `dart run tool/coverage_gate.dart main`  (base ref = arg, else
+    `$COVERAGE_GATE_BASE`, else `main`)
+- **BS02 pending gate:** `integration_test/bs02/pending.dart`. ITEST-1 builds the
+  bs-02 harness (Given/When/Then + fixtures) importing it, and seeds `pendingACs`
+  with the 11 ACs (AC-1..AC-11); ITEST-2/3 register the per-AC tests via
+  `acTestWidgets`; each behaviour phase un-pends its AC by deleting the row.
+  Run-pending (red baseline / un-pend): `--dart-define=BS02_RUN_PENDING=true`
+  on-device, or `BS02_RUN_PENDING=1` for a host-process run.
+- **Frozen interfaces:** none added (no product code). bs-01's `buildApp`,
+  router and `Sample` are unchanged; SOURCE-1 / CAPTURE-2 extend them.
+- **Known gaps:** none. `pendingACs` is intentionally empty until ITEST-1.
+- **Next phase (SOURCE-1):** shell — `CaptureSource` interface + software source
+  + sampling signatures. Keep every new `lib` file at 100% line coverage.
 
 ## Phase 2 — Shell: controller, state, accuracy, read endpoint, route
 
