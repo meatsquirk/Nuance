@@ -72,3 +72,21 @@ phase lands (AC-4/5 → CAPTURE-3, AC-6/7 → CAPTURE-4, AC-8 → CAPTURE-5, AC-
   cadence — CAPTURE-3 must advance the counter one countable step per pumped frame so 6/12 is hit exactly;
   `takeException()` consumes are bounded so they cannot mask a real failure.
 - Whole-suite grid is now **10×A + AC-6 B-pending-CAPTURE-5** — ready for the ITEST-4 G-3 packet.
+
+## Re-grade — SOURCE-2 (un-pended: AC-1, AC-2)
+
+SOURCE-2 landed the live feed + 5 px area-average sampling behind AC-2 and un-pended it. Per the grade gate a
+behaviour phase re-grades **every un-pended AC test** against the **live** behaviour. Graded by an independent
+fresh grader (did not write these tests) on 2026-10-07; confirmed by a live run
+(`flutter test integration_test/capture_test.dart` → all passed, +10 / ~9 skipped; AC-1 and AC-2 executed live).
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_Eyedropper` | A | G1,G4,G5,G6 (G2/G3 n/a) | Unchanged from ITEST-2: Given checked through the real UI; asserts reticle centre vs feed centre on both axes at epsilon 0.5 (not mere presence). Live `CaptureLiveView` lays the feed as `StackFit.expand` and the reticle in a `Center`, so the correct render matches to ~0 px and 0.5 kills an absent/off-centre marker. One AC. |
+| AC-2 | `TestAC02_AreaAverage5px` | A | G1,G2,G4,G5,G6 (G3 n/a) | Now **live**: `_onFrame` calls the real `sampleAreaAverage(frame, centre, radiusPx:5)` — a true sRGB disc average → `color_models` CIELAB — rendered back through the same `ColorScienceImpl.toSRGB` the fixtures use, so the round-trip is tight. The r≤5 disc holds ~80 teal pixels + one red centre speck, so the average sits ≈1/81 off pure teal (a few L1, far under `_sampleToleranceL1 = 45`); `toCentre` (~200 L1) and `toOuter` (~280 L1) are an order of magnitude larger. **Kills** a point read (`toDisc < toCentre`) and a wider radius (`toDisc < toOuter`). Correct impl passes with margin. Matches the prior "as written" A — no downgrade. One AC. |
+
+### Summary — SOURCE-2
+
+- **Grade counts (re-grade): 2×A, 0×B.** No downgrades against the "as-written" grades; AC-2 holds A now that
+  the real true-average sampler drives the three-way distance Then.
+- **Whole-suite grid unchanged: 10×A + AC-6 B-pending-CAPTURE-5** (AC-6 owned by CAPTURE-5; untouched here).

@@ -1,29 +1,62 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../domain/provenance.dart';
+import '../domain/sample.dart';
 import 'capture_state.dart';
 import 'source/capture_source.dart';
+import 'source/frame.dart';
+import 'source/sampling.dart';
 
 /// Drives one capture: holds the [CaptureSource], exposes the observable
 /// [CaptureState], and offers the actions the Capture screen takes on it.
 ///
-/// This is the CAPTURE-2 shell — the fields and the action surface are present
-/// but the behaviour behind each action is deferred to its behaviour phase and
-/// throws [UnimplementedError] until then, exactly as the SOURCE sampling
-/// signatures do. A [ChangeNotifier] so the screen (and the acceptance read
-/// endpoint) can rebuild as the state moves.
+/// The live feed is sampled passively into [CaptureState.currentSample]
+/// (SOURCE-2); the painter *action* methods below are still deferred to their
+/// behaviour phases and throw [UnimplementedError] until then. A
+/// [ChangeNotifier] so the screen (and the acceptance read endpoint) can rebuild
+/// as the state moves.
 class CaptureController extends ChangeNotifier {
   /// Creates a controller reading from [source], starting in the default
-  /// [CaptureState] (auto exposure, 5 px radius, approximate accuracy).
-  CaptureController({required this.source});
+  /// [CaptureState] (auto exposure, 5 px radius, approximate accuracy) and
+  /// subscribing to the live feed so [CaptureState.currentSample] tracks the
+  /// colour under the centre reticle (SOURCE-2).
+  CaptureController({required this.source}) {
+    _feed = source.frames.listen(_onFrame);
+  }
 
-  /// The source of frames and camera controls this capture reads (D-2). Held
-  /// for the behaviour phases; the shell does not yet read frames from it.
+  /// The source of frames and camera controls this capture reads (D-2).
   final CaptureSource source;
+
+  /// The live-feed subscription that drives [CaptureState.currentSample].
+  late final StreamSubscription<Frame> _feed;
 
   CaptureState _state = const CaptureState();
 
   /// The current observable capture state.
   CaptureState get state => _state;
+
+  /// Samples the colour under the centre reticle of each live frame at the
+  /// current radius and publishes it as [CaptureState.currentSample] (AC-2).
+  ///
+  /// The feed drives the reading passively — no painter action is needed; the
+  /// radius selector (SCREEN-2) changes which disc is averaged.
+  void _onFrame(Frame frame) {
+    final coordinates = sampleAreaAverage(
+      frame,
+      frame.width ~/ 2,
+      frame.height ~/ 2,
+      radiusPx: _state.radiusPx,
+    );
+    emit(_state.copyWith(
+      currentSample: Sample(
+        coordinates: coordinates,
+        provenance: const Provenance(ProvenanceTier.measured),
+        accuracy: _state.accuracy,
+      ),
+    ));
+  }
 
   /// Locks AE, AWB and AF together so the reading settles to "STABLE 12/12"
   /// (AC-4). Behaviour lands in CAPTURE-3.
@@ -65,5 +98,11 @@ class CaptureController extends ChangeNotifier {
     if (next == _state) return;
     _state = next;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _feed.cancel();
+    super.dispose();
   }
 }

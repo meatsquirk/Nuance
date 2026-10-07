@@ -1,11 +1,22 @@
+import 'package:color_models/color_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/capture/source/frame.dart';
+import 'package:paint_color_assistant/capture/source/sampling.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 
 void main() {
   const groundTruth = ColorCoordinates(lightness: 42, a: -8, b: 20);
+
+  // The ground-truth colour as the sRGB pixel the generated feed renders it to.
+  final truthRgb = LabColor(
+    groundTruth.lightness,
+    groundTruth.a,
+    groundTruth.b,
+  ).toRgbColor();
+  final truthPixel =
+      Pixel(truthRgb.red, truthRgb.green, truthRgb.blue);
 
   group('SceneSpec', () {
     test('defaults to adequate light, lockable, no card, no noise, no frames',
@@ -61,14 +72,39 @@ void main() {
       expect(await source.frames.toList(), frames);
     });
 
-    test('emits no frames when the scene has none (deferred to SOURCE-2)',
-        () async {
+    test('generates a finite feed of the ground-truth colour when the scene '
+        'has no explicit frames', () async {
       final source =
           SoftwareCaptureSource(const SceneSpec(groundTruth: groundTruth));
-      expect(await source.frames.toList(), isEmpty);
+      final feed = await source.frames.toList();
+      // Finite (so a test pumpAndSettle drains it) and non-empty.
+      expect(feed, isNotEmpty);
+      expect(feed.length, kStabilityFrameTarget);
+      // With no noise every frame is a uniform frame of the ground-truth colour.
+      for (final frame in feed) {
+        expect(frame.width, 64);
+        expect(frame.height, 64);
+        expect(frame.pixels, everyElement(truthPixel));
+      }
     });
 
-    test('emits no stability signal yet (deferred to SOURCE-2)', () async {
+    test('generates a noisy feed whose per-frame mean is the ground truth',
+        () async {
+      final source = SoftwareCaptureSource(
+        const SceneSpec(groundTruth: groundTruth, noise: 6),
+      );
+      final feed = await source.frames.toList();
+      // The frames vary (noise applied) but average back to the ground truth,
+      // so a multi-frame commit (AC-11) recovers it.
+      final distinct = feed.map((f) => f.pixels.first).toSet();
+      expect(distinct.length, greaterThan(1),
+          reason: 'noise must make the frames differ');
+      expect(averageFrames(feed).pixels.first, truthPixel,
+          reason: 'the per-pixel mean over the feed is the ground truth');
+    });
+
+    test('emits no stability signal yet (the settling signal lands in '
+        'CAPTURE-3)', () async {
       final source =
           SoftwareCaptureSource(const SceneSpec(groundTruth: groundTruth));
       expect(await source.stability.toList(), isEmpty);

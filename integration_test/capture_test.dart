@@ -68,10 +68,12 @@ void main() {
       expect(find.byKey(CaptureLiveView.warningKey), findsNothing);
 
       // The observable state is the default capture (auto, 5 px, approximate),
-      // readable through the endpoint the AC Thens use.
+      // readable through the endpoint the AC Thens use. The live feed is sampled
+      // passively on open (SOURCE-2), so a current sample is present; lock and
+      // commit remain deferred, so no lock and no haptic yet.
       expect(harness.state.lockState, LockState.auto);
       expect(harness.state.radiusPx, 5);
-      expect(harness.state.currentSample, isNull);
+      expect(harness.state.currentSample, isNotNull);
       expect(harness.haptics.confirmations, 0);
     },
   );
@@ -81,10 +83,9 @@ void main() {
     // matching ITEST's red-baseline *Owning phase* column. Pinned exactly so a
     // typo'd id, a missing AC, a stray AC or a re-owned AC fails this test
     // rather than passing vacuously. AC-1 is absent: it was un-pended at ITEST-2
-    // as green at baseline (its always-running test is below), so only the ten
-    // still-pending ACs remain here.
+    // as green at baseline (its always-running test is below). AC-2 is absent:
+    // SOURCE-2 un-pended it. So only the nine still-pending ACs remain here.
     const expectedOwners = {
-      'AC-2': 'SOURCE-2',
       'AC-3': 'SCREEN-2',
       'AC-4': 'CAPTURE-3',
       'AC-5': 'CAPTURE-3',
@@ -98,7 +99,7 @@ void main() {
 
     test('the still-pending ACs are each owned by a real behaviour phase', () {
       expect(pendingACs, expectedOwners);
-      expect(pendingACs.length, 10);
+      expect(pendingACs.length, 9);
       for (final owner in pendingACs.values) {
         expect(behaviorPhases, contains(owner),
             reason: '"$owner" is not a known bs-02 behaviour phase');
@@ -108,12 +109,13 @@ void main() {
     test('a pending AC is skipped by default and runs only in run-pending mode',
         () {
       // A mapped (pending) AC: skipped in the default run, run in run-pending.
-      expect(pendingSkipReason('AC-2', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
+      expect(pendingSkipReason('AC-3', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-3', forceRunPending: true), isNull);
       // An un-mapped AC always runs, in either mode — the end state as each
-      // behaviour phase deletes its row, and the state AC-1 is already in
-      // (un-pended at ITEST-2 as green at baseline).
+      // behaviour phase deletes its row, and the state AC-1 (un-pended at
+      // ITEST-2) and AC-2 (un-pended by SOURCE-2) are already in.
       expect(pendingSkipReason('AC-1', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-2', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
     });

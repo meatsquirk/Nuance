@@ -45,7 +45,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// still builds the real eyedropper/reticle and keeps the (always-running) test
 /// green; see ITEST's red-baseline table.
 const Map<String, String> pendingACs = {
-  'AC-2': 'SOURCE-2', // 5 px area-average sampling
+  // AC-2 (5 px area-average sampling) un-pended by SOURCE-2 — now always runs.
   'AC-3': 'SCREEN-2', // radius selector + reticle (over SOURCE-2 sampling)
   'AC-4': 'CAPTURE-3', // lock settles the reading
   'AC-5': 'CAPTURE-3', // pre-lock settling indicator

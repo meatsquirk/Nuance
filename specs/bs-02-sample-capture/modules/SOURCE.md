@@ -1,6 +1,6 @@
 # Module SOURCE — capture source + sampling
 
-**Status:** In progress — SOURCE-1 (shell) done; `CaptureSource` interface + `SoftwareCaptureSource` + sampling signatures landed, 100% covered. SOURCE-2 (AC-2) next, blocked by G-3.
+**Status:** In progress — SOURCE-1 (shell) + SOURCE-2 (AC-2: live feed + point/area-average sampling, 100% covered, AC-2 un-pended green, grade A) done. SOURCE-3 (AC-9, photo import) next — startable now.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/capture_source.dart` (interface), `lib/capture/source/software_capture_source.dart`, `lib/capture/source/sampling.dart` (point / area-average / from-photo), `lib/capture/source/frame.dart` (frame model).
 **Depends on:** bs-01 domain (`ColorCoordinates`) · **Blocks:** CAPTURE-2 (controller consumes the source), SCREEN behavior (reticle reads radius)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 2,451,815 | 12m 12s (12m 12s) |
-| 2 | behavior | AC-2 | ⬜ Todo | | |
+| 2 | behavior | AC-2 | ✅ Done | 13,393,296 | 23m 23s (23m 23s) |
 | 3 | behavior | AC-9 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -106,9 +106,55 @@ resolved (G-3 remains open for the ITEST test review). Tokens 2,451,815 · time 
 - **Acceptance gate:** un-pend AC-2; `TestAC02_AreaAverage5px` green (5 px average at centre, not a point read).
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed AC-2 — the live feed and point/area-average sampling, wired into `currentSample`:
+
+- **`sampling.dart`:** `samplePoint` (single pixel → CIELAB), `sampleAreaAverage` (true per-channel sRGB
+  mean over the disc of `radiusPx`, clamped to frame bounds, then one CIELAB conversion), `averageFrames`
+  (per-pixel mean across frames, for CAPTURE-6). sRGB→CIELAB reuses the `color_models` library (plan D-2 — the
+  same library bs-01's conversions use for the inverse direction), since the `ColorScience` interface exposes
+  only CIELAB→X and the frozen sampling signatures take no `ColorScience`. `sampleFromPhoto` stays deferred to
+  SOURCE-3.
+- **`software_capture_source.dart`:** `frames` now generates a **finite** live feed (12 frames, 64×64) from
+  `SceneSpec.groundTruth` when no explicit frames are given — uniform at `noise:0`, and with an antisymmetric
+  per-frame offset at `noise>0` whose mean over the feed is exactly the ground truth (so `averageFrames`
+  recovers it for AC-11). Explicit frames are still replayed. `.stability` left as the SOURCE-1 placeholder —
+  the settling signal is CAPTURE-3's.
+- **`capture_controller.dart`:** subscribes to the feed in its constructor and samples the frame centre at the
+  current `radiusPx` into `currentSample` (measured provenance, current accuracy) on every frame — the feed
+  drives the reading passively (no painter action). `dispose` cancels the subscription.
+
+**Gates (Flutter 3.47.6):** `flutter analyze` clean. Unit suite green — 290 tests (288 + 2 new controller
+tests); coverage gate **PASS, 100% line coverage** on all 16 touched `lib` files (base `main`), including the
+new sampling/feed/subscription branches (edge-clamp + outside-disc skips unit-tested). **Acceptance gate:**
+AC-2 un-pended (removed from `bs02/pending.dart`; pending-gate scaffold updated to 9); default integration run
+green — `TestAC02_AreaAverage5px` passes live (5 px average ≈ inner disc, rejects point read and wider radius),
+AC-1 stays green, the other 9 ACs skip as pending. **Grade gate:** fresh independent grader re-graded the
+un-pended tests against live behaviour — **AC-1 A, AC-2 A (2×A, 0×B)**; whole-suite grid unchanged at
+**10×A + AC-6 B-pending-CAPTURE-5**. **Augmentations:** none. **Fix passes: 0/3** (first full run clean).
+Tokens 13,393,296 · time 23m 23s (23m 23s).
+
+### Checkpoint / Handoff
+
+- **Frozen now (SOURCE-2):** `samplePoint` / `sampleAreaAverage(radiusPx)` / `averageFrames` behaviour;
+  `SoftwareCaptureSource.frames` generation contract (finite feed from `groundTruth`+`noise`, mean = ground
+  truth); the controller's passive `currentSample` wiring (centre sample at `state.radiusPx` per frame,
+  cancelled on dispose). Sampling takes raw sRGB `Pixel`s → canonical CIELAB via `color_models` (no new colour
+  math); default radius 5 px.
+- **Consumers:** **SOURCE-3** adds `sampleFromPhoto` (decode + area-average at P) and a photo-import flow that
+  switches the controller's sampling from the live feed to the staged photo (observable via `currentSample`).
+  **SCREEN-2** drives `setRadius` (still throws here) and retargets `whenSelectRadius` to per-option 1/5/21
+  anchors over this radius-driven averaging (AC-3). **CAPTURE-6** commits via `averageFrames` over the feed
+  (`framesAveraged > 1`; `FakeCaptureSource.framesRead` counts the generated frames).
+- **Merge-risk with CAPTURE-3 (running ∥):** both edit `capture_controller.dart` (SOURCE-2: feed→`currentSample`
+  subscription + `dispose`; CAPTURE-3: stability subscription + `lock`), `software_capture_source.dart`
+  (SOURCE-2: `frames`; CAPTURE-3: `.stability`), and the shared scaffold in `integration_test/capture_test.dart`
+  (SOURCE-2: smoke `currentSample` now `isNotNull`; CAPTURE-3: smoke `SETTLING 0/12` as it drives the counter)
+  and the grade grid. Edits are additive / in separate members; reconcile both branches onto `main` with care.
+- **Verification commands** (repo root; `export PATH="$HOME/development/flutter/bin:$PATH"` first):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` ·
+  `flutter test integration_test/`.
 
 ## Phase 3 — Behavior: sample from a gallery photo (AC-9)
 
