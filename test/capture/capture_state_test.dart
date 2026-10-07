@@ -51,6 +51,18 @@ void main() {
     });
   });
 
+  group('lock indicator', () {
+    test('reads "AE · AWB · AF AUTO" while unlocked', () {
+      const state = CaptureState();
+      expect(state.lockIndicatorText, 'AE · AWB · AF AUTO');
+    });
+
+    test('reads "AE · AWB · AF LOCKED" once locked', () {
+      const state = CaptureState(lockState: LockState.locked);
+      expect(state.lockIndicatorText, 'AE · AWB · AF LOCKED');
+    });
+  });
+
   group('copyWith', () {
     const base = CaptureState();
 

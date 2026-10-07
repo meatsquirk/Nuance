@@ -115,4 +115,45 @@ AC-9 executed live).
   drained by `givenCaptureOf`'s `pumpAndSettle`, so no live frame remains to overwrite the sample after E19.
   The guard is unit-tested instead (`capture_controller_test.dart`: a controllable source delivers a distinct
   frame after import and the imported sample is unchanged, with a control showing the feed *can* change before
-  import). The AC test stays non-vacuous (the two named wrong impls still fail its Thens).
+  import). The AC test stays non-vacuous (the two named wrong impls still fail its Thens). *(Superseded by the
+  CAPTURE-3 re-grade below: once `givenCaptureOf` stops at `pumpWidget`, the feed is no longer pre-drained at
+  open, so live frames now arrive during `whenImportPhoto`'s local `pumpAndSettle` and the guard IS exercised
+  by the AC test.)*
+
+## Re-grade — CAPTURE-3 (un-pended: AC-4, AC-5; live re-grade of AC-1, AC-2, AC-9)
+
+CAPTURE-3 landed the lock lifecycle + frame-driven stability settling behind AC-4 and AC-5 and un-pended them.
+Per the grade gate a behaviour phase re-grades **every un-pended AC test** against the **live** behaviour — so
+the five currently un-pended tests (AC-1, AC-2, AC-4, AC-5, AC-9) are graded here; AC-3, AC-6, AC-7, AC-8,
+AC-10, AC-11 remain pending and their prior rows are untouched. Graded by an independent fresh grader (did not
+write these tests) on 2026-10-07.
+
+**Harness change weighed this phase:** CAPTURE-3 changed the shared `givenCaptureOf` to end at `pumpWidget`
+instead of `pumpAndSettle`, because the settling counter now advances one step per rendered frame (via
+`_scheduleSettleTick`'s post-frame callback) and `pumpAndSettle` would run it straight to STABLE. Re-examined
+AC-1/AC-2/AC-9 for silent weakening: **none weakened.** AC-1 is a pure structural layout read (independent of
+settling); AC-2 reads a deterministic single-frame disc average (`currentSample` is populated after the first
+frame — the smoke test pins this); AC-9's `whenImportPhoto` runs its **own** `pumpAndSettle` and the
+`_photoImported` guard holds. If anything AC-9 is *strengthened*: because the feed is no longer pre-drained at
+open, live frames now arrive during the post-import `pumpAndSettle`, so the camera-vs-photo rejection genuinely
+bites against the guard rather than against an already-exhausted stream.
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_Eyedropper` | A | G1,G4,G5,G6 (G2/G3 n/a) | Unchanged under `pumpWidget`: a structural read with no dependency on settling. Given checked through the real UI (`AppBar 'Capture'` + `liveViewKey`); asserts reticle centre vs feed centre on both axes at epsilon 0.5 (not mere presence). Live `CaptureLiveView` lays the feed `StackFit.expand` and the reticle in a `Center`, so the correct render matches to ~0 px and 0.5 kills an absent/off-centre marker. One AC. |
+| AC-2 | `TestAC02_AreaAverage5px` | A | G1,G2,G4,G5,G6 (G3 n/a) | Unchanged live grade; not weakened by `pumpWidget`. `SCENE_CENTRE_VARIED` is a single static frame, so the real `sampleAreaAverage(..., radiusPx:5)` disc average is deterministic and `currentSample` is set after frame one. Configured radius read through the endpoint (G2). Three-way distance Then on red/teal/yellow (pairwise L1 ~200–280 ≫ `_sampleToleranceL1 = 45`) kills a point read (`toDisc < toCentre`) and a wider radius (`toDisc < toOuter`). One AC. |
+| AC-4 | `TestAC04_LockSettles` | A | G1,G4,G5,G6 (G3 n/a) | **Now live.** Given `lockState==auto` via endpoint, then `_pumpUntilText` climbs the real frame-driven counter to an explicit `find.text('SETTLING 6/12')` (G1 — checked through the rendered UI, no lock tapped yet so no deferred throw). When taps real E16 (`whenLock` → `controller.lock`); `takeException` consume is bounded (only `UnimplementedError`/null, now a harmless no-op post-CAPTURE-3). Thens assert the spec's exact strings "AE · AWB · AF LOCKED" + "STABLE 12/12" plus `lockState==locked` and `stabilityText=='STABLE 12/12'` at grain (G4 — the raw indicator/stability text the step names). **Kills** the three catalogue Rejects: unchanged indicator (would read "… AUTO"), never-settles (would stay "SETTLING n/12"), partial lock (full `locked` enum + full-lock string). One AC. |
+| AC-5 | `TestAC05_SettlingWarns` | A | G1,G3,G4,G5,G6 | **Now live.** Given `lockState==auto` via endpoint. `_pumpUntilText` advances the real counter 0→6 (no lock tap → no deferred throw). Textbook G3: the negatives (`isStable==false`, `find.text('STABLE 12/12')` findsNothing) are asserted at a settle point (still `auto` at 6/12, re-asserted) and paired with the control proving the reading is live (the counter demonstrably advanced from 0 to 6) — and AC-4 proves a locked reading WOULD show STABLE, so the negative is not vacuous. `lockButton.enabled==true` on the correct `TextButton` cast (verified: `lockKey` is a `TextButton` with non-null `onPressed: controller.lock`) proves the affordance invites locking. **Kills** STABLE-while-unlocked and a missing/disabled lock control. One AC. |
+| AC-9 | `TestAC09_SampleFromPhoto` | A | G1,G2,G4,G5,G6 (G3 n/a) | Live grade holds and is now **strengthened** by the `pumpWidget` change. Given checked on the fixture before the When (`atP != atCentre`). `whenImportPhoto` stages the fixture and taps E19 → real `controller.importPhoto` sets `_photoImported` and `sampleFromPhoto(image, P=(12,12), radiusPx:5)`; the subsequent local `pumpAndSettle` now delivers the still-undrained live frames, which `_onFrame` ignores because `_photoImported` is set — so the feed-switch guard is exercised by the AC test itself (previously only unit-tested). Two discriminators against the one raw observable bite with margin: `toP < 45` (r≤5 around P is all magenta swatch), `toP < toCentre` (magenta vs neutral-grey, L1 ~120 ≫ 45 → rejects the image centre) and `toP < distToColor(sampled, liveCamera)` (vs olive host SCENE_OLIVE → rejects reading the camera). No faked sample value (G2). One AC. |
+
+### Summary — CAPTURE-3
+
+- **Grade counts (re-grade): 5×A, 0×B** across the un-pended set (AC-1, AC-2, AC-4, AC-5, AC-9). AC-4 and AC-5
+  move from their as-written ITEST-3 A to a **live A** against CAPTURE-3's lock/settle code; AC-1/AC-2/AC-9
+  hold their prior live A with no downgrade.
+- **Harness `pumpWidget` change does not weaken any un-pended test.** AC-1 (structural), AC-2 (deterministic
+  single-frame average) are unaffected; AC-9 is strengthened (the `_photoImported` feed-switch guard is now
+  exercised by the AC test, not just the controller unit test).
+- **Still-pending rows untouched:** AC-3 (SCREEN-2), AC-6 (CAPTURE-5 / B-pending), AC-7, AC-8, AC-10, AC-11
+  keep their prior grid rows.
+- **Whole-suite grid: 10×A + AC-6 B-pending-CAPTURE-5** (unchanged; AC-6 owned by CAPTURE-5).

@@ -51,6 +51,11 @@ void main() {
     addTearDown(controller.dispose);
     await _pump(tester, controller);
 
+    // Lock first so the per-frame settling tick (CAPTURE-3) stops mutating the
+    // state; the rendered live view then holds exactly the controller's state.
+    controller.lock();
+    await tester.pump();
+
     final view = tester.widget<CaptureLiveView>(find.byType(CaptureLiveView));
     expect(identical(view.state, controller.state), isTrue);
   });

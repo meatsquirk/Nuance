@@ -32,10 +32,23 @@ class FakeCaptureSource extends SoftwareCaptureSource {
 
   /// A photo staged for the next import (AC-9), or null when none is staged.
   ///
-  /// [whenImportPhoto] stages it here before tapping E19; the photo-import flow
-  /// that consumes it is wired in SOURCE-3 (which owns how the controller reads a
-  /// staged photo and enables E19). A test seam, not a production control.
+  /// [whenImportPhoto] stages it here before tapping E19; the import flow
+  /// consumes it through the production [importedPhoto] surface, which this fake
+  /// derives from the staged fixture below. A test seam, not a production
+  /// control.
   Photo? stagedPhoto;
+
+  /// Surfaces the [stagedPhoto] fixture through the production import surface
+  /// the controller reads (SOURCE-3), so staging a fixture is equivalent to the
+  /// painter picking that image from the gallery.
+  @override
+  ImportedPhoto? get importedPhoto => stagedPhoto == null
+      ? null
+      : ImportedPhoto(
+          image: stagedPhoto!.image,
+          pointX: stagedPhoto!.pointX,
+          pointY: stagedPhoto!.pointY,
+        );
 
   @override
   Stream<Frame> get frames =>

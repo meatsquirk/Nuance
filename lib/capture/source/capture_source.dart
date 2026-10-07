@@ -100,11 +100,35 @@ class StabilityReading {
   String toString() => 'StabilityReading($settledFrames/$requiredFrames)';
 }
 
+/// A gallery photo imported into the source to sample from (AC-9).
+///
+/// Carries the already-decoded [image] and the painter's chosen sample point
+/// ([pointX], [pointY]) on it. The source holds the most recently imported one
+/// (see [CaptureSource.importedPhoto]); the controller reads it to sample point
+/// P of the photograph instead of the live camera feed.
+class ImportedPhoto {
+  const ImportedPhoto({
+    required this.image,
+    required this.pointX,
+    required this.pointY,
+  });
+
+  /// The decoded gallery image to sample.
+  final Frame image;
+
+  /// The sample point's column (0-based) on [image].
+  final int pointX;
+
+  /// The sample point's row (0-based) on [image].
+  final int pointY;
+}
+
 /// A source of capture frames and the camera controls over them (SI D2).
 ///
 /// Yields a live stream of [Frame]s, exposes exposure / white-balance / focus
-/// locking with a [stability] signal, assesses the scene [lighting], and
-/// reports whether a reference card is in view. Platform-native implementations
+/// locking with a [stability] signal, assesses the scene [lighting], reports
+/// whether a reference card is in view, and holds any gallery photo imported to
+/// sample from ([importedPhoto]). Platform-native implementations
 /// (CameraX / AVFoundation) live outside this Dart build; bs-02 ships
 /// `SoftwareCaptureSource` as the deterministic default and the base the test
 /// `FakeCaptureSource` configures.
@@ -123,6 +147,16 @@ abstract class CaptureSource {
 
   /// Whether a reference card is present in the frame (enables calibration).
   bool get referenceCardPresent;
+
+  /// The gallery photo most recently imported to sample from, or null when none
+  /// has been imported (the painter is reading the live feed). Set via
+  /// [importPhoto]; read by the controller when the painter samples from an
+  /// imported photo (AC-9).
+  ImportedPhoto? get importedPhoto;
+
+  /// Imports [photo] into the source so a later sample reads point P of it
+  /// instead of the live feed (AC-9).
+  void importPhoto(ImportedPhoto photo);
 
   /// Locks auto-exposure (AE).
   void lockExposure();

@@ -22,6 +22,9 @@ class CaptureLiveView extends StatelessWidget {
   /// Stable anchor for the "SETTLING n/12" / "STABLE 12/12" indicator.
   static const Key stabilityKey = ValueKey('capture-stability-indicator');
 
+  /// Stable anchor for the "AE · AWB · AF LOCKED" / "… AUTO" lock indicator (E16).
+  static const Key lockIndicatorKey = ValueKey('capture-lock-indicator');
+
   /// Stable anchor for the stated-accuracy label.
   static const Key accuracyKey = ValueKey('capture-accuracy-label');
 
@@ -59,6 +62,15 @@ class CaptureLiveView extends StatelessWidget {
           child: Text(
             state.accuracy.label,
             key: accuracyKey,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+        Positioned(
+          left: 8,
+          top: 32,
+          child: Text(
+            state.lockIndicatorText,
+            key: lockIndicatorKey,
             style: const TextStyle(color: Colors.white),
           ),
         ),

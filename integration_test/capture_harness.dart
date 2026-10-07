@@ -378,6 +378,11 @@ Future<CaptureHarness> givenCaptureOf(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  // Mount with a single frame rather than `pumpAndSettle`: the stability reading
+  // settles one step per rendered frame (CAPTURE-3), so `pumpAndSettle` would run
+  // it straight to "STABLE 12/12". Opening leaves it at "SETTLING 0/12" (the
+  // first build renders before the first settle tick draws) with the live feed
+  // already sampled into `currentSample`; the lock/settle ACs then pump frames to
+  // watch it climb (see `_pumpUntilText`). `when…` actions pumpAndSettle locally.
   return CaptureHarness(tester, source: source, haptics: haptics);
 }

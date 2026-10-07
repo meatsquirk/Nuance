@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide LockState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/capture_controller.dart';
 import 'package:paint_color_assistant/capture/capture_controls.dart';
+import 'package:paint_color_assistant/capture/capture_state.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 
@@ -38,21 +39,35 @@ void main() {
     }
   });
 
-  testWidgets('leaves E18 (radius) and E19 (import) disabled placeholders',
-      (tester) async {
+  testWidgets('leaves E18 (radius) a disabled placeholder', (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
     await _pump(tester, controller);
 
     final radius =
         tester.widget<TextButton>(find.byKey(CaptureControls.radiusKey));
-    final import =
-        tester.widget<TextButton>(find.byKey(CaptureControls.importKey));
     expect(radius.onPressed, isNull);
-    expect(import.onPressed, isNull);
   });
 
-  testWidgets('wires E15–E17, E20, E21 to their (still-deferred) controller '
+  testWidgets('wires E19 (import) to the controller import action (SOURCE-3)',
+      (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    final import =
+        tester.widget<TextButton>(find.byKey(CaptureControls.importKey));
+    expect(import.onPressed, isNotNull,
+        reason: 'E19 is enabled and reaches controller.importPhoto');
+
+    // Tapping with no photo staged is a no-op — the import action is real
+    // (SOURCE-3), not a deferred throw, so it raises no exception.
+    await tester.tap(find.byKey(CaptureControls.importKey));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wires E15, E17, E20, E21 to their (still-deferred) controller '
       'action', (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
@@ -60,9 +75,9 @@ void main() {
 
     // Each wired control is enabled and reaches the controller, whose behaviour
     // is still deferred — a tap surfaces the owning phase's UnimplementedError.
+    // (E16 lock is live as of CAPTURE-3 — asserted separately below.)
     for (final key in [
       CaptureControls.dismissWarningKey,
-      CaptureControls.lockKey,
       CaptureControls.calibrateKey,
       CaptureControls.captureKey,
       CaptureControls.valueOnlyKey,
@@ -78,6 +93,23 @@ void main() {
         reason: '$key should reach the deferred controller action',
       );
     }
+  });
+
+  testWidgets('wires E16 to the live lock action (CAPTURE-3)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    final button =
+        tester.widget<TextButton>(find.byKey(CaptureControls.lockKey));
+    expect(button.onPressed, isNotNull, reason: 'E16 lock should be wired');
+
+    await tester.tap(find.byKey(CaptureControls.lockKey));
+    await tester.pump();
+
+    // Lock is real behaviour now — no deferred throw, and the reading locks.
+    expect(tester.takeException(), isNull);
+    expect(controller.state.lockState, LockState.locked);
   });
 
   test('exposes a stable key per wireframe element', () {
