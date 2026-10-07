@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3 (acceptance tests). G-3 (tests) and G-4 (AC-4 ΔE00 literal) still open.
+**Status:** In progress — ITEST-1+ITEST-2 done (AC-1,2,3,10,11,12 tests pending, graded A); next ITEST-3 (AC-4..9), then ITEST-4 (review, G-3). G-3, G-4 open.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -135,7 +135,7 @@ distance) — **DIFF-2** augments it with a near-identical control pair that rea
 | CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | 🔄 In progress (CVD-1 done) |
 | COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | 🔄 In progress (COMPARE-2 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ✅ Done (SCREEN-1; regions filled by behaviour phases) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1 harness done) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2 done) |
 
 ## Dependency graph
 
@@ -193,8 +193,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | COMPARE-2 | shell: `ComparisonController`/state + `SampleSource` + read endpoint + comparison entry/route | ✅ Done | 12,364,300 | 25m 01s | controller/state/source/read-endpoint + comparison entry + `toComparison`→real screen (replaced `compare_stub`); unit 241 green, 100% coverage on 9 touched files, integ 17 green (bs-01 AC-9/10 on the real screen); analyze clean; 1/3 fix passes |
 | 5 | SCREEN-1 | shell: Comparison screen scaffold (E3–E8, E49 placeholders) bound to controller | ✅ Done | 6,544,654 | 12m 51s | `ComparisonScreen` + 5 region widgets (keyed, inert); unit 247 green / 100% cov on 6 new files; integ 17 green; analyze clean; 0/3 fix passes |
 | 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 5,939,625 | 19m 08s | harness + 12-AC gate + smoke; acc 10/10, integ 27/27; grades 10×A; 0/3 fixes |
-| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
-| 8 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 (AC-4 literal needs G-4) |
+| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ✅ Done | 7,878,822 | 27m 54s | 6 pending AC tests + red baseline; acc 10 pass/6 pending, run-pending 6 fail clean; grades 6×A; 0/3 fixes |
+| 8 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9 (pending) + red baseline | ⬜ Next | | | AC-4 literal needs G-4 |
 | 9 | ITEST-4 | test-review: packet; G-3 | ⬜ Todo | | | |
 | 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ⬜ Todo | | | first behaviour; unblocks all Givens |
 | 11 | COMPARE-6 | behavior: AC-10, AC-11 — open readout for A / B | ⬜ Todo | | | ∥ DIFF-2, CVD-2 |
@@ -210,26 +210,23 @@ when the row is marked done.
 
 ## Next phase
 
-**ITEST-1 (harness) done — the acceptance harness is in place.** `integration_test/comparison_harness.dart`
-drives the real assembled app via `buildApp` with the comparison entry: fixtures (`CATALOGUE` + the named
-samples + `CVD_DEUTAN`), the Given/When/Then vocabulary (`givenComparison`, `ComparisonHarness`), and an
-**independent** `referenceDeltaE00` (inline CIEDE2000, validated vs Sharma et al.) the AC tests grade ΔE00
-against. `bs03/pending.dart` seeds all **12** ACs → owning phase; `comparison_test.dart` holds the smoke test
-+ guards. Acceptance 10/10, full integration 27/27 (17 bs-01 + 10 bs-03); grades **10×A**; 0/3 fix passes.
+**ITEST-2 done — AC-1,2,3,10,11,12 have one pending, grade-A acceptance test each.** Red baseline: all six
+fail cleanly at the COMPARE-3 selection Given (the shell picker lists nothing), never a panic. Harness gained
+`whenOpenPicker` and a baseline-safe `_choose` (asserts the picker lists the name — reason names COMPARE-3 —
+before tapping).
 
-- **Startable now (parallel):** **ITEST-2** (AC-1,2,3,10,11,12) ∥ **ITEST-3** (AC-4,5,6,7,8,9) — one pending
-  test per AC + the run-pending red baseline, graded A. Both write disjoint catalogue rows into the shared
-  `comparison_test.dart` and may extend the harness vocabulary, so coordinate those edits (merge-risky pair).
-- **ITEST-3 carries G-4:** write AC-4's expected ΔE00 as a `TODO(G-4)` placeholder and keep it pending until
-  G-4 resolves — the reference confirms the stated LCh pair is ΔE00 ≈ **13.05**, not the spec's 14.2. ITEST-3
-  also constructs & verifies the `SAMPLE_UMBER`/`SAMPLE_ULTRAMARINE` deutan confusion pair (provisional now).
-- **G-3** (approve acceptance tests) still open; it gates ITEST-4's review and every behaviour phase, not
-  ITEST-2/3 authoring.
+- **Startable now:** **ITEST-3** (AC-4,5,6,7,8,9) — the remaining AC-test phase. Appends its group below the
+  ITEST-2 group in the shared `comparison_test.dart` (merge-risky pair with ITEST-2's branch — keep edits
+  anchored); constructs & verifies the `SAMPLE_UMBER`/`SAMPLE_ULTRAMARINE` deutan pair; writes AC-4's ΔE00 as
+  a `TODO(G-4)` placeholder (reference ≈ 13.05, spec 14.2) and keeps it pending until G-4.
+- **Then ITEST-4** (test review → G-3), which blocks every behaviour phase.
+- **G-3** (approve acceptance tests) and **G-4** (ΔE00 literal) still open.
+- **⚠ Worktree verification:** `coord.sh with-lock` runs its command from `$FNP_COORD_REPO` (primary
+  checkout), so a worktree integration run must `bash -c "cd <worktree> && flutter test …"` or it tests the
+  primary's committed file. `--dart-define=BS03_RUN_PENDING=true` does reach the iOS-sim binary (verified).
 - **Deviation still carried:** `AppRouter.toReadout` does not exist yet; `openReadout` → COMPARE-6.
-- **Branch note:** bs-03 is independent of bs-02 (D-1); nothing to merge here.
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up ITEST-2
-(or `/feature-next-phase --parallel bs-03-relative-comparison ITEST-3` to run the pair concurrently).
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up ITEST-3.
 
 ## Token usage
 
@@ -247,7 +244,9 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-co
 | RECONCILE | 646b2ffe | 2026-10-07 11:18 EDT | 11:22 | 3m 57s | 3m 57s | claude-opus-4-8 | 26 | 13,125 | 1,974,880 | 8,891 | 1,996,922 | fast-forwarded COMPARE-2 shell into feat/bs-03-relative-comparison (3279f0f), verified green (241 unit/100% cov/17 integ/analyze clean); applied COMPARE-2 rollup to master plan |
 | SCREEN-1 | 5ba35b2c | 2026-10-07 11:35 EDT | 11:48 | 12m 51s | 12m 51s | claude-opus-4-8 | 126 | 118,748 | 6,385,337 | 40,443 | 6,544,654 | shell: ComparisonScreen + 5 keyed region widgets (inert E3-E8/E49); unit 247 green, 100% coverage on 6 new files; analyze + integration 17 green; 0/3 fix passes |
 | ITEST-1 | 71c0654e | 2026-10-07 12:24 EDT | 12:43 | 19m 08s | 19m 08s | claude-opus-4-8 | 104 | 207,156 | 5,669,931 | 62,434 | 5,939,625 | harness + 12-AC pending gate + smoke; acc 10/10, integ 27/27; grades 10×A; 0/3 fix passes |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 12:43** | **2h 12m** | **1h 39m** |  | **700** | **900,977** | **39,122,576** | **340,618** | **40,364,871** |  |
+| ITEST-2 | b79f3e10 | 2026-10-07 13:25 EDT | 13:53 | 27m 54s | 27m 54s | claude-opus-4-8 | 122 | 280,162 | 7,515,695 | 82,843 | 7,878,822 | 6 pending AC tests (AC-1,2,3,10,11,12) + red baseline; acc 10 pass/6 pending, run-pending 6 fail clean; grades 6xA; 0/3 fixes |
+| RECONCILE | 8d454f0e | 2026-10-07 13:56 EDT | 13:59 | 3m 29s | 3m 29s | claude-opus-4-8 | 28 | 58,077 | 897,585 | 14,053 | 969,743 | fast-forwarded ITEST-2 (02c7a3c) into feat/bs-03-relative-comparison; applied ITEST-2 rollup to master plan (session log 7 Done / 8 Next, status, Next-phase, ITEST module note) + added ITEST-2 ledger row; removed worktree + phase branch. Clean ff, tree identical to verified 02c7a3c (tests-only, no lib/** change) |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 13:59** | **2h 43m** | **2h 10m** |  | **850** | **1,239,216** | **47,535,856** | **437,514** | **49,213,436** |  |
 
 ## Sign-off
 
