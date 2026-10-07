@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
-import 'package:paint_color_assistant/compare/compare_stub.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -34,7 +34,7 @@ void main() {
       tester,
       router.toComparison(_sample('Warm Terracotta'), ComparisonSlot.a),
     );
-    expect(find.byType(ComparisonStubScreen), findsOneWidget);
+    expect(find.byType(ComparisonHomeScreen), findsOneWidget);
     expect(find.text('Slot A: Warm Terracotta'), findsOneWidget);
     expect(find.text('Slot B: (empty)'), findsOneWidget);
   });

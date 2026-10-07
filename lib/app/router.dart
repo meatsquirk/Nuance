@@ -1,28 +1,32 @@
 import 'package:flutter/material.dart';
 
-import '../compare/compare_stub.dart';
 import '../domain/sample.dart';
 import '../recipes/recipes_stub.dart';
+import 'build_app.dart';
 
 /// Which comparison slot a carried-over sample lands in.
 enum ComparisonSlot { a, b }
 
 /// Typed navigation for the app.
 ///
-/// For bs-01 the comparison and recipes destinations are thin **stub** screens
-/// ([ComparisonStubScreen], [RecipesStubScreen]) that render the handed-off
-/// sample so the acceptance tests can observe the handoff (AC-9, AC-10, AC-11).
-/// bs-03 / bs-04 replace the stubs behind these same typed routes; callers never
-/// change. The router is injected via `buildApp` (CORE-3).
+/// The comparison destination is the real [ComparisonHomeScreen] (bs-03,
+/// replacing bs-01's render-only stub behind this same route — callers never
+/// change); recipes is still the thin [RecipesStubScreen] bs-04 will replace.
+/// Both render the handed-off sample so the acceptance tests can observe the
+/// handoff (AC-9, AC-10, AC-11). The router is injected via `buildApp` (CORE-3).
 class AppRouter {
   const AppRouter();
 
-  /// A route to the comparison screen with [sample] placed into [slot].
+  /// A route to the Comparison screen with [sample] placed into [slot].
+  ///
+  /// Carries the reading into the chosen slot (the other slot empty) via
+  /// [ComparisonHomeScreen]'s initial slots, so the Readout → compare handoff
+  /// (bs-01 AC-9/AC-10) lands on the real comparison with the sample in place.
   Route<void> toComparison(Sample sample, ComparisonSlot slot) {
     return MaterialPageRoute<void>(
-      builder: (_) => ComparisonStubScreen(
-        sampleA: slot == ComparisonSlot.a ? sample : null,
-        sampleB: slot == ComparisonSlot.b ? sample : null,
+      builder: (_) => ComparisonHomeScreen(
+        initialA: slot == ComparisonSlot.a ? sample : null,
+        initialB: slot == ComparisonSlot.b ? sample : null,
       ),
     );
   }

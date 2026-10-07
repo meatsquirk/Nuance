@@ -5,6 +5,10 @@ import '../a11y/cvd/cvd_profile.dart';
 import '../a11y/haptics.dart';
 import '../a11y/speech.dart';
 import '../color_science/color_science.dart';
+import '../compare/comparison_controller.dart';
+import '../compare/comparison_read_endpoint.dart';
+import '../compare/comparison_state.dart';
+import '../compare/sample_source.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
@@ -25,6 +29,20 @@ const Sample demoSample = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
+/// Opt-in that opens the app on the Comparison screen (bs-03 D-8), symmetric to
+/// bs-02's capture entry.
+///
+/// When [AppDependencies.comparisonEntry] carries one, [buildApp] launches to
+/// the [ComparisonHomeScreen] — a comparison over [AppDependencies.sampleSource]
+/// for [AppDependencies.cvdProfile] via [AppDependencies.confusionCheck] — so
+/// the acceptance harness and a later production shortcut both enter comparison
+/// through the one assembly entry. null (the default) preserves bs-01's Readout
+/// entry. A marker for now; bs-06 may extend it (e.g. a pre-selected pair).
+class ComparisonEntry {
+  /// Creates the comparison-entry marker.
+  const ComparisonEntry();
+}
+
 /// The app-wide services assembled once at startup and injected down the tree.
 ///
 /// A single immutable holder so production (`main.dart`) and the acceptance
@@ -40,6 +58,8 @@ class AppDependencies {
     this.initialSample = demoSample,
     this.cvdProfile = const CvdProfile(type: CvdType.deutan),
     this.confusionCheck = const NoopConfusionCheck(),
+    this.sampleSource = const InMemorySampleSource(),
+    this.comparisonEntry,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -74,6 +94,23 @@ class AppDependencies {
   /// Defaults to the inert [NoopConfusionCheck] so the assembled app wires the
   /// detector but flags nothing until CVD-2 supplies the dichromat projection.
   final ConfusionCheck confusionCheck;
+
+  /// The saved-sample catalogue the comparison picker lists (bs-03 D-7).
+  ///
+  /// Defaults to an empty [InMemorySampleSource]; **COMPARE-3** injects one
+  /// seeded with the saved samples, and **bs-06** later supplies a persistent
+  /// store behind the same [SampleSource] interface. Read both by the comparison
+  /// entry and by the Readout → compare handoff so a carried sample lands in a
+  /// comparison that can still offer the catalogue for the other slot.
+  final SampleSource sampleSource;
+
+  /// Opens the app on the Comparison screen when present (bs-03 D-8).
+  ///
+  /// null (the default) keeps bs-01's Readout entry; a [ComparisonEntry] makes
+  /// [buildApp] launch to the [ComparisonHomeScreen] over [sampleSource] /
+  /// [cvdProfile] / [confusionCheck]. The bs-03 acceptance harness injects one
+  /// to drive each comparison scenario through this same assembly entry.
+  final ComparisonEntry? comparisonEntry;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -109,17 +146,123 @@ class AppScope extends InheritedWidget {
 /// Builds the root widget of the Paint Color Assistant.
 ///
 /// The single production assembly entry (D-7): it injects [deps] via [AppScope]
-/// and wires the router into a [MaterialApp] that opens on the [ReadoutScreen]
-/// for [AppDependencies.initialSample]. `main.dart` and the acceptance harness
-/// both construct the app through this entry, differing only in the injected
-/// services and the initial sample.
+/// and wires the router into a [MaterialApp]. The app opens on the
+/// [ComparisonHomeScreen] when a [AppDependencies.comparisonEntry] is injected
+/// (bs-03 D-8), and otherwise on the [ReadoutScreen] for
+/// [AppDependencies.initialSample] (bs-01's entry). `main.dart` and the
+/// acceptance harnesses construct the app through this one entry, differing only
+/// in the injected services, the initial sample and the comparison entry.
 Widget buildApp(AppDependencies deps) {
   return AppScope(
     dependencies: deps,
     child: MaterialApp(
       title: 'Paint Color Assistant',
       theme: ThemeData(useMaterial3: true),
-      home: ReadoutScreen(sample: deps.initialSample),
+      home: deps.comparisonEntry == null
+          ? ReadoutScreen(sample: deps.initialSample)
+          : ComparisonHomeScreen(
+              sampleSource: deps.sampleSource,
+              cvdProfile: deps.cvdProfile,
+              confusionCheck: deps.confusionCheck,
+            ),
     ),
   );
+}
+
+/// The Comparison screen the app opens on when a comparison entry is wired, and
+/// the destination of the Readout → compare handoff (`AppRouter.toComparison`).
+///
+/// It owns the [ComparisonController] over the injected catalogue / profile /
+/// detector and wraps its subtree in a [ComparisonReadEndpoint] so the
+/// acceptance suite can observe the comparison state. The deps are passed in
+/// (not read from [AppScope]) so the handoff route renders the carried sample
+/// even when pushed outside an [AppScope] (bs-01's handoff tests); [initialA] /
+/// [initialB] carry that sample into its slot.
+///
+/// This COMPARE-2 shell renders the two slots as a findable placeholder body —
+/// enough for the entry and the handoff to assemble and the existing suites to
+/// stay green. **SCREEN-1** replaces that body with the real `ComparisonScreen`
+/// composing the wireframe regions (E3–E8, E49); the controller ownership and
+/// the read endpoint stay here.
+class ComparisonHomeScreen extends StatefulWidget {
+  /// Creates the comparison home over the given catalogue / profile / detector,
+  /// optionally pre-placing [initialA] / [initialB] into their slots.
+  const ComparisonHomeScreen({
+    this.sampleSource = const InMemorySampleSource(),
+    this.cvdProfile = const CvdProfile(type: CvdType.deutan),
+    this.confusionCheck = const NoopConfusionCheck(),
+    this.initialA,
+    this.initialB,
+    super.key,
+  });
+
+  /// The saved-sample catalogue the comparison picker lists (D-7).
+  final SampleSource sampleSource;
+
+  /// The painter's colour-vision profile the confusion flag is judged against.
+  final CvdProfile cvdProfile;
+
+  /// The detector deciding whether the pair is confusable (AC-7/AC-8).
+  final ConfusionCheck confusionCheck;
+
+  /// A sample to pre-place into slot A (the Readout → compare-as-A handoff).
+  final Sample? initialA;
+
+  /// A sample to pre-place into slot B (the Readout → compare-as-B handoff).
+  final Sample? initialB;
+
+  @override
+  State<ComparisonHomeScreen> createState() => _ComparisonHomeScreenState();
+}
+
+class _ComparisonHomeScreenState extends State<ComparisonHomeScreen> {
+  late final ComparisonController _controller = ComparisonController(
+    sampleSource: widget.sampleSource,
+    confusionCheck: widget.confusionCheck,
+    profile: widget.cvdProfile,
+    initialA: widget.initialA,
+    initialB: widget.initialB,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ComparisonReadEndpoint(
+      key: ComparisonReadEndpoint.endpointKey,
+      controller: _controller,
+      child: ListenableBuilder(
+        listenable: _controller,
+        builder: (context, _) => _ComparisonShellBody(state: _controller.state),
+      ),
+    );
+  }
+}
+
+/// The COMPARE-2 placeholder body: the two slots as findable text, matching
+/// bs-01's handoff rendering (`Slot A: <name>` / `Slot B: (empty)`) so the
+/// existing suites stay green. Replaced by SCREEN-1's region composition.
+class _ComparisonShellBody extends StatelessWidget {
+  const _ComparisonShellBody({required this.state});
+
+  final ComparisonState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Comparison')),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Text('Slot A: ${state.slotA?.name ?? '(empty)'}'),
+            Text('Slot B: ${state.slotB?.name ?? '(empty)'}'),
+          ],
+        ),
+      ),
+    );
+  }
 }

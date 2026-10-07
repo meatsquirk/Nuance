@@ -1,6 +1,6 @@
 # Module COMPARE — comparison controller & assembly
 
-**Status:** In progress — COMPARE-1 (scaffold) done
+**Status:** In progress — COMPARE-2 (shell) done; SCREEN-1 unblocked
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/compare/comparison_controller.dart`, `lib/compare/comparison_state.dart`,
 `lib/compare/comparison_read_endpoint.dart`, `lib/compare/sample_source.dart` (interface + in-memory
@@ -14,7 +14,7 @@ reuses `lib/app/router.dart` (`toComparison`, `toReadout`). Carries the scaffold
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 2,185,042 | 9m 04s (42m 14s) |
-| 2 | shell | — | ⬜ Todo | | |
+| 2 | shell | — | ✅ Done | 12,364,300 | 25m 01s |
 | 3 | behavior | AC-1, AC-2, AC-12 | ⬜ Todo | | |
 | 5 | behavior | AC-3 | ⬜ Todo | | |
 | 6 | behavior | AC-10, AC-11 | ⬜ Todo | | |
@@ -111,9 +111,64 @@ Scaffold complete; no product code (`lib/**`) touched.
   comparison entry; existing suites green.
 - **Acceptance gate:** *(shell — none)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Shell landed; behaviour unchanged (empty catalogue ⇒ empty slots, no statement).
+
+- **New (`lib/compare/`):** `sample_source.dart` (`SampleSource` interface + `InMemorySampleSource`, empty
+  default, read-only `savedSamples()`), `comparison_state.dart` (`ComparisonState`: slots + derived
+  `Comparison?` + `confusable` + `hasBothSlots`, value equality), `comparison_controller.dart`
+  (`ComparisonController extends ChangeNotifier`: derives the pair via DIFF `compare` + CVD
+  `confusable` — the one wiring seam; `selectA`/`selectB`/`swap`/`openReadout` declared and throw,
+  deferred to COMPARE-3/5/6 per their Files lists), `comparison_read_endpoint.dart`
+  (`ComparisonReadEndpoint` InheritedWidget, mirrors bs-02's `CaptureReadEndpoint`, `endpointKey` +
+  `of`).
+- **`build_app.dart`:** `AppDependencies.sampleSource` (D-7, empty default) + `comparisonEntry`
+  (`ComparisonEntry?`, D-8); `buildApp` opens on `ComparisonHomeScreen` when the entry is set, else the
+  Readout; `ComparisonHomeScreen` owns the controller + wraps the subtree in the read endpoint, body is a
+  placeholder rendering the two slots (SCREEN-1 swaps in the real `ComparisonScreen`).
+- **`router.dart`:** `toComparison` now routes to `ComparisonHomeScreen` (carried sample via
+  `initialA`/`initialB`), replacing the deleted `compare_stub.dart`.
+- **Gate:** `flutter analyze` clean; unit **241 green** (was 215); coverage **100% on all 9 touched files**
+  (`dart run tool/coverage_gate.dart main` PASS); integration **17 green** on iOS sim (incl. bs-01 AC-9/AC-10
+  now hitting the real screen — behaviour preserved). Shell kind ⇒ no acceptance/grade gate. **Fix passes: 1/3**
+  (first run: 1 widget-test read the endpoint from an ancestor context — fixed to a descendant; 1 const-ctor
+  line uncovered — fixed with a runtime construction).
+- **Tests:** +`test/compare/{sample_source,comparison_state,comparison_controller,comparison_read_endpoint}_test.dart`;
+  extended `build_app_test.dart` (entry branch, screen, defaults); updated `router_test.dart`
+  (`ComparisonHomeScreen`); deleted `compare_stub{,_test}.dart`.
+- **Deviations (reported):** (1) `openReadout` needs `AppRouter.toReadout`, which bs-01 does **not** provide
+  (gap-analysis says it does) — deferred to COMPARE-6, which adds `toReadout`. (2) `ComparisonHomeScreen`
+  takes its deps as explicit params (not `AppScope.of`) because the handoff route is pushed outside an
+  `AppScope` in bs-01's `router_test`/`actions_bar_test`; the comparison-entry path passes `deps.*`. (3)
+  `comparisonEntry` is a marker; the sample source + profile it "carries" (D-8) are the top-level deps
+  (`sampleSource` D-7, `cvdProfile`/`confusionCheck` from CVD-1).
+
+### Checkpoint / Handoff
+
+- **Frozen for SCREEN-1 / behaviour phases:**
+  - `ComparisonController({required sampleSource, required confusionCheck, required profile, Sample? initialA,
+    Sample? initialB})` — `state` (`ComparisonState`), `savedSamples`. `_state` is `final` in the shell;
+    **COMPARE-3** makes it mutable and adds an `emit`/notify path when it wires `selectA`/`selectB`.
+  - `ComparisonState(slotA, slotB, comparison, confusable)` + `hasBothSlots`; derivation is null/false
+    unless both slots set (drives AC-12).
+  - `ComparisonReadEndpoint` (`endpointKey` `'comparison-read-endpoint'`, `of(context)`) — read it from a
+    context **below** the endpoint (it is a descendant of `ComparisonHomeScreen`).
+  - `AppDependencies.sampleSource` + `comparisonEntry` (`ComparisonEntry()` opts into the comparison home);
+    `buildApp` switches home on `comparisonEntry != null`.
+  - `AppRouter.toComparison` → `ComparisonHomeScreen(initialA/initialB)`. `AppRouter.toReadout` is **not yet
+    added** — COMPARE-6 adds it for `openReadout`.
+- **SCREEN-1 next:** replace `_ComparisonShellBody` in `build_app.dart` (the placeholder two-slot body) with
+  `ComparisonScreen(controller: ...)` composing the five region widgets; keep `ComparisonHomeScreen`'s
+  controller ownership + the read-endpoint wrap. The real screen must still render the slots as findable text
+  so the handoff route tests stay green (or update those bs-01 tests deliberately).
+- **Verification commands** (export PATH first): `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` · integration on the iOS sim:
+  `flutter test integration_test/ -d <iPhone sim id>` (run under the verify lock — shared device). Base =
+  `main` (≡ this phase's `d3c8c44`, no lib delta vs `main` beyond committed DIFF-1/CVD-1).
+- **Known gaps / notes:** catalogue is empty in the shell (COMPARE-3 seeds it). Carry-over bs-01 const-line
+  coverage flake still applies (re-run `--coverage` once if an untouched file flags). Untracked bs-04..bs-14
+  specs + `docs/` remain in the tree, not part of bs-03.
 
 ## Phase 3 — Sample selection + invite (COMPARE-3)
 
