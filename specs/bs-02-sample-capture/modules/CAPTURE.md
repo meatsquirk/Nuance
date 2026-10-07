@@ -1,6 +1,6 @@
 # Module CAPTURE — scaffold, capture controller, accuracy, commit
 
-**Status:** In progress — CAPTURE-3 (behavior) done; lock lifecycle + stability settling landed, AC-4/AC-5 un-pended green. Next CAPTURE-4 (AC-6, AC-7; depends on SOURCE-2 — merged)
+**Status:** In progress — CAPTURE-4 (behavior) done; low-light commit + accuracy tier + dismiss landed, AC-6/AC-7 un-pended green (AC-6 B-pending-CAPTURE-5). Next CAPTURE-5 (AC-8, calibration) or CAPTURE-6 (AC-11, commit→Readout)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`, `lib/capture/capture_accuracy.dart`, `lib/capture/capture_read_endpoint.dart`; edits to bs-01's `lib/app/build_app.dart` and `lib/app/router.dart` (add the Capture route); the BS02 pending-runner wiring the scaffold adds.
 **Depends on:** SOURCE (consumes `CaptureSource` + sampling), bs-01 `Haptics` + Readout route · **Blocks:** SCREEN, ITEST, every capture behavior
@@ -12,7 +12,7 @@
 | 1 | scaffold | — | ✅ Done | 2,239,601 | 8m 15s (8m 15s) |
 | 2 | shell | — | ✅ Done | 9,221,563 | 16m 54s (16m 54s) |
 | 3 | behavior | AC-4, AC-5 | ✅ Done | 51,577,446 | 1h 28m (3h 35m) |
-| 4 | behavior | AC-6, AC-7 | ⬜ Todo | | |
+| 4 | behavior | AC-6, AC-7 | ✅ Done | 9,611,728 | 20m 03s (20m 03s) |
 | 5 | behavior | AC-8 | ⬜ Todo | | |
 | 6 | behavior | AC-11 | ⬜ Todo | | |
 
@@ -278,9 +278,65 @@ exclusions, no augmentations. Tokens 51,577,446 · time 1h 28m (3h 35m).
   (committed colour within ΔE00 8 of ground truth; a sample is committed, not refused).
 - **Augments:** none here; AC-6's control is added by CAPTURE-5.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed low-light detection + commit on `capture_controller.dart`; no change needed to `capture_accuracy.dart`
+(the `approximate` tier already carries ΔE00 8). Two methods un-deferred:
+
+- **`commit()`** promotes the current reading (`currentSample`) to `lastCommittedSample`, stamping it with the
+  stated `CaptureState.accuracy` (measured provenance), and sets `lowLightWarning = source.lighting ==
+  Lighting.low`. A dim capture is **downgraded, never refused** (D-3): a sample always commits and the warning
+  rises; adequate light leaves the warning clear. A no-op before any colour is sampled (guards `currentSample
+  == null`). Multi-frame averaging, the confirm haptic and the Readout handoff remain deferred to CAPTURE-6.
+- **`dismissWarning()`** emits `copyWith(lowLightWarning: false)` only — a visual acknowledgement that leaves
+  `accuracy` and any committed sample untouched (AC-7).
+
+The screen was already wired end-to-end by SCREEN-1: E20 (`captureKey`) → `commit`, E15 (`dismissWarningKey`)
+→ `dismissWarning`, and `CaptureLiveView` renders `warningKey` from `state.lowLightWarning` — so this phase
+touched **one lib file**.
+
+Un-pended **AC-6, AC-7** (deleted their `pendingACs` rows; the pending-gate guard `expectedOwners` now holds 4
+entries). Acceptance gate green: `flutter test integration_test/capture_test.dart` (default) → **15 pass + 4
+pending-skipped** (AC-3/AC-8/AC-10/AC-11); AC-6 + AC-7 execute live and pass. Full `integration_test/`
+regression (bs-01 + bs-02) → **32 pass + 4 skipped**. Unit **305 pass** (was 302: +5 new commit/low-light/
+dismiss tests, −2 removed `throwsUnimplementedError` rows for commit/dismiss). `flutter analyze` clean.
+Coverage gate `dart run tool/coverage_gate.dart main` → **100% on all touched lib files, PASS** (the new
+`commit()` branches — low light, adequate light, null reading — and `dismissWarning()` are all covered).
+
+**Other test changes (recorded, not AC-weakening):** `capture_controls_test` — the "still-deferred" group
+narrowed to E17/E21 and a new case asserts E15 + E20 now reach live behaviour (no throw);
+`capture_controller_test` — removed the `commit`/`dismissWarning` `throwsUnimplementedError` cases, added a
+`commit + low-light warning + dismiss` group (low-light commit → approximate + warning; adequate commit → no
+warning; commit before any sample → no-op; dismiss clears warning, accuracy unchanged).
+
+Grade gate: **6×A on the un-pended set** (AC-1/2/4/5/7/9), AC-6 **B pending CAPTURE-5** (unchanged — its
+calibrated-vs-approximate control is CAPTURE-5's augmentation), fresh independent re-grade; whole-suite grid
+**10×A + AC-6 B-pending-CAPTURE-5** unchanged. No un-pended test weakened. Fix passes: 1/3 (two existing
+widget/unit tests assumed commit/dismiss still threw — updated to the live behaviour). No exclusions, no
+augmentations (AC-6's is owned by CAPTURE-5). Tokens 9,611,728 · time 20m 03s (20m 03s).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged (PATH export + `flutter analyze` / `flutter test --coverage` /
+  `flutter test integration_test/capture_test.dart` [+ `--dart-define=BS02_RUN_PENDING=true` to run pending] /
+  `dart run tool/coverage_gate.dart <base>`).
+- **Frozen interfaces (CAPTURE-4):** `CaptureController.commit()` lands `lastCommittedSample` stamped with
+  `state.accuracy` and raises `lowLightWarning` in `Lighting.low` (no-op if `currentSample == null`);
+  `CaptureController.dismissWarning()` clears `lowLightWarning` only. Both move state through `emit`.
+- **For CAPTURE-5 (AC-8 + AC-6 augmentation):** `calibrate()` must normalise the reading toward ground truth
+  and upgrade `state.accuracy` to `calibrated` (so a committed `SCENE_CARD` reading lands within ΔE00 3), then
+  add AC-6's control (SCENE_CARD calibrated ΔE3 vs card-less SCENE_DIM approximate ΔE8) and re-grade AC-6 → A.
+  `commit()` already stamps whatever `state.accuracy` is, so once `calibrate()` sets `calibrated` the commit
+  path carries it with no further change.
+- **For CAPTURE-6 (AC-11):** `commit()` currently promotes the single current reading. CAPTURE-6 replaces its
+  body with multi-frame averaging (`averageFrames` over `framesAveraged` source frames), fires exactly one
+  `Haptics` confirm pulse, and navigates to the Readout (`AppRouter.toReadout`) carrying the sample — keep the
+  `lowLightWarning` set-on-commit behaviour AC-6/AC-7 rely on, and keep the `CaptureReadEndpoint` reachable
+  across the Readout push (AC-11 hazard).
+- **Known gaps:** `calibrate` / `setRadius` / `toggleValueOnly` still throw `UnimplementedError` until their
+  phases; AC-6 remains B-pending-CAPTURE-5.
+- **Next phase:** CAPTURE-5 (AC-8, over CAPTURE-4) or CAPTURE-6 (AC-11, deps CAPTURE-3 + SOURCE-2 met). Both
+  edit `capture_controller.dart` — run serially within the module.
 
 ## Phase 5 — Behavior: reference-card calibration + accuracy upgrade (AC-8)
 

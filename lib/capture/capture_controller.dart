@@ -139,20 +139,40 @@ class CaptureController extends ChangeNotifier {
   void calibrate() =>
       throw UnimplementedError('calibrate: behaviour lands in CAPTURE-5');
 
-  /// Clears the low-light warning without changing the accuracy label (AC-7).
-  /// Behaviour lands in CAPTURE-4.
-  void dismissWarning() =>
-      throw UnimplementedError('dismissWarning: behaviour lands in CAPTURE-4');
+  /// Clears the low-light warning without changing the stated accuracy (AC-7).
+  ///
+  /// Dismissing the warning is a purely visual acknowledgement: it hides the
+  /// low-light notice but leaves [CaptureState.accuracy] (and any already
+  /// committed sample's accuracy) exactly as it was — a dim reading stays
+  /// approximate after the painter waves the warning away.
+  void dismissWarning() => emit(_state.copyWith(lowLightWarning: false));
 
   /// Toggles the value-only grayscale preview (AC-10). Behaviour lands in
   /// SCREEN-3.
   void toggleValueOnly() =>
       throw UnimplementedError('toggleValueOnly: behaviour lands in SCREEN-3');
 
-  /// Averages several frames into a committed [CaptureState.lastCommittedSample]
-  /// and opens its readout with a haptic (AC-11). Behaviour lands in CAPTURE-6.
-  void commit() =>
-      throw UnimplementedError('commit: behaviour lands in CAPTURE-6');
+  /// Commits the current reading as [CaptureState.lastCommittedSample], stamped
+  /// with the stated [CaptureState.accuracy] tier (AC-6).
+  ///
+  /// A capture is **downgraded, never refused** (D-3): when the source reports
+  /// [Lighting.low] the commit still lands a sample and raises the low-light
+  /// warning, marking the reading approximate rather than blocking it; in
+  /// adequate light the warning stays clear. A no-op before any colour has been
+  /// sampled (no live frame yet and no imported photo). Averaging several frames,
+  /// the confirm haptic and the Readout handoff land in CAPTURE-6.
+  void commit() {
+    final reading = _state.currentSample;
+    if (reading == null) return;
+    emit(_state.copyWith(
+      lastCommittedSample: Sample(
+        coordinates: reading.coordinates,
+        provenance: const Provenance(ProvenanceTier.measured),
+        accuracy: _state.accuracy,
+      ),
+      lowLightWarning: source.lighting == Lighting.low,
+    ));
+  }
 
   /// Replaces the observable state and notifies listeners.
   ///

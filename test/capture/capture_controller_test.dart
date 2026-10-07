@@ -106,16 +106,14 @@ void main() {
     setUp(() => controller = CaptureController(source: _source()));
     tearDown(() => controller.dispose());
 
-    // lock() is live as of CAPTURE-3 (see the 'lock lifecycle' group below).
+    // lock() is live as of CAPTURE-3 (see the 'lock lifecycle' group below);
+    // commit() and dismissWarning() as of CAPTURE-4 (see 'low-light …' below).
     test('setRadius',
         () => expect(() => controller.setRadius(21), throwsUnimplementedError));
     test('calibrate',
         () => expect(controller.calibrate, throwsUnimplementedError));
-    test('dismissWarning',
-        () => expect(controller.dismissWarning, throwsUnimplementedError));
     test('toggleValueOnly',
         () => expect(controller.toggleValueOnly, throwsUnimplementedError));
-    test('commit', () => expect(controller.commit, throwsUnimplementedError));
   });
 
   group('stability settling + lock lifecycle (CAPTURE-3)', () {
@@ -334,6 +332,81 @@ void main() {
 
       expect(controller.state.currentSample, isNull,
           reason: 'no staged photo → nothing sampled');
+    });
+  });
+
+  group('commit + low-light warning + dismiss (CAPTURE-4, AC-6/AC-7)', () {
+    SoftwareCaptureSource dimSource() => SoftwareCaptureSource(
+          const SceneSpec(
+            groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
+            lighting: Lighting.low,
+          ),
+        );
+
+    test('a low-light commit lands an approximate sample and raises the warning',
+        () async {
+      final controller = CaptureController(source: dimSource());
+      addTearDown(controller.dispose);
+      await pumpEventQueue(); // the feed samples currentSample
+      final reading = controller.state.currentSample;
+      expect(reading, isNotNull);
+
+      controller.commit();
+
+      final committed = controller.state.lastCommittedSample;
+      expect(committed, isNotNull,
+          reason: 'the reading is committed, never refused, in low light');
+      expect(committed!.coordinates, reading!.coordinates,
+          reason: 'the commit promotes the current reading');
+      expect(committed.provenance.tier, ProvenanceTier.measured);
+      expect(committed.accuracy, CaptureAccuracy.approximate,
+          reason: 'a card-less dim capture is marked approximate');
+      expect(controller.state.lowLightWarning, isTrue,
+          reason: 'low light raises the warning on commit');
+    });
+
+    test('an adequately-lit commit lands a sample with no low-light warning',
+        () async {
+      final controller = CaptureController(source: _source()); // adequate light
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample, isNotNull);
+      expect(controller.state.lowLightWarning, isFalse,
+          reason: 'adequate light raises no warning');
+    });
+
+    test('commit before any colour is sampled is a no-op', () {
+      // _ControllableSource never delivers a frame, so currentSample is null.
+      final controller = CaptureController(source: _ControllableSource());
+      addTearDown(controller.dispose);
+      expect(controller.state.currentSample, isNull);
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample, isNull,
+          reason: 'nothing sampled yet → nothing to commit');
+    });
+
+    test('dismissWarning clears the warning without changing the accuracy',
+        () async {
+      final controller = CaptureController(source: dimSource());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      controller.commit();
+      expect(controller.state.lowLightWarning, isTrue);
+      final accuracyBefore = controller.state.lastCommittedSample!.accuracy;
+
+      controller.dismissWarning();
+
+      expect(controller.state.lowLightWarning, isFalse,
+          reason: 'the dismiss clears the warning');
+      expect(controller.state.lastCommittedSample!.accuracy, accuracyBefore,
+          reason: 'the dismiss does not change the stated accuracy');
+      expect(controller.state.accuracy, CaptureAccuracy.approximate,
+          reason: 'the live accuracy tier is untouched by the dismiss');
     });
   });
 

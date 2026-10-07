@@ -157,3 +157,40 @@ bites against the guard rather than against an already-exhausted stream.
 - **Still-pending rows untouched:** AC-3 (SCREEN-2), AC-6 (CAPTURE-5 / B-pending), AC-7, AC-8, AC-10, AC-11
   keep their prior grid rows.
 - **Whole-suite grid: 10×A + AC-6 B-pending-CAPTURE-5** (unchanged; AC-6 owned by CAPTURE-5).
+
+## Re-grade — CAPTURE-4 (un-pended: AC-1, AC-2, AC-4, AC-5, AC-6, AC-7, AC-9)
+
+CAPTURE-4 implemented two controller methods only — `CaptureController.commit()` (reads `_state.currentSample`,
+emits `lastCommittedSample` stamped with `_state.accuracy`, and sets `lowLightWarning: source.lighting ==
+Lighting.low` — downgraded-never-refused per D-3) and `CaptureController.dismissWarning()`
+(`emit(copyWith(lowLightWarning: false))` only) — and un-pended AC-6 and AC-7. It did **not** touch the harness,
+`givenCaptureOf`, the frame-driven settling model, `CaptureLiveView`, `CaptureControls`,
+`sampleAreaAverage`/`sampleFromPhoto`, `lock()`, or the source, so no previously-un-pended test (AC-1/2/4/5/9)
+can be silently weakened — each was re-examined and holds its prior live A. Verified against live code on
+2026-10-07 by an independent fresh grader (did not write these tests); the smoke test pins `currentSample
+isNotNull` after the single `pumpWidget`, so `commit()` has a reading to commit at tap time.
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_Eyedropper` | A | G1,G4,G5,G6 (G2/G3 n/a) | Carried forward from CAPTURE-3 live A; untouched by CAPTURE-4 (pure structural layout read). Given checked through the real UI (`AppBar 'Capture'` + `liveViewKey`); asserts reticle centre vs feed centre on both axes at epsilon 0.5. Live `CaptureLiveView` lays the feed `StackFit.expand` and the reticle in a `Center`, so a correct render matches to ~0 px and 0.5 kills an absent/off-centre marker. |
+| AC-2 | `TestAC02_AreaAverage5px` | A | G1,G2,G4,G5,G6 (G3 n/a) | Carried forward live A; untouched. Configured radius read through the endpoint (`state.radiusPx==5`, G2). Real `sampleAreaAverage(..., radiusPx:5)` drives the three-way distance Then on `SCENE_CENTRE_VARIED` (pairwise L1 ~200–280 ≫ `_sampleToleranceL1 = 45`); kills a point read and a wider radius. |
+| AC-4 | `TestAC04_LockSettles` | A | G1,G4,G5,G6 (G3 n/a) | Carried forward live A; lock/settle unchanged. Given `lockState==auto`; `_pumpUntilText` climbs the real frame counter to `find.text('SETTLING 6/12')` (G1). Taps real E16; `takeException` bounded (now a no-op). Thens assert exact "AE · AWB · AF LOCKED" + "STABLE 12/12" + `lockState==locked` at grain (G4). Kills unchanged-indicator / never-settles / partial-lock. |
+| AC-5 | `TestAC05_SettlingWarns` | A | G1,G3,G4,G5,G6 | Carried forward live A; unaffected. Given `lockState==auto`; counter advances 0→6 (no lock tap). Textbook G3: negatives (`isStable==false`, "STABLE 12/12" findsNothing) at a settle point, paired with the counter climbing 0→6; `lockButton.enabled==true` proves the affordance. Kills STABLE-while-unlocked and a missing/disabled control. |
+| AC-6 | `TestAC06_LowLightApproximate` | **B pending CAPTURE-5** | G1,G2,G4,G6; G5 limited | **Now live, grade unchanged.** Givens `lighting==low` + no card via `harness.source` (G2). Live `commit()` lands `lastCommittedSample` (kills refusal-in-dim), raises `lowLightWarning` + renders `warningKey` (kills no-warning), and the committed colour (`_dimRaw`, ΔE00 ≈5.1) is `<= approximate.maxDeltaE` (8) via the real `_deltaE00` — non-vacuous. But `accuracy==approximate` is still the only reachable tier (`calibrate()` throws until CAPTURE-5), so the test cannot separate "low light downgraded to approximate" from "every reading is always approximate" — it needs CAPTURE-5's calibrated-vs-approximate control (pre-seeded augmentation). CAPTURE-4 correctly did **not** close this. A once CAPTURE-5 lands. |
+| AC-7 | `TestAC07_DismissWarning` | A | G1,G3,G4,G5,G6 | **Now live.** Given built through the real `commit()` flow on SCENE_DIM: `warningKey` findsOneWidget + `lowLightWarning==true` + `lastCommittedSample.accuracy==approximate` all asserted before the When (G1). Taps real E15 → `dismissWarning()`; `takeException` bounded. Textbook G3: the negative (warning gone) is asserted after `whenDismissWarning`'s settle point and paired with the warning-present Given control. Kills *dismiss clears the sample* and *dismiss upgrades the accuracy* (accuracy-invariance bites because `dismissWarning()` only flips `lowLightWarning` and `copyWith` preserves `lastCommittedSample`). Asserts `warningKey` findsNothing + `lowLightWarning==false` at grain (G4). |
+| AC-9 | `TestAC09_SampleFromPhoto` | A | G1,G2,G4,G5,G6 (G3 n/a) | Carried forward live A; unaffected. Given checked on the fixture (`atP != atCentre`). `whenImportPhoto` taps E19 → real `importPhoto()` sets `_photoImported` + `sampleFromPhoto(image, P=(12,12), radiusPx:5)`; the local `pumpAndSettle` delivers still-undrained live frames that `_onFrame` ignores (feed-switch guard exercised). Discriminators `toP < 45`, `toP < toCentre` (magenta vs grey), `toP < distToColor(sampled, liveCamera)` (vs olive host). No faked sample value (G2). |
+
+### Summary — CAPTURE-4
+
+- **Grade counts: 6×A + AC-6 B-pending-CAPTURE-5** across the un-pended set (AC-1, AC-2, AC-4, AC-5, AC-6,
+  AC-7, AC-9). AC-7 moves from its as-written ITEST-3 A to a **live A** against CAPTURE-4's real
+  `commit()`/`dismissWarning()`; AC-1/AC-2/AC-4/AC-5/AC-9 hold their prior live A; AC-6 **remains B pending
+  CAPTURE-5** (CAPTURE-4 did not and should not have closed its one-reachable-tier G5 limitation).
+- **CAPTURE-4 cannot weaken any un-pended test.** It added only `commit()` and `dismissWarning()` on the
+  controller; the harness, settling model, live-view, controls, sampling, lock and source are unchanged.
+- **Whole-suite grid: 10×A + AC-6 B-pending-CAPTURE-5** (unchanged). Still-pending rows untouched: AC-3
+  (SCREEN-2), AC-8 (CAPTURE-5), AC-10 (SCREEN-3), AC-11 (CAPTURE-6).
+- **Carried hazards (do not affect grades):** (1) AC-6's accuracy-downgrade proof and a missing adequate-light
+  warning control both land with CAPTURE-5's augmentation — do not mark AC-6 A before then. (2) `takeException()`
+  consumes stay bounded (`UnimplementedError`/null only) and are now harmless no-ops for AC-6/AC-7. (3) AC-11's
+  navigation hazard (keep `CaptureReadEndpoint` reachable across the Readout push) is carried to CAPTURE-6.
