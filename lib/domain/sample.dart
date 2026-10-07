@@ -1,3 +1,4 @@
+import '../capture/capture_accuracy.dart';
 import 'color_coordinates.dart';
 import 'provenance.dart';
 
@@ -32,7 +33,8 @@ class EvidencePoint {
 ///
 /// Holds the canonical [coordinates], a required non-null [provenance] (SI D9),
 /// an optional [name] (null until the sample is named), whether it was
-/// [justCaptured] (drives the AC-12 confirmation), and the append-ready
+/// [justCaptured] (drives the AC-12 confirmation), the stated capture [accuracy]
+/// (null until the sample comes from a capture — bs-02), and the append-ready
 /// [evidence] list.
 class Sample {
   const Sample({
@@ -40,6 +42,7 @@ class Sample {
     required this.provenance,
     this.name,
     this.justCaptured = false,
+    this.accuracy,
     this.evidence = const [],
   });
 
@@ -55,6 +58,11 @@ class Sample {
   /// True from capture until acknowledged (drives AC-12).
   final bool justCaptured;
 
+  /// The stated capture accuracy tier (bs-02 D-3), or null for a sample that did
+  /// not come from a capture (e.g. a bs-01 reading). Distinct from [provenance]:
+  /// provenance records the data source, accuracy the capture confidence.
+  final CaptureAccuracy? accuracy;
+
   /// Source-tagged evidence backing this sample; append-ready for bs-14.
   final List<EvidencePoint> evidence;
 
@@ -64,6 +72,7 @@ class Sample {
     Provenance? provenance,
     String? name,
     bool? justCaptured,
+    CaptureAccuracy? accuracy,
     List<EvidencePoint>? evidence,
   }) {
     return Sample(
@@ -71,6 +80,7 @@ class Sample {
       provenance: provenance ?? this.provenance,
       name: name ?? this.name,
       justCaptured: justCaptured ?? this.justCaptured,
+      accuracy: accuracy ?? this.accuracy,
       evidence: evidence ?? this.evidence,
     );
   }
@@ -78,5 +88,6 @@ class Sample {
   @override
   String toString() =>
       'Sample(${name ?? '(unnamed)'}, $coordinates, ${provenance.label}'
-      '${justCaptured ? ', just-captured' : ''})';
+      '${justCaptured ? ', just-captured' : ''}'
+      '${accuracy == null ? '' : ', ${accuracy!.label}'})';
 }

@@ -1,6 +1,6 @@
 # Module CAPTURE — scaffold, capture controller, accuracy, commit
 
-**Status:** In progress — CAPTURE-1 (scaffold) done; branch `feat/bs-02-sample-capture`, baseline green, BS02 pending runner wired
+**Status:** In progress — CAPTURE-2 (shell) done; controller + state + accuracy + read endpoint landed, app opens on the Capture route. Next CAPTURE-3 (behavior, blocked on G-3)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`, `lib/capture/capture_accuracy.dart`, `lib/capture/capture_read_endpoint.dart`; edits to bs-01's `lib/app/build_app.dart` and `lib/app/router.dart` (add the Capture route); the BS02 pending-runner wiring the scaffold adds.
 **Depends on:** SOURCE (consumes `CaptureSource` + sampling), bs-01 `Haptics` + Readout route · **Blocks:** SCREEN, ITEST, every capture behavior
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 2,239,601 | 8m 15s (8m 15s) |
-| 2 | shell | — | ⬜ Todo | | |
+| 2 | shell | — | ✅ Done | 9,221,563 | 16m 54s (16m 54s) |
 | 3 | behavior | AC-4, AC-5 | ⬜ Todo | | |
 | 4 | behavior | AC-6, AC-7 | ⬜ Todo | | |
 | 5 | behavior | AC-8 | ⬜ Todo | | |
@@ -18,19 +18,36 @@
 
 ## Interface reconciliation
 
-- **`CaptureController`** holds `CaptureState` { `lockState` (auto / locked), `stabilityCount` (n/12) +
-  `stabilityText` ("SETTLING 6/12" / "STABLE 12/12"), `radiusPx` (default 5), `accuracy` (`CaptureAccuracy`),
-  `valueOnly` (bool), `lowLightWarning` (bool), `currentSample`, `lastCommittedSample`, `framesAveraged` }.
-- **`CaptureAccuracy`** (D-3): `{ approximate (ΔE00 ≤ 8, card-less), calibrated (ΔE00 ≤ 3, reference card) }`
-  with its user-facing label. Attached to the committed `Sample`; distinct from bs-01 `Provenance`. The
-  committed `Sample` gains an `accuracy` field — coordinated with bs-01's shared `Sample` (added here; bs-01
-  is not frozen). Record the exact field shape in this section when CAPTURE-2 lands.
-- **Read endpoint** (`capture_read_endpoint.dart`): exposes the observable `CaptureState` (and the fake's
-  ground-truth hook) to the acceptance tests for the Thens the rendered UI doesn't surface (sampled/committed
-  colour value, `framesAveraged`, accuracy value).
-- **Routing:** CAPTURE-2 adds a Capture route to bs-01's `router.dart` and wires the controller + a
-  `CaptureSource` into `buildApp(deps)`. Commit navigates to bs-01's Readout route (`toReadout(sample)` or the
-  existing Readout entry) carrying the committed sample (D-5).
+- **`CaptureController`** (CAPTURE-2, frozen) `extends ChangeNotifier`, `CaptureController({required CaptureSource source})`.
+  Exposes `CaptureState get state`; placeholder actions `lock()`, `setRadius(int px)`, `calibrate()`,
+  `dismissWarning()`, `toggleValueOnly()`, `commit()` each `throw UnimplementedError('<name>: behaviour lands
+  in <phase>')` (lock→CAPTURE-3, setRadius→SCREEN-2, calibrate→CAPTURE-5, dismissWarning→CAPTURE-4,
+  toggleValueOnly→SCREEN-3, commit→CAPTURE-6). A single `@protected void emit(CaptureState next)` mutation
+  seam (no-op + notify) is the path the behaviour phases move state through.
+- **`CaptureState`** (CAPTURE-2, frozen) — immutable + `copyWith` + `==`/`hashCode` + `toString`. Fields:
+  `LockState lockState` (enum `auto`/`locked`, default `auto`), `int stabilityCount` (0, the n in n/12),
+  `int radiusPx` (default `kDefaultSamplingRadiusPx` = 5), `CaptureAccuracy accuracy` (default `approximate`),
+  `bool valueOnly` (false), `bool lowLightWarning` (false), `Sample? currentSample`, `Sample? lastCommittedSample`,
+  `int framesAveraged` (0). Derived: `bool get isStable` (count ≥ 12), `String get stabilityText`
+  ("STABLE 12/12" when stable **or** locked, else "SETTLING n/12"). `copyWith` is set-forward on the nullable
+  sample fields (`x ?? this.x`).
+- **`CaptureAccuracy`** (D-3, CAPTURE-2, frozen): plain `enum { approximate, calibrated }` with
+  `String get label` ('Approximate' / 'Calibrated') and `double get maxDeltaE` (8 / 3) — the numeric ΔE00
+  bound the accuracy tests assert (D-4). CAPTURE-4/5 set it; tests compare the **enum value** (label is UI text).
+- **`Sample.accuracy`** (added to bs-01's shared `lib/domain/sample.dart`): `final CaptureAccuracy? accuracy`,
+  **nullable, default null** — a non-capture (bs-01) sample leaves it null, so bs-01 readout is unaffected.
+  In `copyWith` (set-forward) and appended to `toString` only when non-null. `sample.dart` now imports
+  `../capture/capture_accuracy.dart` (domain → capture, accepted per D-3 so accuracy rides on the shared Sample).
+- **Read endpoint** `CaptureReadEndpoint` (`capture_read_endpoint.dart`): an `InheritedWidget` carrying the
+  `CaptureController` (→ `.state` and `.source`, incl. the fake's ground truth). Find it with
+  `find.byKey(CaptureReadEndpoint.endpointKey)` (`Key('capture-read-endpoint')`) or `CaptureReadEndpoint.of(context)`.
+  Observation seam only; production screens read their own controller.
+- **Routing:** `AppRouter.toReadout(Sample)` added to `router.dart` (pushes `ReadoutScreen(sample:)` — CAPTURE-6's
+  commit uses it, D-5). `AppDependencies.captureSource` (`CaptureSource?`, default null) added to `build_app.dart`;
+  `buildApp` opens on `CaptureHomeScreen` when a source is wired, else bs-01's Readout. `CaptureHomeScreen`
+  (in `build_app.dart`) owns the controller (built from the injected source via `AppScope`, disposed on teardown)
+  and wraps its subtree in the read endpoint; its body is a placeholder (AppBar "Capture") **SCREEN-1 replaces**.
+  Production `main.dart` injects a `SoftwareCaptureSource` (demo scene) → the shipped app opens on Capture.
 
 ## Open gates
 
@@ -129,9 +146,51 @@ Tokens 2,239,601 · time 8m 15s (8m 15s).
   Capture route.
 - **Acceptance gate:** *(n/a — shell)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed four new `lib/capture` files — `capture_accuracy.dart` (enum, D-3), `capture_state.dart`
+(`CaptureState` + `LockState`), `capture_controller.dart` (`CaptureController extends ChangeNotifier`,
+deferred actions throw with their owning phase, `@protected emit` seam), `capture_read_endpoint.dart`
+(`CaptureReadEndpoint` InheritedWidget) — and wired capture into the app: `Sample` gains a nullable
+`accuracy` field (bs-01 shared file, default null → bs-01 unaffected), `AppRouter.toReadout(Sample)` for
+CAPTURE-6's commit→Readout (D-5), `AppDependencies.captureSource` (`CaptureSource?`) + `CaptureHomeScreen`
+in `build_app.dart` (owns the controller, wraps the subtree in the read endpoint, placeholder body SCREEN-1
+replaces), and `main.dart` injects a `SoftwareCaptureSource` so the shipped app opens on Capture. Exact
+shapes recorded in **Interface reconciliation**.
+
+Verification (Flutter 3.47.6, `~/development/flutter/bin` on PATH): `flutter analyze` clean. Unit: 264 tests
+green (was 229 — +35 across capture_accuracy/state/controller/read_endpoint, build_app, router, sample
+tests). Coverage gate `dart run tool/coverage_gate.dart main`: **100% on all 12 touched `lib` files, PASS**.
+Integration `flutter test integration_test/`: bs-01's 17 tests green (bs-01 `givenReadoutOf` passes no
+capture source → still opens on Readout, unchanged). App-launches-to-Capture proven at unit level via
+`build_app_test` (buildApp+source → `CaptureHomeScreen`, AppBar "Capture", endpoint over the injected
+source, controller disposed on teardown) and `smoke_test` (`main()` boots to the Capture AppBar).
+
+**bs-01 test change (recorded):** `test/smoke_test.dart` `main()`-boots assertion changed from Readout to
+the Capture AppBar, because bs-02 D-2 moved the production entry point to Capture; not an AC test, no AC
+weakened. No `pendingACs` touched (shell un-pends nothing). Fix passes: 2/3 (1 — smoke-test matched a
+duplicate "Capture" text, retargeted to the AppBar; 2 — the accuracy enum had no executable lines so was
+absent from lcov, rewrote its `label`/`maxDeltaE` as `switch` getters like bs-01 `Provenance.label`). No
+exclusions, no augmentations. Tokens 9,221,563 · time 16m 54s (16m 54s).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged from SOURCE-1 (PATH export + `flutter analyze` / `flutter test
+  --coverage` / `flutter test integration_test/` / `dart run tool/coverage_gate.dart main`).
+- **Frozen interfaces (CAPTURE-2):** `CaptureController`, `CaptureState`/`LockState`, `CaptureAccuracy`,
+  `Sample.accuracy`, `CaptureReadEndpoint`, `AppRouter.toReadout`, `AppDependencies.captureSource`,
+  `CaptureHomeScreen` — all detailed in **Interface reconciliation**. Behaviour phases move state **only**
+  through `CaptureController.emit` and un-defer the action methods (replace each `throw` with real behaviour).
+- **For SCREEN-1 (next shell):** replace `CaptureHomeScreen`'s placeholder body (in `lib/app/build_app.dart`)
+  with the real `lib/capture/capture_screen.dart` scaffold — keep the controller ownership + `CaptureReadEndpoint`
+  wiring (read the source from `AppScope.of(context).captureSource!`, dispose the controller). Render the
+  E15–E21 regions, eyedropper and stability indicator as findable placeholders bound to `controller.state`.
+- **For ITEST-1:** the harness builds `buildApp(AppDependencies(..., captureSource: FakeCaptureSource(...)))`
+  → app opens on Capture; observe state via `find.byKey(CaptureReadEndpoint.endpointKey)` →
+  `.controller.state` (and `.controller.source` for the fake's ground truth).
+- **Known gaps:** controller actions intentionally throw `UnimplementedError` until their behaviour phase;
+  `CaptureHomeScreen` body is a placeholder until SCREEN-1. G-3 still gates every behaviour phase.
+- **Next phase (SCREEN-1):** shell — Capture screen scaffold (E15–E21 placeholders) bound to the controller.
 
 ## Phase 3 — Behavior: lock lifecycle + stability settling (AC-4, AC-5)
 

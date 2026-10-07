@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../a11y/haptics.dart';
 import '../a11y/speech.dart';
+import '../capture/capture_controller.dart';
+import '../capture/capture_read_endpoint.dart';
+import '../capture/source/capture_source.dart';
 import '../color_science/color_science.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
@@ -36,6 +39,7 @@ class AppDependencies {
     required this.haptics,
     this.router = const AppRouter(),
     this.initialSample = demoSample,
+    this.captureSource,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -56,6 +60,16 @@ class AppDependencies {
   /// acceptance harness injects a fixture here to read each scenario's sample
   /// through this same [buildApp] entry (capture replaces it in bs-02).
   final Sample initialSample;
+
+  /// The capture source the app opens the Capture screen on, or null to open on
+  /// the Readout (bs-02 D-2).
+  ///
+  /// When present, [buildApp] launches to the Capture screen reading from this
+  /// source and capture commits navigate to the Readout (D-5); when null the app
+  /// opens on the Readout for [initialSample], preserving bs-01's entry. The
+  /// shipped app injects a [CaptureSource]; the bs-02 acceptance harness injects
+  /// a fake with a known ground-truth scene.
+  final CaptureSource? captureSource;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -91,17 +105,74 @@ class AppScope extends InheritedWidget {
 /// Builds the root widget of the Paint Color Assistant.
 ///
 /// The single production assembly entry (D-7): it injects [deps] via [AppScope]
-/// and wires the router into a [MaterialApp] that opens on the [ReadoutScreen]
-/// for [AppDependencies.initialSample]. `main.dart` and the acceptance harness
-/// both construct the app through this entry, differing only in the injected
-/// services and the initial sample.
+/// and wires the router into a [MaterialApp]. The app opens on the Capture
+/// screen when a [AppDependencies.captureSource] is injected (bs-02), and
+/// otherwise on the [ReadoutScreen] for [AppDependencies.initialSample]
+/// (bs-01's entry). `main.dart` and both acceptance harnesses construct the app
+/// through this entry, differing only in the injected services, the initial
+/// sample and the capture source.
 Widget buildApp(AppDependencies deps) {
   return AppScope(
     dependencies: deps,
     child: MaterialApp(
       title: 'Paint Color Assistant',
       theme: ThemeData(useMaterial3: true),
-      home: ReadoutScreen(sample: deps.initialSample),
+      home: deps.captureSource == null
+          ? ReadoutScreen(sample: deps.initialSample)
+          : const CaptureHomeScreen(),
     ),
   );
+}
+
+/// The Capture screen the app opens on when a capture source is wired (bs-02).
+///
+/// CAPTURE-2 shell: it owns the [CaptureController] over the injected
+/// [AppDependencies.captureSource], wraps its subtree in a [CaptureReadEndpoint]
+/// so the acceptance suite can observe the [CaptureState], and renders a
+/// placeholder live-view surface. SCREEN-1 replaces the placeholder body with
+/// the real wireframe regions (E15–E21, the eyedropper and the stability
+/// indicator); the controller ownership and the endpoint wiring stay here.
+class CaptureHomeScreen extends StatefulWidget {
+  const CaptureHomeScreen({super.key});
+
+  @override
+  State<CaptureHomeScreen> createState() => _CaptureHomeScreenState();
+}
+
+class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
+  CaptureController? _controller;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Build the controller once, over the capture source injected above.
+    if (_controller == null) {
+      final source = AppScope.of(context).captureSource!;
+      _controller = CaptureController(source: source);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CaptureReadEndpoint(
+      key: CaptureReadEndpoint.endpointKey,
+      controller: _controller!,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Capture')),
+        body: const SafeArea(
+          child: Center(
+            // Placeholder live-view surface; SCREEN-1 renders the real feed and
+            // the E15–E21 regions over the controller.
+            child: Text('Capture'),
+          ),
+        ),
+      ),
+    );
+  }
 }

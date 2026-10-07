@@ -4,11 +4,26 @@ import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
+import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
+import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
+
+SoftwareCaptureSource _captureSource() => SoftwareCaptureSource(
+      const SceneSpec(
+        groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
+      ),
+    );
+
+AppDependencies _captureDeps(SoftwareCaptureSource source) => AppDependencies(
+      colorScience: const ColorScienceImpl(),
+      speech: const NoopSpeech(),
+      haptics: const NoopHaptics(),
+      captureSource: source,
+    );
 
 AppDependencies _deps() => const AppDependencies(
       colorScience: ColorScienceImpl(),
@@ -32,6 +47,16 @@ void main() {
 
     test('defaults the initial sample to the demo sample', () {
       expect(_deps().initialSample, same(demoSample));
+    });
+
+    test('defaults the capture source to null (bs-01 opens on the Readout)',
+        () {
+      expect(_deps().captureSource, isNull);
+    });
+
+    test('keeps an explicitly injected capture source', () {
+      final source = _captureSource();
+      expect(_captureDeps(source).captureSource, same(source));
     });
 
     test('keeps an explicitly injected initial sample', () {
@@ -102,6 +127,48 @@ void main() {
       final context = tester.element(find.byType(ReadoutScreen));
       seen = AppScope.of(context);
       expect(identical(seen, deps), isTrue);
+    });
+
+    testWidgets('opens on the Capture screen when a capture source is wired',
+        (tester) async {
+      final source = _captureSource();
+      await tester.pumpWidget(buildApp(_captureDeps(source)));
+
+      // The Capture screen, not the Readout, is shown.
+      expect(find.byType(CaptureHomeScreen), findsOneWidget);
+      expect(find.byType(ReadoutScreen), findsNothing);
+      expect(find.widgetWithText(AppBar, 'Capture'), findsOneWidget);
+    });
+
+    testWidgets(
+        'the Capture screen exposes a read endpoint over the injected source',
+        (tester) async {
+      final source = _captureSource();
+      await tester.pumpWidget(buildApp(_captureDeps(source)));
+
+      final endpoint = tester.widget<CaptureReadEndpoint>(
+        find.byKey(CaptureReadEndpoint.endpointKey),
+      );
+      // The controller reads from the injected source and starts in the
+      // default capture state.
+      expect(identical(endpoint.controller.source, source), isTrue);
+      expect(endpoint.controller.state.stabilityText, 'SETTLING 0/12');
+    });
+
+    testWidgets('disposes the capture controller when the screen is torn down',
+        (tester) async {
+      await tester.pumpWidget(buildApp(_captureDeps(_captureSource())));
+      final controller = tester
+          .widget<CaptureReadEndpoint>(
+            find.byKey(CaptureReadEndpoint.endpointKey),
+          )
+          .controller;
+
+      // Replacing the whole app tears the Capture screen down → dispose runs.
+      await tester.pumpWidget(const SizedBox());
+
+      // A disposed ChangeNotifier throws if listened to again.
+      expect(() => controller.addListener(() {}), throwsFlutterError);
     });
   });
 

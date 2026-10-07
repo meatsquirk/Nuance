@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** In progress — next CAPTURE-2 (shell). G-3 approve-tests still open, blocks behaviour only
+**Status:** In progress — next SCREEN-1 (shell). G-3 approve-tests still open, blocks behaviour only
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -170,8 +170,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | CAPTURE-1 | scaffold: branch, baseline, verify coverage gate, BS02 pending runner | ✅ Done | 2,239,601 | 8m 15s (8m 15s) | branch cut; baseline green (196 unit + 17 integ); gate proven both ways; `bs02/pending.dart` added |
 | 2 | SOURCE-1 | shell: `CaptureSource` + software source + sampling signatures | ✅ Done | 2,451,815 | 12m 12s (12m 12s) | 4 lib files (frame/source/software-source/sampling), 100% covered; analyze clean; 229 unit + 17 integ green |
-| 3 | CAPTURE-2 | shell: controller + state + `CaptureAccuracy` + read endpoint + route | ⬜ Next | | | after SOURCE-1 |
-| 4 | SCREEN-1 | shell: Capture screen scaffold (E15–E21 placeholders) bound to controller | ⬜ Todo | | | after CAPTURE-2 |
+| 3 | CAPTURE-2 | shell: controller + state + `CaptureAccuracy` + read endpoint + route | ✅ Done | 9,221,563 | 16m 54s (16m 54s) | controller+state+accuracy+read endpoint; `Sample.accuracy`; `toReadout`; app opens on Capture; 100% cov, 264 unit + 17 integ green |
+| 4 | SCREEN-1 | shell: Capture screen scaffold (E15–E21 placeholders) bound to controller | ⬜ Next | | | after CAPTURE-2 |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (11 ACs), smoke | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,11 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
@@ -191,15 +191,17 @@ when the row is marked done.
 
 ## Next phase
 
-**CAPTURE-2 (shell) is next and startable.** SOURCE-1 landed the SOURCE shell: `CaptureSource` interface,
-`SoftwareCaptureSource` (built from a `SceneSpec`), `Frame`/`Pixel`, `CaptureLocks`/`StabilityReading`/
-`Lighting`, and the four sampling signatures — all pure Dart, 100% covered, not yet wired. CAPTURE-2 defines
-`CaptureState`, `CaptureAccuracy` (D-3), the `CaptureController` skeleton + read endpoint, and wires a
-`SoftwareCaptureSource` into bs-01's `buildApp` + a Capture route. Shells are layered-serial
-(SOURCE-1 ✅ → CAPTURE-2 → SCREEN-1), then ITEST-1. G-3 (approve the acceptance tests) remains open and blocks
-the behaviour phases only — decided at the ITEST-4 test review.
+**SCREEN-1 (shell) is next and startable** — the last shell. CAPTURE-2 landed the controller
+(`CaptureController` over a `CaptureSource`, deferred actions throwing their owning phase, `@protected emit`
+seam), `CaptureState`/`LockState`, `CaptureAccuracy` (D-3), the `CaptureReadEndpoint` observation seam, the
+nullable `Sample.accuracy` field, `AppRouter.toReadout` (D-5), and `AppDependencies.captureSource` +
+`CaptureHomeScreen` so the app opens on Capture (production `main.dart` injects a `SoftwareCaptureSource`).
+All 100% covered; 264 unit + 17 bs-01 integ green; analyze clean. SCREEN-1 replaces `CaptureHomeScreen`'s
+placeholder body with the real `lib/capture/capture_screen.dart` scaffold (E15–E21 placeholders bound to
+`controller.state`), keeping the controller + endpoint wiring. Then ITEST-1 (needs all three shells). G-3
+(approve the acceptance tests) remains open and blocks the behaviour phases only — decided at ITEST-4.
 
-Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… CAPTURE-2`).
+Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… SCREEN-1`).
 
 ## Token usage
 
@@ -211,7 +213,8 @@ Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… CA
 | GATE-DECISION | f00319bb | 2026-10-06 20:25 EDT | 20:30 | 4m 50s | 4m 50s | claude-opus-4-8 | 44 | 127,866 | 2,953,692 | 20,839 | 3,102,441 | G-1 approved (owner Matt Quirk) + G-2 resolved (bs-01 merged to main at c793839); CAPTURE-1 unblocked, G-3 still open |
 | CAPTURE-1 | 0ea18afb | 2026-10-06 20:43 EDT | 20:51 | 8m 15s | 8m 15s | claude-opus-4-8 | 58 | 73,799 | 2,146,871 | 18,873 | 2,239,601 | scaffold done — branch cut from main, baseline green (196 unit + 17 integ), coverage gate proven both ways, BS02 pending runner (integration_test/bs02/pending.dart) wired |
 | SOURCE-1 | 5fdfc7dc | 2026-10-06 21:07 EDT | 21:20 | 12m 12s | 12m 12s | claude-opus-4-8 | 56 | 85,940 | 2,330,132 | 35,687 | 2,451,815 | shell done — CaptureSource interface + SoftwareCaptureSource + sampling signatures; 4 lib files 100% covered; analyze clean; 229 unit + 17 integ green; fix passes 0/3 |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-06 21:20** | **35m 57s** | **35m 57s** |  | **180** | **407,425** | **8,450,052** | **128,503** | **8,986,160** |  |
+| CAPTURE-2 | 132f4c0d | 2026-10-06 21:25 EDT | 21:42 | 16m 54s | 16m 54s | claude-opus-4-8 | 148 | 145,481 | 9,013,575 | 62,359 | 9,221,563 | shell done — CaptureController + CaptureState/LockState + CaptureAccuracy (D-3) + CaptureReadEndpoint; Sample.accuracy (nullable); AppRouter.toReadout + captureSource wiring (app opens on Capture); 100% coverage on 12 touched files; 264 unit + 17 integ green; fix passes 2/3 |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-06 21:42** | **52m 51s** | **52m 51s** |  | **328** | **552,906** | **17,463,627** | **190,862** | **18,207,723** |  |
 
 ## Sign-off
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../compare/compare_stub.dart';
 import '../domain/sample.dart';
+import '../readout/readout_screen.dart';
 import '../recipes/recipes_stub.dart';
 
 /// Which comparison slot a carried-over sample lands in.
@@ -31,6 +32,18 @@ class AppRouter {
   Route<void> toRecipes(Sample target) {
     return MaterialPageRoute<void>(
       builder: (_) => RecipesStubScreen(target: target),
+    );
+  }
+
+  /// A route to the bs-01 Readout screen showing [sample].
+  ///
+  /// The capture commit pushes it to open the captured reading's readout (bs-02
+  /// D-5): the handoff is symmetric to bs-01's own readout entry, and a sample
+  /// marked [Sample.justCaptured] confirms with a haptic as the Readout lands
+  /// (bs-01 AC-12).
+  Route<void> toReadout(Sample sample) {
+    return MaterialPageRoute<void>(
+      builder: (_) => ReadoutScreen(sample: sample),
     );
   }
 }

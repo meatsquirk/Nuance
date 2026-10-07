@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -54,6 +55,11 @@ void main() {
       expect(sample.justCaptured, isFalse);
       expect(sample.evidence, isEmpty);
     });
+
+    test('accuracy is null for a non-capture sample (bs-02)', () {
+      const sample = Sample(coordinates: coords, provenance: measured);
+      expect(sample.accuracy, isNull);
+    });
   });
 
   group('Sample.copyWith', () {
@@ -81,12 +87,14 @@ void main() {
         provenance: newProv,
         name: 'Deep Olive Green',
         justCaptured: false,
+        accuracy: CaptureAccuracy.calibrated,
         evidence: const [],
       );
       expect(copy.coordinates, other);
       expect(copy.provenance, newProv);
       expect(copy.name, 'Deep Olive Green');
       expect(copy.justCaptured, isFalse);
+      expect(copy.accuracy, CaptureAccuracy.calibrated);
       expect(copy.evidence, isEmpty);
     });
   });
@@ -111,6 +119,20 @@ void main() {
       expect(
         sample.toString(),
         'Sample((unnamed), ColorCoordinates(L 58.0, a 24.0, b 30.0), Measured)',
+      );
+    });
+
+    test('appends the capture accuracy label when set (bs-02)', () {
+      const sample = Sample(
+        coordinates: coords,
+        provenance: measured,
+        name: 'Deep Olive Green',
+        accuracy: CaptureAccuracy.approximate,
+      );
+      expect(
+        sample.toString(),
+        'Sample(Deep Olive Green, ColorCoordinates(L 58.0, a 24.0, b 30.0), '
+        'Measured, Approximate)',
       );
     });
   });
