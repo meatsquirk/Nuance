@@ -174,7 +174,10 @@ temperature line, colour-space selector, provenance badge, and the action button
 
 ## 9. Decision
 
-Reviewer: __________________  Date: __________  Decision: ☐ Approved  ☐ Changes requested
+Reviewer: **Matt Quirk** (owner)  Date: **2026-10-06**  Decision: ☑ **Approved**
+
+**Approved 2026-10-06 by Matt Quirk** at code `8a0c380` (sign-off recorded in the commit following this edit).
+All 12 ACs green (12×A), full verification green, no open gates/augmentations/non-A grades. Feature **Done**.
 
 If changes: list each item; it becomes a behaviour phase, an augmentation, or a spec change before a
 fresh SIGNOFF-2. Record via `/feature-next-phase --signoff bs-01-color-readout …`.

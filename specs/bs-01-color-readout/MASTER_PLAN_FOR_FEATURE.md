@@ -1,7 +1,7 @@
 # Master Plan — Color readout (bs-01)
 
 **Spec:** [bs-01-color-readout.feature](../bs-01-color-readout.feature)
-**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet assembled (round 1); all 12 ACs green (12×A), full verification green. Owner decision pending.
+**Status:** Done — signed off 2026-10-06 by Matt Quirk at 8a0c380. All 12 ACs green (12×A), full verification green.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Readout screen (S1.R1, E9–E14), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · greenfield Flutter app (confirmed by Matt, 2026-10-05)
 
@@ -193,27 +193,22 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 16 | READOUT-5 | behavior: AC-6, AC-7 (provenance badges) | ✅ Done | 6,292,987 | 16m 03s (16m 03s) | AC-6/AC-7 green on sim (7×A re-grade of AC-1..7); Measured / "Estimated — not yet verified" + seeded-value note, derived from tier; 100% coverage on 1 touched file; 1 fix pass (harness pending-gate self-tests) |
 | 17 | READOUT-6 | behavior: AC-9, AC-10, AC-11 (navigation handoffs) | ✅ Done | 5,667,325 | 10m 50s (10m 50s) | AC-9/10/11 green on sim (10×A re-grade of all un-pended AC-1..7,9,10,11); compare-A/B + find-recipes handoffs wired via controller routes; READOUT module complete; 100% coverage on 2 touched files; 0 fix passes |
 | 18 | A11Y-2 | behavior: AC-8, AC-12 (speak + haptic/just-captured) | ✅ Done | 9,660,964 | 20m 19s (20m 19s) | AC-8 (speak) + AC-12 (haptic/just-captured) green on sim; independent 12×A re-grade of all ACs; AC-12 hardened (per-build confirm) per grader; 100% coverage on 2 touched files; 0 fix passes |
-| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting | 1,280,906 | 6m 04s (6m 04s) | packet + cost report + live screenshot assembled; full verification green; owner decision pending |
+| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ✅ Done | 1,280,906 | 6m 04s (6m 04s) | packet + cost report + live screenshot; full verification green; **approved 2026-10-06 by Matt Quirk** — feature Done |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-1 done — ⏸ awaiting owner decision (2026-10-06).** The round-1 sign-off packet is assembled:
-[signoff/round-1.md](signoff/round-1.md), with [cost-per-ac-round-1.md](signoff/cost-per-ac-round-1.md)
-and a live app screenshot. Full verification re-run green from the primary checkout — unit **196/0**,
-coverage **100% (449/449, 27 files)**, `flutter analyze` clean, acceptance **17/17** in both default and
-run-pending modes. All 12 ACs green at **12×A, 0×B** (independent re-grade). No product code changed.
+**Feature complete — signed off 2026-10-06 by Matt Quirk (SIGNOFF-1 approved).** All 19 phases done, all
+12 ACs green at 12×A, full verification green. No further phases in this feature.
 
-- **Next: a human decides.** The agent never approves. Record with
-  `/feature-next-phase --signoff bs-01-color-readout approved | changes "<items>"`.
-- **Approved** → SIGNOFF-1 ✅, feature `Status: Done`. **Changes requested** → each item becomes a phase
-  (behaviour / augmentation / spec change) before a fresh SIGNOFF-2.
-- No open gates, no open augmentations, no non-A grades, no phases closed by user acceptance. One open
-  Known flake (`provenance.dart` const-ctor coverage, pre-existing; did not trigger this run).
-- Deferred by design (D-1): `NoopSpeech`/`NoopHaptics` are the production sinks — the actions are wired and
-  observed via fakes; platform speech/haptics land in a later feature behind the same seams.
+- **Nothing left for bs-01.** Packet: [signoff/round-1.md](signoff/round-1.md).
+- Carried forward (deferred by design, D-1): `NoopSpeech`/`NoopHaptics` are the production sinks — the
+  actions are wired and observed via fakes; platform-backed speech/haptics land in a later feature behind
+  the unchanged `Speech`/`Haptics` seams.
+- One pre-existing open Known flake (`provenance.dart` const-ctor coverage) — re-run on red, not a bs-01 gap.
+- **Next feature:** bs-02 (sample capture), starting at CAPTURE-1.
 
 ## Token usage
 
@@ -243,10 +238,11 @@ run-pending modes. All 12 ACs green at **12×A, 0×B** (independent re-grade). N
 | PHASE | 9cbbf3fb | 2026-10-06 17:13 EDT | 17:24 | 10m 50s | 10m 50s | claude-opus-4-8 | 112 | 196,389 | 5,438,199 | 32,625 | 5,667,325 | READOUT-6 done: AC-9/10/11 (navigation handoffs) green on sim; 10×A re-grade; READOUT module complete; 100% coverage on 2 touched files; 0 fix passes |
 | A11Y-2 | 8888fb9f | 2026-10-06 17:34 EDT | 17:55 | 20m 19s | 20m 19s | claude-opus-4-8 | 158 | 269,591 | 9,334,887 | 56,328 | 9,660,964 | AC-8 (speak) + AC-12 (haptic/just-captured) green on sim; 12×A independent re-grade; AC-12 hardened; 100% coverage on 2 touched files; 0 fix passes |
 | SIGNOFF-1 | f00319bb | 2026-10-06 18:07 EDT | 18:13 | 6m 04s | 6m 04s | claude-opus-4-8 | 36 | 154,339 | 1,117,645 | 8,886 | 1,280,906 | full verification green: unit 196/0, coverage 100% (449/449, 27 files), analyze clean, acceptance 17/17 default & run-pending; packet + cost report assembled; awaiting human sign-off |
-| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 18:13** | **8h 17m** | **6h 13m** |  | **2,176** | **3,449,185** | **117,796,802** | **991,392** | **122,239,555** |  |
+| SIGNOFF-DECISION | f00319bb | 2026-10-06 20:25 EDT | 20:26 | 1m 26s | 1m 26s | claude-opus-4-8 | 14 | 106,708 | 802,504 | 5,827 | 915,053 | SIGNOFF-1 approved — feature Done, signed off 2026-10-06 by Matt Quirk |
+| **Feature total** |  | **2026-10-05 10:51 EDT** | **2026-10-06 20:26** | **8h 18m** | **6h 14m** |  | **2,190** | **3,555,893** | **118,599,306** | **997,219** | **123,154,608** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | 8a0c380 | 12×A, 0×B | ⏸ Awaiting (owner Matt Quirk) |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | 8a0c380 | 12×A, 0×B | ✅ Approved 2026-10-06 — Matt Quirk |
