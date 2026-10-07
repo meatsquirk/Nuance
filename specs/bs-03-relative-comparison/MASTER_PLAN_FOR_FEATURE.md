@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** In progress — SCREEN-1 (shell) done; shell stage complete, next ITEST-1 (acceptance-tests). G-3 (tests) and G-4 (AC-4 ΔE00 literal) still open.
+**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3 (acceptance tests). G-3 (tests) and G-4 (AC-4 ΔE00 literal) still open.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -135,7 +135,7 @@ distance) — **DIFF-2** augments it with a near-identical control pair that rea
 | CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | 🔄 In progress (CVD-1 done) |
 | COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | 🔄 In progress (COMPARE-2 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ✅ Done (SCREEN-1; regions filled by behaviour phases) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1 harness done) |
 
 ## Dependency graph
 
@@ -192,8 +192,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | CVD-1 | shell: `CvdProfile` + `ConfusionCheck` signature + inject into deps | ✅ Done | 3,816,225 | 8m 30s | `CvdProfile`/`CvdType` + `ConfusionCheck`/`NoopConfusionCheck` + deps wiring; unit 215 green; coverage 100% on touched files; analyze + integ 17 green |
 | 4 | COMPARE-2 | shell: `ComparisonController`/state + `SampleSource` + read endpoint + comparison entry/route | ✅ Done | 12,364,300 | 25m 01s | controller/state/source/read-endpoint + comparison entry + `toComparison`→real screen (replaced `compare_stub`); unit 241 green, 100% coverage on 9 touched files, integ 17 green (bs-01 AC-9/10 on the real screen); analyze clean; 1/3 fix passes |
 | 5 | SCREEN-1 | shell: Comparison screen scaffold (E3–E8, E49 placeholders) bound to controller | ✅ Done | 6,544,654 | 12m 51s | `ComparisonScreen` + 5 region widgets (keyed, inert); unit 247 green / 100% cov on 6 new files; integ 17 green; analyze clean; 0/3 fix passes |
-| 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Next | | | all shells done |
-| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
+| 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 5,939,625 | 19m 08s | harness + 12-AC gate + smoke; acc 10/10, integ 27/27; grades 10×A; 0/3 fixes |
+| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
 | 8 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 (AC-4 literal needs G-4) |
 | 9 | ITEST-4 | test-review: packet; G-3 | ⬜ Todo | | | |
 | 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ⬜ Todo | | | first behaviour; unblocks all Givens |
@@ -210,25 +210,26 @@ when the row is marked done.
 
 ## Next phase
 
-**SCREEN-1 (shell) done — the shell stage is complete.** `ComparisonHomeScreen` now renders the real
-`ComparisonScreen` (under the existing `ComparisonReadEndpoint`): a pure view composing five keyed region
-widgets on disjoint files — `SlotsRegion` (Slot A/B lines + inert E3/E5/E49/E4), `DifferenceRegion`,
-`StatementRegion`, `ConfusionRegion`, `ComparisonActionsBar` (inert E6/E7/E8). All controls inert, all
-readings placeholders; the slot lines keep COMPARE-2's exact text so every existing suite stays green
-unedited. Unit 247 green, 100% coverage on all 6 new files; analyze + integration (17) green; 0/3 fix passes.
+**ITEST-1 (harness) done — the acceptance harness is in place.** `integration_test/comparison_harness.dart`
+drives the real assembled app via `buildApp` with the comparison entry: fixtures (`CATALOGUE` + the named
+samples + `CVD_DEUTAN`), the Given/When/Then vocabulary (`givenComparison`, `ComparisonHarness`), and an
+**independent** `referenceDeltaE00` (inline CIEDE2000, validated vs Sharma et al.) the AC tests grade ΔE00
+against. `bs03/pending.dart` seeds all **12** ACs → owning phase; `comparison_test.dart` holds the smoke test
++ guards. Acceptance 10/10, full integration 27/27 (17 bs-01 + 10 bs-03); grades **10×A**; 0/3 fix passes.
 
-- **Startable now:** **ITEST-1** — acceptance-tests: the comparison harness over the wired shells, the
-  fixtures, the pending gate (12 ACs) and the smoke test. The five regions are findable by `regionKey` and the
-  slot lines by text. Serial (ITEST-2 ∥ ITEST-3 open only after ITEST-1).
-- **Deviation to carry:** `AppRouter.toReadout` does **not** exist in bs-01 (gap analysis assumed it did);
-  `openReadout` is deferred to COMPARE-6, which adds `toReadout`.
-- **G-4 (spec-data reconciliation)** still open — stated ΔE00 "14.2" vs computed ≈ 13.05. Blocks **ITEST-3**
-  (AC-4 literal) and **DIFF-2** only. Settle before ITEST-3; ITEST-1 and ITEST-2 are clear of it.
-- **G-3** (approve acceptance tests) still open; blocks every behaviour phase (from COMPARE-3), not the ITEST
-  authoring phases.
+- **Startable now (parallel):** **ITEST-2** (AC-1,2,3,10,11,12) ∥ **ITEST-3** (AC-4,5,6,7,8,9) — one pending
+  test per AC + the run-pending red baseline, graded A. Both write disjoint catalogue rows into the shared
+  `comparison_test.dart` and may extend the harness vocabulary, so coordinate those edits (merge-risky pair).
+- **ITEST-3 carries G-4:** write AC-4's expected ΔE00 as a `TODO(G-4)` placeholder and keep it pending until
+  G-4 resolves — the reference confirms the stated LCh pair is ΔE00 ≈ **13.05**, not the spec's 14.2. ITEST-3
+  also constructs & verifies the `SAMPLE_UMBER`/`SAMPLE_ULTRAMARINE` deutan confusion pair (provisional now).
+- **G-3** (approve acceptance tests) still open; it gates ITEST-4's review and every behaviour phase, not
+  ITEST-2/3 authoring.
+- **Deviation still carried:** `AppRouter.toReadout` does not exist yet; `openReadout` → COMPARE-6.
 - **Branch note:** bs-03 is independent of bs-02 (D-1); nothing to merge here.
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up ITEST-1.
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up ITEST-2
+(or `/feature-next-phase --parallel bs-03-relative-comparison ITEST-3` to run the pair concurrently).
 
 ## Token usage
 
@@ -245,7 +246,8 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-co
 | COMPARE-2 | 73fe7631 | 2026-10-07 10:20 EDT | 10:45 | 25m 01s | 25m 01s | claude-opus-4-8 | 158 | 196,228 | 12,070,968 | 96,946 | 12,364,300 | shell: ComparisonController/state + SampleSource + ComparisonReadEndpoint + comparison entry/route; replaced compare_stub; unit 241 green, 100% coverage on 9 touched files, integ 17 green (incl. bs-01 AC-9/10 on the real screen), analyze clean; 1/3 fix passes |
 | RECONCILE | 646b2ffe | 2026-10-07 11:18 EDT | 11:22 | 3m 57s | 3m 57s | claude-opus-4-8 | 26 | 13,125 | 1,974,880 | 8,891 | 1,996,922 | fast-forwarded COMPARE-2 shell into feat/bs-03-relative-comparison (3279f0f), verified green (241 unit/100% cov/17 integ/analyze clean); applied COMPARE-2 rollup to master plan |
 | SCREEN-1 | 5ba35b2c | 2026-10-07 11:35 EDT | 11:48 | 12m 51s | 12m 51s | claude-opus-4-8 | 126 | 118,748 | 6,385,337 | 40,443 | 6,544,654 | shell: ComparisonScreen + 5 keyed region widgets (inert E3-E8/E49); unit 247 green, 100% coverage on 6 new files; analyze + integration 17 green; 0/3 fix passes |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 11:48** | **1h 53m** | **1h 20m** |  | **596** | **693,821** | **33,452,645** | **278,184** | **34,425,246** |  |
+| ITEST-1 | 71c0654e | 2026-10-07 12:24 EDT | 12:43 | 19m 08s | 19m 08s | claude-opus-4-8 | 104 | 207,156 | 5,669,931 | 62,434 | 5,939,625 | harness + 12-AC pending gate + smoke; acc 10/10, integ 27/27; grades 10×A; 0/3 fix passes |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 12:43** | **2h 12m** | **1h 39m** |  | **700** | **900,977** | **39,122,576** | **340,618** | **40,364,871** |  |
 
 ## Sign-off
 

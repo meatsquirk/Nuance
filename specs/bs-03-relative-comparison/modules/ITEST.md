@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/comparison_test.dart` (AC tests), `integration_test/comparison_harness.dart`
 (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the comparison entry); reuses
@@ -11,7 +11,7 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | acceptance-tests | — (harness) | ⬜ Todo | | |
+| 1 | acceptance-tests | — (harness) | ✅ Done | 5,939,625 | 19m 08s |
 | 2 | acceptance-tests | AC-1,2,3,10,11,12 | ⬜ Todo | | |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9 | ⬜ Todo | | |
 | 4 | test-review | — (G-3) | ⬜ Todo | | |
@@ -60,9 +60,58 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
   passes); harness tests graded A.
 - **Acceptance gate:** smoke green; pending gate in place (12 pending).
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+**Landed.** The bs-03 acceptance harness over the wired shells, driving the real assembled app through
+`buildApp` with the comparison entry (D-8):
+- `integration_test/comparison_harness.dart` — fixtures (`CATALOGUE` + `SAMPLE_A_TERRACOTTA`,
+  `SAMPLE_B_SIENNA`, `SAMPLE_A_PRIME`, `SAMPLE_UMBER`, `SAMPLE_ULTRAMARINE`, `CVD_DEUTAN`), the
+  Given/When/Then vocabulary (`givenComparison`, `ComparisonHarness.{state,controller,whenChooseA/B,whenSwap,
+  whenSpeak,whenOpenReadout}`), and the **independent** `referenceDeltaE00` (a complete inline CIEDE2000, not
+  the product metric — AC-4/AC-7 grade `deltaE00` against it). Re-exports the pending gate + fakes.
+- `integration_test/bs03/pending.dart` — `pendingACs` seeded with all **12** ACs → owning phase (AC-1/2/12→
+  COMPARE-3, AC-3→COMPARE-5, AC-4→DIFF-2, AC-5/6→DIFF-3, AC-7/8→CVD-2, AC-9→CVD-3, AC-10/11→COMPARE-6).
+- `integration_test/comparison_test.dart` — the never-pending smoke test (app boots to the Comparison screen;
+  all five region keys + endpoint render; opened empty state) + guards (gate dual-mode via `forceRunPending`;
+  fakes record; fixtures recover their LCh C/h; `referenceDeltaE00` vs 5 Sharma/Wu/Dalal published pairs +
+  self-distance 0). ITEST-2/3 append the per-AC `acTestWidgets` rows here.
+
+**Gates.** `flutter analyze` clean. Unit **247 green** (`flutter test --coverage`); coverage gate PASS — no
+touched `lib/**` files (harness is test-only). Acceptance: `flutter test integration_test/comparison_test.dart`
+**10/10 green** (smoke + 9 guards, iOS sim); full `flutter test integration_test/` **27/27** (17 bs-01 + 10
+bs-03). **Test grades: 10×A, 0×B** — graded by an independent fresh subagent against the scaffold rubric (no
+vacuous passes, honest comments, deterministic, reference provably independent); grid at
+`../behavior-test-completeness-bs-03-relative-comparison.md`. **Fix passes: 0/3.** No coverage exclusions.
+
+**Deviations / notes.** `SAMPLE_UMBER`/`SAMPLE_ULTRAMARINE` carry **provisional** CIELAB — ITEST-3/CVD-2
+construct & verify the deutan confusion-line property (D-5) and may repin them (`TODO(ITEST-3)` in the
+harness). The `when…` helpers target the shells' inert controls by widget text; ITEST-2 wires
+`whenChooseA/B` against COMPARE-3's real picker (E49). Grader's optional-only suggestions (an `isNotEmpty`
+guard on the gate's second test; a FakeHaptics record guard) left for ITEST-2/3 — not rubric failures.
+
+### Checkpoint / Handoff
+
+**Frozen for ITEST-2/3 (the AC-test phases):**
+- Boot a scenario: `final h = await givenComparison(tester, profile: CVD_DEUTAN, confusionCheck: …);`
+  (confusionCheck defaults to the inert `NoopConfusionCheck`; AC-7/8/9 inject CVD-2's real detector once it
+  lands — forward dep).
+- Observe: `h.state` (slots, `comparison` ΔE00/verdict/3 lines, `confusable`) via the read endpoint;
+  `h.speech.utterances` (AC-9); rendered region text/keys. Grade ΔE00 against `referenceDeltaE00(a, b)`.
+- Act: `h.whenChooseA/B(name)`, `h.whenSwap()`, `h.whenSpeak()`, `h.whenOpenReadout(ComparisonSlot.a/.b)`.
+- Register each AC: `acTestWidgets('AC-n', '…', (tester) async {…});` in `comparison_test.dart`. Default run
+  skips pending; red baseline = `--dart-define=BS03_RUN_PENDING=true flutter test
+  integration_test/comparison_test.dart`. Un-pend by deleting the AC's row in `bs03/pending.dart`.
+- **AC-4 literal:** blocked by **G-4** — the stated LCh pair computes ΔE00 ≈ **13.05** (confirmed by the
+  reference), not the spec's 14.2; write AC-4's expected string as `TODO(G-4)` and keep it pending until G-4.
+
+**Verification commands** (`export PATH="$HOME/development/flutter/bin:$PATH"`):
+`flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart <base>` ·
+`flutter test integration_test/comparison_test.dart` (default) ·
+`--dart-define=BS03_RUN_PENDING=true flutter test integration_test/comparison_test.dart` (run-pending).
+Integration runs on the iOS sim (exclusive lane — `coord.sh with-lock` in parallel sessions).
+
+**Next:** ITEST-2 (AC-1,2,3,10,11,12) ∥ ITEST-3 (AC-4,5,6,7,8,9) — disjoint catalogue rows in the same
+file; coordinate the shared `comparison_test.dart` / harness-vocabulary edits.
 
 ## Phase 2 — AC-1,2,3,10,11,12 (ITEST-2)
 
