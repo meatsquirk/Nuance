@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 (harness + scaffold suite) done; ITEST-2/3 (AC tests) next, then ITEST-4 (G-3)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/capture_test.dart` (AC tests), `integration_test/capture_harness.dart` (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the capture source), `integration_test/fakes/fake_capture_source.dart`; reuses bs-01's `integration_test/fakes/fake_haptics.dart`.
 **Depends on:** all shell phases (SOURCE-1, CAPTURE-2, SCREEN-1) · **Blocks:** every behavior phase (via G-3)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | acceptance-tests | — (harness) | ⬜ Todo | | |
+| 1 | acceptance-tests | — (harness) | ✅ Done | 6,008,655 | 17m 53s (17m 53s) |
 | 2 | acceptance-tests | AC-1,2,3,9,10 | ⬜ Todo | | |
 | 3 | acceptance-tests | AC-4,5,6,7,8,11 | ⬜ Todo | | |
 | 4 | test-review | — (G-3) | ⬜ Todo | | |
@@ -54,9 +54,70 @@
   passes); harness tests graded A.
 - **Acceptance gate:** smoke green; pending gate in place (11 pending).
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the bs-02 acceptance harness and the never-pending scaffold suite:
+- `capture_harness.dart` — the fixtures, the Given/When/Then vocabulary and the `givenCaptureOf` driver
+  (builds the real app via bs-01's `buildApp` with a `FakeCaptureSource` injected → opens on Capture);
+  re-exports the pending gate + fakes so an AC test imports only this file.
+- `fakes/fake_capture_source.dart` — `FakeCaptureSource` (the software source + recorded `framesRead` +
+  `groundTruth` + a `stagedPhoto` seam) and the `Photo` fixture type.
+- `capture_test.dart` — the AC-suite file: a smoke test + guard tests (never pending). ITEST-2/3 append the
+  per-AC `acTestWidgets`.
+- Seeded `bs02/pending.dart` (CAPTURE-1's gate) with **all 11 ACs** → owning phase (AC-3 → SCREEN-2, matching
+  the red-baseline column); default run skips them, `BS02_RUN_PENDING=1` runs them.
+
+Fixtures: SCENE_OLIVE/DIM/CARD/MULTIFRAME carry the olive ground truth (uniform; frame generation deferred to
+SOURCE-2 — DIM = low light, CARD = card present, MULTIFRAME = per-frame noise). SCENE_CENTRE_VARIED and
+PHOTO_SWATCH carry explicit frames whose pixels are rendered from chosen CIELAB region colours via the real
+`ColorScienceImpl.toSRGB`, so centre ≠ 5 px avg ≠ 21 px avg (the AC-2/AC-3 control) and P ≠ image centre (AC-9).
+
+Verification (Flutter 3.47.6): `flutter analyze` clean. `flutter test integration_test/capture_test.dart`
+**7 green** (smoke + 6 guards; no AC tests yet). Full `integration_test/` **24 green** (17 bs-01 + 7 bs-02).
+Unit **282 green**. Coverage gate `dart run tool/coverage_gate.dart main`: **PASS 100%** (no `lib` touched —
+only test files + the pending gate). **Grade (scaffold tests, self-assessed against the ITEST-1 criteria):
+A** — no vacuous passes (the pending map is pinned to exactly 11 ACs and owners; the control fixtures are
+proven distinct; the fake's frame count is asserted), comments claim only what is checked, deterministic
+(`pumpAndSettle`, stream `toList`, no sleeps). Per-AC grade grid begins at ITEST-2 (bs-01 convention).
+
+Ownership vs the plan's Files: also created `capture_test.dart` (the suite file the exit criteria runs) and
+seeded `bs02/pending.dart` (pre-created by CAPTURE-1) — both within the ITEST module's stated ownership.
+No AC un-pended (harness phase); no exclusions. Fix passes **0/3** (two pre-run compile fixes during analyze:
+the app-bar "Capture" assertion scoped to `AppBar` since E20 also reads "Capture"; `LockState` hidden from
+`material`). Tokens 6,008,655 · time 17m 53s (17m 53s).
+
+### Checkpoint / Handoff
+
+- **Verification commands** (unchanged; PATH `~/development/flutter/bin`): `flutter analyze`;
+  `flutter test integration_test/capture_test.dart` (default — pending skipped) /
+  `BS02_RUN_PENDING=1 flutter test integration_test/capture_test.dart` (run-pending / red baseline);
+  `flutter test integration_test/` (full); `flutter test --coverage` + `dart run tool/coverage_gate.dart main`.
+- **Frozen harness API (ITEST-1):**
+  - `givenCaptureOf(WidgetTester, CaptureScene) → CaptureHarness`.
+  - `CaptureHarness`: `.source` (`FakeCaptureSource`: `.groundTruth`, `.framesRead`, `.stagedPhoto`),
+    `.haptics`, `.controller`, `.state`; When helpers `whenLock` / `whenCommit` / `whenDismissWarning` /
+    `whenCalibrate` / `whenToggleValueOnly` / `whenSelectRadius(px)` / `whenImportPhoto(Photo)`.
+  - Fixtures: `SCENE_OLIVE`, `SCENE_DIM`, `SCENE_CARD`, `SCENE_MULTIFRAME`, `SCENE_CENTRE_VARIED`
+    (`CaptureScene`, `.groundTruth` / `.groundTruthName`); `PHOTO_SWATCH` (`Photo`: `.image`, `.pointX/Y`,
+    `.colorAtPoint`). `oliveGroundTruthName == 'Deep Olive Green'` (AC-11's Readout name).
+  - Pending gate (re-exported from `bs02/pending.dart`): `acTestWidgets(acId, desc, body)`, `pendingACs`,
+    `pendingSkipReason`, `behaviorPhases`. Un-pend an AC = delete its row in `bs02/pending.dart`.
+- **For ITEST-2 (AC-1,2,3,9,10) / ITEST-3 (AC-4..8,11):** append `acTestWidgets('AC-n', 'TestACnn_<Slug>',
+  …)` to `capture_test.dart`; name per the red-baseline table; observe via `harness.state` / the read endpoint
+  + rendered text. These two phases split the file region and may run concurrently.
+- **Seams ITEST-2/3 refine (flagged, not yet finalised):**
+  - `whenSelectRadius(px)` taps the E18 region; SCREEN-2 adds per-option 1/5/21 anchors → retarget then
+    (AC-3). `whenImportPhoto` stages the photo on the fake + taps E19; **SOURCE-3 wires how the controller
+    reads the staged photo and must enable E19** (carried from the SCREEN-1 handoff — E19 is a disabled
+    placeholder not in SOURCE-3's current Files).
+  - SCENE_CENTRE_VARIED's exact 5 px/21 px averages and PHOTO_SWATCH's P read depend on SOURCE-2/3's sampler;
+    assert `currentSample` ≈ the dominant region colour (`groundTruth` = the disc / `colorAtPoint`), tolerance
+    tuned at ITEST-2/3.
+  - **Red-baseline shape:** observe `currentSample` (null at baseline → the Then fails cleanly, no panic).
+    Tapping a wired-but-deferred control (`whenLock/Commit/Calibrate/DismissWarning/ToggleValueOnly`) throws
+    `UnimplementedError` until its phase, so AC-4/5/6/7/11 should assert the Given precondition / observable
+    Then rather than let the tap panic — structure them so the baseline red is a Then or a phase-named Given.
+- **G-3** (approve the acceptance tests) still gates every behaviour phase; decided at ITEST-4.
 
 ## Phase 2 — AC tests: sampling + screen (AC-1,2,3,9,10)
 

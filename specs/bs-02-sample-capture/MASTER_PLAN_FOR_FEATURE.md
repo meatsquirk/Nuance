@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** In progress — shells done (SOURCE-1, CAPTURE-2, SCREEN-1); next ITEST-1 (harness). G-3 approve-tests still open, blocks behaviour only
+**Status:** In progress — ITEST-1 (harness + scaffold suite) done; next ITEST-2 ∥ ITEST-3 (AC tests). G-3 approve-tests still open, blocks behaviour only
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -124,7 +124,7 @@ CAPTURE-6 target behaviour, not an augmentation.
 | SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` interface + software source; sampling (point, area-average, from-photo); frame feed/averaging primitives | bs-01 domain | 🔄 In progress |
 | CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; Capture Controller (lock, settle, radius, low-light, accuracy, calibration, commit); `CaptureAccuracy`; read endpoint; routing into `buildApp` | SOURCE, bs-01 `Haptics`/Readout | 🔄 In progress |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Capture screen UI: live view, eyedropper, reticle, radius selector, lock, stability, warnings, value-only, capture button, photo import | CAPTURE, SOURCE | 🔄 In progress |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
 
 ## Dependency graph
 
@@ -172,8 +172,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | SOURCE-1 | shell: `CaptureSource` + software source + sampling signatures | ✅ Done | 2,451,815 | 12m 12s (12m 12s) | 4 lib files (frame/source/software-source/sampling), 100% covered; analyze clean; 229 unit + 17 integ green |
 | 3 | CAPTURE-2 | shell: controller + state + `CaptureAccuracy` + read endpoint + route | ✅ Done | 9,221,563 | 16m 54s (16m 54s) | controller+state+accuracy+read endpoint; `Sample.accuracy`; `toReadout`; app opens on Capture; 100% cov, 264 unit + 17 integ green |
 | 4 | SCREEN-1 | shell: Capture screen scaffold (E15–E21 placeholders) bound to controller | ✅ Done | 6,759,706 | 13m 46s (13m 46s) | 4 widgets, 100% cov, 282 unit + 17 integ green |
-| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (11 ACs), smoke | ⬜ Next | | | all shells done |
-| 6 | ITEST-2 | acceptance-tests: AC-1,2,3,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (11 ACs), smoke | ✅ Done | 6,008,655 | 17m 53s (17m 53s) | harness + fakes + scaffold suite; 7 scaffold green, 24 integ, 282 unit, 100% cov |
+| 6 | ITEST-2 | acceptance-tests: AC-1,2,3,9,10 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,11 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
 | 8 | ITEST-4 | test-review: packet; G-3 | ⬜ Todo | | | |
 | 9 | SOURCE-2 | behavior: AC-2 — frame feed + point/area-average sampling, default 5 px | ⬜ Todo | | | ∥ CAPTURE-3 |
@@ -191,20 +191,21 @@ when the row is marked done.
 
 ## Next phase
 
-**ITEST-1 (acceptance-tests — harness) is next and startable.** All three shells are done: SCREEN-1 landed
-the Capture screen (`CaptureScreen` over the controller; `CaptureLiveView` feed+eyedropper+text readings;
-`CaptureControls` E15–E21 keyed buttons — E15/16/17/20/21 wired to their still-deferred controller action,
-E18/E19 disabled placeholders), wired into `CaptureHomeScreen` inside the existing `CaptureReadEndpoint`.
-282 unit + 17 bs-01 integ green; 100% coverage; analyze clean. Element keys are frozen in the SCREEN-1
-handoff — ITEST-1 builds `buildApp` with a `FakeCaptureSource`, writes the Given/When/Then vocabulary
-(When helpers tap by those keys), the fixtures, the pending gate (11 ACs), and the never-pending smoke test.
+**`{ITEST-2, ITEST-3}` are next and startable; they may run concurrently** (both append to
+`capture_test.dart` but split its file region — ITEST-2 the sampling+screen group AC-1,2,3,9,10; ITEST-3 the
+lifecycle+accuracy+commit group AC-4,5,6,7,8,11). The ITEST-1 harness is frozen: `givenCaptureOf(tester,
+scene)`, the `CaptureHarness` When/observe surface, the `SCENE_*` / `PHOTO_SWATCH` fixtures, and the
+`acTestWidgets` pending gate (all 11 ACs seeded). Each phase writes its `TestACnn_<Slug>` pending tests,
+runs run-pending for the red baseline, and grades A (the per-AC grid starts here).
 
-- After ITEST-1: `{ITEST-2, ITEST-3}` may run concurrently (disjoint file regions).
-- **G-3** (approve the acceptance tests) remains open; it blocks every behaviour phase, decided at ITEST-4.
+- Watch the red-baseline shape: observe `currentSample` (null at baseline → Then fails cleanly); for the
+  wired-but-deferred controls (lock/commit/calibrate/dismiss/value-only) structure the test so the baseline
+  red is a Then or a phase-named Given, not an `UnimplementedError` panic (see the ITEST-1 handoff).
+- **G-3** (approve the acceptance tests) remains open; decided at ITEST-4, after ITEST-2 + ITEST-3.
 - **Carried for SOURCE-3:** it must enable E19 (wire `importKey.onPressed`) in `capture_controls.dart`, not
   in its current Files — add that ownership (small augmentation / `--reconcile`) so AC-9 has a control to tap.
 
-Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… ITEST-1`).
+Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… ITEST-2` / `… ITEST-3`).
 
 ## Token usage
 
@@ -218,7 +219,8 @@ Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… IT
 | SOURCE-1 | 5fdfc7dc | 2026-10-06 21:07 EDT | 21:20 | 12m 12s | 12m 12s | claude-opus-4-8 | 56 | 85,940 | 2,330,132 | 35,687 | 2,451,815 | shell done — CaptureSource interface + SoftwareCaptureSource + sampling signatures; 4 lib files 100% covered; analyze clean; 229 unit + 17 integ green; fix passes 0/3 |
 | CAPTURE-2 | 132f4c0d | 2026-10-06 21:25 EDT | 21:42 | 16m 54s | 16m 54s | claude-opus-4-8 | 148 | 145,481 | 9,013,575 | 62,359 | 9,221,563 | shell done — CaptureController + CaptureState/LockState + CaptureAccuracy (D-3) + CaptureReadEndpoint; Sample.accuracy (nullable); AppRouter.toReadout + captureSource wiring (app opens on Capture); 100% coverage on 12 touched files; 264 unit + 17 integ green; fix passes 2/3 |
 | SCREEN-1 | 7c9b7878 | 2026-10-06 21:48 EDT | 22:01 | 13m 46s | 13m 46s | claude-opus-4-8 | 126 | 120,598 | 6,592,727 | 46,255 | 6,759,706 | shell done — Capture screen scaffold (CaptureScreen/LiveView/Eyedropper/Controls E15-E21) bound to controller; 4 widgets 100% covered; 282 unit + 17 integ green; analyze clean; fix passes 1/3 |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-06 22:01** | **1h 06m** | **1h 06m** |  | **454** | **673,504** | **24,056,354** | **237,117** | **24,967,429** |  |
+| ITEST-1 | 09e1b59f | 2026-10-06 22:06 EDT | 22:24 | 17m 53s | 17m 53s | claude-opus-4-8 | 96 | 154,235 | 5,788,523 | 65,801 | 6,008,655 | harness + FakeCaptureSource + fixtures + scaffold suite; pending gate seeded (11 ACs); 7 scaffold green, 24 integ, 282 unit, coverage 100%, analyze clean; grade A; fix passes 0/3 |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-06 22:24** | **1h 24m** | **1h 24m** |  | **550** | **827,739** | **29,844,877** | **302,918** | **30,976,084** |  |
 
 ## Sign-off
 

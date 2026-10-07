@@ -34,9 +34,23 @@ import 'package:flutter_test/flutter_test.dart';
 /// `BS02_RUN_PENDING=1` (or `--dart-define=BS02_RUN_PENDING=true` on-device) to
 /// execute them (the red-baseline / un-pend run).
 ///
-/// Seeded empty by the scaffold. ITEST-1 fills it with the 11 bs-02 ACs; each
-/// behaviour phase then removes the row it owns.
-const Map<String, String> pendingACs = {};
+/// Seeded with all 11 bs-02 ACs by ITEST-1; each behaviour phase removes the row
+/// it owns as it un-pends that AC. The owner is the phase whose acceptance gate
+/// un-pends the AC (AC-3 is un-pended by SCREEN-2 over SOURCE-2's radius
+/// sampling), matching ITEST's red-baseline *Owning phase* column.
+const Map<String, String> pendingACs = {
+  'AC-1': 'SCREEN-2', // centre-point eyedropper
+  'AC-2': 'SOURCE-2', // 5 px area-average sampling
+  'AC-3': 'SCREEN-2', // radius selector + reticle (over SOURCE-2 sampling)
+  'AC-4': 'CAPTURE-3', // lock settles the reading
+  'AC-5': 'CAPTURE-3', // pre-lock settling indicator
+  'AC-6': 'CAPTURE-4', // low-light → approximate, not refused
+  'AC-7': 'CAPTURE-4', // dismiss low-light warning
+  'AC-8': 'CAPTURE-5', // reference-card calibration upgrades the tier
+  'AC-9': 'SOURCE-3', // sample a point from a gallery photo
+  'AC-10': 'SCREEN-3', // value-only grayscale preview
+  'AC-11': 'CAPTURE-6', // multi-frame commit + haptic + open Readout
+};
 
 /// The behaviour phases allowed to own a pending AC.
 ///
