@@ -34,8 +34,9 @@
 
 ## Open gates
 
-- **G-1 (approve spec)** and **G-2 (bs-01 foundation)** block CAPTURE-1 (scaffold).
-- **G-3 (approve tests)** blocks CAPTURE-3/4/5/6 (behavior).
+- **G-1 (approve spec)** ✅ Resolved 2026-10-06 (owner Matt Quirk) and **G-2 (bs-01 foundation)** ✅ Resolved
+  2026-10-06 (bs-01 merged to `main` at c793839) — CAPTURE-1 is now unblocked.
+- **G-3 (approve tests)** blocks CAPTURE-3/4/5/6 (behavior) — still open, decided at the ITEST test review.
 
 ## Phase 1 — Scaffold
 

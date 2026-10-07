@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** Not started — next CAPTURE-1 (blocked by G-1 approve spec, G-2 bs-01 foundation)
+**Status:** Not started — next CAPTURE-1 (startable: G-1 ✅ and G-2 ✅ resolved 2026-10-06; G-3 approve-tests still open, blocks behaviour only)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -152,8 +152,8 @@ coordinate with any live bs-01 nav work.
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CAPTURE-1 | Open |
-| G-2 | dependency | bs-01 shared foundation merged to `main`: Flutter project, `Sample`/`Provenance`, `buildApp`, `Haptics`/`Speech`, color-science (ΔE00 + conversions), coverage-gate tool, `integration_test`, and the Readout screen rendering a sample's name (AC-11 opens it). Carries bs-01 CORE-1's Flutter-SDK-on-machine install. Closed by bs-01 sign-off (or at least CORE, A11Y, READOUT shells + name render merged) | CAPTURE-1, all shells | Open |
+| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CAPTURE-1 | ✅ Resolved 2026-10-06: approved — owner Matt Quirk. Spec first line records approval. |
+| G-2 | dependency | bs-01 shared foundation merged to `main`: Flutter project, `Sample`/`Provenance`, `buildApp`, `Haptics`/`Speech`, color-science (ΔE00 + conversions), coverage-gate tool, `integration_test`, and the Readout screen rendering a sample's name (AC-11 opens it). Carries bs-01 CORE-1's Flutter-SDK-on-machine install. Closed by bs-01 sign-off (or at least CORE, A11Y, READOUT shells + name render merged) | CAPTURE-1, all shells | ✅ Resolved 2026-10-06: bs-01 signed off and fast-forward-merged to `main` at c793839 (full foundation incl. Readout name render). |
 | G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -168,7 +168,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | CAPTURE-1 | scaffold: branch, baseline, verify coverage gate, BS02 pending runner | ⬜ Next | | | blocked by G-1, G-2 |
+| 1 | CAPTURE-1 | scaffold: branch, baseline, verify coverage gate, BS02 pending runner | ⬜ Next | | | G-1 ✅ + G-2 ✅ resolved 2026-10-06 — startable |
 | 2 | SOURCE-1 | shell: `CaptureSource` + software source + sampling signatures | ⬜ Todo | | | after scaffold |
 | 3 | CAPTURE-2 | shell: controller + state + `CaptureAccuracy` + read endpoint + route | ⬜ Todo | | | after SOURCE-1 |
 | 4 | SCREEN-1 | shell: Capture screen scaffold (E15–E21 placeholders) bound to controller | ⬜ Todo | | | after CAPTURE-2 |
@@ -191,10 +191,13 @@ when the row is marked done.
 
 ## Next phase
 
-CAPTURE-1 (scaffold) is next but **blocked by two gates**: G-1 (owner approves `bs-02-sample-capture.feature`
-— resolve with `/feature-next-phase --gate bs-02-sample-capture G-1 approved`) and G-2 (bs-01's shared
-foundation must be merged to `main` — bs-02 extends it and cannot scaffold against an empty tree). Once both
-are resolved, CAPTURE-1 runs; then the shells SOURCE-1 → CAPTURE-2 → SCREEN-1 run layered-serial.
+**CAPTURE-1 (scaffold) is startable.** Both blockers cleared 2026-10-06: G-1 (owner Matt Quirk approved the
+spec) and G-2 (bs-01 signed off and merged to `main` at c793839 — the full shared foundation is now on `main`).
+CAPTURE-1 branches `feat/bs-02-sample-capture` from `main`, records the baseline and wires the BS02 pending
+runner; then the shells SOURCE-1 → CAPTURE-2 → SCREEN-1 run layered-serial. G-3 (approve the acceptance tests)
+remains open and blocks the behaviour phases only — it is decided at the ITEST test review, not now.
+
+Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… CAPTURE-1`).
 
 ## Token usage
 
@@ -203,7 +206,8 @@ are resolved, CAPTURE-1 runs; then the shells SOURCE-1 → CAPTURE-2 → SCREEN-
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 87210ab6 | 2026-10-05 15:54 EDT | 16:05 | 10m 40s | 10m 40s | claude-opus-4-8 | 22 | 119,820 | 1,019,357 | 53,104 | 1,192,303 | plan written: 17 phases, 4 modules, 11 ACs; G-1/G-2/G-3 open |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-05 16:05** | **10m 40s** | **10m 40s** |  | **22** | **119,820** | **1,019,357** | **53,104** | **1,192,303** |  |
+| GATE-DECISION | f00319bb | 2026-10-06 20:25 EDT | 20:30 | 4m 50s | 4m 50s | claude-opus-4-8 | 44 | 127,866 | 2,953,692 | 20,839 | 3,102,441 | G-1 approved (owner Matt Quirk) + G-2 resolved (bs-01 merged to main at c793839); CAPTURE-1 unblocked, G-3 still open |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-06 20:30** | **15m 30s** | **15m 30s** |  | **66** | **247,686** | **3,973,049** | **73,943** | **4,294,744** |  |
 
 ## Sign-off
 
