@@ -324,6 +324,34 @@ void main() {
           reason: 'the live feed no longer overwrites the imported sample');
     });
 
+    test('committing an imported-photo reading commits the point sample (AC-9)',
+        () async {
+      final source = _ControllableSource();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+
+      // A live frame runs first (so the frame buffer holds stale camera frames),
+      // then the painter imports a photo and samples point P.
+      source.emitFrame(_uniformFrame(const Pixel(20, 180, 60)));
+      await pumpEventQueue();
+      source.importPhoto(
+        ImportedPhoto(image: swatchImage(), pointX: pointX, pointY: pointY),
+      );
+      controller.importPhoto();
+
+      controller.commit();
+
+      final committed = controller.state.lastCommittedSample;
+      expect(committed, isNotNull);
+      expect(controller.state.framesAveraged, 1,
+          reason: 'a photo reading is a single point sample, not a live '
+              'multi-frame average');
+      expect(_l1(committed!.coordinates, swatch), lessThan(9),
+          reason: 'the commit is the photo colour at point P, not the stale '
+              'live frames in the buffer');
+      expect(committed.justCaptured, isTrue);
+    });
+
     test('importPhoto with no photo staged is a no-op', () {
       final source = _ControllableSource();
       final controller = CaptureController(source: source);
@@ -392,6 +420,19 @@ void main() {
           reason: 'nothing sampled yet → nothing to commit');
     });
 
+    test('a commit marks the sample just-captured (opens the Readout, AC-11)',
+        () async {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.justCaptured, isTrue,
+          reason: 'the committed sample is just-captured so the Readout '
+              'confirms with a haptic as it lands (bs-01 AC-12)');
+    });
+
     test('dismissWarning clears the warning without changing the accuracy',
         () async {
       final controller = CaptureController(source: dimSource());
@@ -409,6 +450,62 @@ void main() {
           reason: 'the dismiss does not change the stated accuracy');
       expect(controller.state.accuracy, CaptureAccuracy.approximate,
           reason: 'the live accuracy tier is untouched by the dismiss');
+    });
+  });
+
+  group('multi-frame commit (CAPTURE-6, AC-11)', () {
+    test('commits the mean of the recent frames, not a single frame', () async {
+      final source = _ControllableSource();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+
+      // Two frames whose per-pixel mean is grey (120); the last frame alone is
+      // the brighter one.
+      const dark = Pixel(80, 80, 80);
+      const bright = Pixel(160, 160, 160);
+      const mean = Pixel(120, 120, 120);
+      source.emitFrame(_uniformFrame(dark));
+      source.emitFrame(_uniformFrame(bright));
+      await pumpEventQueue();
+
+      controller.commit();
+
+      final committed = controller.state.lastCommittedSample;
+      expect(committed, isNotNull);
+      expect(controller.state.framesAveraged, 2,
+          reason: 'the commit averaged the two buffered frames');
+      expect(_l1(committed!.coordinates, mean), lessThan(9),
+          reason: 'the committed colour is the multi-frame mean');
+      expect(_l1(committed.coordinates, bright), greaterThan(9),
+          reason: 'rejects committing only the last (single) frame');
+    });
+
+    test('averages only the most recent window — older frames drop out',
+        () async {
+      final source = _ControllableSource();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+
+      // Two early red frames, then a full window of blue: the buffer is capped
+      // at kStabilityFrameTarget, so the reds fall out and the mean is blue.
+      const red = Pixel(250, 10, 10);
+      const blue = Pixel(10, 10, 250);
+      source.emitFrame(_uniformFrame(red));
+      source.emitFrame(_uniformFrame(red));
+      for (var i = 0; i < kStabilityFrameTarget; i++) {
+        source.emitFrame(_uniformFrame(blue));
+      }
+      await pumpEventQueue();
+
+      controller.commit();
+
+      expect(controller.state.framesAveraged, kStabilityFrameTarget,
+          reason: 'the buffer is bounded to the most recent window');
+      final committed = controller.state.lastCommittedSample!;
+      expect(_l1(committed.coordinates, blue), lessThan(9),
+          reason: 'only the recent (blue) frames are averaged');
+      expect(_l1(committed.coordinates, red), greaterThan(9),
+          reason: 'the dropped early (red) frames do not pull the mean');
     });
   });
 
@@ -448,6 +545,25 @@ void main() {
           reason: 'the deterministic source recovers ground truth');
       expect(normalised.accuracy, CaptureAccuracy.calibrated,
           reason: 'the normalised reading carries the calibrated tier');
+    });
+
+    test('committing after calibration normalises the averaged colour (AC-8)',
+        () async {
+      final source = cardSource();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      controller.calibrate();
+
+      controller.commit();
+
+      final committed = controller.state.lastCommittedSample;
+      expect(committed, isNotNull);
+      expect(committed!.accuracy, CaptureAccuracy.calibrated,
+          reason: 'the committed sample carries the calibrated tier');
+      expect(committed.coordinates, groundTruth,
+          reason: 'the multi-frame mean is normalised against the card toward '
+              'ground truth, exactly as the live reading was');
     });
 
     test('calibrating with no card in view is a no-op', () async {

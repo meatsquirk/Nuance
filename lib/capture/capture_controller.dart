@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
 import 'capture_accuracy.dart';
@@ -65,6 +66,12 @@ class CaptureController extends ChangeNotifier {
   /// instead of the camera colour.
   bool _photoImported = false;
 
+  /// The most recent live frames, newest last, capped at [kStabilityFrameTarget]
+  /// — the window a [commit] averages over so the committed colour is the mean
+  /// of several settled frames rather than one noisy frame (AC-11). Bounded so a
+  /// live feed never grows it without limit.
+  final List<Frame> _recentFrames = <Frame>[];
+
   /// Samples the colour under the centre reticle of each live frame at the
   /// current radius and publishes it as [CaptureState.currentSample] (AC-2).
   ///
@@ -73,6 +80,12 @@ class CaptureController extends ChangeNotifier {
   /// been imported ([importPhoto]) the feed no longer overwrites the reading.
   void _onFrame(Frame frame) {
     if (_photoImported) return;
+    // Buffer the frame for the multi-frame commit (AC-11), keeping only the most
+    // recent window so a live feed cannot grow the buffer unboundedly.
+    _recentFrames.add(frame);
+    if (_recentFrames.length > kStabilityFrameTarget) {
+      _recentFrames.removeAt(0);
+    }
     final coordinates = sampleAreaAverage(
       frame,
       frame.width ~/ 2,
@@ -175,24 +188,54 @@ class CaptureController extends ChangeNotifier {
   void toggleValueOnly() =>
       throw UnimplementedError('toggleValueOnly: behaviour lands in SCREEN-3');
 
-  /// Commits the current reading as [CaptureState.lastCommittedSample], stamped
-  /// with the stated [CaptureState.accuracy] tier (AC-6).
+  /// Commits the reading as [CaptureState.lastCommittedSample], stamped with the
+  /// stated [CaptureState.accuracy] tier and marked [Sample.justCaptured] so the
+  /// Readout confirms with a haptic as it lands (bs-01 AC-12).
+  ///
+  /// The committed colour is the mean of the recent settled frames
+  /// ([averageFrames] over [_recentFrames]), not one noisy frame, so per-frame
+  /// camera noise averages out (AC-11); [CaptureState.framesAveraged] records how
+  /// many frames went in. When the reading is calibrated the averaged colour is
+  /// normalised against the reference card exactly as the live reading was
+  /// (AC-8). A reading taken from an imported photo (AC-9) is a single point
+  /// sample, not a live average, so it commits as it stands.
   ///
   /// A capture is **downgraded, never refused** (D-3): when the source reports
   /// [Lighting.low] the commit still lands a sample and raises the low-light
-  /// warning, marking the reading approximate rather than blocking it; in
-  /// adequate light the warning stays clear. A no-op before any colour has been
-  /// sampled (no live frame yet and no imported photo). Averaging several frames,
-  /// the confirm haptic and the Readout handoff land in CAPTURE-6.
+  /// warning, marking the reading approximate; in adequate light the warning
+  /// stays clear. A no-op before any colour has been sampled. The confirm haptic
+  /// and the Readout handoff ride on [Sample.justCaptured] through the router's
+  /// `toReadout` (D-5), fired by the Capture home screen on an adequate-light
+  /// commit.
   void commit() {
     final reading = _state.currentSample;
     if (reading == null) return;
+    final ColorCoordinates coordinates;
+    final int framesAveraged;
+    if (_photoImported) {
+      coordinates = reading.coordinates;
+      framesAveraged = 1;
+    } else {
+      final averaged = averageFrames(_recentFrames);
+      final mean = sampleAreaAverage(
+        averaged,
+        averaged.width ~/ 2,
+        averaged.height ~/ 2,
+        radiusPx: _state.radiusPx,
+      );
+      coordinates = _state.accuracy == CaptureAccuracy.calibrated
+          ? source.normaliseAgainstCard(mean)
+          : mean;
+      framesAveraged = _recentFrames.length;
+    }
     emit(_state.copyWith(
       lastCommittedSample: Sample(
-        coordinates: reading.coordinates,
+        coordinates: coordinates,
         provenance: const Provenance(ProvenanceTier.measured),
         accuracy: _state.accuracy,
+        justCaptured: true,
       ),
+      framesAveraged: framesAveraged,
       lowLightWarning: source.lighting == Lighting.low,
     ));
   }

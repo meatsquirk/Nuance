@@ -4,7 +4,9 @@ import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
+import 'package:paint_color_assistant/capture/capture_controls.dart';
 import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
+import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
@@ -22,6 +24,26 @@ AppDependencies _captureDeps(SoftwareCaptureSource source) => AppDependencies(
       colorScience: const ColorScienceImpl(),
       speech: const NoopSpeech(),
       haptics: const NoopHaptics(),
+      captureSource: source,
+    );
+
+/// A [Haptics] that counts the confirmation pulses, so a test can observe the
+/// capture → Readout → confirm handoff (bs-01 AC-12).
+class _RecordingHaptics implements Haptics {
+  int confirmations = 0;
+
+  @override
+  Future<void> confirm() async => confirmations++;
+}
+
+AppDependencies _captureDepsWith(
+  SoftwareCaptureSource source,
+  Haptics haptics,
+) =>
+    AppDependencies(
+      colorScience: const ColorScienceImpl(),
+      speech: const NoopSpeech(),
+      haptics: haptics,
       captureSource: source,
     );
 
@@ -170,6 +192,50 @@ void main() {
 
       // A disposed ChangeNotifier throws if listened to again.
       expect(() => controller.addListener(() {}), throwsFlutterError);
+    });
+
+    testWidgets('a commit opens the captured reading\'s Readout and confirms',
+        (tester) async {
+      final haptics = _RecordingHaptics();
+      await tester.pumpWidget(
+        buildApp(_captureDepsWith(_captureSource(), haptics)),
+      );
+      // The live feed samples a reading on open; capturing commits it.
+      expect(haptics.confirmations, 0);
+
+      await tester.tap(find.byKey(CaptureControls.captureKey));
+      await tester.pumpAndSettle();
+
+      // The commit navigates to bs-01's Readout for the captured sample (D-5),
+      // where the just-captured marker fires exactly one confirmation haptic.
+      expect(find.byType(ReadoutScreen), findsOneWidget,
+          reason: 'the commit opens the Readout');
+      expect(find.widgetWithText(AppBar, 'Readout'), findsOneWidget);
+      expect(haptics.confirmations, 1,
+          reason: 'the just-captured reading confirms with one haptic (AC-12)');
+    });
+
+    testWidgets('a low-light commit keeps the painter on the Capture screen',
+        (tester) async {
+      final haptics = _RecordingHaptics();
+      final source = SoftwareCaptureSource(
+        const SceneSpec(
+          groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
+          lighting: Lighting.low,
+        ),
+      );
+      await tester.pumpWidget(buildApp(_captureDepsWith(source, haptics)));
+
+      await tester.tap(find.byKey(CaptureControls.captureKey));
+      await tester.pumpAndSettle();
+
+      // A low-light commit lands a sample but does not open the Readout: the
+      // painter stays on Capture to dismiss the warning and continue capturing
+      // at the lower accuracy (AC-6/AC-7). No reading lands, so no haptic fires.
+      expect(find.byType(ReadoutScreen), findsNothing,
+          reason: 'a low-light commit stays on the Capture screen');
+      expect(find.byType(CaptureHomeScreen), findsOneWidget);
+      expect(haptics.confirmations, 0);
     });
   });
 

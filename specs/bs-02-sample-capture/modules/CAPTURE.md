@@ -1,6 +1,6 @@
 # Module CAPTURE — scaffold, capture controller, accuracy, commit
 
-**Status:** In progress — CAPTURE-5 (behavior) done; reference-card calibration landed, AC-8 un-pended green and AC-6's augmentation closed (B-pending-CAPTURE-5 → A). Next CAPTURE-6 (AC-11, commit→Readout)
+**Status:** Done — all six phases complete. CAPTURE-6 landed the multi-frame commit → Readout handoff, AC-11 un-pended green; AC-4/5/6/7/8/11 all green. No CAPTURE work remains.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`, `lib/capture/capture_accuracy.dart`, `lib/capture/capture_read_endpoint.dart`; edits to bs-01's `lib/app/build_app.dart` and `lib/app/router.dart` (add the Capture route); the BS02 pending-runner wiring the scaffold adds.
 **Depends on:** SOURCE (consumes `CaptureSource` + sampling), bs-01 `Haptics` + Readout route · **Blocks:** SCREEN, ITEST, every capture behavior
@@ -14,7 +14,7 @@
 | 3 | behavior | AC-4, AC-5 | ✅ Done | 51,577,446 | 1h 28m (3h 35m) |
 | 4 | behavior | AC-6, AC-7 | ✅ Done | 9,611,728 | 20m 03s (20m 03s) |
 | 5 | behavior | AC-8 | ✅ Done | 16,450,722 | 34m 29s (1h 29m) |
-| 6 | behavior | AC-11 | ⬜ Todo | | |
+| 6 | behavior | AC-11 | ✅ Done | 14,356,155 | 39m 10s (39m 10s) |
 
 ## Interface reconciliation
 
@@ -446,6 +446,79 @@ exclusions. Tokens 16,450,722 · time 34m 29s (1h 29m).
   mean, not a single frame; one haptic; Readout shows "Deep Olive Green").
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the multi-frame commit + Readout handoff across two lib files.
+
+- **`capture_controller.dart`** — `commit()` rewritten: the committed colour is now the mean of the recent
+  live frames (`averageFrames` over a bounded `_recentFrames` window, buffered in `_onFrame`, capped at
+  `kStabilityFrameTarget` so a live feed never grows it without limit), sampled at the current radius, then
+  **normalised against the card when the reading is calibrated** (AC-8 preserved) — per-frame camera noise
+  averages out (AC-11). `commit()` now stamps `CaptureState.framesAveraged` and marks the sample
+  `Sample.justCaptured`, keeps the `lowLightWarning`-on-commit behaviour (AC-6/AC-7) and the stated-accuracy
+  stamping (AC-8). A reading sampled from an imported photo (AC-9) commits as a single point sample
+  (`framesAveraged` 1), not a live average.
+- **`build_app.dart` (`CaptureHomeScreen`)** — owns the commit→Readout navigation: a controller listener
+  opens bs-01's Readout (`AppRouter.toReadout`, D-5) once per commit **in adequate light**; the
+  `justCaptured` sample fires bs-01's confirmation haptic as the Readout lands (bs-01 AC-12). A **low-light**
+  commit keeps the painter on the Capture screen to dismiss the warning and continue capturing at the lower
+  accuracy (AC-6/AC-7), so the handoff waits for adequate light. The committed sample's identity gates the
+  push to once per capture. The controller is **not** given a router/haptics (CAPTURE-2's constructor stays
+  frozen) — navigation and the haptic are the screen's/Readout's concern.
+
+**Harness change (necessary, flag for SIGNOFF-1 — like G-4):** `capture_harness.dart`'s `controller` getter
+now finds the read endpoint with `skipOffstage: false`. Reason: a commit pushes the Readout (opaque) over the
+Capture route, which puts the still-mounted Capture subtree offstage; AC-8 and AC-11 read
+`harness.state.lastCommittedSample` **after** the commit navigates (the AC-8 test comment says so), so the
+observation seam must stay reachable while offstage. It only broadens the finder — exactly one
+`CaptureReadEndpoint` ever exists, so non-navigating tests still resolve the single on-stage endpoint. No AC
+assertion weakened (confirmed by the fresh re-grade).
+
+Un-pended **AC-11** (deleted its `pendingACs` row; the pending-gate guard `expectedOwners` now holds 2 —
+AC-3/AC-10). Acceptance gate green: `flutter test integration_test/capture_test.dart` (default) → **17 pass +
+2 pending-skip** (AC-3/AC-10); AC-11 runs live and passes (committed colour = 12-frame mean within ΔE00 8 of
+ground truth; `framesAveraged` 12 > 1; exactly one haptic; Readout shows "Deep Olive Green"). Run-pending →
+only AC-3/AC-10 fail (their SCREEN-2/SCREEN-3 Thens). Full `integration_test/` (bs-01 + bs-02) → **34 pass +
+2 pending-skip** (bs-01 unaffected by the shared `build_app.dart` edit). Unit **315 pass** (was 308: +7 —
+multi-frame averaging, window-trim, calibrated-commit, photo-commit, just-captured controller tests, and two
+`build_app` navigation widget tests). `flutter analyze` clean. Coverage gate
+`dart run tool/coverage_gate.dart <base>` → **100% on both touched lib files, PASS**
+(`capture_controller.dart`, `build_app.dart`).
+
+**Grade gate:** fresh independent re-grade (grader did not write the tests) of all **9** un-pended AC tests →
+**9×A** (AC-1/2/4/5/6/7/8/9/11); AC-11 fresh live **A**; no downgrades, no regression from CAPTURE-6's three
+touch points (commit rewrite, the `skipOffstage` finder, AC-6's CAPTURE-5 control). Whole-suite grid **11×A,
+0×B** (recorded in `behavior-test-completeness-bs-02-sample-capture.md`).
+
+**Other test changes (recorded, not AC-weakening):** `capture_controller_test` — new multi-frame commit
+group (averages the recent frames, not one; the bounded window drops older frames), a calibrated-commit case,
+a photo-commit case, and a just-captured case; `build_app_test` — a `_RecordingHaptics` plus two navigation
+widget tests (an adequate-light commit opens the Readout and confirms once; a low-light commit stays on
+Capture). Fix passes: **1/3** — the first acceptance run reddened AC-6/AC-8/AC-11 because the pushed Readout
+put the read endpoint offstage; fixed by the `skipOffstage: false` harness getter (above), after which the
+suite is green. No exclusions, no augmentations (AC-11 has none). Tokens 14,356,155 · time 39m 10s (39m 10s).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged (PATH export + `flutter analyze` / `flutter test --coverage` /
+  `flutter test integration_test/capture_test.dart` [+ `--dart-define=BS02_RUN_PENDING=true` to run pending] /
+  `dart run tool/coverage_gate.dart <base>`).
+- **Frozen interfaces (CAPTURE-6):**
+  - `CaptureController.commit()` — commits the mean of the recent frames (`averageFrames` over a bounded
+    `_recentFrames` window), normalised against the card when calibrated; stamps `framesAveraged` and marks
+    the sample `justCaptured`; keeps `lowLightWarning` set-on-commit; a photo reading commits as a single
+    point sample. The CAPTURE-2 constructor (`CaptureController({required source})`) is unchanged — no
+    router/haptics on the controller.
+  - `CaptureHomeScreen` opens `AppRouter.toReadout(sample)` on an adequate-light commit (D-5); a low-light
+    commit stays on Capture. The confirm haptic rides on `Sample.justCaptured` through bs-01's Readout.
+  - `capture_harness.dart` `controller`/`state` read the endpoint with `skipOffstage: false` (observable
+    after the commit navigates).
+- **Known gaps:** `setRadius` / `toggleValueOnly` still throw `UnimplementedError` until SCREEN-2 / SCREEN-3.
+  **For SIGNOFF-1:** G-4 (CAPTURE-3 `givenCaptureOf` harness change) and the CAPTURE-6 `skipOffstage: false`
+  harness getter change are both advisory harness-change flags to confirm at sign-off — neither blocks a
+  behaviour phase, and the fresh re-grade found no AC weakened. Photo-then-commit is handled (single point
+  sample) though bs-02 has no AC for it.
+- **Next phase:** CAPTURE is **complete**. Remaining bs-02 behaviour: **SCREEN-2** (AC-1/AC-3 — eyedropper +
+  radius selector/reticle) and **SCREEN-3** (AC-10 — value-only, after SCREEN-2); then **SIGNOFF-1**. SCREEN-2
+  edits the Capture screen; base any worktree on this tip (CAPTURE-6 touched `build_app.dart` +
+  `capture_controller.dart` + the harness).

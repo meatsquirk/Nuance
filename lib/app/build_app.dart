@@ -143,18 +143,44 @@ class CaptureHomeScreen extends StatefulWidget {
 class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
   CaptureController? _controller;
 
+  /// The committed sample the Readout has already been opened for, so the
+  /// handoff fires once per capture rather than on every later state change.
+  Sample? _openedReadoutFor;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Build the controller once, over the capture source injected above.
     if (_controller == null) {
       final source = AppScope.of(context).captureSource!;
-      _controller = CaptureController(source: source);
+      _controller = CaptureController(source: source)
+        ..addListener(_openReadoutOnCommit);
     }
+  }
+
+  /// Opens the captured reading's Readout once a capture commits in adequate
+  /// light (bs-02 D-5).
+  ///
+  /// A commit fills [CaptureController.state]'s `lastCommittedSample` with a
+  /// just-captured sample; this pushes bs-01's Readout for it, where the
+  /// just-captured marker fires the confirmation haptic as the reading lands
+  /// (bs-01 AC-12). A low-light commit keeps the painter on the Capture screen
+  /// to dismiss the warning and continue capturing at the lower accuracy
+  /// (AC-6/AC-7), so the handoff waits for adequate light. The committed
+  /// sample's identity gates the push to once per capture, not on every later
+  /// state change (settling ticks, a warning dismiss).
+  void _openReadoutOnCommit() {
+    final committed = _controller!.state.lastCommittedSample;
+    if (committed == null || identical(committed, _openedReadoutFor)) return;
+    _openedReadoutFor = committed;
+    if (_controller!.state.lowLightWarning) return;
+    Navigator.of(context)
+        .push(AppScope.of(context).router.toReadout(committed));
   }
 
   @override
   void dispose() {
+    _controller?.removeListener(_openReadoutOnCommit);
     _controller?.dispose();
     super.dispose();
   }

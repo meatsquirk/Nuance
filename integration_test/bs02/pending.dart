@@ -52,7 +52,7 @@ const Map<String, String> pendingACs = {
   // AC-8 (reference-card calibration upgrades the tier) un-pended by CAPTURE-5 — now always runs.
   // AC-9 (sample a point from a gallery photo) un-pended by SOURCE-3 — now always runs.
   'AC-10': 'SCREEN-3', // value-only grayscale preview
-  'AC-11': 'CAPTURE-6', // multi-frame commit + haptic + open Readout
+  // AC-11 (multi-frame commit + haptic + open Readout) un-pended by CAPTURE-6 — now always runs.
 };
 
 /// The behaviour phases allowed to own a pending AC.

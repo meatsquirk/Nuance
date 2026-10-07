@@ -307,9 +307,14 @@ class CaptureHarness {
   final FakeHaptics haptics;
 
   /// The live controller the Capture screen owns, via the read endpoint.
+  ///
+  /// `skipOffstage: false` so the capture state stays observable after a commit
+  /// opens the Readout (D-5): the Capture route is still mounted underneath the
+  /// pushed Readout, just offstage, and its controller holds the committed
+  /// sample the AC-8 / AC-11 Thens read after the navigation.
   CaptureController get controller => tester
       .widget<CaptureReadEndpoint>(
-        find.byKey(CaptureReadEndpoint.endpointKey),
+        find.byKey(CaptureReadEndpoint.endpointKey, skipOffstage: false),
       )
       .controller;
 

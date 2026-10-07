@@ -86,17 +86,16 @@ void main() {
     // as green at baseline (its always-running test is below). AC-2 is absent:
     // SOURCE-2 un-pended it. AC-9 is absent: SOURCE-3 un-pended it. AC-4 and AC-5
     // are absent: CAPTURE-3 un-pended them. AC-6 and AC-7 are absent: CAPTURE-4
-    // un-pended them. AC-8 is absent: CAPTURE-5 un-pended it. So only the three
-    // still-pending ACs remain here.
+    // un-pended them. AC-8 is absent: CAPTURE-5 un-pended it. AC-11 is absent:
+    // CAPTURE-6 un-pended it. So only the two still-pending ACs remain here.
     const expectedOwners = {
       'AC-3': 'SCREEN-2',
       'AC-10': 'SCREEN-3',
-      'AC-11': 'CAPTURE-6',
     };
 
     test('the still-pending ACs are each owned by a real behaviour phase', () {
       expect(pendingACs, expectedOwners);
-      expect(pendingACs.length, 3);
+      expect(pendingACs.length, 2);
       for (final owner in pendingACs.values) {
         expect(behaviorPhases, contains(owner),
             reason: '"$owner" is not a known bs-02 behaviour phase');

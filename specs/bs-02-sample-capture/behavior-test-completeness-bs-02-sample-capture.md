@@ -249,3 +249,62 @@ are unchanged. No un-pended test is weakened.
   (AC-3/AC-10/AC-11 pending). The eight un-pended AC tests all executed live and passed.
 - **Whole-suite grid: 11×A, 0×B.** AC-6's B-pending is now resolved to A; every other row holds A. Still-pending
   rows carry their prior A-as-written grades: AC-3 (SCREEN-2), AC-10 (SCREEN-3), AC-11 (CAPTURE-6).
+
+## Grade — CAPTURE-6 re-grade (whole un-pended suite)
+
+Graded by an independent fresh grader (did not write the tests) on 2026-10-07. CAPTURE-6 landed AC-11
+(multi-frame commit → opens the Readout with a confirmation haptic) and un-pended it. Per the grade gate a
+behaviour phase re-grades **every un-pended AC test** against the **live** behaviour — so the nine currently
+un-pended tests (AC-1, AC-2, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11) are graded live here; AC-3 (SCREEN-2)
+and AC-10 (SCREEN-3) remain pending and carry their prior A-as-written rows. Confirmed by live runs: default
+`flutter test integration_test/capture_test.dart` → **16 passed, 3 skipped** (AC-3/AC-10/… — actually AC-3 and
+AC-10 skip; AC-11 now runs and passes); `--dart-define=BS02_RUN_PENDING=true` → only AC-3 and AC-10 fail (the
+two still-pending red baselines), every un-pended test including AC-11 passes.
+
+**CAPTURE-6's three touch points weighed for silent weakening — none weakened a previously-A test:**
+1. **`commit()` now averages the recent frames, records `framesAveraged`, stamps `justCaptured: true`, and (for
+   a calibrated reading) normalises the averaged colour against the card.** For the single-explicit-frame scenes
+   (SCENE_DIM / SCENE_CARD) `averageFrames` over one replayed frame returns that frame unchanged, so AC-6's
+   `_dimRaw` (ΔE00 ≈5.1) and AC-8's post-calibration `normaliseAgainstCard` (→ ground truth, ΔE00 0) are exactly
+   as before — AC-6 and AC-8 still bite with the same margins. `justCaptured: true` makes an **adequate-light**
+   commit navigate to the Readout; AC-6's low-light commit does **not** navigate (`_openReadoutOnCommit` returns
+   on `lowLightWarning`), so AC-6's dim half stays on the Capture screen as its Thens require.
+2. **The harness `controller` getter now uses `skipOffstage: false`.** This is the necessary accommodation for
+   (1): AC-8's and the AC-6-control's adequate-light commits now push a Readout, putting the Capture route
+   offstage; the broadened finder keeps `harness.state.lastCommittedSample` readable from the still-mounted
+   offstage Capture controller (D-5). Only one `CaptureReadEndpoint` ever exists, so the broadened finder still
+   resolves to exactly that one for the non-navigating tests (AC-1/2/4/5/7/9 and AC-6's dim half) — no false
+   match, no weakening. Live run confirms AC-8 and the AC-6 control read the real committed sample across the
+   push.
+3. **AC-6's calibrated-vs-approximate control** (landed CAPTURE-5) is unchanged in behaviour; under CAPTURE-6 its
+   card commit additionally navigates, which the `skipOffstage: false` getter absorbs. Control still
+   discriminates and AC-6 holds A.
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_Eyedropper` | A | G1,G4,G5,G6 (G2/G3 n/a) | Carried-forward live A; untouched by CAPTURE-6 (pure structural layout read, no commit/haptic/nav dependency). Given checked through the real UI (`AppBar 'Capture'` + `liveViewKey`); asserts reticle centre vs feed centre on both axes at epsilon 0.5 (not mere presence). Live `CaptureLiveView` lays the feed `StackFit.expand` and the reticle in a `Center`, so a correct render matches to ~0 px and 0.5 kills an absent/off-centre marker. |
+| AC-2 | `TestAC02_AreaAverage5px` | A | G1,G2,G4,G5,G6 (G3 n/a) | Carried-forward live A; untouched. Configured radius read through the endpoint (`state.radiusPx==5`, G2). Real `sampleAreaAverage(..., radiusPx:5)` drives the three-way distance Then on `SCENE_CENTRE_VARIED` (red/teal/yellow, pairwise L1 ~200–280 ≫ `_sampleToleranceL1 = 45`); kills a point read (`toDisc < toCentre`) and a wider radius (`toDisc < toOuter`). The `skipOffstage:false` getter is irrelevant here (no navigation; one on-stage endpoint). |
+| AC-4 | `TestAC04_LockSettles` | A | G1,G4,G5,G6 (G3 n/a) | Carried-forward live A; lock/settle unchanged by CAPTURE-6. Given `lockState==auto`; `_pumpUntilText` climbs the real frame counter to `find.text('SETTLING 6/12')` (G1). Taps real E16; `takeException` bounded (no-op). Thens assert exact "AE · AWB · AF LOCKED" + "STABLE 12/12" + `lockState==locked` + `stabilityText=='STABLE 12/12'` at grain (G4). Kills unchanged-indicator / never-settles / partial-lock. No commit, so CAPTURE-6's commit/nav changes do not reach it. |
+| AC-5 | `TestAC05_SettlingWarns` | A | G1,G3,G4,G5,G6 | Carried-forward live A; unaffected. Given `lockState==auto`; counter advances 0→6 (no lock tap, no commit). Textbook G3: negatives (`isStable==false`, "STABLE 12/12" findsNothing) at a settle point, paired with the counter climbing 0→6, and AC-4 proves a locked reading WOULD show STABLE; `lockButton.enabled==true` on the correct `TextButton` cast proves the affordance. Kills STABLE-while-unlocked and a missing/disabled control. |
+| AC-6 | `TestAC06_LowLightApproximate` | A | G1,G2,G3,G4,G5,G6 | Carried-forward live A (resolved B→A at CAPTURE-5); holds under CAPTURE-6. Dim half: live `commit()` on configured SCENE_DIM (G2) kills refusal-in-dim (`lastCommittedSample isNotNull`), kills no-warning (`warningKey` + flag), commits `approximate`, and the averaged `_dimRaw` sits ΔE00 ≈5.1 — asserted **both** `≤ approximate.maxDeltaE (8)` **and** `> calibrated.maxDeltaE (3)`, so the label is a real downgrade. The dim commit raises `lowLightWarning`, so `_openReadoutOnCommit` suppresses navigation — the Thens that read the Capture screen (`warningKey`) stay valid. Control: fresh SCENE_CARD app, adequate light, calibrate+commit reads `calibrated` within ΔE00 3 — now read across the Readout push via `skipOffstage:false`. Pairing proves low light *specifically* downgrades (G3/G5). One AC (the calibrated assertions serve AC-6's own downgrade contrast, G6). |
+| AC-7 | `TestAC07_DismissWarning` | A | G1,G3,G4,G5,G6 | Carried-forward live A; unaffected by CAPTURE-6. Given built through the real `commit()` on SCENE_DIM (`warningKey` + `lowLightWarning==true` + `lastCommittedSample.accuracy==approximate` before the When, read via `state` not the label). The dim commit does not navigate (low light), so the screen stays put for the dismiss. Taps real E15 → `dismissWarning()`; `takeException` bounded. Textbook G3: the negative (warning gone) after the settle point, paired with the warning-present Given; accuracy-invariance before **and** after kills *dismiss clears/upgrades the accuracy*. |
+| AC-8 | `TestAC08_CardCalibrates` | A | G1,G2,G4,G5,G6 | Carried-forward live A; **now exercises the Readout push.** Given `referenceCardPresent==true` via `harness.source` (G2). Calibrate (real E17) upgrades the live label, asserted through `find.descendant(of: accuracyKey, matching: 'Calibrated')` on the Capture screen before the commit navigates away. Commit (real E20, adequate light) now pushes the Readout; `harness.state.lastCommittedSample` is read from the offstage-but-mounted Capture controller via `skipOffstage:false` (the CAPTURE-6 getter change) and asserted `calibrated` **and** within ΔE00 3. Non-vacuous (G5): `_cardRaw` sits ΔE00 ≈4.6, so a relabel-only no-op commits ≈4.6 > 3 → `≤3` fails it; `normaliseAgainstCard` → ground truth lands ΔE00 0, a 3-ΔE margin. One AC. |
+| AC-9 | `TestAC09_SampleFromPhoto` | A | G1,G2,G4,G5,G6 (G3 n/a) | Carried-forward live A; unaffected. Given checked on the fixture (`atP != atCentre`). `whenImportPhoto` taps E19 → real `importPhoto()` sets `_photoImported` + `sampleFromPhoto(image, P=(12,12), radiusPx:5)`; the local `pumpAndSettle` delivers still-undrained live frames that `_onFrame` ignores (feed-switch guard exercised). Discriminators `toP < 45`, `toP < toCentre` (magenta vs grey), `toP < distToColor(sampled, liveCamera)` (vs olive host). No commit/nav, so CAPTURE-6 does not touch it; no faked sample value (G2). |
+| AC-11 | `TestAC11_CommitOpensReadout` | A | G1,G4,G5,G6 (G3 n/a) | **Now live against CAPTURE-6's commit → average → navigate path.** Givens checked on the public surface: `haptics.confirmations==0` before the capture, and `find.text('STABLE 12/12')` after a real `whenLock` (G1); `takeException` bounded (no-op). When taps real E20. Thens at grain (G4): `framesAveraged > 1` — on noisy SCENE_MULTIFRAME the `pumpAndSettle`-drained 12-frame feed buffers into `_recentFrames`, so `commit()` averages 12 (live) and this kills a single-frame commit **by count**; the committed colour is the multi-frame mean within ΔE00 8 of ground truth (the antisymmetric per-frame noise averages out), a validity bound reinforcing the name; **exactly** `confirmations==1` (the pushed `ReadoutController` fires `_confirmIfJustCaptured` once on construction — kills no-haptic and double-pulse); `find.widgetWithText(AppBar, 'Readout')` (kills no-nav) and `find.descendant(of: NameHeader.headerKey, matching: 'Deep Olive Green')` where the committed sample is **un-named** so the name is derived from its coordinates via `nearestName` (kills nav-without-sample and the wrong name). **G5 — kills:** single-frame commit (count), missing/duplicate haptic (==1), failed navigation (AppBar), wrong/absent sample at the Readout (keyed name descendant). One AC (G6). |
+
+### Summary — CAPTURE-6
+
+- **Grade counts (whole un-pended suite re-grade): 9×A, 0×B** across the un-pended set (AC-1, AC-2, AC-4, AC-5,
+  AC-6, AC-7, AC-8, AC-9, AC-11). **AC-11 is a fresh live A** against CAPTURE-6's multi-frame commit + confirm
+  haptic + Readout handoff; the other eight hold their prior live A with **no downgrade**.
+- **Whole-suite grid: 11×A, 0×B.** The two still-pending rows carry their prior A-as-written grades unchanged:
+  AC-3 (SCREEN-2) and AC-10 (SCREEN-3).
+- **No previously-A test regressed.** CAPTURE-6's three touch points were each checked: (1) `commit()` averaging
+  + `justCaptured` + calibrated-normalise leaves AC-6/AC-7 (low-light, no nav) and AC-8 (single replayed frame,
+  real normalise) behaving as before; (2) the `skipOffstage: false` getter is the necessary accommodation for the
+  new Readout push and only broadens the finder, with exactly one `CaptureReadEndpoint` ever present so
+  non-navigating tests still resolve to the single on-stage endpoint; (3) AC-6's control is unchanged and still
+  discriminates, with the push absorbed by the getter.
+- **Live-run evidence:** default `flutter test integration_test/capture_test.dart` → 16 passed, AC-3/AC-10
+  skipped, **AC-11 executed live and passed**; run-pending → only AC-3 and AC-10 fail (the two red baselines),
+  every un-pended test including AC-11 passes.
