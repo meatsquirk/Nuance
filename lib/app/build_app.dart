@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../a11y/cvd/confusion_check.dart';
+import '../a11y/cvd/cvd_profile.dart';
 import '../a11y/haptics.dart';
 import '../a11y/speech.dart';
 import '../color_science/color_science.dart';
@@ -36,6 +38,8 @@ class AppDependencies {
     required this.haptics,
     this.router = const AppRouter(),
     this.initialSample = demoSample,
+    this.cvdProfile = const CvdProfile(type: CvdType.deutan),
+    this.confusionCheck = const NoopConfusionCheck(),
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -56,6 +60,20 @@ class AppDependencies {
   /// acceptance harness injects a fixture here to read each scenario's sample
   /// through this same [buildApp] entry (capture replaces it in bs-02).
   final Sample initialSample;
+
+  /// The painter's colour-vision profile, read by [confusionCheck] (bs-03 D-4).
+  ///
+  /// Defaults to a deutan profile for bs-03's comparison scenarios; **bs-07**
+  /// (CVD self-assessment) later populates it from the painter. Injected here so
+  /// the confusion detector and the later simulation/daltonization features
+  /// (bs-08/bs-10) all read one profile.
+  final CvdProfile cvdProfile;
+
+  /// Decides whether a compared pair is confusable for [cvdProfile] (AC-7/AC-8).
+  ///
+  /// Defaults to the inert [NoopConfusionCheck] so the assembled app wires the
+  /// detector but flags nothing until CVD-2 supplies the dichromat projection.
+  final ConfusionCheck confusionCheck;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.

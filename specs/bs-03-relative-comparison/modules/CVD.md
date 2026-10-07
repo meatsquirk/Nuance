@@ -13,7 +13,7 @@ confusion-warning + speak regions in SCREEN
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 3,816,225 | 8m 30s |
 | 2 | behavior | AC-7, AC-8 | ⬜ Todo | | |
 | 3 | behavior | AC-9 | ⬜ Todo | | |
 
@@ -55,9 +55,57 @@ confusion-warning + speak regions in SCREEN
   default changes nothing).
 - **Acceptance gate:** *(shell — none)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** `lib/a11y/cvd/cvd_profile.dart` (`CvdType` { protan, deutan, tritan }
+  + `CvdProfile` { type, severity 0–1, default severity 1.0 }, value equality);
+  `lib/a11y/cvd/confusion_check.dart` (`ConfusionCheck` interface
+  `bool confusable(ColorCoordinates a, ColorCoordinates b, CvdProfile p)` +
+  inert `NoopConfusionCheck` → always false); `lib/app/build_app.dart` gains
+  `AppDependencies.cvdProfile` (default deutan) and `confusionCheck` (default
+  `NoopConfusionCheck`), wired through the existing `AppScope`. Behaviour
+  unchanged — the default detector flags nothing. Dartdoc on each surface names
+  D-4/D-5, AC-7/AC-8, and the bs-07 (populate profile) / bs-08 / bs-10 (reuse
+  projection) reconciliation.
+- **Tests:** `test/a11y/cvd/cvd_profile_test.dart` (8), `test/a11y/cvd/confusion_check_test.dart`
+  (2), and 3 new cases in `test/app/build_app_test.dart` (default profile,
+  default check, explicit injection).
+- **Unit gate:** 215 green (202 → 215, +13). **Coverage:** `dart run
+  tool/coverage_gate.dart main` → 100% on all touched files
+  (`cvd_profile.dart`, `confusion_check.dart`, `build_app.dart`,
+  `difference.dart`), PASS.
+- **Existing suites green:** `flutter analyze` clean; `flutter test integration_test/`
+  17 green (iOS sim) — the inert default changes nothing.
+- **Acceptance gate:** none (shell). **Augmentations:** none.
+- **Fix passes:** 0/3 (passed first run). **Tokens / Time:** 3,816,225 / 8m 30s.
+
+### Checkpoint / Handoff
+
+- **Frozen for consumers (COMPARE-2, CVD-2, CVD-3):**
+  `CvdType` { protan, deutan, tritan }; `CvdProfile({required type, severity = 1.0})`
+  with value equality (import `package:paint_color_assistant/a11y/cvd/cvd_profile.dart`);
+  `ConfusionCheck.confusable(ColorCoordinates a, ColorCoordinates b, CvdProfile p) → bool`
+  with `NoopConfusionCheck` the shipped default
+  (`package:paint_color_assistant/a11y/cvd/confusion_check.dart`);
+  `AppDependencies.cvdProfile` (default deutan) and `.confusionCheck` (default
+  `NoopConfusionCheck`), both injected via `AppScope`.
+- **To fill in behaviour phases:** CVD-2 adds the real dichromat-projection
+  detector (Viénot/BVM LMS, D-4/D-5) as a new `ConfusionCheck` impl and injects
+  it, replacing `NoopConfusionCheck` in the comparison assembly; the fixture
+  `SAMPLE_UMBER`/`SAMPLE_ULTRAMARINE` deutan pair is constructed/verified in
+  ITEST-3 and consumed here. CVD-3 adds `comparison_speech.dart` reusing the
+  `Speech` seam.
+- **Verification commands** (export PATH first —
+  `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+  `flutter test --coverage` · `flutter test integration_test/` ·
+  `dart run tool/coverage_gate.dart main`.
+- **Known gaps:** detection is inert (`NoopConfusionCheck`) until CVD-2; the
+  injected `CvdProfile` is a fixed deutan default until bs-07 populates it.
+  Carry-over bs-01 flake: a const-ctor line can intermittently read uncovered on
+  `--coverage`; re-run once.
+- **Next:** COMPARE-2 is now unblocked (needs DIFF-1 **and** CVD-1 — both done):
+  `ComparisonController`/state, `SampleSource` + in-memory catalogue,
+  `ComparisonReadEndpoint`, and the `buildApp` comparison entry/route.
 
 ## Phase 2 — Confusion detector + warning (CVD-2)
 

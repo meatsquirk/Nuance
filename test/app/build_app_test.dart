@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
+import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
@@ -58,6 +60,28 @@ void main() {
         router: router,
       );
       expect(identical(deps.router, router), isTrue);
+    });
+
+    test('defaults the CVD profile to deutan (bs-03 D-4)', () {
+      expect(_deps().cvdProfile, const CvdProfile(type: CvdType.deutan));
+    });
+
+    test('defaults the confusion check to the inert NoopConfusionCheck', () {
+      expect(_deps().confusionCheck, isA<NoopConfusionCheck>());
+    });
+
+    test('keeps an explicitly injected CVD profile and confusion check', () {
+      const profile = CvdProfile(type: CvdType.protan, severity: 0.6);
+      const check = NoopConfusionCheck();
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        cvdProfile: profile,
+        confusionCheck: check,
+      );
+      expect(deps.cvdProfile, same(profile));
+      expect(identical(deps.confusionCheck, check), isTrue);
     });
   });
 
