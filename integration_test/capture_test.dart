@@ -9,17 +9,23 @@
 // skipped). Run-pending: `BS02_RUN_PENDING=1 flutter test
 // integration_test/capture_test.dart` (the red-baseline / un-pend run).
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart' hide LockState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_controls.dart';
 import 'package:paint_color_assistant/capture/capture_eyedropper.dart';
 import 'package:paint_color_assistant/capture/capture_live_view.dart';
 import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
 import 'package:paint_color_assistant/capture/capture_state.dart';
+import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/capture/source/frame.dart';
 import 'package:paint_color_assistant/color_science/color_science.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/readout/name_header.dart';
 
 import 'capture_harness.dart';
 
@@ -154,6 +160,22 @@ void main() {
       expect(haptics.confirmations, 0);
       await haptics.confirm();
       expect(haptics.confirmations, 1);
+    });
+
+    test('SCENE_CARD and SCENE_DIM read clearly off their ground truth, so the '
+        'accuracy / normalisation Thens (AC-6, AC-8) are not vacuous', () {
+      // Both accuracy-tier scenes share the olive ground truth; their raw frames
+      // sit a verified ΔE00 ≈ 4.6 / 5.1 off it (CIEDE2000). Guard the sRGB
+      // separation so the fixtures can never silently regress to a ground-truth
+      // reading — which would let a calibration/accuracy no-op pass the ΔE Thens.
+      final groundTruthPx = _science.toSRGB(SCENE_OLIVE.groundTruth);
+      for (final scene in [SCENE_CARD, SCENE_DIM]) {
+        final frame = scene.spec.frames!.single;
+        final rawPx = frame.pixelAt(frame.width ~/ 2, frame.height ~/ 2);
+        expect(_distToPixel(groundTruthPx, rawPx), greaterThan(20),
+            reason: '${scene.id}: the raw reading must sit clearly off ground '
+                'truth so a no-op accuracy label cannot pass the ΔE Thens');
+      }
     });
   });
 
@@ -407,6 +429,291 @@ void main() {
         findsOneWidget,
         reason: 'AC-10: the value-only control reads "✓ Value" (SCREEN-3)');
   });
+
+  // ===========================================================================
+  // ITEST-3 — lifecycle + accuracy + commit ACs (AC-4, AC-5, AC-6, AC-7, AC-8,
+  // AC-11)
+  //
+  // The lock/settle lifecycle, the low-light and reference-card accuracy tiers,
+  // and the multi-frame commit → Readout handoff. Same ITEST-1 harness and read
+  // endpoint as ITEST-2; the accuracy Thens measure the committed colour against
+  // the fake source's known ground truth in real CIEDE2000 ΔE00 (`_deltaE00`),
+  // so "within ΔE00 N" is an actual numeric check, not label text (D-4). Each
+  // control whose behaviour is still deferred throws `UnimplementedError` on tap,
+  // so (as AC-10 does) each test consumes that one expected throw via
+  // `tester.takeException()` — the baseline red then lands on a Then or on a
+  // Given precondition naming the owning phase, never a panic. Settling is driven
+  // by frames (CAPTURE-3), so AC-4 / AC-5 pump the feed to reach "SETTLING 6/12".
+  // ===========================================================================
+
+  // AC-4 — Locking AE/AWB/AF settles the reading: the indicator reads
+  // "AE · AWB · AF LOCKED" and the stability reading jumps to "STABLE 12/12".
+  // Owned by CAPTURE-3 (which also drives the pre-lock settling counter).
+  acTestWidgets('AC-4', 'TestAC04_LockSettles', (tester) async {
+    // Given: the Capture screen is open on SCENE_OLIVE in auto exposure, and the
+    // live view reads "SETTLING 6/12" — a partially settled, not-yet-stable
+    // reading. The counter is frame-driven (CAPTURE-3), so advance the feed until
+    // it reads 6/12; at baseline it never leaves "SETTLING 0/12", so this Given
+    // precondition reds cleanly naming CAPTURE-3 (no lock is tapped yet, so no
+    // deferred throw here).
+    final harness = await givenCaptureOf(tester, SCENE_OLIVE);
+    expect(harness.state.lockState, LockState.auto,
+        reason: 'AC-4 Given: the reading starts in auto exposure');
+    await _pumpUntilText(tester, 'SETTLING 6/12');
+    expect(find.text('SETTLING 6/12'), findsOneWidget,
+        reason: 'AC-4 Given: the live view reads "SETTLING 6/12" before the '
+            'lock — CAPTURE-3 drives the frame-settling counter');
+
+    // When: the painter locks exposure, white balance and focus together (E16).
+    await harness.whenLock();
+    final deferred = tester.takeException();
+    expect(deferred, anyOf(isNull, isA<UnimplementedError>()),
+        reason: 'AC-4: only the pending-stage UnimplementedError may be '
+            'deferred by the E16 tap');
+
+    // Then: the indicator reads "AE · AWB · AF LOCKED" (exact string — rejects an
+    // unchanged indicator and a partial AE/AWB/AF lock), the stability reading is
+    // "STABLE 12/12" (rejects a reading that never settles), and the observable
+    // lock state is fully locked.
+    expect(find.text('AE · AWB · AF LOCKED'), findsOneWidget,
+        reason: 'AC-4: locking shows the "AE · AWB · AF LOCKED" indicator '
+            '(CAPTURE-3)');
+    expect(find.text('STABLE 12/12'), findsOneWidget,
+        reason: 'AC-4: the stability indicator reaches STABLE 12/12 on lock');
+    expect(harness.state.lockState, LockState.locked,
+        reason: 'AC-4: the capture is fully locked, not a partial lock');
+    expect(harness.state.stabilityText, 'STABLE 12/12',
+        reason: 'AC-4: the observable stability reading is STABLE 12/12');
+  });
+
+  // AC-5 — Before locking, the stability indicator warns the reading is still
+  // settling ("SETTLING 6/12") and the lock control invites locking. Owned by
+  // CAPTURE-3.
+  acTestWidgets('AC-5', 'TestAC05_SettlingWarns', (tester) async {
+    // Given: the Capture screen is open on SCENE_OLIVE in auto exposure.
+    final harness = await givenCaptureOf(tester, SCENE_OLIVE);
+    expect(harness.state.lockState, LockState.auto,
+        reason: 'AC-5 Given: the reading is in auto exposure');
+
+    // When: frames arrive and the painter does not lock — the reading is left to
+    // settle (the counter advances one step per frame; CAPTURE-3). No lock tap,
+    // so no deferred throw.
+    await _pumpUntilText(tester, 'SETTLING 6/12');
+
+    // Then: the indicator reads "SETTLING 6/12" (the counter advanced from 0 —
+    // the reading is live, not frozen), it is NOT stable while unlocked (rejects
+    // showing STABLE before a lock — the settle point is that we are still in
+    // auto), and the lock control is present and enabled, inviting the painter
+    // to lock.
+    expect(find.text('SETTLING 6/12'), findsOneWidget,
+        reason: 'AC-5: the indicator reads "SETTLING 6/12" while unlocked '
+            '(CAPTURE-3 drives the settling counter)');
+    expect(harness.state.lockState, LockState.auto,
+        reason: 'AC-5 settle point: still unlocked when the reading is read');
+    expect(harness.state.isStable, isFalse,
+        reason: 'AC-5: the reading is not STABLE while it is still settling');
+    expect(find.text('STABLE 12/12'), findsNothing,
+        reason: 'AC-5: no STABLE reading is shown before locking');
+    final lockButton =
+        tester.widget<TextButton>(find.byKey(CaptureControls.lockKey));
+    expect(lockButton.enabled, isTrue,
+        reason: 'AC-5: the lock control invites locking (present + enabled)');
+  });
+
+  // AC-6 — A low-light reading is marked approximate rather than refused: a
+  // low-light warning shows, a sample IS committed (never refused), and it is
+  // approximate within ΔE00 8 of ground truth. Owned by CAPTURE-4. Graded
+  // *B pending CAPTURE-5*: with only one accuracy tier until the reference-card
+  // path lands, this test cannot yet prove low light *specifically* downgrades
+  // vs a single always-on tier — CAPTURE-5 adds the calibrated-vs-approximate
+  // control (see the Test augmentations table).
+  acTestWidgets('AC-6', 'TestAC06_LowLightApproximate', (tester) async {
+    // Given: capturing SCENE_DIM without a reference card — the source reports
+    // low light and no card (asserted through the read endpoint's source).
+    final harness = await givenCaptureOf(tester, SCENE_DIM);
+    expect(harness.source.lighting, Lighting.low,
+        reason: 'AC-6 Given: the scene is in low light');
+    expect(harness.source.referenceCardPresent, isFalse,
+        reason: 'AC-6 Given: no reference card is present');
+
+    // When: the painter commits the reading (E20).
+    await harness.whenCommit();
+    final deferred = tester.takeException();
+    expect(deferred, anyOf(isNull, isA<UnimplementedError>()),
+        reason: 'AC-6: only the pending-stage UnimplementedError may be '
+            'deferred by the E20 tap');
+
+    // Then: a low-light warning is shown; a sample IS committed (rejects
+    // refusing the capture in dim light); its stated accuracy is approximate
+    // (rejects leaving it calibrated with no card); and its colour is within
+    // ΔE00 8 of ground truth — the approximate tier's promise (D-4).
+    expect(harness.state.lowLightWarning, isTrue,
+        reason: 'AC-6: a low-light warning is raised on commit (CAPTURE-4)');
+    expect(find.byKey(CaptureLiveView.warningKey), findsOneWidget,
+        reason: 'AC-6: the low-light warning is shown on the live view');
+    final committed = harness.state.lastCommittedSample;
+    expect(committed, isNotNull,
+        reason: 'AC-6: the reading is committed, not refused, in low light');
+    expect(committed!.accuracy, CaptureAccuracy.approximate,
+        reason: 'AC-6: the committed sample is marked approximate');
+    expect(_deltaE00(committed.coordinates, harness.source.groundTruth),
+        lessThanOrEqualTo(CaptureAccuracy.approximate.maxDeltaE),
+        reason: 'AC-6: the committed colour is within ΔE00 8 of ground truth');
+  });
+
+  // AC-7 — Dismissing the low-light warning clears it and the reading stays
+  // approximate (the dismiss does not change the accuracy). Owned by CAPTURE-4.
+  acTestWidgets('AC-7', 'TestAC07_DismissWarning', (tester) async {
+    // Given: a low-light warning is showing on the Capture screen — built
+    // through the real commit flow on SCENE_DIM (CAPTURE-4 raises it on a
+    // low-light commit). At baseline the commit is deferred and no warning is
+    // raised, so this Given precondition reds cleanly naming CAPTURE-4.
+    final harness = await givenCaptureOf(tester, SCENE_DIM);
+    await harness.whenCommit();
+    final committedThrow = tester.takeException();
+    expect(committedThrow, anyOf(isNull, isA<UnimplementedError>()),
+        reason: 'AC-7: only the pending-stage UnimplementedError may be '
+            'deferred by the E20 tap');
+    expect(find.byKey(CaptureLiveView.warningKey), findsOneWidget,
+        reason: 'AC-7 Given: a low-light warning is shown on the Capture '
+            'screen (CAPTURE-4 raises it on a low-light commit)');
+    expect(harness.state.lowLightWarning, isTrue,
+        reason: 'AC-7 Given: the low-light warning is active');
+    expect(harness.state.lastCommittedSample?.accuracy,
+        CaptureAccuracy.approximate,
+        reason: 'AC-7 Given: the low-light reading is approximate before the '
+            'dismiss');
+
+    // When: the painter dismisses the warning (E15).
+    await harness.whenDismissWarning();
+    final dismissThrow = tester.takeException();
+    expect(dismissThrow, anyOf(isNull, isA<UnimplementedError>()),
+        reason: 'AC-7: only the pending-stage UnimplementedError may be '
+            'deferred by the E15 tap');
+
+    // Then (after the dismiss settles): the warning is cleared — not findable —
+    // while the accuracy label stays approximate (rejects a dismiss that also
+    // clears or upgrades the accuracy). The warning was present in the Given and
+    // is absent now, so this negative Then is a settled observation of a reading
+    // that demonstrably changed, not a vacuous one.
+    expect(find.byKey(CaptureLiveView.warningKey), findsNothing,
+        reason: 'AC-7: the low-light warning is cleared after the dismiss');
+    expect(harness.state.lowLightWarning, isFalse,
+        reason: 'AC-7: the warning flag is cleared');
+    expect(harness.state.lastCommittedSample?.accuracy,
+        CaptureAccuracy.approximate,
+        reason: 'AC-7: the reading remains approximate — the dismiss does not '
+            'change the accuracy label');
+  });
+
+  // AC-8 — Calibrating against a reference card normalises captures toward
+  // ground truth and upgrades the accuracy to "calibrated" (within ΔE00 3).
+  // Owned by CAPTURE-5.
+  acTestWidgets('AC-8', 'TestAC08_CardCalibrates', (tester) async {
+    // Given: the Capture screen is open on SCENE_CARD — a reference card is
+    // present in the frame under controlled lighting (asserted through the read
+    // endpoint's source); its ground truth is known.
+    final harness = await givenCaptureOf(tester, SCENE_CARD);
+    expect(harness.source.referenceCardPresent, isTrue,
+        reason: 'AC-8 Given: a reference card is present in the frame');
+
+    // When: the painter calibrates against the card (E17) …
+    await harness.whenCalibrate();
+    final calibrateThrow = tester.takeException();
+    expect(calibrateThrow, anyOf(isNull, isA<UnimplementedError>()),
+        reason: 'AC-8: only the pending-stage UnimplementedError may be '
+            'deferred by the E17 tap');
+
+    // … and the stated accuracy is upgraded to "Calibrated" on the live label
+    // (rejects an accuracy that stays approximate after calibrate). Asserted on
+    // the Capture screen before the commit navigates away.
+    expect(
+        find.descendant(
+          of: find.byKey(CaptureLiveView.accuracyKey),
+          matching: find.text('Calibrated'),
+        ),
+        findsOneWidget,
+        reason: 'AC-8: calibrating upgrades the accuracy label to "Calibrated"');
+
+    // … then captures (E20).
+    await harness.whenCommit();
+    final commitThrow = tester.takeException();
+    expect(commitThrow, anyOf(isNull, isA<UnimplementedError>()),
+        reason: 'AC-8: only the pending-stage UnimplementedError may be '
+            'deferred by the E20 tap');
+
+    // Then: the capture is normalised toward ground truth — the committed colour
+    // is within ΔE00 3, the calibrated tier's promise (D-4; rejects a
+    // calibration that no-ops and leaves the colour at the ΔE8 tier) — and the
+    // committed sample carries the upgraded "calibrated" accuracy.
+    final committed = harness.state.lastCommittedSample;
+    expect(committed, isNotNull,
+        reason: 'AC-8: a sample is committed after calibrating');
+    expect(committed!.accuracy, CaptureAccuracy.calibrated,
+        reason: 'AC-8: the committed sample is upgraded to calibrated');
+    expect(_deltaE00(committed.coordinates, harness.source.groundTruth),
+        lessThanOrEqualTo(CaptureAccuracy.calibrated.maxDeltaE),
+        reason: 'AC-8: the normalised colour is within ΔE00 3 of ground truth');
+  });
+
+  // AC-11 — Capturing commits a settled reading averaged over several frames,
+  // fires exactly one haptic, and opens the Readout for the captured sample
+  // showing "Deep Olive Green". Owned by CAPTURE-6; its "STABLE 12/12" Given is
+  // enabled by CAPTURE-3's lock/settle.
+  acTestWidgets('AC-11', 'TestAC11_CommitOpensReadout', (tester) async {
+    // Given: the Capture screen is open on SCENE_MULTIFRAME (several noisy frames
+    // whose per-pixel mean is the ground truth), no haptic has fired, and the
+    // reading has reached "STABLE 12/12" via locking. Reaching STABLE is
+    // CAPTURE-3 behaviour, so at baseline the lock is deferred and the reading
+    // stays "SETTLING 0/12" — this Given precondition reds cleanly naming
+    // CAPTURE-3.
+    final harness = await givenCaptureOf(tester, SCENE_MULTIFRAME);
+    expect(harness.haptics.confirmations, 0,
+        reason: 'AC-11 Given: no haptic has fired before the capture');
+    await harness.whenLock();
+    final lockThrow = tester.takeException();
+    expect(lockThrow, anyOf(isNull, isA<UnimplementedError>()),
+        reason: 'AC-11: only the pending-stage UnimplementedError may be '
+            'deferred by the E16 tap');
+    expect(find.text('STABLE 12/12'), findsOneWidget,
+        reason: 'AC-11 Given: the reading has reached STABLE 12/12 (CAPTURE-3 '
+            'lock/settle) before the capture');
+
+    // When: the painter captures the sample (E20).
+    await harness.whenCommit();
+    final commitThrow = tester.takeException();
+    expect(commitThrow, anyOf(isNull, isA<UnimplementedError>()),
+        reason: 'AC-11: only the pending-stage UnimplementedError may be '
+            'deferred by the E20 tap');
+
+    // Then: the reading was averaged over several frames (`framesAveraged` > 1 —
+    // rejects a single-frame commit by count) and the committed colour is the
+    // multi-frame mean, i.e. a valid olive reading within ΔE00 8 of ground truth
+    // (the symmetric per-frame noise averages out); exactly one haptic confirmed
+    // the landing (rejects no haptic / a double pulse); and the current screen is
+    // the Readout for the captured sample, showing "Deep Olive Green" (rejects
+    // navigating without the sample or with the wrong name).
+    final committed = harness.state.lastCommittedSample;
+    expect(committed, isNotNull, reason: 'AC-11: the capture commits a sample');
+    expect(harness.state.framesAveraged, greaterThan(1),
+        reason: 'AC-11: the reading is averaged over several frames, not one');
+    expect(_deltaE00(committed!.coordinates, harness.source.groundTruth),
+        lessThanOrEqualTo(CaptureAccuracy.approximate.maxDeltaE),
+        reason: 'AC-11: the committed colour is the multi-frame mean, ≈ ground '
+            'truth (not a single noisy frame)');
+    expect(harness.haptics.confirmations, 1,
+        reason: 'AC-11: exactly one haptic confirms the reading landed');
+    expect(find.widgetWithText(AppBar, 'Readout'), findsOneWidget,
+        reason: 'AC-11: the captured sample opens its Readout');
+    expect(
+        find.descendant(
+          of: find.byKey(NameHeader.headerKey),
+          matching: find.text(oliveGroundTruthName),
+        ),
+        findsOneWidget,
+        reason: 'AC-11: the Readout shows the captured sample name '
+            '"Deep Olive Green"');
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -439,3 +746,112 @@ int _distToPixel(SRGBColor sampled, Pixel pixel) =>
 /// The L1 sRGB gap between two rendered colours.
 int _distToColor(SRGBColor a, SRGBColor b) =>
     _rgbL1(a.red, a.green, a.blue, b.red, b.green, b.blue);
+
+// ---------------------------------------------------------------------------
+// Settling + accuracy helpers for the lifecycle / accuracy / commit ACs.
+// ---------------------------------------------------------------------------
+
+/// Pumps the feed up to [maxPumps] frames, stopping as soon as [text] is
+/// rendered, so a frame-driven reading (CAPTURE-3's settling counter) can be
+/// advanced to a specific value — e.g. "SETTLING 6/12" — before the assertion.
+///
+/// At baseline the shell never advances the counter, so this exhausts its
+/// budget and returns without the text present; the following `expect` then reds
+/// cleanly on a Then / Given precondition rather than hanging.
+Future<void> _pumpUntilText(
+  WidgetTester tester,
+  String text, {
+  int maxPumps = 60,
+}) async {
+  for (var i = 0; i < maxPumps; i++) {
+    if (find.text(text).evaluate().isNotEmpty) return;
+    await tester.pump();
+  }
+}
+
+double _deg2rad(double degrees) => degrees * math.pi / 180.0;
+
+/// CIEDE2000 colour difference (ΔE00) between two canonical-CIELAB colours.
+///
+/// The perceptual metric the accuracy tiers are defined in (D-3/D-4): the
+/// accuracy Thens measure the committed sample against the fake source's known
+/// ground truth, so "within ΔE00 8 / 3" is a real numeric check rather than
+/// label text. Computed test-side (independent of the implementation's own
+/// colour maths) so the test defines the bound it enforces. Follows Sharma,
+/// Wu & Dalal (2005).
+double _deltaE00(ColorCoordinates c1, ColorCoordinates c2) {
+  final l1 = c1.lightness, a1 = c1.a, b1 = c1.b;
+  final l2 = c2.lightness, a2 = c2.a, b2 = c2.b;
+
+  final cStar1 = math.sqrt(a1 * a1 + b1 * b1);
+  final cStar2 = math.sqrt(a2 * a2 + b2 * b2);
+  final cBar = (cStar1 + cStar2) / 2.0;
+  final cBar7 = math.pow(cBar, 7).toDouble();
+  final pow25_7 = math.pow(25, 7).toDouble();
+  final g = 0.5 * (1 - math.sqrt(cBar7 / (cBar7 + pow25_7)));
+
+  final a1p = (1 + g) * a1;
+  final a2p = (1 + g) * a2;
+  final c1p = math.sqrt(a1p * a1p + b1 * b1);
+  final c2p = math.sqrt(a2p * a2p + b2 * b2);
+
+  double hPrime(double b, double ap) {
+    if (b == 0 && ap == 0) return 0;
+    var h = math.atan2(b, ap) * 180.0 / math.pi;
+    if (h < 0) h += 360;
+    return h;
+  }
+
+  final h1p = hPrime(b1, a1p);
+  final h2p = hPrime(b2, a2p);
+
+  final dLp = l2 - l1;
+  final dCp = c2p - c1p;
+  double dhp;
+  if (c1p * c2p == 0) {
+    dhp = 0;
+  } else {
+    var diff = h2p - h1p;
+    if (diff > 180) {
+      diff -= 360;
+    } else if (diff < -180) {
+      diff += 360;
+    }
+    dhp = diff;
+  }
+  final dHp = 2 * math.sqrt(c1p * c2p) * math.sin(_deg2rad(dhp / 2));
+
+  final lBarp = (l1 + l2) / 2.0;
+  final cBarp = (c1p + c2p) / 2.0;
+  double hBarp;
+  if (c1p * c2p == 0) {
+    hBarp = h1p + h2p;
+  } else if ((h1p - h2p).abs() <= 180) {
+    hBarp = (h1p + h2p) / 2.0;
+  } else if (h1p + h2p < 360) {
+    hBarp = (h1p + h2p + 360) / 2.0;
+  } else {
+    hBarp = (h1p + h2p - 360) / 2.0;
+  }
+
+  final t = 1 -
+      0.17 * math.cos(_deg2rad(hBarp - 30)) +
+      0.24 * math.cos(_deg2rad(2 * hBarp)) +
+      0.32 * math.cos(_deg2rad(3 * hBarp + 6)) -
+      0.20 * math.cos(_deg2rad(4 * hBarp - 63));
+  final dTheta = 30 * math.exp(-math.pow((hBarp - 275) / 25, 2).toDouble());
+  final cBarp7 = math.pow(cBarp, 7).toDouble();
+  final rC = 2 * math.sqrt(cBarp7 / (cBarp7 + pow25_7));
+  final sL = 1 +
+      (0.015 * math.pow(lBarp - 50, 2).toDouble()) /
+          math.sqrt(20 + math.pow(lBarp - 50, 2).toDouble());
+  final sC = 1 + 0.045 * cBarp;
+  final sH = 1 + 0.015 * cBarp * t;
+  final rT = -math.sin(_deg2rad(2 * dTheta)) * rC;
+
+  final termL = dLp / sL;
+  final termC = dCp / sC;
+  final termH = dHp / sH;
+  return math.sqrt(
+      termL * termL + termC * termC + termH * termH + rT * termC * termH);
+}

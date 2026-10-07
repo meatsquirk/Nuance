@@ -92,20 +92,46 @@ const CaptureScene SCENE_OLIVE = CaptureScene(
   groundTruthName: oliveGroundTruthName,
 );
 
+/// SCENE_DIM's raw (uncalibrated) reading, ΔE00 ≈ 5.1 off ground truth
+/// (CIEDE2000, verified against Sharma et al.): a genuinely approximate dim
+/// reading — within the approximate tier's ΔE00 8 but well outside the
+/// calibrated tier's ΔE00 3. This makes AC-6's "within ΔE00 8" bite and gives the
+/// CAPTURE-5 augmentation a real approximate-vs-calibrated contrast; a dim
+/// reading sitting at ΔE00 0 would defeat both.
+const ColorCoordinates _dimRaw = ColorCoordinates(lightness: 34, a: -8, b: 24);
+
+/// SCENE_CARD's raw (uncalibrated) reading, ΔE00 ≈ 4.6 off ground truth
+/// (CIEDE2000, verified): outside the calibrated tier's ΔE00 3, so AC-8's
+/// "normalised within ΔE00 3" rejects a calibration that only relabels the
+/// accuracy without correcting the colour (the catalogue's "calibration no-ops"
+/// Reject). Only a calibration that actually normalises toward ground truth
+/// lands the committed colour within ΔE00 3.
+const ColorCoordinates _cardRaw = ColorCoordinates(lightness: 45, a: -8, b: 24);
+
 /// The olive scene under dim light with no card: the source flags low light and
-/// emits a colour within ΔE00 8 of ground truth. Drives AC-6, AC-7.
-const CaptureScene SCENE_DIM = CaptureScene(
+/// the raw reading sits within ΔE00 8 of ground truth ([_dimRaw]). Drives AC-6,
+/// AC-7.
+final CaptureScene SCENE_DIM = CaptureScene(
   'SCENE_DIM',
-  SceneSpec(groundTruth: _olive, lighting: Lighting.low),
+  SceneSpec(
+    groundTruth: _olive,
+    lighting: Lighting.low,
+    frames: [_uniformFrame(_dimRaw)],
+  ),
   groundTruthName: oliveGroundTruthName,
 );
 
-/// The olive scene with a reference card in view under controlled light:
-/// calibration normalises toward ground truth (within ΔE00 3). Drives AC-8, and
-/// the AC-6 accuracy-tier control (CAPTURE-5 augmentation).
-const CaptureScene SCENE_CARD = CaptureScene(
+/// The olive scene with a reference card in view under controlled light: the raw
+/// reading sits ΔE00 ≈ 4.6 off ground truth ([_cardRaw]) until calibration
+/// normalises it toward ground truth (within ΔE00 3). Drives AC-8, and the AC-6
+/// accuracy-tier control (CAPTURE-5 augmentation).
+final CaptureScene SCENE_CARD = CaptureScene(
   'SCENE_CARD',
-  SceneSpec(groundTruth: _olive, referenceCardPresent: true),
+  SceneSpec(
+    groundTruth: _olive,
+    referenceCardPresent: true,
+    frames: [_uniformFrame(_cardRaw)],
+  ),
   groundTruthName: oliveGroundTruthName,
 );
 
@@ -182,6 +208,19 @@ final Photo PHOTO_SWATCH = Photo(
 Pixel _pixelFor(ColorCoordinates lab) {
   final srgb = _science.toSRGB(lab);
   return Pixel(srgb.red, srgb.green, srgb.blue);
+}
+
+/// A flat [width]×[height] frame of a single [color] — a uniform scene whose
+/// sampled colour at any point or radius is exactly [color]. Used for the
+/// accuracy-tier scenes (SCENE_DIM / SCENE_CARD), whose raw reading sits a known
+/// ΔE00 off ground truth so the accuracy / normalisation Thens are not vacuous.
+Frame _uniformFrame(ColorCoordinates color, {int width = 48, int height = 48}) {
+  final px = _pixelFor(color);
+  return Frame(
+    width: width,
+    height: height,
+    pixels: List<Pixel>.filled(width * height, px),
+  );
 }
 
 /// A [width]×[height] frame of a single centre-pixel [centre], an [inner] disc

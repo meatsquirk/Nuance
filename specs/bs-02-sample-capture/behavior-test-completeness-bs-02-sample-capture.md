@@ -40,3 +40,35 @@ now against the SCREEN-1 shell and is graded live.
      exception of another type; the only theoretical masking is a stray `UnimplementedError` after SCREEN-3,
      which that phase removes.
 - All five are ready for the G-3 packet at grade A.
+
+## Grade — ITEST-3 (AC-4, AC-5, AC-6, AC-7, AC-8, AC-11)
+
+Graded by an independent fresh grader (did not write these tests) on 2026-10-07, then re-graded after the
+AC-8 fixture fix. Grades the assertions **as written** — the behaviour each test will exercise once its owning
+phase lands (AC-4/5 → CAPTURE-3, AC-6/7 → CAPTURE-4, AC-8 → CAPTURE-5, AC-11 → CAPTURE-6). All six are pending
+(red at baseline).
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-4 | `TestAC04_LockSettles` | A | G1,G4,G5,G6 (G3 n/a) | Given `lockState==auto` via endpoint; the "SETTLING 6/12" precondition depends on unbuilt behaviour and is an explicit `find.text` naming CAPTURE-3 (G1). When taps real E16 (`whenLock`); deferred `UnimplementedError` consumed + bounded. Thens assert the spec's exact strings "AE · AWB · AF LOCKED" + "STABLE 12/12" plus `lockState==locked` at grain (G4). **Kills** the catalogue's three Rejects: unchanged indicator, never-settles, partial lock (full-lock string + `locked` enum). Baseline reds on the precondition, no panic. |
+| AC-5 | `TestAC05_SettlingWarns` | A | G1,G3,G4,G5,G6 | Given `lockState==auto`. Pumps to "SETTLING 6/12" (no lock tap → no deferred throw). Textbook G3: negatives (`isStable==false`, "STABLE 12/12" findsNothing) after a settle point, paired with the counter 0→6 proving the reading is live. `lockButton.enabled==true` (correct `TextButton` cast) proves the affordance. **Kills** STABLE-while-unlocked and a missing/disabled lock control. |
+| AC-6 | `TestAC06_LowLightApproximate` | **B pending CAPTURE-5** | G1,G2,G4,G6; G5 limited | Givens `lighting==low` + no card answered by the configured SCENE_DIM via `harness.source` (G2). Robustly kills refusal-in-dim (`lastCommittedSample isNotNull`) and no-warning (`warningKey` + flag); SCENE_DIM now reads ΔE00 ~5.1 off truth so "within ΔE00 8" is non-vacuous. But `accuracy==approximate` is the controller default — with only one reachable tier the test can't prove low light *specifically* downgrades; needs CAPTURE-5's calibrated-vs-approximate control (augmentation). A once that lands. |
+| AC-7 | `TestAC07_DismissWarning` | A | G1,G3,G4,G5,G6 | Given built through the real commit flow on SCENE_DIM; warning-present precondition asserted explicitly naming CAPTURE-4; accuracy captured as approximate before the dismiss. Textbook G3: warning present → `whenDismissWarning` (settle) → `warningKey` findsNothing + flag false, on a demonstrably-changed reading. Accuracy invariance before **and** after kills *dismiss clears/upgrades the accuracy* (fully testable now). Also kills *warning reappears*. |
+| AC-8 | `TestAC08_CardCalibrates` | A | G1,G2,G4,G5,G6 | SCENE_CARD now replays a uniform `_cardRaw` frame ΔE00 4.56 off ground truth (outside calibrated's 3, inside approximate's 8). A relabel-only calibration commits `_cardRaw`, so `_deltaE00(committed, groundTruth) ≈ 4.56 > 3` → the `<= 3` Then **fails it**, genuinely rejecting the catalogue's "calibration no-ops (colour unchanged)" Reject; the 1.56 ΔE margin above the bound is well clear of 8-bit round-trip noise (<1 ΔE). Accuracy-upgrade Reject stays killed (live "Calibrated" label + committed `accuracy==calibrated`). Both named Rejects bite (G5). One AC. |
+| AC-11 | `TestAC11_CommitOpensReadout` | A | G1,G4,G5,G6 (G3 n/a) | Givens `haptics==0` + "STABLE 12/12" precondition naming CAPTURE-3 (reached via real `whenLock`). Asserts at grain: `framesAveraged>1` (kills single-frame by count on noisy SCENE_MULTIFRAME), mean within ΔE00 8, **exactly** `confirmations==1` (kills no-haptic + double-pulse), AppBar "Readout" + `NameHeader` descendant "Deep Olive Green" (kills nav-without-sample / wrong name). |
+
+### Summary — ITEST-3 (AC-4, AC-5, AC-6, AC-7, AC-8, AC-11)
+
+- **Grade counts: 5×A, 1×B** (AC-6 **B pending CAPTURE-5** — matches the planner's pre-seeded augmentation; A
+  once the calibrated-vs-approximate control lands). No remaining must-fix defects.
+- **Fixture fix applied this phase (fix pass 1/3):** AC-8's `ΔE00 ≤ 3` Then was initially vacuous because
+  `SCENE_CARD` read at ground truth (a relabel-only calibrate would have passed). Hardened `SCENE_CARD`
+  (raw ΔE00 4.56) and `SCENE_DIM` (raw ΔE00 5.07) to carry genuine raw errors, with a never-pending soundness
+  guard (sRGB L1 36 / 42). AC-8 re-graded B → **A**; AC-6/AC-7 unaffected (AC-6 stays B-pending).
+- **`_deltaE00` is genuine CIEDE2000** (Sharma vectors 2.0425 / 2.8615 / 0 reproduce exactly), bounds tied to
+  the production `CaptureAccuracy.maxDeltaE` enum (8 / 3), not literals.
+- **Carried hazards (do not affect grades):** AC-11 navigation — keep the `CaptureReadEndpoint` reachable
+  across the Readout push (CAPTURE-6) or `harness.state` throws (false-negative only); AC-4/AC-5 settling
+  cadence — CAPTURE-3 must advance the counter one countable step per pumped frame so 6/12 is hit exactly;
+  `takeException()` consumes are bounded so they cannot mask a real failure.
+- Whole-suite grid is now **10×A + AC-6 B-pending-CAPTURE-5** — ready for the ITEST-4 G-3 packet.

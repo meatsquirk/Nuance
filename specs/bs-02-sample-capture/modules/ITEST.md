@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 (harness) + ITEST-2 (AC-1,2,3,9,10, grade 5×A; AC-1 un-pended green-at-baseline) done; ITEST-3 (AC-4,5,6,7,8,11) next, then ITEST-4 (G-3)
+**Status:** In progress — ITEST-1/2/3 done (ITEST-3: AC-4,5,6,7,8,11 pending tests + red baseline, grade 5×A + AC-6 B-pending-CAPTURE-5); next ITEST-4 (test review, G-3)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/capture_test.dart` (AC tests), `integration_test/capture_harness.dart` (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the capture source), `integration_test/fakes/fake_capture_source.dart`; reuses bs-01's `integration_test/fakes/fake_haptics.dart`.
 **Depends on:** all shell phases (SOURCE-1, CAPTURE-2, SCREEN-1) · **Blocks:** every behavior phase (via G-3)
@@ -11,8 +11,8 @@
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 6,008,655 | 17m 53s (17m 53s) |
 | 2 | acceptance-tests | AC-1,2,3,9,10 | ✅ Done | 9,320,845 | 27m 06s (27m 06s) |
-| 3 | acceptance-tests | AC-4,5,6,7,8,11 | ⬜ Next | | |
-| 4 | test-review | — (G-3) | ⬜ Todo | | |
+| 3 | acceptance-tests | AC-4,5,6,7,8,11 | ✅ Done | 13,046,220 | 41m 18s (41m 18s) |
+| 4 | test-review | — (G-3) | ⬜ Next | | |
 
 ## Interface reconciliation
 - **Boundary:** the assembled app via bs-01's production `buildApp(deps)` (Capture route added by CAPTURE-2),
@@ -208,9 +208,64 @@ is a clean Then, and un-pended AC-1).
 - **Exit criteria:** as ITEST-2 (AC-6 may carry *B pending CAPTURE-5* with its augmentation row).
 - **Acceptance gate:** *(AC-test)* suite green with new tests pending; red baseline recorded; grade gate passed.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Appended the six lifecycle/accuracy/commit AC tests to `integration_test/capture_test.dart`
+(`TestAC04_LockSettles`, `TestAC05_SettlingWarns`, `TestAC06_LowLightApproximate`, `TestAC07_DismissWarning`,
+`TestAC08_CardCalibrates`, `TestAC11_CommitOpensReadout`), each driving the real assembled app through the
+ITEST-1 harness and observing `state` / the read endpoint + rendered text. Added a test-side CIEDE2000
+`_deltaE00` helper (verified exact against Sharma et al. vectors 2.0425 / 2.8615 / 0) so the accuracy Thens
+measure the committed colour against the fake's ground truth in real ΔE00, bounded by the real
+`CaptureAccuracy.{approximate,calibrated}.maxDeltaE` (8 / 3 — D-4); and a `_pumpUntilText` helper to advance
+the frame-driven settling counter to "SETTLING 6/12".
+
+**Fixture hardening (grade-gate fix, fix pass 1/3):** the independent grader caught AC-8's ΔE00 ≤ 3 Then as
+vacuous — `SCENE_CARD` read at ground truth, so a relabel-only calibration would pass. Gave `SCENE_CARD` a raw
+`_cardRaw` frame ΔE00 4.56 off truth and `SCENE_DIM` a raw `_dimRaw` frame ΔE00 5.07 off truth (both in
+(3, 8], via a new `_uniformFrame` helper), and added a never-pending guard that both raw readings sit clearly
+off ground truth (sRGB L1 36 / 42). Now only a real normalisation lands AC-8 within ΔE00 3, and AC-6's
+ΔE00 ≤ 8 + the CAPTURE-5 augmentation contrast are non-vacuous. No AC un-pended (all six red at baseline);
+pending gate stays at **10**.
+
+**Verification** (Flutter 3.47.6): `flutter analyze` clean. Default `flutter test
+integration_test/capture_test.dart` **9 green** (smoke + 7 guards + AC-1), 10 pending skipped.
+`--dart-define=BS02_RUN_PENDING=true` red baseline **+9 −10**: each new test fails on a clean Then or a Given
+precondition naming its owning phase — no panics (deferred `UnimplementedError`s consumed via
+`takeException`). Unit **282 green**; coverage gate `dart run tool/coverage_gate.dart main` **PASS 100%** (no
+`lib` touched — only `capture_test.dart` + `capture_harness.dart`). **Grade: 5×A, 1×B** by an independent
+fresh grader (AC-4/5/7/8/11 A; AC-6 **B pending CAPTURE-5** per the pre-seeded augmentation). No exclusions.
+Fix passes **1/3** (AC-8 fixture vacuity, found by the grade gate). Tokens 13,046,220 · time 41m 18s (41m 18s).
+
+### Checkpoint / Handoff
+
+- **Verification commands** unchanged (Phase 1 handoff): `flutter analyze`; `flutter test
+  integration_test/capture_test.dart` (default) / `--dart-define=BS02_RUN_PENDING=true` (run-pending);
+  `flutter test --coverage` + `dart run tool/coverage_gate.dart main`.
+- **AC tests landed (AC-4,5,6,7,8,11) — contracts the behaviour phases must satisfy:**
+  - **CAPTURE-3 (AC-4, AC-5):** the settling counter must advance **one countable step per pumped frame** so
+    `_pumpUntilText('SETTLING 6/12')` lands exactly on 6/12 (AC-4 Given, AC-5 Then) without `givenCaptureOf`'s
+    own `pumpAndSettle` overshooting. `lock()` must render a text indicator reading **exactly**
+    "AE · AWB · AF LOCKED" — **no such widget exists yet** (the live view renders only stability / accuracy /
+    warning, and CAPTURE-3's Files is the controller): surface a lock indicator (e.g. a derived `lockText` on
+    `CaptureState` rendered by `CaptureLiveView`), and complete stability to "STABLE 12/12" with
+    `lockState == locked`.
+  - **CAPTURE-4 (AC-6, AC-7):** a low-light commit must set `lowLightWarning` (rendered via `warningKey`) and
+    commit an **approximate** sample within ΔE00 8 of ground truth — never refuse; `dismissWarning()` clears
+    the warning without changing the accuracy. AC-6 stays **B pending CAPTURE-5**.
+  - **CAPTURE-5 (AC-8 + AC-6 augmentation):** `calibrate()` on `SCENE_CARD` must **normalise** the reading
+    toward ground truth — its raw reading is ΔE00 4.56 off truth, so a relabel-only calibrate fails AC-8's
+    ΔE00 ≤ 3; flip the live accuracy label to "Calibrated" and commit `CaptureAccuracy.calibrated`. Then close
+    AC-6's augmentation (SCENE_CARD calibrated ΔE00 ≤ 3 vs card-less SCENE_DIM approximate ΔE00 ~5 — both
+    fixtures already carry the raw error) and re-grade AC-6 → A.
+  - **CAPTURE-6 (AC-11):** commit must average several frames (`framesAveraged > 1`), fire exactly one haptic,
+    and navigate to the Readout carrying the sample. **Navigation hazard:** the test reads `harness.state` via
+    the `CaptureReadEndpoint` after the push — keep the controller/endpoint reachable across the push (don't
+    strand it offstage under an opaque route) or the read throws on a correct impl. Its "STABLE 12/12" Given
+    needs CAPTURE-3.
+- **Pending gate unchanged: 10 ACs** (none un-pended here — all six red at baseline). The guard test still
+  pins the 10 owners and `length == 10`.
+- **ITEST-4** (test review, G-3) is next: ITEST-2 and ITEST-3 are both done. Whole-suite grade grid is
+  **10×A + AC-6 B-pending-CAPTURE-5** (with its augmentation row) — no other B to fix before the packet.
 
 ## Phase 4 — Test review (G-3)
 
@@ -240,17 +295,17 @@ is a clean Then, and un-pended AC-1).
 | AC-1 | TestAC01_Eyedropper | **green at baseline** — un-pended at ITEST-2 (SCREEN-1 shell already centres the reticle over the feed); now runs in the default suite | — (passes live; SCREEN-2 keeps it green) | SCREEN-2 | A |
 | AC-2 | TestAC02_AreaAverage5px | red — clean Then fail | Then: `currentSample` null → 5 px average | SOURCE-2 | A |
 | AC-3 | TestAC03_RadiusSelector | red — clean Then fail | Then: reticle 8 px (shell stays 20 px) | SOURCE-2, SCREEN-2 | A |
-| AC-4 | TestAC04_LockSettles | (to record) | Then: LOCKED + STABLE 12/12 | CAPTURE-3 | |
-| AC-5 | TestAC05_SettlingWarns | (to record) | Then: SETTLING 6/12 + lock invites | CAPTURE-3 | |
-| AC-6 | TestAC06_LowLightApproximate | (to record) | Then: approximate within ΔE00 8 | CAPTURE-4 | B pending CAPTURE-5 |
-| AC-7 | TestAC07_DismissWarning | (to record) | Then: warning cleared, stays approximate | CAPTURE-4 | |
-| AC-8 | TestAC08_CardCalibrates | (to record) | Then: normalised ΔE00 3 + upgraded | CAPTURE-5 | |
+| AC-4 | TestAC04_LockSettles | red — clean Given-precondition fail | Given: "SETTLING 6/12" not shown (shell stays "SETTLING 0/12") → CAPTURE-3 drives settling | CAPTURE-3 | A |
+| AC-5 | TestAC05_SettlingWarns | red — clean Then fail | Then: "SETTLING 6/12" not shown while unlocked | CAPTURE-3 | A |
+| AC-6 | TestAC06_LowLightApproximate | red — clean Then fail | Then: low-light warning not raised on commit | CAPTURE-4 | B pending CAPTURE-5 |
+| AC-7 | TestAC07_DismissWarning | red — clean Given-precondition fail | Given: warning not shown (commit deferred) → CAPTURE-4 | CAPTURE-4 | A |
+| AC-8 | TestAC08_CardCalibrates | red — clean Then fail | Then: accuracy label not "Calibrated" (calibrate deferred) | CAPTURE-5 | A |
 | AC-9 | TestAC09_SampleFromPhoto | red — clean Then fail | Then: `currentSample` null → reads point P | SOURCE-3 | A |
 | AC-10 | TestAC10_ValueOnly | red — clean Then fail | Then: `valueOnly` false → grayscale feed + "✓ Value" | SCREEN-3 | A |
-| AC-11 | TestAC11_CommitOpensReadout | (to record) | Then: multi-frame mean + haptic + Readout | CAPTURE-6 | |
+| AC-11 | TestAC11_CommitOpensReadout | red — clean Given-precondition fail | Given: "STABLE 12/12" not reached (lock deferred) → CAPTURE-3 | CAPTURE-6 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC06_LowLightApproximate | until a tighter tier exists (only "approximate" until the reference-card path, CAPTURE-5), the test can't prove low light *specifically* downgrades vs a single always-on tier | CAPTURE-5 | add the control: a `SCENE_CARD` calibrated capture reads **calibrated** ΔE3 while the card-less dim capture reads **approximate** ΔE8 | ⬜ Open |
+| TestAC06_LowLightApproximate | until a tighter tier exists (only "approximate" until the reference-card path, CAPTURE-5), the test can't prove low light *specifically* downgrades vs a single always-on tier | CAPTURE-5 | add the control (fixtures ready: `SCENE_DIM` raw ΔE00 ~5.1, `SCENE_CARD` raw ΔE00 ~4.6): a `SCENE_CARD` calibrated capture reads **calibrated** (ΔE00 ≤ 3) while the card-less `SCENE_DIM` capture reads **approximate** (ΔE00 ~5, ≤ 8) — proving low light specifically downgrades | ⬜ Open |
