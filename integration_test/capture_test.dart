@@ -84,12 +84,11 @@ void main() {
     // typo'd id, a missing AC, a stray AC or a re-owned AC fails this test
     // rather than passing vacuously. AC-1 is absent: it was un-pended at ITEST-2
     // as green at baseline (its always-running test is below). AC-2 is absent:
-    // SOURCE-2 un-pended it. AC-9 is absent: SOURCE-3 un-pended it. So only the
-    // eight still-pending ACs remain here.
+    // SOURCE-2 un-pended it. AC-9 is absent: SOURCE-3 un-pended it. AC-4 and AC-5
+    // are absent: CAPTURE-3 un-pended them. So only the six still-pending ACs
+    // remain here.
     const expectedOwners = {
       'AC-3': 'SCREEN-2',
-      'AC-4': 'CAPTURE-3',
-      'AC-5': 'CAPTURE-3',
       'AC-6': 'CAPTURE-4',
       'AC-7': 'CAPTURE-4',
       'AC-8': 'CAPTURE-5',
@@ -99,7 +98,7 @@ void main() {
 
     test('the still-pending ACs are each owned by a real behaviour phase', () {
       expect(pendingACs, expectedOwners);
-      expect(pendingACs.length, 8);
+      expect(pendingACs.length, 6);
       for (final owner in pendingACs.values) {
         expect(behaviorPhases, contains(owner),
             reason: '"$owner" is not a known bs-02 behaviour phase');

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
@@ -24,6 +25,7 @@ class CaptureController extends ChangeNotifier {
   /// colour under the centre reticle (SOURCE-2).
   CaptureController({required this.source}) {
     _feed = source.frames.listen(_onFrame);
+    _scheduleSettleTick();
   }
 
   /// The source of frames and camera controls this capture reads (D-2).
@@ -32,10 +34,28 @@ class CaptureController extends ChangeNotifier {
   /// The live-feed subscription that drives [CaptureState.currentSample].
   late final StreamSubscription<Frame> _feed;
 
+  bool _disposed = false;
+
   CaptureState _state = const CaptureState();
 
   /// The current observable capture state.
   CaptureState get state => _state;
+
+  /// Advances the stability settling counter one step per rendered frame while
+  /// the reading is unlocked and not yet stable (AC-5): the painter watches
+  /// "SETTLING n/12" climb as the live view runs under auto exposure. Each frame
+  /// the camera settles a little more, so the counter tracks rendered frames up
+  /// to [kStabilityFrameTarget]; it stops once the reading is stable or [lock]
+  /// has settled it, and never restarts (a settled reading stays settled).
+  void _scheduleSettleTick() {
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (_disposed) return;
+      if (_state.lockState == LockState.auto && !_state.isStable) {
+        emit(_state.copyWith(stabilityCount: _state.stabilityCount + 1));
+        _scheduleSettleTick();
+      }
+    });
+  }
 
   /// Whether the reading has been switched to an imported photo (AC-9).
   ///
@@ -95,8 +115,18 @@ class CaptureController extends ChangeNotifier {
   }
 
   /// Locks AE, AWB and AF together so the reading settles to "STABLE 12/12"
-  /// (AC-4). Behaviour lands in CAPTURE-3.
-  void lock() => throw UnimplementedError('lock: behaviour lands in CAPTURE-3');
+  /// (AC-4): the source locks all three, the indicator reads
+  /// "AE · AWB · AF LOCKED" and the stability reading completes to
+  /// "STABLE 12/12" at once (locking is the painter settling the reading).
+  void lock() {
+    source.lockExposure();
+    source.lockWhiteBalance();
+    source.lockFocus();
+    emit(_state.copyWith(
+      lockState: LockState.locked,
+      stabilityCount: kStabilityFrameTarget,
+    ));
+  }
 
   /// Sets the area-average sampling [radiusPx] (1 / 5 / 21 px — AC-3). Behaviour
   /// lands in SCREEN-2 (the selector) over SOURCE-2's radius-driven sampling.
@@ -138,6 +168,7 @@ class CaptureController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _feed.cancel();
     super.dispose();
   }

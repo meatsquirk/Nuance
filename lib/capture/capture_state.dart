@@ -82,6 +82,13 @@ class CaptureState {
     return '$label $count/$kStabilityFrameTarget';
   }
 
+  /// The exposure/white-balance/focus lock indicator (AC-4). Reads
+  /// "AE · AWB · AF LOCKED" once the three are locked together, otherwise
+  /// "AE · AWB · AF AUTO" while they run automatically.
+  String get lockIndicatorText => lockState == LockState.locked
+      ? 'AE · AWB · AF LOCKED'
+      : 'AE · AWB · AF AUTO';
+
   /// Returns a copy with the given fields replaced.
   ///
   /// Follows the repo's `x ?? this.x` merge, so the nullable sample fields are

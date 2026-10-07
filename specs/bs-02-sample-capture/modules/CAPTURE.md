@@ -1,6 +1,6 @@
 # Module CAPTURE — scaffold, capture controller, accuracy, commit
 
-**Status:** In progress — CAPTURE-2 (shell) done; controller + state + accuracy + read endpoint landed, app opens on the Capture route. Next CAPTURE-3 (behavior, blocked on G-3)
+**Status:** In progress — CAPTURE-3 (behavior) done; lock lifecycle + stability settling landed, AC-4/AC-5 un-pended green. Next CAPTURE-4 (AC-6, AC-7; depends on SOURCE-2 — merged)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`, `lib/capture/capture_accuracy.dart`, `lib/capture/capture_read_endpoint.dart`; edits to bs-01's `lib/app/build_app.dart` and `lib/app/router.dart` (add the Capture route); the BS02 pending-runner wiring the scaffold adds.
 **Depends on:** SOURCE (consumes `CaptureSource` + sampling), bs-01 `Haptics` + Readout route · **Blocks:** SCREEN, ITEST, every capture behavior
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 2,239,601 | 8m 15s (8m 15s) |
 | 2 | shell | — | ✅ Done | 9,221,563 | 16m 54s (16m 54s) |
-| 3 | behavior | AC-4, AC-5 | ⬜ Todo | | |
+| 3 | behavior | AC-4, AC-5 | ✅ Done | 51,577,446 | 1h 28m (3h 35m) |
 | 4 | behavior | AC-6, AC-7 | ⬜ Todo | | |
 | 5 | behavior | AC-8 | ⬜ Todo | | |
 | 6 | behavior | AC-11 | ⬜ Todo | | |
@@ -208,9 +208,59 @@ exclusions, no augmentations. Tokens 9,221,563 · time 16m 54s (16m 54s).
 - **Acceptance gate:** un-pend AC-4, AC-5; `TestAC04_LockSettles` + `TestAC05_SettlingWarns` green.
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed lock lifecycle + stability settling on `capture_controller.dart`, with the lock indicator on
+`capture_state.dart` + `capture_live_view.dart`. **Settling** advances one step per *rendered frame* while
+unlocked and not yet stable (a `SchedulerBinding.addPostFrameCallback` loop in the controller, guarded
+`auto && !isStable`, re-arming each frame and stopping at the target or on lock) — a render-frame proxy for
+the camera settling, which climbs to STABLE 12/12 in ~12 frames in production. **`lock()`** locks the
+source AE/AWB/AF and settles at once to `LockState.locked` + `stabilityCount = 12`. New derived reading
+`CaptureState.lockIndicatorText` ("AE · AWB · AF LOCKED" / "… AUTO") rendered at `lockIndicatorKey`.
+
+**Harness change (necessary, flag for review — G-3 territory):** `givenCaptureOf` now mounts with a single
+`pumpWidget` instead of `pumpAndSettle`. Reason: the settling tick advances per rendered frame, so
+`pumpAndSettle` would drive it straight to STABLE 12/12 and the screen could never be observed at
+"SETTLING 0/12". With a single mount the screen opens at "SETTLING 0/12" (the first build renders before the
+first tick draws) with `currentSample` already sampled from the drained feed; `_pumpUntilText` then watches
+it climb one step per `tester.pump()`. `when…` actions still `pumpAndSettle` locally. No AC assertion was
+weakened (see the regrade); AC-tests AC-1/2/9 stay green. This conflates "pump a frame" with "a camera frame
+arriving" — the real reason the AC-4/AC-5 settling contract and SOURCE-2's drained feed could not otherwise
+co-exist; recommend a test-review confirm.
+
+Un-pended **AC-4, AC-5** (deleted their `pendingACs` rows; updated the pending-gate guard: expectedOwners
+now 6 entries). Acceptance gate green: `TestAC04_LockSettles` + `TestAC05_SettlingWarns` pass run-pending;
+default integration suite **13 pass + 6 pending-skipped**. Unit **302 pass**; `flutter analyze` clean;
+coverage gate **100% on all 3 touched lib files, PASS**.
+
+**Other test changes (recorded, not AC-weakening):** `build_app_test` now asserts the opened screen shows
+"SETTLING 0/12" on the live view (was `state.stabilityText`, which now reads 1/12 after the first frame);
+`capture_screen_test` "binds…" locks first so the live ticker stops before the identity check;
+`capture_controls_test` moved E16 out of the still-deferred group into a live-lock assertion;
+`capture_controller_test` added a settling/lock group (and `TestWidgetsFlutterBinding.ensureInitialized()`,
+since the constructor now touches `SchedulerBinding`). Grade gate: 5×A on the un-pended set (AC-1/2/4/5/9), fresh independent regrade; whole-suite grid 10×A + AC-6 B-pending-CAPTURE-5 unchanged; the `givenCaptureOf` change weakened no AC (AC-9 strengthened — its photo-import feed-switch guard is now exercised by the AC test) (fresh independent regrade of
+every un-pended AC test). Fix passes: 1/3 (unit-test breakages from the new behaviour — lock no longer
+throws, the shared `givenCaptureOf` change, `LockState` import clash with Flutter's `LockState`). No
+exclusions, no augmentations. Tokens 51,577,446 · time 1h 28m (3h 35m).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged (PATH export + `flutter analyze` / `flutter test --coverage` /
+  `flutter test integration_test/capture_test.dart` [+ `--dart-define=BS02_RUN_PENDING=true` to run pending] /
+  `dart run tool/coverage_gate.dart <base>`).
+- **Frozen interfaces (CAPTURE-3):** `CaptureController.lock()` is live (locks source AE/AWB/AF + emits
+  `LockState.locked`, `stabilityCount = 12`); the controller runs a per-rendered-frame settling tick while
+  `auto && !isStable`; `CaptureState.lockIndicatorText`; `CaptureLiveView.lockIndicatorKey`.
+- **Harness contract for later phases:** `givenCaptureOf` mounts with one `pumpWidget` (no `pumpAndSettle`),
+  so the reading opens at "SETTLING 0/12" and climbs one step per `tester.pump()`. CAPTURE-6's AC-11 reaches
+  "STABLE 12/12" via `whenLock()` (its Given), exactly as its test already does.
+- **Known gaps:** the `givenCaptureOf` harness change and the render-frame settling model should be confirmed
+  at a test-review (approved tests touched). `calibrate` / `dismissWarning` / `toggleValueOnly` / `commit`
+  still throw until their phases.
+- **Integration note:** built on SOURCE-3 tip (269bfd5 — includes SOURCE-2). This phase branch is **not yet
+  merged** into `feat/bs-02-sample-capture`; merge order SOURCE-2 → SOURCE-3 → CAPTURE-3 (all touch the
+  controller / harness). Master-plan rollup deferred to reconcile.
+- **Next phase (CAPTURE-4, AC-6/AC-7):** low-light detection + accuracy tier + dismiss, over SOURCE-2's feed.
 
 ## Phase 4 — Behavior: low-light detection + accuracy tier + warning (AC-6, AC-7)
 

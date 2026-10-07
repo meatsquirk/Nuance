@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:color_models/color_models.dart';
+import 'package:flutter/material.dart' hide LockState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_controller.dart';
@@ -84,6 +85,11 @@ int _l1(ColorCoordinates lab, Pixel px) {
 }
 
 void main() {
+  // The controller schedules a per-frame settling tick on the scheduler binding
+  // at construction (CAPTURE-3), so the binding must be initialised even for the
+  // plain (non-widget) tests that only build a controller.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('construction', () {
     test('holds the injected source and starts in the default state', () {
       final source = _source();
@@ -100,7 +106,7 @@ void main() {
     setUp(() => controller = CaptureController(source: _source()));
     tearDown(() => controller.dispose());
 
-    test('lock', () => expect(controller.lock, throwsUnimplementedError));
+    // lock() is live as of CAPTURE-3 (see the 'lock lifecycle' group below).
     test('setRadius',
         () => expect(() => controller.setRadius(21), throwsUnimplementedError));
     test('calibrate',
@@ -110,6 +116,90 @@ void main() {
     test('toggleValueOnly',
         () => expect(controller.toggleValueOnly, throwsUnimplementedError));
     test('commit', () => expect(controller.commit, throwsUnimplementedError));
+  });
+
+  group('stability settling + lock lifecycle (CAPTURE-3)', () {
+    // Mount the controller in a listening tree so each rendered frame drives the
+    // settling tick, exactly as the Capture screen does in production.
+    Widget host(CaptureController controller) => MaterialApp(
+          home: ListenableBuilder(
+            listenable: controller,
+            builder: (_, _) => Text(controller.state.stabilityText),
+          ),
+        );
+
+    testWidgets('settling climbs one step per rendered frame while unlocked',
+        (tester) async {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+
+      // Before the first frame the tick is scheduled but has not fired: the
+      // screen opens at "SETTLING 0/12".
+      expect(controller.state.stabilityCount, 0);
+      expect(controller.state.stabilityText, 'SETTLING 0/12');
+
+      await tester.pumpWidget(host(controller)); // one rendered frame
+      expect(controller.state.stabilityCount, 1);
+      await tester.pump();
+      expect(controller.state.stabilityCount, 2);
+    });
+
+    testWidgets('settling stops once stable and does not overshoot',
+        (tester) async {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(host(controller));
+
+      // Pump well past the target; the counter caps at kStabilityFrameTarget.
+      for (var i = 0; i < kStabilityFrameTarget + 5; i++) {
+        await tester.pump();
+      }
+      expect(controller.state.stabilityCount, kStabilityFrameTarget);
+      expect(controller.state.isStable, isTrue);
+      expect(controller.state.stabilityText, 'STABLE 12/12');
+    });
+
+    testWidgets('lock() locks AE/AWB/AF on the source and settles to STABLE',
+        (tester) async {
+      final source = _source();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(host(controller)); // mid-settle (count 1)
+
+      controller.lock();
+
+      expect(source.locks.allLocked, isTrue);
+      expect(controller.state.lockState, LockState.locked);
+      expect(controller.state.stabilityCount, kStabilityFrameTarget);
+      expect(controller.state.stabilityText, 'STABLE 12/12');
+      expect(controller.state.lockIndicatorText, 'AE · AWB · AF LOCKED');
+    });
+
+    testWidgets('a locked reading no longer settles on later frames',
+        (tester) async {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(host(controller));
+      controller.lock();
+
+      // Further frames must not move the (already settled, locked) reading.
+      await tester.pump();
+      await tester.pump();
+      expect(controller.state.lockState, LockState.locked);
+      expect(controller.state.stabilityCount, kStabilityFrameTarget);
+    });
+
+    testWidgets('disposing stops the settling tick (no late mutation)',
+        (tester) async {
+      final controller = CaptureController(source: _source());
+      controller.dispose();
+
+      // The pending post-frame tick fires on this frame but must bail out, since
+      // the controller is disposed (no emit on a disposed ChangeNotifier).
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      expect(controller.state.stabilityCount, 0);
+    });
   });
 
   group('live feed → currentSample (SOURCE-2)', () {

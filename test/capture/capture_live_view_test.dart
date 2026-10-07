@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide LockState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_eyedropper.dart';
@@ -35,6 +35,25 @@ void main() {
     expect(text.data, 'Calibrated');
   });
 
+  testWidgets('shows the lock indicator "… AUTO" while unlocked',
+      (tester) async {
+    await tester.pumpWidget(_host(const CaptureState()));
+
+    final text =
+        tester.widget<Text>(find.byKey(CaptureLiveView.lockIndicatorKey));
+    expect(text.data, 'AE · AWB · AF AUTO');
+  });
+
+  testWidgets('shows the lock indicator "… LOCKED" once locked', (tester) async {
+    await tester.pumpWidget(
+      _host(const CaptureState(lockState: LockState.locked)),
+    );
+
+    final text =
+        tester.widget<Text>(find.byKey(CaptureLiveView.lockIndicatorKey));
+    expect(text.data, 'AE · AWB · AF LOCKED');
+  });
+
   testWidgets('hides the low-light warning when there is none', (tester) async {
     await tester.pumpWidget(_host(const CaptureState()));
 
@@ -59,6 +78,10 @@ void main() {
     expect(
       CaptureLiveView.accuracyKey,
       const ValueKey('capture-accuracy-label'),
+    );
+    expect(
+      CaptureLiveView.lockIndicatorKey,
+      const ValueKey('capture-lock-indicator'),
     );
     expect(
       CaptureLiveView.warningKey,

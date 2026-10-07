@@ -47,8 +47,7 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   // AC-2 (5 px area-average sampling) un-pended by SOURCE-2 — now always runs.
   'AC-3': 'SCREEN-2', // radius selector + reticle (over SOURCE-2 sampling)
-  'AC-4': 'CAPTURE-3', // lock settles the reading
-  'AC-5': 'CAPTURE-3', // pre-lock settling indicator
+  // AC-4, AC-5 (lock lifecycle + stability settling) un-pended by CAPTURE-3 — now always run.
   'AC-6': 'CAPTURE-4', // low-light → approximate, not refused
   'AC-7': 'CAPTURE-4', // dismiss low-light warning
   'AC-8': 'CAPTURE-5', // reference-card calibration upgrades the tier

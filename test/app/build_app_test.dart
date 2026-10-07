@@ -149,10 +149,11 @@ void main() {
       final endpoint = tester.widget<CaptureReadEndpoint>(
         find.byKey(CaptureReadEndpoint.endpointKey),
       );
-      // The controller reads from the injected source and starts in the
-      // default capture state.
+      // The controller reads from the injected source and the screen opens at
+      // "SETTLING 0/12" — the reading begins settling on the first rendered
+      // frame (CAPTURE-3), so the open state is asserted on the live view.
       expect(identical(endpoint.controller.source, source), isTrue);
-      expect(endpoint.controller.state.stabilityText, 'SETTLING 0/12');
+      expect(find.text('SETTLING 0/12'), findsOneWidget);
     });
 
     testWidgets('disposes the capture controller when the screen is torn down',
