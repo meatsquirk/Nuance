@@ -104,8 +104,40 @@ void main() {
     expect(mean.pixels, everyElement(const Pixel(150, 150, 150)));
   });
 
-  test('sampleFromPhoto is deferred to SOURCE-3', () {
-    final frame = _uniform(const Pixel(10, 20, 30));
-    expect(() => sampleFromPhoto(frame, 0, 0), throwsUnimplementedError);
+  test('sampleFromPhoto reads the area average at the chosen point of the '
+      'image, not the centre', () {
+    // A 16×16 image: a background of 100 with a 3×3 swatch of 200 centred on an
+    // off-centre point P = (3, 3). A radius-1 disc at P stays inside the swatch,
+    // so sampling P returns the swatch colour (200) — while the image centre
+    // (8, 8) is background (100). This rejects a point/centre read.
+    const bg = Pixel(100, 100, 100);
+    const swatch = Pixel(200, 200, 200);
+    const w = 16;
+    const h = 16;
+    const px = 3;
+    const py = 3;
+    final pixels = <Pixel>[];
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        pixels.add((x - px).abs() <= 1 && (y - py).abs() <= 1 ? swatch : bg);
+      }
+    }
+    final image = Frame(width: w, height: h, pixels: pixels);
+
+    final atP = _toRgb(sampleFromPhoto(image, px, py, radiusPx: 1));
+    expect(_l1(atP, 200, 200, 200), lessThan(tol),
+        reason: 'reads point P of the image');
+
+    final atCentre = _toRgb(sampleFromPhoto(image, w ~/ 2, h ~/ 2, radiusPx: 1));
+    expect(_l1(atCentre, 100, 100, 100), lessThan(tol),
+        reason: 'the image centre is background — P ≠ centre');
+  });
+
+  test('sampleFromPhoto defaults to the 5 px radius', () {
+    // With no radius given it uses kDefaultSamplingRadiusPx: a uniform image
+    // returns its colour either way, so the default-argument path is exercised.
+    final image = _uniform(const Pixel(70, 150, 220));
+    final sampled = _toRgb(sampleFromPhoto(image, 8, 8));
+    expect(_l1(sampled, 70, 150, 220), lessThan(tol));
   });
 }

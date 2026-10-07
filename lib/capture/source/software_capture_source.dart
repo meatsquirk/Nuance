@@ -131,6 +131,14 @@ class SoftwareCaptureSource implements CaptureSource {
   @override
   bool get referenceCardPresent => scene.referenceCardPresent;
 
+  ImportedPhoto? _importedPhoto;
+
+  @override
+  ImportedPhoto? get importedPhoto => _importedPhoto;
+
+  @override
+  void importPhoto(ImportedPhoto photo) => _importedPhoto = photo;
+
   @override
   void lockExposure() => _locks = _locks.copyWith(exposure: true);
 

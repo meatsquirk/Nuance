@@ -38,18 +38,32 @@ void main() {
     }
   });
 
-  testWidgets('leaves E18 (radius) and E19 (import) disabled placeholders',
-      (tester) async {
+  testWidgets('leaves E18 (radius) a disabled placeholder', (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
     await _pump(tester, controller);
 
     final radius =
         tester.widget<TextButton>(find.byKey(CaptureControls.radiusKey));
+    expect(radius.onPressed, isNull);
+  });
+
+  testWidgets('wires E19 (import) to the controller import action (SOURCE-3)',
+      (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
     final import =
         tester.widget<TextButton>(find.byKey(CaptureControls.importKey));
-    expect(radius.onPressed, isNull);
-    expect(import.onPressed, isNull);
+    expect(import.onPressed, isNotNull,
+        reason: 'E19 is enabled and reaches controller.importPhoto');
+
+    // Tapping with no photo staged is a no-op — the import action is real
+    // (SOURCE-3), not a deferred throw, so it raises no exception.
+    await tester.tap(find.byKey(CaptureControls.importKey));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('wires E15–E17, E20, E21 to their (still-deferred) controller '

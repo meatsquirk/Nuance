@@ -52,7 +52,7 @@ const Map<String, String> pendingACs = {
   'AC-6': 'CAPTURE-4', // low-light → approximate, not refused
   'AC-7': 'CAPTURE-4', // dismiss low-light warning
   'AC-8': 'CAPTURE-5', // reference-card calibration upgrades the tier
-  'AC-9': 'SOURCE-3', // sample a point from a gallery photo
+  // AC-9 (sample a point from a gallery photo) un-pended by SOURCE-3 — now always runs.
   'AC-10': 'SCREEN-3', // value-only grayscale preview
   'AC-11': 'CAPTURE-6', // multi-frame commit + haptic + open Readout
 };

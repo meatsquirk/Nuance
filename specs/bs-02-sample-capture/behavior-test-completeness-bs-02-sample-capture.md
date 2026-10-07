@@ -90,3 +90,29 @@ fresh grader (did not write these tests) on 2026-10-07; confirmed by a live run
 - **Grade counts (re-grade): 2×A, 0×B.** No downgrades against the "as-written" grades; AC-2 holds A now that
   the real true-average sampler drives the three-way distance Then.
 - **Whole-suite grid unchanged: 10×A + AC-6 B-pending-CAPTURE-5** (AC-6 owned by CAPTURE-5; untouched here).
+
+## Re-grade — SOURCE-3 (un-pended: AC-1, AC-2, AC-9)
+
+SOURCE-3 landed AC-9 (import a gallery photo and sample its point P, switching the reading off the live feed)
+and un-pended it. Per the grade gate a behaviour phase re-grades **every un-pended AC test** against the
+**live** behaviour. Graded by an independent fresh grader (did not write these tests) on 2026-10-07; confirmed
+by a live run (`flutter test integration_test/capture_test.dart` → all passed, +11 / ~8 skipped; AC-1, AC-2,
+AC-9 executed live).
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_Eyedropper` | A | G1,G4,G5,G6 (G2/G3 n/a) | Unchanged from the SOURCE-2 re-grade: Given checked through the real UI; asserts reticle centre vs feed centre on both axes at epsilon 0.5 (not mere presence). Live `CaptureLiveView` lays the feed as `StackFit.expand` and the reticle in a `Center`, so the correct render matches to ~0 px and 0.5 kills an absent/off-centre marker. One AC. |
+| AC-2 | `TestAC02_AreaAverage5px` | A | G1,G2,G4,G5,G6 (G3 n/a) | Unchanged live grade: configured radius read through the endpoint (G2); the real `sampleAreaAverage` drives the three-way distance Then on `SCENE_CENTRE_VARIED` (red/teal/yellow, pairwise L1 ~200–280 ≫ `_sampleToleranceL1 = 45`). Kills a point read and a wider radius. One AC. |
+| AC-9 | `TestAC09_SampleFromPhoto` | A | G1,G2,G4,G5,G6 (G3 n/a) | Now **live**: `whenImportPhoto` stages the fixture and taps E19 (wired to `controller.importPhoto`), whose real `importPhoto()` reads `source.importedPhoto` and calls the real `sampleFromPhoto(image, P=(12,12), radiusPx:5)`; observed through `currentSample`, rendered back via the same `ColorScienceImpl.toSRGB`. Given checked on the fixture before the When (`atP != atCentre`): P is the centre of the r=6 magenta swatch Lab(55,50,−10); the image centre (24,24) is ~17 px away in neutral-grey Lab(50,0,0). Two discriminators against the one raw observable bite with margin: `toP < 45` (r≤5 disc around P is entirely swatch → magenta), `toP < toCentre` (magenta vs grey, L1 ~120 ≫ 45 → rejects the image centre) and `toP < distToColor(sampled, liveCamera)` where the host SCENE_OLIVE is Lab(40,−8,24) (→ rejects the live camera). The olive host scene is load-bearing for the camera-vs-photo rejection. The fake's `stagedPhoto`→`importedPhoto` bridge surfaces only the image + P; the sampled colour comes from the real `sampleFromPhoto` reading fixture pixels, so G2 holds (no faked sample value). One AC. |
+
+### Summary — SOURCE-3
+
+- **Grade counts (re-grade): 3×A, 0×B.** No downgrades; AC-9 holds the A it carried as-written in the ITEST-2
+  grid, now re-confirmed against live SOURCE-3 code and a passing live run.
+- **Whole-suite grid unchanged: 10×A + AC-6 B-pending-CAPTURE-5** (AC-6 owned by CAPTURE-5; untouched here).
+- **Non-downgrading observation (grader):** AC-9's `_photoImported` feed-switch guard is *not* strictly
+  exercised by `TestAC09_SampleFromPhoto` — `source.frames` is a finite 12-frame `Stream.fromIterable` fully
+  drained by `givenCaptureOf`'s `pumpAndSettle`, so no live frame remains to overwrite the sample after E19.
+  The guard is unit-tested instead (`capture_controller_test.dart`: a controllable source delivers a distinct
+  frame after import and the imported sample is unchanged, with a control showing the feed *can* change before
+  import). The AC test stays non-vacuous (the two named wrong impls still fail its Thens).

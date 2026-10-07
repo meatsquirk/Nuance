@@ -76,17 +76,20 @@ ColorCoordinates sampleAreaAverage(
 
 /// Samples the colour at ([x], [y]) of an imported photo [image] as the average
 /// over the disc of [radiusPx] (default [kDefaultSamplingRadiusPx]), as
-/// canonical CIELAB.
+/// canonical CIELAB (AC-9).
 ///
-/// Signature only — decoding and sampling land in SOURCE-3 (AC-9).
+/// The photo arrives already decoded as a [Frame] (the import flow decodes the
+/// gallery image into one), so sampling it is the same pure area-average as a
+/// live-feed read — taken here over the imported pixels at the chosen point P,
+/// not the frame centre. Reading point P is what distinguishes an imported
+/// sample from a live-camera one.
 ColorCoordinates sampleFromPhoto(
   Frame image,
   int x,
   int y, {
   int radiusPx = kDefaultSamplingRadiusPx,
-}) {
-  throw UnimplementedError('sampleFromPhoto: behaviour lands in SOURCE-3');
-}
+}) =>
+    sampleAreaAverage(image, x, y, radiusPx: radiusPx);
 
 /// Averages several [frames] into one frame, pixel by pixel — the primitive a
 /// committed reading settles over (spec AC-11).

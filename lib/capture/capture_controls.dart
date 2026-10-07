@@ -13,10 +13,10 @@ import 'capture_controller.dart';
 /// is present and wired before the behaviour lands and no behaviour phase has to
 /// re-touch this file to reach the controller.
 ///
-/// The two controls with no single-call action yet are rendered as disabled
-/// placeholders: E18 (the sampling-radius selector) is built out with its 1 / 5
-/// / 21 px options in SCREEN-2, and E19 (import a gallery photo) is wired to its
-/// import flow in SOURCE-3.
+/// E19 (import a gallery photo) is wired to [CaptureController.importPhoto] in
+/// SOURCE-3. The one control with no single-call action yet is rendered as a
+/// disabled placeholder: E18 (the sampling-radius selector) is built out with
+/// its 1 / 5 / 21 px options in SCREEN-2.
 class CaptureControls extends StatelessWidget {
   const CaptureControls({required this.controller, super.key});
 
@@ -77,17 +77,17 @@ class CaptureControls extends StatelessWidget {
           onPressed: controller.toggleValueOnly,
           child: const Text('Value'),
         ),
-        // E18, E19: placeholders enabled by their behaviour phase (SCREEN-2 /
-        // SOURCE-3).
+        // E18: placeholder enabled by its behaviour phase (SCREEN-2).
         const TextButton(
           key: radiusKey,
           onPressed: null,
           child: Text('Radius'),
         ),
-        const TextButton(
+        // E19: imports a gallery photo and samples its point P (SOURCE-3).
+        TextButton(
           key: importKey,
-          onPressed: null,
-          child: Text('Import photo'),
+          onPressed: controller.importPhoto,
+          child: const Text('Import photo'),
         ),
       ],
     );

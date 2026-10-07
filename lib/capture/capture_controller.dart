@@ -37,16 +37,52 @@ class CaptureController extends ChangeNotifier {
   /// The current observable capture state.
   CaptureState get state => _state;
 
+  /// Whether the reading has been switched to an imported photo (AC-9).
+  ///
+  /// Set once [importPhoto] samples a staged photo; while true the live feed no
+  /// longer drives [_onFrame], so the sampled point P of the photograph stands
+  /// instead of the camera colour.
+  bool _photoImported = false;
+
   /// Samples the colour under the centre reticle of each live frame at the
   /// current radius and publishes it as [CaptureState.currentSample] (AC-2).
   ///
   /// The feed drives the reading passively — no painter action is needed; the
-  /// radius selector (SCREEN-2) changes which disc is averaged.
+  /// radius selector (SCREEN-2) changes which disc is averaged. Once a photo has
+  /// been imported ([importPhoto]) the feed no longer overwrites the reading.
   void _onFrame(Frame frame) {
+    if (_photoImported) return;
     final coordinates = sampleAreaAverage(
       frame,
       frame.width ~/ 2,
       frame.height ~/ 2,
+      radiusPx: _state.radiusPx,
+    );
+    emit(_state.copyWith(
+      currentSample: Sample(
+        coordinates: coordinates,
+        provenance: const Provenance(ProvenanceTier.measured),
+        accuracy: _state.accuracy,
+      ),
+    ));
+  }
+
+  /// Samples the gallery photo imported into the [source] at its chosen point P
+  /// and publishes it as [CaptureState.currentSample], switching the reading off
+  /// the live feed (AC-9).
+  ///
+  /// A no-op when no photo has been imported. The sample is a measured reading
+  /// at the current accuracy, exactly like a live-feed read, but taken over the
+  /// imported image at point P rather than the camera centre; once it lands the
+  /// live feed no longer overwrites it.
+  void importPhoto() {
+    final photo = source.importedPhoto;
+    if (photo == null) return;
+    _photoImported = true;
+    final coordinates = sampleFromPhoto(
+      photo.image,
+      photo.pointX,
+      photo.pointY,
       radiusPx: _state.radiusPx,
     );
     emit(_state.copyWith(

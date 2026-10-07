@@ -1,6 +1,6 @@
 # Module SOURCE — capture source + sampling
 
-**Status:** In progress — SOURCE-1 (shell) + SOURCE-2 (AC-2: live feed + point/area-average sampling, 100% covered, AC-2 un-pended green, grade A) done. SOURCE-3 (AC-9, photo import) next — startable now.
+**Status:** ✅ Done — SOURCE-1 (shell), SOURCE-2 (AC-2: live feed + point/area-average sampling), SOURCE-3 (AC-9: gallery-photo import + sample point P) all done; 100% covered, AC-2 & AC-9 un-pended green, grade A.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/capture_source.dart` (interface), `lib/capture/source/software_capture_source.dart`, `lib/capture/source/sampling.dart` (point / area-average / from-photo), `lib/capture/source/frame.dart` (frame model).
 **Depends on:** bs-01 domain (`ColorCoordinates`) · **Blocks:** CAPTURE-2 (controller consumes the source), SCREEN behavior (reticle reads radius)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 2,451,815 | 12m 12s (12m 12s) |
 | 2 | behavior | AC-2 | ✅ Done | 13,393,296 | 23m 23s (23m 23s) |
-| 3 | behavior | AC-9 | ⬜ Todo | | |
+| 3 | behavior | AC-9 | ✅ Done | 13,040,341 | 20m 59s (20m 59s) |
 
 ## Interface reconciliation
 
@@ -170,6 +170,57 @@ Tokens 13,393,296 · time 23m 23s (23m 23s).
 - **Acceptance gate:** un-pend AC-9; `TestAC09_SampleFromPhoto` green (reads point P of the photo, not the camera).
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed AC-9 — import a gallery photo and sample its point P, switching the reading off the live feed:
+
+- **`sampling.dart`:** `sampleFromPhoto(image, x, y, radiusPx)` implemented — the photo arrives already decoded
+  as a `Frame`, so it reuses `sampleAreaAverage` over the imported pixels at the chosen point P (default 5 px),
+  no new colour math. Reading P (not the frame centre) is what distinguishes an import from a live-feed read.
+- **`capture_source.dart`:** new `ImportedPhoto` value type (decoded `image` + sample point `pointX`/`pointY`)
+  and two interface members — `ImportedPhoto? get importedPhoto` and `void importPhoto(ImportedPhoto)` — so the
+  controller reads an imported photo through the public `CaptureSource` surface.
+- **`software_capture_source.dart`:** holds the most-recently imported photo (`importPhoto` sets it,
+  `importedPhoto` returns it; null until one is imported).
+- **`capture_controller.dart`:** new `importPhoto()` action — reads `source.importedPhoto`, samples point P via
+  `sampleFromPhoto` at the current radius, publishes it as a measured `currentSample` at the current accuracy,
+  and sets a `_photoImported` flag so `_onFrame` stops letting the live feed overwrite the reading (the switch).
+  A no-op when no photo is staged.
+- **`capture_controls.dart`:** E19 "Import photo" enabled and wired to `controller.importPhoto` (was a disabled
+  placeholder); only E18 (radius) remains a placeholder for SCREEN-2.
+- **Test wiring:** the acceptance fake's `stagedPhoto` fixture is surfaced through the production `importedPhoto`
+  getter (so staging a fixture == the painter picking that gallery image). Scaffold pending-gate test updated
+  (AC-9 removed; 9 → 8 pending).
+
+**Gates (Flutter 3.47.6):** `flutter analyze` clean. Unit suite green — 293 tests (290 + 3 new: controller
+import + feed-switch + null-guard, sampleFromPhoto point-read + default-radius, source import hold/return);
+coverage gate **PASS, 100% line coverage** on all 16 touched `lib` files (base `main`). **Acceptance gate:**
+AC-9 un-pended; default integration run green — `TestAC09_SampleFromPhoto` passes live (reads point P, rejects
+the image centre and the live camera); AC-1/AC-2 stay green; the other 8 ACs skip as pending (28 pass / 8 skip).
+**Grade gate:** fresh independent re-grade of the un-pended tests (AC-1, AC-2, AC-9) against live behaviour —
+**3×A, 0×B** (AC-9 A, now graded live; no downgrades); whole-suite grid **10×A + AC-6 B-pending-CAPTURE-5**.
+**Augmentations:** none. **Fix passes: 1/3** — one fix after the first unit run: the AC-9 controller unit
+test's photo swatch was a 3×3 square, too small for the default 5 px sampling disc, so the average bled into
+the background; widened it to an r=6 disc (test-fixture fix; production code unchanged). Tokens 13,040,341
+· time 20m 59s (20m 59s).
+
+### Checkpoint / Handoff
+
+- **Frozen now (SOURCE-3):** `sampleFromPhoto` behaviour (area-average at point P over a decoded `Frame`);
+  the `CaptureSource` import surface — `ImportedPhoto {image, pointX, pointY}`, `importedPhoto`, `importPhoto` —
+  and `SoftwareCaptureSource`'s hold-last-import semantics; the controller's `importPhoto()` action and the
+  `_photoImported` feed-switch (once a photo is imported the live feed no longer overwrites `currentSample`).
+  E19 is wired to `controller.importPhoto`.
+- **Module SOURCE is complete** (SOURCE-1/2/3 all done). No SOURCE phases remain.
+- **Consumers / interactions:** the import switch is one-way within a controller instance (no "return to live"
+  flow is specified by bs-02). CAPTURE phases that read `currentSample` (e.g. CAPTURE-6 commit) see the imported
+  sample after an import exactly as they see a live sample.
+- **Merge-risk with CAPTURE-3 (running ∥, uncommitted in the primary checkout):** both edit
+  `capture_controller.dart` — SOURCE-3 adds `importPhoto()` + the `_onFrame` early-return guard + a
+  `_photoImported` field; CAPTURE-3 adds the settling tick + `lock()` behaviour and (in its WIP) reshapes
+  `_onFrame`. Reconcile onto `main` carefully: keep SOURCE-2's passive `_onFrame` sampling AND SOURCE-3's
+  `if (_photoImported) return;` guard at its top, alongside CAPTURE-3's settling logic. Re-run the suite after
+  each merge.
+- **Verification commands** (repo root; `export PATH="$HOME/development/flutter/bin:$PATH"` first):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` ·
+  `flutter test integration_test/`.

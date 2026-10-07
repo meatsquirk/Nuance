@@ -110,6 +110,31 @@ void main() {
       expect(await source.stability.toList(), isEmpty);
     });
 
+    test('holds no imported photo until one is imported, then returns it '
+        '(AC-9)', () {
+      final source =
+          SoftwareCaptureSource(const SceneSpec(groundTruth: groundTruth));
+      expect(source.importedPhoto, isNull);
+
+      final image = Frame(
+        width: 2,
+        height: 2,
+        pixels: const [
+          Pixel(1, 2, 3),
+          Pixel(4, 5, 6),
+          Pixel(7, 8, 9),
+          Pixel(10, 11, 12),
+        ],
+      );
+      source.importPhoto(ImportedPhoto(image: image, pointX: 1, pointY: 0));
+
+      final imported = source.importedPhoto;
+      expect(imported, isNotNull);
+      expect(imported!.image, same(image));
+      expect(imported.pointX, 1);
+      expect(imported.pointY, 0);
+    });
+
     test('records exposure, white-balance and focus locks', () {
       final source =
           SoftwareCaptureSource(const SceneSpec(groundTruth: groundTruth));

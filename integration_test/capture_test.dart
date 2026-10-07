@@ -84,7 +84,8 @@ void main() {
     // typo'd id, a missing AC, a stray AC or a re-owned AC fails this test
     // rather than passing vacuously. AC-1 is absent: it was un-pended at ITEST-2
     // as green at baseline (its always-running test is below). AC-2 is absent:
-    // SOURCE-2 un-pended it. So only the nine still-pending ACs remain here.
+    // SOURCE-2 un-pended it. AC-9 is absent: SOURCE-3 un-pended it. So only the
+    // eight still-pending ACs remain here.
     const expectedOwners = {
       'AC-3': 'SCREEN-2',
       'AC-4': 'CAPTURE-3',
@@ -92,14 +93,13 @@ void main() {
       'AC-6': 'CAPTURE-4',
       'AC-7': 'CAPTURE-4',
       'AC-8': 'CAPTURE-5',
-      'AC-9': 'SOURCE-3',
       'AC-10': 'SCREEN-3',
       'AC-11': 'CAPTURE-6',
     };
 
     test('the still-pending ACs are each owned by a real behaviour phase', () {
       expect(pendingACs, expectedOwners);
-      expect(pendingACs.length, 9);
+      expect(pendingACs.length, 8);
       for (final owner in pendingACs.values) {
         expect(behaviorPhases, contains(owner),
             reason: '"$owner" is not a known bs-02 behaviour phase');
@@ -113,9 +113,11 @@ void main() {
       expect(pendingSkipReason('AC-3', forceRunPending: true), isNull);
       // An un-mapped AC always runs, in either mode — the end state as each
       // behaviour phase deletes its row, and the state AC-1 (un-pended at
-      // ITEST-2) and AC-2 (un-pended by SOURCE-2) are already in.
+      // ITEST-2), AC-2 (un-pended by SOURCE-2) and AC-9 (un-pended by SOURCE-3)
+      // are already in.
       expect(pendingSkipReason('AC-1', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-2', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-9', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
     });
