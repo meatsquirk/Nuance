@@ -4,6 +4,7 @@ import '../a11y/haptics.dart';
 import '../a11y/speech.dart';
 import '../capture/capture_controller.dart';
 import '../capture/capture_read_endpoint.dart';
+import '../capture/capture_screen.dart';
 import '../capture/source/capture_source.dart';
 import '../color_science/color_science.dart';
 import '../domain/color_coordinates.dart';
@@ -126,12 +127,12 @@ Widget buildApp(AppDependencies deps) {
 
 /// The Capture screen the app opens on when a capture source is wired (bs-02).
 ///
-/// CAPTURE-2 shell: it owns the [CaptureController] over the injected
-/// [AppDependencies.captureSource], wraps its subtree in a [CaptureReadEndpoint]
-/// so the acceptance suite can observe the [CaptureState], and renders a
-/// placeholder live-view surface. SCREEN-1 replaces the placeholder body with
-/// the real wireframe regions (E15–E21, the eyedropper and the stability
-/// indicator); the controller ownership and the endpoint wiring stay here.
+/// It owns the [CaptureController] over the injected
+/// [AppDependencies.captureSource] and wraps its subtree in a
+/// [CaptureReadEndpoint] so the acceptance suite can observe the capture state.
+/// The screen body is the SCREEN-1 [CaptureScreen] scaffold — the wireframe
+/// regions E15–E21, the eyedropper and the stability indicator, bound to the
+/// controller; the controller ownership and the endpoint wiring stay here.
 class CaptureHomeScreen extends StatefulWidget {
   const CaptureHomeScreen({super.key});
 
@@ -163,16 +164,7 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
     return CaptureReadEndpoint(
       key: CaptureReadEndpoint.endpointKey,
       controller: _controller!,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Capture')),
-        body: const SafeArea(
-          child: Center(
-            // Placeholder live-view surface; SCREEN-1 renders the real feed and
-            // the E15–E21 regions over the controller.
-            child: Text('Capture'),
-          ),
-        ),
-      ),
+      child: CaptureScreen(controller: _controller!),
     );
   }
 }

@@ -1,6 +1,6 @@
 # Module SCREEN — Capture screen UI
 
-**Status:** Not started
+**Status:** In progress — SCREEN-1 (shell) done; SCREEN-2/3 (behavior) gated on G-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_screen.dart` and per-region widgets (`capture_eyedropper.dart`, `capture_controls.dart`, `capture_live_view.dart`); labels via bs-01's label-contract widgets.
 **Depends on:** CAPTURE (controller + read endpoint), SOURCE (live feed, radius) · **Blocks:** ITEST-1 (needs the screen to drive), SIGNOFF-1
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 6,759,706 | 13m 46s (13m 46s) |
 | 2 | behavior | AC-1, AC-3 | ⬜ Todo | | |
 | 3 | behavior | AC-10 | ⬜ Todo | | |
 
@@ -41,9 +41,66 @@
   regions as placeholders.
 - **Acceptance gate:** *(n/a — shell)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the Capture screen scaffold: four new `lib/capture` widgets and wired them into
+`CaptureHomeScreen`. `capture_screen.dart` (`CaptureScreen`) is a `Scaffold`+AppBar "Capture" whose body is a
+`ListenableBuilder` over the controller → `Column[ Expanded(CaptureLiveView), CaptureControls ]`, rebuilding
+on every state change. `capture_live_view.dart` (`CaptureLiveView`, reads a plain `CaptureState`) renders a
+placeholder feed surface (`liveViewKey`), the centred `CaptureEyedropper`, and the readings as **text** over
+the feed — stability (`stabilityKey`), accuracy label (`accuracyKey`), low-light warning (`warningKey`, via
+`Visibility`) — honouring bs-01's label contract. `capture_eyedropper.dart` (`CaptureEyedropper`) is a
+centred placeholder reticle (`eyedropperKey`/`reticleKey`, fixed 20 px). `capture_controls.dart`
+(`CaptureControls`) lays out E15–E21 as findable keyed buttons: E15/E16/E17/E20/E21 wired to their controller
+tear-off (`dismissWarning`/`lock`/`calibrate`/`commit`/`toggleValueOnly`) — present but still deferred (a tap
+surfaces the owning phase's `UnimplementedError`); E18 (radius) and E19 (import) are disabled placeholders
+their behaviour phase (SCREEN-2 / SOURCE-3) enables. `build_app.dart`'s `CaptureHomeScreen` now renders
+`CaptureScreen(controller:…)` inside the existing `CaptureReadEndpoint` (controller ownership + endpoint
+wiring unchanged).
+
+Verification (Flutter 3.47.6): `flutter analyze` clean. Unit **282 green (+18** across the four widgets).
+Coverage gate `dart run tool/coverage_gate.dart main`: **100% on all 16 touched `lib` files, PASS**.
+Integration `flutter test integration_test/`: bs-01's **17 green** (unchanged — no capture source in
+`givenReadoutOf`). App-launches-to-Capture-with-all-regions proven at unit level (`build_app_test`,
+`smoke_test` → Capture AppBar; `capture_screen_test` → live view + controls composed and bound). No AC
+un-pended (shell), no augmentations, no exclusions. Fix passes: **1/3** (one run fixed two defects — a
+duplicate `eyedropperKey` on both the widget and its inner `Center`, and the live view's `AspectRatio 3/4`
+forcing the controls off-screen in a `ListView`; moved to `Column`+`Expanded`). Tokens 6,759,706 ·
+time 13m 46s (13m 46s).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged (PATH `~/development/flutter/bin`; `flutter analyze` /
+  `flutter test --coverage` / `flutter test integration_test/` / `dart run tool/coverage_gate.dart main`).
+- **Frozen interfaces (SCREEN-1):**
+  - `CaptureScreen({required CaptureController controller})` — `lib/capture/capture_screen.dart`.
+  - `CaptureLiveView({required CaptureState state})` — keys `liveViewKey`, `stabilityKey`, `accuracyKey`,
+    `warningKey`.
+  - `CaptureEyedropper()` — keys `eyedropperKey`, `reticleKey`; `placeholderReticleSize` (20).
+  - `CaptureControls({required CaptureController controller})` — one key per element:
+    `dismissWarningKey` (E15 `capture-e15-dismiss-warning`), `lockKey` (E16 `capture-e16-lock`),
+    `calibrateKey` (E17 `capture-e17-calibrate`), `radiusKey` (E18 `capture-e18-radius`),
+    `importKey` (E19 `capture-e19-import`), `captureKey` (E20 `capture-e20-capture`),
+    `valueOnlyKey` (E21 `capture-e21-value-only`).
+- **For ITEST-1 (the harness):** build the real app via `buildApp(AppDependencies(…, captureSource: Fake…))`
+  → opens on `CaptureScreen`. The When helpers tap controls by the keys above
+  (`whenLock` → `lockKey`, `whenCommit` → `captureKey`, `whenDismissWarning` → `dismissWarningKey`,
+  `whenCalibrate` → `calibrateKey`, `whenToggleValueOnly` → `valueOnlyKey`, `whenSelectRadius` → E18,
+  `whenImportPhoto` → E19). Observe readings as text by `stabilityKey`/`accuracyKey`/`warningKey`, or state via
+  `CaptureReadEndpoint.endpointKey` → `.controller.state`. The never-pending smoke test can assert the live
+  view (`liveViewKey`) + all seven E15–E21 keys render.
+- **Known gaps / ownership notes:**
+  - E15/E16/E17/E20/E21 are wired but their controller action still throws until CAPTURE-3..6 / SCREEN-3
+    un-defer it — no screen change is then needed for those taps to work.
+  - **E18 (radius)** is a disabled placeholder; SCREEN-2 builds the real 1/5/21 selector + reticle sizing in
+    `capture_controls.dart` / `capture_eyedropper.dart` (both in its Files).
+  - **E19 (import)** is a disabled placeholder with no controller action yet. SOURCE-3 adds the photo-import
+    entry on the controller/source **and must enable E19** (wire `importKey.onPressed`) — that touches
+    `capture_controls.dart`, which is **not** in SOURCE-3's current Files list. Flag for SOURCE-3 /
+    `--reconcile` so the ownership is added (small augmentation), else AC-9's `whenImportPhoto` has no enabled
+    control to tap.
+  - Eyedropper centring (AC-1) and exact reticle sizes 8/20/44 (AC-3) are placeholders until SCREEN-2.
+- **G-3** (approve the acceptance tests) still gates every behaviour phase; decided at ITEST-4.
 
 ## Phase 2 — Behavior: eyedropper + radius selector + reticle (AC-1, AC-3)
 
