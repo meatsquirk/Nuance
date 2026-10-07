@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 (harness + scaffold suite) done; ITEST-2/3 (AC tests) next, then ITEST-4 (G-3)
+**Status:** In progress — ITEST-1 (harness) + ITEST-2 (AC-1,2,3,9,10, grade 5×A; AC-1 un-pended green-at-baseline) done; ITEST-3 (AC-4,5,6,7,8,11) next, then ITEST-4 (G-3)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/capture_test.dart` (AC tests), `integration_test/capture_harness.dart` (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the capture source), `integration_test/fakes/fake_capture_source.dart`; reuses bs-01's `integration_test/fakes/fake_haptics.dart`.
 **Depends on:** all shell phases (SOURCE-1, CAPTURE-2, SCREEN-1) · **Blocks:** every behavior phase (via G-3)
@@ -10,8 +10,8 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 6,008,655 | 17m 53s (17m 53s) |
-| 2 | acceptance-tests | AC-1,2,3,9,10 | ⬜ Todo | | |
-| 3 | acceptance-tests | AC-4,5,6,7,8,11 | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1,2,3,9,10 | ✅ Done | 9,320,845 | 27m 06s (27m 06s) |
+| 3 | acceptance-tests | AC-4,5,6,7,8,11 | ⬜ Next | | |
 | 4 | test-review | — (G-3) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -133,9 +133,66 @@ the app-bar "Capture" assertion scoped to `AppBar` since E20 also reads "Capture
   precondition naming its owning phase; grade grid all A.
 - **Acceptance gate:** *(AC-test)* suite green with new tests pending; red baseline recorded; grade gate passed.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Appended the five sampling+screen AC tests to `integration_test/capture_test.dart` (`TestAC01_Eyedropper`,
+`TestAC02_AreaAverage5px`, `TestAC03_RadiusSelector`, `TestAC09_SampleFromPhoto`, `TestAC10_ValueOnly`), each
+driving the real assembled app through the ITEST-1 harness and observing `currentSample` / reticle size /
+feed render / control text. Sampled colours are rendered back to sRGB via the real `ColorScienceImpl` and
+compared (L1, `_sampleToleranceL1 = 45`) against the fixtures' own frame pixels, so the Thens reject a
+point read, a wrong-radius average, the wrong source, and a missing grayscale render.
+
+**AC-1 un-pended — green at baseline.** The SCREEN-1 shell already renders a centre-point reticle over the
+feed (`Center` inside a `StackFit.expand` live view), so `TestAC01_Eyedropper` (present + reticle centre ≈
+feed centre, ε 0.5) passes live. Per the red-baseline rule a green-at-baseline test is un-pended: removed
+`AC-1` from `bs02/pending.dart`, updated the guard test (`expectedOwners` → 10, length 10, the skip-example
+AC switched to AC-2, AC-1 asserted un-mapped). AC-1 now runs in the default suite; SCREEN-2 still builds the
+real eyedropper/reticle and keeps it green. The other four stay pending on a clean Then naming their owning
+phase (red baseline table above).
+
+**Verification** (Flutter 3.47.6, PATH `~/development/flutter/bin`): `flutter analyze` clean.
+`flutter test integration_test/capture_test.dart` (default) **8 green** (smoke + 6 guards + AC-1), 4 pending
+skipped. `--dart-define=BS02_RUN_PENDING=true` (red baseline) **+8 −4**: AC-1 green; AC-2/AC-9 fail on
+`currentSample` null, AC-3 on reticle 8 px (shell 20 px), AC-10 on `valueOnly` false — all clean Thens, no
+panics. Full `integration_test/` **25 green + 4 pending**. Unit **282 green**. Coverage gate
+`dart run tool/coverage_gate.dart main`: **PASS 100%** (no `lib` touched — only `capture_test.dart` and the
+`bs02/pending.dart` gate). **Grade: 5×A, 0×B** — graded by an independent fresh grader (did not write the
+tests); grid `behavior-test-completeness-bs-02-sample-capture.md`. No exclusions. **Fix passes 1/3** (after
+the first run-pending baseline: consumed AC-10's deferred `UnimplementedError` via `takeException` so its red
+is a clean Then, and un-pended AC-1).
+
+### Checkpoint / Handoff
+
+- **Verification commands** unchanged (see Phase 1 handoff): `flutter analyze`; `flutter test
+  integration_test/capture_test.dart` (default) / `--dart-define=BS02_RUN_PENDING=true` (run-pending);
+  `flutter test integration_test/`; `flutter test --coverage` + `dart run tool/coverage_gate.dart main`.
+- **AC tests landed (AC-1,2,3,9,10) — contracts the behaviour phases must satisfy:**
+  - **SOURCE-2 (AC-2):** opening a scene must populate `state.currentSample` from the live feed (sampled
+    under the centre reticle at the 5 px default) after a `pump`; AC-2 reads it back as sRGB and requires it
+    ≈ the inner-disc colour of `SCENE_CENTRE_VARIED`, nearer the disc than the centre distractor and the
+    outer band. **The test takes no explicit "sample" action — it is passive (`await tester.pump()`), so the
+    live feed must drive `currentSample`** (and the frame stream must terminate / settle so `pumpAndSettle`
+    in the harness `given`/`when` helpers does not hang).
+  - **SCREEN-2 (AC-1 already green; AC-3):** AC-3 iterates radii {1,5,21} via `whenSelectRadius(px)` and
+    asserts the reticle `getSize` == {8,20,44} (ε 0.5) **and** that the average follows the radius. **Carry
+    (flagged by the grader + ITEST-1 handoff):** `whenSelectRadius(px)` currently taps the single E18
+    placeholder regardless of `px`; SCREEN-2 must give each 1/5/21 option its own anchor **and retarget the
+    harness helper** so the three iterations select the three radii — otherwise all three iterations select
+    one radius and the directional-pull Thens don't exercise the selector.
+  - **SOURCE-3 (AC-9):** `whenImportPhoto(PHOTO_SWATCH)` stages the photo on the fake and taps E19; SOURCE-3
+    must **enable E19** (`importKey.onPressed` in `capture_controls.dart`, not in SOURCE-3's current Files —
+    carried from SCREEN-1/ITEST-1) and read the staged photo so `currentSample` becomes the colour at P
+    (5 px average, entirely inside the r=6 swatch), not the image centre, not the olive live camera.
+  - **SCREEN-3 (AC-10):** `toggleValueOnly` must set `state.valueOnly = true`, render the feed grayscale as a
+    **`ColorFiltered` ancestor of `CaptureLiveView.liveViewKey`** (the test asserts that ancestor — use
+    `ColorFiltered`/`ColorFilter.matrix` saturation, not a filter on an unrelated widget), and flip the E21
+    label to exactly **"✓ Value"**. Un-pending AC-10 stops the deferred `UnimplementedError` the test
+    currently consumes.
+- **Pending gate now:** `pendingACs` holds **10** ACs (AC-1 removed). The guard test pins the 10 owners and
+  `length == 10`; a behaviour phase un-pends its AC by deleting its row (AC-10 → SCREEN-3, etc.).
+- **ITEST-3** (AC-4,5,6,7,8,11) is the sibling AC-test phase — same file, lifecycle group; it is now `⬜ Next`
+  and still startable (G-3 blocks only behaviour). ITEST-4 (test review, G-3) needs both ITEST-2 and ITEST-3
+  done.
 
 ## Phase 3 — AC tests: lifecycle + accuracy + commit (AC-4,5,6,7,8,11)
 
@@ -180,16 +237,16 @@ the app-bar "Capture" assertion scoped to `AppBar` since E20 also reads "Capture
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_Eyedropper | (to record) | Then: eyedropper centred | SCREEN-2 | |
-| AC-2 | TestAC02_AreaAverage5px | (to record) | Then: 5 px average (not point) | SOURCE-2 | |
-| AC-3 | TestAC03_RadiusSelector | (to record) | Then: reticle size + radius averaging | SOURCE-2, SCREEN-2 | |
+| AC-1 | TestAC01_Eyedropper | **green at baseline** — un-pended at ITEST-2 (SCREEN-1 shell already centres the reticle over the feed); now runs in the default suite | — (passes live; SCREEN-2 keeps it green) | SCREEN-2 | A |
+| AC-2 | TestAC02_AreaAverage5px | red — clean Then fail | Then: `currentSample` null → 5 px average | SOURCE-2 | A |
+| AC-3 | TestAC03_RadiusSelector | red — clean Then fail | Then: reticle 8 px (shell stays 20 px) | SOURCE-2, SCREEN-2 | A |
 | AC-4 | TestAC04_LockSettles | (to record) | Then: LOCKED + STABLE 12/12 | CAPTURE-3 | |
 | AC-5 | TestAC05_SettlingWarns | (to record) | Then: SETTLING 6/12 + lock invites | CAPTURE-3 | |
 | AC-6 | TestAC06_LowLightApproximate | (to record) | Then: approximate within ΔE00 8 | CAPTURE-4 | B pending CAPTURE-5 |
 | AC-7 | TestAC07_DismissWarning | (to record) | Then: warning cleared, stays approximate | CAPTURE-4 | |
 | AC-8 | TestAC08_CardCalibrates | (to record) | Then: normalised ΔE00 3 + upgraded | CAPTURE-5 | |
-| AC-9 | TestAC09_SampleFromPhoto | (to record) | Then: reads point P of the photo | SOURCE-3 | |
-| AC-10 | TestAC10_ValueOnly | (to record) | Then: grayscale feed + "✓ Value" | SCREEN-3 | |
+| AC-9 | TestAC09_SampleFromPhoto | red — clean Then fail | Then: `currentSample` null → reads point P | SOURCE-3 | A |
+| AC-10 | TestAC10_ValueOnly | red — clean Then fail | Then: `valueOnly` false → grayscale feed + "✓ Value" | SCREEN-3 | A |
 | AC-11 | TestAC11_CommitOpensReadout | (to record) | Then: multi-frame mean + haptic + Readout | CAPTURE-6 | |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->

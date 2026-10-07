@@ -38,8 +38,13 @@ import 'package:flutter_test/flutter_test.dart';
 /// it owns as it un-pends that AC. The owner is the phase whose acceptance gate
 /// un-pends the AC (AC-3 is un-pended by SCREEN-2 over SOURCE-2's radius
 /// sampling), matching ITEST's red-baseline *Owning phase* column.
+///
+/// AC-1 (centre-point eyedropper) was un-pended at ITEST-2: its test is **green
+/// at baseline** — the SCREEN-1 shell already renders a centre-point reticle
+/// over the feed, so the AC holds before SCREEN-2's behaviour lands. SCREEN-2
+/// still builds the real eyedropper/reticle and keeps the (always-running) test
+/// green; see ITEST's red-baseline table.
 const Map<String, String> pendingACs = {
-  'AC-1': 'SCREEN-2', // centre-point eyedropper
   'AC-2': 'SOURCE-2', // 5 px area-average sampling
   'AC-3': 'SCREEN-2', // radius selector + reticle (over SOURCE-2 sampling)
   'AC-4': 'CAPTURE-3', // lock settles the reading
