@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** In progress — next SOURCE-1 (shell). G-3 approve-tests still open, blocks behaviour only
+**Status:** In progress — next CAPTURE-2 (shell). G-3 approve-tests still open, blocks behaviour only
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -121,7 +121,7 @@ CAPTURE-6 target behaviour, not an augmentation.
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` interface + software source; sampling (point, area-average, from-photo); frame feed/averaging primitives | bs-01 domain | ⬜ Todo |
+| SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` interface + software source; sampling (point, area-average, from-photo); frame feed/averaging primitives | bs-01 domain | 🔄 In progress |
 | CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; Capture Controller (lock, settle, radius, low-light, accuracy, calibration, commit); `CaptureAccuracy`; read endpoint; routing into `buildApp` | SOURCE, bs-01 `Haptics`/Readout | 🔄 In progress |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Capture screen UI: live view, eyedropper, reticle, radius selector, lock, stability, warnings, value-only, capture button, photo import | CAPTURE, SOURCE | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
@@ -169,8 +169,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | CAPTURE-1 | scaffold: branch, baseline, verify coverage gate, BS02 pending runner | ✅ Done | 2,239,601 | 8m 15s (8m 15s) | branch cut; baseline green (196 unit + 17 integ); gate proven both ways; `bs02/pending.dart` added |
-| 2 | SOURCE-1 | shell: `CaptureSource` + software source + sampling signatures | ⬜ Next | | | after scaffold |
-| 3 | CAPTURE-2 | shell: controller + state + `CaptureAccuracy` + read endpoint + route | ⬜ Todo | | | after SOURCE-1 |
+| 2 | SOURCE-1 | shell: `CaptureSource` + software source + sampling signatures | ✅ Done | 2,451,815 | 12m 12s (12m 12s) | 4 lib files (frame/source/software-source/sampling), 100% covered; analyze clean; 229 unit + 17 integ green |
+| 3 | CAPTURE-2 | shell: controller + state + `CaptureAccuracy` + read endpoint + route | ⬜ Next | | | after SOURCE-1 |
 | 4 | SCREEN-1 | shell: Capture screen scaffold (E15–E21 placeholders) bound to controller | ⬜ Todo | | | after CAPTURE-2 |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (11 ACs), smoke | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
@@ -191,14 +191,15 @@ when the row is marked done.
 
 ## Next phase
 
-**SOURCE-1 (shell) is next and startable.** CAPTURE-1 landed the scaffold: branch
-`feat/bs-02-sample-capture` off `main`, baseline recorded, coverage gate proven both ways, and the BS02
-pending runner wired at `integration_test/bs02/pending.dart`. SOURCE-1 defines the `CaptureSource` interface +
-a deterministic software source + the sampling signatures (point, area-average, from-photo). The shells are
-layered-serial: SOURCE-1 → CAPTURE-2 → SCREEN-1, then ITEST-1. G-3 (approve the acceptance tests) remains open
-and blocks the behaviour phases only — decided at the ITEST-4 test review, not before.
+**CAPTURE-2 (shell) is next and startable.** SOURCE-1 landed the SOURCE shell: `CaptureSource` interface,
+`SoftwareCaptureSource` (built from a `SceneSpec`), `Frame`/`Pixel`, `CaptureLocks`/`StabilityReading`/
+`Lighting`, and the four sampling signatures — all pure Dart, 100% covered, not yet wired. CAPTURE-2 defines
+`CaptureState`, `CaptureAccuracy` (D-3), the `CaptureController` skeleton + read endpoint, and wires a
+`SoftwareCaptureSource` into bs-01's `buildApp` + a Capture route. Shells are layered-serial
+(SOURCE-1 ✅ → CAPTURE-2 → SCREEN-1), then ITEST-1. G-3 (approve the acceptance tests) remains open and blocks
+the behaviour phases only — decided at the ITEST-4 test review.
 
-Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… SOURCE-1`).
+Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… CAPTURE-2`).
 
 ## Token usage
 
@@ -209,7 +210,8 @@ Run next (fresh session): `/feature-next-phase bs-02-sample-capture` (or `… SO
 | PLAN | 87210ab6 | 2026-10-05 15:54 EDT | 16:05 | 10m 40s | 10m 40s | claude-opus-4-8 | 22 | 119,820 | 1,019,357 | 53,104 | 1,192,303 | plan written: 17 phases, 4 modules, 11 ACs; G-1/G-2/G-3 open |
 | GATE-DECISION | f00319bb | 2026-10-06 20:25 EDT | 20:30 | 4m 50s | 4m 50s | claude-opus-4-8 | 44 | 127,866 | 2,953,692 | 20,839 | 3,102,441 | G-1 approved (owner Matt Quirk) + G-2 resolved (bs-01 merged to main at c793839); CAPTURE-1 unblocked, G-3 still open |
 | CAPTURE-1 | 0ea18afb | 2026-10-06 20:43 EDT | 20:51 | 8m 15s | 8m 15s | claude-opus-4-8 | 58 | 73,799 | 2,146,871 | 18,873 | 2,239,601 | scaffold done — branch cut from main, baseline green (196 unit + 17 integ), coverage gate proven both ways, BS02 pending runner (integration_test/bs02/pending.dart) wired |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-06 20:51** | **23m 45s** | **23m 45s** |  | **124** | **321,485** | **6,119,920** | **92,816** | **6,534,345** |  |
+| SOURCE-1 | 5fdfc7dc | 2026-10-06 21:07 EDT | 21:20 | 12m 12s | 12m 12s | claude-opus-4-8 | 56 | 85,940 | 2,330,132 | 35,687 | 2,451,815 | shell done — CaptureSource interface + SoftwareCaptureSource + sampling signatures; 4 lib files 100% covered; analyze clean; 229 unit + 17 integ green; fix passes 0/3 |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-06 21:20** | **35m 57s** | **35m 57s** |  | **180** | **407,425** | **8,450,052** | **128,503** | **8,986,160** |  |
 
 ## Sign-off
 

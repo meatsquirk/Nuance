@@ -1,6 +1,6 @@
 # Module SOURCE — capture source + sampling
 
-**Status:** Not started
+**Status:** In progress — SOURCE-1 (shell) done; `CaptureSource` interface + `SoftwareCaptureSource` + sampling signatures landed, 100% covered. SOURCE-2 (AC-2) next, blocked by G-3.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/capture_source.dart` (interface), `lib/capture/source/software_capture_source.dart`, `lib/capture/source/sampling.dart` (point / area-average / from-photo), `lib/capture/source/frame.dart` (frame model).
 **Depends on:** bs-01 domain (`ColorCoordinates`) · **Blocks:** CAPTURE-2 (controller consumes the source), SCREEN behavior (reticle reads radius)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 2,451,815 | 12m 12s (12m 12s) |
 | 2 | behavior | AC-2 | ⬜ Todo | | |
 | 3 | behavior | AC-9 | ⬜ Todo | | |
 
@@ -46,9 +46,50 @@
 - **Exit criteria:** unit gate passes on the new types; `flutter analyze` clean; existing suite green.
 - **Acceptance gate:** *(n/a — shell)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the SOURCE module shell under `lib/capture/source/` — four pure-Dart files, no
+flutter dependency, not yet wired into the app (CAPTURE-2 wires it):
+- `frame.dart`: `FrameColorSpace` {srgb, displayP3}, `Pixel` (sRGB 8-bit value type),
+  `Frame` (row-major `Pixel` buffer + `colorSpace`, `pixelAt(x,y)`). Frame keeps
+  identity equality by design (compared through sampled values, not structurally).
+- `capture_source.dart`: `const kStabilityFrameTarget = 12`; `Lighting` {adequate, low};
+  `CaptureLocks` {exposure, whiteBalance, focus} + `allLocked`/`copyWith`; `StabilityReading`
+  {settledFrames, requiredFrames=12} + `isStable`; the abstract `CaptureSource` interface
+  (frames stream, locks, stability stream, lighting, referenceCardPresent, lock controls).
+- `software_capture_source.dart`: `SceneSpec` (groundTruth `ColorCoordinates`, lighting,
+  canLock, referenceCardPresent, noise, optional explicit frames) + `SoftwareCaptureSource`
+  skeleton — exposes scene lighting/card, records lock requests, replays explicit frames;
+  frame generation + stability signal deferred to SOURCE-2 (empty placeholders for now).
+- `sampling.dart`: `const kDefaultSamplingRadiusPx = 5` (D-7) + `samplePoint`,
+  `sampleAreaAverage`, `sampleFromPhoto`, `averageFrames` — signatures only, bodies throw
+  `UnimplementedError` (SOURCE-2/3).
+
+Gates (Flutter 3.47.6 / Dart 3.13.5): `flutter analyze` clean (no issues). Unit suite green,
+229 tests (196 baseline + 33 new across 4 mirror test files). Coverage gate PASS — 100% line
+coverage on all 4 touched `lib` files. Integration suite green (17 tests, unchanged — no wired
+code touched). Fix passes: 0/3 (first full run clean). No augmentations, no exclusions, no gates
+resolved (G-3 remains open for the ITEST test review). Tokens 2,451,815 · time 12m 12s (12m 12s).
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces (SOURCE-1):** `CaptureSource` (abstract), `Frame`/`Pixel`/`FrameColorSpace`,
+  `CaptureLocks`, `StabilityReading`, `Lighting`, `SceneSpec`, `SoftwareCaptureSource`, and the
+  four sampling function signatures. Constants: `kStabilityFrameTarget = 12`,
+  `kDefaultSamplingRadiusPx = 5`.
+- **Deferred placeholders SOURCE-2 replaces:** `SoftwareCaptureSource.frames` (generate the live
+  feed from `SceneSpec.groundTruth` + `noise`, not just replay explicit frames),
+  `.stability` (emit real settling progress), and all of `sampling.dart` (`samplePoint`,
+  `sampleAreaAverage`, `averageFrames`); SOURCE-3 does `sampleFromPhoto`. Sampling converts raw
+  frame pixels → canonical CIELAB using bs-01 color-science (reuse, no new colour math).
+- **Deferred shell fields** held for later phases: `SceneSpec.canLock` (CAPTURE-3 honours it when
+  locking), `SceneSpec.noise` (SOURCE-2 frame generation). Lock controls currently record the lock
+  unconditionally; the lock→settle behaviour is CAPTURE-3.
+- **Verification commands** (repo root; `export PATH="$HOME/development/flutter/bin:$PATH"` first):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` ·
+  `flutter test integration_test/`.
+- **CAPTURE-2 (next in the shell layer)** consumes `CaptureSource` into the controller and wires a
+  `SoftwareCaptureSource` into `buildApp` + a Capture route.
 
 ## Phase 2 — Behavior: live feed + point/area-average sampling (AC-2)
 
