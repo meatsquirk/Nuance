@@ -59,10 +59,15 @@ class CaptureLiveView extends StatelessWidget {
         Positioned(
           right: 8,
           top: 8,
-          child: Text(
-            state.accuracy.label,
+          // The accuracy region carries [accuracyKey] as a wrapper around the
+          // label text, so callers can assert the tier word *within* the region
+          // (`find.descendant(of: accuracyKey, matching: find.text(...))`).
+          child: KeyedSubtree(
             key: accuracyKey,
-            style: const TextStyle(color: Colors.white),
+            child: Text(
+              state.accuracy.label,
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ),
         Positioned(

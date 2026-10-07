@@ -86,17 +86,17 @@ void main() {
     // as green at baseline (its always-running test is below). AC-2 is absent:
     // SOURCE-2 un-pended it. AC-9 is absent: SOURCE-3 un-pended it. AC-4 and AC-5
     // are absent: CAPTURE-3 un-pended them. AC-6 and AC-7 are absent: CAPTURE-4
-    // un-pended them. So only the four still-pending ACs remain here.
+    // un-pended them. AC-8 is absent: CAPTURE-5 un-pended it. So only the three
+    // still-pending ACs remain here.
     const expectedOwners = {
       'AC-3': 'SCREEN-2',
-      'AC-8': 'CAPTURE-5',
       'AC-10': 'SCREEN-3',
       'AC-11': 'CAPTURE-6',
     };
 
     test('the still-pending ACs are each owned by a real behaviour phase', () {
       expect(pendingACs, expectedOwners);
-      expect(pendingACs.length, 4);
+      expect(pendingACs.length, 3);
       for (final owner in pendingACs.values) {
         expect(behaviorPhases, contains(owner),
             reason: '"$owner" is not a known bs-02 behaviour phase');
@@ -523,11 +523,11 @@ void main() {
 
   // AC-6 — A low-light reading is marked approximate rather than refused: a
   // low-light warning shows, a sample IS committed (never refused), and it is
-  // approximate within ΔE00 8 of ground truth. Owned by CAPTURE-4. Graded
-  // *B pending CAPTURE-5*: with only one accuracy tier until the reference-card
-  // path lands, this test cannot yet prove low light *specifically* downgrades
-  // vs a single always-on tier — CAPTURE-5 adds the calibrated-vs-approximate
-  // control (see the Test augmentations table).
+  // approximate within ΔE00 8 of ground truth. Owned by CAPTURE-4; the
+  // calibrated-vs-approximate control landed with CAPTURE-5 (the reference-card
+  // path), closing the former *B pending CAPTURE-5* → A: the control proves low
+  // light *specifically* downgrades the tier rather than the capture reporting a
+  // single always-approximate tier regardless of conditions.
   acTestWidgets('AC-6', 'TestAC06_LowLightApproximate', (tester) async {
     // Given: capturing SCENE_DIM without a reference card — the source reports
     // low light and no card (asserted through the read endpoint's source).
@@ -557,9 +557,45 @@ void main() {
         reason: 'AC-6: the reading is committed, not refused, in low light');
     expect(committed!.accuracy, CaptureAccuracy.approximate,
         reason: 'AC-6: the committed sample is marked approximate');
-    expect(_deltaE00(committed.coordinates, harness.source.groundTruth),
-        lessThanOrEqualTo(CaptureAccuracy.approximate.maxDeltaE),
+    final dimDeltaE = _deltaE00(committed.coordinates, harness.source.groundTruth);
+    expect(dimDeltaE, lessThanOrEqualTo(CaptureAccuracy.approximate.maxDeltaE),
         reason: 'AC-6: the committed colour is within ΔE00 8 of ground truth');
+    expect(dimDeltaE, greaterThan(CaptureAccuracy.calibrated.maxDeltaE),
+        reason: 'AC-6: the dim reading sits beyond the calibrated tier (ΔE00 > '
+            '3), so marking it approximate is a real downgrade, not a '
+            'conservative relabel of an already-accurate reading');
+
+    // Control (CAPTURE-5 augmentation): the same olive ground truth captured
+    // *with* a reference card and calibrated commits at the CALIBRATED tier,
+    // within ΔE00 3. Pairing it with the dim capture above proves low light
+    // *specifically* downgrades the accuracy — the approximate label is not a
+    // single always-on tier the capture reports regardless of conditions. This
+    // control cannot pass before CAPTURE-5 (calibrate() threw), so it also
+    // discriminates a calibration no-op.
+    //
+    // Reset the tree to an empty widget first so the next `givenCaptureOf`
+    // mounts a *fresh* app: CaptureHomeScreen builds its controller once in
+    // initState, so pumping a second app over the live one would reuse the dim
+    // controller and never see the card source. The empty pump tears the dim
+    // app (and its controller) down, exactly as a separate test would start.
+    await tester.pumpWidget(const SizedBox.shrink());
+    final cardHarness = await givenCaptureOf(tester, SCENE_CARD);
+    expect(cardHarness.source.lighting, Lighting.adequate,
+        reason: 'AC-6 control: the card scene is in adequate light (no dim '
+            'downgrade), so the tier difference is the card calibration, not '
+            'lighting');
+    await cardHarness.whenCalibrate();
+    await cardHarness.whenCommit();
+    final calibrated = cardHarness.state.lastCommittedSample;
+    expect(calibrated, isNotNull,
+        reason: 'AC-6 control: the card capture commits');
+    expect(calibrated!.accuracy, CaptureAccuracy.calibrated,
+        reason: 'AC-6 control: a card-calibrated capture reads calibrated — so '
+            'the dim capture above was specifically downgraded to approximate');
+    expect(_deltaE00(calibrated.coordinates, cardHarness.source.groundTruth),
+        lessThanOrEqualTo(CaptureAccuracy.calibrated.maxDeltaE),
+        reason: 'AC-6 control: the calibrated capture is within ΔE00 3, a tier '
+            'tighter than the dim reading’s approximate ΔE00 ≤ 8');
   });
 
   // AC-7 — Dismissing the low-light warning clears it and the reading stays

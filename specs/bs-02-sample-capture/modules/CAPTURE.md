@@ -1,6 +1,6 @@
 # Module CAPTURE — scaffold, capture controller, accuracy, commit
 
-**Status:** In progress — CAPTURE-4 (behavior) done; low-light commit + accuracy tier + dismiss landed, AC-6/AC-7 un-pended green (AC-6 B-pending-CAPTURE-5). Next CAPTURE-5 (AC-8, calibration) or CAPTURE-6 (AC-11, commit→Readout)
+**Status:** In progress — CAPTURE-5 (behavior) done; reference-card calibration landed, AC-8 un-pended green and AC-6's augmentation closed (B-pending-CAPTURE-5 → A). Next CAPTURE-6 (AC-11, commit→Readout)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`, `lib/capture/capture_accuracy.dart`, `lib/capture/capture_read_endpoint.dart`; edits to bs-01's `lib/app/build_app.dart` and `lib/app/router.dart` (add the Capture route); the BS02 pending-runner wiring the scaffold adds.
 **Depends on:** SOURCE (consumes `CaptureSource` + sampling), bs-01 `Haptics` + Readout route · **Blocks:** SCREEN, ITEST, every capture behavior
@@ -13,7 +13,7 @@
 | 2 | shell | — | ✅ Done | 9,221,563 | 16m 54s (16m 54s) |
 | 3 | behavior | AC-4, AC-5 | ✅ Done | 51,577,446 | 1h 28m (3h 35m) |
 | 4 | behavior | AC-6, AC-7 | ✅ Done | 9,611,728 | 20m 03s (20m 03s) |
-| 5 | behavior | AC-8 | ⬜ Todo | | |
+| 5 | behavior | AC-8 | ✅ Done | 16,450,722 | 34m 29s (1h 29m) |
 | 6 | behavior | AC-11 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -53,7 +53,10 @@
 
 - **G-1 (approve spec)** ✅ Resolved 2026-10-06 (owner Matt Quirk) and **G-2 (bs-01 foundation)** ✅ Resolved
   2026-10-06 (bs-01 merged to `main` at c793839) — CAPTURE-1 is now unblocked.
-- **G-3 (approve tests)** blocks CAPTURE-3/4/5/6 (behavior) — still open, decided at the ITEST test review.
+- **G-3 (approve tests)** ✅ Resolved 2026-10-07 07:04 EDT — approved (Matt Quirk) at the ITEST test review;
+  the behaviour stage is un-blocked (CAPTURE-3/4/5 done under it).
+- **G-4 (confirm CAPTURE-3 `givenCaptureOf`→`pumpWidget` harness change)** advisory, still open — does not block
+  the remaining behaviour phases; resolve by SIGNOFF-1.
 
 ## Phase 1 — Scaffold
 
@@ -354,9 +357,79 @@ augmentations (AC-6's is owned by CAPTURE-5). Tokens 9,611,728 · time 20m 03s (
   **calibrated** ΔE3 while the card-less dim capture reads **approximate** ΔE8 — proving low light
   specifically downgrades. Clears AC-6's *B pending CAPTURE-5* to A.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed reference-card calibration. `CaptureController.calibrate()` is live: a no-op when no card is in view
+(`!source.referenceCardPresent`), otherwise it upgrades `state.accuracy` to `CaptureAccuracy.calibrated` and
+normalises the current reading toward ground truth via the source, so the next `commit()` carries the
+calibrated colour + tier (commit already stamps `state.accuracy`, unchanged). The accuracy upgrades even
+before a colour is sampled (card read → tier shows calibrated immediately).
+
+**File scope beyond the plan's declared controller + accuracy (recorded, approved by the user):**
+- **`lib/capture/source/capture_source.dart` + `software_capture_source.dart`** — the normalisation is a
+  **source** responsibility per SI D2 (the `CaptureSource` returns a *normalised* sample; only the source
+  observes the reference card). Added abstract `ColorCoordinates normaliseAgainstCard(ColorCoordinates raw)`;
+  the deterministic `SoftwareCaptureSource` returns `scene.groundTruth` (the card recovers the true colour;
+  ΔE00 0, inside the calibrated tier's ΔE00 3). The controller only sees the `CaptureSource` interface, so it
+  could not reach ground truth otherwise. `capture_accuracy.dart` needed no change (the `calibrated` tier
+  already carries ΔE00 3).
+- **`lib/capture/capture_live_view.dart`** — the approved AC-8 test asserts the tier word **within** the
+  keyed accuracy region (`find.descendant(of: accuracyKey, matching: find.text('Calibrated'))`), but SCREEN-1
+  put `accuracyKey` directly on the `Text`, so the descendant finder (root excluded) could never match.
+  Wrapped the label in `KeyedSubtree(key: accuracyKey)` so the key is an ancestor of the label; its non-AC
+  unit test (`capture_live_view_test.dart`) updated to read the descendant `Text`.
+
+Un-pended **AC-8** (deleted its `pendingACs` row; pending-gate guard `expectedOwners` now 3 — AC-3/AC-10/AC-11).
+**Augmented AC-6** (`TestAC06_LowLightApproximate`): added the calibrated-vs-approximate control — after the
+dim/approximate assertions it resets the tree (`pumpWidget(SizedBox)`, disposing the dim controller — a fresh
+mount is required because `CaptureHomeScreen` builds its controller once in `initState`), mounts `SCENE_CARD`,
+calibrates and commits, asserting the capture reads **calibrated** within ΔE00 3 while the dim capture sits
+ΔE00 > 3 (a real downgrade). This proves low light *specifically* downgrades, closing AC-6's
+*B pending CAPTURE-5* → **A**.
+
+Verification (Flutter 3.47.6, PATH export): `flutter analyze` clean. Unit **308 pass** (+1 net: new calibrate
+group + source normalise test; removed the `calibrate` throws-row). Coverage gate
+`dart run tool/coverage_gate.dart <base>` → **100% on all 4 touched lib files, PASS** (controller, source
+interface, software source, live-view). Acceptance (default) `flutter test integration_test/capture_test.dart`
+→ **16 pass + 3 pending-skip** (AC-3/AC-10/AC-11); AC-8 runs live. Run-pending → 16 pass + 3 fail = exactly the
+still-pending ACs reding on their Thens (SCREEN-2/SCREEN-3/CAPTURE-6). Full `integration_test/` (bs-01 + bs-02)
+→ **33 pass + 3 pending-skip** (bs-01 unaffected by the new interface method).
+
+**Grade gate:** fresh independent re-grade (grader did not write the tests) of all 8 un-pended tests →
+**8×A**; AC-6 upgraded **B pending CAPTURE-5 → A**, AC-8 fresh live **A**; no downgrades, no silent weakening
+(the `KeyedSubtree` and `normaliseAgainstCard` touch only AC-8/AC-6-control paths). Whole-suite grid **11×A,
+0×B** (recorded in `behavior-test-completeness-bs-02-sample-capture.md`).
+
+Fix passes: **2/3** — (1) `capture_controls_test` asserted E17 (calibrate) still threw; retargeted it to the
+live-action group (card-less no-op, no throw), and fixed a `prefer_null_aware_operators` lint by extracting
+`_normalisedAgainstCard`. (2) AC-6's control first failed because the second `givenCaptureOf` reused the dim
+`CaptureHomeScreen` controller (element reuse) — fixed with the `pumpWidget(SizedBox)` tree reset. No
+exclusions. Tokens 16,450,722 · time 34m 29s (1h 29m).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged (PATH export + `flutter analyze` / `flutter test --coverage` /
+  `flutter test integration_test/capture_test.dart` [+ `--dart-define=BS02_RUN_PENDING=true` to run pending] /
+  `dart run tool/coverage_gate.dart <base>`).
+- **Frozen interfaces (CAPTURE-5):**
+  - `CaptureSource.normaliseAgainstCard(ColorCoordinates raw) → ColorCoordinates` — corrects a reading toward
+    ground truth using the reference card; `SoftwareCaptureSource` returns `scene.groundTruth`. (New on the
+    SOURCE-owned interface; implement it in any future `CaptureSource`.)
+  - `CaptureController.calibrate()` — no-op without a card; else upgrades `state.accuracy` to `calibrated` and
+    normalises `currentSample` via the source. Moves state through `emit`.
+  - `CaptureLiveView.accuracyKey` now wraps the label in a `KeyedSubtree` (the label `Text` is a descendant of
+    the keyed node, not the keyed node itself).
+- **For CAPTURE-6 (AC-11):** still the only CAPTURE work left. Replace `commit()`'s body with multi-frame
+  averaging (`averageFrames` over `framesAveraged` source frames), fire exactly one `Haptics` confirm pulse,
+  and navigate to the Readout (`AppRouter.toReadout`) carrying the sample. **Keep** the `lowLightWarning`
+  set-on-commit behaviour (AC-6/AC-7) **and** the calibrated accuracy stamping (AC-8) — `commit()` stamps
+  `state.accuracy`, so calibration keeps riding through as long as that is preserved; and keep the
+  `CaptureReadEndpoint` reachable across the Readout push (AC-11 hazard).
+- **Known gaps:** `setRadius` / `toggleValueOnly` still throw `UnimplementedError` until SCREEN-2 / SCREEN-3.
+  G-4 (the CAPTURE-3 harness change) remains advisory-open for SIGNOFF-1.
+- **Next phase:** CAPTURE-6 (AC-11, over CAPTURE-3 + SOURCE-2) — edits `capture_controller.dart`'s `commit()`;
+  run serially with any other controller edit. SCREEN-2 (AC-1/AC-3) and SCREEN-3 (AC-10) are the remaining
+  non-CAPTURE behaviour phases.
 
 ## Phase 6 — Behavior: multi-frame commit + haptic + open readout (AC-11)
 

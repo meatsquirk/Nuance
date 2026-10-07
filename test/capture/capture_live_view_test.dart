@@ -31,7 +31,14 @@ void main() {
       _host(const CaptureState(accuracy: CaptureAccuracy.calibrated)),
     );
 
-    final text = tester.widget<Text>(find.byKey(CaptureLiveView.accuracyKey));
+    // The accuracy region wraps its label text (so the tier word is findable
+    // within the keyed region — see CaptureLiveView.accuracyKey).
+    final text = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(CaptureLiveView.accuracyKey),
+        matching: find.byType(Text),
+      ),
+    );
     expect(text.data, 'Calibrated');
   });
 

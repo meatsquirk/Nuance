@@ -67,44 +67,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('wires E17, E21 to their (still-deferred) controller action',
+  testWidgets('wires E21 to its (still-deferred) controller action',
       (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
     await _pump(tester, controller);
 
-    // Each wired control is enabled and reaches the controller, whose behaviour
-    // is still deferred — a tap surfaces the owning phase's UnimplementedError.
-    // (E16 lock is live as of CAPTURE-3, E15 dismiss + E20 capture as of
-    // CAPTURE-4 — all asserted separately below.)
-    for (final key in [
-      CaptureControls.calibrateKey,
-      CaptureControls.valueOnlyKey,
-    ]) {
-      final button = tester.widget<TextButton>(find.byKey(key));
-      expect(button.onPressed, isNotNull, reason: '$key should be wired');
+    // E21 (value-only) is the one control whose behaviour is still deferred — a
+    // tap surfaces its owning phase's (SCREEN-3) UnimplementedError. (E16 lock
+    // is live as of CAPTURE-3, E15 dismiss + E20 capture as of CAPTURE-4, E17
+    // calibrate as of CAPTURE-5 — all asserted separately below.)
+    final button =
+        tester.widget<TextButton>(find.byKey(CaptureControls.valueOnlyKey));
+    expect(button.onPressed, isNotNull, reason: 'E21 should be wired');
 
-      await tester.tap(find.byKey(key));
-      await tester.pump();
-      expect(
-        tester.takeException(),
-        isA<UnimplementedError>(),
-        reason: '$key should reach the deferred controller action',
-      );
-    }
+    await tester.tap(find.byKey(CaptureControls.valueOnlyKey));
+    await tester.pump();
+    expect(
+      tester.takeException(),
+      isA<UnimplementedError>(),
+      reason: 'E21 should reach the deferred controller action',
+    );
   });
 
-  testWidgets('wires E15 (dismiss) and E20 (capture) to live actions (CAPTURE-4)',
+  testWidgets(
+      'wires E15 (dismiss), E20 (capture) and E17 (calibrate) to live actions',
       (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
     await _pump(tester, controller);
 
-    // Both controls are enabled and reach real behaviour now — a tap raises no
-    // deferred throw (commit + dismiss landed in CAPTURE-4).
+    // All three reach real behaviour now — a tap raises no deferred throw
+    // (commit + dismiss landed in CAPTURE-4; E17 calibrate in CAPTURE-5, a no-op
+    // here since this controls-only harness has no reference card in view).
     for (final key in [
       CaptureControls.captureKey,
       CaptureControls.dismissWarningKey,
+      CaptureControls.calibrateKey,
     ]) {
       final button = tester.widget<TextButton>(find.byKey(key));
       expect(button.onPressed, isNotNull, reason: '$key should be wired');

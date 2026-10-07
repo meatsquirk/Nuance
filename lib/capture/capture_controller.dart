@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
+import 'capture_accuracy.dart';
 import 'capture_state.dart';
 import 'source/capture_source.dart';
 import 'source/frame.dart';
@@ -133,11 +134,33 @@ class CaptureController extends ChangeNotifier {
   void setRadius(int radiusPx) =>
       throw UnimplementedError('setRadius: behaviour lands in SCREEN-2');
 
-  /// Normalises captures against a reference card and upgrades the stated
-  /// accuracy to [CaptureAccuracy.calibrated] (AC-8). Behaviour lands in
-  /// CAPTURE-5.
-  void calibrate() =>
-      throw UnimplementedError('calibrate: behaviour lands in CAPTURE-5');
+  /// Normalises the current reading against a reference card and upgrades the
+  /// stated accuracy to [CaptureAccuracy.calibrated] (AC-8).
+  ///
+  /// A no-op when no reference card is in view ([CaptureSource.referenceCardPresent]
+  /// is false): without a card there is nothing to normalise against, so the
+  /// reading stays at its card-less tier. With a card present, the source
+  /// corrects the reading toward ground truth (within the calibrated tier's
+  /// ΔE00 3) and the stated accuracy is upgraded to [CaptureAccuracy.calibrated];
+  /// the live feed has already drained into [CaptureState.currentSample], so the
+  /// correction lands on that reading and the next [commit] carries it. The
+  /// accuracy upgrades even before any colour has been sampled, so the painter
+  /// sees the calibrated tier the moment the card is read.
+  void calibrate() {
+    if (!source.referenceCardPresent) return;
+    final reading = _state.currentSample;
+    emit(_state.copyWith(
+      accuracy: CaptureAccuracy.calibrated,
+      currentSample: reading == null ? null : _normalisedAgainstCard(reading),
+    ));
+  }
+
+  /// [reading] corrected toward ground truth by the source's reference card and
+  /// stamped with the upgraded [CaptureAccuracy.calibrated] tier.
+  Sample _normalisedAgainstCard(Sample reading) => reading.copyWith(
+        coordinates: source.normaliseAgainstCard(reading.coordinates),
+        accuracy: CaptureAccuracy.calibrated,
+      );
 
   /// Clears the low-light warning without changing the stated accuracy (AC-7).
   ///

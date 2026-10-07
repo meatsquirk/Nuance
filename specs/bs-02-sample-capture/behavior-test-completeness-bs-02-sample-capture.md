@@ -194,3 +194,58 @@ isNotNull` after the single `pumpWidget`, so `commit()` has a reading to commit 
   warning control both land with CAPTURE-5's augmentation — do not mark AC-6 A before then. (2) `takeException()`
   consumes stay bounded (`UnimplementedError`/null only) and are now harmless no-ops for AC-6/AC-7. (3) AC-11's
   navigation hazard (keep `CaptureReadEndpoint` reachable across the Readout push) is carried to CAPTURE-6.
+
+## Re-grade — CAPTURE-5 (un-pended: AC-1, AC-2, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9)
+
+CAPTURE-5 landed the reference-card calibration path behind AC-8 and un-pended it, and added the
+calibrated-vs-approximate control that closes AC-6's prior `B pending CAPTURE-5`. The live pieces: a new
+`CaptureController.calibrate()` (no-op without a card; else upgrades `accuracy → calibrated` and replaces
+`currentSample` with `_normalisedAgainstCard`); a new abstract `CaptureSource.normaliseAgainstCard(raw)`
+implemented on `SoftwareCaptureSource` as `return scene.groundTruth` (the deterministic card recovers the true
+colour, ΔE00 0) and inherited unchanged by `FakeCaptureSource`; and a `KeyedSubtree(key: accuracyKey)` wrapper
+around the live-view accuracy label. Per the grade gate a behaviour phase re-grades **every un-pended AC test**
+against the **live** behaviour — so the eight currently un-pended tests (AC-1, AC-2, AC-4, AC-5, AC-6, AC-7,
+AC-8, AC-9) are graded here; AC-3 (SCREEN-2), AC-10 (SCREEN-3), AC-11 (CAPTURE-6) remain pending and their prior
+rows are untouched. Graded by an independent fresh grader (did not write these tests) on 2026-10-07; confirmed
+by a live run (`flutter test integration_test/capture_test.dart` → **16 passed, 3 skipped**; AC-1, AC-2, AC-4,
+AC-5, AC-6, AC-7, AC-8, AC-9 all executed live and passed).
+
+**Silent-weakening check (CAPTURE-5's two touch points):** (1) The `KeyedSubtree(key: accuracyKey)` wrapper does
+not weaken any un-pended test. The only reader of `accuracyKey` is AC-8's `find.descendant(of: accuracyKey,
+matching: find.text('Calibrated'))`, which the wrapper is built to serve (the label `Text` is a descendant of
+the keyed subtree). AC-6/AC-7 read the accuracy through `harness.state…accuracy` (the enum, **not** the label),
+so the wrapper is irrelevant to them; the smoke test's `find.text('Approximate')` still matches the `Text`
+inside the subtree. (2) The new `normaliseAgainstCard` interface method is reached only from `calibrate()`
+(AC-8 and AC-6's control); it does not touch AC-1/2/4/5/7/9, whose structural / sampling / lock / commit paths
+are unchanged. No un-pended test is weakened.
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_Eyedropper` | A | G1,G4,G5,G6 (G2/G3 n/a) | Carried forward live A; untouched by CAPTURE-5 (pure structural layout read, no accuracy label or calibration dependency). Given checked through the real UI (`AppBar 'Capture'` + `liveViewKey`); asserts reticle centre vs feed centre on both axes at epsilon 0.5 (not mere presence). Live `CaptureLiveView` lays the feed `StackFit.expand` and the reticle in a `Center`, so a correct render matches to ~0 px and 0.5 kills an absent/off-centre marker. |
+| AC-2 | `TestAC02_AreaAverage5px` | A | G1,G2,G4,G5,G6 (G3 n/a) | Carried forward live A; untouched. Configured radius read through the endpoint (`state.radiusPx==5`, G2). Real `sampleAreaAverage(..., radiusPx:5)` drives the three-way distance Then on `SCENE_CENTRE_VARIED` (red/teal/yellow, pairwise L1 ~200–280 ≫ `_sampleToleranceL1 = 45`); kills a point read (`toDisc < toCentre`) and a wider radius (`toDisc < toOuter`). |
+| AC-4 | `TestAC04_LockSettles` | A | G1,G4,G5,G6 (G3 n/a) | Carried forward live A; lock/settle unchanged by CAPTURE-5. Given `lockState==auto`; `_pumpUntilText` climbs the real frame counter to `find.text('SETTLING 6/12')` (G1). Taps real E16; `takeException` bounded (no-op). Thens assert exact "AE · AWB · AF LOCKED" + "STABLE 12/12" + `lockState==locked` at grain (G4). Kills unchanged-indicator / never-settles / partial-lock. |
+| AC-5 | `TestAC05_SettlingWarns` | A | G1,G3,G4,G5,G6 | Carried forward live A; unaffected. Given `lockState==auto`; counter advances 0→6 (no lock tap). Textbook G3: negatives (`isStable==false`, "STABLE 12/12" findsNothing) at a settle point, paired with the counter climbing 0→6; `lockButton.enabled==true` proves the affordance. Kills STABLE-while-unlocked and a missing/disabled control. |
+| AC-6 | `TestAC06_LowLightApproximate` | **A** (was B pending CAPTURE-5) | G1,G2,G3,G4,G5,G6 | **Upgraded B→A: the pre-seeded CAPTURE-5 augmentation landed and discriminates.** Dim half (live `commit()` on configured SCENE_DIM via `harness.source`, G2): kills refusal-in-dim (`lastCommittedSample isNotNull`), kills no-warning (`warningKey` + flag), committed accuracy==approximate, and the committed `_dimRaw` sits ΔE00 ≈5.1 of ground truth — asserted **both** `≤ approximate.maxDeltaE (8)` and **`> calibrated.maxDeltaE (3)`**, so the approximate label is a real downgrade, not a conservative relabel of an already-tight reading. **Control (G3/G5):** resets the tree (`pumpWidget(SizedBox.shrink())`) — which disposes the dim `CaptureHomeScreen`/controller — then mounts a **fresh** SCENE_CARD app, asserts the card scene is in *adequate* light (so the tier delta is the card, not lighting), calibrates, commits, and asserts the committed capture reads `calibrated` within ΔE00 3. The reset is sound: `CaptureHomeScreen` builds its controller once in `initState`, so the control reads the card controller via the endpoint, not the torn-down dim one (live run confirms the fresh source is sampled: committed card colour = ΔE00 0). The control **discriminates** — pre-CAPTURE-5 `calibrate()` threw `UnimplementedError` (the body takes no exception after `whenCalibrate`, so it would error the test), and a relabel-only calibration leaves `_cardRaw` at ΔE00 ≈4.6 > 3 → the `≤3` Then fails. Pairing the two commits proves low light *specifically* downgrades vs a single always-on tier — the exact G5 gap the prior row named. **G6 judgement (not a defect):** the control asserts `calibrated`/ΔE00 3 (steps that also appear in AC-8), but here they serve AC-6's own downgrade claim as the required contrast, not an independent re-verification of AC-8; this is the planner's pre-seeded augmentation strengthening AC-6's own Then, so it stays one-AC. |
+| AC-7 | `TestAC07_DismissWarning` | A | G1,G3,G4,G5,G6 | Carried forward live A; unaffected by CAPTURE-5. Given built through the real `commit()` flow on SCENE_DIM (`warningKey` + `lowLightWarning==true` + `lastCommittedSample.accuracy==approximate` before the When — read via `state`, not the accuracy label, so the `KeyedSubtree` wrapper does not touch it). Taps real E15 → `dismissWarning()`; `takeException` bounded. Textbook G3: the negative (warning gone) after the settle point, paired with the warning-present Given; accuracy-invariance before **and** after kills *dismiss clears/upgrades the accuracy*. |
+| AC-8 | `TestAC08_CardCalibrates` | A | G1,G2,G4,G5,G6 | **Now live.** Given `referenceCardPresent==true` answered by the configured SCENE_CARD via `harness.source` (G2). When taps real E17 → live `calibrate()`: reads the already-sampled `_cardRaw`, calls `source.normaliseAgainstCard` and upgrades `accuracy → calibrated`; `takeException` bounded (no-op). Asserts the upgraded label live through the `KeyedSubtree`/`find.descendant(of: accuracyKey, matching: 'Calibrated')` finder (rejects an accuracy stuck at approximate). Then taps real E20 and asserts the committed sample is `calibrated` **and** within ΔE00 3 via the test-side CIEDE2000. **Non-vacuous (G5):** SCENE_CARD's raw `_cardRaw` sits ΔE00 ≈4.6 of ground truth (the never-pending fixture guard pins sRGB L1 > 20), so a calibration no-op (colour unchanged) commits at ≈4.6 > 3 → the `≤3` Then **fails it**; the relabel-only impl is killed by the committed `accuracy==calibrated` plus the colour bound. `normaliseAgainstCard` returning `scene.groundTruth` lands the correct impl at ΔE00 0 — a 3-ΔE margin, well clear of 8-bit round-trip noise. One AC. |
+| AC-9 | `TestAC09_SampleFromPhoto` | A | G1,G2,G4,G5,G6 (G3 n/a) | Carried forward live A; unaffected by CAPTURE-5. Given checked on the fixture (`atP != atCentre`). `whenImportPhoto` taps E19 → real `importPhoto()` sets `_photoImported` + `sampleFromPhoto(image, P=(12,12), radiusPx:5)`; the local `pumpAndSettle` delivers still-undrained live frames that `_onFrame` ignores (feed-switch guard exercised). Discriminators `toP < 45`, `toP < toCentre` (magenta vs grey), `toP < distToColor(sampled, liveCamera)` (vs olive host). No faked sample value (G2). |
+
+### Summary — CAPTURE-5
+
+- **Grade counts (re-grade): 8×A, 0×B** across the un-pended set (AC-1, AC-2, AC-4, AC-5, AC-6, AC-7, AC-8,
+  AC-9). **AC-6 moves B→A** (the pre-seeded calibrated-vs-approximate control landed, discriminates, and closes
+  the one-reachable-tier G5 gap the prior row named — no rule now limits it); **AC-8 is a fresh live A** against
+  CAPTURE-5's `calibrate()` → `normaliseAgainstCard` → `commit()` path; AC-1/AC-2/AC-4/AC-5/AC-7/AC-9 hold their
+  prior live A with **no downgrade**.
+- **No silent weakening.** The `KeyedSubtree(key: accuracyKey)` wrapper serves AC-8's `find.descendant` and is
+  irrelevant to AC-6/AC-7 (which read the accuracy enum off `state`, not the label); the new
+  `CaptureSource.normaliseAgainstCard` is reached only from `calibrate()` (AC-8 + AC-6 control) and leaves the
+  structural / sampling / lock / commit paths of AC-1/2/4/5/7/9 untouched.
+- **AC-6 control is a genuine control, not an AC-8 duplicate.** The tree-reset mounts a fresh card app so the
+  control exercises the real card controller (not the torn-down dim one); it discriminates (pre-CAPTURE-5
+  `calibrate()` threw → the body would error; a relabel-only calibrate fails the ΔE00 3 bound); and its
+  calibrated assertions serve AC-6's *own* downgrade claim as the required contrast (G6 stays one-AC).
+- **Live-run evidence:** default `flutter test integration_test/capture_test.dart` → **16 passed, 3 skipped**
+  (AC-3/AC-10/AC-11 pending). The eight un-pended AC tests all executed live and passed.
+- **Whole-suite grid: 11×A, 0×B.** AC-6's B-pending is now resolved to A; every other row holds A. Still-pending
+  rows carry their prior A-as-written grades: AC-3 (SCREEN-2), AC-10 (SCREEN-3), AC-11 (CAPTURE-6).

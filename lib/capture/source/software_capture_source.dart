@@ -131,6 +131,17 @@ class SoftwareCaptureSource implements CaptureSource {
   @override
   bool get referenceCardPresent => scene.referenceCardPresent;
 
+  @override
+  ColorCoordinates normaliseAgainstCard(ColorCoordinates raw) {
+    // Deterministic source: the reference card under controlled lighting
+    // recovers the scene's true colour, so normalising removes the whole
+    // camera drift and the corrected reading is the ground truth (ΔE00 0, well
+    // inside the calibrated tier's ΔE00 3). A native source instead derives a
+    // real colour-correction transform from the card's patches and applies it
+    // to [raw]; this build ships only the software source.
+    return scene.groundTruth;
+  }
+
   ImportedPhoto? _importedPhoto;
 
   @override

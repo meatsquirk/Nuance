@@ -59,6 +59,9 @@ class _ControllableSource implements CaptureSource {
   bool get referenceCardPresent => false;
 
   @override
+  ColorCoordinates normaliseAgainstCard(ColorCoordinates raw) => raw;
+
+  @override
   void lockExposure() {}
 
   @override
@@ -107,11 +110,10 @@ void main() {
     tearDown(() => controller.dispose());
 
     // lock() is live as of CAPTURE-3 (see the 'lock lifecycle' group below);
-    // commit() and dismissWarning() as of CAPTURE-4 (see 'low-light …' below).
+    // commit() and dismissWarning() as of CAPTURE-4 (see 'low-light …' below);
+    // calibrate() as of CAPTURE-5 (see 'reference-card calibration' below).
     test('setRadius',
         () => expect(() => controller.setRadius(21), throwsUnimplementedError));
-    test('calibrate',
-        () => expect(controller.calibrate, throwsUnimplementedError));
     test('toggleValueOnly',
         () => expect(controller.toggleValueOnly, throwsUnimplementedError));
   });
@@ -407,6 +409,81 @@ void main() {
           reason: 'the dismiss does not change the stated accuracy');
       expect(controller.state.accuracy, CaptureAccuracy.approximate,
           reason: 'the live accuracy tier is untouched by the dismiss');
+    });
+  });
+
+  group('reference-card calibration (CAPTURE-5, AC-8)', () {
+    const groundTruth = ColorCoordinates(lightness: 40, a: -8, b: 24);
+
+    // A card scene whose raw reading sits clearly off ground truth, so a
+    // calibration that normalises toward truth is distinguishable from a no-op.
+    SoftwareCaptureSource cardSource() => SoftwareCaptureSource(
+          SceneSpec(
+            groundTruth: groundTruth,
+            referenceCardPresent: true,
+            frames: [_uniformFrame(const Pixel(200, 60, 60))], // reddish, not olive
+          ),
+        );
+
+    test('calibrating with a card normalises the reading and upgrades the tier',
+        () async {
+      final source = cardSource();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await pumpEventQueue(); // the feed samples the raw (off-truth) reading
+      final raw = controller.state.currentSample;
+      expect(raw, isNotNull);
+      expect(raw!.coordinates, isNot(groundTruth),
+          reason: 'the raw card reading starts off ground truth');
+      expect(controller.state.accuracy, CaptureAccuracy.approximate);
+
+      controller.calibrate();
+
+      expect(controller.state.accuracy, CaptureAccuracy.calibrated,
+          reason: 'calibrating against the card upgrades the stated tier');
+      final normalised = controller.state.currentSample;
+      expect(normalised!.coordinates, source.normaliseAgainstCard(raw.coordinates),
+          reason: 'the reading is normalised against the card (toward truth)');
+      expect(normalised.coordinates, groundTruth,
+          reason: 'the deterministic source recovers ground truth');
+      expect(normalised.accuracy, CaptureAccuracy.calibrated,
+          reason: 'the normalised reading carries the calibrated tier');
+    });
+
+    test('calibrating with no card in view is a no-op', () async {
+      // _source() has no reference card: nothing to normalise against.
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      final before = controller.state;
+
+      controller.calibrate();
+
+      expect(controller.state, before,
+          reason: 'without a card the reading and tier are left unchanged');
+      expect(controller.state.accuracy, CaptureAccuracy.approximate);
+    });
+
+    test('calibrating before any colour is sampled upgrades the tier only', () {
+      // Empty feed → no frame → currentSample stays null; the card is present.
+      final controller = CaptureController(
+        source: SoftwareCaptureSource(
+          const SceneSpec(
+            groundTruth: groundTruth,
+            referenceCardPresent: true,
+            frames: [],
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+      expect(controller.state.currentSample, isNull);
+
+      controller.calibrate();
+
+      expect(controller.state.accuracy, CaptureAccuracy.calibrated,
+          reason: 'the tier upgrades the moment the card is read');
+      expect(controller.state.currentSample, isNull,
+          reason: 'nothing sampled yet → no reading to normalise');
     });
   });
 

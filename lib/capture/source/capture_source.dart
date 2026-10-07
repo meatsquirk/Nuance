@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../domain/color_coordinates.dart';
 import 'frame.dart';
 
 /// The number of settled frames a reading needs before it counts as stable
@@ -147,6 +148,18 @@ abstract class CaptureSource {
 
   /// Whether a reference card is present in the frame (enables calibration).
   bool get referenceCardPresent;
+
+  /// Normalises a [raw] reading against the reference card in view, returning
+  /// the colour corrected toward ground truth (AC-8).
+  ///
+  /// A phone camera does not measure colour — it applies its own auto white
+  /// balance — so an uncalibrated reading drifts from the real colour. A
+  /// reference card of known patches lets the source measure that drift and
+  /// remove it, landing the result within the calibrated tier's ΔE00 of ground
+  /// truth (SI D2: the `CaptureSource` returns a *normalised* sample). Called
+  /// by the controller only while [referenceCardPresent]; the correction is the
+  /// source's to compute because only it observes the card.
+  ColorCoordinates normaliseAgainstCard(ColorCoordinates raw);
 
   /// The gallery photo most recently imported to sample from, or null when none
   /// has been imported (the painter is reading the live feed). Set via

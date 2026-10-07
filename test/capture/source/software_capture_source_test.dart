@@ -61,6 +61,17 @@ void main() {
       expect(source.referenceCardPresent, isTrue);
     });
 
+    test('normalises a reading against the card to ground truth (AC-8)', () {
+      final source = SoftwareCaptureSource(
+        const SceneSpec(groundTruth: groundTruth, referenceCardPresent: true),
+      );
+      // A reading well off ground truth: the reference card recovers the true
+      // colour, so normalising it returns the ground truth (ΔE00 0), independent
+      // of how far the raw reading had drifted.
+      const raw = ColorCoordinates(lightness: 70, a: 30, b: -10);
+      expect(source.normaliseAgainstCard(raw), groundTruth);
+    });
+
     test('replays an explicit frame list', () async {
       final frames = [
         Frame(width: 1, height: 1, pixels: const [Pixel(1, 2, 3)]),

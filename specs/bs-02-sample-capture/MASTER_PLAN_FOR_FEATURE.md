@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** In progress — behaviour stage: SOURCE complete + CAPTURE-3 (AC-4,5) + CAPTURE-4 (AC-6,7) done; AC-1,2,4,5,6,7,9 green (AC-6 B-pending-CAPTURE-5). Next CAPTURE-5 ∥ SCREEN-2 ∥ CAPTURE-6.
+**Status:** In progress — behaviour stage: SOURCE complete + CAPTURE-3 (AC-4,5) + CAPTURE-4 (AC-6,7) + CAPTURE-5 (AC-8) done; AC-1,2,4,5,6,7,8,9 green, whole-suite grid 11×A/0×B. Next CAPTURE-6 ∥ SCREEN-2 (∥ SCREEN-3 after SCREEN-2).
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -49,9 +49,9 @@ accuracy label. Every AC below is net-new capture behaviour.
 | AC-3 | The painter selects an area-average radius | ITEST-2 `TestAC03_RadiusSelector` | SOURCE-2, SCREEN-2 | ⬜ Todo |
 | AC-4 | Locking exposure, white balance and focus settles the reading | ITEST-3 `TestAC04_LockSettles` | CAPTURE-3 | ✅ |
 | AC-5 | Before locking, the stability indicator warns it is still settling | ITEST-3 `TestAC05_SettlingWarns` | CAPTURE-3 | ✅ |
-| AC-6 | A low-light reading is marked approximate rather than refused | ITEST-3 `TestAC06_LowLightApproximate` | CAPTURE-4 | 🟡 Green · B-pending-CAPTURE-5 (augmentation open) |
+| AC-6 | A low-light reading is marked approximate rather than refused | ITEST-3 `TestAC06_LowLightApproximate` | CAPTURE-4 (control: CAPTURE-5) | ✅ |
 | AC-7 | The painter dismisses the low-light warning, capture continues | ITEST-3 `TestAC07_DismissWarning` | CAPTURE-4 | ✅ |
-| AC-8 | Calibrating against a reference card upgrades the accuracy tier | ITEST-3 `TestAC08_CardCalibrates` | CAPTURE-5 | ⬜ Todo |
+| AC-8 | Calibrating against a reference card upgrades the accuracy tier | ITEST-3 `TestAC08_CardCalibrates` | CAPTURE-5 | ✅ |
 | AC-9 | The painter samples a colour from a gallery photo | ITEST-2 `TestAC09_SampleFromPhoto` | SOURCE-3 | ✅ |
 | AC-10 | The painter previews the camera feed in value-only grayscale | ITEST-2 `TestAC10_ValueOnly` | SCREEN-3 | ⬜ Todo |
 | AC-11 | Capturing commits a settled reading and opens its readout with a haptic | ITEST-3 `TestAC11_CommitOpensReadout` | CAPTURE-6 | ⬜ Todo |
@@ -181,8 +181,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 10 | SOURCE-3 | behavior: AC-9 — photo import + sample point on image | ✅ Done | 13,040,341 | 20m 59s (20m 59s) | AC-9 un-pended green; 3×A re-grade; ∥ CAPTURE-3 (merge-risk) |
 | 11 | CAPTURE-3 | behavior: AC-4, AC-5 — lock lifecycle + stability settling | ✅ Done | 51,577,446 | 1h 28m (3h 35m) | AC-4,5 un-pended green; 5×A regrade; per-rendered-frame settling + `lock()`; `givenCaptureOf`→`pumpWidget` (flag for test-review, G-4) |
 | 12 | CAPTURE-4 | behavior: AC-6, AC-7 — low-light detection, accuracy tier, warning | ✅ Done | 9,611,728 | 20m 03s (20m 03s) | AC-6,7 un-pended green; 6×A + AC-6 B-pending-CAPTURE-5; commit()+dismissWarning() live; 1 lib file |
-| 13 | CAPTURE-5 | behavior: AC-8 — reference-card calibration + accuracy upgrade | ⬜ Next | | | after CAPTURE-4 (done); closes AC-6 augmentation |
-| 14 | CAPTURE-6 | behavior: AC-11 — multi-frame commit + haptic + open Readout | ⬜ Todo | | | after CAPTURE-3, SOURCE-2 |
+| 13 | CAPTURE-5 | behavior: AC-8 — reference-card calibration + accuracy upgrade | ✅ Done | 16,450,722 | 34m 29s (1h 29m) | AC-8 un-pended green; AC-6 augmentation closed (B-pending → A); 11×A/0×B; calibrate()+source normaliseAgainstCard+keyed accuracy label |
+| 14 | CAPTURE-6 | behavior: AC-11 — multi-frame commit + haptic + open Readout | ⬜ Next | | | after CAPTURE-3, SOURCE-2 |
 | 15 | SCREEN-2 | behavior: AC-1, AC-3 — eyedropper + radius selector + reticle | ⬜ Todo | | | after SOURCE-2 |
 | 16 | SCREEN-3 | behavior: AC-10 — value-only grayscale toggle | ⬜ Todo | | | after SCREEN-2 |
 | 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
@@ -192,31 +192,29 @@ when the row is marked done.
 
 ## Next phase
 
-**SOURCE complete + CAPTURE-3 + CAPTURE-4 done** — AC-1,2,4,5,6,7,9 un-pended green (AC-6 B-pending-CAPTURE-5).
-CAPTURE-4 landed low-light commit + accuracy stamping + warning dismiss on `capture_controller.dart`
-(one lib file; the screen was pre-wired). No gate blocks the remaining behaviour phases (G-4 is advisory).
-Run each phase in its own session (`/clear` first).
+**SOURCE complete + CAPTURE-3/4/5 done** — AC-1,2,4,5,6,7,8,9 un-pended green; whole-suite grid **11×A, 0×B**
+(AC-6's B-pending-CAPTURE-5 resolved to A by CAPTURE-5's calibrated-vs-approximate control). CAPTURE-5 landed
+`calibrate()` + the source `normaliseAgainstCard` primitive + a keyed accuracy label. No gate blocks the
+remaining behaviour phases (G-4 is advisory). Run each phase in its own session (`/clear` first).
 
-- **Startable now, concurrently:** **CAPTURE-5** (AC-8 — reference-card calibration; also closes AC-6's
-  augmentation and re-grades it A; deps CAPTURE-4 met), **SCREEN-2** (AC-1,3 — eyedropper + radius
-  selector/reticle), **CAPTURE-6** (AC-11 — multi-frame commit + haptic + Readout; deps CAPTURE-3 + SOURCE-2
-  met). SCREEN-3 (AC-10) waits on SCREEN-2; SIGNOFF-1 on all behaviour phases.
-- **Merge-risk (still live):** CAPTURE-5/6 both edit `capture_controller.dart`; SCREEN-2/3 both edit the
-  Capture screen — run each serially within its module and re-run the suite after each merge. Base any new
-  worktree on this branch's tip.
-- Whole-suite grade grid: **10×A + AC-6 B-pending-CAPTURE-5**. Pending gate holds **4** ACs (AC-3, AC-8,
-  AC-10, AC-11); AC-1/AC-2/AC-4/AC-5/AC-6/AC-7/AC-9 un-pended.
+- **Startable now, concurrently:** **CAPTURE-6** (AC-11 — multi-frame commit + haptic + Readout; deps
+  CAPTURE-3 + SOURCE-2 met), **SCREEN-2** (AC-1,3 — eyedropper + radius selector/reticle). **SCREEN-3** (AC-10)
+  waits on SCREEN-2. SIGNOFF-1 waits on all behaviour phases (CAPTURE-6, SCREEN-2, SCREEN-3).
+- **Merge-risk (still live):** CAPTURE-6 edits `capture_controller.dart` (`commit()`); SCREEN-2/3 both edit the
+  Capture screen — run each serially within its module and re-run the suite after each merge. CAPTURE-5 also
+  touched `capture_live_view.dart` (keyed accuracy label) and the SOURCE interface — SCREEN-2/3 should base on
+  this branch's tip. Base any new worktree on this tip.
+- Pending gate holds **3** ACs (AC-3→SCREEN-2, AC-10→SCREEN-3, AC-11→CAPTURE-6); AC-1/2/4/5/6/7/8/9 un-pended.
 - **G-4 (advisory):** CAPTURE-3's `givenCaptureOf`→`pumpWidget` harness change awaits a test-review confirm;
   does not block the remaining behaviour phases — resolve by SIGNOFF-1.
 - **Carried for the behaviour phases:** SCREEN-2 retargets `whenSelectRadius` to per-option 1/5/21 anchors;
-  SCREEN-3 greyscales the feed via `ColorFiltered` over `liveViewKey` + "✓ Value"; **CAPTURE-5** `calibrate()`
-  must normalise `SCENE_CARD` (raw ΔE00 4.56) toward ground truth, upgrade `state.accuracy` to `calibrated`
-  (commit already stamps it), and add AC-6's calibrated-vs-approximate control → re-grade AC-6 A; **CAPTURE-6**
-  replaces `commit()`'s body with multi-frame averaging + one haptic + `AppRouter.toReadout`, keeping the
-  set-on-commit `lowLightWarning` and `CaptureReadEndpoint` reachable across the Readout push.
+  SCREEN-3 greyscales the feed via `ColorFiltered` over `liveViewKey` + "✓ Value"; **CAPTURE-6** replaces
+  `commit()`'s body with multi-frame averaging + one haptic + `AppRouter.toReadout`, keeping the set-on-commit
+  `lowLightWarning` (AC-6/AC-7) **and** the calibrated accuracy stamping (AC-8), and the `CaptureReadEndpoint`
+  reachable across the Readout push.
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-02-sample-capture` — name CAPTURE-5, SCREEN-2
-or CAPTURE-6, `--parallel` to run concurrently (base each worktree on this branch's tip).
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-02-sample-capture` — name CAPTURE-6 or
+SCREEN-2, `--parallel` to run concurrently (base each worktree on this branch's tip).
 
 ## Token usage
 
@@ -241,7 +239,8 @@ or CAPTURE-6, `--parallel` to run concurrently (base each worktree on this branc
 | CAPTURE-3 | 263187d1 | 2026-10-07 07:11 EDT | 10:46 | 3h 35m | 1h 28m | claude-opus-4-8 | 368 | 514,618 | 50,788,884 | 273,576 | 51,577,446 | AC-4, AC-5 un-pended green; unit+coverage(100%)+acceptance+analyze pass; harness givenCaptureOf change flagged for review |
 | RECONCILE | 646b2ffe | 2026-10-07 10:56 EDT | 11:15 | 19m 27s | 14m 40s | claude-opus-4-8 | 68 | 99,769 | 3,279,718 | 39,421 | 3,418,976 | merged SOURCE-2+SOURCE-3+CAPTURE-3 code into feat/bs-02-sample-capture (b7ac4ab), verified green (302 unit/100% cov/30 integ+6 pending/AC-4,5 run-pending green); applied CAPTURE-3 rollup; raised G-4 (harness pumpWidget change) for test-review |
 | CAPTURE-4 | 01645a76 | 2026-10-07 14:25 EDT | 14:45 | 20m 03s | 20m 03s | claude-opus-4-8 | 138 | 248,801 | 9,310,201 | 52,588 | 9,611,728 | AC-6,7 un-pended green; 6×A + AC-6 B-pending-CAPTURE-5; commit()+dismissWarning() live; coverage 100%; regression 32 integ green |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 14:45** | **8h 31m** | **5h 39m** |  | **1,944** | **3,261,363** | **151,617,124** | **1,104,779** | **155,985,210** |  |
+| CAPTURE-5 | e0caf61e | 2026-10-07 14:56 EDT | 16:25 | 1h 29m | 34m 29s | claude-opus-4-8 | 210 | 321,652 | 16,036,905 | 91,955 | 16,450,722 | AC-8 un-pended green; AC-6 augmentation closed (B-pending → A); whole-suite 11×A/0×B; calibrate() + source normaliseAgainstCard + keyed accuracy label; coverage 100% on 4 touched lib files; 308 unit green |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 16:25** | **10h 00m** | **6h 13m** |  | **2,154** | **3,583,015** | **167,654,029** | **1,196,734** | **172,435,932** |  |
 
 ## Sign-off
 
