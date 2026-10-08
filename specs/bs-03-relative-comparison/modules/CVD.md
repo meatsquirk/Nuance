@@ -1,6 +1,6 @@
 # Module CVD — confusion profile & detector
 
-**Status:** Not started
+**Status:** Done
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/cvd_profile.dart` (`CvdProfile` { type, severity }),
 `lib/a11y/cvd/confusion_check.dart` (`ConfusionCheck` interface + the dichromat-projection detector),
@@ -15,7 +15,7 @@ confusion-warning + speak regions in SCREEN
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 3,816,225 | 8m 30s |
 | 2 | behavior | AC-7, AC-8 | ✅ Done | 10,847,797 | 27m 02s |
-| 3 | behavior | AC-9 | ⬜ Todo | | |
+| 3 | behavior | AC-9 | ✅ Done | 11,092,874 | 20m 52s |
 
 ## Interface reconciliation
 
@@ -202,6 +202,55 @@ confusion-warning + speak regions in SCREEN
   `TestAC09_SpeakIncludesWarning` green run-pending; earlier ACs green.
 - **Acceptance gate:** un-pend AC-9; suite green for that test and all earlier ACs.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** `lib/a11y/cvd/comparison_speech.dart` — `comparisonSpeech(ComparisonState)
+  → String?`: null when `state.comparison` is null (nothing to speak, AC-12),
+  else one `' '`-joined utterance = the overall difference (`verdict` + ΔE00 to
+  1 dp) + the three LCh lines + `confusionWarningMessage` when `state.confusable`.
+  It **reuses** DIFF's `Comparison` fields and CVD-2's warning constant — no line
+  or ΔE00 re-derived. `comparison_controller.dart` gains an injected
+  `required Speech speech` and `Future<void> speak()` (builds the utterance, calls
+  `Speech.speak` exactly once when non-null; read-only, does not notify).
+  `actions_bar.dart` wires the E6 "Speak whole comparison" control to
+  `controller.speak()`, enabled only when `state.comparison != null`.
+  `build_app.dart` threads `deps.speech` → `ComparisonHomeScreen.speech` → the
+  controller (default `NoopSpeech`, the bs-01 shipped sink).
+- **Unit gate:** 303 green (297 → 303, +6). **Coverage:** `dart run
+  tool/coverage_gate.dart main` → 100% on all touched files, PASS.
+- **Acceptance gate:** AC-9 un-pended — `bs03/pending.dart` row removed (the map
+  is now **empty**: all 12 ACs un-pended) + `'AC-9'` added to
+  `comparison_test.dart`'s `unpended` set. `flutter test integration_test/` on the
+  iPhone 17 sim (verify lock): **43 pass / 0 pending** — AC-9 now runs and passes
+  against the real speak path; all earlier ACs green.
+- **Grades:** independent fresh-context grade of all 12 un-pended ACs →
+  **12×A, 0×B**, PASS; no neighbour regrade. The pending-complement guard is
+  *strengthened* (now proves the map is empty); the skip/run-pending guard's loop
+  is empty (the feature's terminal state) — recorded, not docked. Grid:
+  `behavior-test-completeness-bs-03-relative-comparison.md` § CVD-3.
+- **Augmentations:** none (AC-9 is self-contained; no earlier green test asserts
+  more now). **Fix passes:** 0/3 (passed first run).
+- **Tokens / Time:** 11,092,874 / 20m 52s.
+
+### Checkpoint / Handoff
+
+- **Frozen for consumers (SIGNOFF-1, bs-08 phrasing):**
+  `comparisonSpeech(ComparisonState) → String?`
+  (`package:paint_color_assistant/a11y/cvd/comparison_speech.dart`) builds the one
+  whole-comparison utterance; `ComparisonController.speak()` drives it through the
+  injected `Speech` exactly once; `ComparisonController` now takes a `required
+  Speech speech` and `ComparisonHomeScreen` a `speech` (default `NoopSpeech`),
+  threaded from `AppDependencies.speech` by `buildApp`.
+- **Module complete.** All three CVD phases done. **The whole bs-03 behaviour
+  stage is complete** — all 12 ACs delivered, un-pended and green; `pendingACs`
+  is empty. Only **SIGNOFF-1** remains.
+- **Verification commands** (export PATH first —
+  `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+  `flutter test --coverage` · `dart run tool/coverage_gate.dart main` ·
+  `flutter test integration_test/ -d <ios-sim-id>` (device-bound: the verify
+  lane; iPhone 17 sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` was used).
+- **Known gaps:** the shipped `Speech` is bs-01's inert `NoopSpeech` (no platform
+  TTS until a later feature, D-1) — the utterance text is observed only through
+  the acceptance `FakeSpeech`; the injected `CvdProfile` is a fixed deutan default
+  until bs-07 populates it. Carry-over flake: a `const`-ctor line can read
+  uncovered on `--coverage`; re-run once (not hit this phase).

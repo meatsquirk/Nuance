@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/comparison_speech.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/compare/actions_bar.dart';
 import 'package:paint_color_assistant/compare/comparison_controller.dart';
@@ -29,6 +31,7 @@ const _sampleB = Sample(
 ComparisonController _controller({
   SampleSource sampleSource = const InMemorySampleSource(),
   AppRouter router = const AppRouter(),
+  Speech speech = const NoopSpeech(),
   Sample? initialA,
   Sample? initialB,
 }) =>
@@ -36,10 +39,20 @@ ComparisonController _controller({
       sampleSource: sampleSource,
       confusionCheck: const NoopConfusionCheck(),
       profile: const CvdProfile(type: CvdType.deutan),
+      speech: speech,
       router: router,
       initialA: initialA,
       initialB: initialB,
     );
+
+/// A [Speech] that records each utterance, so the Speak control's (AC-9) wiring
+/// can be observed at the widget level.
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
+}
 
 /// Returns a trivial Readout route (no [AppScope] needed) and records which
 /// sample it was asked to open, so a widget tap can prove the handoff.
@@ -281,6 +294,7 @@ void main() {
           sampleSource: const InMemorySampleSource(),
           confusionCheck: _FixedConfusionCheck(verdict),
           profile: const CvdProfile(type: CvdType.deutan),
+          speech: const NoopSpeech(),
           initialA: _sampleA,
           initialB: _sampleB,
         );
@@ -344,14 +358,37 @@ void main() {
         ),
       );
 
-      // Speak stays deferred to CVD-3; the Open-readout controls are disabled
-      // while their slots are empty (nothing to open).
+      // With no second sample there is no comparison to speak (AC-9) and nothing
+      // to open — every action is disabled.
       expect(enabled(tester, 'Speak whole comparison'), isFalse,
-          reason: 'Speak whole comparison is inert until CVD-3');
+          reason: 'no comparison yet ⇒ Speak whole comparison disabled');
       expect(enabled(tester, 'Open readout for A'), isFalse,
           reason: 'slot A empty ⇒ Open readout for A disabled');
       expect(enabled(tester, 'Open readout for B'), isFalse,
           reason: 'slot B empty ⇒ Open readout for B disabled');
+    });
+
+    testWidgets('with both slots set, tapping Speak speaks the whole comparison '
+        'once (AC-9)', (tester) async {
+      final speech = _RecordingSpeech();
+      final controller =
+          _controller(speech: speech, initialA: _sampleA, initialB: _sampleB);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: ComparisonActionsBar(controller: controller)),
+        ),
+      );
+
+      expect(enabled(tester, 'Speak whole comparison'), isTrue,
+          reason: 'both slots set ⇒ there is a comparison to speak');
+      await tester.tap(find.widgetWithText(TextButton, 'Speak whole comparison'));
+      await tester.pump();
+
+      // Exactly one utterance, and it is the whole-comparison text the builder
+      // produces for this state (reuses DIFF's lines) — rejects a tap that
+      // speaks nothing or more than once.
+      expect(speech.utterances, [comparisonSpeech(controller.state)]);
     });
 
     testWidgets('tapping Open-readout-A opens the Readout for slot A (AC-10)',

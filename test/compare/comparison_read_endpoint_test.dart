@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/compare/comparison_controller.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
@@ -10,6 +11,7 @@ ComparisonController _controller() => ComparisonController(
       sampleSource: const InMemorySampleSource(),
       confusionCheck: const NoopConfusionCheck(),
       profile: const CvdProfile(type: CvdType.deutan),
+      speech: const NoopSpeech(),
     );
 
 void main() {

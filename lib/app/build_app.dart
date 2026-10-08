@@ -165,6 +165,7 @@ Widget buildApp(AppDependencies deps) {
               sampleSource: deps.sampleSource,
               cvdProfile: deps.cvdProfile,
               confusionCheck: deps.confusionCheck,
+              speech: deps.speech,
               router: deps.router,
             ),
     ),
@@ -192,6 +193,7 @@ class ComparisonHomeScreen extends StatefulWidget {
     this.sampleSource = const InMemorySampleSource(),
     this.cvdProfile = const CvdProfile(type: CvdType.deutan),
     this.confusionCheck = const DichromatConfusionCheck(),
+    this.speech = const NoopSpeech(),
     this.router = const AppRouter(),
     this.initialA,
     this.initialB,
@@ -200,6 +202,12 @@ class ComparisonHomeScreen extends StatefulWidget {
 
   /// The saved-sample catalogue the comparison picker lists (D-7).
   final SampleSource sampleSource;
+
+  /// Spoken-output sink the comparison's "Speak whole comparison" control drives
+  /// (AC-9). Defaults to the inert [NoopSpeech] — the bs-01 shipped speech (D-1)
+  /// and what the handoff route carries; the acceptance harness injects a
+  /// recording fake through `AppDependencies.speech`.
+  final Speech speech;
 
   /// Typed navigation the controller uses to open a slot's full Readout
   /// (AC-10, AC-11). Defaults to a plain [AppRouter]; the production assembly
@@ -227,6 +235,7 @@ class _ComparisonHomeScreenState extends State<ComparisonHomeScreen> {
     sampleSource: widget.sampleSource,
     confusionCheck: widget.confusionCheck,
     profile: widget.cvdProfile,
+    speech: widget.speech,
     router: widget.router,
     initialA: widget.initialA,
     initialB: widget.initialB,

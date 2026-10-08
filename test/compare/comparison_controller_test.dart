@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/comparison_speech.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/compare/comparison_controller.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
@@ -37,6 +39,7 @@ const _b = Sample(
 ComparisonController _controller({
   SampleSource sampleSource = const InMemorySampleSource(),
   AppRouter router = const AppRouter(),
+  Speech speech = const NoopSpeech(),
   Sample? initialA,
   Sample? initialB,
 }) =>
@@ -44,10 +47,20 @@ ComparisonController _controller({
       sampleSource: sampleSource,
       confusionCheck: const NoopConfusionCheck(),
       profile: const CvdProfile(type: CvdType.deutan),
+      speech: speech,
       router: router,
       initialA: initialA,
       initialB: initialB,
     );
+
+/// Records each utterance so a test can prove the [ComparisonController.speak]
+/// action sends exactly one, and what it carries (AC-9).
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
+}
 
 void main() {
   group('ComparisonController derivation', () {
@@ -216,6 +229,34 @@ void main() {
 
       expect(router.readoutCalls, [same(_b)]);
       expect(route, isA<Route<void>>());
+    });
+  });
+
+  group('ComparisonController speak (CVD-3)', () {
+    test('speaks the whole comparison exactly once and does not notify (AC-9)',
+        () async {
+      final speech = _RecordingSpeech();
+      final c = _controller(speech: speech, initialA: _a, initialB: _b);
+      var notified = 0;
+      c.addListener(() => notified++);
+
+      await c.speak();
+
+      // One utterance, carrying the builder's whole-comparison text for the
+      // current state; speaking is read-only, so no listener fires.
+      expect(speech.utterances, [comparisonSpeech(c.state)]);
+      expect(notified, 0);
+    });
+
+    test('with only one slot set there is nothing to speak (AC-12)', () async {
+      final speech = _RecordingSpeech();
+      final c = _controller(speech: speech, initialA: _a);
+
+      await c.speak();
+
+      // No reading ⇒ comparisonSpeech is null ⇒ the action is inert.
+      expect(comparisonSpeech(c.state), isNull);
+      expect(speech.utterances, isEmpty);
     });
   });
 }

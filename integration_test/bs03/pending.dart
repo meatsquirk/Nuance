@@ -45,7 +45,7 @@ const Map<String, String> pendingACs = {
   // AC-4 un-pended by DIFF-2 (overall ΔE00 + plain verdict).
   // AC-5, AC-6 un-pended by DIFF-3 (LCh decomposition + "Same hue").
   // AC-7, AC-8 un-pended by CVD-2 (confusion detector + warning region).
-  'AC-9': 'CVD-3', // speak comparison incl. warning
+  // AC-9 un-pended by CVD-3 (speak whole comparison incl. warning).
   // AC-10, AC-11 un-pended by COMPARE-6 (open readout for A / B).
 };
 

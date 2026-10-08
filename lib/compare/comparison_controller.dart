@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 
+import '../a11y/cvd/comparison_speech.dart';
 import '../a11y/cvd/confusion_check.dart';
 import '../a11y/cvd/cvd_profile.dart';
+import '../a11y/speech.dart';
 import '../app/router.dart';
 import '../domain/sample.dart';
 import 'comparison_state.dart';
@@ -34,6 +36,7 @@ class ComparisonController extends ChangeNotifier {
     required this.sampleSource,
     required this.confusionCheck,
     required this.profile,
+    required this.speech,
     this.router = const AppRouter(),
     Sample? initialA,
     Sample? initialB,
@@ -41,6 +44,10 @@ class ComparisonController extends ChangeNotifier {
 
   /// The saved-sample catalogue the picker lists (D-7).
   final SampleSource sampleSource;
+
+  /// Spoken-output sink the [speak] action drives (AC-9) — the same injected
+  /// [Speech] seam bs-01's readout speaks through.
+  final Speech speech;
 
   /// Typed navigation used by [openReadout] to push the full Readout for a slot
   /// (AC-10, AC-11). The production assembly injects `AppDependencies.router`.
@@ -128,4 +135,19 @@ class ComparisonController extends ChangeNotifier {
   /// disabled otherwise.
   Route<void> openReadout(ComparisonSlot slot) =>
       router.toReadout(sampleIn(slot)!);
+
+  /// Speaks the whole comparison as a single utterance (AC-9).
+  ///
+  /// Builds the spoken comparison via [comparisonSpeech] — the overall
+  /// difference, the three relational lines and, when the pair is confusable,
+  /// the confusion warning — and sends it to [Speech.speak] exactly once, so the
+  /// painter hears the whole comparison as one utterance rather than a stream of
+  /// fragments and never with the warning dropped. With no reading yet
+  /// ([comparisonSpeech] null, either slot empty) there is nothing to speak, so
+  /// the action is inert — the E6 control is disabled in that state anyway.
+  /// Speaking does not change the reading, so it does not notify.
+  Future<void> speak() async {
+    final utterance = comparisonSpeech(_state);
+    if (utterance != null) await speech.speak(utterance);
+  }
 }

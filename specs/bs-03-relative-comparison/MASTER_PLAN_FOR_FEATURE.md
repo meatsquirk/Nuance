@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** In progress — next CVD-3 (startable, last behaviour phase). COMPARE-5 done (AC-3 un-pended, green; 11×A). COMPARE + DIFF modules complete. G-3/G-4/G-5 resolved.
+**Status:** In progress — next SIGNOFF-1 (last phase). All 12 ACs delivered, un-pended and green; behaviour stage complete (CVD-3 done: AC-9, 12×A). All modules (DIFF/CVD/COMPARE/SCREEN/ITEST) done. G-3/G-4/G-5 resolved.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -58,7 +58,7 @@ confusion code, and a saved-sample source are all net-new.
 | AC-6 | A dimension that does not change is stated as unchanged | ITEST-3 `TestAC06_SameHue` | DIFF-3 | ✅ Done |
 | AC-7 | A confusable pair is flagged for the painter's CVD type | ITEST-3 `TestAC07_ConfusionFlagged` | CVD-2 | ✅ Done |
 | AC-8 | A clearly distinct pair is not flagged as confusable | ITEST-3 `TestAC08_NotConfusable` | CVD-2 | ✅ Done |
-| AC-9 | Speaking the comparison includes the confusion warning | ITEST-3 `TestAC09_SpeakIncludesWarning` | CVD-3 | ⬜ Todo |
+| AC-9 | Speaking the comparison includes the confusion warning | ITEST-3 `TestAC09_SpeakIncludesWarning` | CVD-3 | ✅ Done |
 | AC-10 | The painter opens the full readout for sample A | ITEST-2 `TestAC10_OpenReadoutA` | COMPARE-6 | ✅ Done |
 | AC-11 | The painter opens the full readout for sample B | ITEST-2 `TestAC11_OpenReadoutB` | COMPARE-6 | ✅ Done |
 | AC-12 | With no second sample chosen, the comparison invites one | ITEST-2 `TestAC12_InviteSecond` | COMPARE-3 | ✅ Done |
@@ -132,7 +132,7 @@ distance) — **DIFF-2** augments it with a near-identical control pair that rea
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | DIFF | [modules/DIFF.md](modules/DIFF.md) | Color-science comparison: CIEDE2000 ΔE00, plain-verdict bands, the LCh relational decomposition (ΔL*/ΔC*/Δh° + direction, "Same …") | bs-01 color-science | ✅ Done |
-| CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | 🔄 In progress (CVD-1, CVD-2 done; only CVD-3 left, now startable — DIFF-3 done) |
+| CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | ✅ Done (CVD-1, CVD-2, CVD-3 all done — module complete) |
 | COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | ✅ Done (COMPARE-3, COMPARE-6, COMPARE-5 all done — module complete) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ✅ Done (SCREEN-1; regions filled by behaviour phases) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1,2,3,4; G-3 approved 2026-10-08) |
@@ -203,29 +203,25 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 13 | CVD-2 | behavior: AC-7, AC-8 — confusion detector + warning region | ✅ Done | 10,847,797 | 27m 02s | AC-7/8 un-pended + green (iOS sim); unit 286, cov 100%, 8×A; 1/3 fixes |
 | 14 | DIFF-3 | behavior: AC-5, AC-6 — relational decomposition + "Same …" + statement region | ✅ Done | 7,471,205 | 15m 32s | AC-5/AC-6 un-pended + green (iOS sim); unit 295, cov 100% touched, default integ +24~2 / run-pending red baseline held (only AC-3/AC-9); 10×A, no neighbour regrade; 0/3 fixes |
 | 15 | COMPARE-5 | behavior: AC-3 — swap A/B + re-express | ✅ Done | 7,118,335 | 18m 43s | AC-3 un-pended + green (iOS sim); unit 297, cov 100% touched, default integ 42 pass/1 pending (only AC-9) / run-pending red baseline held (only AC-9); 11×A, no neighbour regrade; 0/3 fixes; COMPARE module complete |
-| 16 | CVD-3 | behavior: AC-9 — speak whole comparison incl. warning | ⬜ Next | | | last behaviour phase; startable now (DIFF-3 + CVD-2 done) |
-| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+| 16 | CVD-3 | behavior: AC-9 — speak whole comparison incl. warning | ✅ Done | 11,092,874 | 20m 52s | AC-9 un-pended + green (iPhone 17 sim); unit 303, cov 100% touched, integ 43 pass/0 pending (all 12 ACs delivered); grades 12×A, no neighbour regrade; 0/3 fixes; CVD module + behaviour stage complete |
+| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | all 12 ACs delivered, un-pended and green; behaviour stage complete |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**COMPARE-5 done — swap A/B re-expresses the statement and AC-3 is un-pended and green.** `swap()` exchanges
-the slots and re-derives through DIFF/CVD so the direction flips ("Lighter by 12" → "Darker by 12"); the E4
-"Swap A and B" control is wired. 11×A, no neighbour regrade. The COMPARE module is complete (all four
-controller actions now implemented) — only the CVD module's last phase remains.
-- **Startable now:** **CVD-3** (AC-9 — speak whole comparison incl. the confusion warning — `actions_bar.dart`
-  E6 + `Speech`). It is the last behaviour phase and the only pending AC.
-- **CVD-3 note:** reuse `comparison.lightness/saturation/hue`, `.deltaE00`/`.verdict` and
-  `confusionWarningMessage`; do not re-derive any line or ΔE00. It shares `actions_bar.dart` with COMPARE-6's
-  E7/E8 wiring (now committed) — wire E6 ("Speak whole comparison"), leave E7/E8 as they are.
-- Then **SIGNOFF-1** (after CVD-3 — the last behaviour phase).
-- **Un-pend reminder:** un-pending AC-9 means **both** deleting its `bs03/pending.dart` row **and** adding
-  `'AC-9'` to the `unpended` set in `comparison_test.dart` (ITEST-1 complement guard).
+**CVD-3 done — the whole behaviour stage is complete.** AC-9 is un-pended and green: the E6 "Speak whole
+comparison" control drives `ComparisonController.speak()` → `comparisonSpeech(state)` (overall difference + the
+three LCh lines + `confusionWarningMessage` when confusable), one utterance through the injected `Speech`.
+All 12 ACs are now delivered, un-pended and green (integration 43 pass / 0 pending); grades 12×A, no neighbour
+regrade. Every module (DIFF/CVD/COMPARE/SCREEN/ITEST) is done.
+- **Startable now:** **SIGNOFF-1** — the sign-off packet + summary page; a human records the decision
+  (`references/signoff.md`). The agent never approves.
+- Nothing runs concurrently (it is the last phase). No carried blockers.
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` (auto-picks the next
-startable) or name it: `/feature-next-phase bs-03-relative-comparison CVD-3`.
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` (auto-picks
+SIGNOFF-1) or name it: `/feature-next-phase bs-03-relative-comparison SIGNOFF-1`.
 
 ## Token usage
 
@@ -255,7 +251,8 @@ startable) or name it: `/feature-next-phase bs-03-relative-comparison CVD-3`.
 | CVD-2 | d20e956a | 2026-10-08 08:20 EDT | 08:47 | 27m 02s | 27m 02s | claude-opus-4-8 | 152 | 311,827 | 10,469,528 | 66,290 | 10,847,797 | AC-7, AC-8 un-pended + green (iOS sim); DichromatConfusionCheck shipped default; unit 286, coverage 100% on touched files, default integ 39 pass/4 pending; grades 8×A; 1/3 fixes |
 | DIFF-3 | 3bfb8457 | 2026-10-08 08:59 EDT | 09:14 | 15m 32s | 15m 32s | claude-opus-4-8 | 142 | 248,215 | 7,184,041 | 38,807 | 7,471,205 | AC-5, AC-6 un-pended + green (iOS sim); unit 295, coverage 100% on touched files, default integ +24~2 / run-pending red baseline held (only AC-3/AC-9); grades 10×A, no neighbour regrade; 0/3 fixes |
 | COMPARE-5 | 9d46b777 | 2026-10-08 09:27 EDT | 09:45 | 18m 43s | 18m 43s | claude-opus-4-8 | 140 | 225,278 | 6,859,939 | 32,978 | 7,118,335 | AC-3 un-pended + green (iOS sim); unit 297, coverage 100% on touched files, default integ 42 pass/1 pending (only AC-9) / run-pending red baseline held (only AC-9); grades 11×A, no neighbour regrade; 0/3 fixes; COMPARE module complete |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 09:45** | **15h 00m** | **5h 16m** |  | **2,134** | **3,747,487** | **125,424,625** | **952,644** | **130,126,890** |  |
+| CVD-3 | f388d0f9 | 2026-10-08 09:56 EDT | 10:17 | 20m 52s | 20m 52s | claude-opus-4-8 | 190 | 300,531 | 10,747,410 | 44,743 | 11,092,874 | AC-9 un-pended + green (iPhone 17 sim); unit 303, cov 100% touched, integ 43 pass/0 pending (all 12 ACs delivered); grades 12×A, no neighbour regrade; 0/3 fixes; CVD module + behaviour stage complete |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 10:17** | **15h 21m** | **5h 37m** |  | **2,324** | **4,048,018** | **136,172,035** | **997,387** | **141,219,764** |  |
 
 ## Sign-off
 

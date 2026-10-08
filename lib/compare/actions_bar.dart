@@ -10,8 +10,9 @@ import 'comparison_controller.dart';
 /// Named [ComparisonActionsBar] to stand apart from the readout's `ActionsBar`.
 /// The two open-readout controls (E7/E8) are wired here (COMPARE-6): each pushes
 /// [ComparisonController.openReadout] for its slot and is enabled only when that
-/// slot holds a sample (AC-10, AC-11). Speak (E6) stays inert until CVD-3 drives
-/// the spoken comparison.
+/// slot holds a sample (AC-10, AC-11). Speak (E6) drives
+/// [ComparisonController.speak] (CVD-3, AC-9) and is enabled only once both slots
+/// are set — there is no comparison to speak until then.
 class ComparisonActionsBar extends StatelessWidget {
   const ComparisonActionsBar({required this.controller, super.key});
 
@@ -27,10 +28,11 @@ class ComparisonActionsBar extends StatelessWidget {
       key: regionKey,
       spacing: 8,
       children: [
-        // Inert until CVD-3 wires the spoken comparison.
-        const TextButton(
-          onPressed: null,
-          child: Text('Speak whole comparison'),
+        TextButton(
+          onPressed: controller.state.comparison != null
+              ? () => controller.speak()
+              : null,
+          child: const Text('Speak whole comparison'),
         ),
         TextButton(
           onPressed: controller.slotFilled(ComparisonSlot.a)
