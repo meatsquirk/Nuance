@@ -1,7 +1,7 @@
 # Master Plan — Colour-combination suggestions (bs-15)
 
 **Spec:** [bs-15-color-combinations.feature](../bs-15-color-combinations.feature)
-**Status:** Not started — next LIB-1 (scaffold)
+**Status:** Not started — next LIB-1 (scaffold), startable (G-1 approved 2026-10-08)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Colour-combination suggestions (Sanzo Wada reference set)*; D11; D9 provenance; SI accessibility — meaning in numbers/words/sound; SI Phase 3 breadth) · source dataset [docs/ColorCombinations/sanzo-wada-swatch-catalog.html](../../docs/ColorCombinations/sanzo-wada-swatch-catalog.html) (159 colours + 348 combinations, MIT) · [scope](../../docs/paint-color-app-scope.md)
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `ac3bd09` · **extends** the bs-01 foundation (same code home, confirmed by Matt across bs-01/02/03/04)
 
@@ -180,7 +180,7 @@ own region.
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (the `.feature` is "Draft: awaiting owner approval"; record approval as its first line) | LIB-1 | Open |
+| G-1 | decision | Approve the spec (the `.feature` is "Draft: awaiting owner approval"; record approval as its first line) | LIB-1 | ✅ Resolved 2026-10-08 14:58 EDT: spec approved as-is; `.feature` first line stamped "Approved 2026-10-08 by Matt Quirk (G-1)" — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-3 | dependency | bs-04's `Paint`/`PaintPalette` (and a `PaletteSource` seam) merged to `main` — closed by bs-04 reaching those shells on `main`, or by extracting `Paint`/`PaintPalette` to `lib/domain/` | COMBO-3 (AC-2 only) | Open |
 | G-4 | decision | **Suggestion tuning + provenance wording (spec author).** Confirm: (a) the near-match **inclusion threshold** in ΔE00 for a combination to count as "containing" the anchor (D-5); (b) the exact **reference-provenance label** text (D-8); (c) that save-to-project rides bs-15's injected `ProjectSink` with **bs-06** backing it later (D-10); (d) the **default `CvdProfile`** for v1 until bs-07 is acceptable (D-9) | ITEST-3, LIB-3, COMBO-4, COMBO-6 | Open |
@@ -221,8 +221,8 @@ when the row is marked done.
 
 ## Next phase
 
-**LIB-1 (scaffold)** is next, blocked only by **G-1** (approve the spec). Once G-1 is recorded it is
-startable: `/feature-next-phase bs-15-color-combinations`. It branches from `main` @ `ac3bd09`, records the
+**LIB-1 (scaffold)** is next and **startable** — **G-1 is approved** (2026-10-08), the only gate that blocked
+it. Run it: `/feature-next-phase bs-15-color-combinations`. It branches from `main` @ `ccbbd79`, records the
 baseline, proves the coverage gate both ways, and adds the BS15 pending runner — no product code. The shell
 stage is serial (LIB-2 → COMBO-1 → SCREEN-1). **G-4** (threshold + provenance wording) is decidable any time
 before ITEST-3; **G-2** (approve the tests) is decided at ITEST-4 and blocks every behaviour phase; **G-3**
@@ -236,7 +236,8 @@ before ITEST-3; **G-2** (approve the tests) is decided at ITEST-4 and blocks eve
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | <this session> | <see ledger> | | | | claude-opus-4-8 | | | | | | plan written: 17 phases, 4 modules, 12 ACs; G-1/G-2/G-3/G-4 open |
 | PLAN | 9a3b4189 | 2026-10-08 13:40 EDT | 14:48 | 1h 08m | 30m 33s | claude-opus-4-8 | 76 | 239,117 | 6,695,380 | 107,728 | 7,042,301 | plan written: bs-15 spec + 4 modules, 17 phases, 12 ACs; G-1/G-2/G-3/G-4 open (shared session with bs-16) |
-| **Feature total** |  | **2026-10-08 13:40 EDT** | **2026-10-08 14:48** | **1h 08m** | **30m 33s** |  | **76** | **239,117** | **6,695,380** | **107,728** | **7,042,301** |  |
+| GATE-DECISION | 9a3b4189 | 2026-10-08 15:17 EDT | 15:19 | 1m 26s | 1m 26s | claude-opus-4-8 | 18 | 15,443 | 2,560,890 | 5,487 | 2,581,838 | G-1 approved: spec approved as-is by Matt Quirk; .feature stamped |
+| **Feature total** |  | **2026-10-08 13:40 EDT** | **2026-10-08 15:19** | **1h 09m** | **31m 59s** |  | **94** | **254,560** | **9,256,270** | **113,215** | **9,624,139** |  |
 
 ## Sign-off
 

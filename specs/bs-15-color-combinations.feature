@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (authored 2026-10-08 for /feature-next-phase planning)
+# Approved 2026-10-08 by Matt Quirk (G-1) — authored 2026-10-08 for /feature-next-phase planning
 # Source dataset: docs/ColorCombinations/sanzo-wada-swatch-catalog.html — Sanzo Wada,
 # "A Dictionary of Color Combinations" (Haishoku Sokan, 1933-34): 159 named colours
 # and 348 historical combinations of 2, 3 or 4 colours. Data MIT-licensed
