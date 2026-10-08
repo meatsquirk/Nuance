@@ -2,7 +2,7 @@
 
 **Feature:** [bs-03-relative-comparison.feature](../../bs-03-relative-comparison.feature) · **Master plan:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **At code:** `44da743` (CVD-3) — no product code changed during sign-off; this is a verification-only phase.
-**Assembled:** 2026-10-08 by SIGNOFF-1 · **Decision:** ⏸ Awaiting owner (Matt Quirk)
+**Assembled:** 2026-10-08 by SIGNOFF-1 · **Decision:** ✅ **Approved 2026-10-08 by Matt Quirk (owner)** at code `44da743`
 
 The agent never approves. Record the decision with:
 `/feature-next-phase --signoff bs-03-relative-comparison approved | changes "<items>"`
@@ -196,11 +196,11 @@ the authoritative walkthrough; each test below is a scripted click-through of on
 
 ## 9. Decision
 
-Reviewer: **___________**  Date: **___________**  Decision: ☐ Approved  ☐ Changes requested
+Reviewer: **Matt Quirk (owner)**  Date: **2026-10-08**  Decision: ☑ Approved  ☐ Changes requested
 
-The agent never approves. Record via:
-`/feature-next-phase --signoff bs-03-relative-comparison approved | changes "<items>"`
+Recorded via `/feature-next-phase --signoff bs-03-relative-comparison approved`.
 
-- **Approved** → SIGNOFF-1 ✅; feature `Status: Done — signed off <date> by <reviewer> at <commit>`.
-- **Changes requested** → each item becomes a behaviour phase, an augmentation, or a spec change before a
-  fresh SIGNOFF-2; this round's file stays as history.
+- **Approved** ✅ — SIGNOFF-1 complete; feature `Status: Done — signed off 2026-10-08 by Matt Quirk at 44da743`.
+  All 12 ACs green (12×A/0×B), full verification green, no open gates/augmentations/non-A grades. The known
+  gaps in §6 are deferred-by-design dependencies on later features (bs-06 store, bs-07 CVD profile, platform
+  TTS), accepted as part of this approval.
