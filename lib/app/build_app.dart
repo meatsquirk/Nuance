@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../a11y/cvd/confusion_check.dart';
+import '../a11y/cvd/cvd_profile.dart';
 import '../a11y/haptics.dart';
 import '../a11y/speech.dart';
 import '../capture/capture_controller.dart';
@@ -7,6 +9,10 @@ import '../capture/capture_read_endpoint.dart';
 import '../capture/capture_screen.dart';
 import '../capture/source/capture_source.dart';
 import '../color_science/color_science.dart';
+import '../compare/comparison_controller.dart';
+import '../compare/comparison_read_endpoint.dart';
+import '../compare/comparison_screen.dart';
+import '../compare/sample_source.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
@@ -27,6 +33,20 @@ const Sample demoSample = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
+/// Opt-in that opens the app on the Comparison screen (bs-03 D-8), symmetric to
+/// bs-02's capture entry.
+///
+/// When [AppDependencies.comparisonEntry] carries one, [buildApp] launches to
+/// the [ComparisonHomeScreen] — a comparison over [AppDependencies.sampleSource]
+/// for [AppDependencies.cvdProfile] via [AppDependencies.confusionCheck] — so
+/// the acceptance harness and a later production shortcut both enter comparison
+/// through the one assembly entry. null (the default) preserves bs-01's Readout
+/// entry. A marker for now; bs-06 may extend it (e.g. a pre-selected pair).
+class ComparisonEntry {
+  /// Creates the comparison-entry marker.
+  const ComparisonEntry();
+}
+
 /// The app-wide services assembled once at startup and injected down the tree.
 ///
 /// A single immutable holder so production (`main.dart`) and the acceptance
@@ -41,6 +61,10 @@ class AppDependencies {
     this.router = const AppRouter(),
     this.initialSample = demoSample,
     this.captureSource,
+    this.cvdProfile = const CvdProfile(type: CvdType.deutan),
+    this.confusionCheck = const DichromatConfusionCheck(),
+    this.sampleSource = const InMemorySampleSource(),
+    this.comparisonEntry,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -71,6 +95,38 @@ class AppDependencies {
   /// shipped app injects a [CaptureSource]; the bs-02 acceptance harness injects
   /// a fake with a known ground-truth scene.
   final CaptureSource? captureSource;
+
+  /// The painter's colour-vision profile, read by [confusionCheck] (bs-03 D-4).
+  ///
+  /// Defaults to a deutan profile for bs-03's comparison scenarios; **bs-07**
+  /// (CVD self-assessment) later populates it from the painter. Injected here so
+  /// the confusion detector and the later simulation/daltonization features
+  /// (bs-08/bs-10) all read one profile.
+  final CvdProfile cvdProfile;
+
+  /// Decides whether a compared pair is confusable for [cvdProfile] (AC-7/AC-8).
+  ///
+  /// Defaults to the shipped [DichromatConfusionCheck] (CVD-2's Viénot 1999
+  /// dichromat projection, D-4/D-5); inject [NoopConfusionCheck] to disable
+  /// detection.
+  final ConfusionCheck confusionCheck;
+
+  /// The saved-sample catalogue the comparison picker lists (bs-03 D-7).
+  ///
+  /// Defaults to an empty [InMemorySampleSource]; **COMPARE-3** injects one
+  /// seeded with the saved samples, and **bs-06** later supplies a persistent
+  /// store behind the same [SampleSource] interface. Read both by the comparison
+  /// entry and by the Readout → compare handoff so a carried sample lands in a
+  /// comparison that can still offer the catalogue for the other slot.
+  final SampleSource sampleSource;
+
+  /// Opens the app on the Comparison screen when present (bs-03 D-8).
+  ///
+  /// null (the default) keeps bs-01's Readout entry; a [ComparisonEntry] makes
+  /// [buildApp] launch to the [ComparisonHomeScreen] over [sampleSource] /
+  /// [cvdProfile] / [confusionCheck]. The bs-03 acceptance harness injects one
+  /// to drive each comparison scenario through this same assembly entry.
+  final ComparisonEntry? comparisonEntry;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -107,20 +163,30 @@ class AppScope extends InheritedWidget {
 ///
 /// The single production assembly entry (D-7): it injects [deps] via [AppScope]
 /// and wires the router into a [MaterialApp]. The app opens on the Capture
-/// screen when a [AppDependencies.captureSource] is injected (bs-02), and
-/// otherwise on the [ReadoutScreen] for [AppDependencies.initialSample]
-/// (bs-01's entry). `main.dart` and both acceptance harnesses construct the app
-/// through this entry, differing only in the injected services, the initial
-/// sample and the capture source.
+/// screen when a [AppDependencies.captureSource] is injected (bs-02), on the
+/// [ComparisonHomeScreen] when a [AppDependencies.comparisonEntry] is injected
+/// (bs-03 D-8), and otherwise on the [ReadoutScreen] for
+/// [AppDependencies.initialSample] (bs-01's entry). `main.dart` and the
+/// acceptance harnesses construct the app through this one entry, differing only
+/// in the injected services, the initial sample, the capture source and the
+/// comparison entry.
 Widget buildApp(AppDependencies deps) {
   return AppScope(
     dependencies: deps,
     child: MaterialApp(
       title: 'Paint Color Assistant',
       theme: ThemeData(useMaterial3: true),
-      home: deps.captureSource == null
-          ? ReadoutScreen(sample: deps.initialSample)
-          : const CaptureHomeScreen(),
+      home: deps.captureSource != null
+          ? const CaptureHomeScreen()
+          : deps.comparisonEntry != null
+              ? ComparisonHomeScreen(
+                  sampleSource: deps.sampleSource,
+                  cvdProfile: deps.cvdProfile,
+                  confusionCheck: deps.confusionCheck,
+                  speech: deps.speech,
+                  router: deps.router,
+                )
+              : ReadoutScreen(sample: deps.initialSample),
     ),
   );
 }
@@ -191,6 +257,91 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
       key: CaptureReadEndpoint.endpointKey,
       controller: _controller!,
       child: CaptureScreen(controller: _controller!),
+    );
+  }
+}
+
+/// The Comparison screen the app opens on when a comparison entry is wired, and
+/// the destination of the Readout → compare handoff (`AppRouter.toComparison`).
+///
+/// It owns the [ComparisonController] over the injected catalogue / profile /
+/// detector and wraps its subtree in a [ComparisonReadEndpoint] so the
+/// acceptance suite can observe the comparison state. The deps are passed in
+/// (not read from [AppScope]) so the handoff route renders the carried sample
+/// even when pushed outside an [AppScope] (bs-01's handoff tests); [initialA] /
+/// [initialB] carry that sample into its slot.
+///
+/// It renders the real [ComparisonScreen] (SCREEN-1) — the wireframe regions
+/// E3–E8 and the sample picker E49 — composed over the owned controller. Those
+/// regions are shells (placeholders and disabled controls) until their behaviour
+/// phases fill them; the controller ownership and the read endpoint stay here.
+class ComparisonHomeScreen extends StatefulWidget {
+  /// Creates the comparison home over the given catalogue / profile / detector,
+  /// optionally pre-placing [initialA] / [initialB] into their slots.
+  const ComparisonHomeScreen({
+    this.sampleSource = const InMemorySampleSource(),
+    this.cvdProfile = const CvdProfile(type: CvdType.deutan),
+    this.confusionCheck = const DichromatConfusionCheck(),
+    this.speech = const NoopSpeech(),
+    this.router = const AppRouter(),
+    this.initialA,
+    this.initialB,
+    super.key,
+  });
+
+  /// The saved-sample catalogue the comparison picker lists (D-7).
+  final SampleSource sampleSource;
+
+  /// Spoken-output sink the comparison's "Speak whole comparison" control drives
+  /// (AC-9). Defaults to the inert [NoopSpeech] — the bs-01 shipped speech (D-1)
+  /// and what the handoff route carries; the acceptance harness injects a
+  /// recording fake through `AppDependencies.speech`.
+  final Speech speech;
+
+  /// Typed navigation the controller uses to open a slot's full Readout
+  /// (AC-10, AC-11). Defaults to a plain [AppRouter]; the production assembly
+  /// passes `AppDependencies.router`.
+  final AppRouter router;
+
+  /// The painter's colour-vision profile the confusion flag is judged against.
+  final CvdProfile cvdProfile;
+
+  /// The detector deciding whether the pair is confusable (AC-7/AC-8).
+  final ConfusionCheck confusionCheck;
+
+  /// A sample to pre-place into slot A (the Readout → compare-as-A handoff).
+  final Sample? initialA;
+
+  /// A sample to pre-place into slot B (the Readout → compare-as-B handoff).
+  final Sample? initialB;
+
+  @override
+  State<ComparisonHomeScreen> createState() => _ComparisonHomeScreenState();
+}
+
+class _ComparisonHomeScreenState extends State<ComparisonHomeScreen> {
+  late final ComparisonController _controller = ComparisonController(
+    sampleSource: widget.sampleSource,
+    confusionCheck: widget.confusionCheck,
+    profile: widget.cvdProfile,
+    speech: widget.speech,
+    router: widget.router,
+    initialA: widget.initialA,
+    initialB: widget.initialB,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ComparisonReadEndpoint(
+      key: ComparisonReadEndpoint.endpointKey,
+      controller: _controller,
+      child: ComparisonScreen(controller: _controller),
     );
   }
 }

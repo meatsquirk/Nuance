@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** Not started — next COMPARE-1 (startable; G-1 approved; G-4 spec-data gate still open, blocks ITEST-3/DIFF-2 only)
+**Status:** Done — signed off 2026-10-08 by Matt Quirk at `44da743`. All 12 ACs green (12×A/0×B, fresh re-grade); full verification green (analyze clean; unit 303; coverage 100% 772/772; integration 43/43 default ≡ run-pending). No open gates/augmentations. SIGNOFF-1 approved ([signoff/round-1.md](signoff/round-1.md)).
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -50,18 +50,18 @@ confusion code, and a saved-sample source are all net-new.
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | The painter chooses sample A from the saved samples | ITEST-2 `TestAC01_ChooseA` | COMPARE-3 | ⬜ Todo |
-| AC-2 | The painter chooses sample B from the saved samples | ITEST-2 `TestAC02_ChooseB` | COMPARE-3 | ⬜ Todo |
-| AC-3 | Swapping exchanges the two samples and re-expresses the difference | ITEST-2 `TestAC03_Swap` | COMPARE-5 | ⬜ Todo |
-| AC-4 | The overall difference is stated as a delta-E with a plain verdict | ITEST-3 `TestAC04_OverallDelta` | DIFF-2 | ⬜ Todo |
-| AC-5 | The difference is decomposed into lightness, saturation and hue | ITEST-3 `TestAC05_Decompose` | DIFF-3 | ⬜ Todo |
-| AC-6 | A dimension that does not change is stated as unchanged | ITEST-3 `TestAC06_SameHue` | DIFF-3 | ⬜ Todo |
-| AC-7 | A confusable pair is flagged for the painter's CVD type | ITEST-3 `TestAC07_ConfusionFlagged` | CVD-2 | ⬜ Todo |
-| AC-8 | A clearly distinct pair is not flagged as confusable | ITEST-3 `TestAC08_NotConfusable` | CVD-2 | ⬜ Todo |
-| AC-9 | Speaking the comparison includes the confusion warning | ITEST-3 `TestAC09_SpeakIncludesWarning` | CVD-3 | ⬜ Todo |
-| AC-10 | The painter opens the full readout for sample A | ITEST-2 `TestAC10_OpenReadoutA` | COMPARE-6 | ⬜ Todo |
-| AC-11 | The painter opens the full readout for sample B | ITEST-2 `TestAC11_OpenReadoutB` | COMPARE-6 | ⬜ Todo |
-| AC-12 | With no second sample chosen, the comparison invites one | ITEST-2 `TestAC12_InviteSecond` | COMPARE-3 | ⬜ Todo |
+| AC-1 | The painter chooses sample A from the saved samples | ITEST-2 `TestAC01_ChooseA` | COMPARE-3 | ✅ Done |
+| AC-2 | The painter chooses sample B from the saved samples | ITEST-2 `TestAC02_ChooseB` | COMPARE-3 | ✅ Done |
+| AC-3 | Swapping exchanges the two samples and re-expresses the difference | ITEST-2 `TestAC03_Swap` | COMPARE-5 | ✅ Done |
+| AC-4 | The overall difference is stated as a delta-E with a plain verdict | ITEST-3 `TestAC04_OverallDelta` | DIFF-2 | ✅ Done |
+| AC-5 | The difference is decomposed into lightness, saturation and hue | ITEST-3 `TestAC05_Decompose` | DIFF-3 | ✅ Done |
+| AC-6 | A dimension that does not change is stated as unchanged | ITEST-3 `TestAC06_SameHue` | DIFF-3 | ✅ Done |
+| AC-7 | A confusable pair is flagged for the painter's CVD type | ITEST-3 `TestAC07_ConfusionFlagged` | CVD-2 | ✅ Done |
+| AC-8 | A clearly distinct pair is not flagged as confusable | ITEST-3 `TestAC08_NotConfusable` | CVD-2 | ✅ Done |
+| AC-9 | Speaking the comparison includes the confusion warning | ITEST-3 `TestAC09_SpeakIncludesWarning` | CVD-3 | ✅ Done |
+| AC-10 | The painter opens the full readout for sample A | ITEST-2 `TestAC10_OpenReadoutA` | COMPARE-6 | ✅ Done |
+| AC-11 | The painter opens the full readout for sample B | ITEST-2 `TestAC11_OpenReadoutB` | COMPARE-6 | ✅ Done |
+| AC-12 | With no second sample chosen, the comparison invites one | ITEST-2 `TestAC12_InviteSecond` | COMPARE-3 | ✅ Done |
 
 ## Design decisions
 
@@ -98,11 +98,11 @@ colour, ΔE00 or confusion math is faked.
 
 | Fixture | Shape |
 |---|---|
-| `CATALOGUE` | the injected `SampleSource` listing the named saved samples (Warm Terracotta, Raw Sienna Light, Mid Raw Umber, Ultramarine Shadow, and `SAMPLE_A_PRIME`). Drives the picker (AC-1, AC-2) and every selection Given |
+| `CATALOGUE` | the injected `SampleSource` listing the named saved samples (Warm Terracotta, Raw Sienna Light, Mid Raw Umber, Terre Verte Shadow, and `SAMPLE_A_PRIME`). Drives the picker (AC-1, AC-2) and every selection Given |
 | `SAMPLE_A_TERRACOTTA` | "Warm Terracotta", CIELAB from L 58 / C 34 / h 42° = (58, 25.27, 22.75). Drives AC-1, AC-3, AC-4, AC-5, AC-8, AC-10 |
 | `SAMPLE_B_SIENNA` | "Raw Sienna Light", CIELAB from L 70 / C 25 / h 60° = (70, 12.50, 21.65). Drives AC-2, AC-3, AC-4, AC-5, AC-8, AC-11 |
 | `SAMPLE_A_PRIME` | a partner for `SAMPLE_A_TERRACOTTA` sharing the **same hue angle 42°** but differing in L and/or C. **Control** for AC-6 ("Same hue" while other dimensions still differ, so a whole-statement suppression fails) |
-| `SAMPLE_UMBER` / `SAMPLE_ULTRAMARINE` | "Mid Raw Umber" / "Ultramarine Shadow", constructed so that under the **deutan** projection their ΔE00 collapses below the confusion threshold while their normal ΔE00 is clearly-different (ITEST-3/CVD-2 verify the construction). Drives AC-7, AC-9 |
+| `SAMPLE_UMBER` / `SAMPLE_TERRE_VERTE` | "Mid Raw Umber" (40,18,16) / "Terre Verte Shadow" (40,−10,18) — a **verified** deutan confusion pair (ITEST-3): equal L, opposite-sign a\*, near-equal b\*, so normal ΔE00 ≈ 28 (clearly different) while the deutan-projected ΔE00 ≈ 1.4 (below threshold), checked against the independent `referenceDeutanProjected`. Drives AC-7, AC-9. (Renamed from the retired "Ultramarine Shadow" — blue↔yellow is confused by no dichromacy; ITEST-3 reconciliation, spec author.) |
 | `CVD_DEUTAN` | the injected `CvdProfile` { deutan, moderate severity }. Drives AC-7, AC-8, AC-9 |
 
 **Test catalogue:**
@@ -112,10 +112,10 @@ colour, ΔE00 or confusion math is faked.
 | AC-1 | Open Comparison on `CATALOGUE` → assert picker lists the saved samples; slot A empty (read endpoint) | choose "Warm Terracotta" as A (tap E3, pick in E49) | slot A shows "Warm Terracotta" **and** "L 58, C 34, h 42 degrees" (exact) | pick does not populate slot A; wrong sample; name shown without the L/C/h numbers (assert the numbers) |
 | AC-2 | A = Warm Terracotta via AC-1 flow → assert slot A set (read endpoint) | choose "Raw Sienna Light" as B (tap E5, pick in E49) | slot B shows "Raw Sienna Light" **and** "L 70, C 25, h 60 degrees" | B pick lands in slot A; numbers wrong/absent |
 | AC-3 | A=Terracotta, B=Sienna with the statement present (AC-5 flow) → assert slot A=Terracotta, slot B=Sienna and the statement reads A→B ("Lighter by 12") | swap A and B (tap E4) | slot A="Raw Sienna Light", slot B="Warm Terracotta"; the statement is re-expressed new-A→new-B ("Darker by 12") | swap relabels the slots but leaves the statement unchanged (assert a direction flips); swap no-ops |
-| AC-4 | A=Terracotta, B=Sienna → assert both slots set | comparison shown | overall reads "delta-E00 <N>" (**N pinned by G-4**; from the stated coords ΔE00 ≈ 13.1, spec text says 14.2) **and** verdict "clearly different" | a plain Euclidean/ΔE76 distance, not CIEDE2000 (control: a pair equal in ΔE76 but different in ΔE00); a constant verdict (augment: a near-identical pair must read a different verdict) |
+| AC-4 | A=Terracotta, B=Sienna → assert both slots set | comparison shown | overall reads "delta-E00 13.1" (**G-4 resolved**: the stated coords compute to ΔE00 ≈ 13.05 → "13.1"; the spec's old 14.2 was the error) **and** verdict "clearly different" | a plain Euclidean/ΔE76 distance, not CIEDE2000 (control: a pair equal in ΔE76 but different in ΔE00); a constant verdict (augment: a near-identical pair must read a different verdict) |
 | AC-5 | A=Terracotta, B=Sienna → assert both set | comparison shown | "Lighter by 12" (L 58→70), "Less saturated by 9" (C 34→25), "Hue shifted 18 degrees toward yellow" (h 42→60) | deltas taken from a\*/b\* Euclidean not LCh (control pair where they differ); wrong/absent direction word; inverted sign ("Darker"/"More saturated") |
 | AC-6 | A, B = `SAMPLE_A_TERRACOTTA`, `SAMPLE_A_PRIME` (both h 42°) → assert both set | comparison shown | the hue dimension reads "Same hue" (while lightness/saturation still state their deltas) | reports a tiny non-zero hue shift; suppresses the entire statement instead of the one dimension |
-| AC-7 | profile=`CVD_DEUTAN`; A=Mid Raw Umber, B=Ultramarine Shadow → assert profile deutan, both set, and the pair's normal ΔE00 is clearly-different (read endpoint) | comparison shown | a confusion warning is shown stating the two look identical to the painter but are clearly different to others | no warning for a genuinely confusable pair; a warning that fires for every pair (control: AC-8) |
+| AC-7 | profile=`CVD_DEUTAN`; A=Mid Raw Umber, B=Terre Verte Shadow → assert profile deutan, both set, and the pair's normal ΔE00 is clearly-different (read endpoint) | comparison shown | a confusion warning is shown stating the two look identical to the painter but are clearly different to others | no warning for a genuinely confusable pair; a warning that fires for every pair (control: AC-8) |
 | AC-8 | profile=`CVD_DEUTAN`; A=Terracotta, B=Sienna (off the confusion line) → assert profile deutan, both set | comparison shown | **no** confusion warning is shown (after the comparison settles) | flags a non-confusable pair (a detector hard-wired to always warn) |
 | AC-9 | a confusion warning shown for A, B (AC-7 flow) → assert warning present; `FakeSpeech` log empty | ask to speak the whole comparison (tap E6) | `FakeSpeech` has exactly one utterance containing **both** the relational statement and the confusion-warning text | speaks the statement but omits the warning; speaks nothing; multiple utterances |
 | AC-10 | A = Warm Terracotta selected → assert slot A set | open the readout for A (tap E7) | the Readout screen is shown for "Warm Terracotta" (bs-01 Readout rendering the name) | opens the readout for B / the wrong sample; no navigation |
@@ -131,11 +131,11 @@ distance) — **DIFF-2** augments it with a near-identical control pair that rea
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DIFF | [modules/DIFF.md](modules/DIFF.md) | Color-science comparison: CIEDE2000 ΔE00, plain-verdict bands, the LCh relational decomposition (ΔL*/ΔC*/Δh° + direction, "Same …") | bs-01 color-science | ⬜ Todo |
-| CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | ⬜ Todo |
-| COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | ⬜ Todo |
-| SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ⬜ Todo |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| DIFF | [modules/DIFF.md](modules/DIFF.md) | Color-science comparison: CIEDE2000 ΔE00, plain-verdict bands, the LCh relational decomposition (ΔL*/ΔC*/Δh° + direction, "Same …") | bs-01 color-science | ✅ Done |
+| CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | ✅ Done (CVD-1, CVD-2, CVD-3 all done — module complete) |
+| COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | ✅ Done (COMPARE-3, COMPARE-6, COMPARE-5 all done — module complete) |
+| SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ✅ Done (SCREEN-1; regions filled by behaviour phases) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1,2,3,4; G-3 approved 2026-10-08) |
 
 ## Dependency graph
 
@@ -172,8 +172,9 @@ every other behaviour Given needs it; edits `slots_region`/`statement_region`), 
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | COMPARE-1 | ✅ Resolved 2026-10-07 08:15 EDT: approved — Matt Quirk (owner). Spec first line records approval. COMPARE-1 unblocked |
 | G-2 | dependency | bs-01 shared foundation merged to `main`: `Sample`/`ColorCoordinates`, `buildApp`/`AppScope`, `Speech` + `FakeSpeech`, the Readout screen rendering a name, `AppRouter.toComparison`/`.toReadout`, color-science (LCh), the coverage-gate tool and `integration_test`. Closed by bs-01 sign-off | COMPARE-1, all shells | ✅ Resolved 2026-10-06: bs-01 signed off and merged to `main` at c793839 (full foundation). bs-02 is **not** required (D-1) |
-| G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
-| G-4 | decision | **Spec-data reconciliation (routed to the spec author).** AC-4 asserts the overall reads "delta-E00 14.2", but the stated LCh coordinates — A (L 58, C 34, h 42°) and B (L 70, C 25, h 60°) — compute to **CIEDE2000 ΔE00 ≈ 13.05** (verified in plan mode; the decomposition deltas 12 / 9 / 18° match the spec exactly). Decide: (a) correct the expected string to the computed value (≈ "delta-E00 13.1"), or (b) supply the exact CIELAB fixture coordinates that yield 14.2. Amend the spec and `SAMPLE_A/B` fixtures with the answer | ITEST-3 (AC-4 literal), DIFF-2 | Open |
+| G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-08 05:15 EDT: approved — Matt Quirk. The 12-AC suite (all pending, 24×A / 0×B) accepted as assembled; pair-based G5 discrimination and the TestAC04→DIFF-2 augmentation accepted. Behavior stage open; COMPARE-3 first |
+| G-4 | decision | **Spec-data reconciliation (spec author).** AC-4's spec text said "delta-E00 14.2", but the stated LCh coords A (L 58, C 34, h 42°) / B (L 70, C 25, h 60°) compute to CIEDE2000 ΔE00 ≈ 13.05 (decomposition deltas 12 / 9 / 18° match). | ITEST-3 (AC-4 literal), DIFF-2 | ✅ Resolved 2026-10-07: option (a) — correct the overall to the computed value "delta-E00 13.1" — Matt Quirk (spec author). Spec line 48 amended; AC-4 pins "delta-E00 13.1". |
+| G-5 | decision | **Confusion-pair reconciliation (spec author).** "Mid Raw Umber"+"Ultramarine Shadow" (brown+blue) is a blue↔yellow difference, which no dichromacy confuses (verified: it expands under deutan/protan/tritan). Decide the deutan confusion pair. | ITEST-3 (AC-7/AC-9 fixtures), CVD-2 | ✅ Resolved 2026-10-07: rename B to "Terre Verte Shadow" (green earth), keep deutan; ITEST-3 repinned SAMPLE_UMBER=(40,18,16)/SAMPLE_TERRE_VERTE=(40,−10,18), verified — Matt Quirk. Spec line 72 amended |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -181,45 +182,42 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | Test | Symptom | Rate (runs) | Measured at | Owner | Status |
 |---|---|---|---|---|---|
-| — | none yet (carried: bs-01/bs-02 report none) | | | | |
+| coverage_gate — a `const` constructor line in `lib/**` | Carried from bs-01: `flutter test --coverage` can intermittently record a const-folded constructor line as uncovered, so the gate may FAIL on a file the phase never touched | not quantified (bs-01) | — | any phase running the coverage gate | open — if the gate flags an untouched file, re-run `flutter test --coverage` once; green on re-run ⇒ ignore |
 
 ## Session log
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | COMPARE-1 | scaffold: branch from main, baseline, confirm coverage gate, BS03 pending runner | ⬜ Next | | | blocked by G-1 |
-| 2 | DIFF-1 | shell: comparison color-science signatures (`Comparison`, ΔE00, verdict, decompose) | ⬜ Todo | | | ∥ CVD-1 |
-| 3 | CVD-1 | shell: `CvdProfile` + `ConfusionCheck` signature + inject into deps | ⬜ Todo | | | ∥ DIFF-1 |
-| 4 | COMPARE-2 | shell: `ComparisonController`/state + `SampleSource` + read endpoint + comparison entry/route | ⬜ Todo | | | after DIFF-1, CVD-1 |
-| 5 | SCREEN-1 | shell: Comparison screen scaffold (E3–E8, E49 placeholders) bound to controller | ⬜ Todo | | | after COMPARE-2 |
-| 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
-| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
-| 8 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 (AC-4 literal needs G-4) |
-| 9 | ITEST-4 | test-review: packet; G-3 | ⬜ Todo | | | |
-| 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ⬜ Todo | | | first behaviour; unblocks all Givens |
-| 11 | COMPARE-6 | behavior: AC-10, AC-11 — open readout for A / B | ⬜ Todo | | | ∥ DIFF-2, CVD-2 |
-| 12 | DIFF-2 | behavior: AC-4 — ΔE00 + plain verdict + overall-difference region | ⬜ Todo | | | needs G-4; ∥ COMPARE-6, CVD-2 |
-| 13 | CVD-2 | behavior: AC-7, AC-8 — confusion detector + warning region | ⬜ Todo | | | ∥ COMPARE-6, DIFF-2 |
-| 14 | DIFF-3 | behavior: AC-5, AC-6 — relational decomposition + "Same …" + statement region | ⬜ Todo | | | after DIFF-2 |
-| 15 | COMPARE-5 | behavior: AC-3 — swap A/B + re-express | ⬜ Todo | | | after DIFF-3 |
-| 16 | CVD-3 | behavior: AC-9 — speak whole comparison incl. warning | ⬜ Todo | | | after DIFF-3, CVD-2 |
-| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+| 1 | COMPARE-1 | scaffold: branch from main, baseline, confirm coverage gate, BS03 pending runner | ✅ Done | 2,185,042 | 9m 04s (42m 14s) | branch cut from c793839; analyze clean; unit 196 / integration 17 green; gate PASS clean / FAIL on planted gap; BS03 pending runner in place |
+| 2 | DIFF-1 | shell: comparison color-science signatures (`Comparison`, ΔE00, verdict, decompose) | ✅ Done | 2,538,094 | 6m 48s | `Comparison` + pure `compare` + 5 stubs; unit 202 green; coverage 100% on touched file; integ 17 green |
+| 3 | CVD-1 | shell: `CvdProfile` + `ConfusionCheck` signature + inject into deps | ✅ Done | 3,816,225 | 8m 30s | `CvdProfile`/`CvdType` + `ConfusionCheck`/`NoopConfusionCheck` + deps wiring; unit 215 green; coverage 100% on touched files; analyze + integ 17 green |
+| 4 | COMPARE-2 | shell: `ComparisonController`/state + `SampleSource` + read endpoint + comparison entry/route | ✅ Done | 12,364,300 | 25m 01s | controller/state/source/read-endpoint + comparison entry + `toComparison`→real screen (replaced `compare_stub`); unit 241 green, 100% coverage on 9 touched files, integ 17 green (bs-01 AC-9/10 on the real screen); analyze clean; 1/3 fix passes |
+| 5 | SCREEN-1 | shell: Comparison screen scaffold (E3–E8, E49 placeholders) bound to controller | ✅ Done | 6,544,654 | 12m 51s | `ComparisonScreen` + 5 region widgets (keyed, inert); unit 247 green / 100% cov on 6 new files; integ 17 green; analyze clean; 0/3 fix passes |
+| 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 5,939,625 | 19m 08s | harness + 12-AC gate + smoke; acc 10/10, integ 27/27; grades 10×A; 0/3 fixes |
+| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ✅ Done | 7,878,822 | 27m 54s | 6 pending AC tests + red baseline; acc 10 pass/6 pending, run-pending 6 fail clean; grades 6×A; 0/3 fixes |
+| 8 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9 (pending) + red baseline | ✅ Done | 15,032,038 | 29m 57s | 6 pending AC tests + red baseline; G-4 resolved (ΔE00 13.1) + confusion-pair renamed to Terre Verte (verified deutan pair); acc 14 pass/12 pending, run-pending 12 fail clean; grades 6×A; 0/3 fixes; ran in worktree |
+| 9 | ITEST-4 | test-review: packet + G-3 | ✅ Done | 3,360,351 | 10m 59s | packet assembled; regression green (unit 247, acc 14 pass/12 pending); 24×A grid; **G-3 approved 2026-10-08 — Matt Quirk** |
+| 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ✅ Done | 11,695,533 | 22m 21s | AC-1/2/12 un-pended + green; unit 254, cov 100%, acc 34 pass/9 pending; 3×A; 1/3 fixes |
+| 11 | COMPARE-6 | behavior: AC-10, AC-11 — open readout for A / B | ✅ Done | 9,095,859 | 19m 08s | ∥ DIFF-2, CVD-2 |
+| 12 | DIFF-2 | behavior: AC-4 — ΔE00 + plain verdict + overall-difference region | ✅ Done | 12,157,763 | 31m 40s | AC-4 un-pended + green; 6×A; 1/3 fixes |
+| 13 | CVD-2 | behavior: AC-7, AC-8 — confusion detector + warning region | ✅ Done | 10,847,797 | 27m 02s | AC-7/8 un-pended + green (iOS sim); unit 286, cov 100%, 8×A; 1/3 fixes |
+| 14 | DIFF-3 | behavior: AC-5, AC-6 — relational decomposition + "Same …" + statement region | ✅ Done | 7,471,205 | 15m 32s | AC-5/AC-6 un-pended + green (iOS sim); unit 295, cov 100% touched, default integ +24~2 / run-pending red baseline held (only AC-3/AC-9); 10×A, no neighbour regrade; 0/3 fixes |
+| 15 | COMPARE-5 | behavior: AC-3 — swap A/B + re-express | ✅ Done | 7,118,335 | 18m 43s | AC-3 un-pended + green (iOS sim); unit 297, cov 100% touched, default integ 42 pass/1 pending (only AC-9) / run-pending red baseline held (only AC-9); 11×A, no neighbour regrade; 0/3 fixes; COMPARE module complete |
+| 16 | CVD-3 | behavior: AC-9 — speak whole comparison incl. warning | ✅ Done | 11,092,874 | 20m 52s | AC-9 un-pended + green (iPhone 17 sim); unit 303, cov 100% touched, integ 43 pass/0 pending (all 12 ACs delivered); grades 12×A, no neighbour regrade; 0/3 fixes; CVD module + behaviour stage complete |
+| 17 | SIGNOFF-1 | sign-off: packet + manual approval | ✅ Done | 7,688,528 | 21m 34s (21m 34s) | packet + cost report + fresh re-grade assembled; full verification green (analyze clean; unit 303/0; coverage 100% 772/772 across 40 files; integration 43/43 default ≡ run-pending); 12×A/0×B; TestAC04 augmentation row closed; **awaiting human sign-off** |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**G-1 approved (2026-10-07 — Matt Quirk); COMPARE-1 is startable.** The spec's first line records approval.
-
-- **Startable now:** **COMPARE-1** (scaffold — branch from `main` @ c793839, baseline, confirm coverage gate,
-  BS03 pending runner). Run each phase in its own session (`/clear` first).
-- **G-4 (spec-data reconciliation)** still open — the stated ΔE00 "14.2" vs the computed ≈ 13.05. It blocks
-  **ITEST-3** (AC-4 literal) and **DIFF-2** only; scaffold and shells do not need it. Settle before ITEST-3.
-- **Branch coordination:** this plan is committed on `feat/bs-02-sample-capture`; COMPARE-1 branches bs-03
-  from `main`, so bring the plan to its branch (merge bs-02 to main first, or branch from this commit).
-
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up COMPARE-1.
+**Feature complete — SIGNOFF-1 approved 2026-10-08 by Matt Quirk (owner) at `44da743`.** All 17 phases done;
+all 12 ACs green (12×A/0×B, fresh re-grade); full verification green (analyze clean; unit 303; coverage gate
+PASS + whole-lib 772/772 = 100%; integration 43/43 default ≡ run-pending). No open gates/augmentations/non-A
+grades. Packet: [signoff/round-1.md](signoff/round-1.md); cost: [signoff/cost-per-ac-round-1.md](signoff/cost-per-ac-round-1.md).
+- **Next:** nothing in this feature. Deferred-by-design dependencies (§6 of the packet) land in later features:
+  bs-06 (persistent `SampleSource` store), bs-07 (CVD profile from self-assessment), platform-backed TTS.
+- The branch `feat/bs-03-relative-comparison` is ready to merge to `main`.
 
 ## Token usage
 
@@ -230,10 +228,32 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-co
 | PLAN | _pending_ | | | | | claude-opus-4-8 | | | | | | plan written: 17 phases, 5 modules, 12 ACs; G-1/G-3 open, G-4 raised (ΔE00 14.2 vs 13.05) |
 | PLAN | e128d86e | 2026-10-07 07:43 EDT | 07:56 | 13m 02s | 13m 02s | claude-opus-4-8 | 58 | 148,483 | 3,657,272 | 62,473 | 3,868,286 | plan written: 17 phases, 5 modules, 12 ACs; G-1/G-3 open; G-4 raised (overall ΔE00 14.2 vs computed 13.05) |
 | GATE-DECISION | e128d86e | 2026-10-07 08:15 EDT | 08:15 | 0m 53s | 0m 53s | claude-opus-4-8 | 12 | 2,866 | 1,105,647 | 3,198 | 1,111,723 | G-1 approved (owner Matt Quirk); spec first line stamped; COMPARE-1 unblocked. G-4 still open |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 08:15** | **13m 55s** | **13m 55s** |  | **70** | **151,349** | **4,762,919** | **65,671** | **4,980,009** |  |
+| COMPARE-1 | ea5add91 | 2026-10-07 08:16 EDT | 08:59 | 42m 14s | 9m 04s | claude-opus-4-8 | 56 | 70,489 | 2,089,423 | 25,074 | 2,185,042 | scaffold complete — branch cut from c793839; analyze clean; unit 196 / integration 17 green; coverage gate PASS clean / FAIL on planted gap; BS03 pending runner in place |
+| DIFF-1 | b1e7c329 | 2026-10-07 09:13 EDT | 09:19 | 6m 48s | 6m 48s | claude-opus-4-8 | 68 | 66,234 | 2,453,513 | 18,279 | 2,538,094 | shell: Comparison type + pure compare placeholder + 5 stubs; unit 202 green, 100% coverage on touched file, integration 17 green; fix passes 0/3 |
+| CVD-1 | 14a0d9b4 | 2026-10-07 09:22 EDT | 09:31 | 8m 30s | 8m 30s | claude-opus-4-8 | 92 | 77,648 | 3,715,605 | 22,880 | 3,816,225 | shell done: CvdProfile/ConfusionCheck + deps wiring; unit 215 green; coverage 100% touched; analyze + integ 17 green; 0/3 fix passes |
+| COMPARE-2 | 73fe7631 | 2026-10-07 10:20 EDT | 10:45 | 25m 01s | 25m 01s | claude-opus-4-8 | 158 | 196,228 | 12,070,968 | 96,946 | 12,364,300 | shell: ComparisonController/state + SampleSource + ComparisonReadEndpoint + comparison entry/route; replaced compare_stub; unit 241 green, 100% coverage on 9 touched files, integ 17 green (incl. bs-01 AC-9/10 on the real screen), analyze clean; 1/3 fix passes |
+| RECONCILE | 646b2ffe | 2026-10-07 11:18 EDT | 11:22 | 3m 57s | 3m 57s | claude-opus-4-8 | 26 | 13,125 | 1,974,880 | 8,891 | 1,996,922 | fast-forwarded COMPARE-2 shell into feat/bs-03-relative-comparison (3279f0f), verified green (241 unit/100% cov/17 integ/analyze clean); applied COMPARE-2 rollup to master plan |
+| SCREEN-1 | 5ba35b2c | 2026-10-07 11:35 EDT | 11:48 | 12m 51s | 12m 51s | claude-opus-4-8 | 126 | 118,748 | 6,385,337 | 40,443 | 6,544,654 | shell: ComparisonScreen + 5 keyed region widgets (inert E3-E8/E49); unit 247 green, 100% coverage on 6 new files; analyze + integration 17 green; 0/3 fix passes |
+| ITEST-1 | 71c0654e | 2026-10-07 12:24 EDT | 12:43 | 19m 08s | 19m 08s | claude-opus-4-8 | 104 | 207,156 | 5,669,931 | 62,434 | 5,939,625 | harness + 12-AC pending gate + smoke; acc 10/10, integ 27/27; grades 10×A; 0/3 fix passes |
+| ITEST-2 | b79f3e10 | 2026-10-07 13:25 EDT | 13:53 | 27m 54s | 27m 54s | claude-opus-4-8 | 122 | 280,162 | 7,515,695 | 82,843 | 7,878,822 | 6 pending AC tests (AC-1,2,3,10,11,12) + red baseline; acc 10 pass/6 pending, run-pending 6 fail clean; grades 6xA; 0/3 fixes |
+| RECONCILE | 8d454f0e | 2026-10-07 13:56 EDT | 13:59 | 3m 29s | 3m 29s | claude-opus-4-8 | 28 | 58,077 | 897,585 | 14,053 | 969,743 | fast-forwarded ITEST-2 (02c7a3c) into feat/bs-03-relative-comparison; applied ITEST-2 rollup to master plan (session log 7 Done / 8 Next, status, Next-phase, ITEST module note) + added ITEST-2 ledger row; removed worktree + phase branch. Clean ff, tree identical to verified 02c7a3c (tests-only, no lib/** change) |
+| ITEST-3 | 0970b39f | 2026-10-07 14:05 EDT | 22:14 | 8h 08m | 29m 57s | claude-opus-4-8 | 186 | 608,647 | 14,303,307 | 119,898 | 15,032,038 | 6 pending AC tests (AC-4..9) + red baseline; G-4 resolved (13.1), confusion pair renamed+verified; acc 14 pass/12 pending, run-pending 12 fail clean; grades 6×A+guards; 0/3 fixes |
+| RECONCILE | 349b8b33 | 2026-10-07 22:36 EDT | 23:02 | 25m 20s | 6m 44s | claude-opus-4-8 | 54 | 77,930 | 2,141,418 | 29,792 | 2,249,194 | fast-forwarded ITEST-3 (4e0dacd) into feat/bs-03-relative-comparison in a worktree (primary was on bs-02); applied ITEST-3 rollup to master plan (status, G-4 resolved + G-5 added, fixtures/AC-4/AC-7 repinned to Terre Verte, session log, Next-phase) + added ITEST-3 ledger row; clean ff, tests-only, no lib/** change |
+| ITEST-4 | 3e95fce2 | 2026-10-07 23:18 EDT | 23:29 | 10m 59s | 10m 59s | claude-opus-4-8 | 72 | 98,056 | 3,234,848 | 27,375 | 3,360,351 | test-review packet assembled; regression green (unit 247, acc 14 pass/12 pending); 24xA grid; awaiting G-3 |
+| SIGNOFF-DECISION | 4d81ad77 | 2026-10-08 03:57 EDT | 05:16 | 1h 18m | 3m 33s | claude-opus-4-8 | 54 | 106,200 | 1,765,071 | 14,054 | 1,885,379 | ITEST-4 approved |
+| COMPARE-3 | 3c9e4b4b | 2026-10-08 05:33 EDT | 05:56 | 22m 21s | 22m 21s | claude-opus-4-8 | 146 | 301,287 | 11,334,346 | 59,754 | 11,695,533 | AC-1/2/12 un-pended + green; unit 254, cov 100% on 15 touched files, acc 34 pass/9 pending; grades 3×A; 1/3 fixes |
+| COMPARE-6 | 47da8ffc | 2026-10-08 06:02 EDT | 06:21 | 19m 08s | 19m 08s | claude-opus-4-8 | 162 | 232,952 | 8,811,711 | 51,034 | 9,095,859 | AC-10, AC-11 un-pended + green (iOS sim); unit 260 green, coverage 100% touched, 5×A; fix passes 1/3 |
+| DIFF-2 | 0018367c | 2026-10-08 06:29 EDT | 07:01 | 31m 40s | 31m 40s | claude-opus-4-8 | 176 | 297,879 | 11,784,560 | 75,148 | 12,157,763 | AC-4 un-pended + green (iOS sim); unit 272, coverage 100% touched, default integ +37~6 green / run-pending red baseline held; 6×A; 1/3 fixes |
+| CVD-2 | d20e956a | 2026-10-08 08:20 EDT | 08:47 | 27m 02s | 27m 02s | claude-opus-4-8 | 152 | 311,827 | 10,469,528 | 66,290 | 10,847,797 | AC-7, AC-8 un-pended + green (iOS sim); DichromatConfusionCheck shipped default; unit 286, coverage 100% on touched files, default integ 39 pass/4 pending; grades 8×A; 1/3 fixes |
+| DIFF-3 | 3bfb8457 | 2026-10-08 08:59 EDT | 09:14 | 15m 32s | 15m 32s | claude-opus-4-8 | 142 | 248,215 | 7,184,041 | 38,807 | 7,471,205 | AC-5, AC-6 un-pended + green (iOS sim); unit 295, coverage 100% on touched files, default integ +24~2 / run-pending red baseline held (only AC-3/AC-9); grades 10×A, no neighbour regrade; 0/3 fixes |
+| COMPARE-5 | 9d46b777 | 2026-10-08 09:27 EDT | 09:45 | 18m 43s | 18m 43s | claude-opus-4-8 | 140 | 225,278 | 6,859,939 | 32,978 | 7,118,335 | AC-3 un-pended + green (iOS sim); unit 297, coverage 100% on touched files, default integ 42 pass/1 pending (only AC-9) / run-pending red baseline held (only AC-9); grades 11×A, no neighbour regrade; 0/3 fixes; COMPARE module complete |
+| CVD-3 | f388d0f9 | 2026-10-08 09:56 EDT | 10:17 | 20m 52s | 20m 52s | claude-opus-4-8 | 190 | 300,531 | 10,747,410 | 44,743 | 11,092,874 | AC-9 un-pended + green (iPhone 17 sim); unit 303, cov 100% touched, integ 43 pass/0 pending (all 12 ACs delivered); grades 12×A, no neighbour regrade; 0/3 fixes; CVD module + behaviour stage complete |
+| SIGNOFF-1 | 803267ae | 2026-10-08 10:23 EDT | 10:45 | 21m 34s | 21m 34s | claude-opus-4-8 | 134 | 247,225 | 7,397,008 | 44,161 | 7,688,528 | sign-off packet assembled; full verification green (analyze clean; unit 303; coverage gate PASS + whole-lib 772/772 100%; integration 43 pass/0 skip default and run-pending identical); fresh re-grade 12×A/0×B gate PASS; awaiting human decision |
+| SIGNOFF-DECISION | 850f6803 | 2026-10-08 11:14 EDT | 11:16 | 1m 07s | 1m 07s | claude-opus-4-8 | 20 | 40,442 | 575,145 | 4,727 | 620,334 | SIGNOFF-1 approved (owner Matt Quirk) — feature Done |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 11:16** | **15h 44m** | **5h 59m** |  | **2,478** | **4,335,685** | **144,144,188** | **1,046,275** | **149,528,626** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | — | — | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `44da743` (CVD-3) | 12×A, 0×B (fresh re-grade 2026-10-08) | ✅ Approved 2026-10-08 — Matt Quirk (owner) |

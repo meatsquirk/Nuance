@@ -7,7 +7,6 @@ import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
-import 'package:paint_color_assistant/compare/compare_stub.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -39,7 +38,7 @@ void main() {
       tester,
       router.toComparison(_sample('Warm Terracotta'), ComparisonSlot.a),
     );
-    expect(find.byType(ComparisonStubScreen), findsOneWidget);
+    expect(find.byType(ComparisonHomeScreen), findsOneWidget);
     expect(find.text('Slot A: Warm Terracotta'), findsOneWidget);
     expect(find.text('Slot B: (empty)'), findsOneWidget);
   });
@@ -61,10 +60,10 @@ void main() {
     expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
   });
 
-  testWidgets('toReadout opens the Readout on the carried sample',
+  testWidgets('toReadout opens the full Readout for the carried sample',
       (tester) async {
-    // The Readout reads its services from AppScope, so the route is pushed
-    // under one (the capture commit pushes it below the app's scope — D-5).
+    // The Readout screen reads its services from the enclosing AppScope (the
+    // production assembly wraps the navigator in one), so push under a scope.
     final key = GlobalKey<NavigatorState>();
     await tester.pumpWidget(
       AppScope(
@@ -76,10 +75,10 @@ void main() {
         child: MaterialApp(navigatorKey: key, home: const SizedBox()),
       ),
     );
-    unawaited(key.currentState!.push(router.toReadout(_sample('Deep Olive Green'))));
+    unawaited(key.currentState!.push(router.toReadout(_sample('Warm Terracotta'))));
     await tester.pumpAndSettle();
 
     expect(find.byType(ReadoutScreen), findsOneWidget);
-    expect(find.text('Deep Olive Green'), findsOneWidget);
+    expect(find.text('Warm Terracotta'), findsWidgets);
   });
 }
