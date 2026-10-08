@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet ready ([round 1](signoff/round-1.md)). All 11 ACs green; fresh whole-suite re-grade **19×A/0×B**; unit 324 green + coverage gate PASS (100% touched); cross-feature integration 36 green; acceptance 19 green (default == run-pending). G-4/G-5 + SCREEN-2 infra changes confirmed by Matt Quirk 2026-10-07.
+**Status:** ✅ Done — signed off 2026-10-08 by Matt Quirk at `2404763`. All 11 ACs green; whole-suite 19×A/0×B; all gates resolved. Sign-off packet: [round 1](signoff/round-1.md).
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -186,29 +186,23 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 14 | CAPTURE-6 | behavior: AC-11 — multi-frame commit + haptic + open Readout | ✅ Done | 14,356,155 | 39m 10s (39m 10s) | AC-11 un-pended green; 9×A re-grade (whole-suite 11×A/0×B); commit averages frames + justCaptured → Readout; harness skipOffstage flag (G-5) |
 | 15 | SCREEN-2 | behavior: AC-1, AC-3 — eyedropper + radius selector + reticle | ✅ Done | 9,046,680 | 17m 44s (17m 44s) | AC-1,3 un-pended green; 11×A re-grade; E18 selector + reticle 8/20/44 + setRadius re-sample |
 | 16 | SCREEN-3 | behavior: AC-10 — value-only grayscale toggle | ✅ Done | 7,377,195 | 15m 52s (15m 53s) | AC-10 un-pended green; 11×A re-grade (whole suite); `pendingACs` empty; toggleValueOnly + grayscale feed + E21 "✓ Value"; coverage 100% on 3 touched lib files; 324 unit + 36 integ green |
-| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting | 4,351,302 | 14m 36s (20m 55s) | packet round-1 written; full verification green (unit 324 + cov gate PASS, cross-feature integ 36, acceptance 19 default==run-pending); fresh independent re-grade 19×A/0×B; G-4/G-5 + SCREEN-2 infra changes confirmed by Matt Quirk; awaiting human sign-off decision |
+| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ✅ Done | 4,351,302 | 14m 36s (20m 55s) | packet round-1 written; full verification green (unit 324 + cov gate PASS, cross-feature integ 36, acceptance 19 default==run-pending); fresh independent re-grade 19×A/0×B; G-4/G-5 + SCREEN-2 infra confirmed; **approved 2026-10-08 — Matt Quirk** |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-1 packet written — awaiting the human sign-off decision.** The whole feature is built and
-verified: all 11 ACs green, `pendingACs` empty, fresh independent whole-suite re-grade **19×A/0×B** (11 AC +
-8 harness/scaffold tests; no downgrade from the SCREEN-3 grid). Full verification from the primary checkout:
-unit **324 green** + coverage gate **PASS** (100% on all touched files); cross-feature integration **36
-green**; acceptance suite **19 green**, default == run-pending (nothing pending).
+**Feature complete — signed off 2026-10-08 by Matt Quirk (SIGNOFF-1 approved).** All 17 phases done; all 11
+ACs green; whole-suite 19×A/0×B; all gates (G-1..G-5 + SCREEN-2) resolved. Signed off at code `2404763`;
+packet [signoff/round-1.md](signoff/round-1.md).
 
-- **Advisory infra changes — all confirmed by Matt Quirk 2026-10-07 23:18 EDT:** G-4 (`givenCaptureOf` →
-  `pumpWidget`, render-frame settling), G-5 (read endpoint found with `skipOffstage: false` after commit
-  navigates), and the SCREEN-2 `whenSelectRadius` per-option-anchor retarget. All resolved; none blocked.
 - **One documented, non-downgrading residual (carried, not a defect):** AC-10 asserts a `ColorFiltered`
   ancestor over the feed structurally but not the exact saturation-0 matrix — meaningless while the feed is a
-  flat-colour placeholder; worth tightening once real frames render (native-camera work, outside bs-02).
-- **Nothing else in flight.** Every behaviour phase and every module (SOURCE, CAPTURE, SCREEN, ITEST) done.
-
-Decision, when ready: `/feature-next-phase --signoff bs-02-sample-capture approved` (or
-`changes "<items>"`). The packet is [signoff/round-1.md](signoff/round-1.md).
+  flat-colour placeholder; worth tightening once real camera frames render (native-camera work, outside bs-02).
+- **Next:** nothing in this feature. `feat/bs-02-sample-capture` (tip `fc24766` + this sign-off commit) is
+  ready to merge to `main`. A concurrent session holds the shared checkout on `feat/bs-03-relative-comparison`;
+  this sign-off was recorded from a dedicated bs-02 worktree.
 
 ## Token usage
 
@@ -238,10 +232,11 @@ Decision, when ready: `/feature-next-phase --signoff bs-02-sample-capture approv
 | SCREEN-2 | 7d8f5b62 | 2026-10-07 21:50 EDT | 22:07 | 17m 44s | 17m 44s | claude-opus-4-8 | 158 | 275,897 | 8,724,513 | 46,112 | 9,046,680 | AC-1, AC-3 un-pended green; E18 radius selector + reticle 8/20/44 + setRadius re-sample; 11×A/0×B re-grade; coverage 100% on 16 touched lib files; 321 unit + 35 integ green (AC-10 pending); fix passes 0/3 |
 | SCREEN-3 | 4f467b9f | 2026-10-07 22:37 EDT | 22:53 | 15m 53s | 15m 52s | claude-opus-4-8 | 142 | 250,504 | 7,087,798 | 38,751 | 7,377,195 | AC-10 un-pended green; 11×A/0×B whole-suite re-grade; toggleValueOnly + grayscale feed + E21 '✓ Value'; coverage 100% on 3 touched lib files; 324 unit + 36 integ green; fix passes 0/3 |
 | SIGNOFF-1 | d0d02c7f | 2026-10-07 22:59 EDT | 23:20 | 20m 55s | 14m 36s | claude-opus-4-8 | 94 | 228,773 | 4,083,469 | 38,966 | 4,351,302 | packet round-1 written; full verification green (unit 324 + coverage gate PASS, cross-feature integ 36, acceptance 19 default==run-pending); fresh independent re-grade 19xA/0xB; G-4/G-5 + SCREEN-2 infra confirmed (Matt Quirk); awaiting human sign-off |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 23:20** | **11h 34m** | **7h 41m** |  | **2,712** | **4,719,219** | **201,419,091** | **1,426,242** | **207,567,264** |  |
+| SIGNOFF-DECISION | d0d02c7f | 2026-10-08 03:58 EDT | 04:01 | 3m 03s | 3m 03s | claude-opus-4-8 | 40 | 156,709 | 3,340,145 | 11,652 | 3,508,546 | SIGNOFF-1 approved — Matt Quirk; feature bs-02 signed off and complete |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-08 04:01** | **11h 37m** | **7h 44m** |  | **2,752** | **4,875,928** | **204,759,236** | **1,437,894** | **211,075,810** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | 2404763 | 19×A / 0×B | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | 2404763 | 19×A / 0×B | ✅ Approved 2026-10-08 — Matt Quirk |

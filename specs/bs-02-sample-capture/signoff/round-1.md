@@ -1,6 +1,6 @@
 # Sample capture and sampling (bs-02) — sign-off round 1
 
-**Status:** ⏸ Awaiting human decision · **At code:** `2404763` (`feat/bs-02-sample-capture`) · **Packet built:** 2026-10-07 23:20 EDT · **Flutter:** 3.47.6 (stable)
+**Status:** ✅ Approved 2026-10-08 by Matt Quirk · **At code:** `2404763` (`feat/bs-02-sample-capture`) · **Packet built:** 2026-10-07 23:20 EDT · **Flutter:** 3.47.6 (stable)
 
 bs-02 builds the Capture screen on top of bs-01's merged foundation: the live-view eyedropper, point/area-average sampling (incl. from a gallery photo), the AE/AWB/focus lock + stability settling, low-light detection with an honest `approximate` accuracy tier, reference-card calibration that upgrades to `calibrated`, the value-only grayscale preview, and a multi-frame commit that haptically confirms and opens bs-01's Readout. The native camera sits behind the SI `CaptureSource` interface (D-2); this pure-Dart build exercises it through a deterministic `FakeCaptureSource` with known ground-truth scenes, so the accuracy ACs are real numeric ΔE00 checks.
 
@@ -95,4 +95,4 @@ Reproduce everything: `flutter test integration_test/capture_test.dart` (from `/
 
 ## Decision
 
-⏸ **Awaiting** — record with `/feature-next-phase --signoff bs-02-sample-capture approved` (or `changes "<items>"`).
+✅ **Approved** — 2026-10-08 03:58 EDT by **Matt Quirk**, at code `2404763`. Feature bs-02 Sample Capture is signed off and complete: all 11 ACs green, whole-suite 19×A/0×B, all gates resolved.
