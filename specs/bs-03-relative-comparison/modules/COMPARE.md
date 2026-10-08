@@ -1,6 +1,6 @@
 # Module COMPARE — comparison controller & assembly
 
-**Status:** In progress — COMPARE-3 (AC-1, AC-2, AC-12) and COMPARE-6 (AC-10, AC-11) done; only COMPARE-5 (AC-3) remains, blocked on DIFF-3
+**Status:** Done — COMPARE-3 (AC-1, AC-2, AC-12), COMPARE-6 (AC-10, AC-11) and COMPARE-5 (AC-3) all done; module complete
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/compare/comparison_controller.dart`, `lib/compare/comparison_state.dart`,
 `lib/compare/comparison_read_endpoint.dart`, `lib/compare/sample_source.dart` (interface + in-memory
@@ -16,7 +16,7 @@ reuses `lib/app/router.dart` (`toComparison`, `toReadout`). Carries the scaffold
 | 1 | scaffold | — | ✅ Done | 2,185,042 | 9m 04s (42m 14s) |
 | 2 | shell | — | ✅ Done | 12,364,300 | 25m 01s |
 | 3 | behavior | AC-1, AC-2, AC-12 | ✅ Done | 11,695,533 | 22m 21s |
-| 5 | behavior | AC-3 | ⬜ Todo | | |
+| 5 | behavior | AC-3 | ✅ Done | 7,118,335 | 18m 43s |
 | 6 | behavior | AC-10, AC-11 | ✅ Done | 9,095,859 | 19m 08s |
 
 (Phase numbers skip to align with the feature-wide session log: DIFF/CVD own the other behaviour phases.)
@@ -263,9 +263,53 @@ un-pended and green.
 - **Exit criteria:** unit gate 100% on touched code; `TestAC03_Swap` green run-pending; earlier ACs green.
 - **Acceptance gate:** un-pend AC-3; suite green for that test and all earlier ACs.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Behaviour landed: the painter can swap A and B (E4) and the relational statement re-expresses new-A → new-B
+(a direction flips). AC-3 un-pended and green. The COMPARE module is complete.
+
+- **`comparison_controller.dart`** — `swap()` implemented as
+  `_emit(_derive(_state.slotB, _state.slotA, confusionCheck, profile))`: it exchanges the two slots and
+  re-derives the pair through the existing `_derive` seam (DIFF `compare` + CVD `confusable`) and the one
+  `_emit`/`notifyListeners` mutation path shared with `selectA`/`selectB`. Re-deriving over the swapped slots
+  recomputes `compare(newA, newB)`, so the signed LCh lines flip (e.g. "Lighter by 12" → "Darker by 12"); with
+  a slot empty the swap just moves the lone sample and the reading stays null (AC-12 invite intact).
+- **`slots_region.dart`** — the "Swap A and B" (E4) `TextButton` now wires `onPressed: controller.swap` (was
+  the inert shell `onPressed: null`); the screen's `ListenableBuilder` rebuilds `SlotsRegion` + `StatementRegion`
+  on the notify. The standalone "Sample picker" affordance stays inert. Doc comment updated.
+- **Un-pend** — deleted AC-3's row in `integration_test/bs03/pending.dart`; added `'AC-3'` to the `unpended`
+  set in `comparison_test.dart` (ITEST-1 complement guard).
+- **Gates.** `flutter analyze` clean. Unit **297 green** (was ~295; replaced the "swap deferred" test with two
+  real swap tests — both-slots exchange+re-derive+notify, and one-slot move keeps no reading; replaced the
+  "Swap inert" screen test with Swap-enabled + a tap-swaps-rendered-slots widget test). Coverage gate **PASS**
+  — 100% line coverage on all 15 touched `lib/**` files (`dart run tool/coverage_gate.dart main`). Acceptance
+  (iOS sim, under the verify lock): default `flutter test integration_test/` **42 pass / 1 pending** — AC-3
+  un-pended and green, only AC-9 (CVD-3) still pending; run-pending (`--dart-define=BS03_RUN_PENDING=true`,
+  `comparison_test.dart`) **25 pass / 1 fail** where the sole failure is the still-unbuilt AC-9 (expected red
+  baseline). **Test grades: 11×A, 0×B** — AC-3 newly graded + the 10 un-pended neighbours re-confirmed by an
+  independent fresh-context grader against G1–G6 (grid:
+  `../behavior-test-completeness-bs-03-relative-comparison.md`, *COMPARE-5* section); no neighbour regrade.
+  **Fix passes: 0/3** (passed first run). No coverage exclusions. No augmentations assigned to AC-3, and the
+  swap behaviour gives no already-green AC test (selection/difference/readout) anything new to assert (G6).
+- **Tokens / time:** 7,118,335 · 18m 43s (active = wall), one session.
+
+### Checkpoint / Handoff
+
+- **Frozen:** `ComparisonController.swap()` exchanges slots A/B and re-derives through the shared `_derive`/
+  `_emit` path (notifies); the E4 "Swap A and B" control in `SlotsRegion` is wired to it. All of
+  `ComparisonController`'s painter actions (`selectA`/`selectB`/`swap`/`openReadout`) are now implemented — no
+  deferred stubs remain in the COMPARE module.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration on the
+  iOS sim under the verify lock:
+  `$C with-lock <FEATURE> <PHASE> --wait 900 -- bash -c "export PATH=…; cd <repo> && flutter test integration_test/ -d <iPhone-sim-id>"`
+  (booted sim this session: iPhone 17 `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`). Run-pending:
+  `--dart-define=BS03_RUN_PENDING=true`. Base = `main` (the gate measures the whole bs-03 lib delta).
+- **Known gaps / notes:** AC-9 (speak whole comparison incl. warning) is the last pending AC — owned by
+  **CVD-3**, which shares `actions_bar.dart` with COMPARE-6's wiring (file-disjoint from COMPARE-5). Carry-over
+  bs-01 const-line coverage flake still applies (re-run `--coverage` once if an untouched file flags).
+  Untracked bs-04..bs-14 specs + `docs/` remain in the tree, not part of bs-03.
+- **Next:** **CVD-3** (AC-9) is the only remaining behaviour phase; after it, **SIGNOFF-1**.
 
 ## Phase 6 — Open readout for A / B (COMPARE-6)
 

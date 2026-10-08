@@ -144,9 +144,38 @@ void main() {
     });
   });
 
-  group('ComparisonController deferred actions', () {
-    test('swap is deferred to COMPARE-5', () {
-      expect(() => _controller().swap(), throwsUnimplementedError);
+  group('ComparisonController swap (COMPARE-5)', () {
+    test('exchanges both slots, re-derives the pair, and notifies (AC-3)', () {
+      final c = _controller(initialA: _a, initialB: _b);
+      final before = c.state.comparison;
+      expect(before, isNotNull);
+      var notified = 0;
+      c.addListener(() => notified++);
+
+      c.swap();
+
+      // The two samples trade slots...
+      expect(c.state.slotA, same(_b));
+      expect(c.state.slotB, same(_a));
+      // ...the pair is re-read for the swapped direction (B→A, not the old
+      // A→B — rejects a swap that relabels the slots but leaves the reading)...
+      expect(c.state.comparison, isNotNull);
+      expect(c.state.comparison, isNot(equals(before)));
+      // ...and the screen / read endpoint are notified once.
+      expect(notified, 1);
+    });
+
+    test('with one slot set moves the lone sample and keeps no reading', () {
+      final c = _controller(initialA: _a);
+      expect(c.state.slotA, same(_a));
+      expect(c.state.slotB, isNull);
+
+      c.swap();
+
+      expect(c.state.slotA, isNull);
+      expect(c.state.slotB, same(_a));
+      // Still only one slot filled ⇒ no reading (the AC-12 invite stays).
+      expect(c.state.comparison, isNull);
     });
   });
 

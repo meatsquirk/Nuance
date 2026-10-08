@@ -107,28 +107,46 @@ void main() {
   });
 
   group('SlotsRegion', () {
-    testWidgets('Choose A / Choose B are enabled; Sample picker and Swap inert '
-        '(COMPARE-3)', (tester) async {
+    testWidgets('Choose A / Choose B and Swap are enabled; Sample picker inert '
+        '(COMPARE-5 wires Swap)', (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
       await tester.pumpWidget(
         MaterialApp(home: Scaffold(body: SlotsRegion(controller: controller))),
       );
 
-      for (final label in const ['Choose sample A', 'Choose sample B']) {
+      for (final label in const [
+        'Choose sample A',
+        'Choose sample B',
+        'Swap A and B',
+      ]) {
         final button = tester.widget<TextButton>(
           find.widgetWithText(TextButton, label),
         );
-        expect(button.enabled, isTrue,
-            reason: '$label opens the picker in COMPARE-3');
+        expect(button.enabled, isTrue, reason: '$label is wired');
       }
-      for (final label in const ['Sample picker', 'Swap A and B']) {
-        final button = tester.widget<TextButton>(
-          find.widgetWithText(TextButton, label),
-        );
-        expect(button.enabled, isFalse,
-            reason: '$label is not wired in COMPARE-3');
-      }
+      final picker = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, 'Sample picker'),
+      );
+      expect(picker.enabled, isFalse,
+          reason: 'Sample picker is not wired in COMPARE-5');
+    });
+
+    testWidgets('tapping Swap exchanges the rendered slots (AC-3)',
+        (tester) async {
+      final controller = _controller(initialA: _sampleA, initialB: _sampleB);
+      addTearDown(controller.dispose);
+      await _pumpScreen(tester, controller);
+
+      expect(find.text('Slot A: Warm Terracotta'), findsOneWidget);
+      expect(find.text('Slot B: Raw Sienna Light'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Swap A and B'));
+      await tester.pumpAndSettle();
+
+      // The screen's ListenableBuilder re-renders the swapped slots.
+      expect(find.text('Slot A: Raw Sienna Light'), findsOneWidget);
+      expect(find.text('Slot B: Warm Terracotta'), findsOneWidget);
     });
 
     testWidgets('a placed slot shows its CIELCh reading, an empty one does not',

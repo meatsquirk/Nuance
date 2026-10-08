@@ -17,8 +17,9 @@ import 'comparison_controller.dart';
 /// Choose sample A / Choose sample B (E3 / E5) open the saved-sample picker
 /// (E49) over [ComparisonController.savedSamples] and place the chosen sample
 /// into its slot via [ComparisonController.selectA] / [ComparisonController.selectB]
-/// (COMPARE-3). The standalone Sample picker affordance and Swap A and B (E4)
-/// stay inert here; swap lands in COMPARE-5.
+/// (COMPARE-3). Swap A and B (E4) exchanges the two slots via
+/// [ComparisonController.swap] so the statement re-expresses new-A → new-B
+/// (COMPARE-5, AC-3); the standalone Sample picker affordance stays inert.
 class SlotsRegion extends StatelessWidget {
   const SlotsRegion({required this.controller, super.key});
 
@@ -46,8 +47,13 @@ class SlotsRegion extends StatelessWidget {
           child: const Text('Choose sample B'),
         ),
         const TextButton(onPressed: null, child: Text('Sample picker')),
-        // Inert in this phase; COMPARE-5 calls swap to re-express the comparison.
-        const TextButton(onPressed: null, child: Text('Swap A and B')),
+        // Swap A and B (E4): exchanges the slots so the statement re-expresses
+        // new-A → new-B (AC-3). The screen's ListenableBuilder rebuilds on the
+        // controller's notify.
+        TextButton(
+          onPressed: controller.swap,
+          child: const Text('Swap A and B'),
+        ),
       ],
     );
   }

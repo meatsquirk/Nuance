@@ -106,9 +106,14 @@ class ComparisonController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Exchanges slots A and B so the statement re-expresses new-A → new-B
-  /// (AC-3). Behaviour lands in COMPARE-5.
-  void swap() => throw UnimplementedError('swap: behaviour lands in COMPARE-5');
+  /// Exchanges slots A and B so the derived statement re-expresses new-A →
+  /// new-B (AC-3): re-deriving over the swapped slots recomputes the pair
+  /// through DIFF and CVD, so the direction flips (e.g. "Lighter by 12" →
+  /// "Darker by 12"). Routes through the one [_emit] mutation path, notifying
+  /// the screen and the read endpoint. With a slot empty there is still no
+  /// reading, so the swap simply moves the lone sample to the other slot.
+  void swap() =>
+      _emit(_derive(_state.slotB, _state.slotA, confusionCheck, profile));
 
   /// The sample currently in [slot], or null when that slot is empty.
   Sample? sampleIn(ComparisonSlot slot) =>

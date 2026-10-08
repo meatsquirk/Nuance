@@ -41,7 +41,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// un-pends that AC. Every owner must be a member of [behaviorPhases].
 const Map<String, String> pendingACs = {
   // AC-1, AC-2, AC-12 un-pended by COMPARE-3 (selection + slot render + invite).
-  'AC-3': 'COMPARE-5', // swap A/B + re-express
+  // AC-3 un-pended by COMPARE-5 (swap A/B + re-express).
   // AC-4 un-pended by DIFF-2 (overall ΔE00 + plain verdict).
   // AC-5, AC-6 un-pended by DIFF-3 (LCh decomposition + "Same hue").
   // AC-7, AC-8 un-pended by CVD-2 (confusion detector + warning region).
