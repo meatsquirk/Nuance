@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ⏸ Awaiting review — ITEST-1 + ITEST-2 + ITEST-3 done (all 12 ACs have a pending, grade-A test); ITEST-4 packet assembled, **G-3 awaiting the human decision**. G-4 + G-5 resolved.
+**Status:** ✅ Done — ITEST-1 + ITEST-2 + ITEST-3 + ITEST-4 all done (12 ACs, pending, 24×A). **G-3 approved 2026-10-08 — Matt Quirk**; behaviour stage open (COMPARE-3 first). G-4 + G-5 resolved.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/comparison_test.dart` (AC tests), `integration_test/comparison_harness.dart`
 (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the comparison entry); reuses
@@ -14,7 +14,7 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
 | 1 | acceptance-tests | — (harness) | ✅ Done | 5,939,625 | 19m 08s |
 | 2 | acceptance-tests | AC-1,2,3,10,11,12 | ✅ Done | 7,878,822 | 27m 54s |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9 | ✅ Done | 15,032,038 | 29m 57s |
-| 4 | test-review | — (G-3) | ⏸ Awaiting review | 3,360,351 | 10m 59s |
+| 4 | test-review | — (G-3) | ✅ Done | 3,360,351 | 10m 59s |
 
 ## Interface reconciliation
 
@@ -35,9 +35,10 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
 
 ## Open gates
 
-- **G-3 (approve acceptance tests)** — ⏳ **Awaiting decision (packet assembled 2026-10-07, ITEST-4).** The
-  review packet is below under *Phase 4 — Test review*. Record with
-  `/feature-next-phase --gate bs-03-relative-comparison G-3 approved | "<changes>"`.
+- **G-3 (approve acceptance tests)** — ✅ **Resolved 2026-10-08 05:15 EDT: approved — Matt Quirk.** The
+  12-AC suite (all pending, 24×A / 0×B) accepted as assembled (packet below under *Phase 4 — Test review*);
+  pair-based G5 discrimination and the TestAC04→DIFF-2 augmentation accepted. ITEST-4 → ✅ Done; behaviour
+  stage open (COMPARE-3 first).
 - **G-4 (spec-data reconciliation)** ✅ **Resolved 2026-10-07: option (a) — correct the overall to the
   computed value "delta-E00 13.1" — Matt Quirk (spec author).** The stated LCh coords compute to CIEDE2000
   ΔE00 ≈ 13.05 (→ "13.1" displayed); the spec's old "14.2" was the error. Spec line 48 amended; AC-4's test
@@ -392,7 +393,10 @@ phase, then a fresh review).
 
 ### Checkpoint / Handoff
 
-**Awaiting the human G-3 decision.** Nothing is frozen or unfrozen by this phase; it changed only plan files
+**G-3 approved 2026-10-08 05:15 EDT — Matt Quirk.** The suite was accepted as assembled (no test changes);
+this phase is ✅ Done and the behaviour stage is open — **COMPARE-3** is the first startable phase.
+
+_(Original handoff, retained for context.)_ Nothing is frozen or unfrozen by this phase; it changed only plan files
 (this packet + status). On **approve**, G-3 flips resolved and this phase to ✅ Done, and the behaviour stage
 opens: **COMPARE-3** (AC-1, AC-2, AC-12) is the first startable behaviour phase and unblocks all selection
 Givens; COMPARE-6 / DIFF-2 / CVD-2 then run in parallel per the graph. On **changes requested**, each item

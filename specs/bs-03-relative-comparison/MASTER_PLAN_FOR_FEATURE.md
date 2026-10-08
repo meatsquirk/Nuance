@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** ⏸ Awaiting review — ITEST-4 packet assembled; **G-3 awaiting the human decision** before any behaviour is coded. ITEST-1/2/3 done (all 12 ACs have a pending, grade-A test). G-4 + G-5 resolved.
+**Status:** In progress — next COMPARE-3 (behavior stage open). G-3 approved 2026-10-08 (acceptance suite accepted: 12 ACs, 24×A). All ITEST phases done; G-4 + G-5 resolved.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -135,7 +135,7 @@ distance) — **DIFF-2** augments it with a near-identical control pair that rea
 | CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | 🔄 In progress (CVD-1 done) |
 | COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | 🔄 In progress (COMPARE-2 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ✅ Done (SCREEN-1; regions filled by behaviour phases) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1,2,3 done; ITEST-4 review next) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1,2,3,4; G-3 approved 2026-10-08) |
 
 ## Dependency graph
 
@@ -172,7 +172,7 @@ every other behaviour Given needs it; edits `slots_region`/`statement_region`), 
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | COMPARE-1 | ✅ Resolved 2026-10-07 08:15 EDT: approved — Matt Quirk (owner). Spec first line records approval. COMPARE-1 unblocked |
 | G-2 | dependency | bs-01 shared foundation merged to `main`: `Sample`/`ColorCoordinates`, `buildApp`/`AppScope`, `Speech` + `FakeSpeech`, the Readout screen rendering a name, `AppRouter.toComparison`/`.toReadout`, color-science (LCh), the coverage-gate tool and `integration_test`. Closed by bs-01 sign-off | COMPARE-1, all shells | ✅ Resolved 2026-10-06: bs-01 signed off and merged to `main` at c793839 (full foundation). bs-02 is **not** required (D-1) |
-| G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏳ Awaiting decision (packet assembled 2026-10-07, ITEST-4 — see `modules/ITEST.md` § *Phase 4*). 12 ACs, all pending, 24×A / 0×B. Record: `/feature-next-phase --gate bs-03-relative-comparison G-3 approved \| "<changes>"` |
+| G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-08 05:15 EDT: approved — Matt Quirk. The 12-AC suite (all pending, 24×A / 0×B) accepted as assembled; pair-based G5 discrimination and the TestAC04→DIFF-2 augmentation accepted. Behavior stage open; COMPARE-3 first |
 | G-4 | decision | **Spec-data reconciliation (spec author).** AC-4's spec text said "delta-E00 14.2", but the stated LCh coords A (L 58, C 34, h 42°) / B (L 70, C 25, h 60°) compute to CIEDE2000 ΔE00 ≈ 13.05 (decomposition deltas 12 / 9 / 18° match). | ITEST-3 (AC-4 literal), DIFF-2 | ✅ Resolved 2026-10-07: option (a) — correct the overall to the computed value "delta-E00 13.1" — Matt Quirk (spec author). Spec line 48 amended; AC-4 pins "delta-E00 13.1". |
 | G-5 | decision | **Confusion-pair reconciliation (spec author).** "Mid Raw Umber"+"Ultramarine Shadow" (brown+blue) is a blue↔yellow difference, which no dichromacy confuses (verified: it expands under deutan/protan/tritan). Decide the deutan confusion pair. | ITEST-3 (AC-7/AC-9 fixtures), CVD-2 | ✅ Resolved 2026-10-07: rename B to "Terre Verte Shadow" (green earth), keep deutan; ITEST-3 repinned SAMPLE_UMBER=(40,18,16)/SAMPLE_TERRE_VERTE=(40,−10,18), verified — Matt Quirk. Spec line 72 amended |
 
@@ -196,8 +196,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 5,939,625 | 19m 08s | harness + 12-AC gate + smoke; acc 10/10, integ 27/27; grades 10×A; 0/3 fixes |
 | 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ✅ Done | 7,878,822 | 27m 54s | 6 pending AC tests + red baseline; acc 10 pass/6 pending, run-pending 6 fail clean; grades 6×A; 0/3 fixes |
 | 8 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9 (pending) + red baseline | ✅ Done | 15,032,038 | 29m 57s | 6 pending AC tests + red baseline; G-4 resolved (ΔE00 13.1) + confusion-pair renamed to Terre Verte (verified deutan pair); acc 14 pass/12 pending, run-pending 12 fail clean; grades 6×A; 0/3 fixes; ran in worktree |
-| 9 | ITEST-4 | test-review: packet + G-3 | ⏸ Awaiting review | 3,360,351 | 10m 59s | packet assembled; regression green (unit 247, acc 14 pass/12 pending); 24×A grid; G-3 awaiting the human |
-| 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ⬜ Todo | | | first behaviour; unblocks all Givens |
+| 9 | ITEST-4 | test-review: packet + G-3 | ✅ Done | 3,360,351 | 10m 59s | packet assembled; regression green (unit 247, acc 14 pass/12 pending); 24×A grid; **G-3 approved 2026-10-08 — Matt Quirk** |
+| 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ⬜ Next | | | first behaviour; unblocks all Givens |
 | 11 | COMPARE-6 | behavior: AC-10, AC-11 — open readout for A / B | ⬜ Todo | | | ∥ DIFF-2, CVD-2 |
 | 12 | DIFF-2 | behavior: AC-4 — ΔE00 + plain verdict + overall-difference region | ⬜ Todo | | | needs G-4; ∥ COMPARE-6, CVD-2 |
 | 13 | CVD-2 | behavior: AC-7, AC-8 — confusion detector + warning region | ⬜ Todo | | | ∥ COMPARE-6, DIFF-2 |
@@ -211,20 +211,17 @@ when the row is marked done.
 
 ## Next phase
 
-**ITEST-4 packet assembled — the feature is paused on G-3 (human decision).** The full bs-03 acceptance
-suite (12 ACs, all pending, 24×A / 0×B) is in `modules/ITEST.md` § *Phase 4* with a reviewer's "look here
-first". Regression re-run green: analyze clean, unit 247, coverage gate PASS (review-only), acceptance 14
-pass / 12 pending.
-- **Blocked on G-3:** no behaviour phase is startable until the human records the gate —
-  `/feature-next-phase --gate bs-03-relative-comparison G-3 approved | "<changes>"`.
-- **On approve:** **COMPARE-3** (AC-1, AC-2, AC-12) is the first startable behaviour phase (unblocks all
-  selection Givens); then {COMPARE-6 ∥ DIFF-2 ∥ CVD-2}, then DIFF-3, then {COMPARE-5 ∥ CVD-3}.
-- **On changes requested:** each item becomes an `ITEST` change phase before the behaviour stage, then a
-  fresh review.
-- **CVD-2 note:** must make its real detector the app's **shipped default** `AppDependencies.confusionCheck` (the harness no longer forces `NoopConfusionCheck`).
-- **⚠ Reconcile:** ITEST-3 ran in a worktree (primary checkout was on a live bs-02 session); this rollup is pending — apply from the primary once free.
+**G-3 approved 2026-10-08 — the behaviour stage is open.** The acceptance suite (12 ACs, all pending,
+24×A / 0×B) was accepted as assembled (`modules/ITEST.md` § *Phase 4*); all ITEST phases are done.
+- **Startable now:** **COMPARE-3** (AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render +
+  invite). It is the first behaviour phase and unblocks all selection Givens, so nothing runs in parallel with it.
+- **After COMPARE-3:** {COMPARE-6 ∥ DIFF-2 ∥ CVD-2} run in parallel (file-disjoint); then DIFF-3; then
+  {COMPARE-5 ∥ CVD-3}.
+- **DIFF-2** needs G-4 (resolved — AC-4 pins `delta-E00 13.1`) and closes the TestAC04 control augmentation.
+- **CVD-2 note:** must make its real detector the app's **shipped default** `AppDependencies.confusionCheck`
+  (the harness no longer forces `NoopConfusionCheck`).
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up ITEST-4.
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up COMPARE-3.
 
 ## Token usage
 
@@ -247,7 +244,8 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-co
 | ITEST-3 | 0970b39f | 2026-10-07 14:05 EDT | 22:14 | 8h 08m | 29m 57s | claude-opus-4-8 | 186 | 608,647 | 14,303,307 | 119,898 | 15,032,038 | 6 pending AC tests (AC-4..9) + red baseline; G-4 resolved (13.1), confusion pair renamed+verified; acc 14 pass/12 pending, run-pending 12 fail clean; grades 6×A+guards; 0/3 fixes |
 | RECONCILE | 349b8b33 | 2026-10-07 22:36 EDT | 23:02 | 25m 20s | 6m 44s | claude-opus-4-8 | 54 | 77,930 | 2,141,418 | 29,792 | 2,249,194 | fast-forwarded ITEST-3 (4e0dacd) into feat/bs-03-relative-comparison in a worktree (primary was on bs-02); applied ITEST-3 rollup to master plan (status, G-4 resolved + G-5 added, fixtures/AC-4/AC-7 repinned to Terre Verte, session log, Next-phase) + added ITEST-3 ledger row; clean ff, tests-only, no lib/** change |
 | ITEST-4 | 3e95fce2 | 2026-10-07 23:18 EDT | 23:29 | 10m 59s | 10m 59s | claude-opus-4-8 | 72 | 98,056 | 3,234,848 | 27,375 | 3,360,351 | test-review packet assembled; regression green (unit 247, acc 14 pass/12 pending); 24xA grid; awaiting G-3 |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-07 23:29** | **11h 28m** | **2h 58m** |  | **1,162** | **2,023,849** | **67,215,429** | **614,579** | **69,855,019** |  |
+| SIGNOFF-DECISION | 4d81ad77 | 2026-10-08 03:57 EDT | 05:16 | 1h 18m | 3m 33s | claude-opus-4-8 | 54 | 106,200 | 1,765,071 | 14,054 | 1,885,379 | ITEST-4 approved |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 05:16** | **12h 46m** | **3h 01m** |  | **1,216** | **2,130,049** | **68,980,500** | **628,633** | **71,740,398** |  |
 
 ## Sign-off
 
