@@ -343,11 +343,10 @@ class CaptureHarness {
 
   /// Selects the sampling-radius option [radiusPx] (1 / 5 / 21 px — E18, AC-3).
   ///
-  /// Taps the E18 radius region. SCREEN-2 builds the real 1/5/21 selector; when
-  /// it lands it gives each option its own anchor and this helper targets the
-  /// one for [radiusPx]. Until then it taps the region placeholder so AC-3 stays
-  /// pending on its Then, not on a missing control.
-  Future<void> whenSelectRadius(int radiusPx) => _tap(CaptureControls.radiusKey);
+  /// Taps the E18 option anchored to [radiusPx] in the selector SCREEN-2 built
+  /// (`CaptureControls.radiusOptionKey`), exactly as the painter picks a radius.
+  Future<void> whenSelectRadius(int radiusPx) =>
+      _tap(CaptureControls.radiusOptionKey(radiusPx));
 
   /// Imports [photo] from the gallery and samples its point P (E19 — AC-9).
   ///

@@ -19,6 +19,24 @@ Future<void> _pump(WidgetTester tester, CaptureController controller) =>
       MaterialApp(home: Scaffold(body: CaptureControls(controller: controller))),
     );
 
+/// Pumps the controls in a tree that listens to [controller], so a control that
+/// changes state (the radius selector) re-renders exactly as the Capture screen
+/// rebuilds it.
+Future<void> _pumpListening(
+  WidgetTester tester,
+  CaptureController controller,
+) =>
+    tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListenableBuilder(
+            listenable: controller,
+            builder: (_, _) => CaptureControls(controller: controller),
+          ),
+        ),
+      ),
+    );
+
 void main() {
   testWidgets('renders every E15–E21 control as a findable button',
       (tester) async {
@@ -39,14 +57,53 @@ void main() {
     }
   });
 
-  testWidgets('leaves E18 (radius) a disabled placeholder', (tester) async {
+  testWidgets('renders the E18 radius selector with an enabled option per '
+      'radius (1 / 5 / 21 px)', (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
     await _pump(tester, controller);
 
-    final radius =
-        tester.widget<TextButton>(find.byKey(CaptureControls.radiusKey));
-    expect(radius.onPressed, isNull);
+    expect(CaptureControls.radiusOptionsPx, [1, 5, 21]);
+    for (final radiusPx in CaptureControls.radiusOptionsPx) {
+      final option = tester.widget<TextButton>(
+          find.byKey(CaptureControls.radiusOptionKey(radiusPx)));
+      expect(option.onPressed, isNotNull,
+          reason: 'the $radiusPx px option is selectable');
+    }
+    // The option anchors live inside the E18 region.
+    expect(
+      find.descendant(
+        of: find.byKey(CaptureControls.radiusKey),
+        matching: find.byKey(CaptureControls.radiusOptionKey(21)),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('E18 marks the selected radius and drives controller.setRadius',
+      (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pumpListening(tester, controller);
+
+    // The 5 px default is marked; the others are not (both label branches).
+    expect(controller.state.radiusPx, 5);
+    expect(find.text('✓ 5 px'), findsOneWidget);
+    expect(find.text('1 px'), findsOneWidget);
+    expect(find.text('21 px'), findsOneWidget);
+
+    // Selecting the 21 px option sets the radius and moves the mark to it.
+    await tester.tap(find.byKey(CaptureControls.radiusOptionKey(21)));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(controller.state.radiusPx, 21);
+    expect(find.text('✓ 21 px'), findsOneWidget);
+    expect(find.text('5 px'), findsOneWidget);
+  });
+
+  test('exposes a stable per-option anchor under the E18 key', () {
+    expect(CaptureControls.radiusOptionKey(5),
+        const ValueKey('capture-e18-radius-5'));
   });
 
   testWidgets('wires E19 (import) to the controller import action (SOURCE-3)',

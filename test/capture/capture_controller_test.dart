@@ -111,11 +111,74 @@ void main() {
 
     // lock() is live as of CAPTURE-3 (see the 'lock lifecycle' group below);
     // commit() and dismissWarning() as of CAPTURE-4 (see 'low-light …' below);
-    // calibrate() as of CAPTURE-5 (see 'reference-card calibration' below).
-    test('setRadius',
-        () => expect(() => controller.setRadius(21), throwsUnimplementedError));
+    // calibrate() as of CAPTURE-5 (see 'reference-card calibration' below);
+    // setRadius() as of SCREEN-2 (see 'radius selection' below).
     test('toggleValueOnly',
         () => expect(controller.toggleValueOnly, throwsUnimplementedError));
+  });
+
+  group('radius selection (SCREEN-2, AC-3)', () {
+    test('records the radius and re-samples the latest live frame at it',
+        () async {
+      // A live frame drains into currentSample at the default 5 px radius.
+      final source = _ControllableSource();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      const px = Pixel(60, 140, 210);
+      source.emitFrame(_uniformFrame(px));
+      await pumpEventQueue();
+      expect(controller.state.radiusPx, 5);
+      final before = controller.state.currentSample;
+      expect(before, isNotNull);
+
+      // Selecting 21 px records the radius and re-averages the latest frame at
+      // it — no new frame is needed (the live feed has drained).
+      controller.setRadius(21);
+
+      expect(controller.state.radiusPx, 21);
+      final after = controller.state.currentSample;
+      expect(after, isNotNull);
+      // The uniform frame is one colour, so the re-sample round-trips back to
+      // the same pixel; it is a fresh measured reading at the current accuracy.
+      expect(after!.provenance.tier, ProvenanceTier.measured);
+      expect(after.accuracy, CaptureAccuracy.approximate);
+      expect(_l1(after.coordinates, px), lessThan(9));
+    });
+
+    test('before any frame, records the radius but leaves the reading null', () {
+      // _ControllableSource delivers no frame, so there is nothing to re-sample.
+      final controller = CaptureController(source: _ControllableSource());
+      addTearDown(controller.dispose);
+      expect(controller.state.currentSample, isNull);
+
+      controller.setRadius(1);
+
+      expect(controller.state.radiusPx, 1);
+      expect(controller.state.currentSample, isNull,
+          reason: 'no frame has arrived to sample at the new radius');
+    });
+
+    test('after a photo import, changes the radius without touching the reading',
+        () async {
+      // Import a photo so the live feed no longer drives the reading.
+      final source = _ControllableSource()
+        ..importPhoto(ImportedPhoto(
+          image: _uniformFrame(const Pixel(210, 40, 90)),
+          pointX: 8,
+          pointY: 8,
+        ));
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      controller.importPhoto();
+      final imported = controller.state.currentSample;
+      expect(imported, isNotNull);
+
+      controller.setRadius(21);
+
+      expect(controller.state.radiusPx, 21);
+      expect(controller.state.currentSample, same(imported),
+          reason: 'a radius change does not re-sample an imported photo');
+    });
   });
 
   group('stability settling + lock lifecycle (CAPTURE-3)', () {

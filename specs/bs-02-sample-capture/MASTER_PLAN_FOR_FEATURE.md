@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** In progress — behaviour stage: SOURCE + CAPTURE complete; CAPTURE-6 (AC-11) done. AC-1,2,4,5,6,7,8,9,11 green, whole-suite grid 11×A/0×B. Next SCREEN-2 (∥ none left in flight) → SCREEN-3 → SIGNOFF-1.
+**Status:** In progress — behaviour stage: SOURCE + CAPTURE + SCREEN-2 done. AC-1,2,3,4,5,6,7,8,9,11 green (AC-10 pending SCREEN-3), whole-suite grid 11×A/0×B. Next SCREEN-3 (last behaviour) → SIGNOFF-1.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -44,9 +44,9 @@ accuracy label. Every AC below is net-new capture behaviour.
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | The live camera view shows a centre-point eyedropper | ITEST-2 `TestAC01_Eyedropper` (un-pended, green at baseline) | SCREEN-2 | ⬜ Todo |
+| AC-1 | The live camera view shows a centre-point eyedropper | ITEST-2 `TestAC01_Eyedropper` (un-pended, green at baseline) | SCREEN-2 | ✅ |
 | AC-2 | The painter samples the colour under the centre point | ITEST-2 `TestAC02_AreaAverage5px` | SOURCE-2 | ✅ |
-| AC-3 | The painter selects an area-average radius | ITEST-2 `TestAC03_RadiusSelector` | SOURCE-2, SCREEN-2 | ⬜ Todo |
+| AC-3 | The painter selects an area-average radius | ITEST-2 `TestAC03_RadiusSelector` | SOURCE-2, SCREEN-2 | ✅ |
 | AC-4 | Locking exposure, white balance and focus settles the reading | ITEST-3 `TestAC04_LockSettles` | CAPTURE-3 | ✅ |
 | AC-5 | Before locking, the stability indicator warns it is still settling | ITEST-3 `TestAC05_SettlingWarns` | CAPTURE-3 | ✅ |
 | AC-6 | A low-light reading is marked approximate rather than refused | ITEST-3 `TestAC06_LowLightApproximate` | CAPTURE-4 (control: CAPTURE-5) | ✅ |
@@ -184,8 +184,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | CAPTURE-4 | behavior: AC-6, AC-7 — low-light detection, accuracy tier, warning | ✅ Done | 9,611,728 | 20m 03s (20m 03s) | AC-6,7 un-pended green; 6×A + AC-6 B-pending-CAPTURE-5; commit()+dismissWarning() live; 1 lib file |
 | 13 | CAPTURE-5 | behavior: AC-8 — reference-card calibration + accuracy upgrade | ✅ Done | 16,450,722 | 34m 29s (1h 29m) | AC-8 un-pended green; AC-6 augmentation closed (B-pending → A); 11×A/0×B; calibrate()+source normaliseAgainstCard+keyed accuracy label |
 | 14 | CAPTURE-6 | behavior: AC-11 — multi-frame commit + haptic + open Readout | ✅ Done | 14,356,155 | 39m 10s (39m 10s) | AC-11 un-pended green; 9×A re-grade (whole-suite 11×A/0×B); commit averages frames + justCaptured → Readout; harness skipOffstage flag (G-5) |
-| 15 | SCREEN-2 | behavior: AC-1, AC-3 — eyedropper + radius selector + reticle | ⬜ Next | | | after SOURCE-2 |
-| 16 | SCREEN-3 | behavior: AC-10 — value-only grayscale toggle | ⬜ Todo | | | after SCREEN-2 |
+| 15 | SCREEN-2 | behavior: AC-1, AC-3 — eyedropper + radius selector + reticle | ✅ Done | 9,046,680 | 17m 44s (17m 44s) | AC-1,3 un-pended green; 11×A re-grade; E18 selector + reticle 8/20/44 + setRadius re-sample |
+| 16 | SCREEN-3 | behavior: AC-10 — value-only grayscale toggle | ⬜ Next | | | after SCREEN-2 |
 | 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
@@ -193,26 +193,26 @@ when the row is marked done.
 
 ## Next phase
 
-**SOURCE + CAPTURE complete** — AC-1,2,4,5,6,7,8,9,11 un-pended green; whole-suite grid **11×A, 0×B**.
-CAPTURE-6 landed the multi-frame commit (`averageFrames` over a bounded recent-frame window) + the
-commit→Readout handoff (`CaptureHomeScreen` pushes `AppRouter.toReadout`; the `justCaptured` sample fires
-bs-01's confirm haptic; a low-light commit stays on Capture for AC-6/AC-7). Only the two SCREEN behaviour
-phases remain before sign-off. Run each in its own session (`/clear` first).
+**SCREEN-2 done** — AC-1 and AC-3 un-pended green; whole-suite grid **11×A, 0×B** (fresh re-grade). The E18
+radius selector is live (per-option `radiusOptionKey(1|5|21)` → `controller.setRadius`, reticle sizes
+8/20/44 via `CaptureEyedropper(radiusPx:)`, `setRadius` re-samples the latest frame). **SCREEN-3 (AC-10) is
+the last behaviour phase** before sign-off.
 
-- **Startable now:** **SCREEN-2** (AC-1,3 — eyedropper + radius selector/reticle). **SCREEN-3** (AC-10 —
-  value-only) waits on SCREEN-2. Nothing else is in flight — CAPTURE-6 was the last concurrent sibling.
-  SIGNOFF-1 waits on SCREEN-2 + SCREEN-3.
-- **Merge base:** CAPTURE-6 touched `capture_controller.dart` (`commit()`), `build_app.dart`
-  (`CaptureHomeScreen` navigation) and `capture_harness.dart` (`skipOffstage` finder). SCREEN-2/3 edit the
-  Capture screen — base any worktree on this branch's tip and re-run the suite after each merge.
-- Pending gate holds **2** ACs (AC-3→SCREEN-2, AC-10→SCREEN-3); AC-1/2/4/5/6/7/8/9/11 un-pended.
+- **Startable now:** **SCREEN-3** (AC-10 — value-only grayscale). Nothing else is in flight. SIGNOFF-1 waits
+  on SCREEN-3 only.
+- **Merge base:** SCREEN-2 touched `capture_controller.dart` (`setRadius`), `capture_controls.dart` (E18
+  selector), `capture_eyedropper.dart` (reticle sizing) and `capture_live_view.dart` (forwards `radiusPx`).
+  SCREEN-3 edits the same screen files — serial after SCREEN-2; base on this branch's tip.
+- Pending gate holds **1** AC (AC-10→SCREEN-3); AC-1/2/3/4/5/6/7/8/9/11 un-pended. Un-pend AC-10 by deleting
+  its row from `bs02/pending.dart` (then `pendingACs` is empty).
+- **SCREEN-3 shape:** `toggleValueOnly` (controller) flips `CaptureState.valueOnly`; the feed greyscales via a
+  `ColorFiltered` (saturation-0) **ancestor of `liveViewKey`**; E21's label flips to "✓ Value".
 - **G-4 + G-5 (advisory):** two harness-change flags (CAPTURE-3 `givenCaptureOf`→`pumpWidget`; CAPTURE-6
-  `skipOffstage: false` endpoint finder) await a sign-off confirm; neither blocks SCREEN-2/3 — resolve by
-  SIGNOFF-1.
-- **Carried for SCREEN:** SCREEN-2 retargets `whenSelectRadius` to per-option 1/5/21 anchors; SCREEN-3
-  greyscales the feed via `ColorFiltered` over `liveViewKey` + "✓ Value".
+  `skipOffstage: false` endpoint finder) await a sign-off confirm. SCREEN-2 added a third, **planned** harness
+  change — `whenSelectRadius` retargeted to per-option anchors (strengthened AC-3, weakened nothing) — to note
+  at sign-off too. None block SCREEN-3; resolve by SIGNOFF-1.
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-02-sample-capture` (it will pick SCREEN-2).
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-02-sample-capture` (it will pick SCREEN-3).
 
 ## Token usage
 
@@ -239,7 +239,8 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-02-sample-capt
 | CAPTURE-4 | 01645a76 | 2026-10-07 14:25 EDT | 14:45 | 20m 03s | 20m 03s | claude-opus-4-8 | 138 | 248,801 | 9,310,201 | 52,588 | 9,611,728 | AC-6,7 un-pended green; 6×A + AC-6 B-pending-CAPTURE-5; commit()+dismissWarning() live; coverage 100%; regression 32 integ green |
 | CAPTURE-5 | e0caf61e | 2026-10-07 14:56 EDT | 16:25 | 1h 29m | 34m 29s | claude-opus-4-8 | 210 | 321,652 | 16,036,905 | 91,955 | 16,450,722 | AC-8 un-pended green; AC-6 augmentation closed (B-pending → A); whole-suite 11×A/0×B; calibrate() + source normaliseAgainstCard + keyed accuracy label; coverage 100% on 4 touched lib files; 308 unit green |
 | CAPTURE-6 | c6cb0c54 | 2026-10-07 18:16 EDT | 18:55 | 39m 10s | 39m 10s | claude-opus-4-8 | 164 | 381,030 | 13,869,282 | 105,679 | 14,356,155 | AC-11 un-pended green; multi-frame commit + commit→Readout handoff; 9×A re-grade (whole-suite 11×A/0×B); coverage 100% on 2 touched lib files; fix passes 1/3 |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 18:55** | **10h 39m** | **6h 52m** |  | **2,318** | **3,964,045** | **181,523,311** | **1,302,413** | **186,792,087** |  |
+| SCREEN-2 | 7d8f5b62 | 2026-10-07 21:50 EDT | 22:07 | 17m 44s | 17m 44s | claude-opus-4-8 | 158 | 275,897 | 8,724,513 | 46,112 | 9,046,680 | AC-1, AC-3 un-pended green; E18 radius selector + reticle 8/20/44 + setRadius re-sample; 11×A/0×B re-grade; coverage 100% on 16 touched lib files; 321 unit + 35 integ green (AC-10 pending); fix passes 0/3 |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 22:07** | **10h 57m** | **7h 10m** |  | **2,476** | **4,239,942** | **190,247,824** | **1,348,525** | **195,838,767** |  |
 
 ## Sign-off
 

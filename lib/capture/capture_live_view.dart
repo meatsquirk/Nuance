@@ -44,8 +44,9 @@ class CaptureLiveView extends StatelessWidget {
         // Placeholder feed surface; SOURCE-2 renders real frames here and
         // SCREEN-3 adds the value-only grayscale filter.
         const ColoredBox(key: liveViewKey, color: Color(0xFF3A3A3A)),
-        // The eyedropper carries [CaptureEyedropper.eyedropperKey] itself.
-        const CaptureEyedropper(),
+        // The eyedropper carries [CaptureEyedropper.eyedropperKey] itself; its
+        // reticle sizes to the selected sampling radius (AC-3).
+        CaptureEyedropper(radiusPx: state.radiusPx),
         // The text readings, laid over the feed so none rests on colour alone.
         Positioned(
           left: 8,

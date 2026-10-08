@@ -142,10 +142,36 @@ class CaptureController extends ChangeNotifier {
     ));
   }
 
-  /// Sets the area-average sampling [radiusPx] (1 / 5 / 21 px — AC-3). Behaviour
-  /// lands in SCREEN-2 (the selector) over SOURCE-2's radius-driven sampling.
-  void setRadius(int radiusPx) =>
-      throw UnimplementedError('setRadius: behaviour lands in SCREEN-2');
+  /// Sets the area-average sampling [radiusPx] (1 / 5 / 21 px — AC-3) and
+  /// re-samples the current reading at the new radius, so
+  /// [CaptureState.currentSample] tracks the selection at once (SCREEN-2 over
+  /// SOURCE-2's radius-driven sampling).
+  ///
+  /// The live feed is finite and has already drained by the time the painter
+  /// picks a radius, so moving [CaptureState.radiusPx] alone would leave the
+  /// reading on the old disc; this re-averages the most recent live frame at
+  /// [radiusPx]. Once a photo has been imported ([importPhoto]) the live feed no
+  /// longer drives the reading, so the imported point sample is left as it
+  /// stands; and before any frame has arrived there is nothing to re-sample (the
+  /// radius is still recorded for the first frame to use).
+  void setRadius(int radiusPx) {
+    final frame = _recentFrames.isEmpty ? null : _recentFrames.last;
+    emit(_state.copyWith(
+      radiusPx: radiusPx,
+      currentSample: _photoImported || frame == null
+          ? null
+          : Sample(
+              coordinates: sampleAreaAverage(
+                frame,
+                frame.width ~/ 2,
+                frame.height ~/ 2,
+                radiusPx: radiusPx,
+              ),
+              provenance: const Provenance(ProvenanceTier.measured),
+              accuracy: _state.accuracy,
+            ),
+    ));
+  }
 
   /// Normalises the current reading against a reference card and upgrades the
   /// stated accuracy to [CaptureAccuracy.calibrated] (AC-8).

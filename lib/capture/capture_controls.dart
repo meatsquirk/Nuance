@@ -13,10 +13,10 @@ import 'capture_controller.dart';
 /// is present and wired before the behaviour lands and no behaviour phase has to
 /// re-touch this file to reach the controller.
 ///
+/// E18 (the sampling-radius selector) offers the 1 / 5 / 21 px options, each
+/// driving [CaptureController.setRadius] and marking the selected radius (AC-3);
 /// E19 (import a gallery photo) is wired to [CaptureController.importPhoto] in
-/// SOURCE-3. The one control with no single-call action yet is rendered as a
-/// disabled placeholder: E18 (the sampling-radius selector) is built out with
-/// its 1 / 5 / 21 px options in SCREEN-2.
+/// SOURCE-3.
 class CaptureControls extends StatelessWidget {
   const CaptureControls({required this.controller, super.key});
 
@@ -29,8 +29,18 @@ class CaptureControls extends StatelessWidget {
   /// Stable anchor for E17 — calibrate against a reference card.
   static const Key calibrateKey = ValueKey('capture-e17-calibrate');
 
-  /// Stable anchor for E18 — the sampling-radius selector (built in SCREEN-2).
+  /// Stable anchor for E18 — the sampling-radius selector (wraps the 1 / 5 /
+  /// 21 px options).
   static const Key radiusKey = ValueKey('capture-e18-radius');
+
+  /// The sampling radii the E18 selector offers, in px (AC-3; 5 px is D-7's
+  /// default).
+  static const List<int> radiusOptionsPx = [1, 5, 21];
+
+  /// Stable anchor for the [radiusPx] option within E18, so the harness and the
+  /// painter can select a specific radius.
+  static Key radiusOptionKey(int radiusPx) =>
+      ValueKey('capture-e18-radius-$radiusPx');
 
   /// Stable anchor for E19 — import a gallery photo (wired in SOURCE-3).
   static const Key importKey = ValueKey('capture-e19-import');
@@ -77,11 +87,24 @@ class CaptureControls extends StatelessWidget {
           onPressed: controller.toggleValueOnly,
           child: const Text('Value'),
         ),
-        // E18: placeholder enabled by its behaviour phase (SCREEN-2).
-        const TextButton(
+        // E18: the sampling-radius selector — one option per radius, the
+        // selected one marked (AC-3).
+        Row(
           key: radiusKey,
-          onPressed: null,
-          child: Text('Radius'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Radius'),
+            for (final radiusPx in radiusOptionsPx)
+              TextButton(
+                key: radiusOptionKey(radiusPx),
+                onPressed: () => controller.setRadius(radiusPx),
+                child: Text(
+                  controller.state.radiusPx == radiusPx
+                      ? '✓ $radiusPx px'
+                      : '$radiusPx px',
+                ),
+              ),
+          ],
         ),
         // E19: imports a gallery photo and samples its point P (SOURCE-3).
         TextButton(

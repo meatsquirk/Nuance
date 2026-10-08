@@ -308,3 +308,67 @@ two still-pending red baselines), every un-pended test including AC-11 passes.
 - **Live-run evidence:** default `flutter test integration_test/capture_test.dart` → 16 passed, AC-3/AC-10
   skipped, **AC-11 executed live and passed**; run-pending → only AC-3 and AC-10 fail (the two red baselines),
   every un-pended test including AC-11 passes.
+
+## Grade — SCREEN-2 re-grade (2026-10-07)
+
+Graded by an independent fresh grader (did not write the tests) on 2026-10-07. SCREEN-2 landed the real
+sampling-radius selector behind AC-3 and un-pended it. Per the grade gate a behaviour phase re-grades **every
+un-pended AC test** against the **live** behaviour — so the ten currently un-pended tests (AC-1, AC-2, AC-3,
+AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11) are graded live here; AC-10 (SCREEN-3) remains pending and is graded
+**as-written** (the behaviour it will exercise once SCREEN-3 lands).
+
+**SCREEN-2's touch points weighed for silent weakening — none weakened a previously-A test.** The diff is
+scoped to the radius path: `CaptureControls` E18 is now a real per-option selector (`radiusOptionKey(1|5|21)`,
+each `onPressed: () => controller.setRadius(radiusPx)`, the chosen one marked `✓ N px`); `CaptureEyedropper`
+gained a `radiusPx` parameter and sizes its reticle via `reticleSizeByRadiusPx = {1:8, 5:20, 21:44}`;
+`CaptureLiveView` now builds `CaptureEyedropper(radiusPx: state.radiusPx)` (live_view.dart:49); and
+`CaptureController.setRadius` records the radius **and** re-samples `_recentFrames.last` at it
+(controller.dart:157–174). None of this touches lock/settle, commit, calibrate, import, value-only or the
+warning, so AC-4/5/6/7/8/9/11 are untouched. AC-1 reads the reticle **centre** (not its size), and the default
+radius-5 reticle is still centred, so AC-1 is unaffected. AC-2 never calls `setRadius` and reads at the default
+5 px, so it is unaffected. The smoke test's `radiusKey` anchor still resolves (the selector `Row` carries it);
+the per-option labels (`✓ 5 px` etc.) do not collide with AC-10's exact `find.text('Value')`.
+
+**AC-3 prior judgement call — RESOLVED.** The ITEST-2/SOURCE grids flagged that the frozen
+`whenSelectRadius(px)` tapped a single E18 placeholder regardless of `px`, so correctness depended on SCREEN-2
+retargeting it to per-option anchors. It is now resolved on both sides: `whenSelectRadius(radiusPx)` taps
+`CaptureControls.radiusOptionKey(radiusPx)` (harness.dart:348–349), and the live selector renders one
+`TextButton` per radius keyed `radiusOptionKey(1|5|21)` each calling `setRadius` with its own value
+(controls.dart:97–106). The selection is now genuinely per-radius, so the directional-pull Thens exercise all
+three radii, not one placeholder mapping.
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_Eyedropper` | A | G1,G4,G5,G6 (G2/G3 n/a) | Carried-forward live A; untouched by SCREEN-2 (reads the reticle **centre**, not its size). Given checked through the real UI (`AppBar 'Capture'` + `liveViewKey`). Asserts `getCenter(reticleKey)` vs `getCenter(liveViewKey)` on both axes at epsilon 0.5 (not mere presence). Live `CaptureLiveView` lays the feed `StackFit.expand` and the reticle in a `Center`, so a correct render matches to ~0 px and 0.5 kills an absent/off-centre marker. The new default radius-5 reticle (20 px) is still centred, so the centre read is unchanged. |
+| AC-2 | `TestAC02_AreaAverage5px` | A | G1,G2,G4,G5,G6 (G3 n/a) | Carried-forward live A; untouched (never calls `setRadius`; reads the default 5 px via the endpoint, `state.radiusPx==5`, G2). Real `sampleAreaAverage(..., radiusPx:5)` drives the three-way distance Then on `SCENE_CENTRE_VARIED` (red/teal/yellow, pairwise L1 ~200–280 ≫ `_sampleToleranceL1 = 45`); kills a point read (`toDisc < toCentre`) and a wider radius (`toDisc < toOuter`). |
+| AC-3 | `TestAC03_RadiusSelector` | A | G1,G4,G5,G6 (G2 note; G3 n/a) | **Now live, prior judgement call resolved.** Given checked via UI (`liveViewKey`). Faithful one-loop Scenario-Outline over `{1:8, 5:20, 21:44}`, smallest-first so the first iteration (radius 1 → reticle 8, vs the default 20) reds on the Then if the selector is inert. Asserts **both** halves of the step at grain: exact `getSize(reticleKey)` width+height == 8/20/44 at epsilon 0.5 (square), and radius-driven averaging. Reticle size is wired live: `whenSelectRadius(r)` → `setRadius(r)` updates `state.radiusPx` → `CaptureLiveView` rebuilds `CaptureEyedropper(radiusPx: r)` → `reticleSizeFor(r)` (the `Container` width/height is the size; the 2 px border paints inside, so `getSize` is exactly 8/20/44). Averaging is wired live: `setRadius` re-samples `_recentFrames.last` (the single explicit `SCENE_CENTRE_VARIED` frame, delivered by the open pump — the smoke test pins first-frame delivery) at the new radius; the three sampled colours are pairwise distinct (`>0`), with `s1` nearer the red centre distractor than `s5` (r≤1 disc = 1 red + 4 teal) and `s21` nearer the yellow outer band than `s5` (r≤21 reaches the outer band on the 64×64 frame). **Kills:** an inert/unchanged reticle (stays 20 → fails radii 1 and 21), an average that ignores the selected radius (all three equal → distinctness + directional-pull fail), and a swapped/wrong radius (e.g. setRadius(1) sampling at 21 → `s1` would pull toward yellow, failing the nearer-centre inequality). **G2 note:** the radius comes from the real control tap and the real sampler over real fixture pixels — no faked sample value — so there is no fake override to defeat G2. One AC (G6). |
+| AC-4 | `TestAC04_LockSettles` | A | G1,G4,G5,G6 (G3 n/a) | Carried-forward live A; lock/settle untouched by SCREEN-2. Given `lockState==auto`; `_pumpUntilText` climbs the real frame counter to `find.text('SETTLING 6/12')` (G1). Taps real E16; `takeException` bounded (no-op). Thens assert exact "AE · AWB · AF LOCKED" + "STABLE 12/12" + `lockState==locked` + `stabilityText=='STABLE 12/12'` at grain (G4). Kills unchanged-indicator / never-settles / partial-lock. |
+| AC-5 | `TestAC05_SettlingWarns` | A | G1,G3,G4,G5,G6 | Carried-forward live A; unaffected. Given `lockState==auto`; counter advances 0→6 (no lock tap). Textbook G3: negatives (`isStable==false`, "STABLE 12/12" findsNothing) at a settle point, paired with the counter climbing 0→6, and AC-4 proves a locked reading WOULD show STABLE; `lockButton.enabled==true` on the correct `TextButton` cast proves the affordance. Kills STABLE-while-unlocked and a missing/disabled control. |
+| AC-6 | `TestAC06_LowLightApproximate` | A | G1,G2,G3,G4,G5,G6 | Carried-forward live A (resolved B→A at CAPTURE-5); unaffected by SCREEN-2. Dim half: live `commit()` on configured SCENE_DIM (G2) kills refusal-in-dim and no-warning, commits `approximate`, and `_dimRaw` sits ΔE00 ≈5.1 — asserted **both** `≤ approximate.maxDeltaE (8)` and `> calibrated.maxDeltaE (3)`, a real downgrade. Control: fresh SCENE_CARD app, adequate light, calibrate+commit reads `calibrated` within ΔE00 3, read across the Readout push via `skipOffstage:false`. Pairing proves low light *specifically* downgrades (G3/G5). One AC (G6). |
+| AC-7 | `TestAC07_DismissWarning` | A | G1,G3,G4,G5,G6 | Carried-forward live A; unaffected. Given built through the real `commit()` on SCENE_DIM (`warningKey` + `lowLightWarning==true` + `lastCommittedSample.accuracy==approximate` before the When, read via `state` not the label). The dim commit does not navigate (low light). Taps real E15 → `dismissWarning()`; `takeException` bounded. Textbook G3: the negative (warning gone) after the settle point, paired with the warning-present Given; accuracy-invariance before and after kills *dismiss clears/upgrades the accuracy*. |
+| AC-8 | `TestAC08_CardCalibrates` | A | G1,G2,G4,G5,G6 | Carried-forward live A; unaffected by SCREEN-2. Given `referenceCardPresent==true` via `harness.source` (G2). Calibrate (real E17) upgrades the live label, asserted through `find.descendant(of: accuracyKey, matching: 'Calibrated')` before the commit navigates. Commit (real E20, adequate light) pushes the Readout; `lastCommittedSample` read via `skipOffstage:false` and asserted `calibrated` **and** within ΔE00 3. Non-vacuous (G5): `_cardRaw` sits ΔE00 ≈4.6, so a relabel-only no-op commits ≈4.6 > 3 → `≤3` fails it; `normaliseAgainstCard` → ground truth lands ΔE00 0. One AC. |
+| AC-9 | `TestAC09_SampleFromPhoto` | A | G1,G2,G4,G5,G6 (G3 n/a) | Carried-forward live A; unaffected. Given checked on the fixture (`atP != atCentre`). `whenImportPhoto` taps E19 → real `importPhoto()` sets `_photoImported` + `sampleFromPhoto(image, P=(12,12), radiusPx:5)`; the local `pumpAndSettle` delivers still-undrained live frames that `_onFrame` ignores (feed-switch guard exercised). Discriminators `toP < 45`, `toP < toCentre` (magenta vs grey), `toP < distToColor(sampled, liveCamera)` (vs olive host). No faked sample value (G2). |
+| AC-10 | `TestAC10_ValueOnly` | A (as-written) | G1,G3,G4,G5,G6 | **Still pending (SCREEN-3); graded as-written.** `toggleValueOnly` still throws `UnimplementedError` (controller.dart:214), consumed by the bounded `takeException` (only `UnimplementedError`/null passes — any other type still fails). Given fully checked on the public surface: `state.valueOnly==false`, E21 reads exactly `'Value'` (exact-match `find.text`), and no `ColorFiltered` ancestor over `liveViewKey` (the paired control, G3). After the settle point, the Then asserts `valueOnly==true`, a `ColorFiltered` **ancestor of the feed** (`findsWidgets`) and the label flips to exactly `'✓ Value'`. **Kills:** feed stays colour, label unchanged, greyscaling an unrelated widget. One AC. As-written grade holds unchanged from the CAPTURE-6 grid. |
+| AC-11 | `TestAC11_CommitOpensReadout` | A | G1,G4,G5,G6 (G3 n/a) | Carried-forward live A; unaffected by SCREEN-2. Givens `haptics.confirmations==0` + `find.text('STABLE 12/12')` after a real `whenLock` (G1); `takeException` bounded. Thens at grain: `framesAveraged > 1` (kills single-frame by count on noisy SCENE_MULTIFRAME), mean within ΔE00 8, **exactly** `confirmations==1` (kills no-haptic + double-pulse), AppBar "Readout" + `NameHeader` descendant "Deep Olive Green" (kills nav-without-sample / wrong name). One AC. |
+
+### Summary — SCREEN-2 re-grade (2026-10-07)
+
+- **Grade counts: 11×A, 0×B.** **AC-3 is a fresh live A** against SCREEN-2's real radius selector + reticle
+  sizing + re-sampling `setRadius`; the other nine un-pended tests (AC-1, AC-2, AC-4, AC-5, AC-6, AC-7, AC-8,
+  AC-9, AC-11) hold their prior live A with **no downgrade**; AC-10 holds its prior **A-as-written** (still
+  pending SCREEN-3).
+- **AC-3's prior `whenSelectRadius` judgement call is RESOLVED.** The helper now taps the per-option anchor
+  `radiusOptionKey(radiusPx)` and the live selector renders one `setRadius`-wired button per radius, so the
+  directional-pull Thens exercise all three radii (1/5/21), not a single placeholder mapping. The reticle-size
+  and averaging Thens are both wired to live code and bite (kill an inert reticle, a radius-ignoring average,
+  and a swapped radius).
+- **No silent weakening.** SCREEN-2's diff is scoped to the radius path (`CaptureControls` selector,
+  `CaptureEyedropper` sizing, `CaptureLiveView` wiring, `CaptureController.setRadius`); lock/settle, commit,
+  calibrate, import, value-only and the warning are untouched, and AC-1 (reticle **centre**) and AC-2 (default
+  5 px, no `setRadius`) do not depend on the changed surface. The smoke `radiusKey` anchor still resolves and
+  the `✓ N px` option labels do not collide with AC-10's exact `find.text('Value')`.
+- **Whole-suite grid: 11×A, 0×B.** No row below A; nothing to fix this phase.
+- **Judgement calls (none downgrade):** (1) AC-3 G2 is a note, not a gap — the radius is set by the real
+  control tap and the sample comes from the real sampler over real fixture pixels (no fake override). (2)
+  AC-10's `takeException` is bounded, so post-SCREEN-3 it is a harmless no-op and cannot mask a real exception
+  of another type.

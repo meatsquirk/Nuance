@@ -1,6 +1,6 @@
 # Module SCREEN — Capture screen UI
 
-**Status:** In progress — SCREEN-1 (shell) done; SCREEN-2/3 (behavior) gated on G-3
+**Status:** In progress — SCREEN-1 (shell) + SCREEN-2 (AC-1, AC-3) done; SCREEN-3 (AC-10) next (G-3 resolved)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_screen.dart` and per-region widgets (`capture_eyedropper.dart`, `capture_controls.dart`, `capture_live_view.dart`); labels via bs-01's label-contract widgets.
 **Depends on:** CAPTURE (controller + read endpoint), SOURCE (live feed, radius) · **Blocks:** ITEST-1 (needs the screen to drive), SIGNOFF-1
@@ -10,8 +10,8 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 6,759,706 | 13m 46s (13m 46s) |
-| 2 | behavior | AC-1, AC-3 | ⬜ Todo | | |
-| 3 | behavior | AC-10 | ⬜ Todo | | |
+| 2 | behavior | AC-1, AC-3 | ✅ Done | 9,046,680 | 17m 44s (17m 44s) |
+| 3 | behavior | AC-10 | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -25,7 +25,7 @@
 
 ## Open gates
 
-- **G-3 (approve tests)** blocks SCREEN-2/3 (behavior).
+- **G-3 (approve tests)** — ✅ Resolved 2026-10-07 (ITEST-4); un-blocked SCREEN-2/3.
 
 ## Phase 1 — Shell: Capture screen scaffold
 
@@ -118,9 +118,64 @@ time 13m 46s (13m 46s).
   centred; reticle sizes exact; averaging follows the selected radius via SOURCE-2).
 - **Augments:** none (AC-2 stays within SOURCE-2; G6 — don't extend AC-2's test here).
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the real eyedropper + E18 radius selector (AC-1, AC-3). `CaptureEyedropper` now takes a `radiusPx`
+and sizes its reticle to the spec's exact mapping (`reticleSizeByRadiusPx` = {1:8, 5:20, 21:44}; a
+`reticleSizeFor` fallback to the 20 px default for any non-selectable radius), staying centred over the feed
+(AC-1 unchanged). `CaptureControls` renders E18 as a real selector — one `TextButton` per radius keyed
+`radiusOptionKey(1|5|21)`, each calling `controller.setRadius(r)` and the selected one marked "✓ N px"; the
+`radiusKey` region now wraps the options (smoke anchor preserved). `CaptureController.setRadius` is live:
+it records the radius **and** re-averages the most recent live frame at it (the finite feed has already
+drained, so moving `radiusPx` alone wouldn't move the reading), leaving an imported-photo reading and a
+not-yet-sampled reading untouched.
+
+**Ownership extensions (beyond this phase's declared Files — flagged for the master-plan rollup):**
+`capture_controller.dart` (`setRadius` was stubbed *for SCREEN-2* but the controller wasn't in the Files
+list) and `capture_live_view.dart` (one line forwarding `state.radiusPx` into the eyedropper, which lives
+inside the live view). Both are small and SCREEN-only; no parallel conflict (SCREEN-3 is serial after this).
+
+**Test change (G-3-approved acceptance infra):** the harness `whenSelectRadius(radiusPx)` now taps
+`CaptureControls.radiusOptionKey(radiusPx)` instead of a single placeholder key — the per-option retarget the
+ITEST-1 handoff and the AC-3 test comment anticipated. It **strengthens** AC-3 (its directional-pull Thens
+now exercise all three radii, not one placeholder) and weakens nothing; recorded here per the test-change
+ground rule. Advisory only; no behaviour-phase gate.
+
+Un-pended AC-1 (already green at baseline; kept green) and AC-3 (fresh live green) by dropping the AC-3 row
+from `bs02/pending.dart`; pending gate now holds only AC-10 → SCREEN-3.
+
+Verification (Flutter 3.47.6): `flutter analyze` clean. Unit **321 green**. Coverage
+`dart run tool/coverage_gate.dart main`: **100% line on all 16 touched lib files, PASS**. Acceptance
+`flutter test integration_test/capture_test.dart`: **18 green + 1 skipped (AC-10 pending)** — AC-1/AC-2/AC-3
+all green. Full `integration_test/`: **35 green + 1 skipped**, no bs-01 regression. Grade gate (fresh
+independent subagent, re-grading every un-pended AC test): **11×A, 0×B**, no row below A; AC-3's prior
+`whenSelectRadius` judgement call recorded **resolved**. Augmentations: none. Coverage exclusions: none.
+Fix passes: **0/3** (first full run passed analyze + unit + coverage + acceptance). Tokens 9,046,680 ·
+time 17m 44s (17m 44s).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged (PATH `~/development/flutter/bin`; `flutter analyze` /
+  `flutter test --coverage` / `flutter test integration_test/` / `dart run tool/coverage_gate.dart main`).
+- **Frozen interfaces (SCREEN-2):**
+  - `CaptureEyedropper({int radiusPx = kDefaultSamplingRadiusPx})` — reticle edge = `reticleSizeFor(radiusPx)`
+    (`reticleSizeByRadiusPx` {1:8, 5:20, 21:44}, else `placeholderReticleSize` 20). Keys unchanged
+    (`eyedropperKey`, `reticleKey`).
+  - `CaptureControls.radiusOptionsPx` = `[1, 5, 21]`; `CaptureControls.radiusOptionKey(int)` = per-option
+    anchor `capture-e18-radius-<n>`; `radiusKey` still wraps the selector (one widget).
+  - `CaptureController.setRadius(int)` — live: records `radiusPx` and re-samples `_recentFrames.last` at it
+    (no-op on the reading when a photo is imported or no frame has arrived).
+  - `CaptureLiveView` passes `state.radiusPx` to the eyedropper.
+- **For SCREEN-3 (AC-10, the last behaviour phase):** value-only is the only control still deferred —
+  `controller.toggleValueOnly()` throws `UnimplementedError` and E21 reads "Value". SCREEN-3 makes it toggle
+  `CaptureState.valueOnly`, greyscales the feed with a `ColorFiltered` (saturation-0) **ancestor of
+  `liveViewKey`**, and flips E21's label to "✓ Value". SCREEN-3 edits the same screen files
+  (`capture_screen.dart`, `capture_live_view.dart`, `capture_controls.dart`) — serial after this phase; base
+  on this tip. Un-pend AC-10 by deleting its row from `bs02/pending.dart` (then `pendingACs` is empty).
+- **Known gaps / ownership notes:** none new. The `✓ N px` option labels are exact-match distinct from
+  AC-10's `find.text('Value')`/`'✓ Value'`. After SCREEN-3, `pendingACs` is empty and SIGNOFF-1 is startable.
+- **G-4 / G-5** (advisory harness-change flags) remain open for SIGNOFF-1; this phase's `whenSelectRadius`
+  retarget is a third, planned harness change (recorded above) to note at sign-off — it strengthened AC-3.
 
 ## Phase 3 — Behavior: value-only grayscale preview (AC-10)
 

@@ -46,7 +46,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// green; see ITEST's red-baseline table.
 const Map<String, String> pendingACs = {
   // AC-2 (5 px area-average sampling) un-pended by SOURCE-2 — now always runs.
-  'AC-3': 'SCREEN-2', // radius selector + reticle (over SOURCE-2 sampling)
+  // AC-3 (radius selector + reticle sizing) un-pended by SCREEN-2 — now always runs.
   // AC-4, AC-5 (lock lifecycle + stability settling) un-pended by CAPTURE-3 — now always run.
   // AC-6, AC-7 (low-light → approximate; dismiss warning) un-pended by CAPTURE-4 — now always run.
   // AC-8 (reference-card calibration upgrades the tier) un-pended by CAPTURE-5 — now always runs.
