@@ -150,6 +150,16 @@ void main() {
       expect(result.saturation, '');
       expect(result.hue, '');
     });
+
+    test('deltaE00 over coordinates is the same metric compare uses (CVD-2 '
+        'reuse)', () {
+      // The public coordinate-level ΔE00 the confusion detector reuses equals
+      // what compare computes from the same two samples.
+      expect(
+        deltaE00(sampleA.coordinates, sampleB.coordinates),
+        closeTo(compare(sampleA, sampleB).deltaE00, 1e-12),
+      );
+    });
   });
 
   // One Sample at the given CIELAB coordinates (the DIFF-2 math reads only the

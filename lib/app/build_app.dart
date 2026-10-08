@@ -57,7 +57,7 @@ class AppDependencies {
     this.router = const AppRouter(),
     this.initialSample = demoSample,
     this.cvdProfile = const CvdProfile(type: CvdType.deutan),
-    this.confusionCheck = const NoopConfusionCheck(),
+    this.confusionCheck = const DichromatConfusionCheck(),
     this.sampleSource = const InMemorySampleSource(),
     this.comparisonEntry,
   });
@@ -91,8 +91,9 @@ class AppDependencies {
 
   /// Decides whether a compared pair is confusable for [cvdProfile] (AC-7/AC-8).
   ///
-  /// Defaults to the inert [NoopConfusionCheck] so the assembled app wires the
-  /// detector but flags nothing until CVD-2 supplies the dichromat projection.
+  /// Defaults to the shipped [DichromatConfusionCheck] (CVD-2's Viénot 1999
+  /// dichromat projection, D-4/D-5); inject [NoopConfusionCheck] to disable
+  /// detection.
   final ConfusionCheck confusionCheck;
 
   /// The saved-sample catalogue the comparison picker lists (bs-03 D-7).
@@ -190,7 +191,7 @@ class ComparisonHomeScreen extends StatefulWidget {
   const ComparisonHomeScreen({
     this.sampleSource = const InMemorySampleSource(),
     this.cvdProfile = const CvdProfile(type: CvdType.deutan),
-    this.confusionCheck = const NoopConfusionCheck(),
+    this.confusionCheck = const DichromatConfusionCheck(),
     this.router = const AppRouter(),
     this.initialA,
     this.initialB,

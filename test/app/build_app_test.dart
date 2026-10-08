@@ -68,8 +68,9 @@ void main() {
       expect(_deps().cvdProfile, const CvdProfile(type: CvdType.deutan));
     });
 
-    test('defaults the confusion check to the inert NoopConfusionCheck', () {
-      expect(_deps().confusionCheck, isA<NoopConfusionCheck>());
+    test('defaults the confusion check to the shipped DichromatConfusionCheck '
+        '(CVD-2)', () {
+      expect(_deps().confusionCheck, isA<DichromatConfusionCheck>());
     });
 
     test('keeps an explicitly injected CVD profile and confusion check', () {

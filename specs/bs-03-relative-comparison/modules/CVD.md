@@ -14,7 +14,7 @@ confusion-warning + speak regions in SCREEN
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 3,816,225 | 8m 30s |
-| 2 | behavior | AC-7, AC-8 | ⬜ Todo | | |
+| 2 | behavior | AC-7, AC-8 | ✅ Done | 10,847,797 | 27m 02s |
 | 3 | behavior | AC-9 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -125,9 +125,68 @@ confusion-warning + speak regions in SCREEN
   ACs green.
 - **Acceptance gate:** un-pend AC-7, AC-8; suite green for those tests and all earlier ACs.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** `DichromatConfusionCheck` (the shipped `ConfusionCheck`) in
+  `lib/a11y/cvd/confusion_check.dart` — a Viénot 1999 / Brettel–Viénot–Mollon LMS
+  dichromat projection (`projectDichromat`, one plane per `CvdType`, severity
+  blended) + the D-5 decision: `confusable` ⇔ normal ΔE00 ≥ 10 **and** projected
+  ΔE00 < 3. Reuses DIFF's one CIEDE2000 metric via a new public
+  `deltaE00(ColorCoordinates, ColorCoordinates)` in `lib/compare/difference.dart`
+  (re-exposes the existing `_ciede2000`; no change to `compare`). The canonical
+  `confusionWarningMessage` lives here (reused by CVD-3). `confusion_region.dart`
+  now states the warning when `state.confusable`, nothing otherwise (AC-8).
+  `build_app.dart` makes `DichromatConfusionCheck` the shipped default
+  (`AppDependencies` + `ComparisonHomeScreen`), replacing `NoopConfusionCheck`.
+- **Measured separation** (product = reference, same Viénot matrix): umber/terre-
+  verte normal 27.99 / projected 1.357 → flagged; terracotta/sienna normal 13.05
+  / projected 9.28 → not flagged.
+- **Unit gate:** 286 green (272 → 286). **Coverage:** `dart run
+  tool/coverage_gate.dart main` → 100% line+branch on all 15 touched files, PASS.
+- **Acceptance gate:** AC-7, AC-8 un-pended (`bs03/pending.dart` rows deleted +
+  added to `comparison_test.dart`'s `unpended` set). `flutter test
+  integration_test/` on the iOS sim: **39 pass / 4 skipped** (AC-3, AC-5, AC-6,
+  AC-9 still pending) — AC-7, AC-8 now run and pass against the real detector.
+- **Grades:** independent fresh-context grade of all 8 un-pended ACs →
+  **8×A, 0×B**, PASS; no neighbour grade changed. One recorded G5 limitation (the
+  AC-7/AC-8 pair cannot reject a detector that omits the normal-ΔE00 gate — no
+  bs-03 fixture is projected-close *and* normal-close; kept A, consistent with the
+  ITEST-3 grid on unchanged fixtures). Grid:
+  `behavior-test-completeness-bs-03-relative-comparison.md` § CVD-2.
+- **Augmentations:** none (AC-8 is AC-7's discriminating control, per plan).
+- **Fix passes:** 1/3 (pass 1 made `NoopConfusionCheck`'s const ctor run at
+  runtime in its test — now every production use is compile-time `const`, so the
+  line read uncovered; constructed non-`const` in the test).
+- **Tokens / Time:** 10,847,797 / 27m 02s.
+
+### Checkpoint / Handoff
+
+- **Frozen for consumers (CVD-3, bs-07, bs-08/bs-10):**
+  `DichromatConfusionCheck()` is the shipped `ConfusionCheck`
+  (`package:paint_color_assistant/a11y/cvd/confusion_check.dart`); the projection
+  is `projectDichromat(ColorCoordinates, CvdProfile) → ColorCoordinates`
+  (exposed, not private — bs-08/bs-10 reuse it); the decision thresholds
+  (normal ≥ 10, projected < 3) are private to the detector. The on-screen /
+  spoken warning copy is `confusionWarningMessage` — **CVD-3 must reuse this
+  constant**, not re-author the sentence. `deltaE00(ColorCoordinates,
+  ColorCoordinates)` is now public in `difference.dart`.
+- **To fill in CVD-3 (AC-9):** add `comparison_speech.dart` building one utterance
+  = the relational statement (DIFF's `Comparison`) + `confusionWarningMessage`
+  when `state.confusable`; wire the E6 speak control (in `actions_bar.dart`) to
+  call the injected `Speech.speak` exactly once. CVD-3 depends on **DIFF-3** too
+  (the statement text — AC-9's test asserts the spoken output contains
+  `'Hue shifted'`), so CVD-3 is startable only after both DIFF-3 and this phase.
+- **Verification commands** (export PATH first —
+  `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+  `flutter test --coverage` · `dart run tool/coverage_gate.dart main` ·
+  `flutter test integration_test/ -d <ios-sim-id>` (device-bound: the verify
+  lane).
+- **Known gaps:** the injected `CvdProfile` is a fixed deutan default until bs-07
+  populates it; the Viénot projection is graded against the harness's same-method
+  reference (a consistency check, not an independent scientific authority — the
+  ΔE00 metric half *is* externally validated). Carry-over flake: a `const`-ctor
+  line can read uncovered on `--coverage`; re-run once (hit this phase and fixed
+  by exercising the ctor at runtime).
 
 ## Phase 3 — Speak the whole comparison (CVD-3)
 

@@ -121,7 +121,15 @@ String _verdictBand(double deltaE00) {
 /// (`integration_test/comparison_harness.dart`'s `referenceDeltaE00`), so the
 /// product is never checked against itself.
 double _deltaE00(Sample a, Sample b) =>
-    _ciede2000(a.coordinates, b.coordinates);
+    deltaE00(a.coordinates, b.coordinates);
+
+/// CIEDE2000 ΔE00 between two CIELAB coordinates [a] and [b] (D-2).
+///
+/// The one shipped colour-difference metric over raw coordinates — the same
+/// CIEDE2000 [compare] uses. Exposed so the confusion detector (CVD-2) can judge
+/// a pair's distance — both normally and after the dichromat projection — with
+/// this single tested metric rather than a second ad-hoc copy.
+double deltaE00(ColorCoordinates a, ColorCoordinates b) => _ciede2000(a, b);
 
 double _rad(double deg) => deg * math.pi / 180.0;
 double _deg(double rad) => rad * 180.0 / math.pi;

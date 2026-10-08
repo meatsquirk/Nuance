@@ -57,6 +57,16 @@ class _StubRouter extends AppRouter {
   }
 }
 
+/// A [ConfusionCheck] pinned to a fixed verdict, so a widget test can drive the
+/// confusion region without depending on the real projection's numbers.
+class _FixedConfusionCheck implements ConfusionCheck {
+  const _FixedConfusionCheck(this.verdict);
+  final bool verdict;
+  @override
+  bool confusable(ColorCoordinates a, ColorCoordinates b, CvdProfile p) =>
+      verdict;
+}
+
 Future<void> _pumpScreen(WidgetTester tester, ComparisonController c) =>
     tester.pumpWidget(MaterialApp(home: ComparisonScreen(controller: c)));
 
@@ -198,8 +208,8 @@ void main() {
   });
 
   group('placeholder / invite regions', () {
-    testWidgets('difference and confusion show a placeholder; the statement '
-        'invites a second sample when there is no reading (AC-12)',
+    testWidgets('difference shows a placeholder and confusion shows no warning; '
+        'the statement invites a second sample when there is no reading (AC-12)',
         (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
@@ -219,9 +229,11 @@ void main() {
 
       expect(find.text('Overall difference'), findsOneWidget);
       expect(find.text('Relational statement'), findsOneWidget);
-      expect(find.text('Confusion warning'), findsOneWidget);
-      // Difference and confusion still show the "nothing yet" placeholder.
-      expect(find.text('—'), findsNWidgets(2));
+      // Difference shows the "nothing yet" placeholder (its DIFF reading needs
+      // both slots); the confusion region carries no warning (AC-8: not
+      // confusable — here there is no pair at all).
+      expect(find.text('—'), findsOneWidget);
+      expect(find.text(confusionWarningMessage), findsNothing);
       // The statement region invites a second sample instead (AC-12).
       expect(find.text('Choose a second sample to compare.'), findsOneWidget);
     });
@@ -239,6 +251,41 @@ void main() {
       expect(find.text('Relational statement'), findsOneWidget);
       expect(find.text('—'), findsOneWidget);
       expect(find.text('Choose a second sample to compare.'), findsNothing);
+    });
+  });
+
+  group('ConfusionRegion (CVD-2)', () {
+    ComparisonController confused(bool verdict) => ComparisonController(
+          sampleSource: const InMemorySampleSource(),
+          confusionCheck: _FixedConfusionCheck(verdict),
+          profile: const CvdProfile(type: CvdType.deutan),
+          initialA: _sampleA,
+          initialB: _sampleB,
+        );
+
+    testWidgets('states the warning when the pair is confusable (AC-7)',
+        (tester) async {
+      final controller = confused(true);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: ConfusionRegion(controller: controller))),
+      );
+
+      expect(controller.state.confusable, isTrue);
+      expect(find.text(confusionWarningMessage), findsOneWidget);
+    });
+
+    testWidgets('shows no warning when the pair is not confusable (AC-8)',
+        (tester) async {
+      final controller = confused(false);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: ConfusionRegion(controller: controller))),
+      );
+
+      expect(controller.state.confusable, isFalse);
+      expect(find.byKey(ConfusionRegion.regionKey), findsOneWidget);
+      expect(find.text(confusionWarningMessage), findsNothing);
     });
   });
 
