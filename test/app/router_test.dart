@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/haptics.dart';
+import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
+import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/readout/readout_screen.dart';
 import 'package:paint_color_assistant/recipes/recipes_stub.dart';
 
 Sample _sample(String name) => Sample(
@@ -54,5 +58,27 @@ void main() {
     await _pushRoute(tester, router.toRecipes(_sample('Deep Olive Green')));
     expect(find.byType(RecipesStubScreen), findsOneWidget);
     expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
+  });
+
+  testWidgets('toReadout opens the full Readout for the carried sample',
+      (tester) async {
+    // The Readout screen reads its services from the enclosing AppScope (the
+    // production assembly wraps the navigator in one), so push under a scope.
+    final key = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: const AppDependencies(
+          colorScience: ColorScienceImpl(),
+          speech: NoopSpeech(),
+          haptics: NoopHaptics(),
+        ),
+        child: MaterialApp(navigatorKey: key, home: const SizedBox()),
+      ),
+    );
+    unawaited(key.currentState!.push(router.toReadout(_sample('Warm Terracotta'))));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReadoutScreen), findsOneWidget);
+    expect(find.text('Warm Terracotta'), findsWidgets);
   });
 }

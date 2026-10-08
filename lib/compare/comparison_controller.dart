@@ -34,12 +34,17 @@ class ComparisonController extends ChangeNotifier {
     required this.sampleSource,
     required this.confusionCheck,
     required this.profile,
+    this.router = const AppRouter(),
     Sample? initialA,
     Sample? initialB,
   }) : _state = _derive(initialA, initialB, confusionCheck, profile);
 
   /// The saved-sample catalogue the picker lists (D-7).
   final SampleSource sampleSource;
+
+  /// Typed navigation used by [openReadout] to push the full Readout for a slot
+  /// (AC-10, AC-11). The production assembly injects `AppDependencies.router`.
+  final AppRouter router;
 
   /// The detector deciding whether a pair is confusable for [profile] (AC-7/8).
   final ConfusionCheck confusionCheck;
@@ -105,8 +110,17 @@ class ComparisonController extends ChangeNotifier {
   /// (AC-3). Behaviour lands in COMPARE-5.
   void swap() => throw UnimplementedError('swap: behaviour lands in COMPARE-5');
 
-  /// A route to the full Readout for the sample in [slot] (AC-10, AC-11).
-  /// Behaviour lands in COMPARE-6 (wires `AppRouter.toReadout`).
+  /// The sample currently in [slot], or null when that slot is empty.
+  Sample? sampleIn(ComparisonSlot slot) =>
+      slot == ComparisonSlot.a ? _state.slotA : _state.slotB;
+
+  /// Whether [slot] holds a sample, so the Open-readout control for it is
+  /// enabled only when there is a sample to open (AC-10, AC-11).
+  bool slotFilled(ComparisonSlot slot) => sampleIn(slot) != null;
+
+  /// A route to the full Readout for the sample in [slot] (AC-10, AC-11), built
+  /// through [router]. Called only when [slotFilled] for [slot] — the control is
+  /// disabled otherwise.
   Route<void> openReadout(ComparisonSlot slot) =>
-      throw UnimplementedError('openReadout: behaviour lands in COMPARE-6');
+      router.toReadout(sampleIn(slot)!);
 }

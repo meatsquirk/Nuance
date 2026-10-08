@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/sample.dart';
+import '../readout/readout_screen.dart';
 import '../recipes/recipes_stub.dart';
 import 'build_app.dart';
 
@@ -28,6 +29,19 @@ class AppRouter {
         initialA: slot == ComparisonSlot.a ? sample : null,
         initialB: slot == ComparisonSlot.b ? sample : null,
       ),
+    );
+  }
+
+  /// A route to the full Readout for [sample] (the Comparison → readout
+  /// handoff, AC-10/AC-11).
+  ///
+  /// Opens bs-01's [ReadoutScreen] on the carried sample so the painter can open
+  /// either compared sample in full. The screen reads its services from the
+  /// [AppScope] the pushed route sits under (the production assembly wraps the
+  /// navigator in that scope), symmetric to [toComparison].
+  Route<void> toReadout(Sample sample) {
+    return MaterialPageRoute<void>(
+      builder: (_) => ReadoutScreen(sample: sample),
     );
   }
 

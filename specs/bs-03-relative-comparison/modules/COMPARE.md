@@ -1,6 +1,6 @@
 # Module COMPARE — comparison controller & assembly
 
-**Status:** In progress — COMPARE-3 (behaviour: AC-1, AC-2, AC-12) done; COMPARE-5 (needs DIFF-3) and COMPARE-6 startable next
+**Status:** In progress — COMPARE-3 (AC-1, AC-2, AC-12) and COMPARE-6 (AC-10, AC-11) done; only COMPARE-5 (AC-3) remains, blocked on DIFF-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/compare/comparison_controller.dart`, `lib/compare/comparison_state.dart`,
 `lib/compare/comparison_read_endpoint.dart`, `lib/compare/sample_source.dart` (interface + in-memory
@@ -17,7 +17,7 @@ reuses `lib/app/router.dart` (`toComparison`, `toReadout`). Carries the scaffold
 | 2 | shell | — | ✅ Done | 12,364,300 | 25m 01s |
 | 3 | behavior | AC-1, AC-2, AC-12 | ✅ Done | 11,695,533 | 22m 21s |
 | 5 | behavior | AC-3 | ⬜ Todo | | |
-| 6 | behavior | AC-10, AC-11 | ⬜ Todo | | |
+| 6 | behavior | AC-10, AC-11 | ✅ Done | 9,095,859 | 19m 08s |
 
 (Phase numbers skip to align with the feature-wide session log: DIFF/CVD own the other behaviour phases.)
 
@@ -281,6 +281,60 @@ un-pended and green.
   run-pending; earlier ACs green.
 - **Acceptance gate:** un-pend AC-10, AC-11; suite green for those tests and all earlier ACs.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Behaviour landed: the painter can open either compared sample in its full Readout from the comparison. AC-10,
+AC-11 un-pended and green.
+
+- **`router.dart`** — new `AppRouter.toReadout(sample)` returns a `MaterialPageRoute` building bs-01's
+  `ReadoutScreen(sample:)`; the screen reads its services from the enclosing `AppScope` (the production
+  assembly wraps the navigator in one), symmetric to `toComparison`. The COMPARE-2 deviation — `openReadout`
+  needed a `toReadout` bs-01 didn't provide — is now closed.
+- **`comparison_controller.dart`** — `openReadout(slot)` implemented: `router.toReadout(sampleIn(slot)!)`.
+  Added `sampleIn(slot)` (the sample in a slot, or null) and `slotFilled(slot)` (the actions bar's enabled
+  predicate), and injected `AppRouter router` (default `const AppRouter()`; the assembly passes
+  `AppDependencies.router`). `swap` stays deferred to COMPARE-5.
+- **`actions_bar.dart`** — E7/E8 ("Open readout for A/B") wired: each `onPressed` pushes
+  `controller.openReadout(slot)` and is enabled only when `controller.slotFilled(slot)` (AC-10/AC-11). Speak
+  (E6) stays inert until CVD-3. The whole screen sits in a `ListenableBuilder` on the controller, so the
+  controls' enabled state tracks the slots.
+- **`build_app.dart`** — `ComparisonHomeScreen` gains a `router` field (default `const AppRouter()`) threaded
+  into the controller; `buildApp` passes `deps.router`.
+- **Gates.** `flutter analyze` clean. Unit **260 green** (was 254; +6: openReadout/sampleIn/slotFilled, the
+  two actions-bar tap handoffs via a stub router, the toReadout route; rewrote the actions-bar inert test).
+  Coverage gate **PASS** — 100% line coverage on all 15 touched `lib/**` files
+  (`dart run tool/coverage_gate.dart main`). Acceptance (iOS sim, under the verify lock): default
+  `flutter test integration_test/comparison_test.dart` **19 pass / 7 pending** — AC-10, AC-11 un-pended and
+  green; full `flutter test integration_test/` **36 pass / 7 pending** (bs-01 handoffs still green with the new
+  `toReadout`). **Test grades: 5×A, 0×B** — the un-pended AC-1/2/10/11/12 graded by an independent
+  fresh-context grader against G1–G6 (grid: `../behavior-test-completeness-bs-03-relative-comparison.md`,
+  *COMPARE-6* section). **Fix passes: 1/3** (first run: the ITEST-1 complement guard failed because AC-10/11
+  were un-pended — updated its `unpended` set to {AC-1,AC-2,AC-10,AC-11,AC-12}; a bookkeeping guard, not an AC
+  test). No coverage exclusions. No augmentations assigned to AC-10/AC-11, and the open-readout behaviour gives
+  no already-green AC test (AC-1/2/12 — selection, a different region) anything new to assert (G6).
+- **Tokens / time:** 9,095,859 · 19m 08s (active = wall), one session.
+
+### Checkpoint / Handoff
+
+- **Frozen for the remaining behaviour phases:**
+  - `ComparisonController.openReadout(ComparisonSlot)` → `router.toReadout(sampleIn(slot)!)`; `sampleIn(slot)`
+    and `slotFilled(slot)` are the public slot accessors; `router` is injected
+    (`AppDependencies.router` → `ComparisonHomeScreen.router` → the controller). Called only for a filled slot
+    (the control is disabled otherwise).
+  - `AppRouter.toReadout(Sample)` → `ReadoutScreen(sample:)`; the pushed route must sit under an `AppScope`
+    (the real assembly provides it) — bs-01's `ReadoutScreen` reads `colorScience`/`speech`/`haptics`/`router`
+    from it in `didChangeDependencies`.
+  - `ComparisonActionsBar` E7/E8 are wired (enabled per `slotFilled`); "Speak whole comparison" is still
+    `onPressed: null` — **CVD-3** wires it to the spoken comparison.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration on the
+  iOS sim under the verify lock:
+  `$C with-lock <FEATURE> <PHASE> --wait 900 -- bash -c "export PATH=…; cd <repo> && flutter test integration_test/ -d <iPhone-sim-id>"`
+  (booted sim this session: iPhone 17 `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`). Run-pending:
+  `--dart-define=BS03_RUN_PENDING=true`. Base = `main` (the gate measures the whole bs-03 lib delta).
+- **Known gaps / notes:** Speak (E6) inert until CVD-3; the both-slots difference/statement/confusion regions
+  still show placeholders (DIFF-2/3, CVD-2). COMPARE-5 (swap, AC-3) stays blocked on DIFF-3. Carry-over bs-01
+  const-line coverage flake still applies (re-run `--coverage` once if an untouched file flags). Untracked
+  bs-04..bs-14 specs + `docs/` remain in the tree, not part of bs-03.
+- **Next:** DIFF-2 (AC-4) and CVD-2 (AC-7/8) remain startable in parallel (file-disjoint); DIFF-3 follows
+  DIFF-2, then COMPARE-5 (swap) and CVD-3 unblock.

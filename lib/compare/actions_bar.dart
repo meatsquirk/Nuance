@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/router.dart';
 import 'comparison_controller.dart';
 
 /// The comparison actions bar (wireframe S1.R1: Speak whole comparison [E6],
@@ -7,29 +8,44 @@ import 'comparison_controller.dart';
 /// slots it reverses (`SlotsRegion`).
 ///
 /// Named [ComparisonActionsBar] to stand apart from the readout's `ActionsBar`.
-/// Every control is present but inert (disabled) in this shell; the behaviour
-/// phases wire them: speak → the spoken comparison (CVD-3), and the two
-/// open-readout controls → [ComparisonController.openReadout] (COMPARE-6, which
-/// also adds the readout route they push).
+/// The two open-readout controls (E7/E8) are wired here (COMPARE-6): each pushes
+/// [ComparisonController.openReadout] for its slot and is enabled only when that
+/// slot holds a sample (AC-10, AC-11). Speak (E6) stays inert until CVD-3 drives
+/// the spoken comparison.
 class ComparisonActionsBar extends StatelessWidget {
   const ComparisonActionsBar({required this.controller, super.key});
 
   /// Stable anchor for the actions bar.
   static const Key regionKey = ValueKey('comparison-actions-bar');
 
-  /// The controller whose actions these controls will invoke.
+  /// The controller whose actions these controls invoke.
   final ComparisonController controller;
 
   @override
   Widget build(BuildContext context) {
-    return const Wrap(
+    return Wrap(
       key: regionKey,
       spacing: 8,
       children: [
-        // All inert in this shell; the behaviour phases enable them.
-        TextButton(onPressed: null, child: Text('Speak whole comparison')),
-        TextButton(onPressed: null, child: Text('Open readout for A')),
-        TextButton(onPressed: null, child: Text('Open readout for B')),
+        // Inert until CVD-3 wires the spoken comparison.
+        const TextButton(
+          onPressed: null,
+          child: Text('Speak whole comparison'),
+        ),
+        TextButton(
+          onPressed: controller.slotFilled(ComparisonSlot.a)
+              ? () => Navigator.of(context)
+                  .push(controller.openReadout(ComparisonSlot.a))
+              : null,
+          child: const Text('Open readout for A'),
+        ),
+        TextButton(
+          onPressed: controller.slotFilled(ComparisonSlot.b)
+              ? () => Navigator.of(context)
+                  .push(controller.openReadout(ComparisonSlot.b))
+              : null,
+          child: const Text('Open readout for B'),
+        ),
       ],
     );
   }

@@ -48,8 +48,7 @@ const Map<String, String> pendingACs = {
   'AC-7': 'CVD-2', // confusable pair flagged
   'AC-8': 'CVD-2', // distinct pair not flagged
   'AC-9': 'CVD-3', // speak comparison incl. warning
-  'AC-10': 'COMPARE-6', // open readout for A
-  'AC-11': 'COMPARE-6', // open readout for B
+  // AC-10, AC-11 un-pended by COMPARE-6 (open readout for A / B).
 };
 
 /// The behaviour phases allowed to own a pending AC.

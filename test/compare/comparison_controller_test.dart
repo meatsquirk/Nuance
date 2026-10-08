@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
@@ -7,6 +8,20 @@ import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+
+/// Records the samples [toReadout] is asked to route to, so a test can prove
+/// which slot's sample [ComparisonController.openReadout] opens (AC-10/AC-11).
+class _RecordingRouter extends AppRouter {
+  _RecordingRouter();
+
+  final List<Sample> readoutCalls = [];
+
+  @override
+  Route<void> toReadout(Sample sample) {
+    readoutCalls.add(sample);
+    return super.toReadout(sample);
+  }
+}
 
 const _a = Sample(
   name: 'Warm Terracotta',
@@ -21,6 +36,7 @@ const _b = Sample(
 
 ComparisonController _controller({
   SampleSource sampleSource = const InMemorySampleSource(),
+  AppRouter router = const AppRouter(),
   Sample? initialA,
   Sample? initialB,
 }) =>
@@ -28,6 +44,7 @@ ComparisonController _controller({
       sampleSource: sampleSource,
       confusionCheck: const NoopConfusionCheck(),
       profile: const CvdProfile(type: CvdType.deutan),
+      router: router,
       initialA: initialA,
       initialB: initialB,
     );
@@ -131,12 +148,45 @@ void main() {
     test('swap is deferred to COMPARE-5', () {
       expect(() => _controller().swap(), throwsUnimplementedError);
     });
+  });
 
-    test('openReadout is deferred to COMPARE-6', () {
-      expect(
-        () => _controller().openReadout(ComparisonSlot.a),
-        throwsUnimplementedError,
-      );
+  group('ComparisonController open readout (COMPARE-6)', () {
+    test('sampleIn returns the sample in each slot, null when empty', () {
+      final c = _controller(initialA: _a, initialB: _b);
+      expect(c.sampleIn(ComparisonSlot.a), same(_a));
+      expect(c.sampleIn(ComparisonSlot.b), same(_b));
+
+      final empty = _controller();
+      expect(empty.sampleIn(ComparisonSlot.a), isNull);
+      expect(empty.sampleIn(ComparisonSlot.b), isNull);
+    });
+
+    test('slotFilled is true only for a slot that holds a sample', () {
+      final c = _controller(initialA: _a);
+      expect(c.slotFilled(ComparisonSlot.a), isTrue);
+      expect(c.slotFilled(ComparisonSlot.b), isFalse);
+    });
+
+    test('openReadout(a) routes to the Readout for slot A (AC-10)', () {
+      final router = _RecordingRouter();
+      final c = _controller(router: router, initialA: _a, initialB: _b);
+
+      final route = c.openReadout(ComparisonSlot.a);
+
+      // Opens the sample in slot A — not slot B (rejects an impl that always
+      // opens one fixed slot; AC-11's test proves the B side).
+      expect(router.readoutCalls, [same(_a)]);
+      expect(route, isA<Route<void>>());
+    });
+
+    test('openReadout(b) routes to the Readout for slot B (AC-11)', () {
+      final router = _RecordingRouter();
+      final c = _controller(router: router, initialA: _a, initialB: _b);
+
+      final route = c.openReadout(ComparisonSlot.b);
+
+      expect(router.readoutCalls, [same(_b)]);
+      expect(route, isA<Route<void>>());
     });
   });
 }

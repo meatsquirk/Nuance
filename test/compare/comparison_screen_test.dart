@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/compare/actions_bar.dart';
 import 'package:paint_color_assistant/compare/comparison_controller.dart';
 import 'package:paint_color_assistant/compare/comparison_screen.dart';
@@ -27,6 +28,7 @@ const _sampleB = Sample(
 
 ComparisonController _controller({
   SampleSource sampleSource = const InMemorySampleSource(),
+  AppRouter router = const AppRouter(),
   Sample? initialA,
   Sample? initialB,
 }) =>
@@ -34,9 +36,26 @@ ComparisonController _controller({
       sampleSource: sampleSource,
       confusionCheck: const NoopConfusionCheck(),
       profile: const CvdProfile(type: CvdType.deutan),
+      router: router,
       initialA: initialA,
       initialB: initialB,
     );
+
+/// Returns a trivial Readout route (no [AppScope] needed) and records which
+/// sample it was asked to open, so a widget tap can prove the handoff.
+class _StubRouter extends AppRouter {
+  _StubRouter();
+
+  final List<Sample> pushed = [];
+
+  @override
+  Route<void> toReadout(Sample sample) {
+    pushed.add(sample);
+    return MaterialPageRoute<void>(
+      builder: (_) => const Scaffold(body: Text('stub-readout')),
+    );
+  }
+}
 
 Future<void> _pumpScreen(WidgetTester tester, ComparisonController c) =>
     tester.pumpWidget(MaterialApp(home: ComparisonScreen(controller: c)));
@@ -224,7 +243,12 @@ void main() {
   });
 
   group('ComparisonActionsBar', () {
-    testWidgets('every action is present but inert', (tester) async {
+    bool enabled(WidgetTester tester, String label) => tester
+        .widget<TextButton>(find.widgetWithText(TextButton, label))
+        .enabled;
+
+    testWidgets('Speak and both Open-readout controls are inert with no slots',
+        (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
       await tester.pumpWidget(
@@ -233,16 +257,55 @@ void main() {
         ),
       );
 
-      for (final label in const [
-        'Speak whole comparison',
-        'Open readout for A',
-        'Open readout for B',
-      ]) {
-        final button = tester.widget<TextButton>(
-          find.widgetWithText(TextButton, label),
-        );
-        expect(button.enabled, isFalse, reason: '$label must be inert in SCREEN-1');
-      }
+      // Speak stays deferred to CVD-3; the Open-readout controls are disabled
+      // while their slots are empty (nothing to open).
+      expect(enabled(tester, 'Speak whole comparison'), isFalse,
+          reason: 'Speak whole comparison is inert until CVD-3');
+      expect(enabled(tester, 'Open readout for A'), isFalse,
+          reason: 'slot A empty ⇒ Open readout for A disabled');
+      expect(enabled(tester, 'Open readout for B'), isFalse,
+          reason: 'slot B empty ⇒ Open readout for B disabled');
+    });
+
+    testWidgets('tapping Open-readout-A opens the Readout for slot A (AC-10)',
+        (tester) async {
+      final router = _StubRouter();
+      final controller =
+          _controller(router: router, initialA: _sampleA, initialB: _sampleB);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: ComparisonActionsBar(controller: controller)),
+        ),
+      );
+
+      expect(enabled(tester, 'Open readout for A'), isTrue,
+          reason: 'slot A set ⇒ Open readout for A enabled');
+      await tester.tap(find.widgetWithText(TextButton, 'Open readout for A'));
+      await tester.pumpAndSettle();
+
+      // Pushes the Readout for slot A's sample — not slot B's.
+      expect(router.pushed, [same(_sampleA)]);
+      expect(find.text('stub-readout'), findsOneWidget);
+    });
+
+    testWidgets('tapping Open-readout-B opens the Readout for slot B (AC-11)',
+        (tester) async {
+      final router = _StubRouter();
+      final controller =
+          _controller(router: router, initialA: _sampleA, initialB: _sampleB);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: ComparisonActionsBar(controller: controller)),
+        ),
+      );
+
+      await tester.tap(find.widgetWithText(TextButton, 'Open readout for B'));
+      await tester.pumpAndSettle();
+
+      expect(router.pushed, [same(_sampleB)]);
+      expect(find.text('stub-readout'), findsOneWidget);
     });
   });
 }

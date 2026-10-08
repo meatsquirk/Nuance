@@ -164,6 +164,7 @@ Widget buildApp(AppDependencies deps) {
               sampleSource: deps.sampleSource,
               cvdProfile: deps.cvdProfile,
               confusionCheck: deps.confusionCheck,
+              router: deps.router,
             ),
     ),
   );
@@ -190,6 +191,7 @@ class ComparisonHomeScreen extends StatefulWidget {
     this.sampleSource = const InMemorySampleSource(),
     this.cvdProfile = const CvdProfile(type: CvdType.deutan),
     this.confusionCheck = const NoopConfusionCheck(),
+    this.router = const AppRouter(),
     this.initialA,
     this.initialB,
     super.key,
@@ -197,6 +199,11 @@ class ComparisonHomeScreen extends StatefulWidget {
 
   /// The saved-sample catalogue the comparison picker lists (D-7).
   final SampleSource sampleSource;
+
+  /// Typed navigation the controller uses to open a slot's full Readout
+  /// (AC-10, AC-11). Defaults to a plain [AppRouter]; the production assembly
+  /// passes `AppDependencies.router`.
+  final AppRouter router;
 
   /// The painter's colour-vision profile the confusion flag is judged against.
   final CvdProfile cvdProfile;
@@ -219,6 +226,7 @@ class _ComparisonHomeScreenState extends State<ComparisonHomeScreen> {
     sampleSource: widget.sampleSource,
     confusionCheck: widget.confusionCheck,
     profile: widget.cvdProfile,
+    router: widget.router,
     initialA: widget.initialA,
     initialB: widget.initialB,
   );
