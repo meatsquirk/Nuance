@@ -17,6 +17,8 @@ import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
 import '../readout/readout_screen.dart';
+import '../recipes/engine/mixing_engine.dart';
+import '../recipes/engine/subtractive_engine.dart';
 import 'router.dart';
 
 /// The sample the shipped bs-01 app opens the Readout screen on.
@@ -65,6 +67,7 @@ class AppDependencies {
     this.confusionCheck = const DichromatConfusionCheck(),
     this.sampleSource = const InMemorySampleSource(),
     this.comparisonEntry,
+    this.mixingEngine = const SubtractiveMixingEngine(),
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -127,6 +130,15 @@ class AppDependencies {
   /// [cvdProfile] / [confusionCheck]. The bs-03 acceptance harness injects one
   /// to drive each comparison scenario through this same assembly entry.
   final ComparisonEntry? comparisonEntry;
+
+  /// The mixing engine the Recipes feature solves through (bs-04 D-2/D-6).
+  ///
+  /// Defaults to the shipped v1 [SubtractiveMixingEngine]; **RECIPE-2** passes it
+  /// to the `RecipeController` so the controller never computes mixing math
+  /// itself, and the measured-pigment engine
+  /// (`docs/custom-mixing-engine-design.md`) is the deferred swap-in behind the
+  /// same [MixingEngine] interface. A shell for now — no screen reads it yet.
+  final MixingEngine mixingEngine;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.

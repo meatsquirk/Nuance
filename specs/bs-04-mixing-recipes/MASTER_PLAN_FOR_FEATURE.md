@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — RECIPE-1 (scaffold) done; next ENGINE-1 (shell)
+**Status:** In progress — ENGINE-1 (shell) done; next RECIPE-2 (shell)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -144,7 +144,7 @@ discriminating control is an in-test non-crossing recipe (not an augmentation); 
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | The mixing engine: `Paint`/`PaintMedium`, `MixingEngine` interface + `Recipe`/`RecipeComponent`, the v1 subtractive forward model and inverse solver (top 3–5, prefer fewer), per-recipe ΔE00+verdict, trace "a touch of", muddying flag, out-of-gamut, wet/dry transform | bs-03 color-science (`deltaE00`, `ColorScience`) | ⬜ Todo |
+| ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | The mixing engine: `Paint`/`PaintMedium`, `MixingEngine` interface + `Recipe`/`RecipeComponent`, the v1 subtractive forward model and inverse solver (top 3–5, prefer fewer), per-recipe ΔE00+verdict, trace "a touch of", muddying flag, out-of-gamut, wet/dry transform | bs-03 color-science (`deltaE00`, `ColorScience`) | 🔄 In progress |
 | RECIPE | [modules/RECIPE.md](modules/RECIPE.md) | Scaffold; `PaintPalette`/`PaletteSource`; `RecipeController`/state (target, selected palette, recipes, wet/dry mode); target selection (saved sample + manual entry/validation); `RecipeReadEndpoint`; recipes entry in `buildApp`; spoken target & recipe | bs-03 domain/router/Speech/SampleSource, ENGINE | 🔄 In progress |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Recipes screen UI: target selector (E22) + speak-target (E23), wet/dry toggle (E24), the recipe list body (parts, predicted colour, ΔE00, verdict, "a touch of", muddying) + speak-recipe (E25), the "OUT OF GAMUT" banner | RECIPE, ENGINE | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
@@ -196,8 +196,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | RECIPE-1 | scaffold: branch from main, baseline, confirm coverage gate, BS04 pending runner | ✅ Done | 3,103,321 | 16m 10s | branch @ `ac3bd09`; unit 430 / integ 62 green; gate proven both ways |
-| 2 | ENGINE-1 | shell: `Paint`/`PaintMedium` + `MixingEngine` interface + `Recipe`/`RecipeComponent` + stub engine wired into deps | ⬜ Next | | | startable (depends RECIPE-1 ✅) |
-| 3 | RECIPE-2 | shell: `PaintPalette`/`PaletteSource` + `RecipeController`/state + read endpoint + recipes entry/route (replace stub) | ⬜ Todo | | | after ENGINE-1 |
+| 2 | ENGINE-1 | shell: `Paint`/`PaintMedium` + `MixingEngine` interface + `Recipe`/`RecipeComponent` + stub engine wired into deps | ✅ Done | 6,408,543 | 21m 15s | analyze clean; unit 480 / integ 62 green; 100% cov on 5 touched files; introduced minimal `PaintPalette` as the interface enabler |
+| 3 | RECIPE-2 | shell: `PaletteSource`/`InMemoryPaletteSource` over the existing `PaintPalette` + `RecipeController`/state + read endpoint + recipes entry/route (replace stub) | ⬜ Next | | | after ENGINE-1 ✅; `PaintPalette` already exists — add `palette_source.dart`, do not recreate it |
 | 4 | SCREEN-1 | shell: Recipes screen scaffold (E22–E25 + list + gamut banner placeholders) bound to controller | ⬜ Todo | | | after RECIPE-2 |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,11,12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
@@ -217,12 +217,13 @@ when the row is marked done.
 
 ## Next phase
 
-**ENGINE-1 (shell)** is next and **startable** — it depends only on RECIPE-1 (done); no open gate blocks it.
-It defines `Paint`/`PaintMedium`, the `MixingEngine` interface, `Recipe`/`RecipeComponent`, and a stub engine
-wired into `AppDependencies`. Run it: `/feature-next-phase bs-04-mixing-recipes`. The shell stage is serial
-(ENGINE-1 → RECIPE-2 → SCREEN-1). **G-4** (engine / pinned-value reconciliation) remains open; it blocks
-ITEST-3 and the behaviour stage, decidable any time before ITEST-3. **G-2** (approve the acceptance tests) is
-decided at the ITEST-4 test review and blocks every behaviour phase.
+**RECIPE-2 (shell)** is next and **startable** — ENGINE-1 (its only dependency) is done; no open gate blocks
+it. It adds `PaletteSource`/`InMemoryPaletteSource` over the `PaintPalette` ENGINE-1 already created (**do not
+recreate `PaintPalette`**), the `RecipeController`/state (inert), the `RecipeReadEndpoint`, the recipes entry
+in `buildApp`, and replaces `RecipesStubScreen` behind `AppRouter.toRecipes` — still rendering the target name
+so bs-01 AC-11 stays green. Run it: `/feature-next-phase bs-04-mixing-recipes`. Shells are serial (RECIPE-2 →
+SCREEN-1). **G-4** (engine / pinned-value reconciliation) and **G-2** (approve the acceptance tests) remain
+open; both are decided before the behaviour stage (G-4 before ITEST-3; G-2 at the ITEST-4 review).
 
 ## Token usage
 
@@ -233,7 +234,8 @@ decided at the ITEST-4 test review and blocks every behaviour phase.
 | PLAN | cfdec5dc | 2026-10-08 11:52 EDT | 12:06 | 14m 38s | 14m 38s | claude-opus-4-8 | 88 | 332,779 | 4,592,359 | 67,713 | 4,992,939 | plan written: 16 phases, 4 modules, 12 ACs; G-1/G-2/G-4 open, G-3 resolved |
 | GATE-DECISION | ac0ae3b2 | 2026-10-08 12:55 EDT | 12:58 | 2m 29s | 2m 29s | claude-opus-4-8 | 24 | 41,638 | 696,302 | 4,385 | 742,349 | G-1 approved: spec approved as-is by Matt Quirk; .feature stamped |
 | RECIPE-1 | 65dff7c4 | 2026-10-08 13:14 EDT | 13:30 | 16m 10s | 16m 10s | claude-opus-4-8 | 78 | 80,020 | 3,001,598 | 21,625 | 3,103,321 | scaffold: branch @ ac3bd09; baseline unit 430 / integ 62 green; coverage gate PASS clean + FAIL planted; BS04 pending runner in place; no product code |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 13:30** | **33m 17s** | **33m 17s** |  | **190** | **454,437** | **8,290,259** | **93,723** | **8,838,609** |  |
+| ENGINE-1 | ca13c9a4 | 2026-10-08 13:37 EDT | 13:58 | 21m 13s | 21m 15s | claude-opus-4-8 | 108 | 124,126 | 6,240,318 | 43,991 | 6,408,543 | shell: Paint/PaintMedium + MixingEngine interface + Recipe/RecipeComponent/MixOptions + stub SubtractiveMixingEngine wired into AppDependencies.mixingEngine; unit 480 / integ 62 green; 100% coverage on 5 touched files; introduced minimal PaintPalette as the interface enabler |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 13:58** | **54m 30s** | **54m 32s** |  | **298** | **578,563** | **14,530,577** | **137,714** | **15,247,152** |  |
 
 ## Sign-off
 

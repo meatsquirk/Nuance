@@ -1,6 +1,6 @@
 # Module ENGINE — the mixing engine
 
-**Status:** Not started
+**Status:** In progress — ENGINE-1 (shell) done; next ENGINE-2 (behaviour, after RECIPE-3 / G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (`Paint`, `PaintMedium`), `lib/recipes/engine/mixing_engine.dart`
 (`MixingEngine` interface, `Recipe`, `RecipeComponent`, `MixOptions`), `lib/recipes/engine/subtractive_engine.dart`
@@ -13,7 +13,7 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 6,408,543 | 21m 15s |
 | 2 | behavior | AC-3, AC-4 | ⬜ Todo | | |
 | 3 | behavior | AC-5, AC-6 | ⬜ Todo | | |
 | 4 | behavior | AC-7, AC-8 | ⬜ Todo | | |
@@ -57,6 +57,55 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
   5. Unit-test the types (equality/round-trip) and the stub's shape; keep behaviour unchanged.
 - **Exit criteria:** `flutter analyze` clean; unit gate green; 100% coverage on the touched files; the existing suites stay green.
 - **Acceptance gate:** *(shell — unit gate + existing suite green)*
+
+### Result
+
+Shell landed; all four engine types + the stub engine wired into production assembly. Behaviour unchanged.
+
+- **Files:** `lib/domain/paint.dart` (`Paint` + `PaintMedium {acrylic, oil}`, value-equal `const`),
+  `lib/recipes/engine/mixing_engine.dart` (`MixingEngine` interface; `MixOptions`/`RecipeComponent`/`Recipe`
+  value-equal `const`), `lib/recipes/engine/subtractive_engine.dart` (`const SubtractiveMixingEngine`,
+  **stubbed** — `forward` throws `UnimplementedError`, `inverse` returns `const []`), `lib/app/build_app.dart`
+  (`AppDependencies.mixingEngine`, default `const SubtractiveMixingEngine()`; no screen reads it yet).
+- **Coordination deviation (flagged):** the frozen interface `inverse(Sample, PaintPalette, MixOptions)`
+  references `PaintPalette`, which RECIPE-2 owns — but ENGINE-1 precedes RECIPE-2. So ENGINE-1 introduces the
+  **minimal** `PaintPalette` (`lib/recipes/palette.dart`, the pinned `{name, List<Paint>}`) as the enabler the
+  interface needs. **RECIPE-2 adds `palette_source.dart` over it and must NOT recreate `PaintPalette`.**
+- **Gates:** `flutter analyze` clean; unit **480 green** (`flutter test --coverage`, +45 over the 430
+  baseline); **100% line coverage on all 5 touched files** (`dart run tool/coverage_gate.dart main` PASS);
+  existing integration suite **62 green** (`flutter test integration_test/ -d 5AB9D06D…` under the verify lock,
+  incl. bs-01 AC-11 handoff — the `RecipesStubScreen` is untouched).
+- **Note:** `MixingEngine.forward(Map<Paint,double>)` keys a **runtime** map on `Paint` (value-equal); const
+  maps with `Paint` keys are rejected by the analyzer, so callers build the parts map non-const.
+- **Fix passes: 2/3** — (1) dropped `const` from two test maps keyed on `Paint` (analyzer
+  `const_map_key_not_primitive_equality`); (2) added a non-const construction per type so the `const`
+  constructor line executes at runtime (coverage — the documented const-canonicalisation gap).
+- **Tokens / Time:** 6,408,543 · 21m 15s.
+
+### Checkpoint / Handoff
+
+- **Frozen for RECIPE-2 / SCREEN / ITEST / behaviour:**
+  - `Paint({id, name, medium, masstone, pigmentIndex?, opacity?})`, `enum PaintMedium {acrylic, oil}`.
+  - `PaintPalette({name, paints = const []})` — minimal; **RECIPE-2 extends with `PaletteSource`, not by
+    editing `PaintPalette`**.
+  - `MixingEngine`: `ColorCoordinates forward(Map<Paint,double> partsByVolume, {bool dry})`;
+    `List<Recipe> inverse(Sample target, PaintPalette palette, MixOptions opts)`.
+  - `MixOptions({maxPaints=4, topK=5, gamutThreshold=5.0, traceThreshold=0.02})` — threshold literals are
+    D-10/D-12 defaults pending **G-4**; the solver reads them, the ACs assert properties (D-13).
+  - `Recipe({medium, components, predictedColor, deltaE00, verdict?, outOfGamut=false, muddying=false})`;
+    `RecipeComponent({paint, partsFraction, isTrace=false, techniqueNote?})`.
+  - `AppDependencies.mixingEngine` (default `const SubtractiveMixingEngine()`) — RECIPE-2 passes it to the
+    `RecipeController`; the controller never computes mixing math.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under
+  the verify lock: `$C with-lock bs-04-mixing-recipes <PHASE> --wait 900 -- bash -c "export PATH=…; cd <repo>
+  && flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685"`.
+- **Next phase:** RECIPE-2 (shell) — `PaletteSource`/`InMemoryPaletteSource` over the existing `PaintPalette`,
+  `RecipeController`/state, `RecipeReadEndpoint`, recipes entry in `buildApp`, replace `RecipesStubScreen`.
+- **Known gaps:** the engine is a shell — `forward` throws, `inverse` returns `[]`; the subtractive forward
+  model + inverse solver + verdict/ordering/trace/muddying/gamut/wet-dry land in ENGINE-2..6 (behind G-4). The
+  `const`-constructor coverage quirk (master-plan *Known flakes*) applies to every new value type — covered
+  here with a non-const construction per type.
 
 ## Phase 2 — Palette-constrained solver + top 3–5 (ENGINE-2)
 

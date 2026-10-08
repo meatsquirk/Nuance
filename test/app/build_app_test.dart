@@ -17,6 +17,8 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
+import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
+import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
 
 SoftwareCaptureSource _captureSource() => SoftwareCaptureSource(
       const SceneSpec(
@@ -156,6 +158,23 @@ void main() {
       );
       expect(identical(deps.sampleSource, source), isTrue);
       expect(identical(deps.comparisonEntry, entry), isTrue);
+    });
+
+    test('defaults the mixing engine to the v1 SubtractiveMixingEngine (D-2)',
+        () {
+      expect(_deps().mixingEngine, isA<SubtractiveMixingEngine>());
+    });
+
+    test('keeps an explicitly injected mixing engine', () {
+      const engine = SubtractiveMixingEngine();
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        mixingEngine: engine,
+      );
+      expect(identical(deps.mixingEngine, engine), isTrue);
+      expect(deps.mixingEngine, isA<MixingEngine>());
     });
   });
 
