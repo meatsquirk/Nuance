@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 + ITEST-2 + ITEST-3 (all 12 ACs have a pending test) done; next ITEST-4 (review, G-3). G-4 resolved.
+**Status:** ⏸ Awaiting review — ITEST-1 + ITEST-2 + ITEST-3 done (all 12 ACs have a pending, grade-A test); ITEST-4 packet assembled, **G-3 awaiting the human decision**. G-4 + G-5 resolved.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/comparison_test.dart` (AC tests), `integration_test/comparison_harness.dart`
 (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the comparison entry); reuses
@@ -14,7 +14,7 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
 | 1 | acceptance-tests | — (harness) | ✅ Done | 5,939,625 | 19m 08s |
 | 2 | acceptance-tests | AC-1,2,3,10,11,12 | ✅ Done | 7,878,822 | 27m 54s |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9 | ✅ Done | 15,032,038 | 29m 57s |
-| 4 | test-review | — (G-3) | ⬜ Next | | |
+| 4 | test-review | — (G-3) | ⏸ Awaiting review | 3,360,351 | 10m 59s |
 
 ## Interface reconciliation
 
@@ -35,7 +35,9 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
 
 ## Open gates
 
-- **G-3 (approve acceptance tests)** — recorded here on ITEST-4.
+- **G-3 (approve acceptance tests)** — ⏳ **Awaiting decision (packet assembled 2026-10-07, ITEST-4).** The
+  review packet is below under *Phase 4 — Test review*. Record with
+  `/feature-next-phase --gate bs-03-relative-comparison G-3 approved | "<changes>"`.
 - **G-4 (spec-data reconciliation)** ✅ **Resolved 2026-10-07: option (a) — correct the overall to the
   computed value "delta-E00 13.1" — Matt Quirk (spec author).** The stated LCh coords compute to CIEDE2000
   ΔE00 ≈ 13.05 (→ "13.1" displayed); the spec's old "14.2" was the error. Spec line 48 amended; AC-4's test
@@ -316,9 +318,90 @@ for the human G-3 decision. Blocks every behaviour phase.
 - **Exit criteria:** packet assembled; full suite green (AC tests pending); grade grid complete.
 - **Acceptance gate:** human records G-3.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+**ITEST-4 is the test-review packet — no product code, no test changes.** The full acceptance suite for
+bs-03 (12 ACs, all pending, all graded A) is assembled below for the human G-3 decision: approve to unblock
+the behaviour stage, or request changes. The agent does not approve.
+
+**Regression re-run for this packet** (worktree `Nuance-wt-bs03-ITEST-4` @ `53036af`, Flutter on PATH):
+`flutter analyze` clean · unit `flutter test --coverage` **247 green** · coverage gate **PASS** (no touched
+`lib/**` — this phase is review-only) · acceptance `flutter test integration_test/comparison_test.dart`
+**14 pass + 12 pending (skipped), all green**. The 14 non-pending are the smoke test, the pending-gate /
+fakes / fixtures guards, the Sharma CIEDE2000 reference checks, and the four D-5 deutan-projection guards.
+
+**Grade grid:** [`../behavior-test-completeness-bs-03-relative-comparison.md`](../behavior-test-completeness-bs-03-relative-comparison.md)
+— graded across ITEST-1/2/3 by independent fresh-context graders. **Counts: 24×A, 0×B** (ITEST-1: 10×A
+scaffold/harness; ITEST-2: 6×A; ITEST-3: 6×A AC + 4×A D-5 guards). AC-4 is *A with a noted limitation* (its
+discriminating control is the augmentation owned by DIFF-2 — correct G5 handling, not a B).
+
+#### The 12 AC tests (Given checked · When · Then / Rejects)
+
+All run the **real** assembled app via bs-01's production `buildApp(deps)` opened on the Comparison screen;
+only `FakeSpeech` is faked. State is observed through rendered region text and the `ComparisonReadEndpoint`
+seam. ΔE00 and the deutan projection are graded against **independent** in-harness references
+(`referenceDeltaE00` = Sharma CIEDE2000; `referenceDeutanProjected` = Viénot-1999), never the product metric.
+
+| AC | Test | Given (checked before the When) | When | Then · Rejects |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_ChooseA` | `slotA` null; the picker lists all 5 catalogue samples | choose "Warm Terracotta" as A | `slotA`=Terracotta, `slotB` null; slots render `Slot A: Warm Terracotta` **and** `L 58, C 34, h 42 degrees`. Rejects name-only slot, wrong/absent numbers. |
+| AC-2 | `TestAC02_ChooseB` | `slotA`=Terracotta, `slotB` null | choose "Raw Sienna Light" as B | `slotB`=Sienna + `L 70, C 25, h 60 degrees`; `slotA` **unchanged** (settled control). Rejects B landing in/over A. |
+| AC-3 | `TestAC03_Swap` | A=Terracotta, B=Sienna, statement reads `Lighter by 12` | swap A/B | slots exchanged (`Slot A: Raw Sienna Light`); statement now `Darker by 12` **and** `isNot(Lighter by 12)`. Rejects relabel-only / no-op swap. |
+| AC-4 | `TestAC04_OverallDelta` | `hasBothSlots` (A=Terracotta, B=Sienna) | comparison shown | difference region `delta-E00 13.1` **and** `clearly different`; `deltaE00 closeTo(referenceDeltaE00, 0.1)`. Rejects ΔE76/Euclidean (ΔE76=17.56, 4.5 outside band). *Limited → DIFF-2 control augmentation.* |
+| AC-5 | `TestAC05_Decompose` | `hasBothSlots` (A=Terracotta, B=Sienna) | comparison shown | three lines verbatim `Lighter by 12` / `Less saturated by 9` / `Hue shifted 18 degrees toward yellow` (rendered **and** endpoint). Rejects a\*/b\* Euclidean basis + inverted signs. |
+| AC-6 | `TestAC06_SameHue` | A + B share h 42° (Terracotta / Terracotta Tint) | comparison shown | `hue == 'Same hue'` **and** `isNot('Hue shifted')`; lightness/saturation lines still present (in-test control). Rejects tiny-nonzero-shift + whole-statement suppression. |
+| AC-7 | `TestAC07_ConfusionFlagged` | profile deutan; `hasBothSlots`; normal ΔE00 > 15 (27.99 by ref) | comparison shown | `confusable` true; warning contains `identical` … `different`. Rejects always-warn **only as the AC-8 pair**; confusion-line property grounded in D-5 guards. |
+| AC-8 | `TestAC08_NotConfusable` | profile deutan; off-line pair (Terracotta / Sienna) | comparison shown | `confusable` false; warning `isNot('identical')` after settle. Rejects a hard-wired always-warn detector (control for AC-7). |
+| AC-9 | `TestAC09_SpeakIncludesWarning` | `confusable` true, warning on screen, `utterances` empty | speak whole comparison | exactly **one** utterance containing **both** `identical` (warning) and `Hue shifted` (statement). Rejects: speak nothing / multiple / omit warning / warning-only. |
+| AC-10 | `TestAC10_OpenReadoutA` | `slotA`=Terracotta, not on Readout | open readout for A | Readout screen shown; `Warm Terracotta` under `NameHeader.headerKey`. Control pair with AC-11 (rejects always-opens-A / fixed-sample). |
+| AC-11 | `TestAC11_OpenReadoutB` | `slotB`=Sienna, not on Readout | open readout for B | Readout screen shown; `Raw Sienna Light` under `NameHeader.headerKey`. B half of the AC-10/11 control pair. |
+| AC-12 | `TestAC12_InviteSecond` | `slotA`=Terracotta, `slotB` null | Comparison screen shown | `hasBothSlots` false, `comparison` **null** (no statement words rendered); an **enabled** `Choose sample B` control. Rejects a one-sample statement + the inert shell button. |
+
+#### Red baseline (run-pending)
+
+Every one of the 12 fails **cleanly on an `expect`** (no panic / compile / harness error). Nine fail at the
+COMPARE-3 selection Given precondition (the shell picker lists nothing) — a Given precondition naming the
+phase that builds it. AC-3 (owned COMPARE-5) and AC-10/11 (COMPARE-6) stack on COMPARE-3's selection first;
+AC-3 also stacks DIFF-3's `Lighter by 12` Given. Full table under *Red baseline* below.
+
+#### Augmentations scheduled
+
+| AC test | Limited because | Closed by | Add |
+|---|---|---|---|
+| `TestAC04` | one sample pair cannot prove the verdict *tracks* distance (a constant `clearly different` would pass) | **DIFF-2** | a near-identical control pair asserting a **different** verdict band |
+
+One open augmentation. Every behaviour phase also re-asks whether its new behaviour lets an already-green AC
+test assert more, and adds rows then.
+
+#### Reviewer — look here first
+
+1. **AC-4 `delta-E00 13.1`** — this literal is the resolved **G-4** value (the spec's old "14.2" was the
+   error; the stated LCh pair computes CIEDE2000 ≈ 13.05). Confirm the correction is what you intended.
+2. **AC-7/AC-9 confusion pair** — the resolved **G-5** rename: B = "Terre Verte Shadow" (green earth), not
+   the old "Ultramarine Shadow" (the brown/blue pair was *not* confusable under any dichromacy). The deutan
+   confusion-line property is asserted independently in the D-5 guard group, not against the product.
+3. **AC-4 as a control pair with its DIFF-2 augmentation**, and **AC-7/AC-8** + **AC-10/AC-11** judged as
+   control pairs for G5 — confirm you accept pair-based discrimination (same pattern throughout).
+4. **Independence of the references** — `referenceDeltaE00` (Sharma) and `referenceDeutanProjected` (Viénot)
+   are standalone in the harness and never import the product math, so AC-4/AC-7 don't grade the impl
+   against itself.
+
+**Decision:** `/feature-next-phase --gate bs-03-relative-comparison G-3 approved` to unblock the behaviour
+stage (COMPARE-3 first), or `--gate … G-3 "<changes>"` to request test changes (each becomes an ITEST change
+phase, then a fresh review).
+
+### Checkpoint / Handoff
+
+**Awaiting the human G-3 decision.** Nothing is frozen or unfrozen by this phase; it changed only plan files
+(this packet + status). On **approve**, G-3 flips resolved and this phase to ✅ Done, and the behaviour stage
+opens: **COMPARE-3** (AC-1, AC-2, AC-12) is the first startable behaviour phase and unblocks all selection
+Givens; COMPARE-6 / DIFF-2 / CVD-2 then run in parallel per the graph. On **changes requested**, each item
+becomes an `ITEST` change phase before the behaviour stage, followed by a fresh review.
+
+**Verification commands** (unchanged; `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze`
+· `flutter test --coverage` · `dart run tool/coverage_gate.dart <base>` · default + run-pending integration
+(`--dart-define=BS03_RUN_PENDING=true`). Integration uses the shared exclusive lane
+(`coord.sh lock-acquire/‑release`, or `with-lock … -- bash -c "cd <worktree> && flutter test …"`).
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
