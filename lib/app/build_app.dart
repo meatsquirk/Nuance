@@ -22,6 +22,7 @@ import '../recipes/engine/subtractive_engine.dart';
 import '../recipes/palette_source.dart';
 import '../recipes/recipe_controller.dart';
 import '../recipes/recipe_read_endpoint.dart';
+import '../recipes/recipes_screen.dart';
 import 'router.dart';
 
 /// The sample the shipped bs-01 app opens the Readout screen on.
@@ -419,11 +420,10 @@ class _ComparisonHomeScreenState extends State<ComparisonHomeScreen> {
 /// renders the carried target even when pushed outside an [AppScope] (bs-01's
 /// AC-11 handoff test), symmetric to [ComparisonHomeScreen].
 ///
-/// This RECIPE-2 shell renders the target's name under a "Recipes" app bar —
-/// enough to keep bs-01's AC-11 handoff green. SCREEN-1 replaces the body with
-/// the real recipes regions (E22–E25, the recipe list, the gamut banner)
-/// composed over the owned controller; the controller ownership and the read
-/// endpoint stay here.
+/// The body is the [RecipesScreen] — the recipes regions (E22–E25, the recipe
+/// list, the gamut banner) composed over the owned controller (SCREEN-1); the
+/// controller ownership and the read endpoint stay here. Its "Recipes" app bar
+/// and target render keep bs-01's AC-11 handoff green.
 class RecipesHomeScreen extends StatefulWidget {
   /// Creates the recipes home mixing toward [target], over the given seams.
   const RecipesHomeScreen({
@@ -482,10 +482,7 @@ class _RecipesHomeScreenState extends State<RecipesHomeScreen> {
     return RecipeReadEndpoint(
       key: RecipeReadEndpoint.endpointKey,
       controller: _controller,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Recipes')),
-        body: Text('Recipe target: ${widget.target.name ?? '(unnamed)'}'),
-      ),
+      child: RecipesScreen(controller: _controller),
     );
   }
 }
