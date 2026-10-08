@@ -139,16 +139,17 @@ void main() {
       expect(result, isA<Comparison>());
     });
 
-    test('the overall difference is real (DIFF-2); the three LCh lines are '
-        'still DIFF-3 placeholders', () {
+    test('carries the overall difference (DIFF-2) and the three LCh lines '
+        '(DIFF-3)', () {
       final result = compare(sampleA, sampleB);
       // CIEDE2000 ΔE00 for (58,24,30)→(70,12,24) ≈ 12.29.
       expect(result.deltaE00, closeTo(12.29, 0.01));
       expect(result.verdict, 'clearly different');
-      // DIFF-3 fills these; placeholders for now.
-      expect(result.lightness, '');
-      expect(result.saturation, '');
-      expect(result.hue, '');
+      // LCh deltas A→B: L 58→70 (+12); C 38.42→26.83 (−11.59 ≈ −12);
+      // h 51.3°→63.4° (+12°, toward yellow).
+      expect(result.lightness, 'Lighter by 12');
+      expect(result.saturation, 'Less saturated by 12');
+      expect(result.hue, 'Hue shifted 12 degrees toward yellow');
     });
 
     test('deltaE00 over coordinates is the same metric compare uses (CVD-2 '
@@ -238,6 +239,61 @@ void main() {
 
     test('ΔE00 at or above 50 reads "very different"', () {
       expect(verdict((10, 0, 0), (90, 0, 0)), 'very different');
+    });
+  });
+
+  group('compare — LCh decomposition lines (DIFF-3)', () {
+    Comparison compareAt(
+      (double, double, double) x,
+      (double, double, double) y,
+    ) =>
+        compare(at(x.$1, x.$2, x.$3), at(y.$1, y.$2, y.$3));
+
+    group('lightness line — signed ΔL* from A to B (AC-5, AC-6)', () {
+      test('B lighter than A reads "Lighter by n"', () {
+        expect(compareAt((50, 10, 0), (60, 10, 0)).lightness, 'Lighter by 10');
+      });
+      test('B darker than A reads "Darker by n"', () {
+        expect(compareAt((60, 10, 0), (50, 10, 0)).lightness, 'Darker by 10');
+      });
+      test('an unchanged lightness reads "Same lightness" (AC-6)', () {
+        // Same L*, different chroma — only the lightness dimension is unchanged.
+        expect(compareAt((50, 10, 0), (50, 20, 0)).lightness, 'Same lightness');
+      });
+    });
+
+    group('saturation line — signed ΔC*ab from A to B (AC-5, AC-6)', () {
+      test('B more saturated than A reads "More saturated by n"', () {
+        expect(
+            compareAt((50, 10, 0), (50, 20, 0)).saturation, 'More saturated by 10');
+      });
+      test('B less saturated than A reads "Less saturated by n"', () {
+        expect(
+            compareAt((50, 20, 0), (50, 10, 0)).saturation, 'Less saturated by 10');
+      });
+      test('an unchanged chroma reads "Same saturation" (AC-6)', () {
+        // C*ab = 10 for both (a=10,b=0) and (a=0,b=10); only the hue differs.
+        expect(
+            compareAt((50, 10, 0), (50, 0, 10)).saturation, 'Same saturation');
+      });
+    });
+
+    group('hue line — signed Δh° toward B\'s family (AC-5, AC-6)', () {
+      test('a shift names the magnitude and B\'s hue family', () {
+        // h 0° (red) → 90° (yellow): a +90° rotation toward yellow.
+        expect(compareAt((50, 10, 0), (50, 0, 10)).hue,
+            'Hue shifted 90 degrees toward yellow');
+      });
+      test('the shortest rotation wraps past 360° (the long-way fold)', () {
+        // h 10° → 350°: the long way is +340°, folded to the shortest −20°; the
+        // magnitude is 20° and B's hue (350°) is in the red family.
+        expect(compareAt((50, 9.848, 1.736), (50, 9.848, -1.736)).hue,
+            'Hue shifted 20 degrees toward red');
+      });
+      test('an unchanged hue reads "Same hue" (AC-6)', () {
+        // Same hue angle (0°), different lightness — only the hue is unchanged.
+        expect(compareAt((50, 10, 0), (60, 10, 0)).hue, 'Same hue');
+      });
     });
   });
 }

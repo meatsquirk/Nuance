@@ -87,13 +87,16 @@ void main() {
     // Un-pended by the behaviour phases so far: COMPARE-3 un-pended AC-1, AC-2
     // and AC-12 (selection + slot render + invite); COMPARE-6 un-pended AC-10
     // and AC-11 (open readout for A / B); DIFF-2 un-pended AC-4 (overall ΔE00 +
-    // verdict); CVD-2 un-pended AC-7 and AC-8 (confusion detector + warning
+    // verdict); DIFF-3 un-pended AC-5 and AC-6 (LCh decomposition + unchanged
+    // dimension); CVD-2 un-pended AC-7 and AC-8 (confusion detector + warning
     // region). This set grows one behaviour phase at a time as each un-pends
     // its AC.
     const unpended = <String>{
       'AC-1',
       'AC-2',
       'AC-4',
+      'AC-5',
+      'AC-6',
       'AC-7',
       'AC-8',
       'AC-10',

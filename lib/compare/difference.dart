@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import '../color_science/conversions.dart';
+import '../color_science/words.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/sample.dart';
 
@@ -15,8 +17,10 @@ import '../domain/sample.dart';
 /// `decompose`, which is unchanged.
 ///
 /// DIFF-2 fills the overall difference — the CIEDE2000 [_deltaE00] and its
-/// plain-language [_verdictBand] (AC-4). The three LCh dimension lines remain
-/// DIFF-3 placeholders (AC-5, AC-6).
+/// plain-language [_verdictBand] (AC-4). DIFF-3 fills the three LCh dimension
+/// lines — [_lightnessLine], [_saturationLine] and [_hueLine] (AC-5, AC-6) —
+/// each a signed, rounded delta expressed as a direction and magnitude, or
+/// "Same …" when the rounded delta is zero.
 
 /// The relational comparison of two [Sample]s.
 ///
@@ -72,8 +76,10 @@ class Comparison {
 /// Compares sample [a] against sample [b], returning their overall difference
 /// and relational decomposition (AC-4, AC-5, AC-6).
 ///
-/// The overall [Comparison.deltaE00] / [Comparison.verdict] are real (DIFF-2);
-/// the three LCh lines are DIFF-3 placeholders until that phase lands.
+/// Every line reads from [a] **to** [b]: the overall [Comparison.deltaE00] /
+/// [Comparison.verdict] (DIFF-2) and the three LCh lines [Comparison.lightness]
+/// / [Comparison.saturation] / [Comparison.hue] (DIFF-3) all describe how [b]
+/// differs from [a].
 Comparison compare(Sample a, Sample b) {
   final delta = _deltaE00(a, b);
   return Comparison(
@@ -215,13 +221,55 @@ double _ciede2000(ColorCoordinates x, ColorCoordinates y) {
       termL * termL + termC * termC + termH * termH + rt * termC * termH);
 }
 
-/// The LCh lightness line, ΔL\* in words (D-3). Stub — filled by DIFF-3 (AC-5).
-String _lightnessLine(Sample a, Sample b) => '';
+/// The LCh lightness line, signed rounded ΔL\* from [a] to [b] in words (D-3;
+/// AC-5, AC-6).
+///
+/// A positive delta reads "Lighter by n", a negative one "Darker by n", and a
+/// rounded zero "Same lightness" (AC-6). The L\* values are bs-01's [labToCielch]
+/// lightness, so the line agrees with the slot readings.
+String _lightnessLine(Sample a, Sample b) {
+  final n = (labToCielch(b.coordinates).lightness -
+          labToCielch(a.coordinates).lightness)
+      .round();
+  if (n > 0) return 'Lighter by $n';
+  if (n < 0) return 'Darker by ${-n}';
+  return 'Same lightness';
+}
 
-/// The LCh saturation line, ΔC\*ab in words (D-3). Stub — filled by DIFF-3
-/// (AC-5).
-String _saturationLine(Sample a, Sample b) => '';
+/// The LCh saturation line, signed rounded ΔC\*ab from [a] to [b] in words (D-3;
+/// AC-5, AC-6).
+///
+/// A positive delta reads "More saturated by n", a negative one "Less saturated
+/// by n", and a rounded zero "Same saturation" (AC-6). The chroma is bs-01's
+/// [labToCielch] C\*ab, so the line agrees with the slot readings.
+String _saturationLine(Sample a, Sample b) {
+  final n =
+      (labToCielch(b.coordinates).chroma - labToCielch(a.coordinates).chroma)
+          .round();
+  if (n > 0) return 'More saturated by $n';
+  if (n < 0) return 'Less saturated by ${-n}';
+  return 'Same saturation';
+}
 
-/// The LCh hue line, Δh° in words with a direction family (D-3). Stub — filled
-/// by DIFF-3 (AC-5, AC-6).
-String _hueLine(Sample a, Sample b) => '';
+/// The LCh hue line, the signed rounded Δh° from [a] to [b] in words with a
+/// direction family (D-3; AC-5, AC-6).
+///
+/// The rounded magnitude of the shortest signed rotation from [a]'s hue to
+/// [b]'s is stated in degrees "toward `<family>`", where the family is the
+/// perceptual hue family of [b]'s hue ([hueFamilyWord]) — the direction the hue
+/// is heading. A rounded-zero rotation reads "Same hue" (AC-6).
+String _hueLine(Sample a, Sample b) {
+  final hueA = labToCielch(a.coordinates).hue;
+  final hueB = labToCielch(b.coordinates).hue;
+  final n = _signedHueDelta(hueA, hueB).abs().round();
+  if (n == 0) return 'Same hue';
+  return 'Hue shifted $n degrees toward ${hueFamilyWord(hueB)}';
+}
+
+/// The shortest signed rotation (degrees, in (−180, 180]) from hue [a] to hue
+/// [b]. Dart's `%` yields a non-negative remainder, so [diff] lands in [0, 360);
+/// a value past 180° is the long way round and folds to its negative complement.
+double _signedHueDelta(double a, double b) {
+  final diff = (b - a) % 360.0;
+  return diff > 180.0 ? diff - 360.0 : diff;
+}

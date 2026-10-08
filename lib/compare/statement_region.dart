@@ -10,9 +10,9 @@ import 'comparison_controller.dart';
 /// With no reading yet (either slot empty ⇒ [ComparisonController.state]'s
 /// [comparison] is null) this states no relational line and instead invites the
 /// painter to choose a second sample (AC-12) — the enabled choose-sample-B
-/// control lives in the slots region. Once both slots are set, DIFF-3 fills the
-/// three decomposition lines from the derived [comparison]; this phase renders a
-/// labelled placeholder for that case so the layout stays fixed.
+/// control lives in the slots region. Once both slots are set it states the
+/// three decomposition lines — lightness, saturation and hue — from the derived
+/// [comparison] (AC-5, AC-6).
 class StatementRegion extends StatelessWidget {
   const StatementRegion({required this.controller, super.key});
 
@@ -34,9 +34,13 @@ class StatementRegion extends StatelessWidget {
           // No second sample yet: no relational statement, an invite instead
           // (AC-12). The choose-sample-B affordance is the slots region's.
           const Text('Choose a second sample to compare.')
-        else
-          // Both slots set; DIFF-3 fills the three decomposition lines here.
-          const Text('—'),
+        else ...[
+          // Both slots set: the lightness / saturation / hue decomposition,
+          // each stating its direction and magnitude or "Same …" (AC-5, AC-6).
+          Text(comparison.lightness),
+          Text(comparison.saturation),
+          Text(comparison.hue),
+        ],
       ],
     );
   }

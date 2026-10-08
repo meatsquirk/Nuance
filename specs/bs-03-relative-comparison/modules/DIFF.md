@@ -1,6 +1,6 @@
 # Module DIFF — comparison color-science
 
-**Status:** In progress
+**Status:** ✅ Done (DIFF-1 shell, DIFF-2 AC-4, DIFF-3 AC-5/AC-6)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/compare/difference.dart` (ΔE00, verdict, the `Comparison` / `RelationalStatement`
 value types, the LCh decomposition). Reuses bs-01's `lib/color_science/words.dart` (`hueFamilyWord`) and
@@ -14,7 +14,7 @@ comparison-difference regions in SCREEN
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 2,538,094 | 6m 48s |
 | 2 | behavior | AC-4 | ✅ Done | 12,157,763 | 31m 40s |
-| 3 | behavior | AC-5, AC-6 | ⬜ Todo | | |
+| 3 | behavior | AC-5, AC-6 | ✅ Done | 7,471,205 | 15m 32s |
 
 ## Interface reconciliation
 
@@ -181,6 +181,64 @@ complement set in `comparison_test.dart` updated) and made the pre-seeded augmen
   dimension); `TestAC05_Decompose` and `TestAC06_SameHue` green run-pending; earlier ACs green.
 - **Acceptance gate:** un-pend AC-5, AC-6; suite green for those tests and all earlier ACs.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Filled the three LCh decomposition lines in `lib/compare/difference.dart`:
+`_lightnessLine` (signed rounded ΔL\* → "Lighter/Darker by n" / "Same lightness"),
+`_saturationLine` (signed rounded ΔC\*ab → "More/Less saturated by n" / "Same
+saturation"), `_hueLine` (shortest signed rounded Δh° → "Hue shifted n degrees
+toward <family>" with `hueFamilyWord` of B's hue / "Same hue"). Each reads L/C/h
+via bs-01's `labToCielch`, so the lines agree with the slot readings. A private
+`_signedHueDelta` folds the Dart `%` remainder ([0,360)) onto the shortest
+(−180,180] rotation. Rendered the three lines in `statement_region.dart`'s
+both-slots branch (the empty-B invite branch is untouched). Un-pended AC-5/AC-6.
+
+- **Un-pended:** AC-5, AC-6 (`bs03/pending.dart` rows removed **and** `'AC-5'`/
+  `'AC-6'` added to the `unpended` complement set in `comparison_test.dart`).
+- **Unit gate:** `flutter test` 295 green (+? from 294 baseline; +9 new LCh-line
+  cases). `flutter analyze` clean (one doc-comment `<family>` HTML lint fixed
+  before the gate run — backticked). **Coverage:** `dart run
+  tool/coverage_gate.dart main` → 100% line on all 15 touched `lib/` files; the
+  new unit group in `test/compare/difference_test.dart` exercises both signs and
+  the "Same" branch of each dimension, plus the `_signedHueDelta` wrap fold.
+- **Acceptance gate:** default `flutter test integration_test/comparison_test.dart`
+  → **All tests passed (+24 ~2)** — AC-5/AC-6 now run and pass; only AC-3
+  (COMPARE-5) and AC-9 (CVD-3) skipped pending. Run-pending
+  (`--dart-define=BS03_RUN_PENDING=true`) → **+24 −2**: AC-5/AC-6 green, red
+  baseline held by exactly AC-3 and AC-9. iOS sim (iPhone 17), verify lock.
+- **Grade gate:** AC-5 **A**, AC-6 **A**; the eight neighbours (AC-1/2/4/7/8/10/
+  11/12) re-confirmed A, no neighbour regrade. **10×A, 0×B**, independent fresh
+  grader; grid appended to `behavior-test-completeness-bs-03-relative-comparison.md`.
+- **Augmentations / exclusions:** none made, none newly enabled; no coverage
+  exclusions.
+- **Fix passes:** 0/3 (gates passed first full run; the one doc-comment lint was
+  fixed before the gate loop). **Tokens / Time:** 7,471,205 / 15m 32s.
+
+### Checkpoint / Handoff
+
+- **Frozen for consumers:** `compare(a, b)` now returns real `.lightness` /
+  `.saturation` / `.hue` lines (strings), each A→B, alongside the DIFF-2
+  `.deltaE00` / `.verdict`. `StatementRegion` renders the three lines when both
+  slots are set, the AC-12 invite when a slot is empty. The hue direction word is
+  `hueFamilyWord` of **B's** hue; magnitudes are rounded integers.
+- **For COMPARE-5 (AC-3 swap + re-express):** swapping A/B must re-run `compare`
+  so the statement flips direction — "Lighter by 12" ↔ "Darker by 12", hue family
+  re-evaluated toward the new B. Do not re-author the line strings; read them from
+  the re-derived `comparison`. COMPARE-5 owns the swap wiring (controller +
+  actions/slots), not `difference.dart`.
+- **For CVD-3 (AC-9 speak whole comparison):** reuse the exposed
+  `comparison.lightness/saturation/hue` (and DIFF-2's `.deltaE00/.verdict`) plus
+  `confusionWarningMessage` for the spoken output — do not re-derive any line.
+- **Verification commands** (export PATH first —
+  `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+  `flutter test --coverage` · `dart run tool/coverage_gate.dart main` ·
+  integration on the iOS sim under the verify lock:
+  `flutter test integration_test/` (default) and
+  `flutter test integration_test/comparison_test.dart --dart-define=BS03_RUN_PENDING=true`
+  (run-pending), `-d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Known gaps:** AC-3 (COMPARE-5), AC-9 (CVD-3) still pending — the only two red
+  at the run-pending baseline. Carry-over bs-01 const-ctor coverage flake — re-run
+  `--coverage` once if an untouched file flags.
+- **Next:** COMPARE-5 (AC-3 swap) and CVD-3 (AC-9 speak) are both startable now
+  (DIFF-3 and CVD-2 are done). They may share `actions_bar.dart`; run in separate
+  sessions. Then SIGNOFF-1.

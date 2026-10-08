@@ -238,8 +238,8 @@ void main() {
       expect(find.text('Choose a second sample to compare.'), findsOneWidget);
     });
 
-    testWidgets('with both slots set the statement shows the DIFF-3 placeholder',
-        (tester) async {
+    testWidgets('with both slots set the statement shows the three LCh lines '
+        '(AC-5)', (tester) async {
       final controller = _controller(initialA: _sampleA, initialB: _sampleB);
       addTearDown(controller.dispose);
       await tester.pumpWidget(
@@ -248,8 +248,12 @@ void main() {
         ),
       );
 
+      // Warm Terracotta → Raw Sienna Light decomposes A→B (DIFF-3).
       expect(find.text('Relational statement'), findsOneWidget);
-      expect(find.text('—'), findsOneWidget);
+      expect(find.text('Lighter by 12'), findsOneWidget);
+      expect(find.text('Less saturated by 9'), findsOneWidget);
+      expect(find.text('Hue shifted 18 degrees toward yellow'), findsOneWidget);
+      expect(find.text('—'), findsNothing);
       expect(find.text('Choose a second sample to compare.'), findsNothing);
     });
   });
