@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** In progress — next SIGNOFF-1 (last phase). All 12 ACs delivered, un-pended and green; behaviour stage complete (CVD-3 done: AC-9, 12×A). All modules (DIFF/CVD/COMPARE/SCREEN/ITEST) done. G-3/G-4/G-5 resolved.
+**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet assembled ([signoff/round-1.md](signoff/round-1.md)). All 12 ACs green (12×A/0×B, fresh re-grade); full verification green (analyze clean; unit 303; coverage 100% 772/772; integration 43/43 default ≡ run-pending). No open gates/augmentations. A human records the decision; the agent never approves.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -204,24 +204,21 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 14 | DIFF-3 | behavior: AC-5, AC-6 — relational decomposition + "Same …" + statement region | ✅ Done | 7,471,205 | 15m 32s | AC-5/AC-6 un-pended + green (iOS sim); unit 295, cov 100% touched, default integ +24~2 / run-pending red baseline held (only AC-3/AC-9); 10×A, no neighbour regrade; 0/3 fixes |
 | 15 | COMPARE-5 | behavior: AC-3 — swap A/B + re-express | ✅ Done | 7,118,335 | 18m 43s | AC-3 un-pended + green (iOS sim); unit 297, cov 100% touched, default integ 42 pass/1 pending (only AC-9) / run-pending red baseline held (only AC-9); 11×A, no neighbour regrade; 0/3 fixes; COMPARE module complete |
 | 16 | CVD-3 | behavior: AC-9 — speak whole comparison incl. warning | ✅ Done | 11,092,874 | 20m 52s | AC-9 un-pended + green (iPhone 17 sim); unit 303, cov 100% touched, integ 43 pass/0 pending (all 12 ACs delivered); grades 12×A, no neighbour regrade; 0/3 fixes; CVD module + behaviour stage complete |
-| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | all 12 ACs delivered, un-pended and green; behaviour stage complete |
+| 17 | SIGNOFF-1 | sign-off: packet + manual approval | ✅ Done | 7,688,528 | 21m 34s (21m 34s) | packet + cost report + fresh re-grade assembled; full verification green (analyze clean; unit 303/0; coverage 100% 772/772 across 40 files; integration 43/43 default ≡ run-pending); 12×A/0×B; TestAC04 augmentation row closed; **awaiting human sign-off** |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**CVD-3 done — the whole behaviour stage is complete.** AC-9 is un-pended and green: the E6 "Speak whole
-comparison" control drives `ComparisonController.speak()` → `comparisonSpeech(state)` (overall difference + the
-three LCh lines + `confusionWarningMessage` when confusable), one utterance through the injected `Speech`.
-All 12 ACs are now delivered, un-pended and green (integration 43 pass / 0 pending); grades 12×A, no neighbour
-regrade. Every module (DIFF/CVD/COMPARE/SCREEN/ITEST) is done.
-- **Startable now:** **SIGNOFF-1** — the sign-off packet + summary page; a human records the decision
-  (`references/signoff.md`). The agent never approves.
-- Nothing runs concurrently (it is the last phase). No carried blockers.
-
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` (auto-picks
-SIGNOFF-1) or name it: `/feature-next-phase bs-03-relative-comparison SIGNOFF-1`.
+**SIGNOFF-1 packet assembled — awaiting the human decision.** [signoff/round-1.md](signoff/round-1.md) is
+ready: full verification green (analyze clean; unit 303/0; coverage gate PASS + whole-lib 772/772 = 100% over
+40 files; integration 43/43 in default and run-pending, identical), an independent fresh re-grade of all 12
+ACs at 12×A/0×B, the TestAC04 augmentation row closed, no open gates/augmentations/non-A grades. Cost report:
+[signoff/cost-per-ac-round-1.md](signoff/cost-per-ac-round-1.md).
+- **Next:** a human reviews the packet and records the decision. The agent never approves.
+- Record it (fresh session, after `/clear`): `/feature-next-phase --signoff bs-03-relative-comparison approved`
+  — or `… changes "<items>"` to open a SIGNOFF-2 round. On approval the feature is Done.
 
 ## Token usage
 
@@ -252,10 +249,11 @@ SIGNOFF-1) or name it: `/feature-next-phase bs-03-relative-comparison SIGNOFF-1`
 | DIFF-3 | 3bfb8457 | 2026-10-08 08:59 EDT | 09:14 | 15m 32s | 15m 32s | claude-opus-4-8 | 142 | 248,215 | 7,184,041 | 38,807 | 7,471,205 | AC-5, AC-6 un-pended + green (iOS sim); unit 295, coverage 100% on touched files, default integ +24~2 / run-pending red baseline held (only AC-3/AC-9); grades 10×A, no neighbour regrade; 0/3 fixes |
 | COMPARE-5 | 9d46b777 | 2026-10-08 09:27 EDT | 09:45 | 18m 43s | 18m 43s | claude-opus-4-8 | 140 | 225,278 | 6,859,939 | 32,978 | 7,118,335 | AC-3 un-pended + green (iOS sim); unit 297, coverage 100% on touched files, default integ 42 pass/1 pending (only AC-9) / run-pending red baseline held (only AC-9); grades 11×A, no neighbour regrade; 0/3 fixes; COMPARE module complete |
 | CVD-3 | f388d0f9 | 2026-10-08 09:56 EDT | 10:17 | 20m 52s | 20m 52s | claude-opus-4-8 | 190 | 300,531 | 10,747,410 | 44,743 | 11,092,874 | AC-9 un-pended + green (iPhone 17 sim); unit 303, cov 100% touched, integ 43 pass/0 pending (all 12 ACs delivered); grades 12×A, no neighbour regrade; 0/3 fixes; CVD module + behaviour stage complete |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 10:17** | **15h 21m** | **5h 37m** |  | **2,324** | **4,048,018** | **136,172,035** | **997,387** | **141,219,764** |  |
+| SIGNOFF-1 | 803267ae | 2026-10-08 10:23 EDT | 10:45 | 21m 34s | 21m 34s | claude-opus-4-8 | 134 | 247,225 | 7,397,008 | 44,161 | 7,688,528 | sign-off packet assembled; full verification green (analyze clean; unit 303; coverage gate PASS + whole-lib 772/772 100%; integration 43 pass/0 skip default and run-pending identical); fresh re-grade 12×A/0×B gate PASS; awaiting human decision |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 10:45** | **15h 42m** | **5h 58m** |  | **2,458** | **4,295,243** | **143,569,043** | **1,041,548** | **148,908,292** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | — | — | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `44da743` (CVD-3) | 12×A, 0×B (fresh re-grade 2026-10-08) | ⏸ Awaiting (owner Matt Quirk) |

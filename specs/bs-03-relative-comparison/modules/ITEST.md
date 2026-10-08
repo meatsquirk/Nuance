@@ -428,4 +428,4 @@ becomes an `ITEST` change phase before the behaviour stage, followed by a fresh 
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC04 | one sample pair at write time cannot show the verdict tracks distance (a constant verdict string would pass) | DIFF-2 | a near-identical control pair asserting a **different** verdict band | ⬜ Open |
+| TestAC04 | one sample pair at write time cannot show the verdict tracks distance (a constant verdict string would pass) | DIFF-2 | a near-identical control pair asserting a **different** verdict band | ✅ Closed by DIFF-2 (2026-10-08): TestAC04 now re-selects the nearer Raw Sienna Light / Terracotta Tint pair (ΔE00 ≈ 6.71 → "slightly different", `isNot('clearly different')`, endpoint verdict + ΔE00 against the independent reference) — a constant verdict string fails. Re-confirmed A at sign-off (SIGNOFF-1 fresh re-grade). |
