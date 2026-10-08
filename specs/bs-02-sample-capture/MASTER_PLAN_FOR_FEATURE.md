@@ -1,7 +1,7 @@
 # Master Plan — Sample capture and sampling (bs-02)
 
 **Spec:** [bs-02-sample-capture.feature](../bs-02-sample-capture.feature)
-**Status:** In progress — all behaviour done (SOURCE + CAPTURE + SCREEN). All 11 ACs green, `pendingACs` empty, whole-suite grid 11×A/0×B. Next SIGNOFF-1 (confirm G-4/G-5 + SCREEN-2 harness change).
+**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet ready ([round 1](signoff/round-1.md)). All 11 ACs green; fresh whole-suite re-grade **19×A/0×B**; unit 324 green + coverage gate PASS (100% touched); cross-feature integration 36 green; acceptance 19 green (default == run-pending). G-4/G-5 + SCREEN-2 infra changes confirmed by Matt Quirk 2026-10-07.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Capture & sampling; NFR accuracy table; D2/D9; Reliability) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Capture screen (S1.R1, E15–E21), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter project (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -155,8 +155,8 @@ coordinate with any live bs-01 nav work.
 | G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line) | CAPTURE-1 | ✅ Resolved 2026-10-06: approved — owner Matt Quirk. Spec first line records approval. |
 | G-2 | dependency | bs-01 shared foundation merged to `main`: Flutter project, `Sample`/`Provenance`, `buildApp`, `Haptics`/`Speech`, color-science (ΔE00 + conversions), coverage-gate tool, `integration_test`, and the Readout screen rendering a sample's name (AC-11 opens it). Carries bs-01 CORE-1's Flutter-SDK-on-machine install. Closed by bs-01 sign-off (or at least CORE, A11Y, READOUT shells + name render merged) | CAPTURE-1, all shells | ✅ Resolved 2026-10-06: bs-01 signed off and fast-forward-merged to `main` at c793839 (full foundation incl. Readout name render). |
 | G-3 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-07 07:04 EDT: approved — Matt Quirk. Packet accepted (10×A + AC-6 B-pending-CAPTURE-5); AC-6's deferred strengthening accepted. Behaviour stage un-blocked; ITEST-4 → Done. |
-| G-4 | decision | **Confirm the CAPTURE-3 harness change to the G-3-approved acceptance infra.** CAPTURE-3 changed the shared `givenCaptureOf` to stop at `pumpWidget` instead of `pumpAndSettle`, because the settling counter now advances one step per rendered frame (`_scheduleSettleTick` post-frame callback) and `pumpAndSettle` would drive it straight to STABLE 12/12, so the screen could never be observed at "SETTLING n/12". Re-grade found no un-pended AC test weakened (5×A; AC-9 strengthened). Confirm the render-frame settling model + the harness edit are acceptable (it conflates "pump a frame" with "a camera frame arriving" and touches approved infra). | — (advisory; does not block CAPTURE-4/5/6 or SCREEN-2/3; resolve by SIGNOFF-1) | ⬜ Open — raised by CAPTURE-3 reconcile 2026-10-07. Resolve with `/feature-next-phase --gate bs-02-sample-capture G-4 approved` (or changes). |
-| G-5 | decision | **Confirm the CAPTURE-6 harness change to the G-3-approved acceptance infra.** CAPTURE-6's commit pushes the Readout (opaque) over the Capture route, which puts the still-mounted Capture subtree offstage; the `capture_harness.dart` `controller`/`state` getter was changed to find the read endpoint with `skipOffstage: false` so AC-8/AC-11 can read `lastCommittedSample` **after** the commit navigates (as their tests do). It only broadens the finder (exactly one endpoint ever exists); the fresh re-grade found no un-pended AC test weakened (9×A). Confirm the offstage-observation accommodation is acceptable. | — (advisory; does not block SCREEN-2/3; resolve by SIGNOFF-1) | ⬜ Open — raised by CAPTURE-6 2026-10-07. Resolve with `/feature-next-phase --gate bs-02-sample-capture G-5 approved` (or changes). |
+| G-4 | decision | **Confirm the CAPTURE-3 harness change to the G-3-approved acceptance infra.** CAPTURE-3 changed the shared `givenCaptureOf` to stop at `pumpWidget` instead of `pumpAndSettle`, because the settling counter now advances one step per rendered frame (`_scheduleSettleTick` post-frame callback) and `pumpAndSettle` would drive it straight to STABLE 12/12, so the screen could never be observed at "SETTLING n/12". Re-grade found no un-pended AC test weakened (5×A; AC-9 strengthened). Confirm the render-frame settling model + the harness edit are acceptable (it conflates "pump a frame" with "a camera frame arriving" and touches approved infra). | — (advisory; does not block CAPTURE-4/5/6 or SCREEN-2/3; resolve by SIGNOFF-1) | ✅ Resolved 2026-10-07 23:18 EDT: approved — Matt Quirk. Render-frame settling model accepted; the `givenCaptureOf`→`pumpWidget` edit is what makes "SETTLING n/12" observable. Fresh sign-off re-grade confirms no un-pended AC test weakened (AC-4/AC-5 A). |
+| G-5 | decision | **Confirm the CAPTURE-6 harness change to the G-3-approved acceptance infra.** CAPTURE-6's commit pushes the Readout (opaque) over the Capture route, which puts the still-mounted Capture subtree offstage; the `capture_harness.dart` `controller`/`state` getter was changed to find the read endpoint with `skipOffstage: false` so AC-8/AC-11 can read `lastCommittedSample` **after** the commit navigates (as their tests do). It only broadens the finder (exactly one endpoint ever exists); the fresh re-grade found no un-pended AC test weakened (9×A). Confirm the offstage-observation accommodation is acceptable. | — (advisory; does not block SCREEN-2/3; resolve by SIGNOFF-1) | ✅ Resolved 2026-10-07 23:18 EDT: approved — Matt Quirk. Offstage-observation accommodation accepted; the finder only broadens to read the single read endpoint after the commit navigates. Fresh sign-off re-grade confirms no un-pended AC test weakened (AC-8/AC-11 A). |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -186,32 +186,29 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 14 | CAPTURE-6 | behavior: AC-11 — multi-frame commit + haptic + open Readout | ✅ Done | 14,356,155 | 39m 10s (39m 10s) | AC-11 un-pended green; 9×A re-grade (whole-suite 11×A/0×B); commit averages frames + justCaptured → Readout; harness skipOffstage flag (G-5) |
 | 15 | SCREEN-2 | behavior: AC-1, AC-3 — eyedropper + radius selector + reticle | ✅ Done | 9,046,680 | 17m 44s (17m 44s) | AC-1,3 un-pended green; 11×A re-grade; E18 selector + reticle 8/20/44 + setRadius re-sample |
 | 16 | SCREEN-3 | behavior: AC-10 — value-only grayscale toggle | ✅ Done | 7,377,195 | 15m 52s (15m 53s) | AC-10 un-pended green; 11×A re-grade (whole suite); `pendingACs` empty; toggleValueOnly + grayscale feed + E21 "✓ Value"; coverage 100% on 3 touched lib files; 324 unit + 36 integ green |
-| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | all behaviour done; confirm G-4/G-5 + SCREEN-2 harness change at sign-off |
+| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting | 4,351,302 | 14m 36s (20m 55s) | packet round-1 written; full verification green (unit 324 + cov gate PASS, cross-feature integ 36, acceptance 19 default==run-pending); fresh independent re-grade 19×A/0×B; G-4/G-5 + SCREEN-2 infra changes confirmed by Matt Quirk; awaiting human sign-off decision |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**SCREEN-3 done — all behaviour complete.** AC-10 un-pended green against the real value-only toggle
-(`toggleValueOnly` flips `CaptureState.valueOnly`; the feed greyscales via a saturation-0 `ColorFiltered`
-ancestor of `liveViewKey`; E21 reads "✓ Value"). `pendingACs` is now **empty** — all 11 ACs run live and
-pass; whole-suite grade **11×A, 0×B** (fresh re-grade, no downgrade, no silent weakening).
+**SIGNOFF-1 packet written — awaiting the human sign-off decision.** The whole feature is built and
+verified: all 11 ACs green, `pendingACs` empty, fresh independent whole-suite re-grade **19×A/0×B** (11 AC +
+8 harness/scaffold tests; no downgrade from the SCREEN-3 grid). Full verification from the primary checkout:
+unit **324 green** + coverage gate **PASS** (100% on all touched files); cross-feature integration **36
+green**; acceptance suite **19 green**, default == run-pending (nothing pending).
 
-- **Startable now:** **SIGNOFF-1** — the only remaining phase. Every behaviour phase and every module
-  (SOURCE, CAPTURE, SCREEN, ITEST) is done; nothing else is in flight.
-- **For SIGNOFF-1 — three advisory harness changes to confirm, none blocking:**
-  - **G-4:** CAPTURE-3 changed `givenCaptureOf` to stop at `pumpWidget` (render-frame settling model).
-  - **G-5:** CAPTURE-6 broadened the endpoint finder to `skipOffstage: false` (read `lastCommittedSample`
-    after the commit navigates).
-  - **SCREEN-2:** `whenSelectRadius` retargeted to per-option anchors (`radiusOptionKey`) — a planned,
-    strengthening change (no separate gate id); recorded in SCREEN-2's Result.
-- **One tightening opportunity (not a defect, carried in the grade grid):** AC-10 asserts a `ColorFiltered`
+- **Advisory infra changes — all confirmed by Matt Quirk 2026-10-07 23:18 EDT:** G-4 (`givenCaptureOf` →
+  `pumpWidget`, render-frame settling), G-5 (read endpoint found with `skipOffstage: false` after commit
+  navigates), and the SCREEN-2 `whenSelectRadius` per-option-anchor retarget. All resolved; none blocked.
+- **One documented, non-downgrading residual (carried, not a defect):** AC-10 asserts a `ColorFiltered`
   ancestor over the feed structurally but not the exact saturation-0 matrix — meaningless while the feed is a
   flat-colour placeholder; worth tightening once real frames render (native-camera work, outside bs-02).
-- **Sign-off packet** → `signoff/round-1.md` (currently ⏸ Awaiting); summary page + manual approval.
+- **Nothing else in flight.** Every behaviour phase and every module (SOURCE, CAPTURE, SCREEN, ITEST) done.
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-02-sample-capture` (it will pick SIGNOFF-1).
+Decision, when ready: `/feature-next-phase --signoff bs-02-sample-capture approved` (or
+`changes "<items>"`). The packet is [signoff/round-1.md](signoff/round-1.md).
 
 ## Token usage
 
@@ -240,10 +237,11 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-02-sample-capt
 | CAPTURE-6 | c6cb0c54 | 2026-10-07 18:16 EDT | 18:55 | 39m 10s | 39m 10s | claude-opus-4-8 | 164 | 381,030 | 13,869,282 | 105,679 | 14,356,155 | AC-11 un-pended green; multi-frame commit + commit→Readout handoff; 9×A re-grade (whole-suite 11×A/0×B); coverage 100% on 2 touched lib files; fix passes 1/3 |
 | SCREEN-2 | 7d8f5b62 | 2026-10-07 21:50 EDT | 22:07 | 17m 44s | 17m 44s | claude-opus-4-8 | 158 | 275,897 | 8,724,513 | 46,112 | 9,046,680 | AC-1, AC-3 un-pended green; E18 radius selector + reticle 8/20/44 + setRadius re-sample; 11×A/0×B re-grade; coverage 100% on 16 touched lib files; 321 unit + 35 integ green (AC-10 pending); fix passes 0/3 |
 | SCREEN-3 | 4f467b9f | 2026-10-07 22:37 EDT | 22:53 | 15m 53s | 15m 52s | claude-opus-4-8 | 142 | 250,504 | 7,087,798 | 38,751 | 7,377,195 | AC-10 un-pended green; 11×A/0×B whole-suite re-grade; toggleValueOnly + grayscale feed + E21 '✓ Value'; coverage 100% on 3 touched lib files; 324 unit + 36 integ green; fix passes 0/3 |
-| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 22:53** | **11h 13m** | **7h 26m** |  | **2,618** | **4,490,446** | **197,335,622** | **1,387,276** | **203,215,962** |  |
+| SIGNOFF-1 | d0d02c7f | 2026-10-07 22:59 EDT | 23:20 | 20m 55s | 14m 36s | claude-opus-4-8 | 94 | 228,773 | 4,083,469 | 38,966 | 4,351,302 | packet round-1 written; full verification green (unit 324 + coverage gate PASS, cross-feature integ 36, acceptance 19 default==run-pending); fresh independent re-grade 19xA/0xB; G-4/G-5 + SCREEN-2 infra confirmed (Matt Quirk); awaiting human sign-off |
+| **Feature total** |  | **2026-10-05 15:54 EDT** | **2026-10-07 23:20** | **11h 34m** | **7h 41m** |  | **2,712** | **4,719,219** | **201,419,091** | **1,426,242** | **207,567,264** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | — | — | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | 2404763 | 19×A / 0×B | ⏸ Awaiting |
