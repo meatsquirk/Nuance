@@ -42,7 +42,7 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   // AC-1, AC-2, AC-12 un-pended by COMPARE-3 (selection + slot render + invite).
   'AC-3': 'COMPARE-5', // swap A/B + re-express
-  'AC-4': 'DIFF-2', // overall ΔE00 + plain verdict
+  // AC-4 un-pended by DIFF-2 (overall ΔE00 + plain verdict).
   'AC-5': 'DIFF-3', // lightness/saturation/hue decomposition
   'AC-6': 'DIFF-3', // unchanged dimension → "Same hue"
   'AC-7': 'CVD-2', // confusable pair flagged

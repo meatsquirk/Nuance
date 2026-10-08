@@ -242,6 +242,24 @@ void main() {
     });
   });
 
+  group('DifferenceRegion (DIFF-2)', () {
+    testWidgets('with both slots set it shows ΔE00 and its verdict, not the '
+        'placeholder (AC-4)', (tester) async {
+      final controller = _controller(initialA: _sampleA, initialB: _sampleB);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: DifferenceRegion(controller: controller))),
+      );
+
+      // ΔE00 for Warm Terracotta → Raw Sienna Light ≈ 13.05, shown to one
+      // decimal with its plain verdict band.
+      expect(find.text('Overall difference'), findsOneWidget);
+      expect(find.text('delta-E00 13.1'), findsOneWidget);
+      expect(find.text('clearly different'), findsOneWidget);
+      expect(find.text('—'), findsNothing);
+    });
+  });
+
   group('ComparisonActionsBar', () {
     bool enabled(WidgetTester tester, String label) => tester
         .widget<TextButton>(find.widgetWithText(TextButton, label))

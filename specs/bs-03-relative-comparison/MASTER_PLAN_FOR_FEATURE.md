@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** In progress — next {DIFF-2 ∥ CVD-2}. COMPARE-6 done (AC-10, AC-11 un-pended, green; 5×A). G-3/G-4/G-5 resolved.
+**Status:** In progress — next {CVD-2 ∥ DIFF-3}. DIFF-2 done (AC-4 un-pended, green; 6×A). G-3/G-4/G-5 resolved.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -53,7 +53,7 @@ confusion code, and a saved-sample source are all net-new.
 | AC-1 | The painter chooses sample A from the saved samples | ITEST-2 `TestAC01_ChooseA` | COMPARE-3 | ✅ Done |
 | AC-2 | The painter chooses sample B from the saved samples | ITEST-2 `TestAC02_ChooseB` | COMPARE-3 | ✅ Done |
 | AC-3 | Swapping exchanges the two samples and re-expresses the difference | ITEST-2 `TestAC03_Swap` | COMPARE-5 | ⬜ Todo |
-| AC-4 | The overall difference is stated as a delta-E with a plain verdict | ITEST-3 `TestAC04_OverallDelta` | DIFF-2 | ⬜ Todo |
+| AC-4 | The overall difference is stated as a delta-E with a plain verdict | ITEST-3 `TestAC04_OverallDelta` | DIFF-2 | ✅ Done |
 | AC-5 | The difference is decomposed into lightness, saturation and hue | ITEST-3 `TestAC05_Decompose` | DIFF-3 | ⬜ Todo |
 | AC-6 | A dimension that does not change is stated as unchanged | ITEST-3 `TestAC06_SameHue` | DIFF-3 | ⬜ Todo |
 | AC-7 | A confusable pair is flagged for the painter's CVD type | ITEST-3 `TestAC07_ConfusionFlagged` | CVD-2 | ⬜ Todo |
@@ -199,8 +199,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 9 | ITEST-4 | test-review: packet + G-3 | ✅ Done | 3,360,351 | 10m 59s | packet assembled; regression green (unit 247, acc 14 pass/12 pending); 24×A grid; **G-3 approved 2026-10-08 — Matt Quirk** |
 | 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ✅ Done | 11,695,533 | 22m 21s | AC-1/2/12 un-pended + green; unit 254, cov 100%, acc 34 pass/9 pending; 3×A; 1/3 fixes |
 | 11 | COMPARE-6 | behavior: AC-10, AC-11 — open readout for A / B | ✅ Done | 9,095,859 | 19m 08s | ∥ DIFF-2, CVD-2 |
-| 12 | DIFF-2 | behavior: AC-4 — ΔE00 + plain verdict + overall-difference region | ⬜ Next | | | G-4 resolved; ∥ CVD-2 |
-| 13 | CVD-2 | behavior: AC-7, AC-8 — confusion detector + warning region | ⬜ Todo | | | ∥ COMPARE-6, DIFF-2 |
+| 12 | DIFF-2 | behavior: AC-4 — ΔE00 + plain verdict + overall-difference region | ✅ Done | 12,157,763 | 31m 40s | AC-4 un-pended + green; 6×A; 1/3 fixes |
+| 13 | CVD-2 | behavior: AC-7, AC-8 — confusion detector + warning region | ⬜ Next | | | startable now (disjoint dir) |
 | 14 | DIFF-3 | behavior: AC-5, AC-6 — relational decomposition + "Same …" + statement region | ⬜ Todo | | | after DIFF-2 |
 | 15 | COMPARE-5 | behavior: AC-3 — swap A/B + re-express | ⬜ Todo | | | after DIFF-3 |
 | 16 | CVD-3 | behavior: AC-9 — speak whole comparison incl. warning | ⬜ Todo | | | after DIFF-3, CVD-2 |
@@ -211,18 +211,22 @@ when the row is marked done.
 
 ## Next phase
 
-**COMPARE-6 done — the open-readout handoffs are wired; AC-10/AC-11 un-pended and green.** `AppRouter.toReadout`
-now exists (the COMPARE-2 deviation is closed), and COMPARE (E7/E8) is complete; only COMPARE-5 (swap, AC-3)
-remains in the module, blocked on DIFF-3.
-- **Startable now, in parallel (file-disjoint):** **DIFF-2** (AC-4 — `difference.dart` +
-  `difference_region.dart`), **CVD-2** (AC-7, AC-8 — `confusion_check.dart` + `confusion_region.dart`).
-- **After those:** DIFF-3 (AC-5, AC-6 — `statement_region.dart`, serial after DIFF-2); then {COMPARE-5 ∥ CVD-3}.
-- **DIFF-2** closes the TestAC04 control augmentation (near-identical control pair, different verdict band).
+**DIFF-2 done — the overall difference is real; AC-4 un-pended and green.** `compare` now returns the shipped
+CIEDE2000 ΔE00 + a five-band verdict, rendered as `delta-E00 N` + verdict in `difference_region.dart`. The
+TestAC04 augmentation is closed (nearer control pair reads "slightly different"), AC-4 re-graded clean A.
+- **Startable now, in parallel (file-disjoint):** **CVD-2** (AC-7, AC-8 — `confusion_check.dart` +
+  `confusion_region.dart`) and **DIFF-3** (AC-5, AC-6 — `difference.dart` LCh lines + `statement_region.dart`;
+  DIFF-2 is done so DIFF-3 is now unblocked).
+- **After those:** COMPARE-5 (AC-3 swap — after DIFF-3); CVD-3 (AC-9 speak — after DIFF-3 **and** CVD-2); then
+  SIGNOFF-1.
 - **CVD-2 note:** must make its real detector the app's **shipped default** `AppDependencies.confusionCheck`
   (the harness no longer forces `NoopConfusionCheck`).
+- **Un-pend lesson (DIFF-2 fix pass):** un-pending an AC means **both** deleting its `bs03/pending.dart` row
+  **and** adding it to the `unpended` set in `comparison_test.dart` — the ITEST-1 complement guard fails if
+  only one is done.
 
 Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` (auto-picks the next
-startable) or name one, e.g. `/feature-next-phase bs-03-relative-comparison DIFF-2`. For true parallelism,
+startable) or name one, e.g. `/feature-next-phase bs-03-relative-comparison CVD-2`. For true parallelism,
 run each in its own session with `--parallel`.
 
 ## Token usage
@@ -249,7 +253,8 @@ run each in its own session with `--parallel`.
 | SIGNOFF-DECISION | 4d81ad77 | 2026-10-08 03:57 EDT | 05:16 | 1h 18m | 3m 33s | claude-opus-4-8 | 54 | 106,200 | 1,765,071 | 14,054 | 1,885,379 | ITEST-4 approved |
 | COMPARE-3 | 3c9e4b4b | 2026-10-08 05:33 EDT | 05:56 | 22m 21s | 22m 21s | claude-opus-4-8 | 146 | 301,287 | 11,334,346 | 59,754 | 11,695,533 | AC-1/2/12 un-pended + green; unit 254, cov 100% on 15 touched files, acc 34 pass/9 pending; grades 3×A; 1/3 fixes |
 | COMPARE-6 | 47da8ffc | 2026-10-08 06:02 EDT | 06:21 | 19m 08s | 19m 08s | claude-opus-4-8 | 162 | 232,952 | 8,811,711 | 51,034 | 9,095,859 | AC-10, AC-11 un-pended + green (iOS sim); unit 260 green, coverage 100% touched, 5×A; fix passes 1/3 |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 06:21** | **13h 27m** | **3h 43m** |  | **1,524** | **2,664,288** | **89,126,557** | **739,421** | **92,531,790** |  |
+| DIFF-2 | 0018367c | 2026-10-08 06:29 EDT | 07:01 | 31m 40s | 31m 40s | claude-opus-4-8 | 176 | 297,879 | 11,784,560 | 75,148 | 12,157,763 | AC-4 un-pended + green (iOS sim); unit 272, coverage 100% touched, default integ +37~6 green / run-pending red baseline held; 6×A; 1/3 fixes |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 07:01** | **13h 59m** | **4h 14m** |  | **1,700** | **2,962,167** | **100,911,117** | **814,569** | **104,689,553** |  |
 
 ## Sign-off
 

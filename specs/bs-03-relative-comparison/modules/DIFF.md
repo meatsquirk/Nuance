@@ -13,7 +13,7 @@ comparison-difference regions in SCREEN
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 2,538,094 | 6m 48s |
-| 2 | behavior | AC-4 | ⬜ Todo | | |
+| 2 | behavior | AC-4 | ✅ Done | 12,157,763 | 31m 40s |
 | 3 | behavior | AC-5, AC-6 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -27,13 +27,17 @@ comparison-difference regions in SCREEN
   does not grade the implementation against itself.
 - **Decomposition** is in LCh (D-3): `labToCielch` (bs-01) gives L\*/C\*/h for each sample; the deltas are
   ΔL\*, ΔC\*ab and the signed circular Δh°; the direction word is `hueFamilyWord` of the hue moved toward.
-- **Verdict bands** (D-n in Phase 2): ΔE00 thresholds → plain words ("barely different" / "clearly different"
-  / … ); the exact band edges are set in DIFF-2 and recorded here.
+- **Verdict bands** (DIFF-2): ΔE00 → plain words by ascending exclusive upper bound —
+  `< 1` "no visible difference", `[1, 3)` "barely different", `[3, 10)` "slightly different",
+  `[10, 50)` "clearly different", `≥ 50` "very different" (perceptual guide: ΔE00 ≈ 1 is a JND). AC-4's pair
+  (ΔE00 ≈ 13.05) reads "clearly different"; the DIFF-2 augmentation's nearer control pair (ΔE00 ≈ 6.71) reads
+  "slightly different", proving the verdict tracks distance.
 
 ## Open gates
 
-- **G-4 (spec-data reconciliation)** blocks **DIFF-2**: the expected ΔE00 literal for AC-4 ("14.2" vs the
-  computed ≈ 13.05) must be settled before the overall-difference text can be pinned. See the master plan.
+- **G-4 (spec-data reconciliation)** — ✅ Resolved 2026-10-07 (master plan): option (a), the AC-4 overall is
+  the computed value **"delta-E00 13.1"** (the spec's old 14.2 was the error). DIFF-2 pins it. No open gate
+  blocks this module.
 
 ## Phase 1 — Comparison color-science shell (DIFF-1)
 
@@ -113,9 +117,52 @@ the D-2/D-3 basis on each surface. No real math.
 - **Augments:** `TestAC04`: add a near-identical control pair asserting a **different** verdict band (so a
   constant verdict string fails).
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the real overall difference in `lib/compare/difference.dart`: `_ciede2000` (CIEDE2000, Sharma–Wu–Dalal,
+mirroring the harness's independent `referenceDeltaE00`) behind `_deltaE00(a, b)` over the samples' CIELAB
+coordinates, and a five-band `_verdictBand` (bands recorded in *Interface reconciliation*). Rendered the
+reading in `difference_region.dart`: when both slots are set it shows `delta-E00 N` (ΔE00 to one decimal) +
+the verdict word; otherwise the placeholder. Un-pended AC-4 (`bs03/pending.dart` row deleted + `unpended`
+complement set in `comparison_test.dart` updated) and made the pre-seeded augmentation.
+
+- **Un-pended:** AC-4. **Augmentation made:** `TestAC04` now re-selects a nearer pair (Raw Sienna Light vs
+  Terracotta Tint, ΔE00 ≈ 6.71 → "slightly different") and asserts a *different*, lower verdict band — a
+  constant verdict string now fails (grader-verified it discriminates).
+- **Unit gate:** `flutter test` 272 green (260 → 272, +12). `flutter analyze` clean. **Coverage:** `dart run
+  tool/coverage_gate.dart main` → 100% line on all 15 touched `lib/` files (incl. `difference.dart`,
+  `difference_region.dart`); every ΔE00 branch (C=0 short-circuits, both hue wrap signs, both mean-hue
+  quadrants) and all five verdict bands are exercised by the new unit pairs in `test/compare/difference_test.dart`.
+- **Acceptance gate:** default `flutter test integration_test/` → **All tests passed (+37 ~6)** (6 later-phase
+  ACs skipped pending). Run-pending (`--dart-define=BS03_RUN_PENDING=true`) `comparison_test.dart` → AC-4 +
+  all un-pended ACs green; the 6 unbuilt ACs (AC-3/5/6/7/8/9) hold the red baseline. iOS sim (iPhone 17),
+  verify lock.
+- **Grade gate:** AC-4 **clean A** (no longer "A limited" — augmentation closes the limit); AC-1/2/10/11/12
+  re-confirmed A. **6×A, 0×B**, independent fresh grader; grid appended to
+  `behavior-test-completeness-bs-03-relative-comparison.md`.
+- **Fix passes:** 1/3 — the first full default run surfaced the ITEST-1 pending-gate complement guard failing
+  (AC-4 removed from `pendingACs` but not yet added to the `unpended` set); fixed in one line, re-ran green.
+- **Augmentations / exclusions:** one augmentation (TestAC04) made; no coverage exclusions.
+- **Tokens / Time:** 12,157,763 / 31m 40s.
+
+### Checkpoint / Handoff
+
+- **Frozen for consumers:** `compare(a, b).deltaE00` is the shipped CIEDE2000 ΔE00; `.verdict` is the
+  five-band plain word. The three LCh lines (`lightness`/`saturation`/`hue`) are **still placeholders** until
+  DIFF-3. `DifferenceRegion` renders `delta-E00 N` + verdict when `state.comparison != null`.
+- **For DIFF-3 (same file `lib/compare/difference.dart`):** fill `_lightnessLine` / `_saturationLine` /
+  `_hueLine` (LCh ΔL\*/ΔC\*ab/signed Δh° + `hueFamilyWord`, with the "Same …" zero-delta branch), and render
+  them in `statement_region.dart` (keep COMPARE-3's empty-B invite). DIFF-2 did not touch `statement_region`.
+  Un-pend AC-5/AC-6: delete their rows in `bs03/pending.dart` **and** add `'AC-5'`/`'AC-6'` to the `unpended`
+  set in `comparison_test.dart` (the pending-gate complement guard checks both — see DIFF-2's fix pass).
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration on the
+  iOS sim under the verify lock: `flutter test integration_test/` (default) and
+  `flutter test integration_test/comparison_test.dart --dart-define=BS03_RUN_PENDING=true` (run-pending),
+  `-d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Known gaps:** AC-5/6 (DIFF-3), AC-7/8 (CVD-2), AC-9 (CVD-3), AC-3 (COMPARE-5) still pending. Carry-over
+  bs-01 const-ctor coverage flake — re-run `--coverage` once if an untouched file flags.
+- **Next:** DIFF-3 (AC-5, AC-6; after DIFF-2 — same file) or CVD-2 (AC-7, AC-8; disjoint dir, startable now).
 
 ## Phase 3 — Relational decomposition + unchanged dimension (DIFF-3)
 

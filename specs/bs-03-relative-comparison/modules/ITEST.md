@@ -367,12 +367,12 @@ AC-3 also stacks DIFF-3's `Lighter by 12` Given. Full table under *Red baseline*
 
 #### Augmentations scheduled
 
-| AC test | Limited because | Closed by | Add |
-|---|---|---|---|
-| `TestAC04` | one sample pair cannot prove the verdict *tracks* distance (a constant `clearly different` would pass) | **DIFF-2** | a near-identical control pair asserting a **different** verdict band |
+| AC test | Limited because | Closed by | Add | Status |
+|---|---|---|---|---|
+| `TestAC04` | one sample pair cannot prove the verdict *tracks* distance (a constant `clearly different` would pass) | **DIFF-2** | a near-identical control pair asserting a **different** verdict band | ✅ Closed (DIFF-2 2026-10-08): control pair Sienna vs Terracotta Tint (ΔE00 ≈ 6.71) reads "slightly different"; AC-4 re-graded clean A |
 
-One open augmentation. Every behaviour phase also re-asks whether its new behaviour lets an already-green AC
-test assert more, and adds rows then.
+No open augmentations. Every behaviour phase also re-asks whether its new behaviour lets an already-green AC
+test assert more, and adds rows then. DIFF-2 added none beyond closing this one.
 
 #### Reviewer — look here first
 

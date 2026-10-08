@@ -86,9 +86,17 @@ void main() {
   group('pending gate', () {
     // Un-pended by the behaviour phases so far: COMPARE-3 un-pended AC-1, AC-2
     // and AC-12 (selection + slot render + invite); COMPARE-6 un-pended AC-10
-    // and AC-11 (open readout for A / B). This set grows one behaviour phase at
-    // a time as each un-pends its AC.
-    const unpended = <String>{'AC-1', 'AC-2', 'AC-10', 'AC-11', 'AC-12'};
+    // and AC-11 (open readout for A / B); DIFF-2 un-pended AC-4 (overall ΔE00 +
+    // verdict). This set grows one behaviour phase at a time as each un-pends
+    // its AC.
+    const unpended = <String>{
+      'AC-1',
+      'AC-2',
+      'AC-4',
+      'AC-10',
+      'AC-11',
+      'AC-12',
+    };
 
     test(
       'pending map is the exact complement of the un-pended ACs across all 12, '
@@ -607,6 +615,32 @@ void main() {
     expect(h.state.comparison?.verdict, 'clearly different',
         reason: 'AC-4: the verdict band for this ΔE00 is "clearly different" '
             '(DIFF-2)');
+
+    // Augmentation (DIFF-2): one pair cannot show the verdict *tracks* distance
+    // — a constant "clearly different" would pass the assertions above. A nearer
+    // control pair (Raw Sienna Light vs Terracotta Tint, ΔE00 ≈ 6.7) must read a
+    // *different*, lower verdict band ("slightly different"), so a constant
+    // verdict string now fails.
+    await h.whenChooseA('Raw Sienna Light');
+    await h.whenChooseB('Terracotta Tint');
+    final controlReference = referenceDeltaE00(
+      SAMPLE_B_SIENNA.coordinates,
+      SAMPLE_A_PRIME.coordinates,
+    );
+    final control = _plainTextUnder(tester, DifferenceRegion.regionKey);
+    expect(control, contains('slightly different'),
+        reason: 'AC-4 augmentation: the nearer pair reads the lower band '
+            '"slightly different" — the verdict tracks distance (DIFF-2)');
+    expect(control, isNot(contains('clearly different')),
+        reason: 'AC-4 augmentation: the verdict is not a constant string — it '
+            'changed with the distance (DIFF-2)');
+    expect(h.state.comparison?.verdict, 'slightly different',
+        reason: 'AC-4 augmentation: ΔE00 ≈ '
+            '${controlReference.toStringAsFixed(1)} falls in the band below '
+            '"clearly different" (DIFF-2)');
+    expect(h.state.comparison?.deltaE00, closeTo(controlReference, 0.1),
+        reason: 'AC-4 augmentation: the control ΔE00 matches the independent '
+            'CIEDE2000 reference, not a constant (DIFF-2)');
   });
 
   // AC-5 — The difference decomposes into three LCh lines, each a direction and

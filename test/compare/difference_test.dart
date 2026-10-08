@@ -133,20 +133,101 @@ void main() {
     });
   });
 
-  group('compare (DIFF-1 shell placeholder)', () {
+  group('compare', () {
     test('returns a constructible Comparison from two samples', () {
       final result = compare(sampleA, sampleB);
       expect(result, isA<Comparison>());
     });
 
-    test('placeholder fields are fixed (real math arrives in DIFF-2/DIFF-3)',
-        () {
+    test('the overall difference is real (DIFF-2); the three LCh lines are '
+        'still DIFF-3 placeholders', () {
       final result = compare(sampleA, sampleB);
-      expect(result.deltaE00, 0.0);
-      expect(result.verdict, '');
+      // CIEDE2000 ΔE00 for (58,24,30)→(70,12,24) ≈ 12.29.
+      expect(result.deltaE00, closeTo(12.29, 0.01));
+      expect(result.verdict, 'clearly different');
+      // DIFF-3 fills these; placeholders for now.
       expect(result.lightness, '');
       expect(result.saturation, '');
       expect(result.hue, '');
+    });
+  });
+
+  // One Sample at the given CIELAB coordinates (the DIFF-2 math reads only the
+  // coordinates; name/provenance are immaterial).
+  Sample at(double l, double a, double b) => Sample(
+        coordinates: ColorCoordinates(lightness: l, a: a, b: b),
+        provenance: measured,
+      );
+
+  double delta(
+    (double, double, double) x,
+    (double, double, double) y,
+  ) =>
+      compare(at(x.$1, x.$2, x.$3), at(y.$1, y.$2, y.$3)).deltaE00;
+
+  group('compare — ΔE00 is CIEDE2000 (DIFF-2)', () {
+    // Each pair is checked against an independently computed CIEDE2000 value and
+    // together they exercise every branch of the formula: the two chromatic
+    // samples, the achromatic (C=0) short-circuits, the hue wrap-around on both
+    // signs, and both mean-hue quadrant cases.
+    test('two chromatic samples (no short-circuit, small hue difference)', () {
+      expect(delta((58, 25.27, 22.75), (70, 12.50, 21.65)),
+          closeTo(13.0517, 0.001));
+    });
+
+    test('both samples achromatic (C=0 short-circuits the hue terms)', () {
+      expect(delta((50, 0, 0), (60, 0, 0)), closeTo(9.4706, 0.001));
+    });
+
+    test('one sample achromatic (one C=0, the other chromatic)', () {
+      expect(delta((50, 0, 0), (60, 20, 10)), closeTo(20.5893, 0.001));
+    });
+
+    test('hue difference above +180 with the second hue wrapped past 360', () {
+      // h1p ≈ 14°, h2p ≈ 346° (b<0 → atan2 negative, +360): diff +332 → −28.
+      expect(delta((50, 19.40, 4.84), (50, 19.40, -4.84)),
+          closeTo(6.4296, 0.001));
+    });
+
+    test('hue difference below −180 with the first hue wrapped past 360', () {
+      // h1p ≈ 300° (b<0 → atan2 negative, +360), h2p ≈ 10°: diff −290 → +70.
+      expect(delta((50, 10.0, -17.32), (50, 19.70, 3.47)),
+          closeTo(16.1313, 0.001));
+    });
+
+    test('is symmetric in its two arguments', () {
+      expect(delta((58, 25.27, 22.75), (70, 12.50, 21.65)),
+          closeTo(delta((70, 12.50, 21.65), (58, 25.27, 22.75)), 1e-9));
+    });
+  });
+
+  group('compare — the verdict band tracks the distance (DIFF-2)', () {
+    String verdict(
+      (double, double, double) x,
+      (double, double, double) y,
+    ) =>
+        compare(at(x.$1, x.$2, x.$3), at(y.$1, y.$2, y.$3)).verdict;
+
+    test('ΔE00 below 1 reads "no visible difference"', () {
+      expect(verdict((50, 0, 0), (50.5, 0, 0)), 'no visible difference');
+    });
+
+    test('ΔE00 in [1, 3) reads "barely different"', () {
+      expect(verdict((50, 0, 0), (52, 0, 0)), 'barely different');
+    });
+
+    test('ΔE00 in [3, 10) reads "slightly different"', () {
+      expect(verdict((70, 12.50, 21.65), (70, 18.58, 16.73)),
+          'slightly different');
+    });
+
+    test('ΔE00 in [10, 50) reads "clearly different"', () {
+      expect(verdict((58, 25.27, 22.75), (70, 12.50, 21.65)),
+          'clearly different');
+    });
+
+    test('ΔE00 at or above 50 reads "very different"', () {
+      expect(verdict((10, 0, 0), (90, 0, 0)), 'very different');
     });
   });
 }
