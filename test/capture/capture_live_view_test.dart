@@ -76,6 +76,43 @@ void main() {
     expect(text.data, contains('Low light'));
   });
 
+  testWidgets('renders the feed in colour (no filter) while value-only is off '
+      '(AC-10)', (tester) async {
+    await tester.pumpWidget(_host(const CaptureState()));
+
+    // No saturation filter sits over the feed surface while in colour.
+    expect(
+      find.ancestor(
+        of: find.byKey(CaptureLiveView.liveViewKey),
+        matching: find.byType(ColorFiltered),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('wraps the feed in a grayscale ColorFiltered while value-only is '
+      'on (AC-10)', (tester) async {
+    await tester.pumpWidget(_host(const CaptureState(valueOnly: true)));
+
+    // The feed surface is wrapped in a ColorFiltered so it renders grayscale;
+    // the overlaid readings (laid beside it in the Stack) are not.
+    expect(
+      find.ancestor(
+        of: find.byKey(CaptureLiveView.liveViewKey),
+        matching: find.byType(ColorFiltered),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.byKey(CaptureLiveView.stabilityKey),
+        matching: find.byType(ColorFiltered),
+      ),
+      findsNothing,
+      reason: 'the text readings stay in colour, only the feed is grayscaled',
+    );
+  });
+
   test('exposes stable keys', () {
     expect(CaptureLiveView.liveViewKey, const ValueKey('capture-live-view'));
     expect(

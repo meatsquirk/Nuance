@@ -124,27 +124,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('wires E21 to its (still-deferred) controller action',
-      (tester) async {
+  testWidgets('wires E21 to the live value-only toggle and flips its label '
+      '(SCREEN-3, AC-10)', (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
-    await _pump(tester, controller);
+    await _pumpListening(tester, controller);
 
-    // E21 (value-only) is the one control whose behaviour is still deferred — a
-    // tap surfaces its owning phase's (SCREEN-3) UnimplementedError. (E16 lock
-    // is live as of CAPTURE-3, E15 dismiss + E20 capture as of CAPTURE-4, E17
-    // calibrate as of CAPTURE-5 — all asserted separately below.)
+    // E21 (value-only) is wired and live as of SCREEN-3 — a tap drives the
+    // toggle and raises no deferred throw. (E16 lock is live as of CAPTURE-3,
+    // E15 dismiss + E20 capture as of CAPTURE-4, E17 calibrate as of CAPTURE-5.)
     final button =
         tester.widget<TextButton>(find.byKey(CaptureControls.valueOnlyKey));
     expect(button.onPressed, isNotNull, reason: 'E21 should be wired');
 
+    // Off: reads "Value".
+    Text label() => tester.widget<Text>(find.descendant(
+        of: find.byKey(CaptureControls.valueOnlyKey), matching: find.byType(Text)));
+    expect(label().data, 'Value');
+
+    // Tapping turns value-only on and flips the label to "✓ Value".
     await tester.tap(find.byKey(CaptureControls.valueOnlyKey));
     await tester.pump();
-    expect(
-      tester.takeException(),
-      isA<UnimplementedError>(),
-      reason: 'E21 should reach the deferred controller action',
-    );
+    expect(tester.takeException(), isNull,
+        reason: 'E21 reaches live behaviour, not a deferred throw');
+    expect(controller.state.valueOnly, isTrue);
+    expect(label().data, '✓ Value');
+
+    // Tapping again turns it off and restores "Value".
+    await tester.tap(find.byKey(CaptureControls.valueOnlyKey));
+    await tester.pump();
+    expect(controller.state.valueOnly, isFalse);
+    expect(label().data, 'Value');
   });
 
   testWidgets(

@@ -79,38 +79,33 @@ void main() {
   );
 
   group('pending gate', () {
-    // The owner of each AC is the phase whose acceptance gate un-pends it,
-    // matching ITEST's red-baseline *Owning phase* column. Pinned exactly so a
-    // typo'd id, a missing AC, a stray AC or a re-owned AC fails this test
-    // rather than passing vacuously. AC-1 is absent: it was un-pended at ITEST-2
-    // as green at baseline (its always-running test is below). AC-2 is absent:
-    // SOURCE-2 un-pended it. AC-3 is absent: SCREEN-2 un-pended it. AC-9 is
-    // absent: SOURCE-3 un-pended it. AC-4 and AC-5 are absent: CAPTURE-3
-    // un-pended them. AC-6 and AC-7 are absent: CAPTURE-4 un-pended them. AC-8
-    // is absent: CAPTURE-5 un-pended it. AC-11 is absent: CAPTURE-6 un-pended
-    // it. So only the one still-pending AC (AC-10 → SCREEN-3) remains here.
-    const expectedOwners = {
-      'AC-10': 'SCREEN-3',
-    };
+    // Pinned exactly so a typo'd id, a stray AC or a re-pended AC fails this
+    // test rather than passing vacuously. Every bs-02 AC has now been un-pended
+    // by its behaviour phase (AC-1 at ITEST-2 as green at baseline; AC-2 by
+    // SOURCE-2; AC-3 by SCREEN-2; AC-9 by SOURCE-3; AC-4/AC-5 by CAPTURE-3;
+    // AC-6/AC-7 by CAPTURE-4; AC-8 by CAPTURE-5; AC-11 by CAPTURE-6; AC-10 by
+    // SCREEN-3, the last), so the map is empty.
+    const expectedOwners = <String, String>{};
 
-    test('the still-pending ACs are each owned by a real behaviour phase', () {
+    test('no AC is still pending — every one has been un-pended', () {
       expect(pendingACs, expectedOwners);
-      expect(pendingACs.length, 1);
+      expect(pendingACs, isEmpty);
+      // Guards against a future re-pend with a bad owner (vacuous today, since
+      // the map is empty — the isEmpty assertion above pins that).
       for (final owner in pendingACs.values) {
         expect(behaviorPhases, contains(owner),
             reason: '"$owner" is not a known bs-02 behaviour phase');
       }
     });
 
-    test('a pending AC is skipped by default and runs only in run-pending mode',
-        () {
-      // A mapped (pending) AC: skipped in the default run, run in run-pending.
-      expect(pendingSkipReason('AC-10', forceRunPending: false), isNotNull);
+    test('every AC runs in both modes now that none is pending', () {
+      // AC-10 was the last pending AC; un-pended by SCREEN-3, it now always runs
+      // in either mode, like every other AC.
+      expect(pendingSkipReason('AC-10', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-10', forceRunPending: true), isNull);
-      // An un-mapped AC always runs, in either mode — the end state as each
-      // behaviour phase deletes its row, and the state AC-1 (un-pended at
-      // ITEST-2), AC-2 (un-pended by SOURCE-2), AC-3 (un-pended by SCREEN-2) and
-      // AC-9 (un-pended by SOURCE-3) are already in.
+      // The other un-pended ACs (the end state as each behaviour phase deleted
+      // its row): AC-1 (ITEST-2), AC-2 (SOURCE-2), AC-3 (SCREEN-2), AC-9
+      // (SOURCE-3) — all always run.
       expect(pendingSkipReason('AC-1', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-2', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-3', forceRunPending: false), isNull);

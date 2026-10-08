@@ -51,7 +51,7 @@ const Map<String, String> pendingACs = {
   // AC-6, AC-7 (low-light → approximate; dismiss warning) un-pended by CAPTURE-4 — now always run.
   // AC-8 (reference-card calibration upgrades the tier) un-pended by CAPTURE-5 — now always runs.
   // AC-9 (sample a point from a gallery photo) un-pended by SOURCE-3 — now always runs.
-  'AC-10': 'SCREEN-3', // value-only grayscale preview
+  // AC-10 (value-only grayscale preview) un-pended by SCREEN-3 — now always runs.
   // AC-11 (multi-frame commit + haptic + open Readout) un-pended by CAPTURE-6 — now always runs.
 };
 

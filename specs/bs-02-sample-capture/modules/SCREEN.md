@@ -1,6 +1,6 @@
 # Module SCREEN — Capture screen UI
 
-**Status:** In progress — SCREEN-1 (shell) + SCREEN-2 (AC-1, AC-3) done; SCREEN-3 (AC-10) next (G-3 resolved)
+**Status:** Done — SCREEN-1 (shell) + SCREEN-2 (AC-1, AC-3) + SCREEN-3 (AC-10) done; all screen ACs green
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_screen.dart` and per-region widgets (`capture_eyedropper.dart`, `capture_controls.dart`, `capture_live_view.dart`); labels via bs-01's label-contract widgets.
 **Depends on:** CAPTURE (controller + read endpoint), SOURCE (live feed, radius) · **Blocks:** ITEST-1 (needs the screen to drive), SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 6,759,706 | 13m 46s (13m 46s) |
 | 2 | behavior | AC-1, AC-3 | ✅ Done | 9,046,680 | 17m 44s (17m 44s) |
-| 3 | behavior | AC-10 | ⬜ Next | | |
+| 3 | behavior | AC-10 | ✅ Done | 7,377,195 | 15m 52s (15m 53s) |
 
 ## Interface reconciliation
 
@@ -190,6 +190,51 @@ time 17m 44s (17m 44s).
 - **Acceptance gate:** un-pend AC-10; `TestAC10_ValueOnly` green (feed rendered grayscale; control reads "✓ Value").
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the real value-only grayscale preview (AC-10) — the last bs-02 behaviour phase.
+`CaptureController.toggleValueOnly()` is live: it flips `CaptureState.valueOnly`
+(`emit(copyWith(valueOnly: !valueOnly))`), a purely presentational toggle that leaves the sampled reading
+untouched. `CaptureLiveView` now wraps the feed surface (`liveViewKey` `ColoredBox`) in a `ColorFiltered`
+with a static saturation-0, luminance-preserving `_grayscaleMatrix` **when `state.valueOnly` is true** (bare
+`ColoredBox` otherwise); the overlaid text readings are Stack **siblings** of the feed, so only the feed
+greyscales. `CaptureControls` E21 label flips `Text(controller.state.valueOnly ? '✓ Value' : 'Value')`; the
+screen already rebuilds both via its `ListenableBuilder`, so `capture_screen.dart` needed no change (listed in
+Files but untouched).
+
+Un-pended AC-10 by deleting its row from `bs02/pending.dart` — **`pendingACs` is now empty**; updated the
+harness self-tests in `capture_test.dart` (`pending gate` group) to assert the empty map (exact-map + `isEmpty`
+pins the size, not vacuous) and that AC-10 now runs in both modes.
+
+Verification (Flutter 3.47.6): `flutter analyze` clean. Unit **324 green** (`flutter test --coverage`);
+coverage gate `dart run tool/coverage_gate.dart main` **100% line on all touched lib files, PASS** (3 touched:
+`capture_controller.dart`, `capture_controls.dart`, `capture_live_view.dart`). Acceptance
+`flutter test integration_test/`: **36 green, 0 pending** — `AC-10 TestAC10_ValueOnly` runs live and passes;
+no bs-01 regression. Grade gate (fresh independent subagent, whole un-pended suite re-grade):
+**11×A, 0×B** — AC-10 a fresh live A, no downgrade, no silent weakening. Augmentations: none. Coverage
+exclusions: none. Fix passes: **0/3** (first full run passed analyze + unit + coverage + acceptance + grade).
+One non-downgrading tightening note carried to SIGNOFF-1 (below). Tokens 7,377,195 · time 15m 52s (15m 53s).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged (PATH `~/development/flutter/bin`; `flutter analyze` /
+  `flutter test --coverage` / `flutter test integration_test/` / `dart run tool/coverage_gate.dart main`).
+- **Frozen interfaces (SCREEN-3):**
+  - `CaptureController.toggleValueOnly()` — flips `CaptureState.valueOnly`; notifies; leaves the reading
+    untouched (presentation only).
+  - `CaptureLiveView` wraps the `liveViewKey` feed in a `ColorFiltered(ColorFilter.matrix(_grayscaleMatrix))`
+    iff `state.valueOnly`; the filter is an **ancestor of `liveViewKey`** and not of the text readings.
+  - `CaptureControls` E21 reads `'✓ Value'` when `controller.state.valueOnly`, `'Value'` otherwise.
+- **Module SCREEN is complete.** All screen ACs (AC-1, AC-3, AC-10) are green; the whole bs-02 suite is
+  11×A/0×B and `pendingACs` is empty. **SIGNOFF-1 is now startable** (last behaviour phase done; SOURCE,
+  CAPTURE, SCREEN, ITEST all done).
+- **For SIGNOFF-1:**
+  - **Three open advisory gates to confirm:** **G-4** (CAPTURE-3 `givenCaptureOf`→`pumpWidget`), **G-5**
+    (CAPTURE-6 `skipOffstage:false` endpoint finder), and the SCREEN-2 `whenSelectRadius` per-option retarget
+    (a planned, strengthening harness change — recorded in SCREEN-2's Result; no separate gate id).
+  - **One tightening opportunity (not a defect):** AC-10's positive Then asserts a `ColorFiltered` ancestor
+    over the feed structurally but not that its matrix is the saturation-0 `_grayscaleMatrix` — meaningless to
+    assert now (the feed is a flat `Color(0xFF3A3A3A)` placeholder), worth tightening to
+    `colorFilter == ColorFilter.matrix(_grayscaleMatrix)` once the feed renders real frames (SOURCE native
+    camera work, outside bs-02).
+- **Known gaps / ownership notes:** none new.

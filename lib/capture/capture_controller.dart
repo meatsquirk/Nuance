@@ -209,10 +209,14 @@ class CaptureController extends ChangeNotifier {
   /// approximate after the painter waves the warning away.
   void dismissWarning() => emit(_state.copyWith(lowLightWarning: false));
 
-  /// Toggles the value-only grayscale preview (AC-10). Behaviour lands in
-  /// SCREEN-3.
+  /// Toggles the value-only grayscale preview on and off (AC-10).
+  ///
+  /// Flips [CaptureState.valueOnly]; the Capture screen renders the live feed in
+  /// grayscale while it is on (a saturation-0 filter over the feed surface) and
+  /// the E21 control reads "✓ Value". A purely presentational toggle — it leaves
+  /// the sampled reading untouched, so the committed colour is unaffected.
   void toggleValueOnly() =>
-      throw UnimplementedError('toggleValueOnly: behaviour lands in SCREEN-3');
+      emit(_state.copyWith(valueOnly: !_state.valueOnly));
 
   /// Commits the reading as [CaptureState.lastCommittedSample], stamped with the
   /// stated [CaptureState.accuracy] tier and marked [Sample.justCaptured] so the

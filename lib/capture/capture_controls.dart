@@ -4,14 +4,12 @@ import 'capture_controller.dart';
 
 /// The Capture screen's control surface: the wireframe buttons E15–E21.
 ///
-/// SCREEN-1 shell — it lays out every control as a findable, labelled button so
-/// the acceptance harness and the behaviour phases have stable anchors. The
-/// controls whose behaviour is a [CaptureController] action already on the
-/// shell surface are wired to it now (E15 dismiss, E16 lock, E17 calibrate,
-/// E20 capture, E21 value-only): each action still throws until its behaviour
-/// phase un-defers it, exactly as the controller shell declares, so the button
-/// is present and wired before the behaviour lands and no behaviour phase has to
-/// re-touch this file to reach the controller.
+/// It lays out every control as a findable, labelled button so the acceptance
+/// harness and the behaviour phases have stable anchors. The controls whose
+/// behaviour is a [CaptureController] action are wired to it (E15 dismiss, E16
+/// lock, E17 calibrate, E20 capture, E21 value-only). E21 drives
+/// [CaptureController.toggleValueOnly] and reads "✓ Value" while value-only is
+/// on, "Value" while off (AC-10).
 ///
 /// E18 (the sampling-radius selector) offers the 1 / 5 / 21 px options, each
 /// driving [CaptureController.setRadius] and marking the selected radius (AC-3);
@@ -85,7 +83,9 @@ class CaptureControls extends StatelessWidget {
         TextButton(
           key: valueOnlyKey,
           onPressed: controller.toggleValueOnly,
-          child: const Text('Value'),
+          // E21 reads "✓ Value" while the value-only grayscale preview is on,
+          // "Value" while off (AC-10).
+          child: Text(controller.state.valueOnly ? '✓ Value' : 'Value'),
         ),
         // E18: the sampling-radius selector — one option per radius, the
         // selected one marked (AC-3).

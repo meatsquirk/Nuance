@@ -34,16 +34,35 @@ class CaptureLiveView extends StatelessWidget {
   /// The capture state this viewport reflects.
   final CaptureState state;
 
+  /// Saturation-0 (luminance-preserving) colour matrix: maps every channel to
+  /// the pixel's luma, so the feed renders as value-only grayscale (AC-10).
+  static const List<double> _grayscaleMatrix = <double>[
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0, 0, 0, 1, 0,
+  ];
+
   @override
   Widget build(BuildContext context) {
+    // Placeholder feed surface; SOURCE-2 renders real frames here. In value-only
+    // mode (AC-10) the feed is wrapped in a saturation-0 [ColorFiltered] so it
+    // renders grayscale, leaving the overlaid readings in colour.
+    const Widget feedSurface =
+        ColoredBox(key: liveViewKey, color: Color(0xFF3A3A3A));
+    final Widget feed = state.valueOnly
+        ? const ColorFiltered(
+            colorFilter: ColorFilter.matrix(_grayscaleMatrix),
+            child: feedSurface,
+          )
+        : feedSurface;
+
     // Fills the space its parent gives it (the Capture screen hands it the area
     // above the controls); the readings are laid over the feed.
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Placeholder feed surface; SOURCE-2 renders real frames here and
-        // SCREEN-3 adds the value-only grayscale filter.
-        const ColoredBox(key: liveViewKey, color: Color(0xFF3A3A3A)),
+        feed,
         // The eyedropper carries [CaptureEyedropper.eyedropperKey] itself; its
         // reticle sizes to the selected sampling radius (AC-3).
         CaptureEyedropper(radiusPx: state.radiusPx),

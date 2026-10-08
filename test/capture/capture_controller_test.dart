@@ -103,18 +103,39 @@ void main() {
     });
   });
 
-  group('deferred actions throw until their behaviour phase', () {
+  group('value-only toggle (SCREEN-3, AC-10)', () {
     late CaptureController controller;
 
     setUp(() => controller = CaptureController(source: _source()));
     tearDown(() => controller.dispose());
 
-    // lock() is live as of CAPTURE-3 (see the 'lock lifecycle' group below);
-    // commit() and dismissWarning() as of CAPTURE-4 (see 'low-light …' below);
-    // calibrate() as of CAPTURE-5 (see 'reference-card calibration' below);
-    // setRadius() as of SCREEN-2 (see 'radius selection' below).
-    test('toggleValueOnly',
-        () => expect(controller.toggleValueOnly, throwsUnimplementedError));
+    test('flips valueOnly on and back off, notifying each time', () {
+      expect(controller.state.valueOnly, isFalse);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.toggleValueOnly();
+      expect(controller.state.valueOnly, isTrue);
+
+      controller.toggleValueOnly();
+      expect(controller.state.valueOnly, isFalse);
+
+      expect(notifications, 2, reason: 'each toggle emits one state change');
+    });
+
+    test('leaves the sampled reading untouched (presentation only)', () async {
+      final source = _ControllableSource();
+      final valueController = CaptureController(source: source);
+      addTearDown(valueController.dispose);
+      source.emitFrame(_uniformFrame(const Pixel(60, 140, 210)));
+      await pumpEventQueue();
+      final before = valueController.state.currentSample;
+      expect(before, isNotNull);
+
+      valueController.toggleValueOnly();
+      expect(valueController.state.currentSample, before,
+          reason: 'the value-only preview does not change the reading');
+    });
   });
 
   group('radius selection (SCREEN-2, AC-3)', () {
