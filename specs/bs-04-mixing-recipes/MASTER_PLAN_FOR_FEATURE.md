@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — ENGINE-1 (shell) done; next RECIPE-2 (shell)
+**Status:** In progress — RECIPE-2 (shell) done; next SCREEN-1 (shell)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -197,8 +197,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | RECIPE-1 | scaffold: branch from main, baseline, confirm coverage gate, BS04 pending runner | ✅ Done | 3,103,321 | 16m 10s | branch @ `ac3bd09`; unit 430 / integ 62 green; gate proven both ways |
 | 2 | ENGINE-1 | shell: `Paint`/`PaintMedium` + `MixingEngine` interface + `Recipe`/`RecipeComponent` + stub engine wired into deps | ✅ Done | 6,408,543 | 21m 15s | analyze clean; unit 480 / integ 62 green; 100% cov on 5 touched files; introduced minimal `PaintPalette` as the interface enabler |
-| 3 | RECIPE-2 | shell: `PaletteSource`/`InMemoryPaletteSource` over the existing `PaintPalette` + `RecipeController`/state + read endpoint + recipes entry/route (replace stub) | ⬜ Next | | | after ENGINE-1 ✅; `PaintPalette` already exists — add `palette_source.dart`, do not recreate it |
-| 4 | SCREEN-1 | shell: Recipes screen scaffold (E22–E25 + list + gamut banner placeholders) bound to controller | ⬜ Todo | | | after RECIPE-2 |
+| 3 | RECIPE-2 | shell: `PaletteSource`/`InMemoryPaletteSource` over the existing `PaintPalette` + `RecipeController`/state + read endpoint + recipes entry/route (replace stub) | ✅ Done | 14,660,317 | 44m 03s | analyze clean; unit 510 / integ 62 green; 100% cov on 10 touched files; stub removed; bs-01 AC-11 green on the real screen |
+| 4 | SCREEN-1 | shell: Recipes screen scaffold (E22–E25 + list + gamut banner placeholders) bound to controller | ⬜ Next | | | after RECIPE-2 ✅ |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,11,12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2; needs G-4 for pinned values |
@@ -217,13 +217,15 @@ when the row is marked done.
 
 ## Next phase
 
-**RECIPE-2 (shell)** is next and **startable** — ENGINE-1 (its only dependency) is done; no open gate blocks
-it. It adds `PaletteSource`/`InMemoryPaletteSource` over the `PaintPalette` ENGINE-1 already created (**do not
-recreate `PaintPalette`**), the `RecipeController`/state (inert), the `RecipeReadEndpoint`, the recipes entry
-in `buildApp`, and replaces `RecipesStubScreen` behind `AppRouter.toRecipes` — still rendering the target name
-so bs-01 AC-11 stays green. Run it: `/feature-next-phase bs-04-mixing-recipes`. Shells are serial (RECIPE-2 →
-SCREEN-1). **G-4** (engine / pinned-value reconciliation) and **G-2** (approve the acceptance tests) remain
-open; both are decided before the behaviour stage (G-4 before ITEST-3; G-2 at the ITEST-4 review).
+**SCREEN-1 (shell)** is next and **startable** — RECIPE-2 (its only dependency) is done; no open gate blocks
+it. It is the last shell: the Recipes screen scaffold (wireframe E22–E25, the recipe list, the gamut-banner
+placeholders) split into per-region widget files bound to the `RecipeController`, with placeholder/disabled
+controls. It replaces `RecipesHomeScreen`'s shell body (the `Scaffold`/`Text`) with the real regions over the
+owned controller — **keep the "Recipes" app bar and a rendering of the target name so bs-01 AC-11 stays
+green.** Run it: `/feature-next-phase bs-04-mixing-recipes`. After SCREEN-1 the acceptance stage opens
+(ITEST-1, then ITEST-2 ∥ ITEST-3, then the ITEST-4 review). **G-4** (engine / pinned-value reconciliation) and
+**G-2** (approve the acceptance tests) remain open; both are decided before the behaviour stage (G-4 before
+ITEST-3; G-2 at the ITEST-4 review).
 
 ## Token usage
 
@@ -235,7 +237,8 @@ open; both are decided before the behaviour stage (G-4 before ITEST-3; G-2 at th
 | GATE-DECISION | ac0ae3b2 | 2026-10-08 12:55 EDT | 12:58 | 2m 29s | 2m 29s | claude-opus-4-8 | 24 | 41,638 | 696,302 | 4,385 | 742,349 | G-1 approved: spec approved as-is by Matt Quirk; .feature stamped |
 | RECIPE-1 | 65dff7c4 | 2026-10-08 13:14 EDT | 13:30 | 16m 10s | 16m 10s | claude-opus-4-8 | 78 | 80,020 | 3,001,598 | 21,625 | 3,103,321 | scaffold: branch @ ac3bd09; baseline unit 430 / integ 62 green; coverage gate PASS clean + FAIL planted; BS04 pending runner in place; no product code |
 | ENGINE-1 | ca13c9a4 | 2026-10-08 13:37 EDT | 13:58 | 21m 13s | 21m 15s | claude-opus-4-8 | 108 | 124,126 | 6,240,318 | 43,991 | 6,408,543 | shell: Paint/PaintMedium + MixingEngine interface + Recipe/RecipeComponent/MixOptions + stub SubtractiveMixingEngine wired into AppDependencies.mixingEngine; unit 480 / integ 62 green; 100% coverage on 5 touched files; introduced minimal PaintPalette as the interface enabler |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 13:58** | **54m 30s** | **54m 32s** |  | **298** | **578,563** | **14,530,577** | **137,714** | **15,247,152** |  |
+| RECIPE-2 | f71955f4 | 2026-10-08 14:24 EDT | 15:08 | 44m 05s | 44m 03s | claude-opus-4-8 | 224 | 168,724 | 14,424,481 | 66,888 | 14,660,317 | shell: PaletteSource/InMemoryPaletteSource + RecipeState/MixMode + inert RecipeController + RecipeReadEndpoint + RecipesEntry/RecipesHomeScreen wired into buildApp; AppRouter.toRecipes → real screen (stub removed); analyze clean; unit 510 / integ 62 green; 100% coverage on 10 touched files; bs-01 AC-11 green on the real screen; fix passes 1/3 |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 15:08** | **1h 38m** | **1h 38m** |  | **522** | **747,287** | **28,955,058** | **204,602** | **29,907,469** |  |
 
 ## Sign-off
 

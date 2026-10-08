@@ -1,6 +1,6 @@
 # Module RECIPE — scaffold, controller, palette source, target & spoken output
 
-**Status:** In progress — RECIPE-1 (scaffold) done; next RECIPE-2 (shell, after ENGINE-1)
+**Status:** In progress — RECIPE-2 (shell) done; next RECIPE-3 (behavior, after G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/recipes/palette.dart` (`PaintPalette`), `lib/recipes/palette_source.dart`
 (`PaletteSource`, `InMemoryPaletteSource`), `lib/recipes/recipe_state.dart`, `lib/recipes/recipe_controller.dart`,
@@ -16,7 +16,7 @@ owns `integration_test/bs04/pending.dart`.
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 3,103,321 | 16m 10s |
-| 2 | shell | — | ⬜ Todo | | |
+| 2 | shell | — | ✅ Done | 14,660,317 | 44m 03s |
 | 3 | behavior | AC-1, AC-2 | ⬜ Todo | | |
 | 4 | behavior | AC-11, AC-12 | ⬜ Todo | | |
 
@@ -110,6 +110,58 @@ Scaffold complete; no product code (`lib/**`) touched (only `integration_test/bs
   5. Unit-test the state/controller/source/endpoint shape; keep behaviour unchanged.
 - **Exit criteria:** `flutter analyze` clean; unit gate + 100% coverage touched; existing suites green **incl. bs-01's AC-11 handoff** on the real screen.
 - **Acceptance gate:** *(shell — unit gate + existing suite green)*
+
+### Result
+
+Shell landed; the Recipes feature now assembles end-to-end with inert behaviour.
+
+- **Added:** `lib/recipes/palette_source.dart` (`PaletteSource` + empty-default `InMemoryPaletteSource`,
+  mirroring bs-03's `SampleSource`; method `palettes()`, field `catalogue`); `lib/recipes/recipe_state.dart`
+  (`MixMode {wet,dry}` + immutable value-equal `RecipeState` {target, selectedPalette, recipes=[], mode=wet,
+  manualError=null} + `hasRecipes`); `lib/recipes/recipe_controller.dart` (`RecipeController` ChangeNotifier
+  over sampleSource/paletteSource/mixingEngine/speech/router, `state`/`savedSamples`/`palettes` getters,
+  initial selected palette = first available; **inert** actions `selectTarget`/`enterManualTarget`/
+  `selectPalette`/`setMode`/`speakTarget`/`speakRecipe` throw `UnimplementedError` naming their phase);
+  `lib/recipes/recipe_read_endpoint.dart` (`RecipeReadEndpoint`, mirrors `ComparisonReadEndpoint`).
+- **Wired:** `build_app.dart` — `RecipesEntry {target}`, `AppDependencies.paletteSource`
+  (empty default) + `recipesEntry`, `RecipesHomeScreen` (owns the controller, wraps subtree in the read
+  endpoint, renders "Recipes" app bar + the target name), and the `buildApp` recipes-entry branch.
+  `router.dart` — `AppRouter.toRecipes` now routes to `RecipesHomeScreen` (callers unchanged). **Removed**
+  `lib/recipes/recipes_stub.dart` + its test (replaced).
+- **`PaintPalette` not recreated** (ENGINE-1 owns it); only the source seam was added over it.
+- **Gates:** `flutter analyze` clean; unit **510 green** (`flutter test --coverage`); coverage gate **100% on
+  all 10 touched lib files** (vs `main`); integration **62 green** on the iOS sim under the verify lock —
+  incl. bs-01's AC-11 "Finding recipes…" handoff now rendering the real `RecipesHomeScreen`.
+- **Fix passes: 1/3** — first `flutter analyze` flagged a leftover `emit` test reference (removed with the
+  method) + a `prefer_final_fields` info on `_state` (ignored — behaviour phases reassign it); re-ran clean.
+- **Tokens / Time:** 14,660,317 · 44m 03s.
+
+### Checkpoint / Handoff
+
+- **Frozen for SCREEN-1 and the behaviour phases:**
+  - `RecipeController({required sampleSource, paletteSource, mixingEngine, target, speech, router})` —
+    `state` getter → `RecipeState`; `savedSamples` / `palettes` getters; actions throw until filled
+    (`selectTarget`/`enterManualTarget` → RECIPE-3, `selectPalette` → ENGINE-2, `setMode` → ENGINE-6,
+    `speakTarget`/`speakRecipe` → RECIPE-4). The first behaviour phase to mutate adds the private emit/notify
+    path these route through.
+  - `RecipeState {target, selectedPalette, recipes, mode (MixMode.wet/dry), manualError}` — immutable,
+    value-equal, `const`-constructible; reconstruct (no `copyWith`) and notify, as bs-03 does.
+  - `PaletteSource.palettes()` / `InMemoryPaletteSource(catalogue: […])` (empty default) — the ITEST harness
+    seeds `PALETTE_MY_PAINTS` here.
+  - `RecipeReadEndpoint` (`endpointKey = Key('recipe-read-endpoint')`, `.of(context)`) — the acceptance
+    observation seam.
+  - `AppDependencies.paletteSource` + `recipesEntry` (`RecipesEntry {target}`); `buildApp` opens on
+    `RecipesHomeScreen` when `recipesEntry` is set (ITEST entry).
+- **SCREEN-1** replaces `RecipesHomeScreen`'s shell body (`Scaffold`/`Text`) with the real recipes regions
+  (E22–E25 + list + gamut banner) over the owned controller — **keep the "Recipes" app bar and a rendering of
+  the target name so bs-01 AC-11 stays green.** Controller ownership + the read-endpoint wrapping stay in the
+  home screen.
+- **Verification commands** unchanged (RECIPE-1 handoff): `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` · integration under the lock on sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`. Always pass `-d <udid>` (no device ⇒ false green).
+- **Known gaps / notes:** no behaviour yet (every action throws). Carry-over const-constructor coverage flake
+  stands (re-run `--coverage` once if the gate flags an untouched file). Untracked bs-05..bs-14 specs +
+  `docs/` sit in the tree from a prior branch; not part of bs-04 and not committed by this phase.
 
 ## Phase 3 — Target selection (RECIPE-3)
 

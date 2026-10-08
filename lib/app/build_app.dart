@@ -19,6 +19,9 @@ import '../domain/sample.dart';
 import '../readout/readout_screen.dart';
 import '../recipes/engine/mixing_engine.dart';
 import '../recipes/engine/subtractive_engine.dart';
+import '../recipes/palette_source.dart';
+import '../recipes/recipe_controller.dart';
+import '../recipes/recipe_read_endpoint.dart';
 import 'router.dart';
 
 /// The sample the shipped bs-01 app opens the Readout screen on.
@@ -49,6 +52,24 @@ class ComparisonEntry {
   const ComparisonEntry();
 }
 
+/// Opt-in that opens the app on the Recipes screen for a given mixing [target]
+/// (bs-04 D-6), symmetric to bs-02's capture entry and bs-03's comparison entry.
+///
+/// When [AppDependencies.recipesEntry] carries one, [buildApp] launches to the
+/// [RecipesHomeScreen] — a `RecipeController` over
+/// [AppDependencies.sampleSource] / [AppDependencies.paletteSource] /
+/// [AppDependencies.mixingEngine] mixing toward [target] — so the acceptance
+/// harness enters the Recipes feature through the one assembly entry. Unlike the
+/// comparison entry this carries a [target], because a recipe is always toward a
+/// specific colour. null (the default) preserves bs-01's Readout entry.
+class RecipesEntry {
+  /// Creates the recipes-entry marker for mixing toward [target].
+  const RecipesEntry({required this.target});
+
+  /// The colour the Recipes screen opens mixing toward.
+  final Sample target;
+}
+
 /// The app-wide services assembled once at startup and injected down the tree.
 ///
 /// A single immutable holder so production (`main.dart`) and the acceptance
@@ -68,6 +89,8 @@ class AppDependencies {
     this.sampleSource = const InMemorySampleSource(),
     this.comparisonEntry,
     this.mixingEngine = const SubtractiveMixingEngine(),
+    this.paletteSource = const InMemoryPaletteSource(),
+    this.recipesEntry,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -139,6 +162,24 @@ class AppDependencies {
   /// (`docs/custom-mixing-engine-design.md`) is the deferred swap-in behind the
   /// same [MixingEngine] interface. A shell for now — no screen reads it yet.
   final MixingEngine mixingEngine;
+
+  /// The owned palettes the Recipes solver is constrained to choose among
+  /// (bs-04 D-5).
+  ///
+  /// Defaults to an empty [InMemoryPaletteSource]; the bs-04 acceptance harness
+  /// injects one seeded with named palettes, and **bs-06** later supplies a
+  /// persistent store behind the same [PaletteSource] interface. Read by the
+  /// [RecipesHomeScreen]'s `RecipeController`.
+  final PaletteSource paletteSource;
+
+  /// Opens the app on the Recipes screen for a target when present (bs-04 D-6).
+  ///
+  /// null (the default) keeps bs-01's Readout entry; a [RecipesEntry] makes
+  /// [buildApp] launch to the [RecipesHomeScreen] over [sampleSource] /
+  /// [paletteSource] / [mixingEngine], mixing toward the entry's target. The
+  /// bs-04 acceptance harness injects one to drive each recipes scenario through
+  /// this same assembly entry.
+  final RecipesEntry? recipesEntry;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -177,11 +218,12 @@ class AppScope extends InheritedWidget {
 /// and wires the router into a [MaterialApp]. The app opens on the Capture
 /// screen when a [AppDependencies.captureSource] is injected (bs-02), on the
 /// [ComparisonHomeScreen] when a [AppDependencies.comparisonEntry] is injected
-/// (bs-03 D-8), and otherwise on the [ReadoutScreen] for
+/// (bs-03 D-8), on the [RecipesHomeScreen] when a [AppDependencies.recipesEntry]
+/// is injected (bs-04 D-6), and otherwise on the [ReadoutScreen] for
 /// [AppDependencies.initialSample] (bs-01's entry). `main.dart` and the
 /// acceptance harnesses construct the app through this one entry, differing only
 /// in the injected services, the initial sample, the capture source and the
-/// comparison entry.
+/// comparison / recipes entries.
 Widget buildApp(AppDependencies deps) {
   return AppScope(
     dependencies: deps,
@@ -198,7 +240,16 @@ Widget buildApp(AppDependencies deps) {
                   speech: deps.speech,
                   router: deps.router,
                 )
-              : ReadoutScreen(sample: deps.initialSample),
+              : deps.recipesEntry != null
+                  ? RecipesHomeScreen(
+                      target: deps.recipesEntry!.target,
+                      sampleSource: deps.sampleSource,
+                      paletteSource: deps.paletteSource,
+                      mixingEngine: deps.mixingEngine,
+                      speech: deps.speech,
+                      router: deps.router,
+                    )
+                  : ReadoutScreen(sample: deps.initialSample),
     ),
   );
 }
@@ -354,6 +405,87 @@ class _ComparisonHomeScreenState extends State<ComparisonHomeScreen> {
       key: ComparisonReadEndpoint.endpointKey,
       controller: _controller,
       child: ComparisonScreen(controller: _controller),
+    );
+  }
+}
+
+/// The Recipes screen the app opens on when a recipes entry is wired, and the
+/// destination of the Readout → recipes handoff (`AppRouter.toRecipes`).
+///
+/// It owns the [RecipeController] over the injected catalogue / palettes /
+/// engine mixing toward [target], and wraps its subtree in a
+/// [RecipeReadEndpoint] so the acceptance suite can observe the recipe state.
+/// The seams are passed in (not read from [AppScope]) so the handoff route
+/// renders the carried target even when pushed outside an [AppScope] (bs-01's
+/// AC-11 handoff test), symmetric to [ComparisonHomeScreen].
+///
+/// This RECIPE-2 shell renders the target's name under a "Recipes" app bar —
+/// enough to keep bs-01's AC-11 handoff green. SCREEN-1 replaces the body with
+/// the real recipes regions (E22–E25, the recipe list, the gamut banner)
+/// composed over the owned controller; the controller ownership and the read
+/// endpoint stay here.
+class RecipesHomeScreen extends StatefulWidget {
+  /// Creates the recipes home mixing toward [target], over the given seams.
+  const RecipesHomeScreen({
+    required this.target,
+    this.sampleSource = const InMemorySampleSource(),
+    this.paletteSource = const InMemoryPaletteSource(),
+    this.mixingEngine = const SubtractiveMixingEngine(),
+    this.speech = const NoopSpeech(),
+    this.router = const AppRouter(),
+    super.key,
+  });
+
+  /// The colour the painter wants to mix toward (AC-1/AC-2; AC-11 speaks it).
+  final Sample target;
+
+  /// The saved-sample catalogue the AC-1 target picker lists (reused from bs-03).
+  final SampleSource sampleSource;
+
+  /// The owned palettes the solver is constrained to choose among (AC-3).
+  final PaletteSource paletteSource;
+
+  /// The swappable mixing engine every solve is delegated to (D-6).
+  final MixingEngine mixingEngine;
+
+  /// Spoken-output sink the speak-target / speak-recipe controls drive (AC-11,
+  /// AC-12). Defaults to the inert [NoopSpeech] — bs-01's shipped speech and what
+  /// the handoff route carries; the acceptance harness injects a recording fake.
+  final Speech speech;
+
+  /// Typed navigation the controller uses. Defaults to a plain [AppRouter]; the
+  /// production assembly passes `AppDependencies.router`.
+  final AppRouter router;
+
+  @override
+  State<RecipesHomeScreen> createState() => _RecipesHomeScreenState();
+}
+
+class _RecipesHomeScreenState extends State<RecipesHomeScreen> {
+  late final RecipeController _controller = RecipeController(
+    sampleSource: widget.sampleSource,
+    paletteSource: widget.paletteSource,
+    mixingEngine: widget.mixingEngine,
+    target: widget.target,
+    speech: widget.speech,
+    router: widget.router,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RecipeReadEndpoint(
+      key: RecipeReadEndpoint.endpointKey,
+      controller: _controller,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Recipes')),
+        body: Text('Recipe target: ${widget.target.name ?? '(unnamed)'}'),
+      ),
     );
   }
 }

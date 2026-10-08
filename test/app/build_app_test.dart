@@ -19,6 +19,14 @@ import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
 import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
 import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
+import 'package:paint_color_assistant/recipes/palette_source.dart';
+import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
+
+const _olive = Sample(
+  name: 'Deep Olive Green',
+  coordinates: ColorCoordinates(lightness: 42, a: -5, b: 20),
+  provenance: Provenance(ProvenanceTier.measured),
+);
 
 SoftwareCaptureSource _captureSource() => SoftwareCaptureSource(
       const SceneSpec(
@@ -176,6 +184,30 @@ void main() {
       expect(identical(deps.mixingEngine, engine), isTrue);
       expect(deps.mixingEngine, isA<MixingEngine>());
     });
+
+    test('defaults the palette source to an empty in-memory catalogue (D-5)',
+        () {
+      expect(_deps().paletteSource, isA<InMemoryPaletteSource>());
+      expect(_deps().paletteSource.palettes(), isEmpty);
+    });
+
+    test('defaults the recipes entry to null (opens on Readout — D-6)', () {
+      expect(_deps().recipesEntry, isNull);
+    });
+
+    test('keeps an explicitly injected palette source and recipes entry', () {
+      const source = InMemoryPaletteSource();
+      const entry = RecipesEntry(target: _olive);
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        paletteSource: source,
+        recipesEntry: entry,
+      );
+      expect(identical(deps.paletteSource, source), isTrue);
+      expect(identical(deps.recipesEntry, entry), isTrue);
+    });
   });
 
   group('buildApp', () {
@@ -326,6 +358,77 @@ void main() {
       // Empty catalogue, no pre-selected pair → both slots empty, no statement.
       expect(find.text('Slot A: (empty)'), findsOneWidget);
       expect(find.text('Slot B: (empty)'), findsOneWidget);
+    });
+
+    testWidgets('opens on the Recipes screen when a recipes entry is set (D-6)',
+        (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          const AppDependencies(
+            colorScience: ColorScienceImpl(),
+            speech: NoopSpeech(),
+            haptics: NoopHaptics(),
+            recipesEntry: RecipesEntry(target: _olive),
+          ),
+        ),
+      );
+      expect(find.byType(RecipesHomeScreen), findsOneWidget);
+      expect(find.byType(ReadoutScreen), findsNothing);
+      expect(find.text('Recipes'), findsOneWidget);
+      expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
+    });
+  });
+
+  group('RecipesHomeScreen', () {
+    testWidgets('renders the named mixing target under a Recipes app bar',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: RecipesHomeScreen(target: _olive)),
+      );
+      expect(find.widgetWithText(AppBar, 'Recipes'), findsOneWidget);
+      expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
+    });
+
+    testWidgets('falls back to (unnamed) for a target with no name',
+        (tester) async {
+      const unnamed = Sample(
+        coordinates: ColorCoordinates(lightness: 42, a: -5, b: 20),
+        provenance: Provenance(ProvenanceTier.measured),
+      );
+      await tester.pumpWidget(
+        const MaterialApp(home: RecipesHomeScreen(target: unnamed)),
+      );
+      expect(find.text('Recipe target: (unnamed)'), findsOneWidget);
+    });
+
+    testWidgets('wraps its subtree in a RecipeReadEndpoint over the target',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: RecipesHomeScreen(target: _olive)),
+      );
+      expect(find.byKey(RecipeReadEndpoint.endpointKey), findsOneWidget);
+      final context = tester.element(find.byType(Scaffold));
+      final controller = RecipeReadEndpoint.of(context);
+      expect(controller.state.target, _olive);
+      expect(controller.state.recipes, isEmpty);
+    });
+
+    testWidgets('disposes its controller when removed from the tree',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: RecipesHomeScreen(target: _olive)),
+      );
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      expect(find.byType(RecipesHomeScreen), findsNothing);
+    });
+  });
+
+  group('RecipesEntry', () {
+    test('carries the mixing target', () {
+      // Constructed at runtime (non-const) so the constructor line is covered.
+      // ignore: prefer_const_constructors
+      final entry = RecipesEntry(target: _olive);
+      expect(entry.target, _olive);
     });
   });
 
