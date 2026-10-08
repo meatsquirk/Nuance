@@ -25,9 +25,13 @@ const _sampleB = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
-ComparisonController _controller({Sample? initialA, Sample? initialB}) =>
+ComparisonController _controller({
+  SampleSource sampleSource = const InMemorySampleSource(),
+  Sample? initialA,
+  Sample? initialB,
+}) =>
     ComparisonController(
-      sampleSource: const InMemorySampleSource(),
+      sampleSource: sampleSource,
       confusionCheck: const NoopConfusionCheck(),
       profile: const CvdProfile(type: CvdType.deutan),
       initialA: initialA,
@@ -74,30 +78,109 @@ void main() {
   });
 
   group('SlotsRegion', () {
-    testWidgets('the choose and picker controls are present but inert',
-        (tester) async {
+    testWidgets('Choose A / Choose B are enabled; Sample picker and Swap inert '
+        '(COMPARE-3)', (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
       await tester.pumpWidget(
         MaterialApp(home: Scaffold(body: SlotsRegion(controller: controller))),
       );
 
-      for (final label in const [
-        'Choose sample A',
-        'Choose sample B',
-        'Sample picker',
-        'Swap A and B',
-      ]) {
+      for (final label in const ['Choose sample A', 'Choose sample B']) {
         final button = tester.widget<TextButton>(
           find.widgetWithText(TextButton, label),
         );
-        expect(button.enabled, isFalse, reason: '$label must be inert in SCREEN-1');
+        expect(button.enabled, isTrue,
+            reason: '$label opens the picker in COMPARE-3');
       }
+      for (final label in const ['Sample picker', 'Swap A and B']) {
+        final button = tester.widget<TextButton>(
+          find.widgetWithText(TextButton, label),
+        );
+        expect(button.enabled, isFalse,
+            reason: '$label is not wired in COMPARE-3');
+      }
+    });
+
+    testWidgets('a placed slot shows its CIELCh reading, an empty one does not',
+        (tester) async {
+      final controller = _controller(initialA: _sampleA);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: SlotsRegion(controller: controller))),
+      );
+
+      // Slot A (L 58 / C 34 / h 42°) renders its rounded LCh reading (AC-1).
+      expect(find.text('Slot A: Warm Terracotta'), findsOneWidget);
+      expect(find.text('L 58, C 34, h 42 degrees'), findsOneWidget);
+      // Slot B is empty: name line only, no reading line.
+      expect(find.text('Slot B: (empty)'), findsOneWidget);
+    });
+
+    testWidgets('Choose sample A opens the picker and fills slot A (AC-1)',
+        (tester) async {
+      final controller = _controller(
+        sampleSource: const InMemorySampleSource(samples: [_sampleA, _sampleB]),
+      );
+      addTearDown(controller.dispose);
+      // The full screen (with its ListenableBuilder) so the slot re-renders.
+      await _pumpScreen(tester, controller);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Choose sample A'));
+      await tester.pumpAndSettle();
+      // The picker lists the catalogue.
+      expect(find.text('Warm Terracotta'), findsOneWidget);
+      expect(find.text('Raw Sienna Light'), findsOneWidget);
+
+      await tester.tap(find.text('Warm Terracotta'));
+      await tester.pumpAndSettle();
+
+      expect(controller.state.slotA, same(_sampleA));
+      expect(controller.state.slotB, isNull);
+      expect(find.text('Slot A: Warm Terracotta'), findsOneWidget);
+    });
+
+    testWidgets('Choose sample B opens the picker and fills slot B (AC-2)',
+        (tester) async {
+      final controller = _controller(
+        sampleSource: const InMemorySampleSource(samples: [_sampleA, _sampleB]),
+      );
+      addTearDown(controller.dispose);
+      await _pumpScreen(tester, controller);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Choose sample B'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Raw Sienna Light'));
+      await tester.pumpAndSettle();
+
+      expect(controller.state.slotB, same(_sampleB));
+      expect(controller.state.slotA, isNull);
+      expect(find.text('Slot B: Raw Sienna Light'), findsOneWidget);
+    });
+
+    testWidgets('dismissing the picker without choosing changes nothing',
+        (tester) async {
+      final controller = _controller(
+        sampleSource: const InMemorySampleSource(samples: [_sampleA]),
+      );
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: SlotsRegion(controller: controller))),
+      );
+
+      await tester.tap(find.widgetWithText(TextButton, 'Choose sample A'));
+      await tester.pumpAndSettle();
+      // Tap the barrier to dismiss without choosing a sample.
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(controller.state.slotA, isNull);
     });
   });
 
-  group('placeholder regions', () {
-    testWidgets('each states its heading and an inert placeholder',
+  group('placeholder / invite regions', () {
+    testWidgets('difference and confusion show a placeholder; the statement '
+        'invites a second sample when there is no reading (AC-12)',
         (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
@@ -118,8 +201,25 @@ void main() {
       expect(find.text('Overall difference'), findsOneWidget);
       expect(find.text('Relational statement'), findsOneWidget);
       expect(find.text('Confusion warning'), findsOneWidget);
-      // Three regions, each with the same "nothing yet" placeholder.
-      expect(find.text('—'), findsNWidgets(3));
+      // Difference and confusion still show the "nothing yet" placeholder.
+      expect(find.text('—'), findsNWidgets(2));
+      // The statement region invites a second sample instead (AC-12).
+      expect(find.text('Choose a second sample to compare.'), findsOneWidget);
+    });
+
+    testWidgets('with both slots set the statement shows the DIFF-3 placeholder',
+        (tester) async {
+      final controller = _controller(initialA: _sampleA, initialB: _sampleB);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: StatementRegion(controller: controller)),
+        ),
+      );
+
+      expect(find.text('Relational statement'), findsOneWidget);
+      expect(find.text('—'), findsOneWidget);
+      expect(find.text('Choose a second sample to compare.'), findsNothing);
     });
   });
 

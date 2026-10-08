@@ -47,9 +47,9 @@ class ComparisonController extends ChangeNotifier {
   /// The painter's colour-vision profile the confusion flag is judged against.
   final CvdProfile profile;
 
-  // Final in this shell — no action mutates it yet; COMPARE-3 makes it mutable
-  // when it adds the selection/emit path.
-  final ComparisonState _state;
+  // Mutable from COMPARE-3: the selection actions move the slots and re-derive
+  // the reading, emitting the new snapshot to the screen and read endpoint.
+  ComparisonState _state;
 
   /// The current observable comparison state.
   ComparisonState get state => _state;
@@ -83,15 +83,23 @@ class ComparisonController extends ChangeNotifier {
     );
   }
 
-  /// Chooses [sample] into slot A and re-derives the reading (AC-1). Behaviour
-  /// lands in COMPARE-3 (picker + slot render + catalogue).
+  /// Chooses [sample] into slot A and re-derives the reading (AC-1), leaving
+  /// slot B as it was. Re-deriving with one slot still empty yields no reading
+  /// (so the AC-12 invite stays); with both set it reads the pair through DIFF
+  /// and CVD. Notifies the screen and the read endpoint.
   void selectA(Sample sample) =>
-      throw UnimplementedError('selectA: behaviour lands in COMPARE-3');
+      _emit(_derive(sample, _state.slotB, confusionCheck, profile));
 
-  /// Chooses [sample] into slot B and re-derives the reading (AC-2). Behaviour
-  /// lands in COMPARE-3.
+  /// Chooses [sample] into slot B and re-derives the reading (AC-2), leaving
+  /// slot A as it was. See [selectA].
   void selectB(Sample sample) =>
-      throw UnimplementedError('selectB: behaviour lands in COMPARE-3');
+      _emit(_derive(_state.slotA, sample, confusionCheck, profile));
+
+  /// Replaces the observable [state] with [next] and notifies listeners.
+  void _emit(ComparisonState next) {
+    _state = next;
+    notifyListeners();
+  }
 
   /// Exchanges slots A and B so the statement re-expresses new-A → new-B
   /// (AC-3). Behaviour lands in COMPARE-5.

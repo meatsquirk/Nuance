@@ -76,15 +76,58 @@ void main() {
     });
   });
 
+  group('ComparisonController selection (COMPARE-3)', () {
+    test('selectA places the sample in slot A and notifies (AC-1)', () {
+      final c = _controller();
+      var notified = 0;
+      c.addListener(() => notified++);
+
+      c.selectA(_a);
+
+      expect(c.state.slotA, same(_a));
+      expect(c.state.slotB, isNull);
+      // One slot ⇒ still no reading, so the AC-12 invite stays.
+      expect(c.state.comparison, isNull);
+      expect(c.state.hasBothSlots, isFalse);
+      expect(notified, 1);
+    });
+
+    test('selectB places the sample in slot B and notifies (AC-2)', () {
+      final c = _controller();
+      var notified = 0;
+      c.addListener(() => notified++);
+
+      c.selectB(_b);
+
+      expect(c.state.slotB, same(_b));
+      expect(c.state.slotA, isNull);
+      expect(c.state.comparison, isNull);
+      expect(notified, 1);
+    });
+
+    test('selecting B after A keeps A and derives the pair (AC-2)', () {
+      final c = _controller();
+      c.selectA(_a);
+      c.selectB(_b);
+
+      expect(c.state.slotA, same(_a));
+      expect(c.state.slotB, same(_b));
+      expect(c.state.hasBothSlots, isTrue);
+      // Both slots ⇒ the pair is read through DIFF's compare.
+      expect(c.state.comparison, isNotNull);
+    });
+
+    test('selecting A after B keeps B (B pick does not land in A)', () {
+      final c = _controller();
+      c.selectB(_b);
+      c.selectA(_a);
+
+      expect(c.state.slotA, same(_a));
+      expect(c.state.slotB, same(_b));
+    });
+  });
+
   group('ComparisonController deferred actions', () {
-    test('selectA is deferred to COMPARE-3', () {
-      expect(() => _controller().selectA(_a), throwsUnimplementedError);
-    });
-
-    test('selectB is deferred to COMPARE-3', () {
-      expect(() => _controller().selectB(_b), throwsUnimplementedError);
-    });
-
     test('swap is deferred to COMPARE-5', () {
       expect(() => _controller().swap(), throwsUnimplementedError);
     });

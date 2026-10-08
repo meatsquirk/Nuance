@@ -40,8 +40,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// 12 bs-03 ACs; each behaviour phase then removes the row it owns as it
 /// un-pends that AC. Every owner must be a member of [behaviorPhases].
 const Map<String, String> pendingACs = {
-  'AC-1': 'COMPARE-3', // choose sample A
-  'AC-2': 'COMPARE-3', // choose sample B
+  // AC-1, AC-2, AC-12 un-pended by COMPARE-3 (selection + slot render + invite).
   'AC-3': 'COMPARE-5', // swap A/B + re-express
   'AC-4': 'DIFF-2', // overall ΔE00 + plain verdict
   'AC-5': 'DIFF-3', // lightness/saturation/hue decomposition
@@ -51,7 +50,6 @@ const Map<String, String> pendingACs = {
   'AC-9': 'CVD-3', // speak comparison incl. warning
   'AC-10': 'COMPARE-6', // open readout for A
   'AC-11': 'COMPARE-6', // open readout for B
-  'AC-12': 'COMPARE-3', // no second sample → invite one
 };
 
 /// The behaviour phases allowed to own a pending AC.

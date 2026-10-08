@@ -1,7 +1,7 @@
 # Master Plan — Relative comparison (bs-03)
 
 **Spec:** [bs-03-relative-comparison.feature](../bs-03-relative-comparison.feature)
-**Status:** In progress — next COMPARE-3 (behavior stage open). G-3 approved 2026-10-08 (acceptance suite accepted: 12 ACs, 24×A). All ITEST phases done; G-4 + G-5 resolved.
+**Status:** In progress — next {COMPARE-6 ∥ DIFF-2 ∥ CVD-2}. COMPARE-3 done (AC-1, AC-2, AC-12 un-pended, green; 3×A). G-3/G-4/G-5 resolved.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (Comparison mode — flagship; Accessibility as an architectural concern — confusion warnings; NFR offline; D4 color-science, D10 CVD model) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Comparison screen (S1.R1, E3–E8; sample picker E49), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` · **extends** the bs-01 Flutter foundation (same code home, confirmed by Matt 2026-10-05 for bs-01)
 
@@ -50,8 +50,8 @@ confusion code, and a saved-sample source are all net-new.
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | The painter chooses sample A from the saved samples | ITEST-2 `TestAC01_ChooseA` | COMPARE-3 | ⬜ Todo |
-| AC-2 | The painter chooses sample B from the saved samples | ITEST-2 `TestAC02_ChooseB` | COMPARE-3 | ⬜ Todo |
+| AC-1 | The painter chooses sample A from the saved samples | ITEST-2 `TestAC01_ChooseA` | COMPARE-3 | ✅ Done |
+| AC-2 | The painter chooses sample B from the saved samples | ITEST-2 `TestAC02_ChooseB` | COMPARE-3 | ✅ Done |
 | AC-3 | Swapping exchanges the two samples and re-expresses the difference | ITEST-2 `TestAC03_Swap` | COMPARE-5 | ⬜ Todo |
 | AC-4 | The overall difference is stated as a delta-E with a plain verdict | ITEST-3 `TestAC04_OverallDelta` | DIFF-2 | ⬜ Todo |
 | AC-5 | The difference is decomposed into lightness, saturation and hue | ITEST-3 `TestAC05_Decompose` | DIFF-3 | ⬜ Todo |
@@ -61,7 +61,7 @@ confusion code, and a saved-sample source are all net-new.
 | AC-9 | Speaking the comparison includes the confusion warning | ITEST-3 `TestAC09_SpeakIncludesWarning` | CVD-3 | ⬜ Todo |
 | AC-10 | The painter opens the full readout for sample A | ITEST-2 `TestAC10_OpenReadoutA` | COMPARE-6 | ⬜ Todo |
 | AC-11 | The painter opens the full readout for sample B | ITEST-2 `TestAC11_OpenReadoutB` | COMPARE-6 | ⬜ Todo |
-| AC-12 | With no second sample chosen, the comparison invites one | ITEST-2 `TestAC12_InviteSecond` | COMPARE-3 | ⬜ Todo |
+| AC-12 | With no second sample chosen, the comparison invites one | ITEST-2 `TestAC12_InviteSecond` | COMPARE-3 | ✅ Done |
 
 ## Design decisions
 
@@ -133,7 +133,7 @@ distance) — **DIFF-2** augments it with a near-identical control pair that rea
 |---|---|---|---|---|
 | DIFF | [modules/DIFF.md](modules/DIFF.md) | Color-science comparison: CIEDE2000 ΔE00, plain-verdict bands, the LCh relational decomposition (ΔL*/ΔC*/Δh° + direction, "Same …") | bs-01 color-science | 🔄 In progress |
 | CVD | [modules/CVD.md](modules/CVD.md) | `CvdProfile` + `ConfusionCheck` dichromat-projection detector; confusion-warning text; the spoken utterance builder | bs-01 color-science, DIFF | 🔄 In progress (CVD-1 done) |
-| COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | 🔄 In progress (COMPARE-2 done) |
+| COMPARE | [modules/COMPARE.md](modules/COMPARE.md) | Scaffold; `ComparisonController`/state; `SampleSource` + in-memory catalogue; `ComparisonReadEndpoint`; swap; open-readout; comparison entry in `buildApp` | bs-01 domain/router/Speech, DIFF, CVD | 🔄 In progress (COMPARE-3 done; 5/6 left) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Comparison screen UI: slot A/B pickers (E3/E5/E49), swap (E4), overall-difference + relational-statement regions, confusion warning, speak (E6), open-readout (E7/E8), choose-B invite | COMPARE, DIFF, CVD | ✅ Done (SCREEN-1; regions filled by behaviour phases) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1,2,3,4; G-3 approved 2026-10-08) |
 
@@ -197,8 +197,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-2 | acceptance-tests: AC-1,2,3,10,11,12 (pending) + red baseline | ✅ Done | 7,878,822 | 27m 54s | 6 pending AC tests + red baseline; acc 10 pass/6 pending, run-pending 6 fail clean; grades 6×A; 0/3 fixes |
 | 8 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9 (pending) + red baseline | ✅ Done | 15,032,038 | 29m 57s | 6 pending AC tests + red baseline; G-4 resolved (ΔE00 13.1) + confusion-pair renamed to Terre Verte (verified deutan pair); acc 14 pass/12 pending, run-pending 12 fail clean; grades 6×A; 0/3 fixes; ran in worktree |
 | 9 | ITEST-4 | test-review: packet + G-3 | ✅ Done | 3,360,351 | 10m 59s | packet assembled; regression green (unit 247, acc 14 pass/12 pending); 24×A grid; **G-3 approved 2026-10-08 — Matt Quirk** |
-| 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ⬜ Next | | | first behaviour; unblocks all Givens |
-| 11 | COMPARE-6 | behavior: AC-10, AC-11 — open readout for A / B | ⬜ Todo | | | ∥ DIFF-2, CVD-2 |
+| 10 | COMPARE-3 | behavior: AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render + invite | ✅ Done | 11,695,533 | 22m 21s | AC-1/2/12 un-pended + green; unit 254, cov 100%, acc 34 pass/9 pending; 3×A; 1/3 fixes |
+| 11 | COMPARE-6 | behavior: AC-10, AC-11 — open readout for A / B | ⬜ Next | | | ∥ DIFF-2, CVD-2 |
 | 12 | DIFF-2 | behavior: AC-4 — ΔE00 + plain verdict + overall-difference region | ⬜ Todo | | | needs G-4; ∥ COMPARE-6, CVD-2 |
 | 13 | CVD-2 | behavior: AC-7, AC-8 — confusion detector + warning region | ⬜ Todo | | | ∥ COMPARE-6, DIFF-2 |
 | 14 | DIFF-3 | behavior: AC-5, AC-6 — relational decomposition + "Same …" + statement region | ⬜ Todo | | | after DIFF-2 |
@@ -211,17 +211,19 @@ when the row is marked done.
 
 ## Next phase
 
-**G-3 approved 2026-10-08 — the behaviour stage is open.** The acceptance suite (12 ACs, all pending,
-24×A / 0×B) was accepted as assembled (`modules/ITEST.md` § *Phase 4*); all ITEST phases are done.
-- **Startable now:** **COMPARE-3** (AC-1, AC-2, AC-12 — sample source + selection + pickers + slot render +
-  invite). It is the first behaviour phase and unblocks all selection Givens, so nothing runs in parallel with it.
-- **After COMPARE-3:** {COMPARE-6 ∥ DIFF-2 ∥ CVD-2} run in parallel (file-disjoint); then DIFF-3; then
-  {COMPARE-5 ∥ CVD-3}.
-- **DIFF-2** needs G-4 (resolved — AC-4 pins `delta-E00 13.1`) and closes the TestAC04 control augmentation.
+**COMPARE-3 done — selection, slot render and the AC-12 invite are in; AC-1/AC-2/AC-12 un-pended and green.**
+Every behaviour Given (choose A / choose B) now works, so the next window opens.
+- **Startable now, in parallel (file-disjoint):** **COMPARE-6** (AC-10, AC-11 — `actions_bar.dart` +
+  `comparison_controller.openReadout`, wires `AppRouter.toReadout`), **DIFF-2** (AC-4 — `difference.dart` +
+  `difference_region.dart`), **CVD-2** (AC-7, AC-8 — `confusion_check.dart` + `confusion_region.dart`).
+- **After those:** DIFF-3 (AC-5, AC-6 — `statement_region.dart`, serial after DIFF-2); then {COMPARE-5 ∥ CVD-3}.
+- **DIFF-2** closes the TestAC04 control augmentation (near-identical control pair, different verdict band).
 - **CVD-2 note:** must make its real detector the app's **shipped default** `AppDependencies.confusionCheck`
   (the harness no longer forces `NoopConfusionCheck`).
 
-Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` picks up COMPARE-3.
+Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-comparison` (auto-picks the next
+startable) or name one, e.g. `/feature-next-phase bs-03-relative-comparison COMPARE-6`. For true parallelism,
+run each in its own session with `--parallel`.
 
 ## Token usage
 
@@ -245,7 +247,8 @@ Run next (fresh session, after `/clear`): `/feature-next-phase bs-03-relative-co
 | RECONCILE | 349b8b33 | 2026-10-07 22:36 EDT | 23:02 | 25m 20s | 6m 44s | claude-opus-4-8 | 54 | 77,930 | 2,141,418 | 29,792 | 2,249,194 | fast-forwarded ITEST-3 (4e0dacd) into feat/bs-03-relative-comparison in a worktree (primary was on bs-02); applied ITEST-3 rollup to master plan (status, G-4 resolved + G-5 added, fixtures/AC-4/AC-7 repinned to Terre Verte, session log, Next-phase) + added ITEST-3 ledger row; clean ff, tests-only, no lib/** change |
 | ITEST-4 | 3e95fce2 | 2026-10-07 23:18 EDT | 23:29 | 10m 59s | 10m 59s | claude-opus-4-8 | 72 | 98,056 | 3,234,848 | 27,375 | 3,360,351 | test-review packet assembled; regression green (unit 247, acc 14 pass/12 pending); 24xA grid; awaiting G-3 |
 | SIGNOFF-DECISION | 4d81ad77 | 2026-10-08 03:57 EDT | 05:16 | 1h 18m | 3m 33s | claude-opus-4-8 | 54 | 106,200 | 1,765,071 | 14,054 | 1,885,379 | ITEST-4 approved |
-| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 05:16** | **12h 46m** | **3h 01m** |  | **1,216** | **2,130,049** | **68,980,500** | **628,633** | **71,740,398** |  |
+| COMPARE-3 | 3c9e4b4b | 2026-10-08 05:33 EDT | 05:56 | 22m 21s | 22m 21s | claude-opus-4-8 | 146 | 301,287 | 11,334,346 | 59,754 | 11,695,533 | AC-1/2/12 un-pended + green; unit 254, cov 100% on 15 touched files, acc 34 pass/9 pending; grades 3×A; 1/3 fixes |
+| **Feature total** |  | **2026-10-07 07:43 EDT** | **2026-10-08 05:56** | **13h 08m** | **3h 24m** |  | **1,362** | **2,431,336** | **80,314,846** | **688,387** | **83,435,931** |  |
 
 ## Sign-off
 

@@ -84,10 +84,10 @@ void main() {
   );
 
   group('pending gate', () {
-    // No AC is un-pended yet (ITEST-1 only seeds the gate); the pending map is
-    // therefore the full set of 12. This set grows — i.e. this literal shrinks
-    // — one behaviour phase at a time as each un-pends its AC.
-    const unpended = <String>{};
+    // Un-pended by the behaviour phases so far: COMPARE-3 un-pended AC-1, AC-2
+    // and AC-12 (selection + slot render + invite). This set grows one
+    // behaviour phase at a time as each un-pends its AC.
+    const unpended = <String>{'AC-1', 'AC-2', 'AC-12'};
 
     test(
       'pending map is the exact complement of the un-pended ACs across all 12, '

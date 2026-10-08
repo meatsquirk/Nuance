@@ -1,6 +1,6 @@
 # Module COMPARE — comparison controller & assembly
 
-**Status:** In progress — COMPARE-2 (shell) done; SCREEN-1 unblocked
+**Status:** In progress — COMPARE-3 (behaviour: AC-1, AC-2, AC-12) done; COMPARE-5 (needs DIFF-3) and COMPARE-6 startable next
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/compare/comparison_controller.dart`, `lib/compare/comparison_state.dart`,
 `lib/compare/comparison_read_endpoint.dart`, `lib/compare/sample_source.dart` (interface + in-memory
@@ -15,7 +15,7 @@ reuses `lib/app/router.dart` (`toComparison`, `toReadout`). Carries the scaffold
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 2,185,042 | 9m 04s (42m 14s) |
 | 2 | shell | — | ✅ Done | 12,364,300 | 25m 01s |
-| 3 | behavior | AC-1, AC-2, AC-12 | ⬜ Todo | | |
+| 3 | behavior | AC-1, AC-2, AC-12 | ✅ Done | 11,695,533 | 22m 21s |
 | 5 | behavior | AC-3 | ⬜ Todo | | |
 | 6 | behavior | AC-10, AC-11 | ⬜ Todo | | |
 
@@ -188,9 +188,67 @@ Shell landed; behaviour unchanged (empty catalogue ⇒ empty slots, no statement
   `TestAC12_InviteSecond` green run-pending; the smoke + earlier green stay green.
 - **Acceptance gate:** un-pend AC-1, AC-2, AC-12; suite green for those tests.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Behaviour landed: the painter can now choose saved samples into slots A and B, each slot shows its CIELCh
+reading, and a single-sample screen suppresses the statement and invites a second sample. AC-1, AC-2, AC-12
+un-pended and green.
+
+- **`slots_region.dart`** — Choose sample A / B (E3/E5) are now enabled and open a `showDialog` sample picker
+  (E49) listing `controller.savedSamples` (a `SimpleDialogOption` per sample); choosing one calls
+  `selectA`/`selectB`. Each set slot renders its name line **and** a reading line `L n, C n, h n degrees`
+  from bs-01's pure `labToCielch(sample.coordinates)`, rounded. Empty slot: name line only. `Sample picker`
+  and `Swap A and B` stay inert (swap is COMPARE-5).
+- **`comparison_controller.dart`** — `_state` made mutable; `selectA`/`selectB` re-derive the state via the
+  existing `_derive` seam (preserving the other slot) and `_emit` (sets state + `notifyListeners`). One slot
+  ⇒ `comparison` stays null (drives AC-12); both ⇒ the pair reads through DIFF/CVD (placeholders until
+  DIFF-2/3, CVD-2).
+- **`statement_region.dart`** — when `comparison == null` it renders no decomposition line and an invite
+  (`"Choose a second sample to compare."`); when both slots are set it keeps the `—` placeholder DIFF-3
+  fills. (The AC-12 *enabled control* the test asserts is the slots region's Choose-B button; the statement
+  invite text is the user-facing prompt.)
+- **`sample_source.dart`** — unchanged: the shell's `InMemorySampleSource(samples:)` already holds a seeded
+  catalogue; the acceptance suite injects `CATALOGUE`, and the picker lists it through
+  `controller.savedSamples`. The shipped default stays empty (persistent catalogue is bs-06, D-7) — reported
+  deviation from the plan's "populate the catalogue" task, with no AC impact.
+- **Gates.** `flutter analyze` clean. Unit **254 green** (was 247; +7 selection/picker/invite/render tests;
+  rewired the two SCREEN-1 shell tests that asserted inert Choose controls / the statement placeholder).
+  Coverage gate **PASS** — 100% line coverage on all 15 touched `lib/**` files
+  (`dart run tool/coverage_gate.dart main`). Acceptance (iOS sim, under the verify lock): default
+  `flutter test integration_test/comparison_test.dart` **17 pass / 9 pending** — AC-1, AC-2, AC-12 un-pended
+  and green; full `flutter test integration_test/` **34 pass / 9 pending** (bs-01 handoff AC-9/AC-10 still
+  green with the new slot reading line). **Test grades: 3×A, 0×B** — AC-1/AC-2/AC-12 graded by an independent
+  fresh-context grader against G1–G6 (grid: `../behavior-test-completeness-bs-03-relative-comparison.md`,
+  *COMPARE-3* section). **Fix passes: 1/3** (first run: one bare-`SlotsRegion` widget test asserted the
+  re-rendered slot text without a `ListenableBuilder` — switched those picker tests to pump the full
+  `ComparisonScreen`). No coverage exclusions. No augmentations assigned to AC-1/2/12.
+- **Tokens / time:** 11,695,533 · 22m 21s (active = wall), one session.
+
+### Checkpoint / Handoff
+
+- **Frozen for the remaining behaviour phases:**
+  - `ComparisonController.selectA(Sample)` / `selectB(Sample)` place a sample into the slot, preserve the
+    other, re-derive via `_derive` and `_emit` (notifies). `_state` is now mutable; `_emit(next)` is the one
+    mutation path — **COMPARE-5**'s `swap` should route through it too.
+  - `SlotsRegion` owns the picker (`_choose` → `showDialog<Sample>` over `controller.savedSamples`) and the
+    slot render (`_slot`: name line + `L n, C n, h n degrees` via `labToCielch`). COMPARE-5 adds the E4 swap
+    control here; the `Swap A and B` button is present but `onPressed: null` — wire it to `controller.swap`.
+  - `StatementRegion` branches on `controller.state.comparison`: null ⇒ invite; non-null ⇒ the `—`
+    placeholder. **DIFF-3** replaces the non-null branch with the three decomposition lines and keeps the
+    null branch's invite intact (AC-12 must stay green).
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration on the
+  iOS sim under the verify lock:
+  `$C with-lock <FEATURE> <PHASE> --wait 900 -- bash -c "export PATH=…; cd <repo> && flutter test integration_test/ -d <iPhone-sim-id>"`
+  (booted sim this session: iPhone 17 `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`). Run-pending:
+  `--dart-define=BS03_RUN_PENDING=true`. Base = `main` (the gate measures the whole bs-03 lib delta).
+- **Known gaps / notes:** the both-slots statement/difference/confusion regions still show placeholders
+  (DIFF-2/3, CVD-2 fill them). The shipped `AppDependencies.sampleSource` default is empty (bs-06). Carry-over
+  bs-01 const-line coverage flake still applies (re-run `--coverage` once if an untouched file flags).
+  Untracked bs-04..bs-14 specs + `docs/` remain in the tree, not part of bs-03.
+- **Next:** COMPARE-6 (AC-10, AC-11 — open readout; `actions_bar.dart` + `comparison_controller.openReadout`,
+  wires `AppRouter.toReadout`), DIFF-2 (AC-4), CVD-2 (AC-7/8) run in parallel (file-disjoint) now that
+  selection exists.
 
 ## Phase 5 — Swap A / B (COMPARE-5)
 

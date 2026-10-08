@@ -95,3 +95,27 @@ Judgement calls:
 - **Determinism:** `pumpAndSettle` after every action; guards use no env/time/sleep.
 
 Gate recommendation: **PASS** — all six ITEST-3 AC tests and all four new guards meet the grade-A bar (AC-4 as A-with-noted-limitation, its augmentation correctly deferred to DIFF-2).
+
+## COMPARE-3 — AC tests (selection / slot render / invite)
+
+Graded 2026-10-08 by an independent grader (fresh context; did not author these tests), re-graded now that COMPARE-3's behaviour is implemented and AC-1/AC-2/AC-12 are un-pended and green on the iOS sim. Each assertion traced against the real `SlotsRegion` / `StatementRegion` / `ComparisonController`; no Δ found between what the tests assert and what the widgets render, and each is confirmed still non-vacuous (would fail a plausible wrong implementation).
+
+| Test | Grade | Rules checked | Justification / what it rejects |
+| --- | --- | --- | --- |
+| `AC-1` — Choosing sample A fills slot A with the sample and its L/C/h | A | G1 (slot-A-empty + picker-lists-every-catalogue-name asserted before the When), G2 (behaviour from tapping the real picker entry → `selectA`), G4 (exact literals), G5 (name-without-numbers / wrong-sample / B-fill rejects) | Given asserts `state.slotA isNull`, opens the real `showDialog` picker and loops every `CATALOGUE` name `findsWidgets` (a `SimpleDialogOption` per `savedSamples`). Then asserts `slotA?.name == 'Warm Terracotta'`, `slotB isNull`, and the slots region contains BOTH `'Slot A: Warm Terracotta'` AND `'L 58, C 34, h 42 degrees'`. Verified against `_slot` (two Texts; `labToCielch(58,25.27,22.75)` → C 34.00 / h 41.99 → "h 42"). Rejects a name-only slot (the L/C/h literal fails — now a live defeatable alternative), a wrong/absent pick, and `selectA` also filling slot B. |
+| `AC-2` — Choosing sample B fills slot B with the sample and its L/C/h | A | G1 (A-configured + B-empty before the When; picker-lists-B inside `_choose`), G2 (B from real `selectB`), G3 (settled negative + in-test control), G4 (exact literals), G5 (B-overwrites-A reject) | Given configures A via the real `whenChooseA` flow and asserts `slotA?.name == 'Warm Terracotta'`, `slotB isNull`. Then asserts `slotB?.name == 'Raw Sienna Light'`, the settled negative `slotA?.name` STILL `'Warm Terracotta'` after `whenChooseB`, and `'Slot B: Raw Sienna Light'` + `'L 70, C 25, h 60 degrees'` (`labToCielch(70,12.50,21.65)` → C 25.00 / h 60.00). Traced to `selectB` re-deriving with `_state.slotA` preserved; a slot-A-overwriting `selectB` fails the settled negative (paired with the positive slot-B change as the control). |
+| `AC-12` — With no second sample, the comparison invites one | A | G1 (A-set + B-empty before the When), G2 (one-sample state is the real driver), G3 (negative at the state grain + enabled-invite control, settled), G4 (state + rendered + enabled-button grain), G5 (no-statement + inert-control rejects), G6 (own Then only) | Given asserts `slotA?.name == 'Warm Terracotta'`, `slotB isNull`. Then asserts `hasBothSlots isFalse` and the decisive `state.comparison isNull` (traced to `_derive`: `b == null` ⇒ null comparison — rejects a one-sample statement), a word-list guard that `StatementRegion` shows none of Lighter/Darker/saturated/shifted/Same (it renders `'Relational statement'` + `'Choose a second sample to compare.'`), and that the `Choose sample B` `TextButton` is present AND `.enabled`. Confirmed in `SlotsRegion`: Choose-B has non-null `onPressed` (enabled) while `Sample picker`/`Swap A and B` are `onPressed: null` — so the enabled-invite assertion rejects the previous inert shell control and a missing invite. |
+
+### Summary — COMPARE-3
+
+Grade counts: **3×A, 0×B**.
+
+Bs to fix: none.
+
+Judgement calls:
+- **Invite = enabled Choose-sample-B button (confirmed).** `StatementRegion` also renders invite text, but AC-12's asserted control is `SlotsRegion`'s enabled `Choose sample B` `TextButton` — the live, defeatable signal (enabled vs the disabled `Sample picker`/`Swap` siblings).
+- **Positive "reading can change" control lives in sibling ACs.** AC-12's own Then is wholly negative; the control proving a statement CAN appear is AC-3's Given and AC-5 — consistent with the ITEST-2 grid's accepted G3 handling. The in-test enabled Choose-B button + `comparison isNull` already prove a live one-sample render, not a blank screen.
+- **No forward-reference regression / no prior-A downgrade.** At ITEST-2 these failed cleanly against the shell (inert control / name-only slot); against the real code every asserted literal matches what the widgets emit (CIELCh rounding recomputed), so none passes by coincidence.
+- **Determinism:** `pumpAndSettle` after every action; no env/time/sleep.
+
+Gate recommendation: **PASS** — all three un-pended COMPARE-3 AC tests meet the grade-A bar.
