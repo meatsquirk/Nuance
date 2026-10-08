@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 + ITEST-2 (AC-1,2,3,10,11,12) done; next ITEST-3 (AC-4..9), then ITEST-4 (review, G-3)
+**Status:** In progress — ITEST-1 + ITEST-2 + ITEST-3 (all 12 ACs have a pending test) done; next ITEST-4 (review, G-3). G-4 resolved.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/comparison_test.dart` (AC tests), `integration_test/comparison_harness.dart`
 (Given/When/Then vocabulary, fixtures, pending gate, `buildApp` driver with the comparison entry); reuses
@@ -13,8 +13,8 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 5,939,625 | 19m 08s |
 | 2 | acceptance-tests | AC-1,2,3,10,11,12 | ✅ Done | 7,878,822 | 27m 54s |
-| 3 | acceptance-tests | AC-4,5,6,7,8,9 | ⬜ Todo | | |
-| 4 | test-review | — (G-3) | ⬜ Todo | | |
+| 3 | acceptance-tests | AC-4,5,6,7,8,9 | ✅ Done | 15,032,038 | 29m 57s |
+| 4 | test-review | — (G-3) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -36,8 +36,16 @@ bs-01's `integration_test/fakes/fake_speech.dart`.
 ## Open gates
 
 - **G-3 (approve acceptance tests)** — recorded here on ITEST-4.
-- **G-4 (spec-data reconciliation)** must be resolved before ITEST-3 pins AC-4's expected ΔE00 literal; until
-  then AC-4's test is written with the literal as a `TODO(G-4)` placeholder and stays pending.
+- **G-4 (spec-data reconciliation)** ✅ **Resolved 2026-10-07: option (a) — correct the overall to the
+  computed value "delta-E00 13.1" — Matt Quirk (spec author).** The stated LCh coords compute to CIEDE2000
+  ΔE00 ≈ 13.05 (→ "13.1" displayed); the spec's old "14.2" was the error. Spec line 48 amended; AC-4's test
+  pins "delta-E00 13.1" (no placeholder).
+- **Confusion-pair reconciliation** ✅ **Resolved 2026-10-07: rename sample B to "Terre Verte Shadow" (a
+  green earth), keep the deutan profile — Matt Quirk (spec author).** The old "Mid Raw Umber / Ultramarine
+  Shadow" pair is a blue↔yellow difference, which no dichromacy confuses (verified: it *expands* under
+  deutan/protan/tritan projection). ITEST-3 repinned `SAMPLE_UMBER`=(40,18,16) and
+  `SAMPLE_TERRE_VERTE`=(40,−10,18) — normal ΔE00 ≈ 28, deutan-projected ΔE00 ≈ 1.4 — a genuine deutan
+  confusion pair (verified against the independent `referenceDeutanProjected`). Spec line 72 amended.
 
 ## Phase 1 — Harness (ITEST-1)
 
@@ -213,9 +221,89 @@ above (iOS sim, exclusive lane). `--dart-define=BS03_RUN_PENDING=true` **does** 
   Then; grades recorded; the confusion-line pair verified.
 - **Acceptance gate:** *(acceptance-tests — as ITEST-2)*
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+**Landed.** One *pending* `acTestWidgets` per AC (AC-4..AC-9) in the new "ITEST-3 — difference /
+decomposition / confusion / speak" group of `integration_test/comparison_test.dart`, driving the real
+assembled app via the harness; observed through rendered region text + the `ComparisonReadEndpoint` state
+(`comparison` ΔE00/verdict/3 lines, `confusable`) and `FakeSpeech`:
+- **AC-4** `TestAC04_OverallDelta` (→DIFF-2) — A=Terracotta,B=Sienna; asserts the difference region reads
+  `delta-E00 13.1` **and** `clearly different`, and `state.comparison.deltaE00` `closeTo` the independent
+  `referenceDeltaE00` (≈13.05, ±0.1) with verdict `clearly different` — so a ΔE76/Euclidean metric fails.
+  *Limited* (one pair can't show the verdict tracks distance); DIFF-2 augments with a near-identical control.
+- **AC-5** `TestAC05_Decompose` (→DIFF-3) — exact `Lighter by 12` / `Less saturated by 9` /
+  `Hue shifted 18 degrees toward yellow` in the statement region **and** on `state.comparison.{lightness,
+  saturation,hue}` (the 12/9/18 only come out in LCh; rejects a*/b* Euclidean and inverted signs).
+- **AC-6** `TestAC06_SameHue` (→DIFF-3) — A=Terracotta,B=Terracotta Tint (both h 42°); `state.comparison.hue
+  == 'Same hue'` while lightness/saturation still state deltas; rejects a tiny non-zero shift
+  (`isNot(contains('Hue shifted'))`) **and** whole-statement suppression (lightness line still present).
+- **AC-7** `TestAC07_ConfusionFlagged` (→CVD-2) — deutan; A=Umber,B=Terre Verte; asserts profile deutan +
+  both set + the pair's normal ΔE00 clearly-different (independent reference) → `state.confusable` true and the
+  warning region says `identical` … `different`. Control: AC-8.
+- **AC-8** `TestAC08_NotConfusable` (→CVD-2) — deutan; A=Terracotta,B=Sienna (off-line) → `state.confusable`
+  false and no `identical` warning after settle; rejects an always-warn detector.
+- **AC-9** `TestAC09_SpeakIncludesWarning` (→CVD-3) — warning shown for the confusable pair, speech empty;
+  `whenSpeak` → exactly one utterance containing **both** `identical` (warning) and `Hue shifted` (statement);
+  rejects omitting the warning, speaking nothing, multiple utterances, and speaking only the warning.
+
+**Confusion-pair construct-and-verify (plan task 2).** The old `SAMPLE_UMBER`/`SAMPLE_ULTRAMARINE`
+(brown/blue) are **not** a confusion pair under any dichromacy — verified they *expand* under the Viénot-1999
+deutan/protan/tritan projections (blue↔yellow is preserved). Raised to the spec author → renamed B to
+`SAMPLE_TERRE_VERTE` "Terre Verte Shadow", keeping deutan. Repinned `SAMPLE_UMBER`=(40,18,16),
+`SAMPLE_TERRE_VERTE`=(40,−10,18): normal ΔE00 ≈ 28, deutan-projected ΔE00 ≈ 1.4 — a genuine deutan confusion
+pair. Added an **independent** `referenceDeutanProjected` (Viénot 1999, test-only, the deutan analogue of
+`referenceDeltaE00`) and a guard group proving: the pair collapses under the projection while staying
+clearly-different normally; the AC-8 off-line control does **not** collapse; and the projection is
+well-formed (neutral grey fixed, idempotent). CATALOGUE + the catalogue-guard name updated; spec lines 48
+(G-4) and 72 (rename) amended.
+
+**Harness.** `givenComparison`'s `confusionCheck` made optional (null ⇒ the app's shipped default applies),
+so AC-7/8/9 exercise CVD-2's real detector automatically once it ships — with no forward reference to a
+not-yet-built class.
+
+**Gates.** `flutter analyze` clean. Unit **247 green**; coverage gate **PASS** (no touched `lib/**` — tests
+only). Acceptance default `flutter test integration_test/comparison_test.dart` **14 pass + 12 pending
+(skipped)** (14 = smoke + guards, incl. the 3 new deutan-pair guards + the AC-7 geometry guard). Red baseline
+(`--dart-define=BS03_RUN_PENDING=true`) **14 pass / 12 fail**, each AC-4..9 on a clean `expect` at the
+COMPARE-3 selection Given precondition (see *Red baseline*), no panic/compile error. **Grades: 6×A AC + A
+guards, 0×B** — graded by an independent fresh subagent against G1–G6; grid appended at
+`../behavior-test-completeness-bs-03-relative-comparison.md`. **Fix passes: 0/3.** No coverage exclusions.
+
+**Deviations / notes.** All six fail at baseline on the **COMPARE-3** selection Given (the picker lists
+nothing in the shell), *upstream* of each test's own owning phase — the same owning-phase precondition
+stacking accepted for ITEST-2's AC-3/10/11 (a Given precondition naming a real phase; clean `expect`, no
+panic). Run in a **worktree** (`/Users/matthew.quirk/Nuance-wt-bs03-ITEST-3`, branch
+`phase/bs-03-relative-comparison/ITEST-3`) because the primary checkout was occupied by a live bs-02 session;
+master-plan rollup deferred (reconcile from the primary).
+
+### Checkpoint / Handoff
+
+**Frozen for ITEST-4 (test review) and the behaviour phases:**
+- All **12** ACs now have one pending, grade-A `acTestWidgets` in `comparison_test.dart` (ITEST-2 group:
+  AC-1,2,3,10,11,12; ITEST-3 group: AC-4..9). Un-pend by deleting the AC's row in `bs03/pending.dart`.
+- **Behaviour-phase contracts these tests pin:** DIFF-2 → difference region renders `delta-E00 13.1` +
+  verdict `clearly different`, and `Comparison.deltaE00` is CIEDE2000 (matches `referenceDeltaE00` ±0.1);
+  DIFF-3 → `Comparison.{lightness,saturation,hue}` = `Lighter by 12` / `Less saturated by 9` /
+  `Hue shifted 18 degrees toward yellow`, and `Same hue` when the hue is unchanged (no "Hue shifted 0…");
+  CVD-2 → `ConfusionCheck` real deutan projection making `state.confusable` true for Umber/Terre Verte and
+  false for Terracotta/Sienna, and `ConfusionRegion` renders a warning containing `identical` … `different`
+  when true / nothing when false; **CVD-2 must also make its real detector the app's shipped default
+  `AppDependencies.confusionCheck`** (the harness no longer forces `NoopConfusionCheck`); CVD-3 → `whenSpeak`
+  emits exactly one `Speech.speak` utterance containing both the statement and the warning text.
+- **Fixtures:** `SAMPLE_UMBER` / `SAMPLE_TERRE_VERTE` are the deutan confusion pair (verified); CVD-2's
+  shipped detector must agree with `referenceDeutanProjected` (threshold 2.0 projected / 15 normal).
+- **AC-4 augmentation** (DIFF-2): add a near-identical control pair reading a *different* verdict band.
+
+**⚠ Verification in a worktree** (unchanged from ITEST-2): `coord.sh with-lock` runs its command from
+`$FNP_COORD_REPO` (the primary checkout), so a worktree integration run must
+`bash -c "cd <WORKTREE> && flutter test …"`. Unit / `flutter analyze` run directly in the worktree.
+
+**Verification commands** (`export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+`flutter test --coverage` · `dart run tool/coverage_gate.dart <base>` · default + run-pending integration
+(`-d <iOS-sim>`, under the lock) as above.
+
+**Next:** ITEST-4 (test review → G-3) — assemble the packet for all 12 ACs, run the full regression, present
+for the human G-3 decision. Blocks every behaviour phase.
 
 ## Phase 4 — Test review (ITEST-4)
 
@@ -239,12 +327,12 @@ above (iOS sim, exclusive lane). `--dart-define=BS03_RUN_PENDING=true` **does** 
 | AC-1 | TestAC01_ChooseA | ❌ fails | Given: picker lists the saved samples (COMPARE-3 E49) — `find.text('Warm Terracotta')` findsWidgets | COMPARE-3 | A |
 | AC-2 | TestAC02_ChooseB | ❌ fails | Given: choose A via the picker (COMPARE-3) — `_choose` picker-lists-"Warm Terracotta" precondition | COMPARE-3 | A |
 | AC-3 | TestAC03_Swap | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (stacks before swap/DIFF-3 Then) | COMPARE-5 | A |
-| AC-4 | TestAC04_OverallDelta | _TBD ITEST-3_ | | DIFF-2 | |
-| AC-5 | TestAC05_Decompose | _TBD ITEST-3_ | | DIFF-3 | |
-| AC-6 | TestAC06_SameHue | _TBD ITEST-3_ | | DIFF-3 | |
-| AC-7 | TestAC07_ConfusionFlagged | _TBD ITEST-3_ | | CVD-2 | |
-| AC-8 | TestAC08_NotConfusable | _TBD ITEST-3_ | | CVD-2 | |
-| AC-9 | TestAC09_SpeakIncludesWarning | _TBD ITEST-3_ | | CVD-3 | |
+| AC-4 | TestAC04_OverallDelta | ❌ fails | Given: choose A (COMPARE-3) — `_choose` picker-lists-"Warm Terracotta" precondition (stacks before the DIFF-2 Then) | DIFF-2 | A |
+| AC-5 | TestAC05_Decompose | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (stacks before the DIFF-3 Then) | DIFF-3 | A |
+| AC-6 | TestAC06_SameHue | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (stacks before the DIFF-3 Then) | DIFF-3 | A |
+| AC-7 | TestAC07_ConfusionFlagged | ❌ fails | Given: choose A "Mid Raw Umber" (COMPARE-3) — picker precondition (stacks before the CVD-2 Then) | CVD-2 | A |
+| AC-8 | TestAC08_NotConfusable | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (stacks before the CVD-2 Then) | CVD-2 | A |
+| AC-9 | TestAC09_SpeakIncludesWarning | ❌ fails | Given: choose A "Mid Raw Umber" (COMPARE-3) — `_choose` precondition (stacks before the CVD-3 speak Then) | CVD-3 | A |
 | AC-10 | TestAC10_OpenReadoutA | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (stacks before the COMPARE-6 Then) | COMPARE-6 | A |
 | AC-11 | TestAC11_OpenReadoutB | ❌ fails | Given: choose B (COMPARE-3) — picker-lists-"Raw Sienna Light" precondition | COMPARE-6 | A |
 | AC-12 | TestAC12_InviteSecond | ❌ fails | Given: choose A (COMPARE-3) — picker precondition (before the invite Then) | COMPARE-3 | A |

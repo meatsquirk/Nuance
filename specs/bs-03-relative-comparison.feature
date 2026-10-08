@@ -45,7 +45,7 @@ Feature: Relative comparison
     Scenario: The overall difference is stated as a delta-E with a plain verdict
       Given sample A is "Warm Terracotta" and sample B is "Raw Sienna Light"
       When the comparison is shown
-      Then the overall difference reads "delta-E00 14.2"
+      Then the overall difference reads "delta-E00 13.1"
       And it carries the plain verdict "clearly different"
 
   Rule: The comparison decomposes the difference into lightness, saturation and hue
@@ -69,7 +69,7 @@ Feature: Relative comparison
     # UX: Paint Color Assistant.dc.html › S1.R1 Comparison screen — confusion warning [body]
     Scenario: A confusable pair is flagged for the painter's CVD type
       Given the painter's profile is deutan-type
-      And sample A is "Mid Raw Umber" and sample B is "Ultramarine Shadow", which fall on the painter's confusion line
+      And sample A is "Mid Raw Umber" and sample B is "Terre Verte Shadow", which fall on the painter's confusion line
       When the comparison is shown
       Then a confusion warning states the two will look identical to the painter but are clearly different to others
 

@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/compare/actions_bar.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
@@ -156,7 +157,7 @@ void main() {
           'Warm Terracotta',
           'Raw Sienna Light',
           'Mid Raw Umber',
-          'Ultramarine Shadow',
+          'Terre Verte Shadow',
           'Terracotta Tint',
         ]),
       );
@@ -196,7 +197,8 @@ void main() {
     test('the off-line control pair is clearly different to normal vision '
         '(AC-8)', () {
       // The AC-8 control: terracotta vs sienna are plainly distinct, so a
-      // confusion warning on them would be wrong. (The exact literal is G-4.)
+      // confusion warning on them would be wrong. (ΔE00 ≈ 13.1 — AC-4's pinned
+      // overall after G-4 resolved to the computed value.)
       expect(
         referenceDeltaE00(
           SAMPLE_A_TERRACOTTA.coordinates,
@@ -204,6 +206,83 @@ void main() {
         ),
         greaterThan(10),
       );
+    });
+
+    test('Mid Raw Umber / Terre Verte Shadow are a red↔green pair at equal L '
+        '(AC-7)', () {
+      // AC-7 needs two samples a deuteranope confuses: same lightness, opposite
+      // red/green sign (a*), near-equal yellowness (b*). The confusion-line
+      // property itself is checked below against the deutan projection; here we
+      // pin the geometry the construction depends on.
+      expect(SAMPLE_UMBER.coordinates.lightness, 40);
+      expect(SAMPLE_TERRE_VERTE.coordinates.lightness,
+          SAMPLE_UMBER.coordinates.lightness,
+          reason: 'equal lightness, so the difference is not a lightness cue');
+      expect(SAMPLE_UMBER.coordinates.a, greaterThan(0),
+          reason: 'umber is on the red side of a*');
+      expect(SAMPLE_TERRE_VERTE.coordinates.a, lessThan(0),
+          reason: 'terre verte is on the green side of a*');
+    });
+  });
+
+  group('the Umber / Terre Verte pair is a genuine deutan confusion pair (D-5)',
+      () {
+    // ITEST-3's construct-and-verify task (plan Phase 3 task 2): the fixtures
+    // AC-7/AC-9 rely on must *actually* sit on the deutan confusion line, judged
+    // by the independent [referenceDeutanProjected] (not the product detector,
+    // which does not exist until CVD-2). "On the line" = ΔE00 after the deutan
+    // projection collapses below a small threshold while the normal ΔE00 is
+    // clearly-different. If this guard ever fails, the fixtures — not the test —
+    // are wrong.
+    const confusionThreshold = 2.0; // projected ΔE00 below this ⇒ confusable
+    const clearlyDifferent = 15.0; //  normal ΔE00 above this ⇒ distinct to all
+
+    test('normal vision tells them apart; a deuteranope cannot', () {
+      final normal = referenceDeltaE00(
+        SAMPLE_UMBER.coordinates,
+        SAMPLE_TERRE_VERTE.coordinates,
+      );
+      final projected = referenceDeutanProjectedDeltaE00(
+        SAMPLE_UMBER.coordinates,
+        SAMPLE_TERRE_VERTE.coordinates,
+      );
+      expect(normal, greaterThan(clearlyDifferent),
+          reason: 'the pair must be clearly different to normal vision '
+              '(got ΔE00 $normal)');
+      expect(projected, lessThan(confusionThreshold),
+          reason: 'under the deutan projection the pair must collapse below the '
+              'confusion threshold (got ΔE00 $projected)');
+    });
+
+    test('the AC-8 off-line control does NOT collapse under the projection', () {
+      // Terracotta vs sienna: a deuteranope still sees a difference, so AC-8's
+      // "no warning" is a genuine negative, not a detector that never fires.
+      final projected = referenceDeutanProjectedDeltaE00(
+        SAMPLE_A_TERRACOTTA.coordinates,
+        SAMPLE_B_SIENNA.coordinates,
+      );
+      expect(projected, greaterThan(confusionThreshold),
+          reason: 'the off-line control must stay distinct under the deutan '
+              'projection (got ΔE00 $projected)');
+    });
+
+    test('the projection is well-formed: neutral grey is unchanged, and it is '
+        'idempotent', () {
+      // Guards the reference itself (the analogue of the Sharma ΔE00 guard): a
+      // broken projection that expands or scrambles colour would silently pass
+      // the fixtures. A deutan projection fixes the achromatic axis and, being a
+      // projection onto a plane, is idempotent.
+      const grey = ColorCoordinates(lightness: 40, a: 0, b: 0);
+      final pGrey = referenceDeutanProjected(grey);
+      expect(pGrey.lightness, closeTo(40, 0.5));
+      expect(pGrey.a, closeTo(0, 0.5));
+      expect(pGrey.b, closeTo(0, 0.5));
+
+      final once = referenceDeutanProjected(SAMPLE_UMBER.coordinates);
+      final twice = referenceDeutanProjected(once);
+      expect(twice.lightness, closeTo(once.lightness, 1e-6));
+      expect(twice.a, closeTo(once.a, 1e-6));
+      expect(twice.b, closeTo(once.b, 1e-6));
     });
   });
 
@@ -468,5 +547,248 @@ void main() {
     expect(tester.widget<TextButton>(chooseB.first).enabled, isTrue,
         reason: 'AC-12: the screen invites choosing sample B — the choose-B '
             'control is enabled (COMPARE-3)');
+  });
+
+  // ===========================================================================
+  // ITEST-3 — difference / decomposition / confusion / speak (AC-4..AC-9)
+  // ===========================================================================
+  //
+  // One *pending* test per AC, driving the real assembled app through the
+  // harness. The default run skips these; under
+  // `--dart-define=BS03_RUN_PENDING=true` they execute (the red baseline) and
+  // must fail on a Then — or a Given precondition naming the phase that builds
+  // it — never panic. Each un-pends when its owning phase deletes its row in
+  // `bs03/pending.dart` (AC-4 → DIFF-2, AC-5/AC-6 → DIFF-3, AC-7/AC-8 → CVD-2,
+  // AC-9 → CVD-3). Every Given here first chooses the pair through the E49
+  // picker, so until COMPARE-3 lands these fail at that selection precondition.
+  // ΔE00 and the confusion-line property are graded against the harness's
+  // independent `referenceDeltaE00` / `referenceDeutanProjected`, never the
+  // product's own math.
+
+  // AC-4 — The overall difference is an *ΔE00* (CIEDE2000) with a plain verdict.
+  // The region reads the pinned literal "delta-E00 13.1" (G-4: the stated coords
+  // compute to ΔE00 ≈ 13.05, rounded for display; the spec's old 14.2 was the
+  // reconciled error) and the verdict "clearly different"; the read endpoint's
+  // deltaE00 matches the independent reference, so a plain ΔE76/Euclidean metric
+  // fails. Limited at write time (one pair cannot show the verdict *tracks*
+  // distance); DIFF-2 augments it with a near-identical control (augmentation
+  // row owned by DIFF-2).
+  acTestWidgets('AC-4',
+      'The overall difference is an ΔE00 with a plain verdict',
+      (tester) async {
+    // Given: A = Warm Terracotta, B = Raw Sienna Light, both set via selection.
+    final h = await givenComparison(tester);
+    await h.whenChooseA('Warm Terracotta');
+    await h.whenChooseB('Raw Sienna Light');
+    expect(h.state.hasBothSlots, isTrue,
+        reason: 'AC-4 Given: both slots are set (COMPARE-3)');
+
+    // When: the comparison is shown (settled by the selection flow).
+
+    // Then: the overall-difference region reads the ΔE00 literal and the plain
+    // verdict, and the endpoint's numeric ΔE00 matches the independent CIEDE2000
+    // reference for the pair (so a non-CIEDE2000 distance fails).
+    final overall = _plainTextUnder(tester, DifferenceRegion.regionKey);
+    expect(overall, contains('delta-E00 13.1'),
+        reason: 'AC-4: the overall difference reads "delta-E00 13.1" (DIFF-2; '
+            'the computed CIEDE2000 value for the pair, G-4)');
+    expect(overall, contains('clearly different'),
+        reason: 'AC-4: it carries the plain verdict "clearly different" '
+            '(DIFF-2)');
+    final reference = referenceDeltaE00(
+      SAMPLE_A_TERRACOTTA.coordinates,
+      SAMPLE_B_SIENNA.coordinates,
+    );
+    expect(h.state.comparison?.deltaE00, closeTo(reference, 0.1),
+        reason: 'AC-4: the product ΔE00 must match the independent CIEDE2000 '
+            'reference (${reference.toStringAsFixed(2)}), not a ΔE76/Euclidean '
+            'distance (DIFF-2)');
+    expect(h.state.comparison?.verdict, 'clearly different',
+        reason: 'AC-4: the verdict band for this ΔE00 is "clearly different" '
+            '(DIFF-2)');
+  });
+
+  // AC-5 — The difference decomposes into three LCh lines, each a direction and
+  // a magnitude: "Lighter by 12" (L 58→70), "Less saturated by 9" (C 34→25),
+  // "Hue shifted 18 degrees toward yellow" (h 42→60). The exact 12/9/18 come out
+  // only in LCh, so an a*/b*-Euclidean decomposition fails; the direction words
+  // reject an inverted sign ("Darker" / "More saturated").
+  acTestWidgets('AC-5',
+      'The difference decomposes into lightness, saturation and hue',
+      (tester) async {
+    // Given: A = Warm Terracotta, B = Raw Sienna Light, both set.
+    final h = await givenComparison(tester);
+    await h.whenChooseA('Warm Terracotta');
+    await h.whenChooseB('Raw Sienna Light');
+    expect(h.state.hasBothSlots, isTrue,
+        reason: 'AC-5 Given: both slots are set (COMPARE-3)');
+
+    // When: the comparison is shown.
+
+    // Then: the statement region states the three decomposition lines, and the
+    // read endpoint carries them verbatim.
+    final statement = _plainTextUnder(tester, StatementRegion.regionKey);
+    expect(statement, contains('Lighter by 12'),
+        reason: 'AC-5: lightness line "Lighter by 12" (L 58→70) (DIFF-3)');
+    expect(statement, contains('Less saturated by 9'),
+        reason: 'AC-5: saturation line "Less saturated by 9" (C 34→25) '
+            '(DIFF-3)');
+    expect(statement, contains('Hue shifted 18 degrees toward yellow'),
+        reason: 'AC-5: hue line "Hue shifted 18 degrees toward yellow" '
+            '(h 42→60) (DIFF-3)');
+    expect(h.state.comparison?.lightness, 'Lighter by 12',
+        reason: 'AC-5: the LCh lightness delta is +12 — rejects an a*/b* '
+            'Euclidean basis or an inverted "Darker" (DIFF-3)');
+    expect(h.state.comparison?.saturation, 'Less saturated by 9',
+        reason: 'AC-5: the LCh chroma delta is −9 — rejects "More saturated" '
+            '(DIFF-3)');
+    expect(h.state.comparison?.hue, 'Hue shifted 18 degrees toward yellow',
+        reason: 'AC-5: the LCh hue delta is 18° toward yellow (DIFF-3)');
+  });
+
+  // AC-6 — A dimension that does not change reads "Same hue", while the other
+  // two dimensions still state their deltas. A = Terracotta, B = Terracotta Tint
+  // share the hue angle 42° but differ in L and C. Rejects a tiny non-zero hue
+  // shift ("Hue shifted 0 degrees…") and a whole-statement suppression (the
+  // lightness/saturation lines must remain).
+  acTestWidgets('AC-6', 'An unchanged dimension reads "Same hue"',
+      (tester) async {
+    // Given: A = Warm Terracotta, B = Terracotta Tint (both at hue 42°).
+    final h = await givenComparison(tester);
+    await h.whenChooseA('Warm Terracotta');
+    await h.whenChooseB('Terracotta Tint');
+    expect(h.state.hasBothSlots, isTrue,
+        reason: 'AC-6 Given: both slots are set (COMPARE-3)');
+
+    // When: the comparison is shown.
+
+    // Then: only the hue dimension reads "Same hue"; lightness and saturation
+    // still state their deltas (the statement is not wholly suppressed).
+    expect(h.state.comparison?.hue, 'Same hue',
+        reason: 'AC-6: the unchanged hue reads exactly "Same hue" — not "Hue '
+            'shifted 0 degrees…" (DIFF-3)');
+    expect(h.state.comparison?.lightness, 'Lighter by 12',
+        reason: 'AC-6: the lightness line still states its delta (DIFF-3)');
+    expect(h.state.comparison?.saturation, 'Less saturated by 9',
+        reason: 'AC-6: the saturation line still states its delta (DIFF-3)');
+    final statement = _plainTextUnder(tester, StatementRegion.regionKey);
+    expect(statement, contains('Same hue'),
+        reason: 'AC-6: the statement shows "Same hue" for the hue dimension '
+            '(DIFF-3)');
+    expect(statement, contains('Lighter by 12'),
+        reason: 'AC-6: the other dimensions are not suppressed — the lightness '
+            'line remains (rejects whole-statement suppression) (DIFF-3)');
+    expect(statement, isNot(contains('Hue shifted')),
+        reason: 'AC-6: an unchanged hue must not read as a (tiny) shift '
+            '(DIFF-3)');
+  });
+
+  // AC-7 — A pair on the painter's deutan confusion line is flagged. A = Mid Raw
+  // Umber, B = Terre Verte Shadow: clearly different to normal vision yet
+  // collapsing under the deutan projection (verified independently above). The
+  // warning states the two look identical to the painter but are clearly
+  // different to others. Control: AC-8 (an off-line pair that must NOT warn), so
+  // a detector hard-wired to always warn fails exactly one of the pair.
+  acTestWidgets('AC-7',
+      'A confusable pair is flagged for the painter\'s CVD type',
+      (tester) async {
+    // Given: a deutan painter; A = Mid Raw Umber, B = Terre Verte Shadow, which
+    // are clearly different to normal vision (independent reference).
+    final h = await givenComparison(tester, profile: CVD_DEUTAN);
+    expect(h.controller.profile.type, CvdType.deutan,
+        reason: 'AC-7 Given: the painter\'s profile is deutan');
+    await h.whenChooseA('Mid Raw Umber');
+    await h.whenChooseB('Terre Verte Shadow');
+    expect(h.state.hasBothSlots, isTrue,
+        reason: 'AC-7 Given: both slots are set (COMPARE-3)');
+    expect(
+      referenceDeltaE00(
+        SAMPLE_UMBER.coordinates,
+        SAMPLE_TERRE_VERTE.coordinates,
+      ),
+      greaterThan(15),
+      reason: 'AC-7 Given: the pair is clearly different to normal vision '
+          '(independent CIEDE2000 reference)',
+    );
+
+    // When: the comparison is shown.
+
+    // Then: the pair is flagged confusable and a warning states it looks
+    // identical to the painter but clearly different to others.
+    expect(h.state.confusable, isTrue,
+        reason: 'AC-7: the deutan confusion detector flags the pair (CVD-2)');
+    final warning = _plainTextUnder(tester, ConfusionRegion.regionKey);
+    expect(warning, contains('identical'),
+        reason: 'AC-7: the warning says the two look identical to the painter '
+            '(CVD-2)');
+    expect(warning, contains('different'),
+        reason: 'AC-7: …but are clearly different to others (CVD-2)');
+  });
+
+  // AC-8 — A clearly distinct pair is NOT flagged (the control for AC-7). A =
+  // Warm Terracotta, B = Raw Sienna Light are off the deutan confusion line
+  // (verified above), so no warning is shown. Rejects a detector hard-wired to
+  // always warn. Negative Then settled by `givenComparison`'s pumpAndSettle and
+  // paired with AC-7 as the reading-can-change control.
+  acTestWidgets('AC-8', 'A clearly distinct pair is not flagged as confusable',
+      (tester) async {
+    // Given: a deutan painter; A = Warm Terracotta, B = Raw Sienna Light (off
+    // the confusion line).
+    final h = await givenComparison(tester, profile: CVD_DEUTAN);
+    expect(h.controller.profile.type, CvdType.deutan,
+        reason: 'AC-8 Given: the painter\'s profile is deutan');
+    await h.whenChooseA('Warm Terracotta');
+    await h.whenChooseB('Raw Sienna Light');
+    expect(h.state.hasBothSlots, isTrue,
+        reason: 'AC-8 Given: both slots are set (COMPARE-3)');
+
+    // When: the comparison is shown (settled).
+
+    // Then: no confusion warning — the flag is false and the region carries no
+    // warning sentence.
+    expect(h.state.confusable, isFalse,
+        reason: 'AC-8: an off-line pair is not flagged (CVD-2) — rejects a '
+            'detector that always warns');
+    final warning = _plainTextUnder(tester, ConfusionRegion.regionKey);
+    expect(warning, isNot(contains('identical')),
+        reason: 'AC-8: no "look identical" warning is shown for a distinct pair '
+            '(CVD-2)');
+  });
+
+  // AC-9 — Speaking the comparison includes the confusion warning. With a
+  // warning shown for A = Mid Raw Umber, B = Terre Verte Shadow (AC-7 flow),
+  // asking to speak produces exactly one utterance carrying BOTH the relational
+  // statement and the warning text. Rejects speaking the statement but omitting
+  // the warning, speaking nothing, or multiple utterances.
+  acTestWidgets('AC-9', 'Speaking the comparison includes the confusion warning',
+      (tester) async {
+    // Given: a warning is shown for the confusable pair, and nothing spoken yet.
+    final h = await givenComparison(tester, profile: CVD_DEUTAN);
+    await h.whenChooseA('Mid Raw Umber');
+    await h.whenChooseB('Terre Verte Shadow');
+    expect(h.state.confusable, isTrue,
+        reason: 'AC-9 Given: a confusion warning is shown for the pair '
+            '(CVD-2)');
+    expect(_plainTextUnder(tester, ConfusionRegion.regionKey),
+        contains('identical'),
+        reason: 'AC-9 Given: the warning text is on screen (CVD-2)');
+    expect(h.speech.utterances, isEmpty,
+        reason: 'AC-9 Given: nothing has been spoken before the When');
+
+    // When: the painter asks to speak the whole comparison.
+    await h.whenSpeak();
+
+    // Then: exactly one utterance, carrying both the relational statement and
+    // the confusion warning.
+    expect(h.speech.utterances, hasLength(1),
+        reason: 'AC-9: speaking emits exactly one utterance (CVD-3) — rejects '
+            'speaking nothing or multiple utterances');
+    final spoken = h.speech.utterances.single;
+    expect(spoken, contains('identical'),
+        reason: 'AC-9: the utterance includes the confusion warning (CVD-3) — '
+            'rejects speaking the statement but omitting the warning');
+    expect(spoken, contains('Hue shifted'),
+        reason: 'AC-9: the utterance also includes the relational statement '
+            '(the hue line) (CVD-3) — rejects speaking only the warning');
   });
 }

@@ -86,29 +86,36 @@ const Sample SAMPLE_A_PRIME = Sample(
 
 /// "Mid Raw Umber" — one half of the AC-7/AC-9 deutan confusion pair.
 ///
-/// Provisional CIELAB: a dark yellow-brown clearly different from
-/// [SAMPLE_ULTRAMARINE] to normal vision. The confusion-line property (their
-/// ΔE00 collapses below the threshold *under the deutan projection* while their
-/// normal ΔE00 is clearly-different, D-5) is **constructed and verified in
-/// ITEST-3 / CVD-2**, which pins the exact coordinates (and escalates to the
-/// spec author if no genuine deutan pair can be found). ITEST-1 only provides
-/// the named fixture so the catalogue lists it.
-// TODO(ITEST-3): verify/pin the deutan confusion-line coordinates (D-5).
+/// A dark warm reddish-brown (CIELAB L 40 / a\* 18 / b\* 16 — CIELCh C 24.1 /
+/// h 41.6°). Paired with [SAMPLE_TERRE_VERTE] it forms a **genuine deutan
+/// confusion-line pair** (D-5): the two differ mainly in the red↔green (a\*)
+/// direction at equal lightness and near-equal yellowness, so a deuteranope
+/// cannot tell them apart, yet they are clearly different to normal vision.
+///
+/// Constructed and verified in ITEST-3 against the harness's independent
+/// [referenceDeutanProjected]: their normal ΔE00 ≈ 28 (clearly different) while
+/// their ΔE00 *after* the deutan projection ≈ 1.4 (below the confusion
+/// threshold). The verification guard lives in `comparison_test.dart`; CVD-2's
+/// shipped detector must agree. (The original "umber / ultramarine" pairing was
+/// retired — umber-vs-ultramarine is a blue↔yellow difference, which *no*
+/// dichromacy confuses; the spec author renamed B to a green earth, keeping the
+/// deutan profile — ITEST-3 reconciliation.)
 const Sample SAMPLE_UMBER = Sample(
   name: 'Mid Raw Umber',
-  coordinates: ColorCoordinates(lightness: 37, a: 8, b: 22),
+  coordinates: ColorCoordinates(lightness: 40, a: 18, b: 16),
   provenance: Provenance(ProvenanceTier.measured),
 );
 
-/// "Ultramarine Shadow" — the other half of the AC-7/AC-9 deutan confusion pair.
+/// "Terre Verte Shadow" — the other half of the AC-7/AC-9 deutan confusion pair.
 ///
-/// Provisional CIELAB: a dark blue clearly different from [SAMPLE_UMBER] to
-/// normal vision. See [SAMPLE_UMBER] — the confusion-line construction is
-/// ITEST-3 / CVD-2's responsibility.
-// TODO(ITEST-3): verify/pin the deutan confusion-line coordinates (D-5).
-const Sample SAMPLE_ULTRAMARINE = Sample(
-  name: 'Ultramarine Shadow',
-  coordinates: ColorCoordinates(lightness: 37, a: 10, b: -38),
+/// A dark green earth (CIELAB L 40 / a\* −10 / b\* 18 — CIELCh C 20.6 /
+/// h 119°). See [SAMPLE_UMBER]: equal lightness and near-equal b\* with an
+/// opposite-signed a\* puts the pair on the deutan confusion line (it collapses
+/// under the deutan projection) while staying clearly different to normal
+/// vision.
+const Sample SAMPLE_TERRE_VERTE = Sample(
+  name: 'Terre Verte Shadow',
+  coordinates: ColorCoordinates(lightness: 40, a: -10, b: 18),
   provenance: Provenance(ProvenanceTier.measured),
 );
 
@@ -123,7 +130,7 @@ const List<Sample> CATALOGUE = [
   SAMPLE_A_TERRACOTTA,
   SAMPLE_B_SIENNA,
   SAMPLE_UMBER,
-  SAMPLE_ULTRAMARINE,
+  SAMPLE_TERRE_VERTE,
   SAMPLE_A_PRIME,
 ];
 
@@ -220,6 +227,109 @@ double referenceDeltaE00(ColorCoordinates a, ColorCoordinates b) {
   return math.sqrt(
       termL * termL + termC * termC + termH * termH + rt * termC * termH);
 }
+
+// ---------------------------------------------------------------------------
+// Independent deutan dichromat projection
+//
+// A standalone simulation of how a deuteranope sees a colour, used *only* to
+// verify the `SAMPLE_UMBER` / `SAMPLE_TERRE_VERTE` fixtures genuinely sit on the
+// deutan confusion line (ITEST-3's construct-and-verify task, D-5): a pair is on
+// the line when its ΔE00 **after** this projection collapses below a small
+// threshold while its normal ΔE00 stays clearly-different. This is the deutan
+// analogue of [referenceDeltaE00] — an independent reference so the fixtures
+// (and, later, CVD-2's shipped detector) are never graded against the product's
+// own projection.
+//
+// Method: Viénot, Brettel & Mollon (1999), the single-plane LMS simulation for
+// deuteranopia. CIELAB → XYZ (D65) → linear sRGB → LMS (their matrix) → drop the
+// M cone onto the L/S plane (M' = 0.494207·L + 1.24827·S) → back. The
+// coefficients are specific to this LMS matrix, so the whole path stays
+// self-consistent. Validated by the projection-invariant guards in
+// `comparison_test.dart` (a neutral grey is unchanged; the map is idempotent).
+// ---------------------------------------------------------------------------
+
+// CIELAB (D65) → XYZ, 0..1 scale.
+const double _xn = 0.95047, _yn = 1.0, _zn = 1.08883;
+
+List<double> _labToXyz(ColorCoordinates c) {
+  final fy = (c.lightness + 16) / 116;
+  final fx = fy + c.a / 500;
+  final fz = fy - c.b / 200;
+  double inv(double t) {
+    final t3 = t * t * t;
+    return t3 > 0.008856 ? t3 : (t - 16 / 116) / 7.787;
+  }
+
+  return [_xn * inv(fx), _yn * inv(fy), _zn * inv(fz)];
+}
+
+ColorCoordinates _xyzToLab(List<double> xyz) {
+  double f(double t) =>
+      t > 0.008856 ? math.pow(t, 1 / 3).toDouble() : 7.787 * t + 16 / 116;
+  final fx = f(xyz[0] / _xn), fy = f(xyz[1] / _yn), fz = f(xyz[2] / _zn);
+  return ColorCoordinates(
+    lightness: 116 * fy - 16,
+    a: 500 * (fx - fy),
+    b: 200 * (fy - fz),
+  );
+}
+
+List<double> _mul(List<List<double>> m, List<double> v) => [
+      for (final row in m) row[0] * v[0] + row[1] * v[1] + row[2] * v[2],
+    ];
+
+List<List<double>> _inv3(List<List<double>> m) {
+  final a = m[0][0], b = m[0][1], c = m[0][2];
+  final d = m[1][0], e = m[1][1], f = m[1][2];
+  final g = m[2][0], h = m[2][1], i = m[2][2];
+  final det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  return [
+    [(e * i - f * h) / det, (c * h - b * i) / det, (b * f - c * e) / det],
+    [(f * g - d * i) / det, (a * i - c * g) / det, (c * d - a * f) / det],
+    [(d * h - e * g) / det, (b * g - a * h) / det, (a * e - b * d) / det],
+  ];
+}
+
+// Linear sRGB (D65) ↔ XYZ.
+const List<List<double>> _rgb2xyz = [
+  [0.4124564, 0.3575761, 0.1804375],
+  [0.2126729, 0.7151522, 0.0721750],
+  [0.0193339, 0.1191920, 0.9503041],
+];
+// Viénot 1999 LMS from linear sRGB, and the deutan M-drop in that LMS space.
+const List<List<double>> _rgb2lms = [
+  [17.8824, 43.5161, 4.11935],
+  [3.45565, 27.1554, 3.86714],
+  [0.0299566, 0.184309, 1.46709],
+];
+const List<List<double>> _deutanLms = [
+  [1.0, 0.0, 0.0],
+  [0.494207, 0.0, 1.24827],
+  [0.0, 0.0, 1.0],
+];
+
+final List<List<double>> _xyz2rgb = _inv3(_rgb2xyz);
+final List<List<double>> _lms2rgb = _inv3(_rgb2lms);
+
+/// How colour [c] appears to a deuteranope — the Viénot 1999 deutan simulation.
+///
+/// Test-only reference for verifying the deutan confusion-line fixtures (D-5);
+/// not the shipped detector (CVD-2). See the section header above.
+ColorCoordinates referenceDeutanProjected(ColorCoordinates c) {
+  final rgb = _mul(_xyz2rgb, _labToXyz(c));
+  final lms = _mul(_rgb2lms, rgb);
+  final lmsP = _mul(_deutanLms, lms);
+  final rgbP = _mul(_lms2rgb, lmsP);
+  final xyzP = _mul(_rgb2xyz, rgbP);
+  return _xyzToLab(xyzP);
+}
+
+/// The ΔE00 between [a] and [b] **as a deuteranope sees them** — their distance
+/// after the [referenceDeutanProjected] simulation. Small (below the confusion
+/// threshold) for a pair on the deutan confusion line (D-5, AC-7); large for a
+/// pair a deuteranope can still tell apart (AC-8's control).
+double referenceDeutanProjectedDeltaE00(ColorCoordinates a, ColorCoordinates b) =>
+    referenceDeltaE00(referenceDeutanProjected(a), referenceDeutanProjected(b));
 
 // ---------------------------------------------------------------------------
 // Given / When / Then vocabulary
@@ -320,31 +430,43 @@ class ComparisonHarness {
 /// Opens the Comparison screen in the fully assembled app for [profile].
 ///
 /// Builds the real app via the production `buildApp` entry with the comparison
-/// entry wired (D-8): the [CATALOGUE] catalogue, the given [profile] and
-/// [confusionCheck] injected, the speech sink faked and the real
-/// `ColorScienceImpl`. [confusionCheck] defaults to the inert
-/// [NoopConfusionCheck] the shipped app wires until CVD-2; AC-7/AC-8/AC-9 inject
-/// the real detector once it lands. Returns a [ComparisonHarness] over the
-/// booted app.
+/// entry wired (D-8): the [CATALOGUE] catalogue and the given [profile] injected,
+/// the speech sink faked and the real `ColorScienceImpl`.
+///
+/// [confusionCheck] is left **null** by default, so the comparison runs the
+/// detector the shipped app wires through [AppDependencies.confusionCheck] — the
+/// inert [NoopConfusionCheck] today, CVD-2's real dichromat projection once it
+/// lands. AC-7/AC-8/AC-9 therefore exercise the real detector automatically when
+/// CVD-2 ships it, with no forward reference to a not-yet-built class. Pass a
+/// specific [confusionCheck] only to pin a particular detector in a test.
+/// Returns a [ComparisonHarness] over the booted app.
 Future<ComparisonHarness> givenComparison(
   WidgetTester tester, {
   CvdProfile profile = CVD_DEUTAN,
-  ConfusionCheck confusionCheck = const NoopConfusionCheck(),
+  ConfusionCheck? confusionCheck,
 }) async {
   final speech = FakeSpeech();
-  await tester.pumpWidget(
-    buildApp(
-      AppDependencies(
-        colorScience: const ColorScienceImpl(),
-        speech: speech,
-        haptics: FakeHaptics(),
-        cvdProfile: profile,
-        confusionCheck: confusionCheck,
-        sampleSource: const InMemorySampleSource(samples: CATALOGUE),
-        comparisonEntry: const ComparisonEntry(),
-      ),
-    ),
-  );
+  // When no detector is pinned, omit it so AppDependencies' shipped default
+  // applies (the one CVD-2 replaces with the real projection).
+  final deps = confusionCheck == null
+      ? AppDependencies(
+          colorScience: const ColorScienceImpl(),
+          speech: speech,
+          haptics: FakeHaptics(),
+          cvdProfile: profile,
+          sampleSource: const InMemorySampleSource(samples: CATALOGUE),
+          comparisonEntry: const ComparisonEntry(),
+        )
+      : AppDependencies(
+          colorScience: const ColorScienceImpl(),
+          speech: speech,
+          haptics: FakeHaptics(),
+          cvdProfile: profile,
+          confusionCheck: confusionCheck,
+          sampleSource: const InMemorySampleSource(samples: CATALOGUE),
+          comparisonEntry: const ComparisonEntry(),
+        );
+  await tester.pumpWidget(buildApp(deps));
   await tester.pumpAndSettle();
   return ComparisonHarness(tester, speech: speech);
 }
