@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** Not started — next RECIPE-1 (blocked by G-1: approve the spec)
+**Status:** Not started — next RECIPE-1 (startable; G-1 approved 2026-10-08)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -177,7 +177,7 @@ keeping the screen side file-disjoint across the windows above.
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (the `.feature` is "Draft: awaiting owner approval"; record approval as its first line) | RECIPE-1 | Open |
+| G-1 | decision | Approve the spec (the `.feature` is "Draft: awaiting owner approval"; record approval as its first line) | RECIPE-1 | ✅ Resolved 2026-10-08 12:57 EDT: spec approved as-is; `.feature` first line stamped "Approved 2026-10-08 by Matt Quirk" — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-3 | dependency | bs-01/02/03 shared foundation merged to `main` (`Sample`/`ColorCoordinates`, `buildApp`/`AppScope`/`AppDependencies`, `Speech`+`FakeSpeech`, `deltaE00`, `ColorScience`, `SampleSource`, `AppRouter.toRecipes` + the handoff, coverage gate, `integration_test`) | RECIPE-1, all shells | ✅ Resolved 2026-10-08: bs-01, bs-02 and bs-03 are signed off and merged to `main` @ `8518463` (full foundation present) |
 | G-4 | decision | **Spec-data / engine reconciliation (spec author).** The spec pins predicted colours (AC-5 "predicts L 42.6, C 27.1, h 106"; AC-10 "shifts to L 41.2, C 26.4, h 107") that a general v1 engine (D-2) will not reproduce exactly. Confirm: (a) the pinned L/C/h are **illustrative** and the ACs assert behavioural properties (D-13) — or a literal is binding and its authoritative value; (b) the v1 subtractive forward approach (D-2); (c) the gamut threshold (D-10) and the ~2% trace threshold (D-12) | ITEST-3, ENGINE-2, ENGINE-3, ENGINE-4, ENGINE-5, ENGINE-6 | Open |
@@ -217,11 +217,11 @@ when the row is marked done.
 
 ## Next phase
 
-**RECIPE-1 (scaffold)** is next, but **blocked by G-1** (approve the spec — it is marked "Draft: awaiting
-owner approval"). Resolve G-1 first: `/feature-next-phase --gate bs-04-mixing-recipes G-1 approved` (and stamp
-the spec's first line). **G-4** (engine / pinned-value reconciliation) is also open and blocks ITEST-3 and the
-behaviour stage — it can be decided any time before ITEST-3, but deciding it alongside G-1 lets the plan run
-uninterrupted. Nothing is startable until G-1 is resolved.
+**RECIPE-1 (scaffold)** is next and **startable** — G-1 (approve the spec) was approved 2026-10-08 and G-3
+(foundation merged) is resolved; scaffold depends on neither G-2 nor G-4. Run it:
+`/feature-next-phase bs-04-mixing-recipes`. **G-4** (engine / pinned-value reconciliation) remains open; it
+blocks ITEST-3 and the behaviour stage and can be decided any time before ITEST-3. **G-2** (approve the
+acceptance tests) is decided at the ITEST-4 test review and blocks every behaviour phase.
 
 ## Token usage
 
@@ -230,7 +230,8 @@ uninterrupted. Nothing is startable until G-1 is resolved.
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | cfdec5dc | 2026-10-08 11:52 EDT | 12:06 | 14m 38s | 14m 38s | claude-opus-4-8 | 88 | 332,779 | 4,592,359 | 67,713 | 4,992,939 | plan written: 16 phases, 4 modules, 12 ACs; G-1/G-2/G-4 open, G-3 resolved |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 12:06** | **14m 38s** | **14m 38s** |  | **88** | **332,779** | **4,592,359** | **67,713** | **4,992,939** |  |
+| GATE-DECISION | ac0ae3b2 | 2026-10-08 12:55 EDT | 12:58 | 2m 29s | 2m 29s | claude-opus-4-8 | 24 | 41,638 | 696,302 | 4,385 | 742,349 | G-1 approved: spec approved as-is by Matt Quirk; .feature stamped |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 12:58** | **17m 07s** | **17m 07s** |  | **112** | **374,417** | **5,288,661** | **72,098** | **5,735,288** |  |
 
 ## Sign-off
 

@@ -36,7 +36,7 @@ owns `integration_test/bs04/pending.dart`.
 
 ## Open gates
 
-- **G-1 (approve the spec)** blocks RECIPE-1 (scaffold).
+- **G-1 (approve the spec)** ✅ Resolved 2026-10-08 12:57 EDT — spec approved as-is by Matt Quirk; `.feature` first line stamped. RECIPE-1 unblocked.
 - **G-2 (approve the acceptance tests)** blocks RECIPE-3, RECIPE-4 (every behaviour phase).
 
 ## Phase 1 — Scaffold (RECIPE-1)
