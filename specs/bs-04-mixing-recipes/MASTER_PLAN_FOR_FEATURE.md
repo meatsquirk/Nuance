@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — G-2 approved; behaviour stage open, next RECIPE-3 (∥ ENGINE-2)
+**Status:** In progress — RECIPE-3 + ENGINE-2 done (AC-1..AC-4 green); **G-5 open** (Deep Olive unreachable to ΔE≤5) blocks ENGINE-3/ENGINE-5; next ENGINE-4 ∥ RECIPE-4
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -55,10 +55,10 @@ muddying / wet-dry / trace logic, and no real Recipes screen exist** — all net
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | The painter chooses a saved sample as the target | ITEST-2 `TestAC01_ChooseSavedTarget` | RECIPE-3 | ⬜ Todo |
-| AC-2 | The painter enters a target colour manually and an impossible value is refused | ITEST-2 `TestAC02_ManualTargetRefused` | RECIPE-3 | ⬜ Todo |
-| AC-3 | Recipes use only paints from the currently selected palette | ITEST-2 `TestAC03_PaletteConstrained` | ENGINE-2 | ⬜ Todo |
-| AC-4 | The top three to five recipes are returned with parts and predicted colour | ITEST-3 `TestAC04_TopRecipes` | ENGINE-2 | ⬜ Todo |
+| AC-1 | The painter chooses a saved sample as the target | ITEST-2 `TestAC01_ChooseSavedTarget` | RECIPE-3 | ✅ Done |
+| AC-2 | The painter enters a target colour manually and an impossible value is refused | ITEST-2 `TestAC02_ManualTargetRefused` | RECIPE-3 | ✅ Done |
+| AC-3 | Recipes use only paints from the currently selected palette | ITEST-2 `TestAC03_PaletteConstrained` | ENGINE-2 | ✅ Done |
+| AC-4 | The top three to five recipes are returned with parts and predicted colour | ITEST-3 `TestAC04_TopRecipes` | ENGINE-2 | ✅ Done |
 | AC-5 | A close recipe states a small delta-E with a plain verdict | ITEST-3 `TestAC05_CloseVerdict` | ENGINE-3 | ⬜ Todo |
 | AC-6 | A cleaner two-paint mix ranks above a muddier four-paint mix at a similar delta-E | ITEST-3 `TestAC06_PreferFewer` | ENGINE-3 | ⬜ Todo |
 | AC-7 | A component under about two percent is expressed as a touch of | ITEST-3 `TestAC07_TraceTouchOf` | ENGINE-4 | ⬜ Todo |
@@ -181,6 +181,7 @@ keeping the screen side file-disjoint across the windows above.
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-09 04:25 EDT: acceptance tests **approved** — the 12 pending AC tests accepted as the acceptance contract (grid all at the A bar, 0×B; five A-limited with scheduled augmentations); ITEST-4 ✅ Done, behaviour stage opens — Matt Quirk |
 | G-3 | dependency | bs-01/02/03 shared foundation merged to `main` (`Sample`/`ColorCoordinates`, `buildApp`/`AppScope`/`AppDependencies`, `Speech`+`FakeSpeech`, `deltaE00`, `ColorScience`, `SampleSource`, `AppRouter.toRecipes` + the handoff, coverage gate, `integration_test`) | RECIPE-1, all shells | ✅ Resolved 2026-10-08: bs-01, bs-02 and bs-03 are signed off and merged to `main` @ `8518463` (full foundation present) |
 | G-4 | decision | **Spec-data / engine reconciliation (spec author).** The spec pins predicted colours (AC-5 "predicts L 42.6, C 27.1, h 106"; AC-10 "shifts to L 41.2, C 26.4, h 107") that a general v1 engine (D-2) will not reproduce exactly. Confirm: (a) the pinned L/C/h are **illustrative** and the ACs assert behavioural properties (D-13) — or a literal is binding and its authoritative value; (b) the v1 subtractive forward approach (D-2); (c) the gamut threshold (D-10) and the ~2% trace threshold (D-12) | ITEST-3, ENGINE-2, ENGINE-3, ENGINE-4, ENGINE-5, ENGINE-6 | ✅ Resolved 2026-10-08 (Matt Quirk): (a) the pinned predicted L/C/h are **illustrative** — the ACs assert behavioural properties (D-13); (b) v1 subtractive forward+inverse (D-2); (c) gamut ΔE00 > 5 (D-10), trace ~2% (D-12). ITEST-3 wrote AC-5/AC-10 as behavioural properties accordingly |
+| G-5 | decision | **Spec-data / engine reachability (spec author).** The verified v1 subtractive engine (D-2, built in ENGINE-2) reaches `SAMPLE_DEEP_OLIVE` (L 42, a\* −8.65, b\* 26.63) only to **ΔE00 ≈ 9.31** (best: Titanium White 21% + Yellow Ochre 70% + Ivory Black 9%) — `PALETTE_MY_PAINTS` has no green/phthalo pigment, so yellow+ultramarine make a grey-olive not a green (a\* < 0), robust across KM & geometric-mean mixing. But `recipes_test.dart` hard-codes `gamutThreshold = 5.0`: **AC-5** asserts best ≤ 5 + "very close" and **AC-9**'s control asserts Deep Olive is *not* out-of-gamut (≤ 5). (Ref: Vivid Turquoise ΔE00 ≈ 22.68, correctly out of gamut.) Choose: (a) retarget Deep Olive to a reachable olive; (b) add a green pigment to the palette; (c) raise the asserted ceiling; (d) accept a measured-pigment engine for v1. (a)/(b)/(c) reshape the approved ITEST-3 ⇒ a fresh test-review round. Full detail in [modules/ENGINE.md](modules/ENGINE.md). | ENGINE-3, ENGINE-5 | ⬜ Open (raised 2026-10-09 by ENGINE-2) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -203,13 +204,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,11,12 (pending) + red baseline | ✅ Done | 6,819,011 | 25m 09s (25m 09s) | 5 pending AC tests; analyze clean; unit 517 green; integ default green (5 pending) / run-pending 5 fail clean at owner; grade 5A/0B (AC-2 B→A valid-L50 control; AC-12 A limited); fix 1/3 |
 | 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9,10 (pending) + red baseline | ✅ Done | 7,282,541 | 41m 45s (1h 15m) | 7 pending AC tests; analyze clean; unit 517; integ default green (12 pending) / run-pending 7 fail clean; grade 3A + 4A-limited / 0B (augmentations → ENGINE-3/4); G-4 resolved; fix 0/3 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 6,078,568 | 55m 56s (1h 01m) | packet assembled over 2 sessions; full regression green (unit 517; cov PASS 15/15; integ 11 pass / 12 AC pending); grid 12 AC + 11 guards at A, 0B; **G-2 approved 2026-10-09 by Matt Quirk** |
-| 9 | RECIPE-3 | behavior: AC-1, AC-2 — target selection (saved sample + manual/validation) | ⬜ Next | | | foundational; startable now (∥ ENGINE-2) |
-| 10 | ENGINE-2 | behavior: AC-3, AC-4 — palette-constrained solver + top 3–5 w/ parts + predicted colour | ⬜ Todo | | | foundational |
-| 11 | ENGINE-3 | behavior: AC-5, AC-6 — per-recipe ΔE00+verdict; prefer fewer paints | ⬜ Todo | | | serial on engine |
-| 12 | ENGINE-4 | behavior: AC-7, AC-8 — trace "a touch of"; muddying flag | ⬜ Todo | | | serial on engine |
-| 13 | ENGINE-5 | behavior: AC-9 — out-of-gamut + nearest-not-a-match | ⬜ Todo | | | serial on engine |
+| 9 | RECIPE-3 | behavior: AC-1, AC-2 — target selection (saved sample + manual/validation) | ✅ Done | 18,470,473 | 46m 17s | analyze clean; unit 529 / integ +75~10; 100% cov 15 touched; AC-1/AC-2 un-pended + green (TestAC01/02); grade 2A/0B; fix 2/3 |
+| 10 | ENGINE-2 | behavior: AC-3, AC-4 — palette-constrained solver + top 3–5 w/ parts + predicted colour | ✅ Done | 19,431,437 | 50m 12s | forward(KM)+inverse; AC-3/AC-4 un-pended + green; 100% cov; **G-5 raised** (Deep Olive ΔE≈9.31>5 ⇒ ENGINE-3/5 blocked); fix 1/3 |
+| 11 | ENGINE-3 | behavior: AC-5, AC-6 — per-recipe ΔE00+verdict; prefer fewer paints | ⬜ Todo | | | serial on engine; **blocked by G-5** |
+| 12 | ENGINE-4 | behavior: AC-7, AC-8 — trace "a touch of"; muddying flag | ⬜ Next | | | serial on engine; startable now (∥ RECIPE-4) |
+| 13 | ENGINE-5 | behavior: AC-9 — out-of-gamut + nearest-not-a-match | ⬜ Todo | | | serial on engine; **blocked by G-5** |
 | 14 | ENGINE-6 | behavior: AC-10 — wet/dry toggle + dry prediction | ⬜ Todo | | | serial on engine |
-| 15 | RECIPE-4 | behavior: AC-11, AC-12 — speak target; speak recipe | ⬜ Todo | | | ∥ ENGINE-3..6 |
+| 15 | RECIPE-4 | behavior: AC-11, AC-12 — speak target; speak recipe | ⬜ Todo | | | startable now (∥ ENGINE-4); needs a recipe from ENGINE-2 (done) |
 | 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
@@ -217,16 +218,15 @@ when the row is marked done.
 
 ## Next phase
 
-**G-2 approved** (2026-10-09, Matt Quirk) — ITEST-4 ✅ Done and the behaviour stage is open. Startable now
-with no unmet dependency, **parallelisable**:
+**RECIPE-3 (AC-1/AC-2) + ENGINE-2 (AC-3/AC-4) done and reconciled** (merged into `feat`; AC-1..AC-4 green).
 
-- **RECIPE-3** (AC-1, AC-2 — target selection) — run this first/alone if sequential (every recipe Given needs
-  a target).
-- **ENGINE-2** (AC-3, AC-4 — palette-constrained solver + top 3–5).
+**⚠ G-5 open (spec author):** the verified v1 engine reaches `SAMPLE_DEEP_OLIVE` only to ΔE00 ≈ 9.31, but the
+approved ACs assert in-gamut ≤ 5. It **blocks ENGINE-3 (AC-5) and ENGINE-5 (AC-9 in-gamut control)** — resolve
+before starting them (options in Open gates G-5 / ENGINE.md).
 
-Both un-pend their ACs by editing `integration_test/bs04/pending.dart` **and** the guard's `unpended` set in
-`recipes_test.dart`, so if run concurrently coordinate those shared edits. Then ENGINE-3→4→5→6 serialize on
-`subtractive_engine.dart` ∥ RECIPE-4 (speak), then SIGNOFF-1.
+Startable now (no unmet dependency): **ENGINE-4** (AC-7 trace, AC-8 muddying — serial on
+`subtractive_engine.dart`) and **RECIPE-4** (AC-11/AC-12 speak — file-disjoint, needs a recipe from ENGINE-2).
+After G-5: ENGINE-3 then ENGINE-5, ENGINE-6; then SIGNOFF-1.
 
 ## Token usage
 
@@ -249,7 +249,10 @@ Both un-pend their ACs by editing `integration_test/bs04/pending.dart` **and** t
 | ITEST-4 | 8ceef99f | 2026-10-08 22:25 EDT | 22:53 | 28m 04s | 28m 03s | claude-opus-4-8 | 76 | 94,302 | 3,591,908 | 24,190 | 3,710,476 | packet assembled; full regression green (unit 517; cov 15/15; integ +11 ~12); G-2 awaiting human |
 | ITEST-4 | 86adfcf1 | 2026-10-08 22:25 EDT | 22:58 | 33m 03s | 27m 53s | claude-opus-4-8 | 52 | 96,798 | 2,253,371 | 17,871 | 2,368,092 | test-review: packet assembled from ITEST-2/3; full regression green (analyze clean; unit 517; coverage gate PASS 15/15 touched; integration 11 scaffold/guard pass + 12 AC pending on sim under lock); grid 12 AC + 11 guards at A, 0B; phase ⏸ Awaiting review; G-2 awaiting human decision |
 | SIGNOFF-DECISION | bdd7280c | 2026-10-08 22:58 EDT | 2026-10-09 04:26 | 5h 28m | 2m 35s | claude-opus-4-8 | 34 | 118,910 | 1,201,215 | 7,813 | 1,327,972 | ITEST-4 approved: G-2 acceptance tests approved by Matt Quirk; behaviour stage open (RECIPE-3 + ENGINE-2 startable) |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 04:26** | **14h 52m** | **4h 27m** |  | **1,248** | **2,269,857** | **69,802,539** | **528,708** | **72,602,352** |  |
+| RECIPE-3 | c3250ac8 | 2026-10-09 07:03 EDT | 07:49 | 46m 18s | 46m 17s | claude-opus-4-8 | 254 | 293,977 | 18,102,430 | 73,812 | 18,470,473 | AC-1, AC-2 un-pended + green; unit 529 / integ +75~10; 100% cov 15 touched; grade 2A/0B; fix 2/3 |
+| ENGINE-2 | c9875f00 | 2026-10-09 07:03 EDT | 07:54 | 50m 12s | 50m 12s | claude-opus-4-8 | 216 | 244,268 | 19,060,186 | 126,767 | 19,431,437 | AC-3/AC-4 green; 100% coverage; G-5 raised (Deep Olive ΔE≈9.31>5 blocks ENGINE-3/5); fix 1/3 |
+| RECONCILE | 6a32b307 | 2026-10-09 10:48 EDT | 11:00 | 11m 57s | 11m 57s | claude-opus-4-8 | 92 | 112,768 | 4,659,882 | 43,074 | 4,815,816 | applied RECIPE-3 + ENGINE-2 rollups: merged both phase branches into feat (resolved controller/guard/test conflicts); re-verified merged tree (analyze clean; unit 543; cov PASS 15/15; integ +15 ~8 incl TestAC01-04 run + green); AC-1..AC-4 ✅ Done; G-5 added (open, blocks ENGINE-3/5); both phase ledger rows added; 2 worktrees + phase branches removed |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 11:00** | **16h 40m** | **6h 15m** |  | **1,810** | **2,920,870** | **111,625,037** | **772,361** | **115,320,078** |  |
 
 ## Sign-off
 
