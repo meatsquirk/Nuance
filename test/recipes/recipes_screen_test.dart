@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/recipes/controls_region.dart';
 import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
 import 'package:paint_color_assistant/recipes/gamut_banner.dart';
+import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/recipes/recipe_controller.dart';
 import 'package:paint_color_assistant/recipes/recipe_list_region.dart';
@@ -24,12 +26,24 @@ const _unnamed = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
-RecipeController _controller({Sample target = _olive}) => RecipeController(
+RecipeController _controller({
+  Sample target = _olive,
+  PaletteSource paletteSource = const InMemoryPaletteSource(),
+}) =>
+    RecipeController(
       sampleSource: const InMemorySampleSource(),
-      paletteSource: const InMemoryPaletteSource(),
+      paletteSource: paletteSource,
       mixingEngine: const SubtractiveMixingEngine(),
       target: target,
     );
+
+const _ochre = Paint(
+  id: 'py43',
+  name: 'Yellow Ochre',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 60, a: 12, b: 46),
+);
+const _studioPalette = PaintPalette(name: 'Studio', paints: [_ochre]);
 
 /// Pumps [child] under a Material scaffold so the regions render in isolation.
 Future<void> _pumpRegion(WidgetTester tester, Widget child) =>
@@ -113,16 +127,35 @@ void main() {
   });
 
   group('RecipeListRegion', () {
-    testWidgets('shows the empty-state placeholder and an inert speak control',
+    testWidgets('shows the empty-state placeholder when nothing is solved',
         (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
       await _pumpRegion(tester, RecipeListRegion(controller: controller));
 
       expect(find.text('No recipes yet'), findsOneWidget);
-      // E25 speak recipe is present but inert until RECIPE-4.
+      // No recipe cards ⇒ no speak-recipe control yet (ENGINE-2 renders the
+      // card; RECIPE-4 wires its speak control).
+      expect(find.widgetWithText(TextButton, 'Speak recipe'), findsNothing);
+    });
+
+    testWidgets('renders a card per solved recipe with paints, parts and the '
+        'predicted colour (AC-4)', (tester) async {
+      final controller =
+          _controller(paletteSource: const InMemoryPaletteSource(catalogue: [_studioPalette]));
+      addTearDown(controller.dispose);
+      expect(controller.state.recipes, isNotEmpty);
+
+      await _pumpRegion(tester, RecipeListRegion(controller: controller));
+
+      expect(find.text('No recipes yet'), findsNothing);
+      expect(find.byType(Card), findsWidgets);
+      // The single-paint palette's recipe names Yellow Ochre at 100%.
+      expect(find.textContaining('Yellow Ochre'), findsWidgets);
+      expect(find.textContaining('Predicted colour:'), findsWidgets);
+      // E25 speak recipe is present per card but inert until RECIPE-4.
       expect(_enabled(tester, 'Speak recipe'), isFalse,
-          reason: 'E25 speak recipe is not wired in SCREEN-1');
+          reason: 'E25 speak recipe is not wired until RECIPE-4');
     });
   });
 

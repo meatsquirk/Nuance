@@ -43,8 +43,6 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   // AC-1, AC-2 un-pended by RECIPE-3 (target selection: saved sample + manual).
   // AC-3, AC-4 un-pended by ENGINE-2 (palette-constrained solver + top recipes).
-  'AC-3': 'ENGINE-2',
-  'AC-4': 'ENGINE-2',
   // AC-5, AC-6 un-pended by ENGINE-3 (per-recipe ΔE00 + verdict; prefer fewer).
   'AC-5': 'ENGINE-3',
   'AC-6': 'ENGINE-3',

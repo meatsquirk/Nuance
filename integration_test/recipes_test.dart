@@ -59,11 +59,14 @@ void main() {
       expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
 
       // Opened mixing toward the injected target, over the selected palette,
-      // with no recipes solved yet, wet mode, no manual error, nothing spoken.
+      // with the recipes solved on open (ENGINE-2), wet mode, no manual error,
+      // nothing spoken. (ITEST-1 wrote this snapshot against the shell, which
+      // solved nothing; ENGINE-2 now solves over the selected palette on open,
+      // so the recipes are present here.)
       expect(harness.state.target, SAMPLE_DEEP_OLIVE);
       expect(harness.state.selectedPalette, PALETTE_MY_PAINTS);
-      expect(harness.state.recipes, isEmpty);
-      expect(harness.state.hasRecipes, isFalse);
+      expect(harness.state.recipes, isNotEmpty);
+      expect(harness.state.hasRecipes, isTrue);
       expect(harness.state.mode, MixMode.wet);
       expect(harness.state.manualError, isNull);
       expect(harness.speech.utterances, isEmpty);
@@ -71,12 +74,12 @@ void main() {
   );
 
   group('pending gate', () {
-    // Un-pended by the behaviour phases so far: AC-1, AC-2 (RECIPE-3). ITEST-1
-    // seeds all 12 pending; each behaviour phase adds its AC here as it deletes
-    // the row in `bs04/pending.dart`: RECIPE-3 → AC-1, AC-2; ENGINE-2 → AC-3,
-    // AC-4; ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8; ENGINE-5 → AC-9;
-    // ENGINE-6 → AC-10; RECIPE-4 → AC-11, AC-12.
-    const unpended = <String>{'AC-1', 'AC-2'};
+    // Un-pended by the behaviour phases so far: AC-1, AC-2 (RECIPE-3), AC-3,
+    // AC-4 (ENGINE-2). ITEST-1 seeds all 12 pending; each behaviour phase adds
+    // its AC here as it deletes the row in `bs04/pending.dart`: RECIPE-3 → AC-1,
+    // AC-2; ENGINE-2 → AC-3, AC-4; ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8;
+    // ENGINE-5 → AC-9; ENGINE-6 → AC-10; RECIPE-4 → AC-11, AC-12.
+    const unpended = <String>{'AC-1', 'AC-2', 'AC-3', 'AC-4'};
 
     test(
       'pending map is the exact complement of the un-pended ACs across all 12, '

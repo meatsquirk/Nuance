@@ -23,8 +23,16 @@ const _white = Paint(
   medium: PaintMedium.acrylic,
   masstone: ColorCoordinates(lightness: 96, a: 0, b: 2),
 );
+const _ochre = Paint(
+  id: 'py43',
+  name: 'Yellow Ochre',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 60, a: 12, b: 46),
+);
 const _myPaints = PaintPalette(name: 'My paints', paints: [_white]);
 const _oils = PaintPalette(name: 'Studio oils', paints: [_white]);
+const _richPalette =
+    PaintPalette(name: 'Studio', paints: [_white, _ochre]);
 const _recipe = Recipe(
   medium: PaintMedium.acrylic,
   components: [RecipeComponent(paint: _white, partsFraction: 1)],
@@ -108,10 +116,15 @@ void main() {
         final controller = _controller(
           paletteSource: const InMemoryPaletteSource(catalogue: [_myPaints]),
         );
+        // ENGINE-2 solves the recipes on open, so the controller already holds
+        // the mixes for the initial target; selectTarget does not re-solve
+        // (the re-solve on a new target is a later concern), so the recipes are
+        // carried over as-is.
+        final recipesBefore = controller.state.recipes;
         controller.selectTarget(warmSand);
 
         expect(controller.state.selectedPalette, _myPaints);
-        expect(controller.state.recipes, isEmpty);
+        expect(controller.state.recipes, same(recipesBefore));
         expect(controller.state.mode, MixMode.wet);
       });
 
@@ -185,13 +198,9 @@ void main() {
       });
     });
 
-    group('actions are inert in the RECIPE-2 shell', () {
+    group('actions still deferred to later phases throw', () {
       final controller = _controller();
 
-      test('selectPalette throws until ENGINE-2', () {
-        expect(() => controller.selectPalette(_myPaints),
-            throwsUnimplementedError);
-      });
       test('setMode throws until ENGINE-6', () {
         expect(() => controller.setMode(MixMode.dry), throwsUnimplementedError);
       });
@@ -200,6 +209,49 @@ void main() {
       });
       test('speakRecipe throws until RECIPE-4', () {
         expect(() => controller.speakRecipe(_recipe), throwsUnimplementedError);
+      });
+    });
+
+    group('solving (ENGINE-2)', () {
+      test('solves over the default palette on open', () {
+        final controller = _controller(
+          paletteSource: const InMemoryPaletteSource(catalogue: [_richPalette]),
+        );
+        addTearDown(controller.dispose);
+        final recipes = controller.state.recipes;
+        expect(recipes, isNotEmpty);
+        final paletteIds = _richPalette.paints.map((p) => p.id).toSet();
+        for (final r in recipes) {
+          for (final c in r.components) {
+            expect(paletteIds, contains(c.paint.id));
+          }
+        }
+      });
+
+      test('no palette available ⇒ no solve on open', () {
+        final controller = _controller();
+        addTearDown(controller.dispose);
+        expect(controller.state.selectedPalette, isNull);
+        expect(controller.state.recipes, isEmpty);
+      });
+
+      test('selectPalette re-solves over the chosen palette and notifies', () {
+        final controller = _controller(
+          paletteSource:
+              const InMemoryPaletteSource(catalogue: [_myPaints, _richPalette]),
+        );
+        addTearDown(controller.dispose);
+        expect(controller.state.selectedPalette, _myPaints);
+
+        var notified = 0;
+        controller.addListener(() => notified++);
+        controller.selectPalette(_richPalette);
+
+        expect(notified, 1);
+        expect(controller.state.selectedPalette, _richPalette);
+        expect(controller.state.recipes, isNotEmpty);
+        expect(controller.state.mode, MixMode.wet);
+        expect(controller.state.manualError, isNull);
       });
     });
   });
