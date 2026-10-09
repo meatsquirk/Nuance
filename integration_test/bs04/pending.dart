@@ -44,8 +44,6 @@ const Map<String, String> pendingACs = {
   // AC-1, AC-2 un-pended by RECIPE-3 (target selection: saved sample + manual).
   // AC-3, AC-4 un-pended by ENGINE-2 (palette-constrained solver + top recipes).
   // AC-5, AC-6 un-pended by ENGINE-3 (per-recipe ΔE00 + verdict; prefer fewer).
-  'AC-5': 'ENGINE-3',
-  'AC-6': 'ENGINE-3',
   // AC-7, AC-8 un-pended by ENGINE-4 (trace "a touch of"; muddying flag).
   // AC-9 un-pended by ENGINE-5 (out-of-gamut + nearest-not-a-match).
   'AC-9': 'ENGINE-5',

@@ -82,7 +82,8 @@ void main() {
     // AC-2; ENGINE-2 → AC-3, AC-4; ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8;
     // ENGINE-5 → AC-9; ENGINE-6 → AC-10; RECIPE-4 → AC-11, AC-12.
     const unpended = <String>{
-      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-7', 'AC-8', 'AC-10', 'AC-11', 'AC-12',
+      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', 'AC-10',
+      'AC-11', 'AC-12',
     };
 
     test(
@@ -594,9 +595,20 @@ void main() {
         reason: 'the recipe list renders the "very close" verdict',
       );
 
-      // LIMITED (augmentation owned by ENGINE-3): a single close recipe cannot
-      // show the verdict *tracks* distance — a constant "very close" would pass.
-      // ENGINE-3 adds a farther recipe asserting a different, worse verdict band.
+      // AUGMENTATION (ENGINE-3): the verdict must TRACK distance — a single
+      // close recipe cannot prove that, since a constant "very close" would
+      // pass. The solve also returns farther mixes; the farthest reads a plainly
+      // different, worse band, so a constant-string verdict is rejected.
+      final farthest = harness.state.recipes
+          .reduce((a, b) => a.deltaE00 >= b.deltaE00 ? a : b);
+      expect(farthest.deltaE00, greaterThan(best.deltaE00),
+          reason: 'a farther recipe exists to compare the verdict against');
+      expect(farthest.verdict, isNotNull);
+      expect(farthest.verdict!.toLowerCase(), isNot(contains('very close')),
+          reason: 'a farther mix must not read "very close" — the verdict '
+              'tracks the distance, it is not a constant');
+      expect(farthest.verdict, isNot(best.verdict),
+          reason: 'the farther recipe reads a different (worse) verdict band');
     });
 
     acTestWidgets('AC-6', 'TestAC06_PreferFewer — a cleaner mix is never ranked '
@@ -632,10 +644,42 @@ void main() {
         }
       }
 
-      // LIMITED (augmentation owned by ENGINE-3): the invariant above rejects a
-      // mis-ordering but is only exercised where a similar-ΔE pair of differing
-      // paint counts exists. ENGINE-3 constructs the decisive two-paint /
-      // four-paint similar-ΔE pair and asserts the two-paint mix ranks above.
+      // AUGMENTATION (ENGINE-3): the decisive near-tie the real solve produces
+      // for this target over "My paints" — a two-paint Yellow Ochre + Ivory
+      // Black mix and a three-paint Titanium White + Yellow Ochre + Ivory Black
+      // mix that reach the target within [similarDeltaE] of each other. The
+      // three-paint mix is in fact the marginally LOWER ΔE00, so ranking the
+      // two-paint mix above it can come only from the prefer-fewer tie-break
+      // (D-8): a pure ascending-ΔE order (ENGINE-2) ranked the three-paint mix
+      // first and fails here.
+      //
+      // (The ITEST-3 plan sketched a two-paint / four-paint pair; after the G-5
+      // retarget the earthy palette's decisive near-tie for this olive is two
+      // vs three paints — no four-paint mix is competitive — so the augmentation
+      // uses the real pair. It still strengthens AC-6 only, and discriminates:
+      // it fails against the pre-ENGINE-3 ordering.)
+      int indexOfSet(Set<String> names) => recipes.indexWhere((r) =>
+          r.components.length == names.length &&
+          r.components.every((c) => names.contains(c.paint.name)));
+      final twoPaint = indexOfSet({'Yellow Ochre', 'Ivory Black'});
+      final threePaint =
+          indexOfSet({'Titanium White', 'Yellow Ochre', 'Ivory Black'});
+      expect(twoPaint, greaterThanOrEqualTo(0),
+          reason: 'the two-paint Yellow Ochre + Ivory Black mix must be offered');
+      expect(threePaint, greaterThanOrEqualTo(0),
+          reason: 'the three-paint White + Ochre + Black mix must be offered');
+      expect(
+        (recipes[twoPaint].deltaE00 - recipes[threePaint].deltaE00).abs(),
+        lessThanOrEqualTo(similarDeltaE),
+        reason: 'the two mixes reach the target at a similar ΔE00 (a genuine '
+            'tie, so ranking is decided by paint count not distance)',
+      );
+      expect(recipes[threePaint].components.length,
+          greaterThan(recipes[twoPaint].components.length),
+          reason: 'the three-paint mix genuinely uses more paints');
+      expect(twoPaint, lessThan(threePaint),
+          reason: 'at a similar ΔE00 the cleaner two-paint mix ranks above the '
+              'three-paint mix (prefer fewer paints, D-8)');
     });
 
     acTestWidgets('AC-7', 'TestAC07_TraceTouchOf — a sub-two-percent component is '

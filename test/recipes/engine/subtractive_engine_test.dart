@@ -34,6 +34,14 @@ const _ultramarine = Paint(
   medium: PaintMedium.acrylic,
   masstone: ColorCoordinates(lightness: 30, a: 18, b: -52),
 );
+// The earthy red that completes the acceptance "My paints" palette; the
+// ENGINE-3 ordering group mirrors that five-paint palette.
+const _venetian = Paint(
+  id: 'pr101',
+  name: 'Venetian Red',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 40, a: 32, b: 26),
+);
 // Oil paints so a mixed-medium palette can prove recipes never span media.
 const _whiteOil = Paint(
   id: 'pw6-oil',
@@ -172,9 +180,21 @@ void main() {
       expect(recipes.length, inInclusiveRange(3, 5));
       expect(recipes.length, lessThanOrEqualTo(const MixOptions().topK));
 
-      // Ordered by ascending ΔE00 (ENGINE-2 ordering).
+      // Ordered best-first by the D-8 ranking (ENGINE-3): ΔE00 ascending, but
+      // recipes within ~1 ΔE00 (a just-noticeable tie) are ordered toward fewer
+      // paints. So for each adjacent pair, either the next recipe is a clear
+      // step farther, or — at a tie — the earlier one uses no more paints.
+      // (ENGINE-2's plain ascending-ΔE order is a special case of this.)
+      const tieGrain = 1.0; // mirrors SubtractiveMixingEngine._tieGrain
       for (var i = 1; i < recipes.length; i++) {
-        expect(recipes[i - 1].deltaE00, lessThanOrEqualTo(recipes[i].deltaE00));
+        final prev = recipes[i - 1], next = recipes[i];
+        if ((next.deltaE00 - prev.deltaE00).abs() <= tieGrain) {
+          expect(prev.components.length, lessThanOrEqualTo(next.components.length),
+              reason: 'at a tie the earlier recipe uses no more paints (D-8)');
+        } else {
+          expect(prev.deltaE00, lessThan(next.deltaE00),
+              reason: 'beyond a tie the ranking is ascending ΔE00');
+        }
       }
 
       // Distinct by the set of paints each uses.
@@ -201,9 +221,11 @@ void main() {
         }
         expect(sum, closeTo(1.0, 1e-9));
         expect(_inLabRange(recipe.predictedColor), isTrue);
-        // ENGINE-3 (verdict) and ENGINE-5 (out-of-gamut) still leave these at
-        // their defaults; `muddying` is now set by ENGINE-4 (see its group).
-        expect(recipe.verdict, isNull);
+        // ENGINE-3 now fills `verdict` with a non-empty plain band (see its
+        // group); ENGINE-5 still leaves `outOfGamut` at its default; `muddying`
+        // is set by ENGINE-4.
+        expect(recipe.verdict, isNotNull);
+        expect(recipe.verdict, isNotEmpty);
         expect(recipe.outOfGamut, isFalse);
         // deltaE00 is the shipped metric over the recipe's own predicted colour.
         expect(recipe.deltaE00,
@@ -377,6 +399,117 @@ void main() {
         expect(r.muddying, isFalse,
             reason: 'warm + temperature-neutral is not a complementary crossing');
       }
+    });
+  });
+
+  group('verdict + ordering (ENGINE-3, AC-5 / AC-6 / D-7 / D-8)', () {
+    // The retargeted reachable olive (ITEST-5 / G-5 (a)): the earthy palette's
+    // best mix lands at ΔE00 ≈ 3.3 — inside the in-gamut range — so a "very
+    // close" verdict is meaningful, and the top two mixes (a 3-paint and a
+    // 2-paint) sit a hair apart, exercising the prefer-fewer tie-break.
+    const olive = Sample(
+      name: 'Deep Olive Green',
+      coordinates: ColorCoordinates(lightness: 42, a: -1.2561, b: 23.9671),
+      provenance: Provenance(ProvenanceTier.measured),
+    );
+    const myPaintsFull = PaintPalette(
+      name: 'My paints',
+      paints: [_white, _ochre, _black, _ultramarine, _venetian],
+    );
+
+    test('every recipe carries a non-empty verdict that tracks its distance',
+        () {
+      final recipes = engine.inverse(olive, myPaintsFull, const MixOptions());
+      expect(recipes, isNotEmpty);
+      for (final r in recipes) {
+        expect(r.verdict, isNotNull);
+        expect(r.verdict, isNotEmpty);
+      }
+      // The best mix is in gamut (ΔE00 ≤ 5) and reads the pinned "very close"
+      // phrase (AC-5); the farthest returned mix reads a plainly different,
+      // worse band — so the verdict is not a constant string (D-7).
+      final best = recipes.first;
+      expect(best.deltaE00, lessThanOrEqualTo(5.0));
+      expect(best.verdict!.toLowerCase(), contains('very close'));
+      final farthest =
+          recipes.reduce((a, b) => a.deltaE00 >= b.deltaE00 ? a : b);
+      expect(farthest.deltaE00, greaterThan(best.deltaE00));
+      expect(farthest.verdict, isNot(best.verdict),
+          reason: 'a farther mix reads a different, worse verdict band');
+    });
+
+    test('an almost-exact match reads the closest band (< 1 ΔE00)', () {
+      // A target equal to a palette paint's own masstone: the 100%-of-that-paint
+      // recipe reproduces it to well under 1 ΔE00 (forward self-consistency), so
+      // it reads the closest verdict band — the sub-1 branch the olive solve,
+      // whose best is ≈ 3.3, never reaches.
+      const ochreItself = Sample(
+        name: 'Yellow Ochre itself',
+        coordinates: ColorCoordinates(lightness: 60, a: 12, b: 46),
+        provenance: Provenance(ProvenanceTier.measured),
+      );
+      final recipes = engine.inverse(ochreItself, myPaintsFull, const MixOptions());
+      final best = recipes.first;
+      expect(best.deltaE00, lessThan(1.0));
+      expect(best.verdict!.toLowerCase(), contains('almost'),
+          reason: 'a sub-1 ΔE00 match reads the closest band');
+    });
+
+    test('prefers fewer paints at a near-tie: the 2-paint mix ranks above the '
+        '3-paint mix the pure-ΔE order would have led with', () {
+      final recipes = engine.inverse(olive, myPaintsFull, const MixOptions());
+      int indexOfSet(Set<String> names) => recipes.indexWhere((r) =>
+          r.components.length == names.length &&
+          r.components.every((c) => names.contains(c.paint.name)));
+      final twoPaint = indexOfSet({'Yellow Ochre', 'Ivory Black'});
+      final threePaint =
+          indexOfSet({'Titanium White', 'Yellow Ochre', 'Ivory Black'});
+      expect(twoPaint, greaterThanOrEqualTo(0));
+      expect(threePaint, greaterThanOrEqualTo(0));
+      // A genuine near-tie (within the tie grain), and the 3-paint mix is in
+      // fact the marginally lower ΔE00 — so ranking the 2-paint mix first is the
+      // prefer-fewer tie-break at work, not a distance win.
+      expect((recipes[twoPaint].deltaE00 - recipes[threePaint].deltaE00).abs(),
+          lessThanOrEqualTo(1.0));
+      expect(recipes[threePaint].deltaE00,
+          lessThan(recipes[twoPaint].deltaE00),
+          reason: 'the 3-paint mix has the marginally lower ΔE00');
+      expect(twoPaint, lessThan(threePaint),
+          reason: 'the cleaner 2-paint mix still ranks above it (D-8)');
+      // The AC-6 invariant holds over the whole returned order.
+      for (var i = 0; i < recipes.length; i++) {
+        for (var j = i + 1; j < recipes.length; j++) {
+          if ((recipes[i].deltaE00 - recipes[j].deltaE00).abs() <= 1.0) {
+            expect(recipes[i].components.length,
+                lessThanOrEqualTo(recipes[j].components.length));
+          }
+        }
+      }
+    });
+
+    test('candidates tied on distance and paint count fall through to the finer '
+        'tie-breaks, deterministically', () {
+      // Two paints with the same masstone (distinct ids) each give a
+      // 100%-of-one-paint recipe at the identical ΔE00 and colour, so the
+      // ranking must compare them past the band and paint-count tie-breaks —
+      // exercising the added-chroma and exact-ΔE fallbacks — and still return a
+      // stable order.
+      const twins = PaintPalette(name: 'twins', paints: [
+        Paint(
+            id: 'twin-a',
+            name: 'Twin A',
+            medium: PaintMedium.acrylic,
+            masstone: ColorCoordinates(lightness: 55, a: 6, b: 20)),
+        Paint(
+            id: 'twin-b',
+            name: 'Twin B',
+            medium: PaintMedium.acrylic,
+            masstone: ColorCoordinates(lightness: 55, a: 6, b: 20)),
+      ]);
+      final a = engine.inverse(_target, twins, const MixOptions());
+      final b = engine.inverse(_target, twins, const MixOptions());
+      expect(a, isNotEmpty);
+      expect(a, b, reason: 'the ranking is deterministic even at a full tie');
     });
   });
 }

@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — **G-6 approved 2026-10-09** (retargeted suite moves the contract honestly); ITEST stage complete. Next **ENGINE-3** (AC-5, AC-6), then ENGINE-5 (AC-9), then SIGNOFF-1. AC-1..AC-4,7,8,10,11,12 done (9/12)
+**Status:** In progress — **ENGINE-3 done** (AC-5 verdict + AC-6 prefer-fewer). Next **ENGINE-5** (AC-9, last behaviour phase), then SIGNOFF-1. 11/12 ACs done (only AC-9 left)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -59,8 +59,8 @@ muddying / wet-dry / trace logic, and no real Recipes screen exist** — all net
 | AC-2 | The painter enters a target colour manually and an impossible value is refused | ITEST-2 `TestAC02_ManualTargetRefused` | RECIPE-3 | ✅ Done |
 | AC-3 | Recipes use only paints from the currently selected palette | ITEST-2 `TestAC03_PaletteConstrained` | ENGINE-2 | ✅ Done |
 | AC-4 | The top three to five recipes are returned with parts and predicted colour | ITEST-3 `TestAC04_TopRecipes` | ENGINE-2 | ✅ Done |
-| AC-5 | A close recipe states a small delta-E with a plain verdict | ITEST-3 `TestAC05_CloseVerdict` | ENGINE-3 | ⬜ Todo |
-| AC-6 | A cleaner two-paint mix ranks above a muddier four-paint mix at a similar delta-E | ITEST-3 `TestAC06_PreferFewer` | ENGINE-3 | ⬜ Todo |
+| AC-5 | A close recipe states a small delta-E with a plain verdict | ITEST-3 `TestAC05_CloseVerdict` | ENGINE-3 | ✅ Done |
+| AC-6 | A cleaner two-paint mix ranks above a muddier four-paint mix at a similar delta-E | ITEST-3 `TestAC06_PreferFewer` | ENGINE-3 | ✅ Done |
 | AC-7 | A component under about two percent is expressed as a touch of | ITEST-3 `TestAC07_TraceTouchOf` | ENGINE-4 | ✅ Done |
 | AC-8 | A complementary-crossing mix is flagged as muddying | ITEST-3 `TestAC08_MuddyingFlag` | ENGINE-4 | ✅ Done |
 | AC-9 | An out-of-gamut target offers the nearest possible without claiming a match | ITEST-3 `TestAC09_OutOfGamut` | ENGINE-5 | ⬜ Todo |
@@ -207,9 +207,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 6,078,568 | 55m 56s (1h 01m) | packet assembled over 2 sessions; full regression green (unit 517; cov PASS 15/15; integ 11 pass / 12 AC pending); grid 12 AC + 11 guards at A, 0B; **G-2 approved 2026-10-09 by Matt Quirk** |
 | 9 | RECIPE-3 | behavior: AC-1, AC-2 — target selection (saved sample + manual/validation) | ✅ Done | 18,470,473 | 46m 17s | analyze clean; unit 529 / integ +75~10; 100% cov 15 touched; AC-1/AC-2 un-pended + green (TestAC01/02); grade 2A/0B; fix 2/3 |
 | 10 | ENGINE-2 | behavior: AC-3, AC-4 — palette-constrained solver + top 3–5 w/ parts + predicted colour | ✅ Done | 19,431,437 | 50m 12s | forward(KM)+inverse; AC-3/AC-4 un-pended + green; 100% cov; **G-5 raised** (Deep Olive ΔE≈9.31>5 ⇒ ENGINE-3/5 blocked); fix 1/3 |
-| 11 | ENGINE-3 | behavior: AC-5, AC-6 — per-recipe ΔE00+verdict; prefer fewer paints | ⬜ Next | | | serial on engine; **unblocked — G-6 approved 2026-10-09**; startable now |
+| 11 | ENGINE-3 | behavior: AC-5, AC-6 — per-recipe ΔE00+verdict; prefer fewer paints | ✅ Done | 12,441,399 | 27m 36s | verdict band (D-7, "very close") + D-8 prefer-fewer ranking; AC-5/AC-6 un-pended + green; analyze clean; unit 570; 100% cov 16 touched; grade 11×A/0B (AC-5/AC-6 augmentations now decisive, AC-8 unweakened); fix 0/3 |
 | 12 | ENGINE-4 | behavior: AC-7, AC-8 — trace "a touch of"; muddying flag | ✅ Done | 19,391,961 | 38m 16s | analyze clean; unit 551; 100% cov 15 touched; AC-7/AC-8 un-pended + green; grade 2A/0B (both A-limited→A); fix 1/3 |
-| 13 | ENGINE-5 | behavior: AC-9 — out-of-gamut + nearest-not-a-match | ⬜ Todo | | | serial on engine; G-6 approved; startable after ENGINE-3 |
+| 13 | ENGINE-5 | behavior: AC-9 — out-of-gamut + nearest-not-a-match | ⬜ Next | | | serial on engine; G-6 approved; **startable now** (ENGINE-3 done) — last behaviour phase |
 | 14 | ENGINE-6 | behavior: AC-10 — wet/dry toggle + dry prediction | ✅ Done | 12,666,200 | 18m 55s | per-medium wet→dry transform in `forward(dry:)` + `setMode` re-predict + E24 wired; AC-10 un-pended + green; unit 558; grade A (augmented drying-direction); fix 0/3 |
 | 15 | RECIPE-4 | behavior: AC-11, AC-12 — speak target; speak recipe | ✅ Done | 18,065,846 | 24m 45s | analyze clean; unit 566; 100% cov 16 touched; AC-11/AC-12 un-pended + green (integ +20 ~3, 3 skips = AC-5/6/9); grade 9A/0B (AC-11 label-swap + AC-12 parts-quantity augmentations closed); fix 0/3 |
 | 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | after all behaviour + ITEST-5/6 |
@@ -221,15 +221,14 @@ when the row is marked done.
 
 ## Next phase
 
-**G-6 approved 2026-10-09 by Matt Quirk** — ITEST-6 ✅ Done, the ITEST stage is complete, ENGINE-3/ENGINE-5 unblocked.
+**ENGINE-3 ✅ Done 2026-10-09** (AC-5 verdict + AC-6 prefer-fewer ordering; 11×A/0B grade). 11/12 ACs done.
 
-**Next: ENGINE-3** (behavior, AC-5 + AC-6) — per-recipe ΔE00 + "very close" verdict, and the prefer-fewer
-tie-break. Serial on the engine. New target facts for it: best Deep Olive recipe ΔE00 ≈ 3.34 (W 6% + YO 85% +
-BK 9%); the "very close" band must cover ≈ 3.34; AC-6's order must float the 2-paint `YO 91% + BK 9%`
-(ΔE ≈ 3.37) above the 3-paint mix at their near-tie.
+**Next: ENGINE-5** (behavior, AC-9 — out-of-gamut target marked OUT OF GAMUT, nearest mix offered as nearest
+not a match) — the **last behaviour phase**, serial on `subtractive_engine.dart`; AC-9 is the only still-pending
+AC. Reachability data: Vivid Turquoise best ΔE00 ≈ 22.68 (> 5, out of gamut); Deep Olive ≈ 3.34 (the in-gamut
+control). ENGINE-5 sets `Recipe.outOfGamut` and the gamut banner — it must not re-derive the verdict or order.
 
-Then **ENGINE-5** (AC-9, out-of-gamut; Deep Olive stays the in-gamut control at 3.34 ≤ 5), then **SIGNOFF-1**.
-9/12 ACs done; remaining AC-5, AC-6, AC-9. The three ENGINE phases serialize (same engine files).
+Then **SIGNOFF-1** (packet + summary page + human approval).
 
 ## Token usage
 
@@ -262,7 +261,8 @@ Then **ENGINE-5** (AC-9, out-of-gamut; Deep Olive stays the in-gamut control at 
 | ITEST-5 | 23de13a2 | 2026-10-09 15:02 EDT | 15:20 | 18m 10s | 18m 10s | claude-opus-4-8 | 148 | 308,057 | 10,261,541 | 61,597 | 10,631,343 | retarget SAMPLE_DEEP_OLIVE to reachable olive L42/C24/h93 (real engine best ΔE00 3.34 ≤ 5); AC-1/AC-11 pins updated + engine-backed reachability guard added; analyze clean; unit 566; cov PASS (no lib); integ default +21 ~3 / run-pending -3 fail clean at owner; grade 4×A/0B; fix 0/3 |
 | ITEST-6 | 481f0c3e | 2026-10-09 15:49 EDT | 15:54 | 5m 35s | 5m 35s | claude-opus-4-8 | 44 | 75,188 | 1,747,586 | 14,279 | 1,837,097 | test-review: fresh G-6 packet assembled from the ITEST-5 retarget; full regression green (analyze clean; unit 566; coverage gate PASS 16/16 touched; integ default +21 ~3 / run-pending +21 -3 fail clean at owner) on sim under lock; grid 4×A re-grade, AC-5/9 carry, 0B; phase ⏸ Awaiting review; G-6 awaiting human decision |
 | SIGNOFF-DECISION | 224b1fc9 | 2026-10-09 16:22 EDT | 16:48 | 25m 38s | 3m 10s | claude-opus-4-8 | 54 | 53,363 | 1,795,522 | 13,409 | 1,862,348 | ITEST-6 approved |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 16:48** | **19h 01m** | **8h 10m** |  | **2,744** | **4,399,021** | **176,819,989** | **1,147,660** | **182,369,414** |  |
+| ENGINE-3 | a8f8b62d | 2026-10-09 17:48 EDT | 18:15 | 27m 36s | 27m 36s | claude-opus-4-8 | 160 | 337,087 | 12,029,727 | 74,425 | 12,441,399 | verdict band (D-7, 'very close') + D-8 prefer-fewer ranking; AC-5/AC-6 un-pended + green; analyze clean; unit 570; 100% cov 16 touched; grade 11xA/0B; fix 0/3 |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 18:15** | **19h 29m** | **8h 38m** |  | **2,904** | **4,736,108** | **188,849,716** | **1,222,085** | **194,810,813** |  |
 
 ## Sign-off
 

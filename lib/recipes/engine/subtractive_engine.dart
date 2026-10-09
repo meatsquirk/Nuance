@@ -55,6 +55,38 @@ class SubtractiveMixingEngine implements MixingEngine {
       'Measuring so little by volume is not practical — add a little at a time '
       'and mix fully before judging the colour.';
 
+  /// Two recipes whose ΔE00 differ by less than this count as equally close for
+  /// ranking (AC-6 / D-8): ΔE00 ≈ 1 is a just-noticeable difference (the same
+  /// perceptual grain the comparison verdict bands use), so at a nearer spacing
+  /// the ranking is free to prefer the cleaner mix rather than split hairs over
+  /// a difference no eye can see.
+  static const double _tieGrain = 1.0;
+
+  /// The plain-language match verdict band edges for a recipe's ΔE00 (D-7; AC-5),
+  /// in ascending distance. Each entry pairs the exclusive upper bound of a band
+  /// with the word shown for a ΔE00 below it; a value at or above the last bound
+  /// is [_verdictAbove]. A close recipe (ΔE00 ≤ 5, the in-gamut range) reads at
+  /// least "very close" — the phrase the spec pins (AC-5) — and a farther mix
+  /// reads a plainly worse band, so the verdict tracks the distance rather than
+  /// being a constant string.
+  static const List<(double, String)> _verdictBands = [
+    (1.0, 'an almost exact match'),
+    (5.0, 'very close'),
+    (10.0, 'close'),
+    (20.0, 'in the ballpark'),
+  ];
+
+  /// The verdict for a ΔE00 at or above the largest [_verdictBands] bound.
+  static const String _verdictAbove = 'far off';
+
+  /// The plain-language match verdict for a recipe's ΔE00 (D-7; AC-5).
+  static String _verdictBand(double deltaE00) {
+    for (final (bound, word) in _verdictBands) {
+      if (deltaE00 < bound) return word;
+    }
+    return _verdictAbove;
+  }
+
   @override
   ColorCoordinates forward(Map<Paint, double> partsByVolume, {bool dry = false}) {
     if (partsByVolume.isEmpty) {
@@ -173,6 +205,7 @@ class SubtractiveMixingEngine implements MixingEngine {
             components: components,
             predictedColor: predicted,
             deltaE00: de,
+            verdict: _verdictBand(de),
             muddying: _isMuddying(kept),
           );
 
@@ -186,7 +219,7 @@ class SubtractiveMixingEngine implements MixingEngine {
     });
 
     final recipes = bestByPaintSet.values.toList()
-      ..sort((a, b) => a.deltaE00.compareTo(b.deltaE00));
+      ..sort((a, b) => _rankCompare(a, b, targetLab));
     if (recipes.length > opts.topK) {
       return recipes.sublist(0, opts.topK);
     }
@@ -296,6 +329,38 @@ class SubtractiveMixingEngine implements MixingEngine {
 
     recur(0, const []);
     return result;
+  }
+
+  /// Ranks two candidate recipes against [target] (AC-6 / D-8): best-first by
+  /// ΔE00, with a tie-break toward the *cleaner* mix.
+  ///
+  /// The ΔE00 is bucketed to [_tieGrain], so two recipes closer than a
+  /// just-noticeable difference land in the same band and count as equally
+  /// close. Within a band the ranking prefers, in order, fewer paints, then the
+  /// mix that adds less chroma over the target (the cleaner, less muddy one),
+  /// then the finer ΔE00 — so a cleaner two-paint mix ranks above a muddier
+  /// four-paint mix at a similar distance. Bucketing keeps this a total order
+  /// (the comparison is lexicographic over crisp keys, never a fuzzy
+  /// within-tolerance equality), so the sort stays deterministic.
+  static int _rankCompare(Recipe a, Recipe b, ColorCoordinates target) {
+    final bandA = (a.deltaE00 / _tieGrain).floor();
+    final bandB = (b.deltaE00 / _tieGrain).floor();
+    if (bandA != bandB) return bandA.compareTo(bandB);
+    final byCount = a.components.length.compareTo(b.components.length);
+    if (byCount != 0) return byCount;
+    final byChroma = _addedChroma(a.predictedColor, target)
+        .compareTo(_addedChroma(b.predictedColor, target));
+    if (byChroma != 0) return byChroma;
+    return a.deltaE00.compareTo(b.deltaE00);
+  }
+
+  /// How much chroma [predicted] adds over [target] (never below zero) — the
+  /// "added chroma" the D-8 tie-break prefers to keep low, since an
+  /// over-saturated mix is the muddier one at a similar distance.
+  static double _addedChroma(ColorCoordinates predicted, ColorCoordinates target) {
+    double chroma(ColorCoordinates c) => math.sqrt(c.a * c.a + c.b * c.b);
+    final added = chroma(predicted) - chroma(target);
+    return added > 0 ? added : 0;
   }
 
   /// Builds a [RecipeComponent] for [paint] at [share] of the mix, flagging it a

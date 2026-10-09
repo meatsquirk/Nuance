@@ -1,6 +1,6 @@
 # Module ENGINE — the mixing engine
 
-**Status:** In progress — ENGINE-6 done (per-medium wet→dry transform; AC-10 green); G-5 resolved (a) retarget Deep Olive; ITEST-5 retarget done + **G-6 approved 2026-10-09** → **ENGINE-3 (AC-5/AC-6) now startable**, then ENGINE-5 (AC-9); RECIPE-4 done
+**Status:** In progress — **ENGINE-3 done** (per-recipe ΔE00 + "very close" verdict band, D-7; prefer-fewer-paints ranking, D-8; AC-5/AC-6 green). Remaining: **ENGINE-5** (AC-9 out-of-gamut) — startable now, serial on the engine. ENGINE-2/4/6 + RECIPE-3/4 done; G-5/G-6 resolved
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (`Paint`, `PaintMedium`), `lib/recipes/engine/mixing_engine.dart`
 (`MixingEngine` interface, `Recipe`, `RecipeComponent`, `MixOptions`), `lib/recipes/engine/subtractive_engine.dart`
@@ -15,7 +15,7 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 6,408,543 | 21m 15s |
 | 2 | behavior | AC-3, AC-4 | ✅ Done | 19,431,437 | 50m 12s |
-| 3 | behavior | AC-5, AC-6 | ⬜ Todo | | |
+| 3 | behavior | AC-5, AC-6 | ✅ Done | 12,441,399 | 27m 36s |
 | 4 | behavior | AC-7, AC-8 | ✅ Done | 19,391,961 | 38m 16s |
 | 5 | behavior | AC-9 | ⬜ Todo | | |
 | 6 | behavior | AC-10 | ✅ Done | 12,666,200 | 18m 55s |
@@ -228,6 +228,66 @@ Forward + inverse landed; AC-3 and AC-4 un-pended and green end-to-end.
 - **Exit criteria:** AC-5/AC-6 green; default suite green; unit gate + 100% coverage touched.
 - **Acceptance gate:** un-pend AC-5, AC-6; suite green (`TestAC05_*`, `TestAC06_*` + earlier); TestAC05 augmentation made; grade gate passed.
 - **Augments:** `TestAC05`: add a farther recipe asserting a **different** (worse) verdict band.
+
+### Result
+
+Per-recipe ΔE00 + verdict (D-7) and prefer-fewer-paints ranking (D-8) landed; AC-5 and AC-6 un-pended and green end-to-end.
+
+- **Engine** (`subtractive_engine.dart`): `inverse` now sets `Recipe.verdict` via `_verdictBand(de)` — a plain
+  match band (`an almost exact match` < 1, `very close` < 5, `close` < 10, `in the ballpark` < 20, else `far
+  off`), the same ascending-band pattern `compare/difference.dart` uses (D-7), with "very close" as the pinned
+  in-gamut phrase. Ranking moved from pure ascending ΔE to `_rankCompare(a, b, target)` (D-8): ΔE00 bucketed to
+  `_tieGrain = 1.0` (a just-noticeable difference), ties broken toward fewer paints, then lower added chroma
+  (`_addedChroma` = predicted chroma over target, floored at 0), then the finer ΔE00. Lexicographic over crisp
+  keys → a deterministic total order (no fuzzy within-tolerance comparator). `forward` unchanged.
+- **Render** (`recipe_list_region.dart`): each card now shows an `ΔE00 <x.x> — <verdict>` line under the
+  predicted colour.
+- **Un-pended** AC-5, AC-6 (rows deleted in `bs04/pending.dart`; added to `recipes_test.dart`'s `unpended` set).
+- **AC-5 augmentation (made):** asserts the farthest returned recipe (Deep Olive #4, ΔE00 ≈ 20.5 → "far off")
+  reads a verdict that is non-null, not "very close", and `isNot(best.verdict)` — so a constant verdict (or the
+  pre-ENGINE-3 null) fails; picked by ΔE00 not rank, so it strengthens AC-5's verdict only (G6).
+- **AC-6 augmentation (made):** the decisive near-tie the retargeted solve produces — 2-paint {Ochre, Black}
+  (ΔE00 ≈ 3.37) vs 3-paint {White, Ochre, Black} (ΔE00 ≈ 3.34). The 3-paint has the **lower** ΔE00 yet ranks
+  below the 2-paint, so the pass comes only from the prefer-fewer tie-break. **Change from the plan** (recorded
+  per the "tests serve the AC" rule): the ITEST-3 plan sketched a 2-vs-4-paint pair; after the G-5 retarget no
+  4-paint mix is competitive for this olive, so the real decisive pair is 2-vs-3 — still discriminating against
+  the pre-ENGINE-3 ΔE-only order, still AC-6-only. The ITEST *Test augmentations* row records the same.
+- **Updated two ENGINE-2 generic unit assertions** the new contract changes: the ordering test (was "strictly
+  ascending ΔE00") now asserts the D-8 order (ascending beyond a tie, fewer paints within a tie); the generic
+  recipe test (was `verdict isNull`) now asserts `verdict isNotNull`/`isNotEmpty`. Both legitimate — ENGINE-3
+  owns the engine and fills the verdict / sets the order.
+- **Gates:** `flutter analyze` clean; **unit 570 green** (+4 ENGINE-3 tests: verdict-tracks-distance, the sub-1
+  closest band, the prefer-fewer near-tie, and a full-tie determinism case that exercises the chroma/ΔE
+  fallbacks); **100% line coverage on all 16 touched files** (`coverage_gate.dart main` PASS); **recipes
+  acceptance suite green** under the verify lock (`-d 5AB9D06D…`: `TestAC05_*`, `TestAC06_*` + AC-1..AC-4,7,8,
+  10,11,12 run and pass; only AC-9 skips, pending ENGINE-5).
+- **Grade gate:** an independent grader (fresh context) graded the full un-pended suite **11×A, 0×B**; AC-5 and
+  AC-6 **upgraded from A (limited) to full A** (augmentations now decisive), and confirmed no neighbour weakened
+  (AC-8's clean-above-crossing ranking still holds under the new order). Grid § *ENGINE-3 re-grade*.
+- **Fix passes: 0/3** — engine, tests and render passed on the first full run.
+- **G-5/G-6 settled** (retarget + fresh review already approved); nothing reopened.
+- **Tokens / Time:** 12,441,399 · 27m 36s.
+
+### Checkpoint / Handoff
+
+- **Frozen for ENGINE-5 / SIGNOFF:**
+  - `inverse` fills `Recipe.verdict` (via `_verdictBand`) and ranks by `_rankCompare` (D-8 total order,
+    `_tieGrain = 1.0`). **ENGINE-5** adds `outOfGamut` on top of the same per-recipe build and the gamut label
+    in the card — it must **not** re-derive the verdict or the ordering. When a target is out of gamut the best
+    ΔE00 exceeds 5, so its verdict naturally reads a worse band ("close"/"in the ballpark"/"far off"); ENGINE-5
+    adds the OUT OF GAMUT marking, it does not change the verdict text.
+  - `RecipeListRegion._RecipeCard` renders, in order: components (trace or measured) → `Predicted colour:` →
+    `ΔE00 <x.x> — <verdict>` → `Liable to muddy`? → Speak. ENGINE-5's gamut label goes inside the same card;
+    keep `cardKey(i)`.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under
+  the lock: `$C with-lock bs-04-mixing-recipes <PHASE> --wait 900 -- bash -c "export PATH=…; cd <repo> &&
+  flutter test integration_test/recipes_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685"`.
+- **Next phase:** **ENGINE-5** (AC-9 out-of-gamut + nearest-not-a-match) — the last behaviour phase, serial on
+  `subtractive_engine.dart`; AC-9 is the only still-pending AC. Then **SIGNOFF-1**. Reachability data for AC-9:
+  Vivid Turquoise best ΔE00 ≈ 22.68 (> 5, out of gamut); Deep Olive ≈ 3.34 (the in-gamut control).
+- **Known gaps:** `outOfGamut` is still `false` on every recipe (ENGINE-5). No other gaps — verdict, ordering,
+  trace, muddying and wet/dry are all in.
 
 ## Phase 4 — Trace "a touch of" + muddying flag (ENGINE-4)
 

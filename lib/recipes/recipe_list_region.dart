@@ -88,6 +88,11 @@ class _RecipeCard extends StatelessWidget {
                     '${(component.partsFraction * 100).round()}%'),
             Text('Predicted colour: L ${predicted.lightness.round()}, '
                 'a ${predicted.a.round()}, b ${predicted.b.round()}'),
+            // The mix's distance from the target and its plain verdict (AC-5 /
+            // D-7). The verdict is null only on a recipe built without one (the
+            // model default); the engine always fills it, so it reads here.
+            Text('ΔE00 ${recipe.deltaE00.toStringAsFixed(1)}'
+                '${recipe.verdict == null ? '' : ' — ${recipe.verdict}'}'),
             if (recipe.muddying) const Text('Liable to muddy'),
             // E25 Speak recipe — wired by RECIPE-4 (AC-12): speaks this recipe's
             // paints and their parts through the controller's speech seam.
