@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1..5 done; ITEST-6 ⏸ Awaiting review — the fresh retargeted suite is assembled and green (default +21, ~3 pending; run-pending +21 −3 clean), awaiting the human **G-6** decision, which re-gates ENGINE-3/ENGINE-5
+**Status:** Done — ITEST-1..6 done; **G-6 approved 2026-10-09 by Matt Quirk** (the retargeted suite moves the contract honestly, best ΔE00 ≈ 3.34 ≤ 5, ceiling/`gamutThreshold` unchanged). ENGINE-3/ENGINE-5 unblocked; the ITEST module is complete
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/recipes_test.dart` (AC tests + smoke/guards),
 `integration_test/recipes_harness.dart` (Given/When/Then vocabulary, fixtures, the independent
@@ -18,7 +18,7 @@ RECIPE-1).
 | 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ✅ Done | 7,282,541 | 41m 45s (1h 15m) |
 | 4 | test-review | — (G-2) | ✅ Done | 6,078,568 | 55m 56s (1h 01m) |
 | 5 | acceptance-tests | AC-5, AC-9 (retarget) | ✅ Done | 10,631,343 | 18m 10s (18m 10s) |
-| 6 | test-review | — (G-6) | ⏸ Awaiting review | 1,837,097 | 5m 35s (5m 35s) |
+| 6 | test-review | — (G-6) | ✅ Done | 1,837,097 | 5m 35s (5m 35s) |
 
 ## Interface reconciliation
 
@@ -58,11 +58,11 @@ RECIPE-1).
   performs the retarget + updates every test pinning the old L42/C28/h108, and **ITEST-6** is the fresh review
   (G-6). The engine, the ΔE00 ≤ 5 "very close" contract (D-7/D-10) and the `gamutThreshold = 5.0` are
   unchanged.
-- **G-6 (approve the retargeted acceptance tests — spec author)** — ⏸ **Awaiting decision** (packet assembled
-  2026-10-09, full regression green): a fresh review of the retargeted AC-5/AC-9 (and the re-verified
-  AC-1/AC-4/AC-11 whose pinned coordinates move with the fixture), re-confirming the acceptance contract moved
-  **honestly** (best ΔE00 ≈ 3.34 ≤ 5 proven against the real engine) rather than by weakening any assertion.
-  **Blocks ENGINE-3, ENGINE-5.** Recorded via `/feature-next-phase --gate bs-04-mixing-recipes G-6 approved | "<changes>"`.
+- **G-6 (approve the retargeted acceptance tests — spec author)** — ✅ **Resolved 2026-10-09 16:46 EDT by Matt
+  Quirk: approved** — the retargeted AC-5/AC-9 (and the re-verified AC-1/AC-4/AC-11) move the acceptance
+  contract **honestly**, not by weakening it: best ΔE00 ≈ 3.34 ≤ 5 proven against the real engine, the ≤ 5
+  "very close" ceiling (D-7/D-10) and `gamutThreshold = 5.0` unchanged, with an engine-backed discriminating
+  guard (reverting the retarget fails it). ITEST-6 ✅ Done; **ENGINE-3 and ENGINE-5 unblocked.**
 
 ## Phase 1 — Harness (ITEST-1)
 
@@ -550,8 +550,9 @@ plan edits only (the retarget itself landed in ITEST-5).
   AC-1/AC-11 pins + the new reachability guard all pass; AC-5/AC-6/AC-9 skip). **Red baseline (run-pending):**
   `+21 −3` — AC-5/AC-6/AC-9 each fail cleanly at the Then naming their owner, no panics.
 - **Grade grid complete** for the whole suite; the ITEST-5 re-grade is 4×A, 0×B — PASS; no new grading this phase.
-- **Gate:** **G-6 awaiting the human decision.** Recorded via
-  `/feature-next-phase --gate bs-04-mixing-recipes G-6 approved | "<changes>"`.
+- **Gate:** **G-6 ✅ approved 2026-10-09 16:46 EDT by Matt Quirk** — the retargeted contract moved honestly
+  (best ΔE00 ≈ 3.34 ≤ 5 vs the real engine; ceiling/`gamutThreshold` unchanged; engine-backed guard).
+  ITEST-6 ✅ Done; ENGINE-3 then ENGINE-5 unblocked.
 - **Fix passes: 0/3** (no code; regression green first run).
 - **Tokens / Time:** 1,837,097 · 5m 35s active (5m 35s wall) — one session, no subagents.
 

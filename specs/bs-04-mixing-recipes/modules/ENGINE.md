@@ -1,6 +1,6 @@
 # Module ENGINE — the mixing engine
 
-**Status:** In progress — ENGINE-6 done (per-medium wet→dry transform; AC-10 green); G-5 resolved (a) retarget Deep Olive; ENGINE-3 & ENGINE-5 now gated by **ITEST-5** (retarget the fixture) + **G-6** (fresh review); RECIPE-4 startable (other module)
+**Status:** In progress — ENGINE-6 done (per-medium wet→dry transform; AC-10 green); G-5 resolved (a) retarget Deep Olive; ITEST-5 retarget done + **G-6 approved 2026-10-09** → **ENGINE-3 (AC-5/AC-6) now startable**, then ENGINE-5 (AC-9); RECIPE-4 done
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (`Paint`, `PaintMedium`), `lib/recipes/engine/mixing_engine.dart`
 (`MixingEngine` interface, `Recipe`, `RecipeComponent`, `MixOptions`), `lib/recipes/engine/subtractive_engine.dart`
@@ -66,6 +66,10 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
   round runs before the blocked behaviour phases: **ITEST-5** (retarget the fixture + update every test pinning
   the old L42/C28/h108, incl. the done AC-1 and the pending AC-11) → **ITEST-6** fresh review (**G-6**) →
   ENGINE-3, then ENGINE-5. Full phase defs in [ITEST.md](ITEST.md) (Phases 5–6).
+- **G-6 (approve the retargeted acceptance tests — spec author)** — ✅ **RESOLVED 2026-10-09 16:46 EDT approved,
+  by Matt Quirk.** The retargeted suite moves the contract honestly (best ΔE00 ≈ 3.34 ≤ 5 vs the real engine;
+  ≤ 5 ceiling and `gamutThreshold = 5.0` unchanged; engine-backed discriminating guard). **ENGINE-3 (AC-5,
+  AC-6) and ENGINE-5 (AC-9) are now unblocked.**
 
 ## Phase 1 — Engine types + interface + stub (ENGINE-1)
 
