@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — SCREEN-1 (shell) done; next ITEST-1 (acceptance-tests)
+**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3 (AC tests)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -147,7 +147,7 @@ discriminating control is an in-test non-crossing recipe (not an augmentation); 
 | ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | The mixing engine: `Paint`/`PaintMedium`, `MixingEngine` interface + `Recipe`/`RecipeComponent`, the v1 subtractive forward model and inverse solver (top 3–5, prefer fewer), per-recipe ΔE00+verdict, trace "a touch of", muddying flag, out-of-gamut, wet/dry transform | bs-03 color-science (`deltaE00`, `ColorScience`) | 🔄 In progress |
 | RECIPE | [modules/RECIPE.md](modules/RECIPE.md) | Scaffold; `PaintPalette`/`PaletteSource`; `RecipeController`/state (target, selected palette, recipes, wet/dry mode); target selection (saved sample + manual entry/validation); `RecipeReadEndpoint`; recipes entry in `buildApp`; spoken target & recipe | bs-03 domain/router/Speech/SampleSource, ENGINE | 🔄 In progress |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Recipes screen UI: target selector (E22) + speak-target (E23), wet/dry toggle (E24), the recipe list body (parts, predicted colour, ΔE00, verdict, "a touch of", muddying) + speak-recipe (E25), the "OUT OF GAMUT" banner | RECIPE, ENGINE | ✅ Done |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
 
 ## Dependency graph
 
@@ -199,9 +199,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | ENGINE-1 | shell: `Paint`/`PaintMedium` + `MixingEngine` interface + `Recipe`/`RecipeComponent` + stub engine wired into deps | ✅ Done | 6,408,543 | 21m 15s | analyze clean; unit 480 / integ 62 green; 100% cov on 5 touched files; introduced minimal `PaintPalette` as the interface enabler |
 | 3 | RECIPE-2 | shell: `PaletteSource`/`InMemoryPaletteSource` over the existing `PaintPalette` + `RecipeController`/state + read endpoint + recipes entry/route (replace stub) | ✅ Done | 14,660,317 | 44m 03s | analyze clean; unit 510 / integ 62 green; 100% cov on 10 touched files; stub removed; bs-01 AC-11 green on the real screen |
 | 4 | SCREEN-1 | shell: Recipes screen scaffold (E22–E25 + list + gamut banner placeholders) bound to controller | ✅ Done | 7,144,050 | 15m 26s (15m 26s) | analyze clean; unit 517 / integ 62 green; 100% cov on 15 touched files; bs-01 AC-11 green; last shell |
-| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ⬜ Next | | | |
-| 6 | ITEST-2 | acceptance-tests: AC-1,2,3,11,12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
-| 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2; needs G-4 for pinned values |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 10,067,182 | 18m 44s (4h 40m) | analyze clean; unit 517 / integ 73 green (11 new scaffold, AC pending); grade 11A/0B PASS |
+| 6 | ITEST-2 | acceptance-tests: AC-1,2,3,11,12 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
+| 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9,10 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-2; needs G-4 for pinned values |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | RECIPE-3 | behavior: AC-1, AC-2 — target selection (saved sample + manual/validation) | ⬜ Todo | | | foundational |
 | 10 | ENGINE-2 | behavior: AC-3, AC-4 — palette-constrained solver + top 3–5 w/ parts + predicted colour | ⬜ Todo | | | foundational |
@@ -217,15 +217,15 @@ when the row is marked done.
 
 ## Next phase
 
-**ITEST-1 (acceptance-tests)** is next and **startable** — SCREEN-1 (the last shell) is done, so the
-acceptance stage opens. ITEST-1 builds the harness `integration_test/recipes_harness.dart` over the wired
-shells, the fixtures (`CATALOGUE`, `SAMPLE_DEEP_OLIVE`, `PALETTE_MY_PAINTS`, the out-of-gamut and oil
-controls, the independent `referenceDeltaE00`), seeds the 12-AC pending gate in
-`integration_test/bs04/pending.dart`, and adds a smoke test. Then **{ITEST-2 ∥ ITEST-3}** (disjoint
-catalogue rows in the shared `recipes_test.dart` — coordinate the harness edits), then the **ITEST-4**
-test review (**G-2**). **G-4** (engine / pinned-value reconciliation) is decided before ITEST-3; **G-2**
-(approve the acceptance tests) at the ITEST-4 review. Run it:
-`/feature-next-phase bs-04-mixing-recipes` (or `--parallel …` for a worktree run).
+**ITEST-2 ∥ ITEST-3 (acceptance-tests)** are both next and startable — ITEST-1's harness is in place.
+**ITEST-2** registers one pending `acTestWidgets` per AC for AC-1,2,3,11,12 (target selection / manual /
+palette constraint / speak) and records their red baseline; **ITEST-3** does AC-4,5,6,7,8,9,10 (solve /
+verdict / rank / trace / muddy / gamut / wet-dry). Both edit `integration_test/recipes_test.dart` — a
+**merge-risky** pair; coordinate the shared file (append disjoint AC groups under their headers) and
+update the pending-gate guard's `unpended` set as rows are un-pended. **G-4** must be decided before
+ITEST-3 pins any predicted-colour literal (it writes AC-5/AC-10 as behavioural properties regardless).
+Then the **ITEST-4** test review (**G-2**). Run: `/feature-next-phase bs-04-mixing-recipes ITEST-2`
+(or `--parallel …`).
 
 ## Token usage
 
@@ -240,7 +240,9 @@ test review (**G-2**). **G-4** (engine / pinned-value reconciliation) is decided
 | RECIPE-2 | f71955f4 | 2026-10-08 14:24 EDT | 15:08 | 44m 05s | 44m 03s | claude-opus-4-8 | 224 | 168,724 | 14,424,481 | 66,888 | 14,660,317 | shell: PaletteSource/InMemoryPaletteSource + RecipeState/MixMode + inert RecipeController + RecipeReadEndpoint + RecipesEntry/RecipesHomeScreen wired into buildApp; AppRouter.toRecipes → real screen (stub removed); analyze clean; unit 510 / integ 62 green; 100% coverage on 10 touched files; bs-01 AC-11 green on the real screen; fix passes 1/3 |
 | SCREEN-1 | a4f0dbfb | 2026-10-08 15:23 EDT | 15:38 | 15m 26s | 15m 26s | claude-opus-4-8 | 138 | 132,834 | 6,971,588 | 39,490 | 7,144,050 | shell: RecipesScreen + 4 keyed region widgets (E22-E25 + gamut banner) over the owned controller, all inert; analyze clean; unit 517 / integ 62 green; 100% coverage on 15 touched files; bs-01 AC-11 green on the real screen; fix passes 1/3 |
 | RECONCILE | 3959e60d | 2026-10-08 15:43 EDT | 15:46 | 3m 21s | 3m 21s | claude-opus-4-8 | 28 | 58,058 | 938,083 | 13,366 | 1,009,535 | applied SCREEN-1 rollup: master status/SCREEN cell/session log rows 4-5/Next-phase updated, SCREEN-1 ledger row added; phase branch fast-forwarded into feat |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 15:46** | **1h 57m** | **1h 57m** |  | **688** | **938,179** | **36,864,729** | **257,458** | **38,061,054** |  |
+| ITEST-1 | a4f0dbfb | 2026-10-08 15:43 EDT | 20:23 | 4h 40m | 18m 44s | claude-opus-4-8 | 90 | 359,451 | 9,655,100 | 52,541 | 10,067,182 | acceptance-tests harness: recipes_harness.dart (givenRecipes + RecipesHarness vocabulary + fixtures + independent referenceDeltaE00) + recipes_test.dart (smoke + guards) + pending.dart seeded 12 ACs; analyze clean; unit 517 green; integration 73 green (11 new scaffold, AC tests pending); grade 11A/0B PASS; fix passes 0/3 |
+| RECONCILE | e5d5d212 | 2026-10-08 20:35 EDT | 20:38 | 2m 40s | 2m 40s | claude-opus-4-8 | 32 | 54,875 | 1,043,789 | 10,794 | 1,109,490 | applied ITEST-1 parallel rollup: master status/ITEST module cell/session log rows 5-7/Next-phase updated, ITEST-1 ledger row added; phase branch fast-forwarded into feat; worktree + phase branch removed |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 20:38** | **6h 40m** | **2h 18m** |  | **810** | **1,352,505** | **47,563,618** | **320,793** | **49,237,726** |  |
 
 ## Sign-off
 
