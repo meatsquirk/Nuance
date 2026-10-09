@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Done — ITEST-1/2/3/4 done; G-2 approved 2026-10-09 (behaviour stage open)
+**Status:** In progress — ITEST-1..4 done (G-2 approved); reopened by G-5 (a) for ITEST-5 (retarget `SAMPLE_DEEP_OLIVE` to a reachable olive + update pinned-coordinate tests) then ITEST-6 fresh review (G-6), which re-gate ENGINE-3/ENGINE-5
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/recipes_test.dart` (AC tests + smoke/guards),
 `integration_test/recipes_harness.dart` (Given/When/Then vocabulary, fixtures, the independent
@@ -17,6 +17,8 @@ RECIPE-1).
 | 2 | acceptance-tests | AC-1,2,3,11,12 | ✅ Done | 6,819,011 | 25m 09s (25m 09s) |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ✅ Done | 7,282,541 | 41m 45s (1h 15m) |
 | 4 | test-review | — (G-2) | ✅ Done | 6,078,568 | 55m 56s (1h 01m) |
+| 5 | acceptance-tests | AC-5, AC-9 (retarget) | ⬜ Todo | | |
+| 6 | test-review | — (G-6) | ⬜ Todo | | |
 
 ## Interface reconciliation
 
@@ -49,6 +51,16 @@ RECIPE-1).
   trace ~2% (D-12). ITEST-3 wrote AC-5/AC-10 as behavioural properties (small ΔE graded vs the independent
   reference + the "very close" verdict; a real wet→dry shift) — no follow-up needed; every fixture
   discriminated. G-4 still blocks the ENGINE behaviour phases only as a now-closed decision.
+- **G-5 (spec-data / engine reachability — spec author)** — ✅ Resolved 2026-10-09 14:41 EDT by Matt Quirk:
+  **(a) retarget `SAMPLE_DEEP_OLIVE` to a reachable olive** (a\* from −8.65 toward ~0, keeping an olive hue) so
+  the earthy `PALETTE_MY_PAINTS` reaches it to ΔE00 ≤ 5 — the verified v1 engine (D-2) reaches the old target
+  only to ΔE00 ≈ 9.31. This reshapes the approved ITEST-3, so a fresh test-review round is required: **ITEST-5**
+  performs the retarget + updates every test pinning the old L42/C28/h108, and **ITEST-6** is the fresh review
+  (G-6). The engine, the ΔE00 ≤ 5 "very close" contract (D-7/D-10) and the `gamutThreshold = 5.0` are
+  unchanged.
+- **G-6 (approve the retargeted acceptance tests — spec author)** — ⬜ Open: ITEST-6's packet, a fresh review
+  of the retargeted AC-5/AC-9 (and the re-verified AC-1/AC-4/AC-11 whose pinned coordinates move with the
+  fixture). **Blocks ENGINE-3, ENGINE-5.**
 
 ## Phase 1 — Harness (ITEST-1)
 
@@ -343,3 +355,49 @@ plan edits only.
 | TestAC08 | the not-constant check (one muddying, one clean) does not verify the flagged recipe **actually** crosses a complementary hue pair — an arbitrary flag assignment would pass (confirmed by ITEST-3) | ENGINE-4 | a known complementary-crossing recipe asserted flagged and a known non-crossing recipe asserted unflagged | ✅ Closed (ENGINE-4): asserts the known Yellow Ochre + Ultramarine crossing is flagged `muddying` (+ renders) and a known non-crossing Yellow Ochre mix is not. Re-graded A |
 | TestAC12 | the spoken recipe is checked for each paint's **name** and a single global `contains('part')`, not each paint's **parts quantity** — the "its parts" clause is half-covered until the E25 speak format is frozen (confirmed by ITEST-2) | RECIPE-4 | assert per-component that the utterance states that paint's parts value (its normalized parts rendering) | ⬜ Open |
 | TestAC10 | the red-baseline test asserted only that the dry prediction *differs* from wet (any direction) — a sign-flipped shift (dry *lighter*) would have passed, so the spec's **drying direction** was unasserted (raised by ENGINE-6) | ENGINE-6 | assert the dry prediction is **darker** (`lightness` ↓) and **less saturated** (chroma ↓) than wet, the drying direction | ✅ Closed (ENGINE-6): the AC-10 test now asserts `dry.lightness < wet.lightness` and `chroma(dry) < chroma(wet)` after the toggle; a sign-flipped shift fails. Per-medium magnitude (oil < acrylic, D-11) is covered decisively at the unit level. Re-graded A |
+
+## Phase 5 — Retarget Deep Olive to a reachable olive (ITEST-5)
+
+- **Kind:** acceptance-tests (change phase from G-5 (a))
+- **Target AC:** AC-5, AC-9 (the reachability-sensitive ACs); re-verifies AC-1, AC-4, AC-11 whose pinned
+  coordinates move with the fixture.
+- **Depends on:** G-5 resolved (a) · **Blocks:** ITEST-6 (fresh review), and through it ENGINE-3, ENGINE-5.
+- **Files:** `integration_test/recipes_harness.dart` (the `SAMPLE_DEEP_OLIVE` fixture + the ITEST-1 reachability
+  guard), `integration_test/recipes_test.dart` (every test pinning L42/C28/h108). No `lib/**`.
+- **Context — why:** the verified v1 engine (D-2) reaches the old `SAMPLE_DEEP_OLIVE` (L 42, a\* −8.65, b\* 26.63
+  ≡ C 28 / h 108) only to ΔE00 ≈ 9.31 because `PALETTE_MY_PAINTS` has no green/phthalo pigment (a\* cannot go
+  usefully negative). G-5 (a): move the fixture to an olive the earthy palette actually reaches — a\* toward ~0
+  (a warm, slightly-neutral olive), keeping L and the olive character — so the ΔE00 ≤ 5 "very close" contract
+  stays meaningful rather than being weakened.
+- **Tasks:**
+  1. Choose the new `SAMPLE_DEEP_OLIVE` L\*a\*b\* and **verify with the real `SubtractiveMixingEngine`** that its
+     best recipe over `PALETTE_MY_PAINTS` is ΔE00 ≤ 5 (candidate: near the engine's own best-reachable point —
+     predicted colour of Titanium White + Yellow Ochre + Ivory Black, a\* ≈ +1 — nudged to a clean olive). Record
+     the achieved ΔE00.
+  2. Update every test/fixture pinning the old coordinates: the fixture itself; **AC-1** `TestAC01` (done, green
+     — re-verify it stays green with the new L/C/h); **AC-4** `TestAC04` (still a mixable target); **AC-5**
+     `TestAC05` (now genuinely ≤ 5 + "very close"); **AC-9** `TestAC09` in-gamut **control** (Deep Olive shows no
+     banner, no out-of-gamut recipe); **AC-11** `TestAC11` (speak target — pending, owner RECIPE-4: update its
+     pinned L/C/h, keep it pending). Leave `SAMPLE_VIVID_TURQUOISE` (the out-of-gamut main path) unchanged.
+  3. Refresh the **red baseline** rows for AC-5 and AC-9 against the new fixture (run-pending); keep the default
+     run green. Keep the ITEST-1 reachability guard honest — it must still prove Vivid Turquoise unreachable and
+     now prove the new Deep Olive **reachable** (≤ 5).
+- **Exit criteria:** new fixture verified reachable ≤ 5 by the real engine; `flutter analyze` clean; unit suite
+  green; coverage gate PASS (no `lib/**` touched); default integration green with AC-5/AC-9 pending and AC-1
+  re-verified green; fresh red baseline recorded; grade grid re-checked for the changed tests.
+- **Acceptance gate:** regression green (AC-5/AC-9 pending, AC-1 green); red baseline refreshed; grades held.
+  No AC un-pended here (that stays with ENGINE-3/ENGINE-5 after G-6).
+
+## Phase 6 — Fresh test review after retarget (ITEST-6)
+
+- **Kind:** test-review
+- **Target AC:** — (G-6)
+- **Depends on:** ITEST-5 · **Blocks:** ENGINE-3, ENGINE-5 (via G-6)
+- **Tasks:** assemble the fresh review packet — the retargeted `SAMPLE_DEEP_OLIVE`, the achieved ΔE00 ≤ 5 proof
+  from the real engine, the updated AC-5/AC-9 Given/When/Then/Rejects, the re-verified AC-1/AC-4/AC-11, the
+  refreshed red baseline, and the unchanged grade grid; run the full regression; present for the human **G-6**
+  decision. The whole point of the round is that the human re-confirms the acceptance contract moved honestly
+  (not weakened) when the fixture moved.
+- **Exit criteria:** packet assembled; full suite green (AC-5/AC-9 pending); grade grid complete.
+- **Acceptance gate:** human records **G-6**. On approved: ITEST-6 ✅ Done, ENGINE-3 then ENGINE-5 unblock. On
+  changes requested: each item becomes an ITEST change phase before ENGINE-3/ENGINE-5, then another review.

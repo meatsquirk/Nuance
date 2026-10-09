@@ -1,6 +1,6 @@
 # Module ENGINE — the mixing engine
 
-**Status:** In progress — ENGINE-6 done (per-medium wet→dry transform; AC-10 green); ENGINE-3 & ENGINE-5 **blocked by G-5** (Deep Olive best ΔE00 ≈ 9.31 > the in-gamut ceiling 5.0 the ACs assert); RECIPE-4 startable (other module)
+**Status:** In progress — ENGINE-6 done (per-medium wet→dry transform; AC-10 green); G-5 resolved (a) retarget Deep Olive; ENGINE-3 & ENGINE-5 now gated by **ITEST-5** (retarget the fixture) + **G-6** (fresh review); RECIPE-4 startable (other module)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (`Paint`, `PaintMedium`), `lib/recipes/engine/mixing_engine.dart`
 (`MixingEngine` interface, `Recipe`, `RecipeComponent`, `MixOptions`), `lib/recipes/engine/subtractive_engine.dart`
@@ -40,7 +40,8 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
 - **G-4 (spec-data / engine reconciliation — spec author)** ✅ resolved 2026-10-08: pinned predicted colours
   are illustrative (ACs assert behavioural properties, D-13); v1 subtractive forward+inverse (D-2); gamut
   ΔE00 > 5 (D-10), trace ~2% (D-12).
-- **G-5 (spec-data / engine reachability — spec author) — OPEN, raised by ENGINE-2. Blocks ENGINE-3 (AC-5)
+- **G-5 (spec-data / engine reachability — spec author) — ✅ RESOLVED 2026-10-09 14:41 EDT (a) retarget, by
+  Matt Quirk; raised by ENGINE-2. Had blocked ENGINE-3 (AC-5)
   and ENGINE-5 (AC-9 in-gamut control).** The v1 subtractive engine (D-2), built and verified in ENGINE-2,
   **cannot reach `SAMPLE_DEEP_OLIVE` (L 42, a\* −8.65, b\* 26.63) within the in-gamut ceiling the approved ACs
   assert.** Best achievable ΔE00 ≈ **9.31** (Titanium White 21% + Yellow Ochre 70% + Ivory Black 9%; predicted
@@ -57,6 +58,14 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
   (d) accept a measured-pigment engine for v1 (deferred per D-2/SI D3). Until G-5 resolves, ENGINE-3 and
   ENGINE-5 cannot pass their acceptance gates; **ENGINE-4 (AC-7 trace, AC-8 muddying)** and the RECIPE phases
   are unaffected and can proceed.
+
+  **Resolution (a), 2026-10-09 14:41 EDT — Matt Quirk:** retarget `SAMPLE_DEEP_OLIVE` to a reachable olive
+  (a\* −8.65 → ~0, olive hue kept) so `PALETTE_MY_PAINTS` reaches it to ΔE00 ≤ 5. The engine, the "very close"
+  verdict band (D-7) and the `gamutThreshold = 5.0` are **unchanged** — the ΔE ≤ 5 contract is kept, not
+  weakened; only the over-claiming fixture moves. This reshapes the approved ITEST-3, so a fresh test-review
+  round runs before the blocked behaviour phases: **ITEST-5** (retarget the fixture + update every test pinning
+  the old L42/C28/h108, incl. the done AC-1 and the pending AC-11) → **ITEST-6** fresh review (**G-6**) →
+  ENGINE-3, then ENGINE-5. Full phase defs in [ITEST.md](ITEST.md) (Phases 5–6).
 
 ## Phase 1 — Engine types + interface + stub (ENGINE-1)
 
@@ -206,7 +215,7 @@ Forward + inverse landed; AC-3 and AC-4 un-pended and green end-to-end.
 
 - **Kind:** behavior
 - **Target AC:** AC-5 (small ΔE + plain verdict "very close"), AC-6 (prefer fewer paints)
-- **Depends on:** ENGINE-2 · **Blocks:** ENGINE-4
+- **Depends on:** ENGINE-2, **ITEST-5 (retarget) + G-6 (fresh review)** · **Blocks:** ENGINE-4
 - **Files:** `lib/recipes/engine/subtractive_engine.dart` (**serial** with ENGINE-2/4/5/6).
 - **Tasks:**
   1. Per-recipe `deltaE00` (already the solve metric) + a plain `verdict` band reusing `_verdictBand`'s pattern, adding a "very close" band for small ΔE (D-7).
@@ -284,7 +293,7 @@ Trace "a touch of" + muddying landed; AC-7 and AC-8 un-pended and green end-to-e
 
 - **Kind:** behavior
 - **Target AC:** AC-9 (out-of-gamut identified without a false recipe)
-- **Depends on:** ENGINE-2 · **Blocks:** ENGINE-6
+- **Depends on:** ENGINE-2, **ITEST-5 (retarget) + G-6 (fresh review)** · **Blocks:** ENGINE-6
 - **Files:** `lib/recipes/engine/subtractive_engine.dart` (**serial**).
 - **Tasks:**
   1. When the best achievable recipe's `deltaE00` exceeds the gamut threshold (D-10 / G-4), mark the result `outOfGamut` and present the nearest mix labelled *as nearest*, never as a match (no match verdict on it).
