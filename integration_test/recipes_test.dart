@@ -238,4 +238,181 @@ void main() {
       );
     });
   });
+
+  // =========================================================================
+  // ITEST-2 — AC tests for AC-1, AC-2, AC-3, AC-11, AC-12
+  // (target selection / manual entry / palette constraint / speak).
+  //
+  // One *pending* acTestWidgets per AC: skipped in the default run, executed
+  // under --dart-define=BS04_RUN_PENDING=true, un-pended by its owning
+  // behaviour phase (AC-1/2 → RECIPE-3; AC-3 → ENGINE-2; AC-11/12 → RECIPE-4).
+  // Each drives the real assembled app through `recipes_harness.dart` and
+  // asserts through the public surface (rendered text + the RecipeReadEndpoint
+  // state seam + the FakeSpeech log). ITEST-3 appends AC-4..AC-10 below this
+  // group — keep the two groups disjoint.
+  // =========================================================================
+  group('ITEST-2 — AC-1, AC-2, AC-3, AC-11, AC-12', () {
+    acTestWidgets('AC-1', 'TestAC01_ChooseSavedTarget — a saved sample is set '
+        'as the target at its L/C/h', (tester) async {
+      // Given: the painter has a saved sample "Deep Olive Green" at L 42, C 28,
+      // h 108, and is currently mixing toward a *different* saved target so the
+      // choice is observable (control: the reading can change).
+      final harness = await givenRecipes(tester, target: SAMPLE_WARM_SAND);
+      expect(
+        harness.controller.savedSamples.map((s) => s.name),
+        contains('Deep Olive Green'),
+        reason: 'the catalogue must offer the "Deep Olive Green" saved sample',
+      );
+      expect(harness.state.target, SAMPLE_WARM_SAND,
+          reason: 'control: opened on a different target before the choice');
+      expect(find.text('Recipe target: Warm Sand'), findsOneWidget);
+
+      // When: the painter chooses "Deep Olive Green" as the recipe target.
+      await harness.whenChooseSavedTarget('Deep Olive Green');
+
+      // Then: "Deep Olive Green" at L 42, C 28, h 108 is the target — both the
+      // observable state and the rendered target line.
+      expect(harness.state.target, SAMPLE_DEEP_OLIVE);
+      expect(harness.state.target.coordinates.lightness, 42);
+      expect(_chroma(harness.state.target.coordinates), closeTo(28, 0.05));
+      expect(_hueDeg(harness.state.target.coordinates), closeTo(108, 0.1));
+      expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
+    });
+
+    acTestWidgets('AC-2', 'TestAC02_ManualTargetRefused — an out-of-range '
+        'manual lightness is refused and the target is kept', (tester) async {
+      // Given: the painter is setting a target by hand, with a known target
+      // already set and no manual error outstanding.
+      final harness = await givenRecipes(tester);
+      expect(harness.state.target, SAMPLE_DEEP_OLIVE,
+          reason: 'a known target is set before any manual entry');
+      expect(harness.state.manualError, isNull,
+          reason: 'no manual error before any manual entry');
+
+      // Control: a *valid* manual target (L 50, in CIELAB's 0..100 range) IS
+      // accepted and becomes the target — so the kept-target assertion below
+      // separates range validation from an inert/reject-all handler that would
+      // keep the target whatever is entered (G3/G5).
+      await harness.whenEnterManualTarget(50, 0, 0);
+      expect(harness.state.manualError, isNull,
+          reason: 'a valid in-range manual target is accepted (no error)');
+      expect(harness.state.target.coordinates.lightness, closeTo(50, 1e-9),
+          reason: 'the accepted manual entry moves the target to L 50');
+      expect(harness.state.target.coordinates.a, closeTo(0, 1e-9));
+      expect(harness.state.target.coordinates.b, closeTo(0, 1e-9));
+      final kept = harness.state.target;
+      expect(kept, isNot(SAMPLE_DEEP_OLIVE),
+          reason: 'the valid entry genuinely changed the target (control)');
+
+      // When: the painter enters a lightness of 140 (out of CIELAB's 0..100).
+      await harness.whenEnterManualTarget(140, 0, 0);
+
+      // Then: the entry is refused as out of range (a manual error is raised),
+      // and the previously set (valid L 50) target is kept unchanged — an
+      // out-of-range value is rejected where the valid one was accepted.
+      expect(harness.state.manualError, isNotNull,
+          reason: 'L 140 is out of range and must be refused');
+      expect(harness.state.target, kept,
+          reason: 'the refused out-of-range entry must keep the valid target '
+              'set just before it, not replace or clear it');
+    });
+
+    acTestWidgets('AC-3', 'TestAC03_PaletteConstrained — every returned recipe '
+        'uses only paints from the selected palette', (tester) async {
+      // Given: the selected palette is "My paints" (which contains Titanium
+      // White, Yellow Ochre and Ivory Black, among others) and the target is
+      // "Deep Olive Green", which that palette can mix.
+      final harness = await givenRecipes(
+        tester,
+        target: SAMPLE_DEEP_OLIVE,
+        palette: PALETTE_MY_PAINTS,
+      );
+      expect(harness.state.selectedPalette, PALETTE_MY_PAINTS);
+      final paletteNames =
+          PALETTE_MY_PAINTS.paints.map((p) => p.name).toSet();
+      expect(
+        paletteNames,
+        containsAll(<String>['Titanium White', 'Yellow Ochre', 'Ivory Black']),
+        reason: 'the Given names these three paints in "My paints"',
+      );
+
+      // When: the recipes are solved (ENGINE-2 solves over the selected palette
+      // on open) — precondition naming the owner so the red baseline is clean.
+      expect(harness.state.recipes, isNotEmpty,
+          reason: 'the solve must return recipes to constrain (ENGINE-2)');
+
+      // Then: every component of every returned recipe is a paint from the
+      // selected palette — asserted by paint id for every recipe, every part.
+      final paletteIds = PALETTE_MY_PAINTS.paints.map((p) => p.id).toSet();
+      for (final recipe in harness.state.recipes) {
+        for (final component in recipe.components) {
+          expect(
+            paletteIds,
+            contains(component.paint.id),
+            reason: '${component.paint.name} (${component.paint.id}) is not in '
+                '"My paints" — recipes must use only the selected palette',
+          );
+        }
+      }
+    });
+
+    acTestWidgets('AC-11', 'TestAC11_SpeakTarget — the spoken target states its '
+        'name and L, C and hue', (tester) async {
+      // Given: the target is "Deep Olive Green" at L 42, C 28, h 108, and
+      // nothing has been spoken yet.
+      final harness = await givenRecipes(tester, target: SAMPLE_DEEP_OLIVE);
+      expect(harness.state.target, SAMPLE_DEEP_OLIVE);
+      expect(harness.state.target.coordinates.lightness, 42);
+      expect(_chroma(harness.state.target.coordinates), closeTo(28, 0.05));
+      expect(_hueDeg(harness.state.target.coordinates), closeTo(108, 0.1));
+      expect(harness.speech.utterances, isEmpty,
+          reason: 'nothing spoken before the painter asks (control)');
+
+      // When: the painter asks to speak the target.
+      await harness.whenSpeakTarget();
+
+      // Then: exactly one utterance states the target's name and its L, C and
+      // hue (42 / 28 / 108) — a wrong value or an omitted field fails here.
+      expect(harness.speech.utterances, hasLength(1),
+          reason: 'speaking the target emits one utterance (RECIPE-4 E23)');
+      final spoken = harness.speech.utterances.single;
+      expect(spoken, contains('Deep Olive Green'));
+      expect(spoken, contains('42'), reason: 'states the lightness (L 42)');
+      expect(spoken, contains('28'), reason: 'states the chroma (C 28)');
+      expect(spoken, contains('108'), reason: 'states the hue (h 108)');
+    });
+
+    acTestWidgets('AC-12', 'TestAC12_SpeakRecipe — the spoken recipe states '
+        'each paint and its parts', (tester) async {
+      // Given: a recipe is shown for the target over "My paints" (the engine
+      // solves on open; the spec pins an illustrative Yellow Ochre/Ivory Black
+      // recipe, but end-to-end we speak the actual top recipe), and nothing has
+      // been spoken yet.
+      final harness = await givenRecipes(
+        tester,
+        target: SAMPLE_DEEP_OLIVE,
+        palette: PALETTE_MY_PAINTS,
+      );
+      expect(harness.state.recipes, isNotEmpty,
+          reason: 'a recipe must be shown to speak it (ENGINE-2 list)');
+      expect(harness.speech.utterances, isEmpty,
+          reason: 'nothing spoken before the painter asks (control)');
+      final recipe = harness.state.recipes.first;
+
+      // When: the painter asks to speak that (top) recipe.
+      await harness.whenSpeakRecipe(0);
+
+      // Then: one utterance states each paint in the recipe and its parts — an
+      // impl that drops a paint, or names paints without parts, fails here.
+      expect(harness.speech.utterances, hasLength(1),
+          reason: 'speaking a recipe emits one utterance (RECIPE-4 E25)');
+      final spoken = harness.speech.utterances.single;
+      for (final component in recipe.components) {
+        expect(spoken, contains(component.paint.name),
+            reason: 'the spoken recipe must state every paint by name');
+      }
+      expect(spoken.toLowerCase(), contains('part'),
+          reason: 'the spoken recipe must state the paints as parts');
+    });
+  });
 }

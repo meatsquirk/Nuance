@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3 (AC tests)
+**Status:** In progress — ITEST-1 (harness) + ITEST-2 (AC-1,2,3,11,12) done; next ITEST-3 (AC-4..10), then ITEST-4 review
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/recipes_test.dart` (AC tests + smoke/guards),
 `integration_test/recipes_harness.dart` (Given/When/Then vocabulary, fixtures, the independent
@@ -14,7 +14,7 @@ RECIPE-1).
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 10,067,182 | 18m 44s (4h 40m) |
-| 2 | acceptance-tests | AC-1,2,3,11,12 | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1,2,3,11,12 | ✅ Done | 6,819,011 | 25m 09s (25m 09s) |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -130,6 +130,24 @@ The acceptance harness is in place; the real app is drivable end to end and the 
 - **Exit criteria:** default suite green (these pending); run-pending shows each failing at its intended Then / precondition; grades recorded.
 - **Acceptance gate:** *(acceptance-tests — suite green with new tests pending; red baseline recorded; grade gate passed)*
 
+### Result
+
+One pending `acTestWidgets` per AC for AC-1, AC-2, AC-3, AC-11, AC-12 now lives in `recipes_test.dart` under the `ITEST-2 — AC-1, AC-2, AC-3, AC-11, AC-12` group (a disjoint append, leaving AC-4..10 for ITEST-3); the suite stays green with all 12 ACs still pending.
+
+- **Added (tests only — no `lib/**`):** `integration_test/recipes_test.dart` gains five pending AC tests driven entirely through the public surface (rendered text + the `RecipeReadEndpoint` state seam + the `FakeSpeech` log): **AC-1** chooses a saved target from a *different* starting target (Warm Sand → Deep Olive) and asserts identity + L 42 / C 28 / h 108 + the rendered line; **AC-2** refuses an out-of-range manual L 140 and keeps the target, with a valid-L50 **control** separating range-validation from a reject-all/inert handler; **AC-3** asserts every component of every recipe is a palette paint by **id**; **AC-11** asserts one spoken utterance states the name + L/C/h; **AC-12** speaks the real top recipe and asserts each paint name + that parts are spoken. No harness vocabulary change was needed (the 3-field manual form assumed by `whenEnterManualTarget` was sufficient).
+- **Gates:** `flutter analyze` clean; unit **517 green**; coverage gate **PASS** (ITEST-2 touches no `lib/**`; the 15 bs-04 lib files stay 100%). Integration **default run green** — 11 scaffold tests pass, the 5 new AC tests pending/skipped — on the iPhone 17 sim under the verify lock. **Red baseline (run-pending):** all 5 fail cleanly at a Then or a Given precondition naming the owner, none panic (see the *Red baseline* table).
+- **Grade gate:** an independent grader (fresh context) graded the 5 tests; AC-2 came back **B (G3)** — the kept-target Then lacked a control separating range-validation from a reject-all/inert handler — and was fixed in-phase with the valid-L50 control, then re-graded **A** by a second fresh grader. Final **5×A, 0×B** (AC-12 A, *limited* — a RECIPE-4 augmentation row added for per-paint parts quantity). Grid: `behavior-test-completeness-bs-04-mixing-recipes.md`.
+- **Fix passes: 1/3** (one grade-fix pass for AC-2; integration green first run both times).
+- **Tokens / Time:** 6,819,011 · 25m 09s active (25m 09s wall) — one session, 2 grader subagents included.
+
+### Checkpoint / Handoff
+
+- **AC tests registered for AC-1, AC-2, AC-3, AC-11, AC-12** in `recipes_test.dart`; **AC-4..AC-10 remain for ITEST-3** (append under a second disjoint header, same file — still **merge-risky** if run concurrently). The pending gate (`bs04/pending.dart`) and the guard's `unpended` set are **unchanged** — ITEST-2 un-pends nothing; the behaviour phases do.
+- **Red baseline is clean for these five.** When a behaviour phase un-pends its AC, deleting the `bs04/pending.dart` row and adding the AC to the guard's `unpended` set: **RECIPE-3** (AC-1/AC-2) wires `selectTarget` / `enterManualTarget` (range-validating; a valid entry moves the target, L 140 sets `manualError` and keeps it); **ENGINE-2** (AC-3) makes `state.recipes` non-empty on open over the selected palette; **RECIPE-4** (AC-11/AC-12) wires `speakTarget` (one utterance: name + L/C/h) and `speakRecipe` (one utterance naming each paint + its parts — and must close the **TestAC12 augmentation** by asserting each paint's parts quantity once the E25 format is frozen).
+- **AC-11/AC-12 format notes for RECIPE-4:** AC-11 asserts the utterance `contains` '42'/'28'/'108' (a C/h label swap would still pass — tighten to labelled substrings if the spoken format makes that cheap). AC-12 asserts each `component.paint.name` + a global `contains('part')`; the augmentation wants per-paint parts quantities.
+- **Verification commands** unchanged (SCREEN-1/ITEST-1 handoff; `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under the verify lock on sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (always `-d <udid>`). Run-pending: `flutter test integration_test/recipes_test.dart -d <udid> --dart-define=BS04_RUN_PENDING=true`.
+- **Known gaps / notes:** no behaviour yet. **G-4** still blocks ITEST-3's pinning of predicted-colour literals (it writes AC-5/AC-10 as behavioural properties regardless). **G-2** (ITEST-4 review) still blocks every behaviour phase. Carry-over const-constructor coverage flake stands. Untracked bs-05..bs-14 specs + `docs/` are not part of bs-04.
+
 ## Phase 3 — AC-4,5,6,7,8,9,10 (ITEST-3)
 
 - **Kind:** acceptance-tests
@@ -157,9 +175,9 @@ The acceptance harness is in place; the real app is drivable end to end and the 
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_ChooseSavedTarget | _pending ITEST-2_ | | RECIPE-3 | |
-| AC-2 | TestAC02_ManualTargetRefused | _pending ITEST-2_ | | RECIPE-3 | |
-| AC-3 | TestAC03_PaletteConstrained | _pending ITEST-2_ | | ENGINE-2 | |
+| AC-1 | TestAC01_ChooseSavedTarget | fails (run-pending) | precond — target picker lists no "Deep Olive Green" (`recipes_harness.dart:359`) | RECIPE-3 | A |
+| AC-2 | TestAC02_ManualTargetRefused | fails (run-pending) | precond — no L/a/b manual fields on the valid-L50 control (`recipes_harness.dart:376`) | RECIPE-3 | A |
+| AC-3 | TestAC03_PaletteConstrained | fails (run-pending) | precond — `state.recipes` empty, none to constrain (`recipes_test.dart:341`) | ENGINE-2 | A |
 | AC-4 | TestAC04_TopRecipes | _pending ITEST-3_ | | ENGINE-2 | |
 | AC-5 | TestAC05_CloseVerdict | _pending ITEST-3_ | | ENGINE-3 | |
 | AC-6 | TestAC06_PreferFewer | _pending ITEST-3_ | | ENGINE-3 | |
@@ -167,11 +185,12 @@ The acceptance harness is in place; the real app is drivable end to end and the 
 | AC-8 | TestAC08_MuddyingFlag | _pending ITEST-3_ | | ENGINE-4 | |
 | AC-9 | TestAC09_OutOfGamut | _pending ITEST-3_ | | ENGINE-5 | |
 | AC-10 | TestAC10_WetDry | _pending ITEST-3_ | | ENGINE-6 | |
-| AC-11 | TestAC11_SpeakTarget | _pending ITEST-2_ | | RECIPE-4 | |
-| AC-12 | TestAC12_SpeakRecipe | _pending ITEST-2_ | | RECIPE-4 | |
+| AC-11 | TestAC11_SpeakTarget | fails (run-pending) | Then — no utterance emitted, `hasLength(1)` (`recipes_test.dart:376`) | RECIPE-4 | A |
+| AC-12 | TestAC12_SpeakRecipe | fails (run-pending) | precond — `state.recipes` empty, none to speak (`recipes_test.dart:396`) | RECIPE-4 | A (limited) |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
 | TestAC05 | one near-target recipe cannot show the verdict *tracks* distance (a constant "very close" would pass) | ENGINE-3 | a farther recipe asserting a **different** (worse) verdict band | ⬜ Open |
+| TestAC12 | the spoken recipe is checked for each paint's **name** and a single global `contains('part')`, not each paint's **parts quantity** — the "its parts" clause is half-covered until the E25 speak format is frozen (confirmed by ITEST-2) | RECIPE-4 | assert per-component that the utterance states that paint's parts value (its normalized parts rendering) | ⬜ Open |
