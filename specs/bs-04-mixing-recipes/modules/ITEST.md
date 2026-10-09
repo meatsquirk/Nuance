@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1/2/3 done; ITEST-4 packet assembled, ⏸ awaiting the human G-2 decision
+**Status:** Done — ITEST-1/2/3/4 done; G-2 approved 2026-10-09 (behaviour stage open)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/recipes_test.dart` (AC tests + smoke/guards),
 `integration_test/recipes_harness.dart` (Given/When/Then vocabulary, fixtures, the independent
@@ -16,7 +16,7 @@ RECIPE-1).
 | 1 | acceptance-tests | — (harness) | ✅ Done | 10,067,182 | 18m 44s (4h 40m) |
 | 2 | acceptance-tests | AC-1,2,3,11,12 | ✅ Done | 6,819,011 | 25m 09s (25m 09s) |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ✅ Done | 7,282,541 | 41m 45s (1h 15m) |
-| 4 | test-review | — (G-2) | ⏸ Awaiting review | 6,078,568 | 55m 56s (1h 01m) |
+| 4 | test-review | — (G-2) | ✅ Done | 6,078,568 | 55m 56s (1h 01m) |
 
 ## Interface reconciliation
 
@@ -39,8 +39,10 @@ RECIPE-1).
 
 ## Open gates
 
-- **G-2 (approve the acceptance tests)** — ITEST-4's packet; blocks every behaviour phase. **Awaiting
-  decision** (ITEST-4 packet assembled 2026-10-08; present for the human G-2 verdict).
+- **G-2 (approve the acceptance tests)** — ITEST-4's packet; blocked every behaviour phase. **✅ Resolved
+  2026-10-09 04:25 EDT by Matt Quirk: approved** — the 12 pending AC tests accepted as the acceptance
+  contract (grid all at the A bar, 0×B; five A-limited with scheduled augmentations). ITEST-4 ✅ Done; the
+  behaviour stage is open (RECIPE-3 + ENGINE-2 startable).
 - **G-4 (spec-data / engine reconciliation — spec author)** — ✅ Resolved 2026-10-08 by Matt Quirk: the
   pinned predicted L/C/h (AC-5 "L 42.6, C 27.1, h 106"; AC-10 "→ L 41.2, C 26.4, h 107") are **illustrative**
   and the ACs assert **behavioural properties** (D-13); v1 engine is subtractive (D-2); gamut ΔE00 > 5 (D-10);
