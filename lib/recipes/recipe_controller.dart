@@ -10,6 +10,7 @@ import '../domain/sample.dart';
 import 'engine/mixing_engine.dart';
 import 'palette.dart';
 import 'palette_source.dart';
+import 'recipe_speech.dart';
 import 'recipe_state.dart';
 
 /// Drives the Recipes screen: holds the mixing [state] and offers the actions
@@ -23,12 +24,11 @@ import 'recipe_state.dart';
 /// computes mixing math itself — D-6), and the [speech] sink — plus the typed
 /// [router].
 ///
-/// This is the RECIPE-2 **shell**: it establishes the state shape, the seams and
-/// the read getters, but every painter *action* ([selectTarget] /
-/// [enterManualTarget] / [selectPalette] / [setMode] / [speakTarget] /
-/// [speakRecipe]) is declared here and throws until its behaviour phase fills it
-/// — exactly as bs-02's capture controller deferred its actions. No selection,
-/// no solve and no spoken output happen yet.
+/// The seams and read getters were established in the RECIPE-2 shell; the
+/// painter *actions* are filled by the behaviour phases — selection
+/// ([selectTarget] / [enterManualTarget], RECIPE-3), solving ([selectPalette],
+/// ENGINE-2), the wet/dry toggle ([setMode], ENGINE-6) and the spoken output
+/// ([speakTarget] / [speakRecipe], RECIPE-4).
 class RecipeController extends ChangeNotifier {
   /// Creates a controller for mixing toward [target], over the given seams.
   ///
@@ -217,14 +217,16 @@ class RecipeController extends ChangeNotifier {
           component.paint: component.partsFraction,
       };
 
-  /// Speaks the target as one utterance — name + L, C, h (AC-11) — RECIPE-4.
-  Future<void> speakTarget() => throw UnimplementedError(_deferred('RECIPE-4'));
+  /// Speaks the target as one utterance — name + L, C, h (AC-11) — through the
+  /// injected [speech], via the [targetSpeech] builder (E23).
+  ///
+  /// Speaking does not change the state, so it does not notify.
+  Future<void> speakTarget() => speech.speak(targetSpeech(_state.target));
 
   /// Speaks [recipe] as one utterance — each paint and its parts (AC-12) —
-  /// RECIPE-4.
+  /// through the injected [speech], via the [recipeSpeech] builder (E25).
+  ///
+  /// Speaking does not change the state, so it does not notify.
   Future<void> speakRecipe(Recipe recipe) =>
-      throw UnimplementedError(_deferred('RECIPE-4'));
-
-  static String _deferred(String phase) =>
-      'RecipeController is a shell (RECIPE-2); this action lands in $phase.';
+      speech.speak(recipeSpeech(recipe));
 }

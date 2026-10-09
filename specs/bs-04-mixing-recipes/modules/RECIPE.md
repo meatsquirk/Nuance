@@ -1,6 +1,6 @@
 # Module RECIPE — scaffold, controller, palette source, target & spoken output
 
-**Status:** In progress — RECIPE-3 (target selection) done; next RECIPE-4 (speak, after ENGINE-2)
+**Status:** ✅ Done — all phases complete (scaffold, shell, target selection, spoken target & recipe)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/recipes/palette.dart` (`PaintPalette`), `lib/recipes/palette_source.dart`
 (`PaletteSource`, `InMemoryPaletteSource`), `lib/recipes/recipe_state.dart`, `lib/recipes/recipe_controller.dart`,
@@ -18,7 +18,7 @@ owns `integration_test/bs04/pending.dart`.
 | 1 | scaffold | — | ✅ Done | 3,103,321 | 16m 10s |
 | 2 | shell | — | ✅ Done | 14,660,317 | 44m 03s |
 | 3 | behavior | AC-1, AC-2 | ✅ Done | 18,470,473 | 46m 17s |
-| 4 | behavior | AC-11, AC-12 | ⬜ Todo | | |
+| 4 | behavior | AC-11, AC-12 | ✅ Done | 18,065,846 | 24m 45s |
 
 ## Interface reconciliation
 
@@ -245,3 +245,47 @@ sample and from a range-validated manual CIELAB entry; the E22 selector sheet wi
   3. Un-pend AC-11, AC-12; unit-test both builders (exact content) and that each speak call emits exactly one utterance.
 - **Exit criteria:** AC-11/AC-12 green; default suite green; unit gate + 100% coverage touched.
 - **Acceptance gate:** un-pend AC-11, AC-12; suite green (`TestAC11_*`, `TestAC12_*`); grade gate passed.
+
+### Result
+
+Spoken output landed; both ACs un-pended and green. No `lib/**` outside RECIPE's owned files; the engine phases
+were untouched (file-disjoint as planned).
+
+- **What landed:** new `lib/recipes/recipe_speech.dart` — two pure builders: `targetSpeech(Sample)` (name +
+  CIELCh L, C, h, each derived straight from canonical CIELAB and rounded, mirroring `ColorScience.decompose`)
+  and `recipeSpeech(Recipe)` (each paint + its parts; measured shares reduced against the smallest measured
+  share to small integer "parts by volume"; a trace spoken as "a touch of"). `RecipeController.speakTarget` /
+  `speakRecipe` now call the builders through the injected `Speech` (no notify — speaking is read-only); the
+  E23 "Speak target" (target region) and per-card E25 "Speak recipe" (recipe list region) controls are wired.
+  No `ColorScience` seam added to the controller — the builders stay pure (D-6 controller holds no colour math).
+- **Tests:** `test/recipes/recipe_speech_test.dart` (new) pins exact builder content (L/C/h rounding incl. a
+  neutral + unnamed target; measured parts ratio, trace "a touch of", single-paint); `recipe_controller_test`
+  replaced the two deferred-throw tests with speak-once-and-don't-notify tests; `recipes_screen_test` flips the
+  E23/E25 inert assertions to wired and adds tap-drives-speak tests. Acceptance: AC-11/AC-12 un-pended in
+  `bs04/pending.dart`; AC-12 strengthened to a **per-component** parts assertion (closing its RECIPE-4
+  augmentation); AC-11 strengthened to **labelled** `Lightness 42`/`chroma 28`/`hue 108` (closing the C/h
+  label-swap residual the ITEST-2 grid flagged for RECIPE-4).
+- **Results:** `flutter analyze` clean; unit **566 green** (`flutter test --coverage`); coverage gate **100%**
+  on all 16 touched `lib/**` files; integration `flutter test integration_test/recipes_test.dart -d <sim>`
+  **+20 ~3** (AC-11/AC-12 green; 3 skips = AC-5/AC-6/AC-9, owned by later phases); full suite **+82 ~3**.
+- **Grade gate:** fresh-context grade of the 9 un-pended AC tests — **9×A / 0×B**, no *A (limited)* remaining;
+  AC-11 label-swap and AC-12 parts-quantity gaps both confirmed CLOSED. Grid appended to
+  `behavior-test-completeness-bs-04-mixing-recipes.md`.
+- **Augmentations:** closed the AC-12 row (per-component parts) and added+closed a new AC-11 row (labelled
+  L/C/h) in ITEST's *Test augmentations*. **Fix passes: 0/3** (passed first run).
+- **Tokens / Time:** 18,065,846 · 24m 45s.
+
+### Checkpoint / Handoff
+
+- **Frozen:** the spoken format. Target → `'<name>. Lightness <L>, chroma <C>, hue <h> degrees.'` (L/C/h whole
+  numbers from canonical CIELAB). Recipe → `'Recipe: <p1> <n> part(s), …, a touch of <trace>.'` Builders are
+  pure functions in `lib/recipes/recipe_speech.dart`; `RecipeController.speakTarget()/speakRecipe(recipe)` speak
+  them once and do not notify.
+- **For ITEST-5 (retarget):** when `SAMPLE_DEEP_OLIVE` moves, `TestAC11_SpeakTarget` now pins **labelled**
+  substrings `Lightness 42` / `chroma 28` / `hue 108` (not bare numbers) — update all three to the new
+  fixture's rounded L/C/h. `recipe_speech.dart` is coordinate-agnostic, so no `lib/**` change is needed.
+- **Verification commands** unchanged (`export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+  `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under the verify lock on sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (`-d <udid>`; run-pending via `--dart-define=BS04_RUN_PENDING=true`).
+- **Known gaps:** none for RECIPE. AC-5/AC-6/AC-9 remain pending (ENGINE-3/ENGINE-5, gated by ITEST-5 + G-6).
+  Carry-over const-constructor coverage flake stands.

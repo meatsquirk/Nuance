@@ -51,8 +51,6 @@ const Map<String, String> pendingACs = {
   'AC-9': 'ENGINE-5',
   // AC-10 un-pended by ENGINE-6 (wet/dry toggle + dry prediction).
   // AC-11, AC-12 un-pended by RECIPE-4 (speak target; speak recipe).
-  'AC-11': 'RECIPE-4',
-  'AC-12': 'RECIPE-4',
 };
 
 /// The behaviour phases allowed to own a pending AC.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
@@ -12,6 +13,7 @@ import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/recipes/recipe_controller.dart';
 import 'package:paint_color_assistant/recipes/recipe_list_region.dart';
+import 'package:paint_color_assistant/recipes/recipe_speech.dart';
 import 'package:paint_color_assistant/recipes/recipe_state.dart';
 import 'package:paint_color_assistant/recipes/recipes_screen.dart';
 import 'package:paint_color_assistant/recipes/target_region.dart';
@@ -26,15 +28,24 @@ const _unnamed = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
+}
+
 RecipeController _controller({
   Sample target = _olive,
   PaletteSource paletteSource = const InMemoryPaletteSource(),
+  Speech speech = const NoopSpeech(),
 }) =>
     RecipeController(
       sampleSource: const InMemorySampleSource(),
       paletteSource: paletteSource,
       mixingEngine: const SubtractiveMixingEngine(),
       target: target,
+      speech: speech,
     );
 
 const _ochre = Paint(
@@ -107,18 +118,31 @@ void main() {
   });
 
   group('TargetRegion', () {
-    testWidgets('shows the named target with a wired selector and inert speak',
+    testWidgets('shows the named target with a wired selector and speak',
         (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
       await _pumpRegion(tester, TargetRegion(controller: controller));
 
       expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
-      // E22 is wired by RECIPE-3; E23 stays inert until RECIPE-4.
+      // E22 is wired by RECIPE-3; E23 is wired by RECIPE-4.
       expect(_enabled(tester, 'Choose target'), isTrue,
           reason: 'E22 target selector is wired in RECIPE-3');
-      expect(_enabled(tester, 'Speak target'), isFalse,
-          reason: 'E23 speak target is not wired until RECIPE-4');
+      expect(_enabled(tester, 'Speak target'), isTrue,
+          reason: 'E23 speak target is wired in RECIPE-4');
+    });
+
+    testWidgets('tapping Speak target speaks the target once (E23, AC-11)',
+        (tester) async {
+      final speech = _RecordingSpeech();
+      final controller = _controller(speech: speech);
+      addTearDown(controller.dispose);
+      await _pumpRegion(tester, TargetRegion(controller: controller));
+
+      await tester.tap(find.widgetWithText(TextButton, 'Speak target'));
+      await tester.pump();
+
+      expect(speech.utterances, [targetSpeech(controller.state.target)]);
     });
 
     testWidgets('falls back to (unnamed) for a target with no name',
@@ -203,9 +227,28 @@ void main() {
       // The single-paint palette's recipe names Yellow Ochre at 100%.
       expect(find.textContaining('Yellow Ochre'), findsWidgets);
       expect(find.textContaining('Predicted colour:'), findsWidgets);
-      // E25 speak recipe is present per card but inert until RECIPE-4.
-      expect(_enabled(tester, 'Speak recipe'), isFalse,
-          reason: 'E25 speak recipe is not wired until RECIPE-4');
+      // E25 speak recipe is present per card and wired by RECIPE-4.
+      expect(_enabled(tester, 'Speak recipe'), isTrue,
+          reason: 'E25 speak recipe is wired in RECIPE-4');
+    });
+
+    testWidgets('tapping a card\'s Speak recipe speaks that recipe once '
+        '(E25, AC-12)', (tester) async {
+      final speech = _RecordingSpeech();
+      final controller = _controller(
+        speech: speech,
+        paletteSource: const InMemoryPaletteSource(catalogue: [_studioPalette]),
+      );
+      addTearDown(controller.dispose);
+      final recipe = controller.state.recipes.first;
+
+      await _pumpRegion(tester, RecipeListRegion(controller: controller));
+      await tester.tap(
+        find.widgetWithText(TextButton, 'Speak recipe').first,
+      );
+      await tester.pump();
+
+      expect(speech.utterances, [recipeSpeech(recipe)]);
     });
 
     testWidgets('expresses a trace component as "a touch of" with its technique '

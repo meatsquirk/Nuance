@@ -80,7 +80,7 @@ void main() {
     // AC-2; ENGINE-2 → AC-3, AC-4; ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8;
     // ENGINE-5 → AC-9; ENGINE-6 → AC-10; RECIPE-4 → AC-11, AC-12.
     const unpended = <String>{
-      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-7', 'AC-8', 'AC-10',
+      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-7', 'AC-8', 'AC-10', 'AC-11', 'AC-12',
     };
 
     test(
@@ -378,13 +378,17 @@ void main() {
 
       // Then: exactly one utterance states the target's name and its L, C and
       // hue (42 / 28 / 108) — a wrong value or an omitted field fails here.
+      // Augmented (RECIPE-4, now the spoken format is frozen) from bare 42/28/
+      // 108 substrings to *labelled* ones, so a chroma/hue (or L) label swap —
+      // which the bare check tolerated since all three numbers are present —
+      // is now rejected.
       expect(harness.speech.utterances, hasLength(1),
           reason: 'speaking the target emits one utterance (RECIPE-4 E23)');
       final spoken = harness.speech.utterances.single;
       expect(spoken, contains('Deep Olive Green'));
-      expect(spoken, contains('42'), reason: 'states the lightness (L 42)');
-      expect(spoken, contains('28'), reason: 'states the chroma (C 28)');
-      expect(spoken, contains('108'), reason: 'states the hue (h 108)');
+      expect(spoken, contains('Lightness 42'), reason: 'states the lightness L');
+      expect(spoken, contains('chroma 28'), reason: 'states the chroma C');
+      expect(spoken, contains('hue 108'), reason: 'states the hue h');
     });
 
     acTestWidgets('AC-12', 'TestAC12_SpeakRecipe — the spoken recipe states '
@@ -407,17 +411,29 @@ void main() {
       // When: the painter asks to speak that (top) recipe.
       await harness.whenSpeakRecipe(0);
 
-      // Then: one utterance states each paint in the recipe and its parts — an
-      // impl that drops a paint, or names paints without parts, fails here.
+      // Then: one utterance states each paint in the recipe *with its parts* —
+      // an impl that drops a paint, or names paints without their parts, fails
+      // here. Augmented (RECIPE-4) from the earlier name-only + single global
+      // `contains('part')` check to a per-component parts assertion: a measured
+      // paint is stated with its parts value, a trace paint as "a touch of".
       expect(harness.speech.utterances, hasLength(1),
           reason: 'speaking a recipe emits one utterance (RECIPE-4 E25)');
       final spoken = harness.speech.utterances.single;
-      for (final component in recipe.components) {
-        expect(spoken, contains(component.paint.name),
-            reason: 'the spoken recipe must state every paint by name');
-      }
       expect(spoken.toLowerCase(), contains('part'),
-          reason: 'the spoken recipe must state the paints as parts');
+          reason: 'the spoken recipe states the paints as parts by volume');
+      for (final component in recipe.components) {
+        final name = RegExp.escape(component.paint.name);
+        if (component.isTrace) {
+          // A sub-2% paint is spoken as "a touch of <name>", not a part (AC-7).
+          expect(spoken, matches(RegExp('a touch of $name')),
+              reason: '${component.paint.name} is a trace — spoken as a touch of');
+        } else {
+          // A measured paint is named with its (normalized) parts value — the
+          // whole number of parts by volume the recipe states for it.
+          expect(spoken, matches(RegExp('$name \\d+ parts?')),
+              reason: '${component.paint.name} must be spoken with its parts');
+        }
+      }
     });
   });
 

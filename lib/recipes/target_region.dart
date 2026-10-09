@@ -11,8 +11,8 @@ import 'recipe_controller.dart';
 /// the same render the Readout → recipes handoff (bs-01 AC-11) relies on — read
 /// from [RecipeController.state]. Below it sit the target controls: the target
 /// selector (E22), wired by RECIPE-3 to choose a saved sample or enter a colour
-/// by hand (AC-1, AC-2), and the speak-target control (E23), an **inert
-/// placeholder** until RECIPE-4 wires it to speak the target (AC-11). Any
+/// by hand (AC-1, AC-2), and the speak-target control (E23), wired by RECIPE-4
+/// to speak the target's name and its L, C and hue (AC-11). Any
 /// manual-entry error is surfaced under the selector. The region keeps its
 /// [regionKey] so the acceptance finders and the behaviour phases have a stable
 /// anchor.
@@ -59,8 +59,12 @@ class TargetRegion extends StatelessWidget {
             key: manualErrorKey,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
-        // E23 Speak target — inert until RECIPE-4 (AC-11).
-        const TextButton(onPressed: null, child: Text('Speak target')),
+        // E23 Speak target — wired by RECIPE-4 (AC-11): speaks the target's
+        // name and its L, C and hue through the controller's speech seam.
+        TextButton(
+          onPressed: () => controller.speakTarget(),
+          child: const Text('Speak target'),
+        ),
       ],
     );
   }

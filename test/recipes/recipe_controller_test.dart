@@ -10,6 +10,7 @@ import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/recipes/recipe_controller.dart';
+import 'package:paint_color_assistant/recipes/recipe_speech.dart';
 import 'package:paint_color_assistant/recipes/recipe_state.dart';
 
 const _olive = Sample(
@@ -40,15 +41,24 @@ const _recipe = Recipe(
   deltaE00: 1.2,
 );
 
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
+}
+
 RecipeController _controller({
   SampleSource? sampleSource,
   PaletteSource? paletteSource,
+  Speech? speech,
 }) =>
     RecipeController(
       sampleSource: sampleSource ?? const InMemorySampleSource(),
       paletteSource: paletteSource ?? const InMemoryPaletteSource(),
       mixingEngine: const SubtractiveMixingEngine(),
       target: _olive,
+      speech: speech ?? const NoopSpeech(),
     );
 
 void main() {
@@ -198,14 +208,33 @@ void main() {
       });
     });
 
-    group('actions still deferred to later phases throw', () {
-      final controller = _controller();
+    group('spoken output (RECIPE-4, AC-11/AC-12)', () {
+      test('speakTarget speaks the target builder once and does not notify', () async {
+        final speech = _RecordingSpeech();
+        final controller = _controller(speech: speech);
+        addTearDown(controller.dispose);
+        var notified = 0;
+        controller.addListener(() => notified++);
 
-      test('speakTarget throws until RECIPE-4', () {
-        expect(() => controller.speakTarget(), throwsUnimplementedError);
+        await controller.speakTarget();
+
+        // Exactly one utterance, carrying the target builder's text for the
+        // current target; speaking is read-only, so no listener fires.
+        expect(speech.utterances, [targetSpeech(controller.state.target)]);
+        expect(notified, 0);
       });
-      test('speakRecipe throws until RECIPE-4', () {
-        expect(() => controller.speakRecipe(_recipe), throwsUnimplementedError);
+
+      test('speakRecipe speaks the recipe builder once and does not notify', () async {
+        final speech = _RecordingSpeech();
+        final controller = _controller(speech: speech);
+        addTearDown(controller.dispose);
+        var notified = 0;
+        controller.addListener(() => notified++);
+
+        await controller.speakRecipe(_recipe);
+
+        expect(speech.utterances, [recipeSpeech(_recipe)]);
+        expect(notified, 0);
       });
     });
 

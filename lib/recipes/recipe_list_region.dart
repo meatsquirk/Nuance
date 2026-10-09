@@ -38,7 +38,11 @@ class RecipeListRegion extends StatelessWidget {
           ? const [Text('No recipes yet')]
           : [
               for (var i = 0; i < recipes.length; i++)
-                _RecipeCard(recipe: recipes[i], index: i),
+                _RecipeCard(
+                  recipe: recipes[i],
+                  index: i,
+                  controller: controller,
+                ),
             ],
     );
   }
@@ -48,16 +52,23 @@ class RecipeListRegion extends StatelessWidget {
 /// predicted colour. A trace component (under ~2% by volume) is expressed as
 /// "a touch of" plus its technique note rather than a measured part (ENGINE-4,
 /// AC-7), and a mix liable to muddy carries a flag (ENGINE-4, AC-8). The
-/// per-recipe "Speak recipe" control (E25) is inert until RECIPE-4 wires it to
-/// the controller (AC-12).
+/// per-recipe "Speak recipe" control (E25) is wired by RECIPE-4 to speak the
+/// recipe's paints and parts through the controller (AC-12).
 class _RecipeCard extends StatelessWidget {
-  const _RecipeCard({required this.recipe, required this.index});
+  const _RecipeCard({
+    required this.recipe,
+    required this.index,
+    required this.controller,
+  });
 
   final Recipe recipe;
 
   /// The recipe's position in the solved list — a stable per-card anchor the
   /// acceptance finders scope their trace / muddying assertions to.
   final int index;
+
+  /// The controller the per-card "Speak recipe" control (E25) drives (AC-12).
+  final RecipeController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -78,8 +89,12 @@ class _RecipeCard extends StatelessWidget {
             Text('Predicted colour: L ${predicted.lightness.round()}, '
                 'a ${predicted.a.round()}, b ${predicted.b.round()}'),
             if (recipe.muddying) const Text('Liable to muddy'),
-            // E25 Speak recipe — inert until RECIPE-4 (AC-12).
-            const TextButton(onPressed: null, child: Text('Speak recipe')),
+            // E25 Speak recipe — wired by RECIPE-4 (AC-12): speaks this recipe's
+            // paints and their parts through the controller's speech seam.
+            TextButton(
+              onPressed: () => controller.speakRecipe(recipe),
+              child: const Text('Speak recipe'),
+            ),
           ],
         ),
       ),
