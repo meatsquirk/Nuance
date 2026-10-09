@@ -148,6 +148,21 @@ class Recipe {
   /// (D-9; AC-8). Defaults to false; ENGINE-4 sets it.
   final bool muddying;
 
+  /// This recipe with its [predictedColor] replaced, every other field kept.
+  ///
+  /// Used to re-render the mix wet or dry (AC-10 / ENGINE-6) without re-solving:
+  /// the parts, distance, verdict and flags are unchanged — only the colour the
+  /// forward model predicts moves with the wet/dry mode.
+  Recipe withPredictedColor(ColorCoordinates predictedColor) => Recipe(
+        medium: medium,
+        components: components,
+        predictedColor: predictedColor,
+        deltaE00: deltaE00,
+        verdict: verdict,
+        outOfGamut: outOfGamut,
+        muddying: muddying,
+      );
+
   @override
   bool operator ==(Object other) =>
       other is Recipe &&

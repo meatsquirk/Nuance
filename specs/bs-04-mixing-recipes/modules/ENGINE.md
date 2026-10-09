@@ -1,6 +1,6 @@
 # Module ENGINE — the mixing engine
 
-**Status:** In progress — ENGINE-4 done (trace "a touch of" + muddying; AC-7/AC-8 green); ENGINE-3 & ENGINE-5 **blocked by G-5** (Deep Olive best ΔE00 ≈ 9.31 > the in-gamut ceiling 5.0 the ACs assert); ENGINE-6 ∥ RECIPE-4 startable
+**Status:** In progress — ENGINE-6 done (per-medium wet→dry transform; AC-10 green); ENGINE-3 & ENGINE-5 **blocked by G-5** (Deep Olive best ΔE00 ≈ 9.31 > the in-gamut ceiling 5.0 the ACs assert); RECIPE-4 startable (other module)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (`Paint`, `PaintMedium`), `lib/recipes/engine/mixing_engine.dart`
 (`MixingEngine` interface, `Recipe`, `RecipeComponent`, `MixOptions`), `lib/recipes/engine/subtractive_engine.dart`
@@ -18,7 +18,7 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
 | 3 | behavior | AC-5, AC-6 | ⬜ Todo | | |
 | 4 | behavior | AC-7, AC-8 | ✅ Done | 19,391,961 | 38m 16s |
 | 5 | behavior | AC-9 | ⬜ Todo | | |
-| 6 | behavior | AC-10 | ⬜ Todo | | |
+| 6 | behavior | AC-10 | ✅ Done | 12,666,200 | 18m 55s |
 
 ## Interface reconciliation
 
@@ -303,3 +303,56 @@ Trace "a touch of" + muddying landed; AC-7 and AC-8 un-pended and green end-to-e
   2. Un-pend AC-10; unit-test that the dry prediction differs from wet in the drying direction and is a pure function of the medium + wet prediction.
 - **Exit criteria:** AC-10 green; default suite green; unit gate + 100% coverage touched.
 - **Acceptance gate:** un-pend AC-10; suite green (`TestAC10_*` + earlier); grade gate passed.
+
+### Result
+
+Per-medium wet→dry transform landed; AC-10 un-pended and green end-to-end.
+
+- **Engine** (`subtractive_engine.dart`): `forward(parts, dry: true)` now returns the wet mix shifted by
+  `_dryPrediction(wet, medium)` — L\*/a\*/b\* scaled by `(1 − shift)` (darker + slightly muted), a pure
+  function of the wet prediction and the medium. `_acrylicDryingShift` = 0.04, `_oilDryingShift` = 0.015
+  (oil shifts far less on its first-shot dry, D-11). `_singleMedium` rejects a mixed-medium dry mix (recipes
+  never span media). Wet `forward` and `inverse` unchanged.
+- **Re-render seam** (`mixing_engine.dart`): `Recipe.withPredictedColor` copies a recipe with only its
+  predicted colour replaced — parts, ΔE00, verdict and flags unchanged.
+- **Controller** (`recipe_controller.dart`): `setMode(mode)` re-predicts every recipe via
+  `mixingEngine.forward(partsByVolume, dry:)` (the controller computes no mixing math itself, D-6) and emits
+  the new mode; reversible — toggling back to wet reproduces the wet colour exactly.
+- **Wiring** (`controls_region.dart`): the E24 `SegmentedButton`'s `onSelectionChanged` drives
+  `controller.setMode(selection.first)` (was inert/null).
+- **Un-pended** AC-10 (row deleted in `bs04/pending.dart`; added to `recipes_test.dart`'s `unpended` set).
+- **AC-10 augmentation (made, this phase):** the red-baseline test asserted only that the dry prediction
+  *differs* from wet. Strengthened to assert the **drying direction** — `dry.lightness < wet.lightness` and
+  `chroma(dry) < chroma(wet)` — so a sign-flipped shift fails. Per-medium magnitude (oil < acrylic) is
+  covered decisively at the unit level. ITEST *Test augmentations* row added (✅ Closed).
+- **Gates:** `flutter analyze` clean; **unit 558 green** (+7 over 551); **100% line coverage on all touched
+  files** (`coverage_gate.dart main` PASS); **recipes acceptance suite green** under the verify lock
+  (`-d 5AB9D06D…`: `TestAC10_*` + AC-1..AC-4, AC-7, AC-8 run and pass; the 5 later-phase ACs skip).
+- **Grade gate:** an independent grader (fresh context) re-graded **AC-10 A** against the implemented
+  behaviour (upgraded from A-limited once the drying-direction augmentation was made); **0×B**. Grid
+  § *ENGINE-6 behaviour re-grade*.
+- **Fix passes: 0/3** — analyze, unit, coverage and the acceptance suite all passed first run; the
+  A-limited→A augmentation was a strengthening, not a gate failure.
+- **G-5 untouched** (ENGINE-6 does not bear on reachability; ENGINE-3/ENGINE-5 remain blocked).
+- **Tokens / Time:** 12,666,200 · 18m 55s.
+
+### Checkpoint / Handoff
+
+- **Frozen for SIGNOFF-1 / RECIPE / SCREEN:**
+  - `SubtractiveMixingEngine.forward(parts, {dry})`: `dry: true` returns the per-medium dried colour
+    (`_dryPrediction`); a mixed-medium mix throws when `dry`. The drying shifts (acrylic 0.04, oil 0.015) are
+    internal constants; the exact dry L/C/h are illustrative (G-4) — the asserted property is darker/muted,
+    oil < acrylic.
+  - `Recipe.withPredictedColor` is the re-render copy used by the toggle; `RecipeController.setMode(mode)`
+    re-predicts all recipes through it and emits the mode, reversibly. `RecipeListRegion` already renders
+    `predictedColor`, so it shows the dry colour after the toggle with no further change.
+  - `ControlsRegion` E24 toggle is wired (single-select; the callback set holds exactly the chosen mode).
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under
+  the lock: `$C with-lock bs-04-mixing-recipes <PHASE> --wait 900 -- bash -c "export PATH=…; cd <repo> &&
+  flutter test integration_test/recipes_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685"`.
+- **Next phase:** **RECIPE-4** (AC-11/AC-12 speak — file-disjoint from the ENGINE phases) is startable now.
+  **G-5 still blocks ENGINE-3 (AC-5) and ENGINE-5 (AC-9 in-gamut control).** After G-5: ENGINE-3, ENGINE-5;
+  then SIGNOFF-1 (needs all ACs or a recorded gap).
+- **Known gaps:** `verdict` null (ENGINE-3), `outOfGamut` false (ENGINE-5) still outstanding. The const-ctor
+  coverage quirk (Known flakes) applies to the new `withPredictedColor` path — covered by a direct unit test.

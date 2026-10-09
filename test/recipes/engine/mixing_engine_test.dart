@@ -288,5 +288,28 @@ void main() {
       );
       expect(recipe, isA<Recipe>());
     });
+
+    test('withPredictedColor replaces only the colour (AC-10 re-render)', () {
+      const flagged = Recipe(
+        medium: PaintMedium.oil,
+        components: [RecipeComponent(paint: _ochre, partsFraction: 1)],
+        predictedColor: _predicted,
+        deltaE00: 7.4,
+        verdict: 'noticeably off',
+        outOfGamut: true,
+        muddying: true,
+      );
+      const dry = ColorCoordinates(lightness: 41, a: 2, b: 19);
+      final rendered = flagged.withPredictedColor(dry);
+      expect(rendered.predictedColor, dry);
+      // Every other field is carried unchanged — the parts, distance and flags
+      // do not move with the wet/dry mode.
+      expect(rendered.medium, flagged.medium);
+      expect(rendered.components, flagged.components);
+      expect(rendered.deltaE00, flagged.deltaE00);
+      expect(rendered.verdict, flagged.verdict);
+      expect(rendered.outOfGamut, flagged.outOfGamut);
+      expect(rendered.muddying, flagged.muddying);
+    });
   });
 }

@@ -50,7 +50,6 @@ const Map<String, String> pendingACs = {
   // AC-9 un-pended by ENGINE-5 (out-of-gamut + nearest-not-a-match).
   'AC-9': 'ENGINE-5',
   // AC-10 un-pended by ENGINE-6 (wet/dry toggle + dry prediction).
-  'AC-10': 'ENGINE-6',
   // AC-11, AC-12 un-pended by RECIPE-4 (speak target; speak recipe).
   'AC-11': 'RECIPE-4',
   'AC-12': 'RECIPE-4',

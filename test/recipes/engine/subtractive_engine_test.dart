@@ -99,11 +99,6 @@ void main() {
       expect(deltaE00(a, b), lessThan(1e-6));
     });
 
-    test('dry prediction is deferred to ENGINE-6', () {
-      expect(() => engine.forward({_white: 1.0}, dry: true),
-          throwsUnimplementedError);
-    });
-
     test('an empty mix is rejected', () {
       expect(() => engine.forward(const {}), throwsArgumentError);
     });
@@ -115,6 +110,50 @@ void main() {
 
     test('a zero-volume mix is rejected', () {
       expect(() => engine.forward({_white: 0.0}), throwsArgumentError);
+    });
+  });
+
+  group('forward (dry prediction, AC-10 / D-11)', () {
+    test('the dry prediction darkens the wet colour (the drying direction)', () {
+      final wet = engine.forward({_ochreOil: 1.0});
+      final dry = engine.forward({_ochreOil: 1.0}, dry: true);
+      // Drying shifts darker: a real change, not a no-op.
+      expect(dry, isNot(wet));
+      expect(dry.lightness, lessThan(wet.lightness),
+          reason: 'paint dries darker (D-11)');
+      expect(deltaE00(dry, wet), greaterThan(0),
+          reason: 'the wet→dry shift is a genuine colour change');
+    });
+
+    test('oil shifts less on drying than acrylic (D-11)', () {
+      // Same wet masstone in each medium (white in acrylic vs. oil) so only the
+      // per-medium drying factor differs.
+      final wetAcrylic = engine.forward({_white: 1.0});
+      final dryAcrylic = engine.forward({_white: 1.0}, dry: true);
+      final wetOil = engine.forward({_whiteOil: 1.0});
+      final dryOil = engine.forward({_whiteOil: 1.0}, dry: true);
+      expect(deltaE00(dryOil, wetOil), greaterThan(0));
+      expect(deltaE00(dryOil, wetOil), lessThan(deltaE00(dryAcrylic, wetAcrylic)),
+          reason: 'oil shifts far less on its first-shot dry than acrylic');
+    });
+
+    test('the dry prediction is a pure function of the wet colour and medium',
+        () {
+      // Two mixes of the same oil paints at the same ratios (scaled volumes)
+      // share a wet colour, so their dry predictions must match exactly — the
+      // transform depends on nothing but the wet colour and the medium.
+      final dryA = engine.forward({_whiteOil: 1.0, _ochreOil: 1.0}, dry: true);
+      final dryB = engine.forward({_whiteOil: 3.0, _ochreOil: 3.0}, dry: true);
+      expect(deltaE00(dryA, dryB), lessThan(1e-6));
+    });
+
+    test('a dry prediction needs a single-medium mix (recipes never span media)',
+        () {
+      expect(() => engine.forward({_white: 1.0, _whiteOil: 1.0}, dry: true),
+          throwsArgumentError);
+      // The same mixed-medium mix is fine wet — only the dry transform is
+      // per-medium.
+      expect(engine.forward({_white: 1.0, _whiteOil: 1.0}), isA<ColorCoordinates>());
     });
   });
 

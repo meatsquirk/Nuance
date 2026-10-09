@@ -132,7 +132,7 @@ void main() {
   });
 
   group('ControlsRegion', () {
-    testWidgets('shows the wet/dry toggle reflecting the current mode, inert',
+    testWidgets('shows the wet/dry toggle reflecting the current mode',
         (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
@@ -141,13 +141,38 @@ void main() {
       expect(find.text('Wet or dry:'), findsOneWidget);
       expect(find.text('Wet'), findsOneWidget);
       expect(find.text('Dry'), findsOneWidget);
-      // E24 is inert until ENGINE-6: a null onSelectionChanged disables it, and
-      // the controller still starts in wet mode.
+      // E24 is wired in ENGINE-6: a non-null onSelectionChanged, opening wet.
       final toggle = tester.widget<SegmentedButton<MixMode>>(
         find.byType(SegmentedButton<MixMode>),
       );
-      expect(toggle.onSelectionChanged, isNull);
+      expect(toggle.onSelectionChanged, isNotNull);
       expect(toggle.selected, {MixMode.wet});
+    });
+
+    testWidgets('switching the toggle drives setMode and reflects the new mode '
+        '(AC-10)', (tester) async {
+      final controller = _controller();
+      addTearDown(controller.dispose);
+      // Wrapped so the region rebuilds on the controller's notification, as the
+      // real screen does — the toggle's selection tracks the live mode.
+      await _pumpRegion(
+        tester,
+        ListenableBuilder(
+          listenable: controller,
+          builder: (_, _) => ControlsRegion(controller: controller),
+        ),
+      );
+      expect(controller.state.mode, MixMode.wet);
+
+      await tester.tap(find.text('Dry'));
+      await tester.pumpAndSettle();
+
+      expect(controller.state.mode, MixMode.dry,
+          reason: 'the toggle drives RecipeController.setMode');
+      final toggle = tester.widget<SegmentedButton<MixMode>>(
+        find.byType(SegmentedButton<MixMode>),
+      );
+      expect(toggle.selected, {MixMode.dry});
     });
   });
 

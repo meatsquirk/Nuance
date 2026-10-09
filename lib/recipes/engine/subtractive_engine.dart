@@ -25,10 +25,10 @@ import 'mixing_engine.dart';
 ///
 /// The predicted L/C/h are illustrative (G-4): the engine asserts behavioural
 /// properties, not pinned literals. The per-recipe verdict (ENGINE-3), the "a
-/// touch of" trace and muddying flags (ENGINE-4), the out-of-gamut marking
-/// (ENGINE-5) and the wet→dry transform (ENGINE-6) layer on top of this forward
-/// + inverse. The measured-pigment engine is the deferred swap-in behind the
-/// same [MixingEngine] interface.
+/// touch of" trace and muddying flags (ENGINE-4) and the out-of-gamut marking
+/// (ENGINE-5) layer on top of this forward + inverse; the per-medium wet→dry
+/// transform (ENGINE-6) is `forward(..., dry: true)`. The measured-pigment
+/// engine is the deferred swap-in behind the same [MixingEngine] interface.
 ///
 /// A stateless, `const` engine wired in as the default
 /// `AppDependencies.mixingEngine`.
@@ -57,12 +57,6 @@ class SubtractiveMixingEngine implements MixingEngine {
 
   @override
   ColorCoordinates forward(Map<Paint, double> partsByVolume, {bool dry = false}) {
-    if (dry) {
-      // The per-medium wet→dry transform is ENGINE-6; this phase predicts the
-      // wet colour only.
-      throw UnimplementedError(
-          'the dry prediction (forward dry: true) lands in ENGINE-6');
-    }
     if (partsByVolume.isEmpty) {
       throw ArgumentError.value(
           partsByVolume, 'partsByVolume', 'a mix needs at least one paint');
@@ -79,8 +73,56 @@ class SubtractiveMixingEngine implements MixingEngine {
           'the parts must sum to a positive volume');
     }
     final spectra = [for (final p in paints) _Spectrum.ofLab(p.masstone)];
-    return _mix(spectra, weights);
+    final wet = _mix(spectra, weights);
+    // The dry prediction (AC-10) is the wet colour shifted by the per-medium
+    // drying transform — a pure function of the wet prediction and the medium.
+    return dry ? _dryPrediction(wet, _singleMedium(paints)) : wet;
   }
+
+  /// The single [PaintMedium] all [paints] share.
+  ///
+  /// Recipes never span media (engine-design cross-medium rule), so a dry
+  /// prediction is only defined for a single-medium mix; a mixed-medium map is
+  /// rejected rather than dried under one arbitrary medium's constants.
+  static PaintMedium _singleMedium(List<Paint> paints) {
+    final medium = paints.first.medium;
+    for (final paint in paints) {
+      if (paint.medium != medium) {
+        throw ArgumentError.value(paints, 'partsByVolume',
+            'a dry prediction needs a single-medium mix (recipes never span media)');
+      }
+    }
+    return medium;
+  }
+
+  /// The predicted **dry** colour of a mix whose wet colour is [wet], under
+  /// [medium] (AC-10 / D-11).
+  ///
+  /// Paint dries darker and slightly more muted as its vehicle leaves — the
+  /// wet L\* and a\*/b\* are scaled toward the darker, lower-chroma dry state.
+  /// Oil shifts far less than acrylic on its first-shot dry (D-11), so its
+  /// factor is the smaller. A pure function of [wet] and [medium]: no solve, no
+  /// spectra — the exact dry L/C/h are illustrative (G-4), the behavioural
+  /// property is the darkening shift.
+  static ColorCoordinates _dryPrediction(
+      ColorCoordinates wet, PaintMedium medium) {
+    final shift = switch (medium) {
+      PaintMedium.acrylic => _acrylicDryingShift,
+      PaintMedium.oil => _oilDryingShift,
+    };
+    final keep = 1 - shift;
+    return ColorCoordinates(
+      lightness: wet.lightness * keep,
+      a: wet.a * keep,
+      b: wet.b * keep,
+    );
+  }
+
+  /// Acrylic dries noticeably darker (D-11) — the larger first-shot shift.
+  static const double _acrylicDryingShift = 0.04;
+
+  /// Oil shifts far less on drying than acrylic (D-11) — the smaller shift.
+  static const double _oilDryingShift = 0.015;
 
   @override
   List<Recipe> inverse(Sample target, PaintPalette palette, MixOptions opts) {

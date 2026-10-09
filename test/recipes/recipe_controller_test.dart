@@ -201,9 +201,6 @@ void main() {
     group('actions still deferred to later phases throw', () {
       final controller = _controller();
 
-      test('setMode throws until ENGINE-6', () {
-        expect(() => controller.setMode(MixMode.dry), throwsUnimplementedError);
-      });
       test('speakTarget throws until RECIPE-4', () {
         expect(() => controller.speakTarget(), throwsUnimplementedError);
       });
@@ -252,6 +249,62 @@ void main() {
         expect(controller.state.recipes, isNotEmpty);
         expect(controller.state.mode, MixMode.wet);
         expect(controller.state.manualError, isNull);
+      });
+    });
+
+    group('wet/dry toggle (ENGINE-6, AC-10)', () {
+      RecipeController solvingController() => _controller(
+            paletteSource:
+                const InMemoryPaletteSource(catalogue: [_richPalette]),
+          );
+
+      test('setMode(dry) re-predicts each recipe and notifies', () {
+        final controller = solvingController();
+        addTearDown(controller.dispose);
+        final wet = controller.state.recipes;
+        expect(wet, isNotEmpty);
+        expect(controller.state.mode, MixMode.wet);
+
+        var notified = 0;
+        controller.addListener(() => notified++);
+        controller.setMode(MixMode.dry);
+
+        expect(notified, 1);
+        expect(controller.state.mode, MixMode.dry);
+        final dry = controller.state.recipes;
+        // Same recipes (parts, distance, order), but each predicted colour moved
+        // to the dry prediction — a real shift, not a relabel.
+        expect(dry.length, wet.length);
+        for (var i = 0; i < dry.length; i++) {
+          expect(dry[i].predictedColor, isNot(wet[i].predictedColor),
+              reason: 'recipe $i must predict a different dry colour');
+          expect(dry[i].components, wet[i].components);
+          expect(dry[i].deltaE00, wet[i].deltaE00);
+        }
+      });
+
+      test('toggling back to wet restores the wet prediction exactly', () {
+        final controller = solvingController();
+        addTearDown(controller.dispose);
+        final wet = controller.state.recipes;
+
+        controller.setMode(MixMode.dry);
+        controller.setMode(MixMode.wet);
+
+        expect(controller.state.mode, MixMode.wet);
+        expect(controller.state.recipes, wet,
+            reason: 're-rendering wet reproduces the original prediction');
+      });
+
+      test('setMode with no palette solved leaves the recipes empty', () {
+        final controller = _controller();
+        addTearDown(controller.dispose);
+        expect(controller.state.recipes, isEmpty);
+
+        controller.setMode(MixMode.dry);
+
+        expect(controller.state.mode, MixMode.dry);
+        expect(controller.state.recipes, isEmpty);
       });
     });
   });

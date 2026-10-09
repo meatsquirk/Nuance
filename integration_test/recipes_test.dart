@@ -79,7 +79,9 @@ void main() {
     // its AC here as it deletes the row in `bs04/pending.dart`: RECIPE-3 → AC-1,
     // AC-2; ENGINE-2 → AC-3, AC-4; ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8;
     // ENGINE-5 → AC-9; ENGINE-6 → AC-10; RECIPE-4 → AC-11, AC-12.
-    const unpended = <String>{'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-7', 'AC-8'};
+    const unpended = <String>{
+      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-7', 'AC-8', 'AC-10',
+    };
 
     test(
       'pending map is the exact complement of the un-pended ACs across all 12, '
@@ -832,6 +834,13 @@ void main() {
           reason: 'the dry prediction differs from the wet prediction');
       expect(referenceDeltaE00(wet, dry), greaterThan(0),
           reason: 'the wet→dry shift is a real colour change');
+      // …and in the drying direction (D-11): paint dries darker and slightly
+      // muted, never lighter or more saturated. This separates the real
+      // transform from a sign-flipped shift that would still "differ".
+      expect(dry.lightness, lessThan(wet.lightness),
+          reason: 'the dry prediction is darker than wet (the drying direction)');
+      expect(_chroma(dry), lessThan(_chroma(wet)),
+          reason: 'the dry prediction is slightly less saturated than wet');
     });
   });
 }

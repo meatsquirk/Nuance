@@ -4,6 +4,7 @@ import '../a11y/speech.dart';
 import '../app/router.dart';
 import '../compare/sample_source.dart';
 import '../domain/color_coordinates.dart';
+import '../domain/paint.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
 import 'engine/mixing_engine.dart';
@@ -182,7 +183,39 @@ class RecipeController extends ChangeNotifier {
   }
 
   /// Switches between wet and dry predictions (AC-10) — ENGINE-6.
-  void setMode(MixMode mode) => throw UnimplementedError(_deferred('ENGINE-6'));
+  ///
+  /// Re-renders every current recipe for [mode] by asking the [mixingEngine] to
+  /// predict each recipe's own parts wet or dry (the controller never computes
+  /// the shift itself — D-6), then emits the new mode. The solve is unchanged:
+  /// only each recipe's predicted colour moves, so toggling back to wet restores
+  /// the wet prediction exactly.
+  void setMode(MixMode mode) => _emit(RecipeState(
+        target: _state.target,
+        selectedPalette: _state.selectedPalette,
+        recipes: _repredict(_state.recipes, mode),
+        mode: mode,
+        manualError: _state.manualError,
+      ));
+
+  /// Each recipe in [recipes] re-rendered for [mode]: the engine predicts the
+  /// recipe's own parts wet or dry (AC-10), leaving the parts and distance as
+  /// they were.
+  List<Recipe> _repredict(List<Recipe> recipes, MixMode mode) {
+    final dry = mode == MixMode.dry;
+    return [
+      for (final recipe in recipes)
+        recipe.withPredictedColor(
+          mixingEngine.forward(_partsByVolume(recipe), dry: dry),
+        ),
+    ];
+  }
+
+  /// The paint → volume-share map for [recipe], the input the engine's forward
+  /// model takes (only the ratios matter, so the parts fractions suffice).
+  static Map<Paint, double> _partsByVolume(Recipe recipe) => {
+        for (final component in recipe.components)
+          component.paint: component.partsFraction,
+      };
 
   /// Speaks the target as one utterance — name + L, C, h (AC-11) — RECIPE-4.
   Future<void> speakTarget() => throw UnimplementedError(_deferred('RECIPE-4'));
