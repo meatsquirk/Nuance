@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — ITEST-1 + ITEST-2 + ITEST-3 done; next ITEST-4 test review (G-2), then behaviour phases
+**Status:** In progress — ITEST-4 packet assembled, ⏸ awaiting the human G-2 decision; then the behaviour phases
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -178,7 +178,7 @@ keeping the screen side file-disjoint across the windows above.
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (the `.feature` is "Draft: awaiting owner approval"; record approval as its first line) | RECIPE-1 | ✅ Resolved 2026-10-08 12:57 EDT: spec approved as-is; `.feature` first line stamped "Approved 2026-10-08 by Matt Quirk" — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Awaiting decision — ITEST-4 packet assembled 2026-10-08 (ITEST module, Phase 4 § *Review packet*); full regression green; present for the human verdict |
 | G-3 | dependency | bs-01/02/03 shared foundation merged to `main` (`Sample`/`ColorCoordinates`, `buildApp`/`AppScope`/`AppDependencies`, `Speech`+`FakeSpeech`, `deltaE00`, `ColorScience`, `SampleSource`, `AppRouter.toRecipes` + the handoff, coverage gate, `integration_test`) | RECIPE-1, all shells | ✅ Resolved 2026-10-08: bs-01, bs-02 and bs-03 are signed off and merged to `main` @ `8518463` (full foundation present) |
 | G-4 | decision | **Spec-data / engine reconciliation (spec author).** The spec pins predicted colours (AC-5 "predicts L 42.6, C 27.1, h 106"; AC-10 "shifts to L 41.2, C 26.4, h 107") that a general v1 engine (D-2) will not reproduce exactly. Confirm: (a) the pinned L/C/h are **illustrative** and the ACs assert behavioural properties (D-13) — or a literal is binding and its authoritative value; (b) the v1 subtractive forward approach (D-2); (c) the gamut threshold (D-10) and the ~2% trace threshold (D-12) | ITEST-3, ENGINE-2, ENGINE-3, ENGINE-4, ENGINE-5, ENGINE-6 | ✅ Resolved 2026-10-08 (Matt Quirk): (a) the pinned predicted L/C/h are **illustrative** — the ACs assert behavioural properties (D-13); (b) v1 subtractive forward+inverse (D-2); (c) gamut ΔE00 > 5 (D-10), trace ~2% (D-12). ITEST-3 wrote AC-5/AC-10 as behavioural properties accordingly |
 
@@ -202,7 +202,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 10,067,182 | 18m 44s (4h 40m) | analyze clean; unit 517 / integ 73 green (11 new scaffold, AC pending); grade 11A/0B PASS |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,11,12 (pending) + red baseline | ✅ Done | 6,819,011 | 25m 09s (25m 09s) | 5 pending AC tests; analyze clean; unit 517 green; integ default green (5 pending) / run-pending 5 fail clean at owner; grade 5A/0B (AC-2 B→A valid-L50 control; AC-12 A limited); fix 1/3 |
 | 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9,10 (pending) + red baseline | ✅ Done | 7,282,541 | 41m 45s (1h 15m) | 7 pending AC tests; analyze clean; unit 517; integ default green (12 pending) / run-pending 7 fail clean; grade 3A + 4A-limited / 0B (augmentations → ENGINE-3/4); G-4 resolved; fix 0/3 |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | both AC-test phases done; assembles the G-2 packet |
+| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 3,710,476 | 28m 03s (28m 04s) | packet assembled; full regression green (unit 517; cov PASS 15/15; integ 11 pass / 12 AC pending); grid 12 AC + 11 guards at A, 0B; G-2 awaiting human |
 | 9 | RECIPE-3 | behavior: AC-1, AC-2 — target selection (saved sample + manual/validation) | ⬜ Todo | | | foundational |
 | 10 | ENGINE-2 | behavior: AC-3, AC-4 — palette-constrained solver + top 3–5 w/ parts + predicted colour | ⬜ Todo | | | foundational |
 | 11 | ENGINE-3 | behavior: AC-5, AC-6 — per-recipe ΔE00+verdict; prefer fewer paints | ⬜ Todo | | | serial on engine |
@@ -217,14 +217,16 @@ when the row is marked done.
 
 ## Next phase
 
-**ITEST-4 (test-review)** is next and startable — both AC-test phases are done (ITEST-2: AC-1,2,3,11,12;
-ITEST-3: AC-4..AC-10), all 12 ACs registered as pending `acTestWidgets` in
-`integration_test/recipes_test.dart` with a clean red baseline, and the grade grid is complete (ITEST-1
-11×A; ITEST-2 5×A; ITEST-3 3×A + 4×A-limited). **ITEST-4** assembles the review packet (per-AC test +
-Thens/Rejects, the red baseline, the grade grid, the pre-seeded augmentations incl. the four ITEST-3
-ones, the G-4 behavioural-property treatment) and runs the full regression, then presents it for the
-human **G-2** decision, which unblocks every behaviour phase. Run:
-`/feature-next-phase bs-04-mixing-recipes ITEST-4`.
+**ITEST-4 is done bar the gate** — the review packet is assembled (ITEST module, Phase 4 § *Review packet*)
+and the full regression is green (analyze clean; unit 517; coverage gate PASS 15/15 touched; integration 11
+scaffold/guard pass with all 12 ACs pending). **G-2 (approve the acceptance tests) now blocks everything** and
+is the only startable action — a human decision:
+
+- `/feature-next-phase --gate bs-04-mixing-recipes G-2 approved` — then **RECIPE-3** (AC-1, AC-2) and
+  **ENGINE-2** (AC-3, AC-4) become startable with no unmet dependency (parallelisable; both touch
+  `recipes_test.dart`/`bs04/pending.dart`, so coordinate the un-pend edits); ENGINE-3..6 and RECIPE-4 follow.
+- `/feature-next-phase --gate bs-04-mixing-recipes G-2 "<changes>"` — each change item becomes an ITEST
+  change phase before the behaviour stage, then a fresh review.
 
 ## Token usage
 
@@ -244,7 +246,8 @@ human **G-2** decision, which unblocks every behaviour phase. Run:
 | ITEST-2 | c59f9d22 | 2026-10-08 20:49 EDT | 21:14 | 25m 09s | 25m 09s | claude-opus-4-8 | 120 | 268,603 | 6,495,282 | 55,006 | 6,819,011 | acceptance-tests: 5 pending AC tests (AC-1,2,3,11,12) + red baseline; analyze clean; unit 517 green; coverage PASS (no lib touched); integration default green (5 pending), run-pending all 5 fail cleanly at owner-naming Then/precondition; grade 5A/0B (AC-2 B->A after valid-L50 control fix; AC-12 A limited); fix passes 1/3 |
 | ITEST-3 | ae6d1715 | 2026-10-08 20:49 EDT | 22:05 | 1h 15m | 41m 45s | claude-opus-4-8 | 108 | 268,482 | 6,923,809 | 90,142 | 7,282,541 | acceptance-tests: 7 pending AC tests (AC-4..AC-10) + red baseline; analyze clean; unit 517; coverage PASS (no lib touched); integration default green (12 pending), run-pending all 7 fail cleanly (precondition/Then); grade 3A + 4A-limited / 0B (augmentations -> ENGINE-3/ENGINE-4); G-4 resolved; fix passes 0/3 |
 | RECONCILE | 973d4e96 | 2026-10-08 22:18 EDT | 22:21 | 3m 02s | 3m 02s | claude-opus-4-8 | 48 | 70,257 | 1,773,336 | 12,893 | 1,856,534 | applied ITEST-2 + ITEST-3 parallel rollups: status/session-log rows 6-8/Next-phase updated, G-4 resolved, both ledger rows added; phase branches fast-forwarded into feat; 2 worktrees + 2 phase branches removed |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 22:21** | **8h 23m** | **3h 28m** |  | **1,086** | **1,959,847** | **62,756,045** | **478,834** | **65,195,812** |  |
+| ITEST-4 | 8ceef99f | 2026-10-08 22:25 EDT | 22:53 | 28m 04s | 28m 03s | claude-opus-4-8 | 76 | 94,302 | 3,591,908 | 24,190 | 3,710,476 | packet assembled; full regression green (unit 517; cov 15/15; integ +11 ~12); G-2 awaiting human |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 22:53** | **8h 51m** | **3h 56m** |  | **1,162** | **2,054,149** | **66,347,953** | **503,024** | **68,906,288** |  |
 
 ## Sign-off
 
