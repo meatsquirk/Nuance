@@ -42,12 +42,24 @@ import 'package:flutter_test/flutter_test.dart';
 /// un-pends that AC. Every owner must be a member of [behaviorPhases].
 const Map<String, String> pendingACs = {
   // AC-1, AC-2 un-pended by RECIPE-3 (target selection: saved sample + manual).
+  'AC-1': 'RECIPE-3',
+  'AC-2': 'RECIPE-3',
   // AC-3, AC-4 un-pended by ENGINE-2 (palette-constrained solver + top recipes).
+  'AC-3': 'ENGINE-2',
+  'AC-4': 'ENGINE-2',
   // AC-5, AC-6 un-pended by ENGINE-3 (per-recipe ΔE00 + verdict; prefer fewer).
+  'AC-5': 'ENGINE-3',
+  'AC-6': 'ENGINE-3',
   // AC-7, AC-8 un-pended by ENGINE-4 (trace "a touch of"; muddying flag).
+  'AC-7': 'ENGINE-4',
+  'AC-8': 'ENGINE-4',
   // AC-9 un-pended by ENGINE-5 (out-of-gamut + nearest-not-a-match).
+  'AC-9': 'ENGINE-5',
   // AC-10 un-pended by ENGINE-6 (wet/dry toggle + dry prediction).
+  'AC-10': 'ENGINE-6',
   // AC-11, AC-12 un-pended by RECIPE-4 (speak target; speak recipe).
+  'AC-11': 'RECIPE-4',
+  'AC-12': 'RECIPE-4',
 };
 
 /// The behaviour phases allowed to own a pending AC.

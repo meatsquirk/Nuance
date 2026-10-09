@@ -1,0 +1,241 @@
+// Acceptance suite for bs-04 Mixing recipes.
+//
+// ITEST-1 lands the harness scaffold here: a never-pending smoke test proving
+// the shells wire end to end (the real app boots to the Recipes screen and
+// renders every region), plus guard tests so the scaffold cannot pass vacuously
+// — the pending map must cover exactly the 12 ACs each owned by a real
+// behaviour phase, the fake must record, the fixtures must carry the
+// coordinates their scenarios assume (incl. a genuinely out-of-gamut control and
+// an all-oil palette), and the independent reference ΔE00 must match Sharma et
+// al.'s published CIEDE2000 test data.
+//
+// ITEST-2 and ITEST-3 register one *pending* `acTestWidgets` per AC in this
+// file; the behaviour phases un-pend each by deleting its row in
+// `bs04/pending.dart`. Default `flutter test integration_test/recipes_test.dart`
+// skips pending ACs; `--dart-define=BS04_RUN_PENDING=true` runs them.
+
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/recipes/controls_region.dart';
+import 'package:paint_color_assistant/recipes/gamut_banner.dart';
+import 'package:paint_color_assistant/recipes/recipe_list_region.dart';
+import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
+import 'package:paint_color_assistant/recipes/recipe_state.dart';
+import 'package:paint_color_assistant/recipes/target_region.dart';
+
+import 'recipes_harness.dart';
+
+double _chroma(ColorCoordinates c) => math.sqrt(c.a * c.a + c.b * c.b);
+
+double _hueDeg(ColorCoordinates c) {
+  var h = math.atan2(c.b, c.a) * 180.0 / math.pi;
+  if (h < 0) h += 360.0;
+  return h;
+}
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+    'smoke: the assembled app boots to the Recipes screen showing every region',
+    (tester) async {
+      final harness = await givenRecipes(tester);
+
+      // Booted to the Recipes route over the injected catalogue / palette.
+      expect(find.widgetWithText(AppBar, 'Recipes'), findsOneWidget);
+      expect(find.byKey(RecipeReadEndpoint.endpointKey), findsOneWidget);
+
+      // Every region anchor the AC finders and behaviour phases rely on.
+      expect(find.byKey(TargetRegion.regionKey), findsOneWidget);
+      expect(find.byKey(ControlsRegion.regionKey), findsOneWidget);
+      expect(find.byKey(RecipeListRegion.regionKey), findsOneWidget);
+      expect(find.byKey(GamutBanner.regionKey), findsOneWidget);
+
+      // The target render the Readout → recipes handoff (bs-01 AC-11) relies on.
+      expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
+
+      // Opened mixing toward the injected target, over the selected palette,
+      // with no recipes solved yet, wet mode, no manual error, nothing spoken.
+      expect(harness.state.target, SAMPLE_DEEP_OLIVE);
+      expect(harness.state.selectedPalette, PALETTE_MY_PAINTS);
+      expect(harness.state.recipes, isEmpty);
+      expect(harness.state.hasRecipes, isFalse);
+      expect(harness.state.mode, MixMode.wet);
+      expect(harness.state.manualError, isNull);
+      expect(harness.speech.utterances, isEmpty);
+    },
+  );
+
+  group('pending gate', () {
+    // Un-pended by the behaviour phases so far: none yet — ITEST-1 seeds all 12
+    // pending. Each behaviour phase adds its AC here as it deletes the row in
+    // `bs04/pending.dart`: RECIPE-3 → AC-1, AC-2; ENGINE-2 → AC-3, AC-4;
+    // ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8; ENGINE-5 → AC-9; ENGINE-6 →
+    // AC-10; RECIPE-4 → AC-11, AC-12.
+    const unpended = <String>{};
+
+    test(
+      'pending map is the exact complement of the un-pended ACs across all 12, '
+      'each owned by a real behaviour phase',
+      () {
+        for (var n = 1; n <= 12; n++) {
+          final ac = 'AC-$n';
+          expect(
+            pendingACs.containsKey(ac),
+            !unpended.contains(ac),
+            reason: unpended.contains(ac)
+                ? '$ac is un-pended and must not be in the pending map'
+                : '$ac must still have a pending entry',
+          );
+        }
+        expect(pendingACs.length, 12 - unpended.length);
+        for (final entry in pendingACs.entries) {
+          expect(
+            behaviorPhases,
+            contains(entry.value),
+            reason: '${entry.key} names unknown phase "${entry.value}"',
+          );
+        }
+      },
+    );
+
+    test(
+        'the gate skips every pending AC by default and runs it in run-pending '
+        'mode', () {
+      for (final ac in pendingACs.keys) {
+        expect(
+          pendingSkipReason(ac, forceRunPending: false),
+          isNotNull,
+          reason: '$ac is pending and must be skipped in the default run',
+        );
+        expect(
+          pendingSkipReason(ac, forceRunPending: true),
+          isNull,
+          reason: '$ac must execute in run-pending mode (the red baseline)',
+        );
+      }
+      // An AC absent from the map always runs, in either mode — the un-pended
+      // end state each behaviour phase moves its AC toward.
+      expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
+      // The ambient path (used by acTestWidgets) agrees with the current mode.
+      expect(
+        pendingSkipReason('AC-1'),
+        pendingSkipReason('AC-1', forceRunPending: runPending),
+      );
+    });
+  });
+
+  group('fakes record what the app drives them with', () {
+    test('FakeSpeech appends each utterance in order', () async {
+      final speech = FakeSpeech();
+      await speech.speak('first');
+      await speech.speak('second');
+      expect(speech.utterances, ['first', 'second']);
+    });
+  });
+
+  group('fixtures carry the coordinates their scenarios assume', () {
+    test('the catalogue lists the named saved samples', () {
+      expect(
+        CATALOGUE.map((s) => s.name).toList(),
+        containsAll(<String>[
+          'Deep Olive Green',
+          'Warm Sand',
+          'Vivid Turquoise',
+        ]),
+      );
+      expect(CATALOGUE.length, 3);
+    });
+
+    test('Deep Olive Green recovers its C 28 / h 108 (AC-1 render)', () {
+      // AC-1 renders "L 42, C 28, h 108"; the target derives C/h from a*/b*, so
+      // the fixture must carry those polar values.
+      expect(SAMPLE_DEEP_OLIVE.coordinates.lightness, 42);
+      expect(_chroma(SAMPLE_DEEP_OLIVE.coordinates), closeTo(28, 0.05));
+      expect(_hueDeg(SAMPLE_DEEP_OLIVE.coordinates), closeTo(108, 0.1));
+    });
+
+    test('"My paints" lists the five named paints (AC-3 names three)', () {
+      expect(
+        PALETTE_MY_PAINTS.paints.map((p) => p.name).toList(),
+        containsAll(<String>[
+          'Titanium White',
+          'Yellow Ochre',
+          'Ivory Black',
+          'Ultramarine Blue',
+          'Venetian Red',
+        ]),
+      );
+      expect(PALETTE_MY_PAINTS.paints.length, 5);
+    });
+
+    test('Vivid Turquoise is a genuine out-of-gamut control for "My paints" '
+        '(AC-9)', () {
+      // AC-9 needs a target the earthy palette cannot reach: a strongly green
+      // (a* ≪ 0), high-chroma colour. No "My paints" paint sits on the green
+      // side, so no mix of them can produce it — the engine must say OUT OF
+      // GAMUT, not invent a recipe. (The exact gamut verdict is the engine's,
+      // graded in ENGINE-5; here we pin the fixture geometry the control needs.)
+      expect(SAMPLE_VIVID_TURQUOISE.coordinates.a, lessThan(-20),
+          reason: 'the turquoise must be strongly green (a* ≪ 0)');
+      expect(_chroma(SAMPLE_VIVID_TURQUOISE.coordinates), greaterThan(35),
+          reason: 'the turquoise must be high-chroma');
+      for (final paint in PALETTE_MY_PAINTS.paints) {
+        expect(paint.masstone.a, greaterThan(-5),
+            reason: '${paint.name} is not on the green side, so the palette '
+                'cannot reach a strongly green target');
+      }
+    });
+
+    test('the oil fixtures are all oil so the AC-10 recipe is an oil mix', () {
+      // AC-10's wet→dry transform is per-medium (D-11) and recipes never span
+      // media, so the AC-10 palette must be entirely one medium.
+      for (final paint in PALETTE_OIL.paints) {
+        expect(paint.medium.name, 'oil',
+            reason: '${paint.name} must be oil for the AC-10 drying transform');
+      }
+      expect(PALETTE_OIL.paints, isNotEmpty);
+      expect(SAMPLE_OIL_TARGET.name, 'Studio Olive');
+    });
+  });
+
+  group('referenceDeltaE00 matches Sharma et al. published CIEDE2000 data', () {
+    // The independent authority AC-5 grades the product's ΔE00 against; a wrong
+    // reference (CIE76 / CIE94 / a sign slip in the hue-rotation term) fails
+    // these. Published pairs from Sharma, Wu & Dalal (2005).
+    const cases = <List<double>>[
+      // L1, a1, b1, L2, a2, b2, expected ΔE00
+      [50, 2.6772, -79.7751, 50, 0, -82.7485, 2.0425],
+      [50, -1.3802, -84.2814, 50, 0, -82.7485, 1.0000],
+      [50, 0, 0, 50, -1, 2, 2.3669],
+      [50, 2.4900, -0.0010, 50, -2.4900, 0.0009, 7.1792],
+      [2.0776, 0.0795, -1.1350, 0.9033, -0.0636, -0.5514, 0.9082],
+    ];
+
+    test('each published pair', () {
+      for (final c in cases) {
+        final got = referenceDeltaE00(
+          ColorCoordinates(lightness: c[0], a: c[1], b: c[2]),
+          ColorCoordinates(lightness: c[3], a: c[4], b: c[5]),
+        );
+        expect(got, closeTo(c[6], 1e-3),
+            reason: 'ΔE00 for $c should be ${c[6]}');
+      }
+    });
+
+    test('a sample compared with itself is zero', () {
+      expect(
+        referenceDeltaE00(
+          SAMPLE_DEEP_OLIVE.coordinates,
+          SAMPLE_DEEP_OLIVE.coordinates,
+        ),
+        closeTo(0, 1e-9),
+      );
+    });
+  });
+}

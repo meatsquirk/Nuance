@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3 (AC tests)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/recipes_test.dart` (AC tests + smoke/guards),
 `integration_test/recipes_harness.dart` (Given/When/Then vocabulary, fixtures, the independent
@@ -13,7 +13,7 @@ RECIPE-1).
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | acceptance-tests | — (harness) | ⬜ Todo | | |
+| 1 | acceptance-tests | — (harness) | ✅ Done | 10,067,182 | 18m 44s (4h 40m) |
 | 2 | acceptance-tests | AC-1,2,3,11,12 | ⬜ Todo | | |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
@@ -58,6 +58,67 @@ RECIPE-1).
   4. Grade the scaffold tests: the pending map has exactly 12 keys each naming a real phase; the smoke test asserts concrete rendered regions; deterministic (`pumpAndSettle`, no fixed sleeps); `referenceDeltaE00` validated against published CIEDE2000 pairs + self-distance 0.
 - **Exit criteria:** `flutter test integration_test/recipes_test.dart -d <udid>` green (all AC tests pending, smoke passes); harness tests graded A.
 - **Acceptance gate:** smoke green; pending gate in place (12 pending).
+
+### Result
+
+The acceptance harness is in place; the real app is drivable end to end and the pending gate holds all 12 ACs.
+
+- **Added:** `integration_test/recipes_harness.dart` — the `givenRecipes(tester, {target, catalogue, palette,
+  mixingEngine})` driver assembling the real app via `buildApp` with the recipes entry (injected `CATALOGUE` /
+  `PALETTE_MY_PAINTS` / real `SubtractiveMixingEngine` / `FakeSpeech`); the `RecipesHarness` vocabulary
+  (`whenOpenTargetSelector`, `whenChooseSavedTarget`, `whenEnterManualTarget`, `whenToggleWetDry`,
+  `whenSpeakTarget`, `whenSpeakRecipe` — each drives the real control and names its owning phase in a
+  precondition, since the controls are inert in the SCREEN-1 shell); the fixtures (`SAMPLE_DEEP_OLIVE`,
+  `SAMPLE_WARM_SAND`, `SAMPLE_VIVID_TURQUOISE` out-of-gamut control, `SAMPLE_OIL_TARGET` + the paints +
+  `PALETTE_MY_PAINTS` / `PALETTE_OIL`); and the **independent** `referenceDeltaE00` (inline CIEDE2000, no import
+  of `lib/compare/difference.dart`). Re-exports `bs04/pending.dart` + the fakes.
+- **Added:** `integration_test/recipes_test.dart` — a never-pending **smoke** test (boots to Recipes, asserts
+  all four region keys + the read endpoint + the "Recipe target: Deep Olive Green" render + the opened state)
+  and the guards: the pending-gate complement (exactly 12, each owner ∈ `behaviorPhases`; skip/run-pending
+  modes), `FakeSpeech` ordering, the fixtures carry their coordinates (Deep Olive recovers C 28 / h 108; "My
+  paints" names its five paints; Vivid Turquoise is a genuine out-of-gamut control; the oil palette is all
+  oil), and `referenceDeltaE00` vs the five Sharma et al. published pairs + self-distance 0. **No per-AC tests
+  yet** (ITEST-2/3 register them).
+- **Seeded:** `integration_test/bs04/pending.dart` — `pendingACs` now maps all 12 ACs to their owning phase
+  (AC-1/2 → RECIPE-3, AC-3/4 → ENGINE-2, AC-5/6 → ENGINE-3, AC-7/8 → ENGINE-4, AC-9 → ENGINE-5, AC-10 →
+  ENGINE-6, AC-11/12 → RECIPE-4). No `lib/**` touched.
+- **Gates:** `flutter analyze` clean; unit **517 green**; coverage gate **PASS** (100% on touched lib — ITEST-1
+  touches none; the 7 shell files stay fully covered); integration **73 green** on the iPhone 17 sim under the
+  verify lock (62 prior bs-01/02/03 + **11 new** recipes scaffold tests; all AC tests pending). **Red baseline:
+  none recorded — ITEST-1 registers no AC tests** (ITEST-2/3 fill the *Red baseline* table).
+- **Grade gate:** an independent grader (fresh context) graded the scaffold **11×A, 0×B — PASS**; grid at
+  `behavior-test-completeness-bs-04-mixing-recipes.md`. It independently recomputed the fixture math
+  (Deep Olive → C 27.9996 / h 107.995°), confirmed every guard threshold, and verified `referenceDeltaE00`
+  imports nothing from the product metric.
+- **Fix passes: 0/3** (green first run).
+- **Tokens / Time:** 10,067,182 · 18m 44s active (4h 40m wall — the gap was the AskUserQuestion wait).
+
+### Checkpoint / Handoff
+
+- **Frozen for ITEST-2 / ITEST-3:** import only `recipes_harness.dart`. `givenRecipes(tester, {target =
+  SAMPLE_DEEP_OLIVE, catalogue = CATALOGUE, palette = PALETTE_MY_PAINTS, mixingEngine = SubtractiveMixingEngine})`
+  → `RecipesHarness`. Read seams: `harness.controller` / `harness.state` (over `RecipeReadEndpoint`),
+  `harness.speech.utterances`. When-helpers as above. Fixtures: `SAMPLE_DEEP_OLIVE` (C 28 / h 108), `SAMPLE_WARM_SAND`,
+  `SAMPLE_VIVID_TURQUOISE` (AC-9 out-of-gamut), `SAMPLE_OIL_TARGET` + `PALETTE_OIL` (AC-10), `PALETTE_MY_PAINTS`
+  (AC-3; paints named + id'd), the independent `referenceDeltaE00` (grade AC-5 against this, never the impl).
+- **Register AC tests** with `acTestWidgets('AC-n', '<desc>', (tester) async { … })` in `recipes_test.dart`
+  (ITEST-2: AC-1,2,3,11,12 below a header; ITEST-3: AC-4,5,6,7,8,9,10). Each is *pending* until its row is
+  deleted from `bs04/pending.dart`. **Update the pending-gate guard's `unpended` set as rows are un-pended**
+  (it is empty now; the guard asserts `pendingACs` is the exact complement).
+- **Harness vocabulary may be extended** by ITEST-2/3 (the plan allows it) — e.g. refine `whenEnterManualTarget`
+  to RECIPE-3's shipped manual form if it differs from the 3-TextField + done-action shape assumed here.
+- **Red-baseline note:** when ITEST-2/3 run `--dart-define=BS04_RUN_PENDING=true`, each new AC test must fail on
+  a Then or a Given precondition naming its owning phase (never panic). The current when-helpers fail at a
+  precondition until the behaviour lands (picker lists nothing → RECIPE-3; no recipes → ENGINE-2; etc.).
+- **Verification commands** unchanged (SCREEN-1 handoff; `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under the
+  lock on sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (always `-d <udid>`; no device ⇒ false green). Run-pending:
+  `flutter test integration_test/recipes_test.dart -d <udid> --dart-define=BS04_RUN_PENDING=true`.
+- **Known gaps / notes:** no AC tests and no behaviour yet. `{ITEST-2 ∥ ITEST-3}` both edit
+  `recipes_test.dart` — **merge-risky**; coordinate the shared file (append disjoint AC groups under their
+  headers). **G-4** must be decided before ITEST-3 pins any predicted-colour literal (ITEST-3 writes AC-5/AC-10
+  as behavioural properties regardless). Carry-over const-constructor coverage flake stands. Untracked
+  bs-05..bs-14 specs + `docs/` are not part of bs-04.
 
 ## Phase 2 — AC-1,2,3,11,12 (ITEST-2)
 
