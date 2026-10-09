@@ -202,7 +202,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (12 ACs), smoke | ✅ Done | 10,067,182 | 18m 44s (4h 40m) | analyze clean; unit 517 / integ 73 green (11 new scaffold, AC pending); grade 11A/0B PASS |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,11,12 (pending) + red baseline | ✅ Done | 6,819,011 | 25m 09s (25m 09s) | 5 pending AC tests; analyze clean; unit 517 green; integ default green (5 pending) / run-pending 5 fail clean at owner; grade 5A/0B (AC-2 B→A valid-L50 control; AC-12 A limited); fix 1/3 |
 | 7 | ITEST-3 | acceptance-tests: AC-4,5,6,7,8,9,10 (pending) + red baseline | ✅ Done | 7,282,541 | 41m 45s (1h 15m) | 7 pending AC tests; analyze clean; unit 517; integ default green (12 pending) / run-pending 7 fail clean; grade 3A + 4A-limited / 0B (augmentations → ENGINE-3/4); G-4 resolved; fix 0/3 |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 3,710,476 | 28m 03s (28m 04s) | packet assembled; full regression green (unit 517; cov PASS 15/15; integ 11 pass / 12 AC pending); grid 12 AC + 11 guards at A, 0B; G-2 awaiting human |
+| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 6,078,568 | 55m 56s (1h 01m) | packet assembled over 2 sessions; full regression green (unit 517; cov PASS 15/15; integ 11 pass / 12 AC pending); grid 12 AC + 11 guards at A, 0B; G-2 awaiting human |
 | 9 | RECIPE-3 | behavior: AC-1, AC-2 — target selection (saved sample + manual/validation) | ⬜ Todo | | | foundational |
 | 10 | ENGINE-2 | behavior: AC-3, AC-4 — palette-constrained solver + top 3–5 w/ parts + predicted colour | ⬜ Todo | | | foundational |
 | 11 | ENGINE-3 | behavior: AC-5, AC-6 — per-recipe ΔE00+verdict; prefer fewer paints | ⬜ Todo | | | serial on engine |
@@ -247,7 +247,8 @@ is the only startable action — a human decision:
 | ITEST-3 | ae6d1715 | 2026-10-08 20:49 EDT | 22:05 | 1h 15m | 41m 45s | claude-opus-4-8 | 108 | 268,482 | 6,923,809 | 90,142 | 7,282,541 | acceptance-tests: 7 pending AC tests (AC-4..AC-10) + red baseline; analyze clean; unit 517; coverage PASS (no lib touched); integration default green (12 pending), run-pending all 7 fail cleanly (precondition/Then); grade 3A + 4A-limited / 0B (augmentations -> ENGINE-3/ENGINE-4); G-4 resolved; fix passes 0/3 |
 | RECONCILE | 973d4e96 | 2026-10-08 22:18 EDT | 22:21 | 3m 02s | 3m 02s | claude-opus-4-8 | 48 | 70,257 | 1,773,336 | 12,893 | 1,856,534 | applied ITEST-2 + ITEST-3 parallel rollups: status/session-log rows 6-8/Next-phase updated, G-4 resolved, both ledger rows added; phase branches fast-forwarded into feat; 2 worktrees + 2 phase branches removed |
 | ITEST-4 | 8ceef99f | 2026-10-08 22:25 EDT | 22:53 | 28m 04s | 28m 03s | claude-opus-4-8 | 76 | 94,302 | 3,591,908 | 24,190 | 3,710,476 | packet assembled; full regression green (unit 517; cov 15/15; integ +11 ~12); G-2 awaiting human |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 22:53** | **8h 51m** | **3h 56m** |  | **1,162** | **2,054,149** | **66,347,953** | **503,024** | **68,906,288** |  |
+| ITEST-4 | 86adfcf1 | 2026-10-08 22:25 EDT | 22:58 | 33m 03s | 27m 53s | claude-opus-4-8 | 52 | 96,798 | 2,253,371 | 17,871 | 2,368,092 | test-review: packet assembled from ITEST-2/3; full regression green (analyze clean; unit 517; coverage gate PASS 15/15 touched; integration 11 scaffold/guard pass + 12 AC pending on sim under lock); grid 12 AC + 11 guards at A, 0B; phase ⏸ Awaiting review; G-2 awaiting human decision |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-08 22:53** | **9h 24m** | **4h 24m** |  | **1,214** | **2,150,947** | **68,601,324** | **520,895** | **71,274,380** |  |
 
 ## Sign-off
 

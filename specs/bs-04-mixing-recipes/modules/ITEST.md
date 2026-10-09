@@ -16,7 +16,7 @@ RECIPE-1).
 | 1 | acceptance-tests | — (harness) | ✅ Done | 10,067,182 | 18m 44s (4h 40m) |
 | 2 | acceptance-tests | AC-1,2,3,11,12 | ✅ Done | 6,819,011 | 25m 09s (25m 09s) |
 | 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ✅ Done | 7,282,541 | 41m 45s (1h 15m) |
-| 4 | test-review | — (G-2) | ⏸ Awaiting review | 3,710,476 | 28m 03s (28m 04s) |
+| 4 | test-review | — (G-2) | ⏸ Awaiting review | 6,078,568 | 55m 56s (1h 01m) |
 
 ## Interface reconciliation
 
@@ -292,7 +292,8 @@ plan edits only.
 - **Gate:** **G-2 awaiting the human decision.** Recorded via
   `/feature-next-phase --gate bs-04-mixing-recipes G-2 approved | "<changes>"`.
 - **Fix passes: 0/3** (no code; regression green first run).
-- **Tokens / Time:** 3,710,476 · 28m 03s active (28m 04s wall) — one session, no subagents.
+- **Tokens / Time:** 6,078,568 · 55m 56s active (1h 01m wall) — phase total over 2 sessions (packet
+  assembled in one session while the independent full-regression run completed in the other), no subagents.
 
 ### Checkpoint / Handoff
 
