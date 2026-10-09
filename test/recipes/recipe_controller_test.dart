@@ -86,19 +86,108 @@ void main() {
       expect(controller.palettes, [_myPaints]);
     });
 
+    group('target selection (RECIPE-3)', () {
+      const warmSand = Sample(
+        name: 'Warm Sand',
+        coordinates: ColorCoordinates(lightness: 78, a: 4, b: 23),
+        provenance: Provenance(ProvenanceTier.measured),
+      );
+
+      test('selectTarget moves the target to the chosen saved sample', () {
+        final controller = _controller();
+        var notified = 0;
+        controller.addListener(() => notified++);
+
+        controller.selectTarget(warmSand);
+
+        expect(controller.state.target, same(warmSand));
+        expect(notified, 1, reason: 'the state change notifies listeners once');
+      });
+
+      test('selectTarget carries the palette, recipes and mode unchanged', () {
+        final controller = _controller(
+          paletteSource: const InMemoryPaletteSource(catalogue: [_myPaints]),
+        );
+        controller.selectTarget(warmSand);
+
+        expect(controller.state.selectedPalette, _myPaints);
+        expect(controller.state.recipes, isEmpty);
+        expect(controller.state.mode, MixMode.wet);
+      });
+
+      test('selectTarget clears a prior manual error', () {
+        final controller = _controller();
+        controller.enterManualTarget(
+            const ColorCoordinates(lightness: 140, a: 0, b: 0));
+        expect(controller.state.manualError, isNotNull);
+
+        controller.selectTarget(warmSand);
+        expect(controller.state.manualError, isNull);
+      });
+
+      test('a valid manual entry becomes the target and clears any error', () {
+        final controller = _controller();
+        controller.enterManualTarget(
+            const ColorCoordinates(lightness: 50, a: 0, b: 0));
+
+        expect(controller.state.manualError, isNull);
+        expect(controller.state.target.coordinates,
+            const ColorCoordinates(lightness: 50, a: 0, b: 0));
+        expect(controller.state.target.provenance.tier,
+            ProvenanceTier.confirmed);
+        expect(controller.state.target, isNot(same(_olive)));
+      });
+
+      test('an out-of-range lightness is refused and the target is kept', () {
+        final controller = _controller();
+        final before = controller.state.target;
+
+        controller.enterManualTarget(
+            const ColorCoordinates(lightness: 140, a: 0, b: 0));
+
+        expect(controller.state.manualError, isNotNull);
+        expect(controller.state.target, same(before));
+      });
+
+      test('a below-range lightness is refused', () {
+        final controller = _controller();
+        controller.enterManualTarget(
+            const ColorCoordinates(lightness: -1, a: 0, b: 0));
+        expect(controller.state.manualError, isNotNull);
+      });
+
+      test('a non-finite coordinate is refused (unparseable manual field)', () {
+        final controller = _controller();
+        controller.enterManualTarget(
+            ColorCoordinates(lightness: double.nan, a: 0, b: 0));
+        expect(controller.state.manualError, isNotNull);
+      });
+
+      test('an out-of-range a* or b* is refused (L* in range)', () {
+        final controller = _controller();
+        controller.enterManualTarget(
+            const ColorCoordinates(lightness: 50, a: 200, b: 0));
+        expect(controller.state.manualError, isNotNull);
+
+        controller.enterManualTarget(
+            const ColorCoordinates(lightness: 50, a: 0, b: -200));
+        expect(controller.state.manualError, isNotNull);
+      });
+
+      test('the range boundaries (L* 0 and 100) are accepted', () {
+        final controller = _controller();
+        controller.enterManualTarget(
+            const ColorCoordinates(lightness: 0, a: -128, b: 127));
+        expect(controller.state.manualError, isNull);
+        controller.enterManualTarget(
+            const ColorCoordinates(lightness: 100, a: 0, b: 0));
+        expect(controller.state.manualError, isNull);
+      });
+    });
+
     group('actions are inert in the RECIPE-2 shell', () {
       final controller = _controller();
 
-      test('selectTarget throws until RECIPE-3', () {
-        expect(() => controller.selectTarget(_olive), throwsUnimplementedError);
-      });
-      test('enterManualTarget throws until RECIPE-3', () {
-        expect(
-          () => controller.enterManualTarget(
-              const ColorCoordinates(lightness: 42, a: -5, b: 20)),
-          throwsUnimplementedError,
-        );
-      });
       test('selectPalette throws until ENGINE-2', () {
         expect(() => controller.selectPalette(_myPaints),
             throwsUnimplementedError);

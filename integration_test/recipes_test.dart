@@ -71,12 +71,12 @@ void main() {
   );
 
   group('pending gate', () {
-    // Un-pended by the behaviour phases so far: none yet — ITEST-1 seeds all 12
-    // pending. Each behaviour phase adds its AC here as it deletes the row in
-    // `bs04/pending.dart`: RECIPE-3 → AC-1, AC-2; ENGINE-2 → AC-3, AC-4;
-    // ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8; ENGINE-5 → AC-9; ENGINE-6 →
-    // AC-10; RECIPE-4 → AC-11, AC-12.
-    const unpended = <String>{};
+    // Un-pended by the behaviour phases so far: AC-1, AC-2 (RECIPE-3). ITEST-1
+    // seeds all 12 pending; each behaviour phase adds its AC here as it deletes
+    // the row in `bs04/pending.dart`: RECIPE-3 → AC-1, AC-2; ENGINE-2 → AC-3,
+    // AC-4; ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8; ENGINE-5 → AC-9;
+    // ENGINE-6 → AC-10; RECIPE-4 → AC-11, AC-12.
+    const unpended = <String>{'AC-1', 'AC-2'};
 
     test(
       'pending map is the exact complement of the un-pended ACs across all 12, '

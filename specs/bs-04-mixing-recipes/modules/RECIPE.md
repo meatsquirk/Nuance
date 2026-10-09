@@ -1,6 +1,6 @@
 # Module RECIPE — scaffold, controller, palette source, target & spoken output
 
-**Status:** In progress — RECIPE-2 (shell) done; next RECIPE-3 (behavior, after G-2)
+**Status:** In progress — RECIPE-3 (target selection) done; next RECIPE-4 (speak, after ENGINE-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/recipes/palette.dart` (`PaintPalette`), `lib/recipes/palette_source.dart`
 (`PaletteSource`, `InMemoryPaletteSource`), `lib/recipes/recipe_state.dart`, `lib/recipes/recipe_controller.dart`,
@@ -17,7 +17,7 @@ owns `integration_test/bs04/pending.dart`.
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 3,103,321 | 16m 10s |
 | 2 | shell | — | ✅ Done | 14,660,317 | 44m 03s |
-| 3 | behavior | AC-1, AC-2 | ⬜ Todo | | |
+| 3 | behavior | AC-1, AC-2 | ✅ Done | 18,470,473 | 46m 17s |
 | 4 | behavior | AC-11, AC-12 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -37,7 +37,8 @@ owns `integration_test/bs04/pending.dart`.
 ## Open gates
 
 - **G-1 (approve the spec)** ✅ Resolved 2026-10-08 12:57 EDT — spec approved as-is by Matt Quirk; `.feature` first line stamped. RECIPE-1 unblocked.
-- **G-2 (approve the acceptance tests)** blocks RECIPE-3, RECIPE-4 (every behaviour phase).
+- **G-2 (approve the acceptance tests)** ✅ Resolved 2026-10-09 by Matt Quirk — the 12 pending AC tests
+  accepted as the acceptance contract. Behaviour stage open; RECIPE-3 done, RECIPE-4 awaits ENGINE-2.
 
 ## Phase 1 — Scaffold (RECIPE-1)
 
@@ -175,6 +176,62 @@ Shell landed; the Recipes feature now assembles end-to-end with inert behaviour.
   3. Un-pend AC-1, AC-2; unit-test set-from-sample, valid manual entry, and the out-of-range rejection keeping the previous target.
 - **Exit criteria:** AC-1/AC-2 green; default suite green; unit gate + 100% coverage touched.
 - **Acceptance gate:** un-pend AC-1, AC-2; `flutter test integration_test/recipes_test.dart -d <udid>` green (`TestAC01_*`, `TestAC02_*`); grade gate passed.
+
+### Result
+
+Target selection landed; AC-1 and AC-2 are un-pended and green. The controller sets the target from a saved
+sample and from a range-validated manual CIELAB entry; the E22 selector sheet wires both.
+
+- **Controller (`recipe_controller.dart`):** `selectTarget(sample)` emits a new state with the chosen target
+  (palette/recipes/mode carried, `manualError` cleared); `enterManualTarget(coordinates)` validates CIELAB
+  range (L\* 0–100, a\*/b\* within ±128, all finite) — out of range raises `manualError` and keeps the previous
+  target **instance** unchanged, in range becomes a `confirmed` / "Entered by hand" target. Added the single
+  `_emit` mutation path (reconstruct + notify, mirrors bs-03) and dropped the shell's `prefer_final_fields`
+  ignore now `_state` is reassigned.
+- **Target region (`target_region.dart`):** the inert "Choose target" button now opens a modal
+  `_TargetSelectorSheet` listing `savedSamples` (tap → `selectTarget`) and a by-hand L\*/a\*/b\* form (submit →
+  `enterManualTarget`; an unparseable field → `NaN`, refused); the manual error renders under the selector
+  (`manualErrorKey`). "Speak target" stays inert (RECIPE-4).
+- **Un-pended:** AC-1, AC-2 removed from `integration_test/bs04/pending.dart`; added to the guard's `unpended`
+  set in `recipes_test.dart`. Flipped the E22 inert assertion in `recipes_screen_test.dart`; added
+  `test/recipes/target_region_test.dart` (picker, valid/rejected/unparseable manual entry).
+- **Gates:** `flutter analyze` clean; unit **529 green** (`flutter test --coverage`); coverage gate **100% on
+  all 15 touched lib files** (`recipe_controller.dart` + `target_region.dart` changed). Integration **green on
+  the iPhone 17 sim (`5AB9D06D…`) under the verify lock** — full suite `+75 ~10` (the 10 skips are the still
+  pending AC-3..12); `TestAC01_ChooseSavedTarget` and `TestAC02_ManualTargetRefused` run and pass.
+- **Grade gate:** an independent grader (fresh context) re-graded AC-1 and AC-2 against the implemented
+  behaviour — **2×A, 0×B — PASS**; section appended to `behavior-test-completeness-bs-04-mixing-recipes.md`.
+  No augmentations owned by RECIPE-3.
+- **Fix passes: 2/3** (pass 1: missing `provenance` import + a test import + a double-underscore lint; pass 2:
+  two uncovered per-field `onSubmitted` closures → one shared callback).
+- **Tokens / Time:** 18,470,473 · 46m 17s active (46m 18s wall; 1 grader subagent included).
+
+### Checkpoint / Handoff
+
+- **Frozen for the behaviour phases:**
+  - `RecipeController.selectTarget(Sample)` and `enterManualTarget(ColorCoordinates)` are live, routing through
+    the private `_emit(RecipeState)` path (reconstruct + notify; no `copyWith`). **ENGINE-2**'s solve-on-change
+    should call its solve inside/after `selectTarget` (and `selectPalette`); RECIPE-3 carries `recipes`
+    unchanged for now (it does not solve).
+  - Manual validation: `_inLabRange` (L\* 0–100, a\*/b\* ±128, finite). Out of range → `RecipeState.manualError`
+    set and the target **instance** kept (AC-2 asserts identity); in range → a `Sample` named 'Manual target'
+    with `Provenance(ProvenanceTier.confirmed, note: 'Entered by hand')`.
+  - `TargetRegion` opens `_TargetSelectorSheet` (a modal bottom sheet) from the now-enabled "Choose target"
+    button; `TargetRegion.manualErrorKey` anchors the error line. "Speak target" is still inert → **RECIPE-4**
+    wires it in this same file (file-shared with RECIPE-4).
+- **Parallel / merge note:** RECIPE-3 edited `recipe_controller.dart`, `target_region.dart`, `bs04/pending.dart`,
+  `recipes_test.dart` (guard `unpended`), `recipes_screen_test.dart`, the grade grid, + added
+  `test/recipes/target_region_test.dart`. **ENGINE-2 also edits `recipe_controller.dart`, `bs04/pending.dart`
+  and the `recipes_test.dart` guard** — merge-risky, but the controller edits sit in disjoint method regions
+  (`selectTarget`/`enterManualTarget` vs `selectPalette`/solve) and the pending/guard edits are disjoint AC rows,
+  so a 3-way merge is clean when both anchor minimally.
+- **Verification commands** unchanged (`export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` ·
+  `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under the verify lock on sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (always `-d <udid>`; no device ⇒ false green). Run the integration
+  suite from the worktree.
+- **Known gaps / notes:** RECIPE-4 (speak) depends on ENGINE-2 (a recipe to speak); RECIPE-3 does not solve.
+  Carry-over const-constructor coverage flake stands. Untracked bs-05..bs-14 specs + `docs/` are not part of
+  bs-04.
 
 ## Phase 4 — Spoken target & recipe (RECIPE-4)
 

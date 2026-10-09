@@ -68,18 +68,18 @@ void main() {
   });
 
   group('TargetRegion', () {
-    testWidgets('shows the named target with inert selector and speak controls',
+    testWidgets('shows the named target with a wired selector and inert speak',
         (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
       await _pumpRegion(tester, TargetRegion(controller: controller));
 
       expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
-      // E22 and E23 are present but inert until RECIPE-3 / RECIPE-4.
-      expect(_enabled(tester, 'Choose target'), isFalse,
-          reason: 'E22 target selector is not wired in SCREEN-1');
+      // E22 is wired by RECIPE-3; E23 stays inert until RECIPE-4.
+      expect(_enabled(tester, 'Choose target'), isTrue,
+          reason: 'E22 target selector is wired in RECIPE-3');
       expect(_enabled(tester, 'Speak target'), isFalse,
-          reason: 'E23 speak target is not wired in SCREEN-1');
+          reason: 'E23 speak target is not wired until RECIPE-4');
     });
 
     testWidgets('falls back to (unnamed) for a target with no name',

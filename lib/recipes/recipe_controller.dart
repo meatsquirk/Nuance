@@ -4,6 +4,7 @@ import '../a11y/speech.dart';
 import '../app/router.dart';
 import '../compare/sample_source.dart';
 import '../domain/color_coordinates.dart';
+import '../domain/provenance.dart';
 import '../domain/sample.dart';
 import 'engine/mixing_engine.dart';
 import 'palette.dart';
@@ -60,10 +61,9 @@ class RecipeController extends ChangeNotifier {
   /// Typed navigation (e.g. back to a sample's Readout), injected by the app.
   final AppRouter router;
 
-  // Reassigned by the behaviour phases: selection re-derives the target, the
-  // solve fills the recipes, the toggle moves the mode. Only assigned once in
-  // this inert shell, hence the ignore — it is not final by design.
-  // ignore: prefer_final_fields
+  // Reassigned through [_emit] as the painter acts: selection re-derives the
+  // target (RECIPE-3), the solve fills the recipes (ENGINE-2), the toggle moves
+  // the mode (ENGINE-6). Not final by design.
   RecipeState _state;
 
   /// The current observable recipe state.
@@ -85,20 +85,71 @@ class RecipeController extends ChangeNotifier {
     );
   }
 
-  // --- Actions deferred to the behaviour phases (inert in this shell) ---
-  //
-  // Each throws until its phase fills it; the phase that adds the first real
-  // mutation also adds the private emit/notify path these will route through.
+  // --- Target selection (RECIPE-3) ---
 
-  /// Chooses a saved [sample] as the mixing target (AC-1) — RECIPE-3.
-  void selectTarget(Sample sample) =>
-      throw UnimplementedError(_deferred('RECIPE-3'));
+  /// Chooses a saved [sample] as the mixing target (AC-1).
+  ///
+  /// Moves the target to [sample] and clears any outstanding manual-entry error;
+  /// the palette, recipes and mode are carried unchanged (the re-solve on a new
+  /// target lands in ENGINE-2).
+  void selectTarget(Sample sample) => _emit(RecipeState(
+        target: sample,
+        selectedPalette: _state.selectedPalette,
+        recipes: _state.recipes,
+        mode: _state.mode,
+      ));
 
   /// Sets a manually entered CIELAB [coordinates] target, validating its range
-  /// and leaving the previous target unchanged on an impossible value (AC-2) —
-  /// RECIPE-3.
-  void enterManualTarget(ColorCoordinates coordinates) =>
-      throw UnimplementedError(_deferred('RECIPE-3'));
+  /// and leaving the previous target unchanged on an impossible value (AC-2).
+  ///
+  /// A value outside CIELAB's range (L\* 0–100, a\*/b\* within ±128, all finite)
+  /// is refused: [RecipeState.manualError] is raised and [RecipeState.target] is
+  /// kept exactly as it was. An in-range entry becomes the new target (a
+  /// painter-confirmed sample) and clears the error.
+  void enterManualTarget(ColorCoordinates coordinates) {
+    if (!_inLabRange(coordinates)) {
+      _emit(RecipeState(
+        target: _state.target,
+        selectedPalette: _state.selectedPalette,
+        recipes: _state.recipes,
+        mode: _state.mode,
+        manualError: _manualRangeError,
+      ));
+      return;
+    }
+    _emit(RecipeState(
+      target: Sample(
+        name: 'Manual target',
+        coordinates: coordinates,
+        provenance:
+            const Provenance(ProvenanceTier.confirmed, note: 'Entered by hand'),
+      ),
+      selectedPalette: _state.selectedPalette,
+      recipes: _state.recipes,
+      mode: _state.mode,
+    ));
+  }
+
+  /// The message shown when a manual target is out of CIELAB's range (AC-2).
+  static const String _manualRangeError =
+      'Enter L* 0–100 and a*/b* within ±128.';
+
+  /// Whether [c] is a representable CIELAB colour: finite, L\* in 0–100 and
+  /// a\*/b\* within ±128.
+  static bool _inLabRange(ColorCoordinates c) =>
+      _within(c.lightness, 0, 100) &&
+      _within(c.a, -128, 127) &&
+      _within(c.b, -128, 127);
+
+  static bool _within(double v, double lo, double hi) =>
+      v.isFinite && v >= lo && v <= hi;
+
+  /// Assigns [next] as the current state and notifies listeners — the single
+  /// mutation path every action routes through (mirrors bs-03).
+  void _emit(RecipeState next) {
+    _state = next;
+    notifyListeners();
+  }
 
   /// Constrains the solve to [palette] and re-solves (AC-3) — ENGINE-2.
   void selectPalette(PaintPalette palette) =>

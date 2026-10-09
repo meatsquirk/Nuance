@@ -84,3 +84,14 @@ Judgement calls:
 - **Red baseline clean (G5):** each of the seven fails as a `TestFailure` (never a panic) at a Then or a Given precondition — AC-9 at the OUT OF GAMUT banner Then (ENGINE-5), the rest at a `recipes`/`length` precondition naming the solve (ENGINE-2) or ordering (ENGINE-3). Determinism: `pumpAndSettle` throughout, no fixed sleeps.
 
 Gate recommendation: **PASS** — all seven ITEST-3 AC tests meet the grade-A bar (4 recorded A (limited) with augmentations owned by their behaviour phases).
+
+## RECIPE-3 behaviour re-grade (AC-1, AC-2)
+
+Re-graded 2026-10-09 by an independent grader (fresh context) against the **now-implemented** RECIPE-3 behaviour (`RecipeController.selectTarget` / `enterManualTarget` + `_TargetSelectorSheet`), not the earlier red-baseline/pending shell. Both un-pended (removed from `pendingACs`) and both run green in the default suite — confirmed by executing `flutter test integration_test/recipes_test.dart --plain-name "TestAC01" / "TestAC02"` (both `All tests passed!`). Prior ITEST-2 grades were A; no downgrade.
+
+| Test | Grade | Rules | Justification |
+| --- | --- | --- | --- |
+| AC-1 — `TestAC01_ChooseSavedTarget` | A | G1–G6 | Opens on `SAMPLE_WARM_SAND` (asserts `state.target == SAMPLE_WARM_SAND` + rendered `Recipe target: Warm Sand` + catalogue offers Deep Olive before the When — G1/G3 change-control), picks via the real injected picker reading `controller.savedSamples` (G2), then asserts `state.target == SAMPLE_DEEP_OLIVE`, `lightness == 42`, `_chroma≈28`, `_hueDeg≈108` and the rendered line (G4). Against the real `selectTarget` (emits a new state with `target: sample`) it discriminates: a no-op keeps Warm Sand, a hard-coded-target impl ignores the Warm-Sand start, and an identity-without-coordinates impl fails the L/C/h decomposition. Passes green. |
+| AC-2 — `TestAC02_ManualTargetRefused` | A | G1–G6 | Asserts `target`/`manualError==null` before (G1), runs a **valid L50/a0/b0 control** that must be accepted and move the target off `SAMPLE_DEEP_OLIVE` (captured as `kept`), then enters L140 and asserts `manualError isNotNull` + `target == kept` (G3/G5 differential; a*/b* held at 0 so only lightness crosses the 0–100 ceiling — G4 reason-grain). Against the real `enterManualTarget`/`_inLabRange` it separates range-validation from an inert handler (fails the L50 move), a reject-all handler (errors on L50) and an accept-all handler (L140 would change target / raise no error). Error text not asserted — correct, the message is an internal detail. Passes green. |
+
+Gate recommendation: **PASS** — both AC-1 and AC-2 grade A against the implemented RECIPE-3 behaviour and run green.

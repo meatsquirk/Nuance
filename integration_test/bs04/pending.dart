@@ -42,8 +42,6 @@ import 'package:flutter_test/flutter_test.dart';
 /// un-pends that AC. Every owner must be a member of [behaviorPhases].
 const Map<String, String> pendingACs = {
   // AC-1, AC-2 un-pended by RECIPE-3 (target selection: saved sample + manual).
-  'AC-1': 'RECIPE-3',
-  'AC-2': 'RECIPE-3',
   // AC-3, AC-4 un-pended by ENGINE-2 (palette-constrained solver + top recipes).
   'AC-3': 'ENGINE-2',
   'AC-4': 'ENGINE-2',
