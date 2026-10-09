@@ -41,7 +41,7 @@ class RecipeController extends ChangeNotifier {
     required Sample target,
     this.speech = const NoopSpeech(),
     this.router = const AppRouter(),
-  }) : _state = _initial(target, paletteSource);
+  }) : _state = _initial(target, paletteSource, mixingEngine);
 
   /// The saved-sample catalogue the AC-1 target picker lists (reused from bs-03).
   final SampleSource sampleSource;
@@ -60,10 +60,11 @@ class RecipeController extends ChangeNotifier {
   /// Typed navigation (e.g. back to a sample's Readout), injected by the app.
   final AppRouter router;
 
+  /// The solver options every solve runs under (the D-8/D-10/D-12 defaults).
+  static const MixOptions _options = MixOptions();
+
   // Reassigned by the behaviour phases: selection re-derives the target, the
-  // solve fills the recipes, the toggle moves the mode. Only assigned once in
-  // this inert shell, hence the ignore — it is not final by design.
-  // ignore: prefer_final_fields
+  // solve fills the recipes, the toggle moves the mode.
   RecipeState _state;
 
   /// The current observable recipe state.
@@ -76,13 +77,36 @@ class RecipeController extends ChangeNotifier {
   List<PaintPalette> get palettes => paletteSource.palettes();
 
   /// Builds the initial state for [target], defaulting the selected palette to
-  /// the first the [source] offers.
-  static RecipeState _initial(Sample target, PaletteSource source) {
+  /// the first the [source] offers and solving the recipes over it on open
+  /// (ENGINE-2) so the screen shows mixes without the painter acting first.
+  static RecipeState _initial(
+    Sample target,
+    PaletteSource source,
+    MixingEngine engine,
+  ) {
     final available = source.palettes();
+    final selected = available.isEmpty ? null : available.first;
     return RecipeState(
       target: target,
-      selectedPalette: available.isEmpty ? null : available.first,
+      selectedPalette: selected,
+      recipes: _solve(engine, target, selected),
     );
+  }
+
+  /// The recipes the [engine] finds for [target] over [palette], or none when no
+  /// palette is selected (nothing to constrain the solve to).
+  static List<Recipe> _solve(
+    MixingEngine engine,
+    Sample target,
+    PaintPalette? palette,
+  ) =>
+      palette == null ? const [] : engine.inverse(target, palette, _options);
+
+  /// Replaces the observable [state] and notifies listeners (the first real
+  /// mutation path the behaviour phases route their changes through).
+  void _emit(RecipeState next) {
+    _state = next;
+    notifyListeners();
   }
 
   // --- Actions deferred to the behaviour phases (inert in this shell) ---
@@ -100,9 +124,16 @@ class RecipeController extends ChangeNotifier {
   void enterManualTarget(ColorCoordinates coordinates) =>
       throw UnimplementedError(_deferred('RECIPE-3'));
 
-  /// Constrains the solve to [palette] and re-solves (AC-3) — ENGINE-2.
-  void selectPalette(PaintPalette palette) =>
-      throw UnimplementedError(_deferred('ENGINE-2'));
+  /// Constrains the solve to [palette] and re-solves over it (AC-3) — ENGINE-2.
+  void selectPalette(PaintPalette palette) {
+    _emit(RecipeState(
+      target: _state.target,
+      selectedPalette: palette,
+      recipes: _solve(mixingEngine, _state.target, palette),
+      mode: _state.mode,
+      manualError: _state.manualError,
+    ));
+  }
 
   /// Switches between wet and dry predictions (AC-10) — ENGINE-6.
   void setMode(MixMode mode) => throw UnimplementedError(_deferred('ENGINE-6'));

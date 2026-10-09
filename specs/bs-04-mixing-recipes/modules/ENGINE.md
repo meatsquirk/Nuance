@@ -1,6 +1,6 @@
 # Module ENGINE — the mixing engine
 
-**Status:** In progress — ENGINE-1 (shell) done; next ENGINE-2 (behaviour, after RECIPE-3 / G-2)
+**Status:** In progress — ENGINE-2 done (forward+inverse; AC-3/AC-4 green); ENGINE-3 & ENGINE-5 **blocked by G-5** (Deep Olive best ΔE00 ≈ 9.31 > the in-gamut ceiling 5.0 the ACs assert); ENGINE-4 unblocked
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (`Paint`, `PaintMedium`), `lib/recipes/engine/mixing_engine.dart`
 (`MixingEngine` interface, `Recipe`, `RecipeComponent`, `MixOptions`), `lib/recipes/engine/subtractive_engine.dart`
@@ -14,7 +14,7 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 6,408,543 | 21m 15s |
-| 2 | behavior | AC-3, AC-4 | ⬜ Todo | | |
+| 2 | behavior | AC-3, AC-4 | ✅ Done | 19,431,437 | 50m 12s |
 | 3 | behavior | AC-5, AC-6 | ⬜ Todo | | |
 | 4 | behavior | AC-7, AC-8 | ⬜ Todo | | |
 | 5 | behavior | AC-9 | ⬜ Todo | | |
@@ -37,10 +37,26 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
 
 ## Open gates
 
-- **G-4 (spec-data / engine reconciliation — spec author)** blocks ENGINE-2..6: confirm the pinned predicted
-  colours are illustrative (ACs assert behavioural properties, D-13), the v1 subtractive forward approach
-  (D-2), the gamut threshold (D-10) and the ~2% trace threshold (D-12). Until resolved, ENGINE behaviour
-  phases code the behaviour but pin no spec literal.
+- **G-4 (spec-data / engine reconciliation — spec author)** ✅ resolved 2026-10-08: pinned predicted colours
+  are illustrative (ACs assert behavioural properties, D-13); v1 subtractive forward+inverse (D-2); gamut
+  ΔE00 > 5 (D-10), trace ~2% (D-12).
+- **G-5 (spec-data / engine reachability — spec author) — OPEN, raised by ENGINE-2. Blocks ENGINE-3 (AC-5)
+  and ENGINE-5 (AC-9 in-gamut control).** The v1 subtractive engine (D-2), built and verified in ENGINE-2,
+  **cannot reach `SAMPLE_DEEP_OLIVE` (L 42, a\* −8.65, b\* 26.63) within the in-gamut ceiling the approved ACs
+  assert.** Best achievable ΔE00 ≈ **9.31** (Titanium White 21% + Yellow Ochre 70% + Ivory Black 9%; predicted
+  a\* ≈ +1), because `PALETTE_MY_PAINTS` has no green/phthalo pigment and Ultramarine + Yellow Ochre mix to a
+  grey-olive, not a green a\* < 0 — a limit robust across KM and geometric-mean subtractive mixing, not a
+  calibration quirk. But `recipes_test.dart` hard-codes `const gamutThreshold = 5.0` and asserts
+  **AC-5** `best.deltaE00 ≤ 5` + verdict "very close", and **AC-9**'s control asserts Deep Olive is *not*
+  out-of-gamut (so its best must be ≤ 5). For reference: Vivid Turquoise ΔE00 ≈ 22.68 (correctly unreachable,
+  AC-9 main path fine); Studio Olive oil ΔE00 ≈ 0.11 (AC-10 fine). The spec author must choose one, and it
+  reshapes ITEST-3 (an approved test, so a test-review round) or a fixture/palette:
+  (a) retarget `SAMPLE_DEEP_OLIVE` to an olive the earthy palette actually reaches (a\* nearer 0);
+  (b) add a green/phthalo pigment to `PALETTE_MY_PAINTS` so the olive-green is mixable;
+  (c) raise the in-gamut ceiling the ACs assert (changes the approved `gamutThreshold`); or
+  (d) accept a measured-pigment engine for v1 (deferred per D-2/SI D3). Until G-5 resolves, ENGINE-3 and
+  ENGINE-5 cannot pass their acceptance gates; **ENGINE-4 (AC-7 trace, AC-8 muddying)** and the RECIPE phases
+  are unaffected and can proceed.
 
 ## Phase 1 — Engine types + interface + stub (ENGINE-1)
 
@@ -120,6 +136,71 @@ Shell landed; all four engine types + the stub engine wired into production asse
   4. Un-pend AC-3, AC-4; write unit tests for the solver (palette constraint, count bound 3–5, determinism) and every branch.
 - **Exit criteria:** `BS04_RUN_PENDING` AC-3/AC-4 green; default suite green; unit gate + 100% coverage on touched files.
 - **Acceptance gate:** un-pend AC-3, AC-4; `flutter test integration_test/recipes_test.dart -d <udid>` green (`TestAC03_*`, `TestAC04_*` + all earlier ACs); grade gate passed.
+
+### Result
+
+Forward + inverse landed; AC-3 and AC-4 un-pended and green end-to-end.
+
+- **Engine** (`lib/recipes/engine/subtractive_engine.dart`): a self-contained Kubelka–Munk–class v1. Each
+  masstone CIELAB is lifted to a smooth reflectance (illuminant-E, analytic CIE-1931 CMFs — Wyman 2013; a
+  three-Gaussian reflectance basis solved to match XYZ, so a single paint round-trips its own masstone).
+  **forward** mixes reflectances by single-constant KM (volume-weighted K/S, inverted to reflectance) →
+  CIELAB — subtractive, so yellow + blue darken toward green. `dry: true` throws (ENGINE-6). **inverse**
+  enumerates palette subsets by ascending size within a medium (recipes never span media), optimises each
+  subset's volumes (coarse simplex grid → coordinate descent) to minimise the shipped `deltaE00`, drops
+  zeroed paints, dedups by paint-set and returns the top `topK` best-first with parts + predicted colour.
+- **Wiring**: `RecipeController` solves over the selected palette **on open** and on `selectPalette`
+  (`_solve`/`_emit` added — the first real mutation path); `RecipeListRegion` renders a card per recipe
+  (paints as parts, predicted colour, an inert "Speak recipe" per card for RECIPE-4). Controller `selectTarget`
+  / `enterManualTarget` (RECIPE-3), `setMode` (ENGINE-6) and `speak*` (RECIPE-4) stay deferred.
+- **Un-pended** AC-3, AC-4 — row deleted in `integration_test/bs04/pending.dart` **and** added to the
+  `unpended` guard set in `recipes_test.dart` (shared with RECIPE-3's AC-1/AC-2 un-pend — distinct lines).
+- **ITEST smoke change (recorded):** `recipes_test.dart`'s never-pending smoke test asserted the shell
+  snapshot `state.recipes isEmpty` / `hasRecipes isFalse`; ENGINE-2 solves on open (as AC-3/AC-4's
+  `givenRecipes` → `state.recipes isNotEmpty` require), so those two lines were flipped to `isNotEmpty` /
+  `isTrue` with a comment. No AC test weakened; no AC assertion changed.
+- **Gates:** `flutter analyze` clean; **unit 531 green** (`flutter test --coverage`, +14 net over 517 after
+  replacing the ENGINE-1 shell-stub tests); **100% line coverage on all touched files** (`coverage_gate.dart
+  main` PASS); **integration recipes suite green** (`-d 5AB9D06D…` under the verify lock: `TestAC03_*`,
+  `TestAC04_*` + smoke pass, the 10 still-pending ACs skip) and the **bs-01/02/03 capture+comparison suites
+  stay green** (full-suite run; recipes re-run after the smoke fix confirmed +13 ~10 -0).
+- **Fix passes: 1/3** — the first integration run failed only on the smoke test's stale shell assertion
+  (recipes now solved on open); flipping those two lines fixed it. The engine/solver passed first time.
+- **Grade gate:** AC-3 / AC-4 graded **A** (behavioural properties — palette constraint by paint id; 3–5
+  distinct recipes with positive parts summing to 1 and a rendered predicted colour; no literal pinned, D-13).
+- **Raised G-5 (blocks ENGINE-3 / ENGINE-5):** the verified engine reaches Deep Olive only to ΔE00 ≈ **9.31**
+  (earthy palette has no green pigment), but the approved ACs assert an in-gamut ceiling of 5.0 — see
+  *Open gates* above. ENGINE-4 and the RECIPE phases are unaffected.
+- **Tokens / Time:** 19,431,437 · 50m 12s.
+
+### Checkpoint / Handoff
+
+- **Frozen for ENGINE-3..6 / RECIPE / SCREEN:**
+  - `SubtractiveMixingEngine.forward(Map<Paint,double>, {bool dry})` (wet implemented; `dry:true` throws —
+    ENGINE-6 fills the per-medium transform there) and `inverse(Sample, PaintPalette, MixOptions)` (returns
+    best-first, deduped, ≤ `topK`, positive parts summing to 1, `verdict`/`outOfGamut`/`muddying` at
+    defaults). The `_Spectral` pipeline and the `_optimise` solver are internal; downstream phases layer on
+    top via the returned `Recipe`s, not by re-deriving the math.
+  - `RecipeController` solves on open and on `selectPalette`, through `_solve(engine, target, palette)` and
+    `_emit(state)`. **RECIPE-3** routes its `selectTarget` / `enterManualTarget` re-solve through the same
+    `_solve`/`_emit` (merge note below). **ENGINE-6** adds the mode re-predict through `_emit`.
+  - `RecipeListRegion` renders `state.recipes` as a card each; ENGINE-3 adds the verdict + ΔE line, ENGINE-4
+    the "a touch of" trace + muddying, ENGINE-5 the out-of-gamut label, RECIPE-4 wires each card's speak
+    control.
+- **Parallel merge notes (shared files, reconcile at RECONCILE):** `recipe_controller.dart` (RECIPE-3 also
+  edits it — it adds `selectTarget`/`enterManualTarget`; ENGINE-2 added `_solve`/`_emit`/`selectPalette` +
+  the solving constructor), `integration_test/bs04/pending.dart` and `recipes_test.dart`'s `unpended` set
+  (RECIPE-3 removes AC-1/AC-2; ENGINE-2 removed AC-3/AC-4 — distinct lines), and the `recipes_test.dart`
+  smoke-test lines. Re-read before merging.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under
+  the lock: `$C with-lock bs-04-mixing-recipes <PHASE> --wait 900 -- bash -c "export PATH=…; cd <worktree> &&
+  flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685"`.
+- **Next phase:** **G-5 must be resolved before ENGINE-3 / ENGINE-5.** ENGINE-4 (AC-7 trace, AC-8 muddying)
+  is startable now (serial on `subtractive_engine.dart`); RECIPE-3 / RECIPE-4 independent. Reachability data
+  for the gate: Deep Olive 9.31, Vivid Turquoise 22.68, Studio Olive (oil) 0.11.
+- **Known gaps:** `verdict` null, `outOfGamut`/`muddying` false, `isTrace` false on every component, `dry`
+  unimplemented — all land in ENGINE-3..6. The ΔE reachability limit (G-5) is the one blocking issue.
 
 ## Phase 3 — ΔE00 + verdict + prefer fewer paints (ENGINE-3)
 

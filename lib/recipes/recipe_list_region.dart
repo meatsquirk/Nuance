@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'engine/mixing_engine.dart';
 import 'recipe_controller.dart';
 
 /// The recipe-list region of the Recipes screen (wireframe S1.R1 — the recipe
@@ -25,16 +26,46 @@ class RecipeListRegion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final recipes = controller.state.recipes;
     return Column(
       key: regionKey,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        // ENGINE-2 replaces this with a card per solved recipe; until then the
-        // list is an empty-state placeholder.
-        Text('No recipes yet'),
-        // E25 Speak recipe — inert until RECIPE-4 (AC-12).
-        TextButton(onPressed: null, child: Text('Speak recipe')),
-      ],
+      children: recipes.isEmpty
+          ? const [Text('No recipes yet')]
+          : [
+              for (final recipe in recipes) _RecipeCard(recipe: recipe),
+            ],
+    );
+  }
+}
+
+/// One solved recipe (ENGINE-2): its paints as parts by volume and the mix's
+/// predicted colour. The per-recipe "Speak recipe" control (E25) is inert until
+/// RECIPE-4 wires it to the controller (AC-12).
+class _RecipeCard extends StatelessWidget {
+  const _RecipeCard({required this.recipe});
+
+  final Recipe recipe;
+
+  @override
+  Widget build(BuildContext context) {
+    final predicted = recipe.predictedColor;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final component in recipe.components)
+              Text('${component.paint.name} — '
+                  '${(component.partsFraction * 100).round()}%'),
+            Text('Predicted colour: L ${predicted.lightness.round()}, '
+                'a ${predicted.a.round()}, b ${predicted.b.round()}'),
+            // E25 Speak recipe — inert until RECIPE-4 (AC-12).
+            const TextButton(onPressed: null, child: Text('Speak recipe')),
+          ],
+        ),
+      ),
     );
   }
 }
