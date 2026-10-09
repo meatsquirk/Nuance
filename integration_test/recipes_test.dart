@@ -21,6 +21,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/recipes/controls_region.dart';
+import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
+import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
 import 'package:paint_color_assistant/recipes/gamut_banner.dart';
 import 'package:paint_color_assistant/recipes/recipe_list_region.dart';
 import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
@@ -157,12 +159,42 @@ void main() {
       expect(CATALOGUE.length, 3);
     });
 
-    test('Deep Olive Green recovers its C 28 / h 108 (AC-1 render)', () {
-      // AC-1 renders "L 42, C 28, h 108"; the target derives C/h from a*/b*, so
-      // the fixture must carry those polar values.
+    test('Deep Olive Green recovers its C 24 / h 93 (AC-1 render)', () {
+      // AC-1 renders "L 42, C 24, h 93"; the target derives C/h from a*/b*, so
+      // the fixture must carry those polar values. (Retargeted in ITEST-5 from
+      // the old C 28 / h 108 — G-5 (a).)
       expect(SAMPLE_DEEP_OLIVE.coordinates.lightness, 42);
-      expect(_chroma(SAMPLE_DEEP_OLIVE.coordinates), closeTo(28, 0.05));
-      expect(_hueDeg(SAMPLE_DEEP_OLIVE.coordinates), closeTo(108, 0.1));
+      expect(_chroma(SAMPLE_DEEP_OLIVE.coordinates), closeTo(24, 0.05));
+      expect(_hueDeg(SAMPLE_DEEP_OLIVE.coordinates), closeTo(93, 0.1));
+    });
+
+    test('the real engine reaches Deep Olive but not Vivid Turquoise (G-5 (a) '
+        'reachability guard)', () {
+      // The retarget's whole point: the earthy "My paints" (no green/phthalo
+      // pigment) must actually REACH "Deep Olive Green" inside the ΔE00 ≤ 5
+      // in-gamut ceiling, while the strongly-green "Vivid Turquoise" stays out.
+      // Run the *real* SubtractiveMixingEngine (no fake) so this guard verifies
+      // the fixture against the shipped solver, not against hand-picked numbers —
+      // the same ΔE00 the gamut verdict (ENGINE-5) will threshold.
+      const engine = SubtractiveMixingEngine();
+      const opts = MixOptions();
+      const ceiling = 5.0; // MixOptions.gamutThreshold
+
+      final oliveRecipes =
+          engine.inverse(SAMPLE_DEEP_OLIVE, PALETTE_MY_PAINTS, opts);
+      expect(oliveRecipes, isNotEmpty,
+          reason: 'the palette must yield recipes for the olive');
+      expect(oliveRecipes.first.deltaE00, lessThanOrEqualTo(ceiling),
+          reason: 'Deep Olive must be reachable within the in-gamut ceiling — '
+              'the retargeted fixture sits inside the palette gamut (G-5 (a))');
+
+      final turquoiseRecipes =
+          engine.inverse(SAMPLE_VIVID_TURQUOISE, PALETTE_MY_PAINTS, opts);
+      expect(turquoiseRecipes, isNotEmpty,
+          reason: 'even unreachable, the engine offers a nearest mix');
+      expect(turquoiseRecipes.first.deltaE00, greaterThan(ceiling),
+          reason: 'Vivid Turquoise stays genuinely out of gamut (AC-9 control), '
+              'so the reachability guard is not vacuously true for any target');
     });
 
     test('"My paints" lists the five named paints (AC-3 names three)', () {
@@ -259,8 +291,8 @@ void main() {
   group('ITEST-2 — AC-1, AC-2, AC-3, AC-11, AC-12', () {
     acTestWidgets('AC-1', 'TestAC01_ChooseSavedTarget — a saved sample is set '
         'as the target at its L/C/h', (tester) async {
-      // Given: the painter has a saved sample "Deep Olive Green" at L 42, C 28,
-      // h 108, and is currently mixing toward a *different* saved target so the
+      // Given: the painter has a saved sample "Deep Olive Green" at L 42, C 24,
+      // h 93, and is currently mixing toward a *different* saved target so the
       // choice is observable (control: the reading can change).
       final harness = await givenRecipes(tester, target: SAMPLE_WARM_SAND);
       expect(
@@ -275,12 +307,12 @@ void main() {
       // When: the painter chooses "Deep Olive Green" as the recipe target.
       await harness.whenChooseSavedTarget('Deep Olive Green');
 
-      // Then: "Deep Olive Green" at L 42, C 28, h 108 is the target — both the
+      // Then: "Deep Olive Green" at L 42, C 24, h 93 is the target — both the
       // observable state and the rendered target line.
       expect(harness.state.target, SAMPLE_DEEP_OLIVE);
       expect(harness.state.target.coordinates.lightness, 42);
-      expect(_chroma(harness.state.target.coordinates), closeTo(28, 0.05));
-      expect(_hueDeg(harness.state.target.coordinates), closeTo(108, 0.1));
+      expect(_chroma(harness.state.target.coordinates), closeTo(24, 0.05));
+      expect(_hueDeg(harness.state.target.coordinates), closeTo(93, 0.1));
       expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
     });
 
@@ -363,13 +395,13 @@ void main() {
 
     acTestWidgets('AC-11', 'TestAC11_SpeakTarget — the spoken target states its '
         'name and L, C and hue', (tester) async {
-      // Given: the target is "Deep Olive Green" at L 42, C 28, h 108, and
+      // Given: the target is "Deep Olive Green" at L 42, C 24, h 93, and
       // nothing has been spoken yet.
       final harness = await givenRecipes(tester, target: SAMPLE_DEEP_OLIVE);
       expect(harness.state.target, SAMPLE_DEEP_OLIVE);
       expect(harness.state.target.coordinates.lightness, 42);
-      expect(_chroma(harness.state.target.coordinates), closeTo(28, 0.05));
-      expect(_hueDeg(harness.state.target.coordinates), closeTo(108, 0.1));
+      expect(_chroma(harness.state.target.coordinates), closeTo(24, 0.05));
+      expect(_hueDeg(harness.state.target.coordinates), closeTo(93, 0.1));
       expect(harness.speech.utterances, isEmpty,
           reason: 'nothing spoken before the painter asks (control)');
 
@@ -377,9 +409,9 @@ void main() {
       await harness.whenSpeakTarget();
 
       // Then: exactly one utterance states the target's name and its L, C and
-      // hue (42 / 28 / 108) — a wrong value or an omitted field fails here.
-      // Augmented (RECIPE-4, now the spoken format is frozen) from bare 42/28/
-      // 108 substrings to *labelled* ones, so a chroma/hue (or L) label swap —
+      // hue (42 / 24 / 93) — a wrong value or an omitted field fails here.
+      // Augmented (RECIPE-4, now the spoken format is frozen) from bare 42/24/
+      // 93 substrings to *labelled* ones, so a chroma/hue (or L) label swap —
       // which the bare check tolerated since all three numbers are present —
       // is now rejected.
       expect(harness.speech.utterances, hasLength(1),
@@ -387,8 +419,8 @@ void main() {
       final spoken = harness.speech.utterances.single;
       expect(spoken, contains('Deep Olive Green'));
       expect(spoken, contains('Lightness 42'), reason: 'states the lightness L');
-      expect(spoken, contains('chroma 28'), reason: 'states the chroma C');
-      expect(spoken, contains('hue 108'), reason: 'states the hue h');
+      expect(spoken, contains('chroma 24'), reason: 'states the chroma C');
+      expect(spoken, contains('hue 93'), reason: 'states the hue h');
     });
 
     acTestWidgets('AC-12', 'TestAC12_SpeakRecipe — the spoken recipe states '

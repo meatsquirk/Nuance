@@ -156,3 +156,18 @@ Judgement calls:
 - AC-1..AC-4, AC-7, AC-8, AC-10 were not touched by RECIPE-4 and are carried at their prior A grades (implemented, un-pended, green); no downgrade.
 
 Gate recommendation: **PASS** — all nine un-pended ACs grade full A against the implemented RECIPE-4 speech behaviour; the AC-11 label-swap residual and the AC-12 parts-quantity limitation are both closed.
+
+## ITEST-5 — retarget re-grade (4 changed tests)
+
+Graded 2026-10-09 by an independent grader (fresh context). ITEST-5 retargeted `SAMPLE_DEEP_OLIVE` from L 42 / C 28 / h 108° (CIELAB a −8.65, b 26.63) to a reachable warm olive L 42 / C 24 / h 93° (a −1.2561, b 23.9671) per gate G-5 (a). The grader recomputed the fixture math (C 23.99999 / h 93.00009 — both centred in their `closeTo` bands and rounding to 24 / 93), ran the **real** `SubtractiveMixingEngine` (temporary probe, deleted) to confirm best ΔE00 ≈ 3.34 ≤ 5 for Deep Olive and ≈ 22.68 > 5 for Vivid Turquoise, and confirmed `targetSpeech` emits the labelled substrings `Lightness 42` / `chroma 24` / `hue 93`.
+
+| Test / guard | Grade | Rules checked | Justification / what it rejects |
+| --- | --- | --- | --- |
+| fixtures — `Deep Olive Green recovers its C 24 / h 93 (AC-1 render)` | A | G1, G4, scaffold (non-vacuous, honest, deterministic) | `lightness == 42` exactly; `_chroma closeTo(24, 0.05)` (23.99999 ✓) / `_hueDeg closeTo(93, 0.1)` (93.00009 ✓), decomposed independently from stored a*/b*. Rejects a*/b* that don't decompose to the retargeted polar coords. Comment honestly flags the retarget. No downgrade vs the prior A (identical structure, new literals verified). |
+| fixtures — `the real engine reaches Deep Olive but not Vivid Turquoise (G-5 (a) reachability guard)` (NEW) | A | G1 (`isNotEmpty` before `.first`), G4 (raw `deltaE00` at the 5.0 ceiling grain), G5 (reachable-vs-unreachable control), scaffold | Runs the real engine + default `MixOptions`; `oliveRecipes.first.deltaE00 ≤ 5.0` (3.34 ✓) and `turquoiseRecipes.first.deltaE00 > 5.0` (22.68 ✓), each after an `isNotEmpty` guard. Non-vacuous and discriminating — reverting the retarget (old a* −8.65, best ≈ 9.31) fails the `≤ 5` side, so the guard protects the G-5 (a) decision. Non-docking nit: the ceiling is the literal `5.0` (commented `// MixOptions.gamutThreshold`) rather than `opts.gamutThreshold`; value correct and documented. |
+| ITEST-2 AC-1 — `TestAC01_ChooseSavedTarget` (C/h pins → 24 / 93) | A | G1, G2, G3 (opens on Warm Sand control), G4 (identity + L42/C24/h93 + rendered line), G5, G6 | Only the C/h literals changed (28→24, 108→93); both recomputed inside their bands. The Warm-Sand start rejects a no-op / hard-coded Deep-Olive target; the L/C/h decomposition rejects setting identity without coordinates. Unchanged structure, prior A preserved. |
+| ITEST-2 AC-11 — `TestAC11_SpeakTarget` (`chroma 24` / `hue 93`) | A | G1, G3 (control `utterances isEmpty` before), G4 (`hasLength(1)` + labelled substrings), G5, G6 | One utterance containing `'Deep Olive Green'`, `'Lightness 42'`, `'chroma 24'`, `'hue 93'` — matches `targetSpeech` verbatim. The labelled substrings bind each value to its field (a chroma/hue/L label swap is rejected; no false-substring collision), `hasLength(1)` rejects double/zero emission. Pending RECIPE-4, kept pending. |
+
+Grade counts: **4×A, 0×B**. AC-4/AC-8/AC-12 (Deep Olive, no coord pins) untouched and carried at their prior A; AC-5/AC-9 test code unchanged (only the consumed fixture moved), grades carry from ITEST-3.
+
+Gate recommendation: **PASS** — all four changed tests grade A; the retarget moved the acceptance contract honestly (best ΔE00 3.34 ≤ 5 proven against the real engine), not by weakening any assertion.

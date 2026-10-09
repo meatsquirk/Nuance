@@ -57,14 +57,23 @@ export 'fakes/fake_speech.dart';
 // the exact polar form of that chroma/hue in a*/b* (a* = C·cos h, b* = C·sin h),
 // since CIELCh is the polar form of CIELAB a*/b* by definition. Values are the
 // ones pinned in the master plan's fixture table, rounded so C/h recover
-// (C 28, h 108° etc.).
+// (Deep Olive C 24, h 93° after the ITEST-5 retarget; etc.).
 // ---------------------------------------------------------------------------
 
-/// "Deep Olive Green" — CIELAB from CIELCh L 42 / C 28 / h 108° = (42, −8.65,
-/// 26.63). The primary target. Drives AC-1, AC-4, AC-5, AC-6, AC-11.
+/// "Deep Olive Green" — CIELAB from CIELCh L 42 / C 24 / h 93° = (42, −1.2561,
+/// 23.9671). The primary target. Drives AC-1, AC-4, AC-5, AC-6, AC-11.
+///
+/// **Retargeted (ITEST-5, G-5 (a)):** the original L 42 / C 28 / h 108° olive
+/// (a\* −8.65) was only reachable to ΔE00 ≈ 9.31 — the earthy [PALETTE_MY_PAINTS]
+/// has no green/phthalo pigment, so a\* cannot go usefully negative. Moving a\*
+/// toward ~0 (a warm, slightly-neutral deep olive, keeping L and the olive hue)
+/// lands it inside the gamut: the real [SubtractiveMixingEngine]'s best recipe is
+/// ΔE00 ≈ 3.34 (≤ the 5.0 in-gamut ceiling), so the "very close" contract
+/// (D-7/D-10) stays meaningful. The reachability guard below asserts this with
+/// the real engine.
 const Sample SAMPLE_DEEP_OLIVE = Sample(
   name: 'Deep Olive Green',
-  coordinates: ColorCoordinates(lightness: 42, a: -8.65, b: 26.63),
+  coordinates: ColorCoordinates(lightness: 42, a: -1.2561, b: 23.9671),
   provenance: Provenance(ProvenanceTier.measured),
 );
 
