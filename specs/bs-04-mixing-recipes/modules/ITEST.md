@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 (harness) + ITEST-2 (AC-1,2,3,11,12) done; next ITEST-3 (AC-4..10), then ITEST-4 review
+**Status:** In progress — ITEST-1 + ITEST-2 + ITEST-3 (AC tests) done; next ITEST-4 test review (G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/recipes_test.dart` (AC tests + smoke/guards),
 `integration_test/recipes_harness.dart` (Given/When/Then vocabulary, fixtures, the independent
@@ -15,7 +15,7 @@ RECIPE-1).
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 10,067,182 | 18m 44s (4h 40m) |
 | 2 | acceptance-tests | AC-1,2,3,11,12 | ✅ Done | 6,819,011 | 25m 09s (25m 09s) |
-| 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ⬜ Todo | | |
+| 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ✅ Done | 7,282,541 | 41m 45s (1h 15m) |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -40,10 +40,12 @@ RECIPE-1).
 ## Open gates
 
 - **G-2 (approve the acceptance tests)** — ITEST-4's packet; blocks every behaviour phase. Open.
-- **G-4 (spec-data / engine reconciliation — spec author)** — blocks ITEST-3 (the AC tests that would
-  otherwise pin the spec's illustrative predicted colours). ITEST-3 writes AC-5/AC-10 against **behavioural
-  properties** (a small ΔE + "very close"; dry ≠ wet in the drying direction) and, if a fixture cannot
-  discriminate a pinned literal, raises a follow-up to the spec author (as bs-03's ITEST-3 did for G-4/G-5).
+- **G-4 (spec-data / engine reconciliation — spec author)** — ✅ Resolved 2026-10-08 by Matt Quirk: the
+  pinned predicted L/C/h (AC-5 "L 42.6, C 27.1, h 106"; AC-10 "→ L 41.2, C 26.4, h 107") are **illustrative**
+  and the ACs assert **behavioural properties** (D-13); v1 engine is subtractive (D-2); gamut ΔE00 > 5 (D-10);
+  trace ~2% (D-12). ITEST-3 wrote AC-5/AC-10 as behavioural properties (small ΔE graded vs the independent
+  reference + the "very close" verdict; a real wet→dry shift) — no follow-up needed; every fixture
+  discriminated. G-4 still blocks the ENGINE behaviour phases only as a now-closed decision.
 
 ## Phase 1 — Harness (ITEST-1)
 
@@ -162,6 +164,24 @@ One pending `acTestWidgets` per AC for AC-1, AC-2, AC-3, AC-11, AC-12 now lives 
 - **Exit criteria:** default suite green (these pending); run-pending shows each failing at its intended Then; grades recorded.
 - **Acceptance gate:** *(acceptance-tests — as ITEST-2)*
 
+### Result
+
+One pending `acTestWidgets` per AC for AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10 now lives in `recipes_test.dart` under the `ITEST-3 — AC-4..AC-10` group (a disjoint append below the ITEST-2 group); the suite stays green with all 12 ACs still pending. G-4 was resolved this session (illustrative L/C/h; the ACs assert behavioural properties), so AC-5/AC-10 are written as properties, never the spec's pinned literals.
+
+- **Added (tests only — no `lib/**`):** seven pending AC tests driven through the public surface (the `RecipeReadEndpoint` state seam + rendered region text): **AC-4** 3–5 recipes, each with positive parts summing to 1 and a plausible predicted colour, paints rendered; **AC-5** the top recipe's `deltaE00` matches the **independent** `referenceDeltaE00(predictedColor, target)` (never the impl vs itself), is in gamut (≤ 5) and carries the "very close" verdict; **AC-6** the prefer-fewer ordering invariant (no recipe ranked above a fewer-paint one at a similar ΔE); **AC-7** a sub-2% component is `isTrace` + a technique note (with a non-trace control) and renders "a touch of"; **AC-8** a muddying recipe and a clean control both present (flag not constant) + the "muddy" render; **AC-9** `SAMPLE_VIVID_TURQUOISE` marked "OUT OF GAMUT" with every offered recipe `outOfGamut` and ΔE00 > 5, plus an in-gamut Deep-Olive control (banner absent); **AC-10** the oil target's top recipe predicted colour shifts on the wet→dry toggle (`mode == dry`, a real `referenceDeltaE00(wet,dry) > 0`). No harness vocabulary change was needed.
+- **Gates:** `flutter analyze` clean; unit **517 green**; coverage gate **PASS** (ITEST-3 touches no `lib/**`; the 15 bs-04 lib files stay 100% vs `main`). Integration **default run green** — 11 scaffold tests pass, all 12 AC tests pending/skipped (`+11 ~12`) — on the iPhone 17 sim under the verify lock. **Red baseline (run-pending):** all 12 run (`+11 -12`); the seven new tests each fail cleanly as a `TestFailure` at a Then or a Given precondition, none panic (see the *Red baseline* table).
+- **Grade gate:** an independent grader (fresh context) graded the seven **3×A (AC-4, AC-9, AC-10), 4×A (limited) (AC-5, AC-6, AC-7, AC-8), 0×B — PASS**; grid at `behavior-test-completeness-bs-04-mixing-recipes.md`. It re-verified `referenceDeltaE00`'s independence from the product metric and that `SAMPLE_VIVID_TURQUOISE` is geometrically unreachable from `PALETTE_MY_PAINTS`. The four *limited* tests each pre-seed/confirm an augmentation owned by the behaviour phase that lands the engine output (AC-5/AC-6 → ENGINE-3; AC-7/AC-8 → ENGINE-4).
+- **Fix passes: 0/3** (green first run; grader found no B).
+- **Tokens / Time:** 7,282,541 · 41m 45s active (1h 15m wall — the gap was the AskUserQuestion G-4 wait; 1 grader subagent included).
+
+### Checkpoint / Handoff
+
+- **All 12 AC tests are now registered** in `recipes_test.dart` (ITEST-2: AC-1,2,3,11,12; ITEST-3: AC-4..AC-10). The pending gate (`bs04/pending.dart`) and the guard's `unpended` set are **unchanged** — ITEST-3 un-pends nothing; the behaviour phases do, each deleting its `bs04/pending.dart` row and adding its AC to the guard's `unpended` set.
+- **When each behaviour phase un-pends its AC** (owner in the *Red baseline* table): the pending test flips from skipped to run, so it must then pass. The ENGINE phases close the four augmentations as they land real engine output: **ENGINE-3** (AC-5 farther-recipe worse-verdict; AC-6 the decisive 2-paint/4-paint similar-ΔE pair); **ENGINE-4** (AC-7 a genuine sub-2% *Titanium White* trace + the measured-part absence; AC-8 a known complementary-crossing recipe vs a known clean control).
+- **G-4 is resolved** (illustrative literals; behavioural properties; subtractive v1; gamut ΔE00 > 5; trace ~2%). The ENGINE phases build to those thresholds; `MixOptions` defaults already encode them (gamut 5.0, trace 0.02).
+- **Verification commands** unchanged (SCREEN-1/ITEST-1/ITEST-2 handoff; `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under the verify lock on sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (always `-d <udid>`). Run-pending: `flutter test integration_test/recipes_test.dart -d <udid> --dart-define=BS04_RUN_PENDING=true`. **Note:** run the integration suite from the worktree (`cd <worktree> && flutter test …`) — `coord.sh with-lock` cd's to `FNP_COORD_REPO` (the primary checkout), and a `--dart-define` change needs a rebuilt kernel (the define is compiled in on-device; the host env var does not reach the device).
+- **Known gaps / notes:** no behaviour yet. **G-2** (ITEST-4 review) still blocks every behaviour phase. The next phase is **ITEST-4** (assemble the review packet from both AC-test phases; present for the human G-2 decision). Carry-over const-constructor coverage flake stands. Untracked bs-05..bs-14 specs + `docs/` are not part of bs-04.
+
 ## Phase 4 — Test review (ITEST-4)
 
 - **Kind:** test-review
@@ -178,13 +198,13 @@ One pending `acTestWidgets` per AC for AC-1, AC-2, AC-3, AC-11, AC-12 now lives 
 | AC-1 | TestAC01_ChooseSavedTarget | fails (run-pending) | precond — target picker lists no "Deep Olive Green" (`recipes_harness.dart:359`) | RECIPE-3 | A |
 | AC-2 | TestAC02_ManualTargetRefused | fails (run-pending) | precond — no L/a/b manual fields on the valid-L50 control (`recipes_harness.dart:376`) | RECIPE-3 | A |
 | AC-3 | TestAC03_PaletteConstrained | fails (run-pending) | precond — `state.recipes` empty, none to constrain (`recipes_test.dart:341`) | ENGINE-2 | A |
-| AC-4 | TestAC04_TopRecipes | _pending ITEST-3_ | | ENGINE-2 | |
-| AC-5 | TestAC05_CloseVerdict | _pending ITEST-3_ | | ENGINE-3 | |
-| AC-6 | TestAC06_PreferFewer | _pending ITEST-3_ | | ENGINE-3 | |
-| AC-7 | TestAC07_TraceTouchOf | _pending ITEST-3_ | | ENGINE-4 | |
-| AC-8 | TestAC08_MuddyingFlag | _pending ITEST-3_ | | ENGINE-4 | |
-| AC-9 | TestAC09_OutOfGamut | _pending ITEST-3_ | | ENGINE-5 | |
-| AC-10 | TestAC10_WetDry | _pending ITEST-3_ | | ENGINE-6 | |
+| AC-4 | TestAC04_TopRecipes | fails (run-pending) | precond — `state.recipes` empty, none to list (`recipes_test.dart:456`) | ENGINE-2 | A |
+| AC-5 | TestAC05_CloseVerdict | fails (run-pending) | precond — `state.recipes` empty, none to verdict (`recipes_test.dart:508`) | ENGINE-3 | A (limited) |
+| AC-6 | TestAC06_PreferFewer | fails (run-pending) | precond — `state.recipes.length` 0, < 2 to compare (`recipes_test.dart:558`) | ENGINE-3 | A (limited) |
+| AC-7 | TestAC07_TraceTouchOf | fails (run-pending) | precond — `state.recipes` empty, none to trace (`recipes_test.dart:599`) | ENGINE-4 | A (limited) |
+| AC-8 | TestAC08_MuddyingFlag | fails (run-pending) | precond — `state.recipes` empty, none to flag (`recipes_test.dart:658`) | ENGINE-4 | A (limited) |
+| AC-9 | TestAC09_OutOfGamut | fails (run-pending) | Then — no "OUT OF GAMUT" banner, `findsOneWidget` 0 found (`recipes_test.dart:704`) | ENGINE-5 | A |
+| AC-10 | TestAC10_WetDry | fails (run-pending) | precond — `state.recipes` empty, none to predict dry (`recipes_test.dart:759`) | ENGINE-6 | A |
 | AC-11 | TestAC11_SpeakTarget | fails (run-pending) | Then — no utterance emitted, `hasLength(1)` (`recipes_test.dart:376`) | RECIPE-4 | A |
 | AC-12 | TestAC12_SpeakRecipe | fails (run-pending) | precond — `state.recipes` empty, none to speak (`recipes_test.dart:396`) | RECIPE-4 | A (limited) |
 
@@ -193,4 +213,7 @@ One pending `acTestWidgets` per AC for AC-1, AC-2, AC-3, AC-11, AC-12 now lives 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
 | TestAC05 | one near-target recipe cannot show the verdict *tracks* distance (a constant "very close" would pass) | ENGINE-3 | a farther recipe asserting a **different** (worse) verdict band | ⬜ Open |
+| TestAC06 | the prefer-fewer invariant only bites where the engine's output holds a similar-ΔE pair of differing paint counts; the stub returns none, so the decisive pair can't be constructed in ITEST-3 (confirmed by ITEST-3) | ENGINE-3 | a concrete 2-paint vs 4-paint recipe pair at a similar ΔE00, asserting the 2-paint mix ranks above the 4-paint mix | ⬜ Open |
+| TestAC07 | the trace test asserts *any* sub-2% component, not the spec's named **Titanium White** trace, and does not assert the measured-part form is **absent** for the traced paint (confirmed by ITEST-3) | ENGINE-4 | a recipe with a genuine sub-2% Titanium White trace, asserting it renders "a touch of" + note and **not** a measured part | ⬜ Open |
+| TestAC08 | the not-constant check (one muddying, one clean) does not verify the flagged recipe **actually** crosses a complementary hue pair — an arbitrary flag assignment would pass (confirmed by ITEST-3) | ENGINE-4 | a known complementary-crossing recipe asserted flagged and a known non-crossing recipe asserted unflagged | ⬜ Open |
 | TestAC12 | the spoken recipe is checked for each paint's **name** and a single global `contains('part')`, not each paint's **parts quantity** — the "its parts" clause is half-covered until the E25 speak format is frozen (confirmed by ITEST-2) | RECIPE-4 | assert per-component that the utterance states that paint's parts value (its normalized parts rendering) | ⬜ Open |
