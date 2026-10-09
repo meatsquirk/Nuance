@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1..5 done (ITEST-5 retargeted `SAMPLE_DEEP_OLIVE` to a reachable olive, ΔE00 ≈ 3.34 ≤ 5, pinned tests updated + re-graded A); next ITEST-6 fresh review (G-6), which re-gates ENGINE-3/ENGINE-5
+**Status:** In progress — ITEST-1..5 done; ITEST-6 ⏸ Awaiting review — the fresh retargeted suite is assembled and green (default +21, ~3 pending; run-pending +21 −3 clean), awaiting the human **G-6** decision, which re-gates ENGINE-3/ENGINE-5
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/recipes_test.dart` (AC tests + smoke/guards),
 `integration_test/recipes_harness.dart` (Given/When/Then vocabulary, fixtures, the independent
@@ -18,7 +18,7 @@ RECIPE-1).
 | 3 | acceptance-tests | AC-4,5,6,7,8,9,10 | ✅ Done | 7,282,541 | 41m 45s (1h 15m) |
 | 4 | test-review | — (G-2) | ✅ Done | 6,078,568 | 55m 56s (1h 01m) |
 | 5 | acceptance-tests | AC-5, AC-9 (retarget) | ✅ Done | 10,631,343 | 18m 10s (18m 10s) |
-| 6 | test-review | — (G-6) | ⬜ Next | | |
+| 6 | test-review | — (G-6) | ⏸ Awaiting review | 1,837,097 | 5m 35s (5m 35s) |
 
 ## Interface reconciliation
 
@@ -58,9 +58,11 @@ RECIPE-1).
   performs the retarget + updates every test pinning the old L42/C28/h108, and **ITEST-6** is the fresh review
   (G-6). The engine, the ΔE00 ≤ 5 "very close" contract (D-7/D-10) and the `gamutThreshold = 5.0` are
   unchanged.
-- **G-6 (approve the retargeted acceptance tests — spec author)** — ⬜ Open: ITEST-6's packet, a fresh review
-  of the retargeted AC-5/AC-9 (and the re-verified AC-1/AC-4/AC-11 whose pinned coordinates move with the
-  fixture). **Blocks ENGINE-3, ENGINE-5.**
+- **G-6 (approve the retargeted acceptance tests — spec author)** — ⏸ **Awaiting decision** (packet assembled
+  2026-10-09, full regression green): a fresh review of the retargeted AC-5/AC-9 (and the re-verified
+  AC-1/AC-4/AC-11 whose pinned coordinates move with the fixture), re-confirming the acceptance contract moved
+  **honestly** (best ΔE00 ≈ 3.34 ≤ 5 proven against the real engine) rather than by weakening any assertion.
+  **Blocks ENGINE-3, ENGINE-5.** Recorded via `/feature-next-phase --gate bs-04-mixing-recipes G-6 approved | "<changes>"`.
 
 ## Phase 1 — Harness (ITEST-1)
 
@@ -465,3 +467,110 @@ stays with ENGINE-3/ENGINE-5 after G-6).
 - **Exit criteria:** packet assembled; full suite green (AC-5/AC-9 pending); grade grid complete.
 - **Acceptance gate:** human records **G-6**. On approved: ITEST-6 ✅ Done, ENGINE-3 then ENGINE-5 unblock. On
   changes requested: each item becomes an ITEST change phase before ENGINE-3/ENGINE-5, then another review.
+
+### Review packet (for the human G-6 decision)
+
+This is a **fresh** review — not a re-review of the whole suite, but a re-confirmation of the one thing that
+moved: in ITEST-5 the `SAMPLE_DEEP_OLIVE` fixture was retargeted (per gate **G-5 (a)**) from an olive the
+verified v1 engine could not reach to one it can. The question for G-6 is narrow and important: **did the
+acceptance contract move honestly, or was it weakened to make the fixture pass?** The suite still drives the
+**real** assembled app through `recipes_harness.dart` and asserts only through the public surface (rendered
+text, the `RecipeReadEndpoint` state seam, the `FakeSpeech` log); no colour/mixing/ΔE00 math is faked.
+
+**Look at first:**
+
+1. **The retarget is honest, not a weakening.** The old `SAMPLE_DEEP_OLIVE` (L 42 / C 28 / h 108°, CIELAB
+   a\* −8.65 / b\* 26.63) sits on the **green** side; `PALETTE_MY_PAINTS` has no green/phthalo pigment, so the
+   verified v1 subtractive engine (D-2) reaches it only to **ΔE00 ≈ 9.31** — the "very close" (≤ 5) contract
+   could never hold there. The new target (**L 42 / C 24 / h 93°**, CIELAB **a\* −1.2561 / b\* 23.9671**) keeps
+   L exactly and moves a\* toward ~0 (a warm, slightly-neutral olive — still an olive), which the earthy
+   palette genuinely reaches at **best ΔE00 ≈ 3.34** (top recipe W 6% + YO 85% + BK 9%, 5 recipes returned).
+   The ΔE00 ≤ 5 "very close" ceiling (D-7/D-10) and `gamutThreshold = 5.0` are **unchanged** — only the fixture
+   moved, to a point where the unchanged contract is meaningful.
+2. **The proof is engine-backed, not asserted by hand.** A new never-pending guard — *the real engine reaches
+   Deep Olive but not Vivid Turquoise* — runs the real `SubtractiveMixingEngine` with default `MixOptions` and
+   asserts `oliveRecipes.first.deltaE00 ≤ 5.0` (3.34 ✓) and `turquoiseRecipes.first.deltaE00 > 5.0` (22.68 ✓),
+   each behind an `isNotEmpty` check. It is **discriminating**: reverting the retarget (old a\* −8.65, best
+   ≈ 9.31) fails the ≤ 5 side, so the guard protects the G-5 (a) decision itself from silent regression.
+3. **AC-9's out-of-gamut main path is untouched.** `SAMPLE_VIVID_TURQUOISE` (ΔE00 ≈ 22.68, geometrically
+   unreachable) is unchanged; Deep Olive serves only as AC-9's **in-gamut control** (no banner, no out-of-gamut
+   recipe) and it stays in gamut because 3.34 ≤ 5. The retarget did not touch the thing AC-9 primarily proves.
+
+**What moved in the retargeted suite** — test · change · still-asserts · Rejects:
+
+- **AC-5 · TestAC05_CloseVerdict** (pending → ENGINE-3) — the consumed fixture moved; **the test code is
+  unchanged**. Against the retargeted olive the `deltaE00 ≤ 5` in-gamut assertion now **passes** (3.34 ≤ 5), so
+  the test fails **deeper** than before — on the still-missing verdict (`best.verdict` null, the exact Then
+  ENGINE-3 fills). *Still asserts:* the top recipe's `deltaE00` equals the **independent**
+  `referenceDeltaE00(predicted, target)` within 0.5, is ≤ the in-gamut ceiling (5), and carries a "very close"
+  verdict that renders. *Rejects:* a stated ΔE that isn't a real CIEDE2000 of the predicted colour, a non-close
+  recipe, a missing/other verdict. **A (limited)** → ENGINE-3 adds a farther recipe with a different, worse band.
+- **AC-9 · TestAC09_OutOfGamut** (pending → ENGINE-5) — **test code unchanged**; the Deep Olive **in-gamut
+  control** now points at the retargeted olive (still in gamut, 3.34 ≤ 5). The out-of-gamut main path
+  (`SAMPLE_VIVID_TURQUOISE`, ΔE00 > 5) is unchanged. *Still asserts:* the "OUT OF GAMUT" banner for the
+  unreachable target, every offered recipe `outOfGamut` with ΔE00 > 5, and the in-gamut control shows **no**
+  banner and no out-of-gamut recipe. *Rejects:* a missing banner, a nearest mix offered as a match, a
+  constant-on banner.
+- **AC-1 · TestAC01_ChooseSavedTarget** (done, green) — **re-verified** with the new pins: `lightness == 42`,
+  `_chroma closeTo(24, 0.05)` (recomputed 23.99999 ✓), `_hueDeg closeTo(93, 0.1)` (93.00009 ✓), still opening on
+  the Warm-Sand change-control. Rejects a no-op picker, a hard-coded target, identity-without-coordinates.
+- **AC-4 · TestAC04_TopRecipes** (done, green) — the retargeted olive is still a mixable target (3–5 recipes,
+  positive parts summing to 1, plausible predicted colour, paints rendered); no coordinate pins, re-verified green.
+- **AC-11 · TestAC11_SpeakTarget** (pending → RECIPE-4, kept pending) — spoken pins updated to the labelled
+  substrings `chroma 24` / `hue 93` (matching `targetSpeech` verbatim), so a C/h/L label swap is still rejected.
+
+**Red baseline** (run-pending, `--dart-define=BS04_RUN_PENDING=true`, this session): `+21 −3`. The three
+pending ACs execute and each fails **cleanly** as a `TestFailure` at a Then naming its owner, **no panics** —
+**AC-5** `recipes_test.dart:582` (`best.verdict` null → ENGINE-3; the ΔE00 ≤ 5 check now passes, 3.34 ≤ 5),
+**AC-6** `:625` ("at a similar ΔE00 the higher-ranked recipe must not use more paints" — the ΔE-only order
+lacks the prefer-fewer tie-break → ENGINE-3), **AC-9** `:812` (0 "OUT OF GAMUT" widgets → ENGINE-5). The
+default run stays green (+21; the three skip). Full rows in the *Red baseline* table above.
+
+**Grade grid:** `specs/bs-04-mixing-recipes/behavior-test-completeness-bs-04-mixing-recipes.md`. The ITEST-5
+retarget re-grade (independent grader, fresh context) is **4×A, 0×B — PASS** on the four changed tests
+(C/h recovery guard, the new engine-backed reachability guard, AC-1, AC-11); the grader recomputed the fixture
+math (C 23.99999 / h 93.00009), ran the real engine to confirm 3.34 ≤ 5 < 22.68, and confirmed the labelled
+spoken substrings. AC-5/AC-9 **test code is unchanged** (only the consumed fixture moved), so their A grades
+carry from ITEST-3; AC-4 (no coord pins) carries its prior A. Whole suite still at the A bar, **0×B**.
+
+### Result
+
+ITEST-6 assembled the fresh G-6 review packet above and ran the full regression. The retargeted suite is green
+with AC-5/AC-6/AC-9 pending; the phase is now **⏸ Awaiting review** for the human **G-6** decision, which
+re-unblocks ENGINE-3 and ENGINE-5. No `lib/**` or test code changed — this phase is packet + regression + the
+plan edits only (the retarget itself landed in ITEST-5).
+
+- **Packet:** the honest-retarget argument (old green-side target unreachable at ΔE00 ≈ 9.31 vs the new warm
+  olive reachable at ≈ 3.34, ceiling and `gamutThreshold` unchanged), the engine-backed reachability guard as
+  proof, the AC-5/AC-9 "test code unchanged, fixture moved" treatment, the re-verified AC-1/AC-4/AC-11, the
+  refreshed red baseline, and the grade-grid path + counts (4×A re-grade; AC-5/AC-9 grades carry; 0×B).
+- **Full regression (this session, under the verify lock on sim `5AB9D06D-…`):** `flutter analyze` clean; unit
+  **566 green**; coverage gate **PASS** — 100% line coverage on all 16 touched `lib/**` files vs `main`;
+  integration **default green** — `+21 ~3` (the 18 never-pending scaffold/guard tests + the retargeted
+  AC-1/AC-11 pins + the new reachability guard all pass; AC-5/AC-6/AC-9 skip). **Red baseline (run-pending):**
+  `+21 −3` — AC-5/AC-6/AC-9 each fail cleanly at the Then naming their owner, no panics.
+- **Grade grid complete** for the whole suite; the ITEST-5 re-grade is 4×A, 0×B — PASS; no new grading this phase.
+- **Gate:** **G-6 awaiting the human decision.** Recorded via
+  `/feature-next-phase --gate bs-04-mixing-recipes G-6 approved | "<changes>"`.
+- **Fix passes: 0/3** (no code; regression green first run).
+- **Tokens / Time:** 1,837,097 · 5m 35s active (5m 35s wall) — one session, no subagents.
+
+### Checkpoint / Handoff
+
+- **G-6 blocks ENGINE-3 and ENGINE-5.** On **approved**: this phase flips to ✅ Done; **ENGINE-3** (AC-5, AC-6)
+  becomes startable, then **ENGINE-5** (AC-9), then **SIGNOFF-1**. On **changes requested**: each item becomes
+  an `ITEST` change phase before ENGINE-3/ENGINE-5, then a fresh review round.
+- **New target facts for ENGINE-3/ENGINE-5** (once unblocked): best Deep Olive recipe ΔE00 ≈ 3.34 (W 6% + YO
+  85% + BK 9%); the "very close" band ENGINE-3 sets must cover ≈ 3.34 (D-7/D-10). The prefer-fewer order (AC-6)
+  must float the 2-paint `YO 91% + BK 9%` (ΔE ≈ 3.37) above the 3-paint `W 6% + YO 85% + BK 9%` (ΔE ≈ 3.34) at
+  their near-tie. ENGINE-5's gamut marking must leave Deep Olive in-gamut (3.34 ≤ 5, the AC-9 control) while
+  marking Vivid Turquoise (22.68) out.
+- **Un-pending protocol (each behaviour phase):** delete the AC's row in `integration_test/bs04/pending.dart`
+  **and** add the AC to the pending-gate guard's `unpended` set in `recipes_test.dart`; close any augmentation
+  the phase owns in the same session (ENGINE-3: AC-5 farther-recipe, AC-6 the 2-paint/4-paint pair).
+- **Verification commands** unchanged (`export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze`
+  · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under the verify lock on
+  sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (always `-d <udid>`; no device ⇒ false green). Run-pending:
+  `flutter test integration_test/recipes_test.dart -d <udid> --dart-define=BS04_RUN_PENDING=true`.
+- **Known gaps / notes:** behaviour for AC-5/AC-6/AC-9 not yet coded (ENGINE-3/ENGINE-5, after G-6). Carry-over
+  const-constructor coverage flake stands. Untracked bs-05..bs-14 specs + `docs/` are not part of bs-04.

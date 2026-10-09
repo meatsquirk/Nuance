@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — ITEST-5 retargeted `SAMPLE_DEEP_OLIVE` to a reachable olive (ΔE00 ≈ 3.34 ≤ 5), pinned tests updated + re-graded 4×A; AC-1..AC-4,7,8,10,11,12 done (9/12); next ITEST-6 fresh review (G-6), which gates ENGINE-3/ENGINE-5
+**Status:** In progress — ITEST-6 ⏸ Awaiting review: the retargeted suite is assembled + green (default +21, ~3 pending; run-pending +21 −3 clean), awaiting the human **G-6** decision, which gates ENGINE-3/ENGINE-5. AC-1..AC-4,7,8,10,11,12 done (9/12)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -182,7 +182,7 @@ keeping the screen side file-disjoint across the windows above.
 | G-3 | dependency | bs-01/02/03 shared foundation merged to `main` (`Sample`/`ColorCoordinates`, `buildApp`/`AppScope`/`AppDependencies`, `Speech`+`FakeSpeech`, `deltaE00`, `ColorScience`, `SampleSource`, `AppRouter.toRecipes` + the handoff, coverage gate, `integration_test`) | RECIPE-1, all shells | ✅ Resolved 2026-10-08: bs-01, bs-02 and bs-03 are signed off and merged to `main` @ `8518463` (full foundation present) |
 | G-4 | decision | **Spec-data / engine reconciliation (spec author).** The spec pins predicted colours (AC-5 "predicts L 42.6, C 27.1, h 106"; AC-10 "shifts to L 41.2, C 26.4, h 107") that a general v1 engine (D-2) will not reproduce exactly. Confirm: (a) the pinned L/C/h are **illustrative** and the ACs assert behavioural properties (D-13) — or a literal is binding and its authoritative value; (b) the v1 subtractive forward approach (D-2); (c) the gamut threshold (D-10) and the ~2% trace threshold (D-12) | ITEST-3, ENGINE-2, ENGINE-3, ENGINE-4, ENGINE-5, ENGINE-6 | ✅ Resolved 2026-10-08 (Matt Quirk): (a) the pinned predicted L/C/h are **illustrative** — the ACs assert behavioural properties (D-13); (b) v1 subtractive forward+inverse (D-2); (c) gamut ΔE00 > 5 (D-10), trace ~2% (D-12). ITEST-3 wrote AC-5/AC-10 as behavioural properties accordingly |
 | G-5 | decision | **Spec-data / engine reachability (spec author).** The verified v1 subtractive engine (D-2, built in ENGINE-2) reaches `SAMPLE_DEEP_OLIVE` (L 42, a\* −8.65, b\* 26.63) only to **ΔE00 ≈ 9.31** (best: Titanium White 21% + Yellow Ochre 70% + Ivory Black 9%) — `PALETTE_MY_PAINTS` has no green/phthalo pigment, so yellow+ultramarine make a grey-olive not a green (a\* < 0), robust across KM & geometric-mean mixing. But `recipes_test.dart` hard-codes `gamutThreshold = 5.0`: **AC-5** asserts best ≤ 5 + "very close" and **AC-9**'s control asserts Deep Olive is *not* out-of-gamut (≤ 5). (Ref: Vivid Turquoise ΔE00 ≈ 22.68, correctly out of gamut.) Choose: (a) retarget Deep Olive to a reachable olive; (b) add a green pigment to the palette; (c) raise the asserted ceiling; (d) accept a measured-pigment engine for v1. (a)/(b)/(c) reshape the approved ITEST-3 ⇒ a fresh test-review round. Full detail in [modules/ENGINE.md](modules/ENGINE.md). | ENGINE-3, ENGINE-5 | ✅ Resolved 2026-10-09 14:41 EDT: **(a) retarget `SAMPLE_DEEP_OLIVE`** to a reachable olive (a\* −8.65 → ~0) so `PALETTE_MY_PAINTS` reaches it ≤ ΔE00 5 — engine + "very close" contract + `gamutThreshold = 5.0` unchanged. Reshapes ITEST-3 ⇒ **ITEST-5** (retarget + update pinned tests) → fresh review **ITEST-6 / G-6** before ENGINE-3/ENGINE-5 — Matt Quirk |
-| G-6 | decision | Approve the retargeted acceptance tests (ITEST-6's packet, fresh review after the G-5 (a) retarget: updated AC-5/AC-9 + re-verified AC-1/AC-4/AC-11, achieved ΔE00 ≤ 5 proof) | ENGINE-3, ENGINE-5 | ⬜ Open (raised 2026-10-09 by G-5 (a)) |
+| G-6 | decision | Approve the retargeted acceptance tests (ITEST-6's packet, fresh review after the G-5 (a) retarget: updated AC-5/AC-9 + re-verified AC-1/AC-4/AC-11, achieved ΔE00 ≤ 5 proof) | ENGINE-3, ENGINE-5 | ⏸ Awaiting decision (packet assembled 2026-10-09, regression green; the contract moved honestly — best ΔE00 ≈ 3.34 ≤ 5 vs the real engine, ceiling/`gamutThreshold` unchanged) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -214,22 +214,24 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 15 | RECIPE-4 | behavior: AC-11, AC-12 — speak target; speak recipe | ✅ Done | 18,065,846 | 24m 45s | analyze clean; unit 566; 100% cov 16 touched; AC-11/AC-12 un-pended + green (integ +20 ~3, 3 skips = AC-5/6/9); grade 9A/0B (AC-11 label-swap + AC-12 parts-quantity augmentations closed); fix 0/3 |
 | 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | after all behaviour + ITEST-5/6 |
 | 17 | ITEST-5 | acceptance-tests: retarget `SAMPLE_DEEP_OLIVE` to a reachable olive (≤ ΔE00 5); update pinned-coordinate tests (AC-1/AC-11 + guards) + red baseline | ✅ Done | 10,631,343 | 18m 10s (18m 10s) | retargeted to L 42 / C 24 / h 93° (a −1.2561, b 23.9671), real engine best ΔE00 ≈ 3.34 ≤ 5; AC-1/AC-11 pins → 24/93, new engine-backed reachability guard added; analyze clean; unit 566; cov PASS (no lib); integ default +21 ~3 (AC-5/6/9 pending) / run-pending −3 fail clean at owner; grade 4×A/0B; fix 0/3 |
-| 18 | ITEST-6 | test-review: fresh review of the retargeted acceptance tests (G-6) | ⬜ Next | | | after ITEST-5; gates ENGINE-3/ENGINE-5 |
+| 18 | ITEST-6 | test-review: fresh review of the retargeted acceptance tests (G-6) | ⏸ Awaiting review | 1,837,097 | 5m 35s (5m 35s) | packet assembled; regression green (analyze clean; unit 566; cov PASS 16/16; integ default +21 ~3 / run-pending +21 −3 clean); grid 4×A re-grade, AC-5/9 carry, 0B; **G-6 awaiting human decision** — gates ENGINE-3/ENGINE-5 |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-ITEST-5 done: `SAMPLE_DEEP_OLIVE` retargeted to a reachable warm olive L 42 / C 24 / h 93° (real engine best
-ΔE00 ≈ 3.34 ≤ 5); AC-1/AC-11 coordinate pins updated to 24/93, a new engine-backed reachability guard added,
-red baseline refreshed, 4 changed tests re-graded A. No AC un-pended (that stays with ENGINE-3/ENGINE-5 after
-G-6). 9/12 ACs done; remaining AC-5, AC-6, AC-9.
+ITEST-6 done (⏸ Awaiting review): the fresh G-6 packet is assembled and the full regression ran green —
+analyze clean, unit 566, coverage gate PASS (16/16 touched lib 100%), integration default `+21 ~3` (AC-5/6/9
+pending) / run-pending `+21 −3` (each fails clean at the Then naming its owner). The packet re-confirms the
+retarget moved the contract **honestly** (old green-side target unreachable at ΔE00 ≈ 9.31 → new warm olive
+reachable at ≈ 3.34, ceiling/`gamutThreshold` unchanged, engine-backed guard as proof). 9/12 ACs done;
+remaining AC-5, AC-6, AC-9.
 
-Startable now: **ITEST-6** — the fresh **G-6** test review of the retargeted suite (packet: the new target +
-the ΔE00 ≈ 3.34 ≤ 5 proof, the updated AC-5/AC-9 + re-verified AC-1/AC-4/AC-11, the refreshed red baseline, the
-4×A re-grade; full regression). It is the only startable phase. Then **G-6** approval → **ENGINE-3** (AC-5/AC-6)
-→ **ENGINE-5** (AC-9) → **SIGNOFF-1**. ENGINE-3/ENGINE-5 stay blocked until G-6.
+**Blocked on the human G-6 decision** — `/feature-next-phase --gate bs-04-mixing-recipes G-6 approved | "<changes>"`.
+No phase is startable until G-6: ENGINE-3 (AC-5/AC-6) and ENGINE-5 (AC-9) stay blocked by it. On **approved**:
+ITEST-6 ✅ Done → **ENGINE-3** → **ENGINE-5** → **SIGNOFF-1**. On **changes requested**: each item becomes an
+`ITEST` change phase, then another review round.
 
 ## Token usage
 
@@ -260,7 +262,8 @@ the ΔE00 ≈ 3.34 ≤ 5 proof, the updated AC-5/AC-9 + re-verified AC-1/AC-4/AC
 | GATE-DECISION | 2acce267 | 2026-10-09 14:35 EDT | 14:45 | 9m 21s | 6m 03s | claude-opus-4-8 | 62 | 73,339 | 2,494,380 | 26,760 | 2,594,541 | G-5 resolved (a) retarget SAMPLE_DEEP_OLIVE to reachable olive; reshaped ITEST-3 -> ITEST-5 (retarget) + ITEST-6 fresh review (G-6) before ENGINE-3/ENGINE-5 |
 | RECIPE-4 | b1a11648 | 2026-10-09 14:31 EDT | 14:55 | 24m 45s | 24m 45s | claude-opus-4-8 | 232 | 305,217 | 17,676,655 | 83,742 | 18,065,846 | AC-11/AC-12 un-pended + green; grade 9A/0B (AC-11 label + AC-12 parts augmentations closed); 100% cov 16 files; fix 0/3 |
 | ITEST-5 | 23de13a2 | 2026-10-09 15:02 EDT | 15:20 | 18m 10s | 18m 10s | claude-opus-4-8 | 148 | 308,057 | 10,261,541 | 61,597 | 10,631,343 | retarget SAMPLE_DEEP_OLIVE to reachable olive L42/C24/h93 (real engine best ΔE00 3.34 ≤ 5); AC-1/AC-11 pins updated + engine-backed reachability guard added; analyze clean; unit 566; cov PASS (no lib); integ default +21 ~3 / run-pending -3 fail clean at owner; grade 4×A/0B; fix 0/3 |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 15:20** | **18h 30m** | **8h 01m** |  | **2,646** | **4,270,470** | **173,276,881** | **1,119,972** | **178,669,969** |  |
+| ITEST-6 | 481f0c3e | 2026-10-09 15:49 EDT | 15:54 | 5m 35s | 5m 35s | claude-opus-4-8 | 44 | 75,188 | 1,747,586 | 14,279 | 1,837,097 | test-review: fresh G-6 packet assembled from the ITEST-5 retarget; full regression green (analyze clean; unit 566; coverage gate PASS 16/16 touched; integ default +21 ~3 / run-pending +21 -3 fail clean at owner) on sim under lock; grid 4×A re-grade, AC-5/9 carry, 0B; phase ⏸ Awaiting review; G-6 awaiting human decision |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 15:54** | **18h 35m** | **8h 07m** |  | **2,690** | **4,345,658** | **175,024,467** | **1,134,251** | **180,507,066** |  |
 
 ## Sign-off
 
