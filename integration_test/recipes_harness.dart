@@ -87,6 +87,17 @@ const Sample SAMPLE_VIVID_TURQUOISE = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
+/// "Deep Umber" — the AC-7 trace fixture. A dark warm near-neutral (CIELAB
+/// (33, 0, 12)) whose best mix over [PALETTE_MY_PAINTS] is Yellow Ochre + Ivory
+/// Black with **only a touch of Titanium White** (≈ 1.4% by volume), so the
+/// top recipe carries a genuine sub-2% Titanium White trace — the spec's named
+/// trace paint (AC-7 / D-12) — rather than a measured part.
+const Sample SAMPLE_DEEP_UMBER = Sample(
+  name: 'Deep Umber',
+  coordinates: ColorCoordinates(lightness: 33, a: 0, b: 12),
+  provenance: Provenance(ProvenanceTier.measured),
+);
+
 /// "Studio Olive (oil)" — the AC-10 wet/dry target. A muted warm olive
 /// (CIELAB (55, 6, 20)) reachable from the oil [PALETTE_OIL], so a recipe exists
 /// whose predicted colour the per-medium drying transform (D-11) can shift.

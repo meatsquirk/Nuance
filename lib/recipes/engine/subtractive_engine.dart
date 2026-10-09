@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../../color_science/words.dart' show temperatureWord;
 import '../../compare/difference.dart' show deltaE00;
 import '../../domain/color_coordinates.dart';
 import '../../domain/paint.dart';
@@ -39,6 +40,20 @@ class SubtractiveMixingEngine implements MixingEngine {
   /// from the recipe (and the rest renormalised) so every reported part is
   /// genuinely present — the inverse search drives spurious paints to zero.
   static const double _volumeEpsilon = 1e-3;
+
+  /// A paint whose masstone chroma is below this is treated as (near-)achromatic
+  /// when judging muddying (AC-8 / D-9): white, black and the greys carry no
+  /// meaningful hue temperature, so they never make a mix cross complements.
+  static const double _achromaticChroma = 10.0;
+
+  /// The static technique note shown with a trace component (AC-7 / D-12).
+  ///
+  /// Measuring a sub-2% share by volume is not realistic at the bench, so the
+  /// recipe expresses it as "a touch of" and explains how to add it instead of
+  /// reporting an unusable fraction.
+  static const String _traceTechniqueNote =
+      'Measuring so little by volume is not practical — add a little at a time '
+      'and mix fully before judging the colour.';
 
   @override
   ColorCoordinates forward(Map<Paint, double> partsByVolume, {bool dry = false}) {
@@ -109,16 +124,14 @@ class SubtractiveMixingEngine implements MixingEngine {
           final de = deltaE00(predicted, targetLab);
           final components = [
             for (var i = 0; i < kept.length; i++)
-              RecipeComponent(
-                paint: kept[i],
-                partsFraction: keptVolumes[i] / total,
-              ),
+              _component(kept[i], keptVolumes[i] / total, opts),
           ];
           final recipe = Recipe(
             medium: medium,
             components: components,
             predictedColor: predicted,
             deltaE00: de,
+            muddying: _isMuddying(kept),
           );
 
           final key = (kept.map((p) => p.id).toList()..sort()).join('+');
@@ -241,6 +254,45 @@ class SubtractiveMixingEngine implements MixingEngine {
 
     recur(0, const []);
     return result;
+  }
+
+  /// Builds a [RecipeComponent] for [paint] at [share] of the mix, flagging it a
+  /// trace — "a touch of" plus a static technique note (AC-7 / D-12) — when its
+  /// share falls below [MixOptions.traceThreshold].
+  static RecipeComponent _component(Paint paint, double share, MixOptions opts) {
+    final isTrace = share < opts.traceThreshold;
+    return RecipeComponent(
+      paint: paint,
+      partsFraction: share,
+      isTrace: isTrace,
+      techniqueNote: isTrace ? _traceTechniqueNote : null,
+    );
+  }
+
+  /// Whether a mix of [paints] is liable to muddy: it spans a complementary hue
+  /// pair (AC-8 / D-9), i.e. it combines a chromatic **warm** paint with a
+  /// chromatic **cool** one, the opposite temperature camps of the warm/cool
+  /// model in `words.dart`. Near-achromatic paints (white, black, greys) carry
+  /// no meaningful temperature and are ignored, so lightening or darkening a
+  /// single hue never counts as a crossing.
+  static bool _isMuddying(List<Paint> paints) {
+    var hasWarm = false;
+    var hasCool = false;
+    for (final paint in paints) {
+      final lab = paint.masstone;
+      if (math.sqrt(lab.a * lab.a + lab.b * lab.b) < _achromaticChroma) {
+        continue;
+      }
+      var hue = math.atan2(lab.b, lab.a) * 180 / math.pi;
+      if (hue < 0) hue += 360;
+      switch (temperatureWord(hue)) {
+        case 'warm':
+          hasWarm = true;
+        case 'cool':
+          hasCool = true;
+      }
+    }
+    return hasWarm && hasCool;
   }
 }
 

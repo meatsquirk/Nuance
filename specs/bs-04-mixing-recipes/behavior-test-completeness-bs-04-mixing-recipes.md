@@ -95,3 +95,18 @@ Re-graded 2026-10-09 by an independent grader (fresh context) against the **now-
 | AC-2 — `TestAC02_ManualTargetRefused` | A | G1–G6 | Asserts `target`/`manualError==null` before (G1), runs a **valid L50/a0/b0 control** that must be accepted and move the target off `SAMPLE_DEEP_OLIVE` (captured as `kept`), then enters L140 and asserts `manualError isNotNull` + `target == kept` (G3/G5 differential; a*/b* held at 0 so only lightness crosses the 0–100 ceiling — G4 reason-grain). Against the real `enterManualTarget`/`_inLabRange` it separates range-validation from an inert handler (fails the L50 move), a reject-all handler (errors on L50) and an accept-all handler (L140 would change target / raise no error). Error text not asserted — correct, the message is an internal detail. Passes green. |
 
 Gate recommendation: **PASS** — both AC-1 and AC-2 grade A against the implemented RECIPE-3 behaviour and run green.
+
+## ENGINE-4 behaviour re-grade (AC-7, AC-8)
+
+Re-graded 2026-10-09 by an independent grader (fresh context) against the **now-implemented** ENGINE-4 behaviour (`inverse` trace flagging + `_isMuddying`; `recipe_list_region` trace / muddying render), not the earlier A (limited) baseline. Both un-pended and both run green (`flutter test integration_test/recipes_test.dart -d 5AB9D06D… --plain-name TestAC07 / TestAC08` → both `All tests passed!`). Prior ITEST-3 grades were A (limited); both now upgraded to full A — no downgrade.
+
+| Test | Grade | Rules | Justification |
+| --- | --- | --- | --- |
+| AC-7 — `TestAC07_TraceTouchOf` | A (was A limited) | G1, G3/G5, G4, G6 | Given "a recipe whose Titanium White is under 2%" asserted via `whiteTraceIndex >= 0` through the real solve over the new `SAMPLE_DEEP_UMBER` fixture; the trace is paired with the ≥2% measured control (flag not constant); asserts at grain — "a touch of" + the technique note render in the specific `cardKey(whiteTraceIndex)` and **no** `Text` containing "Titanium White" in that card carries a "%". Rejects: a constant trace flag, a trace without a note, a threshold shifted into [0.02,0.05), and the newly-closed clause — an impl that still renders the traced Titanium White as a measured "— N%" part. Decisive against pre-ENGINE-4 code (defaults `isTrace=false`/`techniqueNote=null`). |
+| AC-8 — `TestAC08_MuddyingFlag` | A (was A limited) | G1, G3/G5, G4, G6 | Both `muddying` and non-`muddying` subsets asserted non-empty, plus a KNOWN Yellow Ochre + Ultramarine crossing asserted `muddying==true` and a KNOWN Yellow-Ochre-without-the-cool recipe asserted `false`; "muddy" renders on the crossing card and `findsNothing` on the clean card (each `scrollUntilVisible`'d). The two known recipes differ precisely by the cool paint, so a constant-true, constant-false or arbitrary flag each fails one. Grader verified paint temperatures by hand (Ochre h≈75°/Venetian h≈39° warm, Ultramarine h≈289° cool, White/Black below the chroma-10 cutoff) — verdicts correct, not coincidental. Decisive against pre-ENGINE-4 code (`muddying` default false). |
+
+Grade counts: **2×A, 0×B**.
+
+Judgement call (noted, not docked): AC-8's non-crossing control is warm-only; a narrower wrong impl ("flag iff the recipe contains Ultramarine") would survive, but a cool-only non-crossing recipe cannot be reliably produced in the ranked top-5 for a green target, so this is an A (limited)-style residual that cannot be closed now, not a B. The implemented code visibly computes warm **and** cool, and the realistic wrong impls (unimplemented / constant / arbitrary) are all rejected.
+
+Gate recommendation: **PASS** — AC-7 and AC-8 both grade full A against the implemented ENGINE-4 behaviour and run green.

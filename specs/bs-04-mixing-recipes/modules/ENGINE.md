@@ -1,6 +1,6 @@
 # Module ENGINE — the mixing engine
 
-**Status:** In progress — ENGINE-2 done (forward+inverse; AC-3/AC-4 green); ENGINE-3 & ENGINE-5 **blocked by G-5** (Deep Olive best ΔE00 ≈ 9.31 > the in-gamut ceiling 5.0 the ACs assert); ENGINE-4 unblocked
+**Status:** In progress — ENGINE-4 done (trace "a touch of" + muddying; AC-7/AC-8 green); ENGINE-3 & ENGINE-5 **blocked by G-5** (Deep Olive best ΔE00 ≈ 9.31 > the in-gamut ceiling 5.0 the ACs assert); ENGINE-6 ∥ RECIPE-4 startable
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (`Paint`, `PaintMedium`), `lib/recipes/engine/mixing_engine.dart`
 (`MixingEngine` interface, `Recipe`, `RecipeComponent`, `MixOptions`), `lib/recipes/engine/subtractive_engine.dart`
@@ -16,7 +16,7 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
 | 1 | shell | — | ✅ Done | 6,408,543 | 21m 15s |
 | 2 | behavior | AC-3, AC-4 | ✅ Done | 19,431,437 | 50m 12s |
 | 3 | behavior | AC-5, AC-6 | ⬜ Todo | | |
-| 4 | behavior | AC-7, AC-8 | ⬜ Todo | | |
+| 4 | behavior | AC-7, AC-8 | ✅ Done | 19,391,961 | 38m 16s |
 | 5 | behavior | AC-9 | ⬜ Todo | | |
 | 6 | behavior | AC-10 | ⬜ Todo | | |
 
@@ -228,6 +228,57 @@ Forward + inverse landed; AC-3 and AC-4 un-pended and green end-to-end.
   3. Un-pend AC-7, AC-8; unit-test the trace threshold boundary and the muddying detector (a crossing recipe flagged; a non-crossing recipe not — the in-test control).
 - **Exit criteria:** AC-7/AC-8 green; default suite green; unit gate + 100% coverage touched.
 - **Acceptance gate:** un-pend AC-7, AC-8; suite green (`TestAC07_*`, `TestAC08_*` + earlier); grade gate passed.
+
+### Result
+
+Trace "a touch of" + muddying landed; AC-7 and AC-8 un-pended and green end-to-end.
+
+- **Engine** (`subtractive_engine.dart`): `inverse` now flags each component below `MixOptions.traceThreshold`
+  (2%, D-12) `isTrace` with a static `techniqueNote`, and sets `Recipe.muddying` when a mix pairs a chromatic
+  **warm** with a chromatic **cool** paint — warm/cool from `words.dart`'s `temperatureWord` (poles 60°/240°,
+  i.e. complementary), paints below masstone chroma 10 excluded as achromatic (D-9). `forward` unchanged.
+- **Render** (`recipe_list_region.dart`): a trace renders "`<paint> — a touch of`" + its note (never a measured
+  `%`); a muddying recipe shows a "Liable to muddy" flag; each card carries `RecipeListRegion.cardKey(i)` so the
+  suite scopes assertions to one recipe.
+- **Un-pended** AC-7, AC-8 (row deleted in `bs04/pending.dart`; added to `recipes_test.dart`'s `unpended` set).
+- **AC-7 augmentation (made):** retargeted the test to a new `SAMPLE_DEEP_UMBER` fixture (CIELAB 33,0,12) whose
+  top recipe is Yellow Ochre + Ivory Black with a genuine ≈1.4% **Titanium White** trace; asserts that recipe's
+  card renders "a touch of" + the note for Titanium White and **no** measured `%` for it, plus the general
+  trace-vs-measured-control invariant across every recipe.
+- **AC-8 augmentation (made):** on Deep Olive / My paints, asserts a **known** Yellow Ochre + Ultramarine
+  crossing is `muddying` (+ renders the flag) and a **known** non-crossing Yellow Ochre mix is not — decisive
+  over an arbitrary flag assignment.
+- **Gates:** `flutter analyze` clean; **unit 551 green** (+8 over 543); **100% line coverage on all 15 touched
+  files** (`coverage_gate.dart main` PASS — const-ctor line re-covered with a non-const construction, the
+  Known-flakes quirk); **recipes acceptance suite green** under the verify lock (`-d 5AB9D06D…`: `TestAC07_*`,
+  `TestAC08_*` + AC-1..AC-4 run and pass; the 6 later-phase ACs skip). Also updated the ENGINE-2 generic unit
+  test that asserted `muddying isFalse` (ENGINE-4 now sets it).
+- **Grade gate:** an independent grader (fresh context) graded **AC-7 A (full)** and **AC-8 A (full)** — both
+  upgraded from A (limited), their augmentations now decisive; **0×B**. Grid § *ENGINE-4 behaviour re-grade*.
+- **Fix passes: 1/3** — the first region widget test overflowed the unscrolled test Scaffold with 5 cards;
+  wrapped it in a `SingleChildScrollView` (as the screen's `ListView` does). Engine/solver passed first try.
+- **G-5 untouched** (ENGINE-4 does not bear on reachability).
+- **Tokens / Time:** 19,391,961 · 38m 16s.
+
+### Checkpoint / Handoff
+
+- **Frozen for ENGINE-5/6 / RECIPE / SCREEN:**
+  - `inverse` sets `isTrace`/`techniqueNote` (static `_traceTechniqueNote`) per `MixOptions.traceThreshold` and
+    `Recipe.muddying` via `_isMuddying` (warm+cool chromatic crossing through `temperatureWord`,
+    `_achromaticChroma` = 10). ENGINE-5 adds `outOfGamut`, ENGINE-6 the `dry` transform — both layer on the same
+    per-component / per-recipe build; do **not** re-derive trace or muddying.
+  - `RecipeListRegion.cardKey(i)` is the per-card anchor; `_TraceComponent` renders "a touch of" + note; the
+    muddying flag text is "Liable to muddy". ENGINE-3 adds the verdict + ΔE line, ENGINE-5 the gamut label —
+    both inside `_RecipeCard`; keep the key.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under
+  the lock: `$C with-lock bs-04-mixing-recipes <PHASE> --wait 900 -- bash -c "export PATH=…; cd <repo> &&
+  flutter test integration_test/recipes_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685"`.
+- **Next phase:** **G-5 still blocks ENGINE-3 (AC-5) and ENGINE-5 (AC-9 in-gamut control).** Startable now:
+  **ENGINE-6** (AC-10 wet/dry — serial on `subtractive_engine.dart`) and **RECIPE-4** (AC-11/AC-12 speak —
+  file-disjoint). After G-5: ENGINE-3, ENGINE-5.
+- **Known gaps:** `verdict` null (ENGINE-3), `outOfGamut` false (ENGINE-5), `forward(dry: true)` throws
+  (ENGINE-6). The new `SAMPLE_DEEP_UMBER` harness fixture is used only by AC-7.
 
 ## Phase 5 — Out-of-gamut (ENGINE-5)
 

@@ -68,6 +68,10 @@ void main() {
   test('is a MixingEngine and const-canonicalises', () {
     expect(engine, isA<MixingEngine>());
     expect(identical(engine, const SubtractiveMixingEngine()), isTrue);
+    // A non-const construction runs the const constructor body at runtime (the
+    // const-canonicalisation coverage quirk — master-plan Known flakes).
+    // ignore: prefer_const_constructors
+    expect(SubtractiveMixingEngine(), isA<SubtractiveMixingEngine>());
   });
 
   group('forward (wet prediction)', () {
@@ -158,10 +162,10 @@ void main() {
         }
         expect(sum, closeTo(1.0, 1e-9));
         expect(_inLabRange(recipe.predictedColor), isTrue);
-        // ENGINE-2 leaves the later-phase fields at their defaults.
+        // ENGINE-3 (verdict) and ENGINE-5 (out-of-gamut) still leave these at
+        // their defaults; `muddying` is now set by ENGINE-4 (see its group).
         expect(recipe.verdict, isNull);
         expect(recipe.outOfGamut, isFalse);
-        expect(recipe.muddying, isFalse);
         // deltaE00 is the shipped metric over the recipe's own predicted colour.
         expect(recipe.deltaE00,
             closeTo(deltaE00(recipe.predictedColor, _target.coordinates), 1e-9));
@@ -210,6 +214,130 @@ void main() {
       final a = engine.inverse(_target, _myPaints, const MixOptions());
       final b = engine.inverse(_target, _myPaints, const MixOptions());
       expect(a, b);
+    });
+  });
+
+  group('trace "a touch of" (ENGINE-4, AC-7 / D-12)', () {
+    // A target whose best mix needs only a touch of Titanium White: the top
+    // recipe over My paints is White ≈ 1.4% + Yellow Ochre + Ivory Black.
+    const traceTarget = Sample(
+      name: 'Deep Umber',
+      coordinates: ColorCoordinates(lightness: 33, a: 0, b: 12),
+      provenance: Provenance(ProvenanceTier.measured),
+    );
+
+    test(
+        'a sub-threshold share is a trace with a static note; a measured share '
+        'is not', () {
+      const opts = MixOptions();
+      final recipes = engine.inverse(traceTarget, _myPaints, opts);
+      var sawTrace = false;
+      var sawMeasured = false;
+      for (final recipe in recipes) {
+        for (final c in recipe.components) {
+          if (c.partsFraction < opts.traceThreshold) {
+            sawTrace = true;
+            expect(c.isTrace, isTrue,
+                reason: '${c.paint.name} at ${c.partsFraction} is a trace');
+            expect(c.techniqueNote, isNotNull);
+            expect(c.techniqueNote, isNotEmpty);
+          } else {
+            sawMeasured = true;
+            expect(c.isTrace, isFalse);
+            expect(c.techniqueNote, isNull);
+          }
+        }
+      }
+      expect(sawTrace, isTrue,
+          reason: 'the target must yield a sub-2% component to exercise the rule');
+      expect(sawMeasured, isTrue, reason: 'the non-trace control must be present');
+    });
+
+    test('the flag tracks MixOptions.traceThreshold — zero flags nothing', () {
+      final recipes =
+          engine.inverse(traceTarget, _myPaints, const MixOptions(traceThreshold: 0));
+      for (final recipe in recipes) {
+        for (final c in recipe.components) {
+          expect(c.isTrace, isFalse);
+          expect(c.techniqueNote, isNull);
+        }
+      }
+    });
+
+    test('a single-paint mix is never a trace (100% of one paint)', () {
+      final recipes = engine.inverse(
+        _target,
+        const PaintPalette(name: 'one', paints: [_ochre]),
+        const MixOptions(),
+      );
+      expect(recipes.single.components.single.isTrace, isFalse);
+      expect(recipes.single.components.single.techniqueNote, isNull);
+    });
+  });
+
+  group('muddying flag (ENGINE-4, AC-8 / D-9)', () {
+    test('a warm + cool crossing is muddying; a single-temperature mix is not',
+        () {
+      final recipes = engine.inverse(_target, _myPaints, const MixOptions());
+      // Deep Olive over My paints returns a Yellow Ochre (warm) + Ultramarine
+      // (cool) crossing and clean single-temperature mixes.
+      final crossing = recipes.where((r) =>
+          r.components.any((c) => c.paint.id == _ochre.id) &&
+          r.components.any((c) => c.paint.id == _ultramarine.id));
+      final warmOnly = recipes.where((r) =>
+          r.components.any((c) => c.paint.id == _ochre.id) &&
+          r.components.every((c) => c.paint.id != _ultramarine.id));
+      expect(crossing, isNotEmpty,
+          reason: 'a warm+cool crossing recipe must be present');
+      for (final r in crossing) {
+        expect(r.muddying, isTrue, reason: 'ochre + ultramarine crosses complements');
+      }
+      expect(warmOnly, isNotEmpty, reason: 'a clean control must be present');
+      for (final r in warmOnly) {
+        expect(r.muddying, isFalse, reason: 'a single-temperature mix is clean');
+      }
+    });
+
+    test('a cool-only mix is not muddying (achromatic paints are ignored)', () {
+      final recipes = engine.inverse(
+        const Sample(
+          name: 'dusty blue',
+          coordinates: ColorCoordinates(lightness: 40, a: 5, b: -30),
+          provenance: Provenance(ProvenanceTier.measured),
+        ),
+        const PaintPalette(name: 'cool', paints: [_white, _ultramarine]),
+        const MixOptions(),
+      );
+      expect(recipes, isNotEmpty);
+      for (final r in recipes) {
+        expect(r.muddying, isFalse,
+            reason: 'white is achromatic, so ultramarine alone is not a crossing');
+      }
+    });
+
+    test('a temperature-neutral chromatic paint does not cross', () {
+      // A green masstone is chromatic but reads neither warm nor cool (the
+      // neutral axis), so mixing it with a warm paint is not a crossing.
+      const green = Paint(
+        id: 'pg7',
+        name: 'Phthalo Green',
+        medium: PaintMedium.acrylic,
+        masstone: ColorCoordinates(lightness: 45, a: -40, b: 10),
+      );
+      final recipes = engine.inverse(
+        const Sample(
+          name: 'muted green',
+          coordinates: ColorCoordinates(lightness: 45, a: -12, b: 22),
+          provenance: Provenance(ProvenanceTier.measured),
+        ),
+        const PaintPalette(name: 'greens', paints: [green, _ochre]),
+        const MixOptions(),
+      );
+      expect(recipes, isNotEmpty);
+      for (final r in recipes) {
+        expect(r.muddying, isFalse,
+            reason: 'warm + temperature-neutral is not a complementary crossing');
+      }
     });
   });
 }

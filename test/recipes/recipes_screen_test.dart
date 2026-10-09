@@ -43,7 +43,32 @@ const _ochre = Paint(
   medium: PaintMedium.acrylic,
   masstone: ColorCoordinates(lightness: 60, a: 12, b: 46),
 );
+const _white = Paint(
+  id: 'pw6',
+  name: 'Titanium White',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 96, a: -0.5, b: 2.5),
+);
+const _black = Paint(
+  id: 'pbk9',
+  name: 'Ivory Black',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 16, a: 0, b: 1),
+);
+const _ultramarine = Paint(
+  id: 'pb29',
+  name: 'Ultramarine Blue',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 30, a: 18, b: -52),
+);
 const _studioPalette = PaintPalette(name: 'Studio', paints: [_ochre]);
+
+// A target whose best mix over an earthy palette needs only a touch of white.
+const _umber = Sample(
+  name: 'Deep Umber',
+  coordinates: ColorCoordinates(lightness: 33, a: 0, b: 12),
+  provenance: Provenance(ProvenanceTier.measured),
+);
 
 /// Pumps [child] under a Material scaffold so the regions render in isolation.
 Future<void> _pumpRegion(WidgetTester tester, Widget child) =>
@@ -156,6 +181,55 @@ void main() {
       // E25 speak recipe is present per card but inert until RECIPE-4.
       expect(_enabled(tester, 'Speak recipe'), isFalse,
           reason: 'E25 speak recipe is not wired until RECIPE-4');
+    });
+
+    testWidgets('expresses a trace component as "a touch of" with its technique '
+        'note rather than a measured part (ENGINE-4, AC-7)', (tester) async {
+      const earth = PaintPalette(name: 'Earth', paints: [_white, _ochre, _black]);
+      final controller = _controller(
+        target: _umber,
+        paletteSource: const InMemoryPaletteSource(catalogue: [earth]),
+      );
+      addTearDown(controller.dispose);
+      // The solve returns a recipe with a genuine sub-2% trace component.
+      expect(
+        controller.state.recipes.any((r) => r.components.any((c) => c.isTrace)),
+        isTrue,
+      );
+
+      // Wrap in a scroll view (as the Recipes screen's ListView does) so the
+      // full card stack lays out; cards past the viewport are offstage.
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: RecipeListRegion(controller: controller),
+          ),
+        ),
+      ));
+
+      // The trace renders as "a touch of" plus its static technique note (the
+      // cards past the viewport are offstage, so the finder spans them).
+      expect(find.textContaining('a touch of', skipOffstage: false), findsWidgets);
+      expect(find.textContaining('add a little at a time', skipOffstage: false),
+          findsWidgets);
+      // A measured (non-trace) part still renders as a percentage.
+      expect(find.textContaining('%', skipOffstage: false), findsWidgets);
+    });
+
+    testWidgets('flags a muddying mix as liable to muddy (ENGINE-4, AC-8)',
+        (tester) async {
+      const crossing = PaintPalette(name: 'Cross', paints: [_ochre, _ultramarine]);
+      final controller = _controller(
+        target: _olive,
+        paletteSource: const InMemoryPaletteSource(catalogue: [crossing]),
+      );
+      addTearDown(controller.dispose);
+      expect(controller.state.recipes.any((r) => r.muddying), isTrue);
+
+      await _pumpRegion(tester, RecipeListRegion(controller: controller));
+
+      expect(find.textContaining('Liable to muddy', skipOffstage: false),
+          findsWidgets);
     });
   });
 

@@ -20,6 +20,10 @@ class RecipeListRegion extends StatelessWidget {
   /// Stable anchor for the recipe-list region.
   static const Key regionKey = ValueKey('recipes-list-region');
 
+  /// A per-card anchor (keyed by the recipe's position in the solved list) the
+  /// acceptance suite scopes its trace / muddying assertions to.
+  static Key cardKey(int index) => ValueKey('recipe-card-$index');
+
   /// The controller supplying the solved recipes (empty in this shell; filled by
   /// ENGINE-2).
   final RecipeController controller;
@@ -33,39 +37,73 @@ class RecipeListRegion extends StatelessWidget {
       children: recipes.isEmpty
           ? const [Text('No recipes yet')]
           : [
-              for (final recipe in recipes) _RecipeCard(recipe: recipe),
+              for (var i = 0; i < recipes.length; i++)
+                _RecipeCard(recipe: recipes[i], index: i),
             ],
     );
   }
 }
 
 /// One solved recipe (ENGINE-2): its paints as parts by volume and the mix's
-/// predicted colour. The per-recipe "Speak recipe" control (E25) is inert until
-/// RECIPE-4 wires it to the controller (AC-12).
+/// predicted colour. A trace component (under ~2% by volume) is expressed as
+/// "a touch of" plus its technique note rather than a measured part (ENGINE-4,
+/// AC-7), and a mix liable to muddy carries a flag (ENGINE-4, AC-8). The
+/// per-recipe "Speak recipe" control (E25) is inert until RECIPE-4 wires it to
+/// the controller (AC-12).
 class _RecipeCard extends StatelessWidget {
-  const _RecipeCard({required this.recipe});
+  const _RecipeCard({required this.recipe, required this.index});
 
   final Recipe recipe;
+
+  /// The recipe's position in the solved list — a stable per-card anchor the
+  /// acceptance finders scope their trace / muddying assertions to.
+  final int index;
 
   @override
   Widget build(BuildContext context) {
     final predicted = recipe.predictedColor;
     return Card(
+      key: RecipeListRegion.cardKey(index),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (final component in recipe.components)
-              Text('${component.paint.name} — '
-                  '${(component.partsFraction * 100).round()}%'),
+              if (component.isTrace)
+                _TraceComponent(component: component)
+              else
+                Text('${component.paint.name} — '
+                    '${(component.partsFraction * 100).round()}%'),
             Text('Predicted colour: L ${predicted.lightness.round()}, '
                 'a ${predicted.a.round()}, b ${predicted.b.round()}'),
+            if (recipe.muddying) const Text('Liable to muddy'),
             // E25 Speak recipe — inert until RECIPE-4 (AC-12).
             const TextButton(onPressed: null, child: Text('Speak recipe')),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A trace component (AC-7 / D-12): the paint expressed as "a touch of" with its
+/// static technique note, rather than an unrealistic measured fraction.
+class _TraceComponent extends StatelessWidget {
+  const _TraceComponent({required this.component});
+
+  final RecipeComponent component;
+
+  @override
+  Widget build(BuildContext context) {
+    // The engine always pairs a trace with its static technique note (D-12);
+    // the fallback is pure defence so the card never asserts on a null note.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('${component.paint.name} — a touch of'),
+        Text(component.techniqueNote ?? ''),
+      ],
     );
   }
 }

@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — RECIPE-3 + ENGINE-2 done (AC-1..AC-4 green); **G-5 open** (Deep Olive unreachable to ΔE≤5) blocks ENGINE-3/ENGINE-5; next ENGINE-4 ∥ RECIPE-4
+**Status:** In progress — ENGINE-4 done (AC-7/AC-8 green; AC-1..AC-4,7,8 done); **G-5 open** (Deep Olive unreachable to ΔE≤5) blocks ENGINE-3/ENGINE-5; next ENGINE-6 ∥ RECIPE-4
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -61,8 +61,8 @@ muddying / wet-dry / trace logic, and no real Recipes screen exist** — all net
 | AC-4 | The top three to five recipes are returned with parts and predicted colour | ITEST-3 `TestAC04_TopRecipes` | ENGINE-2 | ✅ Done |
 | AC-5 | A close recipe states a small delta-E with a plain verdict | ITEST-3 `TestAC05_CloseVerdict` | ENGINE-3 | ⬜ Todo |
 | AC-6 | A cleaner two-paint mix ranks above a muddier four-paint mix at a similar delta-E | ITEST-3 `TestAC06_PreferFewer` | ENGINE-3 | ⬜ Todo |
-| AC-7 | A component under about two percent is expressed as a touch of | ITEST-3 `TestAC07_TraceTouchOf` | ENGINE-4 | ⬜ Todo |
-| AC-8 | A complementary-crossing mix is flagged as muddying | ITEST-3 `TestAC08_MuddyingFlag` | ENGINE-4 | ⬜ Todo |
+| AC-7 | A component under about two percent is expressed as a touch of | ITEST-3 `TestAC07_TraceTouchOf` | ENGINE-4 | ✅ Done |
+| AC-8 | A complementary-crossing mix is flagged as muddying | ITEST-3 `TestAC08_MuddyingFlag` | ENGINE-4 | ✅ Done |
 | AC-9 | An out-of-gamut target offers the nearest possible without claiming a match | ITEST-3 `TestAC09_OutOfGamut` | ENGINE-5 | ⬜ Todo |
 | AC-10 | The painter views the predicted dry colour | ITEST-3 `TestAC10_WetDry` | ENGINE-6 | ⬜ Todo |
 | AC-11 | The painter hears the target spoken | ITEST-2 `TestAC11_SpeakTarget` | RECIPE-4 | ⬜ Todo |
@@ -207,9 +207,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 9 | RECIPE-3 | behavior: AC-1, AC-2 — target selection (saved sample + manual/validation) | ✅ Done | 18,470,473 | 46m 17s | analyze clean; unit 529 / integ +75~10; 100% cov 15 touched; AC-1/AC-2 un-pended + green (TestAC01/02); grade 2A/0B; fix 2/3 |
 | 10 | ENGINE-2 | behavior: AC-3, AC-4 — palette-constrained solver + top 3–5 w/ parts + predicted colour | ✅ Done | 19,431,437 | 50m 12s | forward(KM)+inverse; AC-3/AC-4 un-pended + green; 100% cov; **G-5 raised** (Deep Olive ΔE≈9.31>5 ⇒ ENGINE-3/5 blocked); fix 1/3 |
 | 11 | ENGINE-3 | behavior: AC-5, AC-6 — per-recipe ΔE00+verdict; prefer fewer paints | ⬜ Todo | | | serial on engine; **blocked by G-5** |
-| 12 | ENGINE-4 | behavior: AC-7, AC-8 — trace "a touch of"; muddying flag | ⬜ Next | | | serial on engine; startable now (∥ RECIPE-4) |
+| 12 | ENGINE-4 | behavior: AC-7, AC-8 — trace "a touch of"; muddying flag | ✅ Done | 19,391,961 | 38m 16s | analyze clean; unit 551; 100% cov 15 touched; AC-7/AC-8 un-pended + green; grade 2A/0B (both A-limited→A); fix 1/3 |
 | 13 | ENGINE-5 | behavior: AC-9 — out-of-gamut + nearest-not-a-match | ⬜ Todo | | | serial on engine; **blocked by G-5** |
-| 14 | ENGINE-6 | behavior: AC-10 — wet/dry toggle + dry prediction | ⬜ Todo | | | serial on engine |
+| 14 | ENGINE-6 | behavior: AC-10 — wet/dry toggle + dry prediction | ⬜ Next | | | serial on engine; startable now (∥ RECIPE-4) |
 | 15 | RECIPE-4 | behavior: AC-11, AC-12 — speak target; speak recipe | ⬜ Todo | | | startable now (∥ ENGINE-4); needs a recipe from ENGINE-2 (done) |
 | 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -218,15 +218,15 @@ when the row is marked done.
 
 ## Next phase
 
-**RECIPE-3 (AC-1/AC-2) + ENGINE-2 (AC-3/AC-4) done and reconciled** (merged into `feat`; AC-1..AC-4 green).
+**ENGINE-4 (AC-7 trace / AC-8 muddying) done** — un-pended and green; both augmentations closed (re-graded A).
+AC-1..AC-4, AC-7, AC-8 ✅ Done (6/12).
 
 **⚠ G-5 open (spec author):** the verified v1 engine reaches `SAMPLE_DEEP_OLIVE` only to ΔE00 ≈ 9.31, but the
 approved ACs assert in-gamut ≤ 5. It **blocks ENGINE-3 (AC-5) and ENGINE-5 (AC-9 in-gamut control)** — resolve
 before starting them (options in Open gates G-5 / ENGINE.md).
 
-Startable now (no unmet dependency): **ENGINE-4** (AC-7 trace, AC-8 muddying — serial on
-`subtractive_engine.dart`) and **RECIPE-4** (AC-11/AC-12 speak — file-disjoint, needs a recipe from ENGINE-2).
-After G-5: ENGINE-3 then ENGINE-5, ENGINE-6; then SIGNOFF-1.
+Startable now (no unmet dependency): **ENGINE-6** (AC-10 wet/dry — serial on `subtractive_engine.dart`) and
+**RECIPE-4** (AC-11/AC-12 speak — file-disjoint). After G-5: ENGINE-3, then ENGINE-5; then SIGNOFF-1.
 
 ## Token usage
 
@@ -252,7 +252,8 @@ After G-5: ENGINE-3 then ENGINE-5, ENGINE-6; then SIGNOFF-1.
 | RECIPE-3 | c3250ac8 | 2026-10-09 07:03 EDT | 07:49 | 46m 18s | 46m 17s | claude-opus-4-8 | 254 | 293,977 | 18,102,430 | 73,812 | 18,470,473 | AC-1, AC-2 un-pended + green; unit 529 / integ +75~10; 100% cov 15 touched; grade 2A/0B; fix 2/3 |
 | ENGINE-2 | c9875f00 | 2026-10-09 07:03 EDT | 07:54 | 50m 12s | 50m 12s | claude-opus-4-8 | 216 | 244,268 | 19,060,186 | 126,767 | 19,431,437 | AC-3/AC-4 green; 100% coverage; G-5 raised (Deep Olive ΔE≈9.31>5 blocks ENGINE-3/5); fix 1/3 |
 | RECONCILE | 6a32b307 | 2026-10-09 10:48 EDT | 11:00 | 11m 57s | 11m 57s | claude-opus-4-8 | 92 | 112,768 | 4,659,882 | 43,074 | 4,815,816 | applied RECIPE-3 + ENGINE-2 rollups: merged both phase branches into feat (resolved controller/guard/test conflicts); re-verified merged tree (analyze clean; unit 543; cov PASS 15/15; integ +15 ~8 incl TestAC01-04 run + green); AC-1..AC-4 ✅ Done; G-5 added (open, blocks ENGINE-3/5); both phase ledger rows added; 2 worktrees + phase branches removed |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 11:00** | **16h 40m** | **6h 15m** |  | **1,810** | **2,920,870** | **111,625,037** | **772,361** | **115,320,078** |  |
+| ENGINE-4 | 0759ffb5 | 2026-10-09 12:15 EDT | 12:53 | 38m 16s | 38m 16s | claude-opus-4-8 | 218 | 371,195 | 18,900,724 | 119,824 | 19,391,961 | AC-7 trace + AC-8 muddying un-pended + green; unit 551; 100% cov 15 touched; grade 2A/0B (both A-limited->A); fix 1/3; G-5 untouched |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 12:53** | **17h 19m** | **6h 53m** |  | **2,028** | **3,292,065** | **130,525,761** | **892,185** | **134,712,039** |  |
 
 ## Sign-off
 

@@ -79,7 +79,7 @@ void main() {
     // its AC here as it deletes the row in `bs04/pending.dart`: RECIPE-3 → AC-1,
     // AC-2; ENGINE-2 → AC-3, AC-4; ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8;
     // ENGINE-5 → AC-9; ENGINE-6 → AC-10; RECIPE-4 → AC-11, AC-12.
-    const unpended = <String>{'AC-1', 'AC-2', 'AC-3', 'AC-4'};
+    const unpended = <String>{'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-7', 'AC-8'};
 
     test(
       'pending map is the exact complement of the un-pended ACs across all 12, '
@@ -591,29 +591,29 @@ void main() {
     acTestWidgets('AC-7', 'TestAC07_TraceTouchOf — a sub-two-percent component is '
         'expressed as "a touch of" with a technique note, not a measured part',
         (tester) async {
-      // Given: a recipe whose component share is under ~2% by volume (D-12; G-4
-      // confirmed ~2%). The solve produces the recipes (ENGINE-2) and ENGINE-4
-      // flags the trace.
+      // Given: a target ("Deep Umber") whose best mix over "My paints" needs
+      // Titanium White only in trace amount (< 2% by volume) — the spec's named
+      // trace paint (D-12; G-4 confirmed ~2%). The solve produces the recipes
+      // (ENGINE-2) and ENGINE-4 flags the trace.
       final harness = await givenRecipes(
         tester,
-        target: SAMPLE_DEEP_OLIVE,
+        target: SAMPLE_DEEP_UMBER,
         palette: PALETTE_MY_PAINTS,
       );
-      expect(harness.state.recipes, isNotEmpty,
+      final recipes = harness.state.recipes;
+      expect(recipes, isNotEmpty,
           reason: 'the solve must return recipes to trace (ENGINE-2)');
 
-      // A trace component must exist to exercise the rule (ENGINE-4) — any
-      // component whose share is below the trace threshold.
+      // The trace rule holds across every component: one below the threshold is
+      // flagged with a static technique note; one at or above it is a measured
+      // part, not a trace (the control — so the flag is not constant).
       final traceComponents = [
-        for (final r in harness.state.recipes)
+        for (final r in recipes)
           for (final c in r.components)
             if (c.partsFraction < traceThreshold) c,
       ];
       expect(traceComponents, isNotEmpty,
           reason: 'a recipe must carry a sub-2% trace component (ENGINE-4)');
-
-      // Then: a trace component is flagged and carries a static technique note,
-      // and a non-trace component is NOT flagged (so the flag is not constant).
       for (final c in traceComponents) {
         expect(c.isTrace, isTrue,
             reason: '${c.paint.name} at ${c.partsFraction} is a trace');
@@ -622,71 +622,126 @@ void main() {
         expect(c.techniqueNote, isNotEmpty);
       }
       final measured = [
-        for (final r in harness.state.recipes)
+        for (final r in recipes)
           for (final c in r.components)
             if (c.partsFraction >= traceThreshold) c,
       ];
+      expect(measured, isNotEmpty,
+          reason: 'a measured (>=2%) component must be present as the control');
       for (final c in measured) {
         expect(c.isTrace, isFalse,
             reason: '${c.paint.name} at ${c.partsFraction} is a measured part, '
                 'not a trace');
       }
 
-      // And the trace renders as "a touch of" in the recipe-list card.
+      // AUGMENTATION (ENGINE-4): the decisive case the spec names — a recipe
+      // whose *Titanium White* is the genuine sub-2% trace. It is flagged, and
+      // its card renders "a touch of" + the technique note for Titanium White
+      // and NOT a measured part. (The solve ranks this recipe first — its card
+      // is on screen.)
+      final whiteTraceIndex = recipes.indexWhere((r) => r.components.any((c) =>
+          c.paint.name == 'Titanium White' &&
+          c.partsFraction < traceThreshold));
+      expect(whiteTraceIndex, greaterThanOrEqualTo(0),
+          reason: 'a recipe must carry a genuine sub-2% Titanium White trace');
+      final white = recipes[whiteTraceIndex]
+          .components
+          .firstWhere((c) => c.paint.name == 'Titanium White');
+      expect(white.isTrace, isTrue);
+      expect(white.techniqueNote, isNotNull);
+
+      final card = find.byKey(RecipeListRegion.cardKey(whiteTraceIndex));
+      expect(card, findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.textContaining('a touch of')),
+        findsWidgets,
+        reason: 'the Titanium White trace renders as "a touch of" (AC-7)',
+      );
       expect(
         find.descendant(
-          of: find.byKey(RecipeListRegion.regionKey),
-          matching: find.textContaining('a touch of'),
-        ),
+            of: card, matching: find.textContaining(white.techniqueNote!)),
         findsWidgets,
-        reason: 'a trace component renders as "a touch of" (AC-7)',
+        reason: 'the trace renders its technique note (D-12)',
       );
-
-      // LIMITED (augmentation owned by ENGINE-4): the decisive case is a recipe
-      // whose *Titanium White* is the sub-2% trace (the spec names it). ENGINE-4
-      // constructs/guarantees that recipe and asserts its measured-part form is
-      // absent for the traced paint.
+      // Titanium White is expressed only as a touch of, never as a measured
+      // part (a "— N%" line), in that recipe's card.
+      final whiteTexts = tester
+          .widgetList<Text>(find.descendant(
+            of: card,
+            matching: find.textContaining('Titanium White'),
+          ))
+          .toList();
+      expect(whiteTexts, isNotEmpty);
+      for (final t in whiteTexts) {
+        expect(t.data, isNot(contains('%')),
+            reason: 'the traced Titanium White is not shown as a measured part');
+      }
     });
 
     acTestWidgets('AC-8', 'TestAC08_MuddyingFlag — a complementary-crossing mix is '
         'flagged as muddying, a non-crossing one is not', (tester) async {
-      // Given: the solve returns candidate recipes, some of which cross a
-      // complementary hue pair (D-9; "My paints" holds both earthy greens/yellows
-      // and Venetian Red, so a crossing mix is reachable).
+      // Given: the solve returns candidate recipes for "Deep Olive Green" over
+      // "My paints" — which holds a warm earth (Yellow Ochre) and the palette's
+      // one cool (Ultramarine Blue), so a warm+cool crossing mix and clean
+      // single-temperature mixes are both reachable (D-9).
       final harness = await givenRecipes(
         tester,
         target: SAMPLE_DEEP_OLIVE,
         palette: PALETTE_MY_PAINTS,
       );
-      expect(harness.state.recipes, isNotEmpty,
-          reason: 'the solve must return recipes to flag (ENGINE-2)');
       final recipes = harness.state.recipes;
+      expect(recipes, isNotEmpty,
+          reason: 'the solve must return recipes to flag (ENGINE-2)');
 
       // A crossing recipe and a non-crossing control must both exist, so the
-      // flag is proven to track the crossing rather than being constant
-      // (ENGINE-4 sets the flag).
-      final muddying = recipes.where((r) => r.muddying).toList();
-      final clean = recipes.where((r) => !r.muddying).toList();
-      expect(muddying, isNotEmpty,
+      // flag is proven to track the crossing rather than being constant.
+      expect(recipes.where((r) => r.muddying), isNotEmpty,
           reason: 'a complementary-crossing recipe must be flagged (ENGINE-4)');
-      expect(clean, isNotEmpty,
+      expect(recipes.where((r) => !r.muddying), isNotEmpty,
           reason: 'a non-crossing control must be present and unflagged '
               '(so the flag is not constant-true)');
 
-      // Then: the muddying recipe renders a "liable to muddy" flag in its card.
+      // AUGMENTATION (ENGINE-4): decisive on known recipes. A KNOWN crossing —
+      // Yellow Ochre (warm) + Ultramarine Blue (cool) — is flagged muddying; a
+      // KNOWN non-crossing one (Yellow Ochre without the cool) is not. An
+      // arbitrary flag assignment would fail one of these.
+      final crossingIndex = recipes.indexWhere((r) =>
+          r.components.any((c) => c.paint.name == 'Yellow Ochre') &&
+          r.components.any((c) => c.paint.name == 'Ultramarine Blue'));
+      expect(crossingIndex, greaterThanOrEqualTo(0),
+          reason: 'a Yellow Ochre + Ultramarine crossing recipe must be present');
+      expect(recipes[crossingIndex].muddying, isTrue,
+          reason: 'a warm + cool crossing is liable to muddy');
+      final cleanIndex = recipes.indexWhere((r) =>
+          r.components.any((c) => c.paint.name == 'Yellow Ochre') &&
+          r.components.every((c) => c.paint.name != 'Ultramarine Blue'));
+      expect(cleanIndex, greaterThanOrEqualTo(0),
+          reason: 'a non-crossing Yellow Ochre mix must be present');
+      expect(recipes[cleanIndex].muddying, isFalse,
+          reason: 'a single-temperature mix is not muddying');
+
+      // Then: the crossing recipe's card renders the "liable to muddy" flag and
+      // the clean control's card does not. Each card is scrolled into view (the
+      // list scrolls; a card past the fold is otherwise not laid out). The clean
+      // control ranks above the crossing mix, so it is visited first (the list
+      // only scrolls downward).
+      expect(cleanIndex, lessThan(crossingIndex),
+          reason: 'the clean control ranks above the crossing mix');
+      final cleanCard = find.byKey(RecipeListRegion.cardKey(cleanIndex));
+      await tester.scrollUntilVisible(cleanCard, 100);
+      expect(
+        find.descendant(of: cleanCard, matching: find.textContaining('muddy')),
+        findsNothing,
+        reason: 'the clean control carries no muddying flag',
+      );
+      final crossingCard = find.byKey(RecipeListRegion.cardKey(crossingIndex));
+      await tester.scrollUntilVisible(crossingCard, 100);
       expect(
         find.descendant(
-          of: find.byKey(RecipeListRegion.regionKey),
-          matching: find.textContaining('muddy'),
-        ),
+            of: crossingCard, matching: find.textContaining('muddy')),
         findsWidgets,
         reason: 'a crossing recipe is flagged as liable to muddy (AC-8)',
       );
-
-      // LIMITED (augmentation owned by ENGINE-4): a decisive case pins a *known*
-      // complementary-crossing recipe (a green mix crossing Venetian Red) flagged
-      // and a known non-crossing recipe unflagged, once the engine output is
-      // known.
     });
 
     acTestWidgets('AC-9', 'TestAC09_OutOfGamut — an unreachable target is marked '

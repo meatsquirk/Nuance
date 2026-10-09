@@ -47,8 +47,6 @@ const Map<String, String> pendingACs = {
   'AC-5': 'ENGINE-3',
   'AC-6': 'ENGINE-3',
   // AC-7, AC-8 un-pended by ENGINE-4 (trace "a touch of"; muddying flag).
-  'AC-7': 'ENGINE-4',
-  'AC-8': 'ENGINE-4',
   // AC-9 un-pended by ENGINE-5 (out-of-gamut + nearest-not-a-match).
   'AC-9': 'ENGINE-5',
   // AC-10 un-pended by ENGINE-6 (wet/dry toggle + dry prediction).
