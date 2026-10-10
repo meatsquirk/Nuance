@@ -2,7 +2,7 @@
 
 **Feature:** bs-04-mixing-recipes · **Spec:** [bs-04-mixing-recipes.feature](../../bs-04-mixing-recipes.feature)
 **Prepared:** 2026-10-09 (SIGNOFF-1) · **At code:** `feat/bs-04-mixing-recipes` @ `ca877e4` (sign-off commit stamped on decision)
-**Decision:** ⏸ Awaiting — a human approves or requests changes. The agent never approves.
+**Decision:** ✅ **Approved 2026-10-09 by Matt Quirk (owner)** at code `ca877e4` (ENGINE-5), recorded via `/feature-next-phase --signoff bs-04-mixing-recipes approved`.
 
 All 12 acceptance criteria are coded, un-pended and green; the full cross-feature regression is green; a
 fresh independent full-suite grade grid is **24×A, 0 below A**. This packet is the evidence for the decision.
@@ -163,3 +163,13 @@ To watch the whole contract run green end to end:
 A reviewer likely to ask "show me it fails honestly" can run `BS04_RUN_PENDING=true` (no change now — nothing
 pending) or revert the G-5 retarget and re-run: the engine-backed reachability guard and AC-6's prefer-fewer
 tie-break both go red, confirming the tests discriminate.
+
+---
+
+## 10. Decision
+
+Reviewer: **Matt Quirk (owner)**  Date: **2026-10-09**  Decision: ☑ Approved  ☐ Changes requested
+
+Recorded via `/feature-next-phase --signoff bs-04-mixing-recipes approved`.
+
+- **Approved** ✅ — SIGNOFF-1 complete; feature `Status: Done — signed off 2026-10-09 by Matt Quirk at ca877e4`.
