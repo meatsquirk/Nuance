@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1, ITEST-2 done (harness + AC-1,7,8,9,10 pending tests + red baseline); next ITEST-3
+**Status:** In progress — ITEST-1, ITEST-2, ITEST-3 done (harness + all 10 ACs pending + red baseline); next ITEST-4 (test review, G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/correction_test.dart`, `integration_test/correction_harness.dart`, `integration_test/bs05/pending.dart`; reuses `integration_test/fakes/` (`fake_capture_source.dart`, `fake_speech.dart`, `fake_haptics.dart`)
 **Depends on:** all shell phases (CORRECT-1, LOOP-2, SCREEN-1) · **Blocks:** every behaviour phase (via the pending tests they un-pend) and G-2
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,454,576 | 20m 21s |
 | 2 | acceptance-tests | AC-1, AC-7, AC-8, AC-9, AC-10 (pending) | ✅ Done | 4,978,132 | 18m 00s |
-| 3 | acceptance-tests | AC-2, AC-3, AC-4, AC-5, AC-6 (pending) | ⬜ Todo | | |
+| 3 | acceptance-tests | AC-2, AC-3, AC-4, AC-5, AC-6 (pending) | ✅ Done | 6,375,988 | 20m 29s |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -40,6 +40,7 @@
 - **Depends on:** also needs **G-4** resolved (verdict words/tolerance/trace threshold/amounts) before the detail assertions are final.
 - **Tasks:** one pending `acTestWidgets` per AC per the catalogue (the difference/correction detail ACs); seed `TestAC02`'s within-tolerance control as an augmentation owned by CORRECT-4; AC-4's forward-score control in-test. Record the run-pending red baseline.
 - **Exit criteria:** analyze clean; unit green; integration default green (all pending) / run-pending these 5 fail cleanly; grade gate pass; red baseline recorded below.
+- **Result (ITEST-3, ✅):** the five difference/correction-detail AC tests, one pending `acTestWidgets` each, appended to a new **ITEST-3 group** in `correction_test.dart` (below the ITEST-2 group — disjoint, no merge risk); `+1` import (`subtractive_engine.dart`) for AC-4's in-test forward-model control. No `lib/` touched. Detail assertions use G-4's resolved values: verdict words **"noticeably off"** / **"very close"**, tolerance **ΔE00 ≤ 2**, trace threshold **0.02**. **Gates:** analyze clean (file + full project); unit **632 green** (`flutter test --coverage`); coverage gate **100%** on the 14 branch `lib/` files (no `lib/` added); integration **default green** on sim `5AB9D06D…` — `correction_test.dart` **12 pass / 10 skipped** (all ACs pending). **Red baseline** (run-pending, `BS05_RUN_PENDING=true`): **12 pass / 10 fail**, every ITEST-3 failure clean on its **Given precondition** (`Expected: not null / Actual: <null>`) naming the owner — AC-2/AC-3 `difference` null → CORRECT-2, AC-4/AC-5 `correction` null → CORRECT-3, AC-6 `difference` null → CORRECT-4; no compile errors/panics/harness errors. **Grade gate: 4×A, 1×B pending CORRECT-4** (independent grader, fresh context, given the ITEST-1+2 grid — grid `behavior-test-completeness-bs-05-mix-correction-loop.md`): AC-3/4/5/6 A; **AC-2 B pending CORRECT-4** — one off-reading can't show the verdict *tracks* distance (a constant "noticeably off" would pass), the decisive within-tolerance "very close" control is the pre-seeded TestAC02 augmentation (CORRECT-4). AC-4's forward-model control verified a valid discriminator (K/S scale-invariant; independent reference + real forward, not circular). No code fix needed. Fix passes: **0/3** (every gate passed first run).
 
 ## Phase 4 — Test review (ITEST-4, G-2)
 
@@ -52,11 +53,11 @@
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
 | AC-1 | TestAC01_CheckPhotographsAndCompares | fail (clean) | Then: `state.mixedSwatch` null (check not wired) | LOOP-3 | A |
-| AC-2 | TestAC02_DeltaEAndVerdict | | | CORRECT-2 | |
-| AC-3 | TestAC03_ValueLeadingDecomposition | | | CORRECT-2 | |
-| AC-4 | TestAC04_ConcreteCorrection | | | CORRECT-3 | |
-| AC-5 | TestAC05_TouchOf | | | CORRECT-3 | |
-| AC-6 | TestAC06_WithinTolerance | | | CORRECT-4 | |
+| AC-2 | TestAC02_DeltaEAndVerdict | fail (clean) | Given precond: `difference` null (check not wired) | CORRECT-2 | B pending CORRECT-4 |
+| AC-3 | TestAC03_ValueLeadingDecomposition | fail (clean) | Given precond: `difference` null | CORRECT-2 | A |
+| AC-4 | TestAC04_ConcreteCorrection | fail (clean) | Given precond: `correction` null | CORRECT-3 | A |
+| AC-5 | TestAC05_TouchOf | fail (clean) | Given precond: `correction` null | CORRECT-3 | A |
+| AC-6 | TestAC06_WithinTolerance | fail (clean) | Given precond: `difference` null | CORRECT-4 | A |
 | AC-7 | TestAC07_SpeakCorrection | fail (clean) | Given precond: `correction` null | LOOP-4 | A |
 | AC-8 | TestAC08_RephotographRechecks | fail (clean) | Given precond: first-check `difference` null | LOOP-5 | A |
 | AC-9 | TestAC09_SaveConfirmed | fail (clean) | Given precond: photographed `swatch` null | LOOP-6 | A |
@@ -86,3 +87,10 @@
 - **New test affordance (AC-8 added it):** `FakeCaptureSource.rephotographAs(SceneSpec)` swaps the live scene for the next capture (and `_liveScene`/`normaliseAgainstCard` follow it). ITEST-3 doesn't need it, but it's there.
 - **G-4 is resolved** — ITEST-3's detail assertions are now final: verdict words **"noticeably off"** (beyond) / **"very close"** (within), tolerance **ΔE00 ≤ 2**, trace threshold **0.02** (2% vol), confirmed phrase via `note` (not the shared label). Seed `TestAC02`'s within-tolerance control as an augmentation owned by **CORRECT-4** (already in the augmentations table); put AC-4's forward-score control in-test.
 - **Grade gate:** run the independent grader in a fresh context against the full grid; give it the ITEST-1+ITEST-2 grid so grades don't drift.
+
+### After ITEST-3 (for ITEST-4, the test review)
+
+- **ITEST-3 done** — all 10 AC tests now exist (one pending `acTestWidgets` each), graded and red-baselined. The full suite grade stands at **14 scaffold/guard + 10 AC = 24 rows**, counts **23×A, 1×B pending CORRECT-4** (AC-2 — the pre-seeded augmentation, not a defect). Frozen interfaces above unchanged; ITEST-4 touches no tests, it assembles the review packet and runs the full regression.
+- **Red baseline complete** — run-pending (`BS05_RUN_PENDING=true`, `correction_test.dart`) is **12 pass / 10 fail**, every failure clean (Then or owner-naming Given precondition). See the *Red baseline* table above for all ten.
+- **ITEST-4 (test review, G-2) is the next phase and is startable** — all AC-test phases are done and the grid is all-A-equivalent (the one B is *B pending CORRECT-4* with an augmentation row, which the test-review preconditions permit). Assemble the packet (per AC: test name, Given checks, When, Then + Rejects, one–two lines each; the red-baseline summary; the augmentation schedule — TestAC02 → CORRECT-4; the grid path + counts; what the reviewer should look at first), set ITEST-4 `⏸ Awaiting review` and G-2 *awaiting decision*, run the full regression (analyze; unit; coverage; integration default + run-pending under the lock), record the ledger row, commit, and stop with: `/feature-next-phase --gate bs-05-mix-correction-loop G-2 approved | "<changes>"`.
+- **Verification commands** unchanged (see the ITEST-1 handoff): `export PATH="$HOME/development/flutter/bin:$PATH"`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; integration under the lock on sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (run-pending: `--dart-define=BS05_RUN_PENDING=true`).

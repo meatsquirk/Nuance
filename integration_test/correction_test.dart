@@ -33,6 +33,7 @@ import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/provenance_region.dart';
+import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
 
 import 'correction_harness.dart';
 
@@ -538,6 +539,223 @@ void main() {
           reason: 'AC-10: the readout states Confirmed, not the old tier');
       expect(provenanceText, contains('you measured this'),
           reason: 'AC-10: the readout carries the "you measured this" phrasing');
+    });
+  });
+
+  group(
+      'ITEST-3 — AC-2, AC-3, AC-4, AC-5, AC-6 (difference / correction detail)',
+      () {
+    acTestWidgets(
+        'AC-2',
+        'TestAC02_DeltaEAndVerdict — the difference is a ΔE00 with a plain '
+            'verdict', (tester) async {
+      // Given: a checked SCENE_OFF mix, so a difference reading is shown. The
+      // reading is CORRECT-2's output; until then `whenCheck` is inert (LOOP-3),
+      // so this precondition fails cleanly at the red baseline.
+      final h = await givenCorrection(tester, scene: SCENE_OFF);
+      await h.whenCheck(); // CORRECT-2 computes the difference reading
+      final diff = h.state.difference;
+      expect(diff, isNotNull,
+          reason: 'AC-2 Given: the checked mix shows a difference (CORRECT-2)');
+      final swatch = h.state.mixedSwatch;
+      expect(swatch, isA<Sample>(),
+          reason: 'AC-2 Given: a photographed swatch to compare');
+
+      // When: the comparison is shown.
+      // Then: the stated ΔE00 is the real swatch→target distance (graded against
+      // the independent reference), and the plain verdict "noticeably off" is
+      // rendered in the difference region (G-4b).
+      expect(
+          diff!.deltaE00,
+          closeTo(
+              referenceDeltaE00(
+                  swatch!.coordinates, SAMPLE_DEEP_OLIVE.coordinates),
+              0.1),
+          reason: 'AC-2: the difference states the swatch→target ΔE00');
+      expect(diff.verdict, 'noticeably off',
+          reason: 'AC-2: a beyond-tolerance mix reads "noticeably off" (G-4b)');
+      final shown = _plainTextUnder(tester, DifferenceRegion.regionKey);
+      expect(shown, contains('noticeably off'),
+          reason: 'AC-2: the verdict is rendered on the difference body');
+
+      // LIMITED (augmented by CORRECT-4): one off-reading cannot show the verdict
+      // *tracks* distance (a constant "noticeably off" would also pass here). The
+      // decisive within-tolerance control ("very close") needs CORRECT-4's
+      // tolerance verdict, so it is the TestAC02 augmentation. Grade: B pending
+      // CORRECT-4.
+    });
+
+    acTestWidgets(
+        'AC-3',
+        'TestAC03_ValueLeadingDecomposition — the difference is decomposed and '
+            'leads with value for a CVD painter', (tester) async {
+      // Given: the SCENE_OFF checked mix (measured too dark, hue toward green vs
+      // the target). The decomposition is CORRECT-2's; inert until then.
+      final h = await givenCorrection(tester, scene: SCENE_OFF);
+      await h.whenCheck(); // CORRECT-2 computes the value-leading decomposition
+      final diff = h.state.difference;
+      expect(diff, isNotNull,
+          reason: 'AC-3 Given: the checked mix shows a difference (CORRECT-2)');
+      final swatch = h.state.mixedSwatch;
+      expect(swatch, isA<Sample>(),
+          reason: 'AC-3 Given: a photographed swatch to decompose');
+
+      // When: the comparison is shown.
+      // Then: the leading reading is value ("too dark by N"), then hue ("toward
+      // green") — value first for a CVD painter (D-5).
+      final expectedDarkBy =
+          (SAMPLE_DEEP_OLIVE.coordinates.lightness - swatch!.coordinates.lightness)
+              .round();
+      expect(expectedDarkBy, greaterThan(0),
+          reason: 'AC-3 Given: SCENE_OFF really is darker than the target');
+      expect(diff!.valueReading.toLowerCase(), contains('dark'),
+          reason: 'AC-3: states "too dark" (not "too light") — the right sign');
+      expect(diff.valueReading, contains('$expectedDarkBy'),
+          reason: 'AC-3: states "too dark by $expectedDarkBy" (the L* gap)');
+      expect(diff.hueReading.toLowerCase(), contains('green'),
+          reason: 'AC-3: the hue reading is "shifted toward green"');
+
+      // Value leads hue in the rendered body (the CVD-first ordering, D-5).
+      final shown = _plainTextUnder(tester, DifferenceRegion.regionKey);
+      final valueAt = shown.toLowerCase().indexOf('dark');
+      final hueAt = shown.toLowerCase().indexOf('green');
+      expect(valueAt, greaterThanOrEqualTo(0),
+          reason: 'AC-3: the value reading is rendered');
+      expect(hueAt, greaterThan(valueAt),
+          reason: 'AC-3: value leads, hue follows (value-first for a CVD '
+              'painter)');
+    });
+
+    acTestWidgets(
+        'AC-4',
+        'TestAC04_ConcreteCorrection — a concrete correction names the paint '
+            'and the amount to add', (tester) async {
+      // Given: the SCENE_OFF checked mix + RECIPE_DEEP_OLIVE + "My paints". The
+      // correction is CORRECT-3's; inert until then.
+      final h = await givenCorrection(tester, scene: SCENE_OFF);
+      await h.whenCheck(); // CORRECT-3 computes the concrete correction
+      final correction = h.state.correction;
+      expect(correction, isNotNull,
+          reason: 'AC-4 Given: the checked mix yields a correction (CORRECT-3)');
+      expect(correction!.isEmpty, isFalse,
+          reason: 'AC-4 Given: SCENE_OFF is off enough to need a correction');
+
+      // When: the correction is shown.
+      // Then: it names Titanium White (the "too dark" fix) with a positive
+      // amount, rendered, and every addition is drawn from the owned palette.
+      final whiteAdds =
+          correction.additions.where((a) => a.paint.name == 'Titanium White');
+      expect(whiteAdds, hasLength(1),
+          reason: 'AC-4: the correction names Titanium White to lift the value');
+      expect(whiteAdds.single.parts, greaterThan(0),
+          reason: 'AC-4: a positive amount of white to add (≈ one part more)');
+      final shown = _plainTextUnder(tester, CorrectionRegion.regionKey);
+      expect(shown, contains('Titanium White'),
+          reason: 'AC-4: the paint to add is rendered');
+      final paletteIds = PALETTE_MY_PAINTS.paints.map((p) => p.id).toSet();
+      for (final a in correction.additions) {
+        expect(paletteIds, contains(a.paint.id),
+            reason: 'AC-4: ${a.paint.name} must be a paint from "My paints"');
+      }
+
+      // In-test forward-model control (D-10): applying the suggested additions to
+      // the current mix and re-running the real forward model must move the
+      // prediction *closer* to the target — rejecting a darkening paint or an
+      // addition that increases ΔE00. K/S mixing is scale-invariant, so comparing
+      // the base mix against base+additions reads the true physical effect.
+      const engine = SubtractiveMixingEngine();
+      final target = SAMPLE_DEEP_OLIVE.coordinates;
+      final baseParts = <Paint, double>{
+        for (final c in RECIPE_DEEP_OLIVE.components) c.paint: c.partsFraction,
+      };
+      final before = referenceDeltaE00(engine.forward(baseParts), target);
+      final adjusted = Map<Paint, double>.from(baseParts);
+      for (final a in correction.additions) {
+        adjusted[a.paint] = (adjusted[a.paint] ?? 0) + a.parts;
+      }
+      final after = referenceDeltaE00(engine.forward(adjusted), target);
+      expect(after, lessThan(before),
+          reason: 'AC-4: adding the correction moves the forward-predicted mix '
+              'closer to the target (not a darkening/ΔE-increasing paint)');
+    });
+
+    acTestWidgets(
+        'AC-5',
+        'TestAC05_TouchOf — a small correction is expressed as "a touch of"',
+        (tester) async {
+      // Given: a checked SCENE_OCHRE_TRACE mix whose best correction is a
+      // sub-trace Yellow Ochre addition. The correction is CORRECT-3's; inert
+      // until then.
+      final h = await givenCorrection(tester, scene: SCENE_OCHRE_TRACE);
+      await h.whenCheck(); // CORRECT-3 computes the trace correction
+      final correction = h.state.correction;
+      expect(correction, isNotNull,
+          reason: 'AC-5 Given: the checked mix yields a correction (CORRECT-3)');
+      expect(correction!.isEmpty, isFalse,
+          reason: 'AC-5 Given: SCENE_OCHRE_TRACE needs a small correction');
+      final ochre =
+          correction.additions.where((a) => a.paint.name == 'Yellow Ochre');
+      expect(ochre, hasLength(1),
+          reason: 'AC-5 Given: the fix is a Yellow Ochre addition');
+      expect(ochre.single.parts, lessThan(0.02),
+          reason: 'AC-5 Given: the ochre addition is sub-trace (< 2% by volume, '
+              'the G-4c trace threshold)');
+
+      // When: the correction is shown.
+      // Then: the ochre adjustment renders "a touch of" + a technique note — not
+      // a measured part, and not silently dropped.
+      expect(ochre.single.isTrace, isTrue,
+          reason: 'AC-5: the sub-trace addition is flagged a trace');
+      expect(ochre.single.techniqueNote, isNotNull,
+          reason: 'AC-5: a technique note accompanies the trace (D-7)');
+      final shown = _plainTextUnder(tester, CorrectionRegion.regionKey);
+      expect(shown.toLowerCase(), contains('a touch of'),
+          reason: 'AC-5: the trace renders "a touch of", not a numeric part');
+      expect(shown, contains('Yellow Ochre'),
+          reason: 'AC-5: the touch names Yellow Ochre');
+    });
+
+    acTestWidgets(
+        'AC-6',
+        'TestAC06_WithinTolerance — a mix already within tolerance needs no '
+            'correction', (tester) async {
+      // Given: a checked SCENE_CLOSE mix sitting within ΔE00 tolerance of the
+      // target. The within-tolerance verdict/suppression is CORRECT-4's; inert
+      // until then.
+      final h = await givenCorrection(tester, scene: SCENE_CLOSE);
+      await h.whenCheck(); // CORRECT-4 sets within-tolerance + suppresses
+      final diff = h.state.difference;
+      expect(diff, isNotNull,
+          reason: 'AC-6 Given: the checked mix shows a difference (CORRECT-4)');
+      final swatch = h.state.mixedSwatch;
+      expect(swatch, isA<Sample>(),
+          reason: 'AC-6 Given: a photographed swatch to judge');
+      expect(
+          referenceDeltaE00(
+              swatch!.coordinates, SAMPLE_DEEP_OLIVE.coordinates),
+          lessThanOrEqualTo(kToleranceDeltaE00),
+          reason: 'AC-6 Given: SCENE_CLOSE sits within ΔE00 2 of the target');
+
+      // When: the comparison is shown (settle point: the check completed and the
+      // screen rendered its within-tolerance state).
+      // Then: the mix reads "very close", is flagged within tolerance, and NO
+      // correction is offered — the correction region names no paint to add.
+      expect(diff!.withinTolerance, isTrue,
+          reason: 'AC-6: the mix is flagged within tolerance');
+      expect(diff.verdict, 'very close',
+          reason: 'AC-6: a within-tolerance mix reads "very close" (G-4b)');
+      final correction = h.state.correction;
+      expect(correction == null || correction.isEmpty, isTrue,
+          reason: 'AC-6: no correction is suggested within tolerance');
+      final correctionShown = _plainTextUnder(tester, CorrectionRegion.regionKey);
+      for (final p in PALETTE_MY_PAINTS.paints) {
+        expect(correctionShown, isNot(contains(p.name)),
+            reason: 'AC-6: no paint to add (${p.name}) is rendered within '
+                'tolerance');
+      }
+      final diffShown = _plainTextUnder(tester, DifferenceRegion.regionKey);
+      expect(diffShown, contains('very close'),
+          reason: 'AC-6: "very close" is rendered on the difference body');
     });
   });
 }
