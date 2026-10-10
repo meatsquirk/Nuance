@@ -222,11 +222,14 @@ void main() {
         expect(sum, closeTo(1.0, 1e-9));
         expect(_inLabRange(recipe.predictedColor), isTrue);
         // ENGINE-3 now fills `verdict` with a non-empty plain band (see its
-        // group); ENGINE-5 still leaves `outOfGamut` at its default; `muddying`
-        // is set by ENGINE-4.
+        // group); `muddying` is set by ENGINE-4. ENGINE-5 flags `outOfGamut`:
+        // this `_target` is the pre-retarget olive (a* −8.65) the earthy palette
+        // cannot reach within the ΔE00 ≤ 5 ceiling (best ≈ 9.3 — the G-5 limit),
+        // so every offered mix is the nearest, not a match. The in-gamut flag
+        // path (a reachable olive) is covered in the out-of-gamut group below.
         expect(recipe.verdict, isNotNull);
         expect(recipe.verdict, isNotEmpty);
-        expect(recipe.outOfGamut, isFalse);
+        expect(recipe.outOfGamut, isTrue);
         // deltaE00 is the shipped metric over the recipe's own predicted colour.
         expect(recipe.deltaE00,
             closeTo(deltaE00(recipe.predictedColor, _target.coordinates), 1e-9));
@@ -510,6 +513,80 @@ void main() {
       final b = engine.inverse(_target, twins, const MixOptions());
       expect(a, isNotEmpty);
       expect(a, b, reason: 'the ranking is deterministic even at a full tie');
+    });
+  });
+
+  group('out of gamut (ENGINE-5, AC-9 / D-10)', () {
+    const myPaintsFull = PaintPalette(
+      name: 'My paints',
+      paints: [_white, _ochre, _black, _ultramarine, _venetian],
+    );
+    // A strongly-green, high-chroma turquoise no earthy-palette paint sits near:
+    // genuinely unreachable (best ΔE00 ≈ 21, well above the ceiling).
+    const turquoise = Sample(
+      name: 'Vivid Turquoise',
+      coordinates: ColorCoordinates(lightness: 55, a: -35, b: -12),
+      provenance: Provenance(ProvenanceTier.measured),
+    );
+    // The retargeted reachable olive (best ΔE00 ≈ 3.3 ≤ 5) — the in-gamut
+    // control.
+    const reachableOlive = Sample(
+      name: 'Deep Olive Green',
+      coordinates: ColorCoordinates(lightness: 42, a: -1.2561, b: 23.9671),
+      provenance: Provenance(ProvenanceTier.measured),
+    );
+
+    double minDeltaE00(List<Recipe> recipes) =>
+        recipes.map((r) => r.deltaE00).reduce((a, b) => a < b ? a : b);
+
+    test('an unreachable target flags every offered mix out of gamut, each above '
+        'the in-gamut ceiling, with no verdict claiming a match', () {
+      const opts = MixOptions();
+      final recipes = engine.inverse(turquoise, myPaintsFull, opts);
+      expect(recipes, isNotEmpty,
+          reason: 'even unreachable, the engine offers the nearest mix (AC-9)');
+      expect(minDeltaE00(recipes), greaterThan(opts.gamutThreshold),
+          reason: 'the best achievable mix exceeds the ΔE00 ≤ 5 ceiling');
+      for (final r in recipes) {
+        expect(r.outOfGamut, isTrue,
+            reason: 'the nearest mix is offered as nearest, not a match');
+        expect(r.deltaE00, greaterThan(opts.gamutThreshold));
+        // The distance band at this range never reads as a match (AC-9): the
+        // flag is the signal, and the verdict stays an honest, worse band.
+        expect(r.verdict, isNotNull);
+        expect(r.verdict!.toLowerCase(), isNot(contains('very close')));
+        expect(r.verdict!.toLowerCase(), isNot(contains('almost')));
+      }
+    });
+
+    test('a reachable target flags no recipe out of gamut (the in-gamut control)',
+        () {
+      final recipes =
+          engine.inverse(reachableOlive, myPaintsFull, const MixOptions());
+      expect(recipes, isNotEmpty);
+      expect(minDeltaE00(recipes), lessThanOrEqualTo(5.0),
+          reason: 'the reachable olive sits inside the in-gamut ceiling');
+      for (final r in recipes) {
+        expect(r.outOfGamut, isFalse,
+            reason: 'an in-gamut recipe is a match, not a nearest-only');
+      }
+    });
+
+    test('the flag is thresholded by MixOptions.gamutThreshold, not a hardcoded '
+        'ceiling', () {
+      // The same reachable olive (best ≈ 3.3) is out of gamut under a ceiling
+      // below its best, and the same turquoise (best ≈ 21) is in gamut under a
+      // ceiling above its best — so the boundary is the option, not a constant.
+      final tight = engine.inverse(
+          reachableOlive, myPaintsFull, const MixOptions(gamutThreshold: 1.0));
+      expect(tight, isNotEmpty);
+      expect(tight.every((r) => r.outOfGamut), isTrue,
+          reason: 'under a 1.0 ceiling the ≈3.3 best mix is out of gamut');
+      final loose = engine.inverse(
+          turquoise, myPaintsFull, const MixOptions(gamutThreshold: 100.0));
+      expect(loose, isNotEmpty);
+      expect(loose.every((r) => !r.outOfGamut), isTrue,
+          reason: 'under a 100 ceiling even the turquoise is within gamut');
     });
   });
 }

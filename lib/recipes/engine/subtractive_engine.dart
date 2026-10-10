@@ -218,8 +218,21 @@ class SubtractiveMixingEngine implements MixingEngine {
       }
     });
 
-    final recipes = bestByPaintSet.values.toList()
+    final ranked = bestByPaintSet.values.toList()
       ..sort((a, b) => _rankCompare(a, b, targetLab));
+
+    // AC-9 / D-10: the target is out of gamut when even the *best achievable*
+    // mix cannot reach it within the in-gamut ceiling. "Best achievable" is the
+    // minimum ΔE00 over the candidates — not `ranked.first`, which the D-8
+    // tie-break may set to a marginally farther but cleaner mix within the same
+    // band. When out of gamut, every offered recipe is flagged so the screen
+    // presents it as the nearest possible, never as a claimed match.
+    final bestDeltaE00 =
+        ranked.map((r) => r.deltaE00).reduce(math.min);
+    final recipes = bestDeltaE00 > opts.gamutThreshold
+        ? [for (final r in ranked) r.asOutOfGamut()]
+        : ranked;
+
     if (recipes.length > opts.topK) {
       return recipes.sublist(0, opts.topK);
     }

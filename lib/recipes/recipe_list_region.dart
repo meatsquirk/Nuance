@@ -51,7 +51,9 @@ class RecipeListRegion extends StatelessWidget {
 /// One solved recipe (ENGINE-2): its paints as parts by volume and the mix's
 /// predicted colour. A trace component (under ~2% by volume) is expressed as
 /// "a touch of" plus its technique note rather than a measured part (ENGINE-4,
-/// AC-7), and a mix liable to muddy carries a flag (ENGINE-4, AC-8). The
+/// AC-7), and a mix liable to muddy carries a flag (ENGINE-4, AC-8). When the
+/// target is out of gamut the card marks the mix the nearest possible, not a
+/// match (ENGINE-5, AC-9). The
 /// per-recipe "Speak recipe" control (E25) is wired by RECIPE-4 to speak the
 /// recipe's paints and parts through the controller (AC-12).
 class _RecipeCard extends StatelessWidget {
@@ -93,6 +95,11 @@ class _RecipeCard extends StatelessWidget {
             // model default); the engine always fills it, so it reads here.
             Text('ΔE00 ${recipe.deltaE00.toStringAsFixed(1)}'
                 '${recipe.verdict == null ? '' : ' — ${recipe.verdict}'}'),
+            // When the target is out of gamut (AC-9) the mix is the nearest
+            // possible, not a match — the card says so plainly so the verdict's
+            // distance band is never read as a claimed match.
+            if (recipe.outOfGamut)
+              const Text('Nearest possible — not an exact match'),
             if (recipe.muddying) const Text('Liable to muddy'),
             // E25 Speak recipe — wired by RECIPE-4 (AC-12): speaks this recipe's
             // paints and their parts through the controller's speech seam.

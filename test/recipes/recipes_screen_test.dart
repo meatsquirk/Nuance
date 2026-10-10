@@ -81,6 +81,21 @@ const _umber = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
+// An earthy palette (no green/cool-green pigment) used to drive the out-of-gamut
+// path: it cannot reach the strongly-green [_turquoise] (best ΔE00 ≈ 23) but
+// reaches the warm [_sand] (best ≈ 2.5) as the in-gamut control.
+const _earthy = PaintPalette(name: 'Earth', paints: [_ochre, _white, _black]);
+const _turquoise = Sample(
+  name: 'Vivid Turquoise',
+  coordinates: ColorCoordinates(lightness: 55, a: -35, b: -12),
+  provenance: Provenance(ProvenanceTier.measured),
+);
+const _sand = Sample(
+  name: 'Warm Sand',
+  coordinates: ColorCoordinates(lightness: 70, a: 6, b: 30),
+  provenance: Provenance(ProvenanceTier.measured),
+);
+
 /// Pumps [child] under a Material scaffold so the regions render in isolation.
 Future<void> _pumpRegion(WidgetTester tester, Widget child) =>
     tester.pumpWidget(MaterialApp(home: Scaffold(body: child)));
@@ -299,13 +314,103 @@ void main() {
       expect(find.textContaining('Liable to muddy', skipOffstage: false),
           findsWidgets);
     });
+
+    testWidgets('marks each card the nearest, not a match, when the target is '
+        'out of gamut (ENGINE-5, AC-9)', (tester) async {
+      final controller = _controller(
+        target: _turquoise,
+        paletteSource: const InMemoryPaletteSource(catalogue: [_earthy]),
+      );
+      addTearDown(controller.dispose);
+      expect(controller.state.recipes, isNotEmpty);
+      expect(controller.state.recipes.every((r) => r.outOfGamut), isTrue,
+          reason: 'the turquoise is unreachable from the earthy palette');
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: RecipeListRegion(controller: controller),
+          ),
+        ),
+      ));
+
+      expect(
+        find.textContaining('not an exact match', skipOffstage: false),
+        findsWidgets,
+        reason: 'an out-of-gamut recipe card is labelled the nearest possible',
+      );
+    });
+
+    testWidgets('an in-gamut recipe card carries no nearest-only label '
+        '(control)', (tester) async {
+      final controller = _controller(
+        target: _sand,
+        paletteSource: const InMemoryPaletteSource(catalogue: [_earthy]),
+      );
+      addTearDown(controller.dispose);
+      expect(controller.state.recipes, isNotEmpty);
+      expect(controller.state.recipes.any((r) => r.outOfGamut), isFalse,
+          reason: 'the warm sand is reachable from the earthy palette');
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: RecipeListRegion(controller: controller),
+          ),
+        ),
+      ));
+
+      expect(find.textContaining('not an exact match', skipOffstage: false),
+          findsNothing);
+    });
   });
 
   group('GamutBanner', () {
-    testWidgets('keeps its anchor but shows no banner in the shell',
+    testWidgets('keeps its anchor but shows no banner with no recipes yet',
         (tester) async {
+      // The default controller has no palette, so the solve returns nothing —
+      // nothing is out of gamut and the banner collapses to its bare anchor.
       final controller = _controller();
       addTearDown(controller.dispose);
+      await _pumpRegion(tester, GamutBanner(controller: controller));
+
+      expect(find.byKey(GamutBanner.regionKey), findsOneWidget);
+      expect(find.text('OUT OF GAMUT'), findsNothing);
+    });
+
+    testWidgets('reads OUT OF GAMUT when the target is unreachable (ENGINE-5, '
+        'AC-9)', (tester) async {
+      final controller = _controller(
+        target: _turquoise,
+        paletteSource: const InMemoryPaletteSource(catalogue: [_earthy]),
+      );
+      addTearDown(controller.dispose);
+      expect(controller.state.outOfGamut, isTrue,
+          reason: 'the turquoise is unreachable from the earthy palette');
+
+      await _pumpRegion(tester, GamutBanner(controller: controller));
+
+      expect(find.byKey(GamutBanner.regionKey), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(GamutBanner.regionKey),
+          matching: find.text('OUT OF GAMUT'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('stays hidden for an in-gamut target (control: not constant-on)',
+        (tester) async {
+      final controller = _controller(
+        target: _sand,
+        paletteSource: const InMemoryPaletteSource(catalogue: [_earthy]),
+      );
+      addTearDown(controller.dispose);
+      expect(controller.state.recipes, isNotEmpty,
+          reason: 'the warm sand is reachable, so recipes are offered');
+      expect(controller.state.outOfGamut, isFalse);
+
       await _pumpRegion(tester, GamutBanner(controller: controller));
 
       expect(find.byKey(GamutBanner.regionKey), findsOneWidget);

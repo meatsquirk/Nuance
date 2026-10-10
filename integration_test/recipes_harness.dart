@@ -461,6 +461,15 @@ Future<RecipesHarness> givenRecipes(
   PaintPalette palette = PALETTE_MY_PAINTS,
   MixingEngine mixingEngine = const SubtractiveMixingEngine(),
 }) async {
+  // Open a *fresh* app each time. A repeated `givenRecipes` in one test (AC-9
+  // opens an out-of-gamut target, then its in-gamut control) would otherwise
+  // reuse the previous `RecipesHomeScreen` State — whose `late final`
+  // RecipeController is built once — so the screen would keep the first
+  // scenario's controller and target. Unmounting the prior tree first disposes
+  // that State, so the next pump builds a new controller over these deps.
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump();
+
   final speech = FakeSpeech();
   final deps = AppDependencies(
     colorScience: const ColorScienceImpl(),

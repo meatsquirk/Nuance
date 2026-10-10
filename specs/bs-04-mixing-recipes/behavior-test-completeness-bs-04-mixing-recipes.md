@@ -216,3 +216,57 @@ Judgement calls:
 - **Determinism:** `pumpAndSettle` throughout `givenRecipes` and every `when…`; the ranking is a total order (band-bucketed lexicographic keys), confirmed by the engine's own `is deterministic` unit test and a stable probe.
 
 Gate recommendation: **PASS** — all 11 un-pended AC tests grade full A against the implemented ENGINE-3 behaviour and run green; the AC-5 verdict-tracking and AC-6 prefer-fewer augmentations both discriminate against the pre-ENGINE-3 ordering/verdict and each strengthen only their own AC.
+
+## ENGINE-5 re-grade (AC-9; full un-pended suite re-verified)
+
+Graded 2026-10-09 by an independent grader (fresh context) against the **now-implemented** ENGINE-5 behaviour. ENGINE-5 un-pended AC-9 (`pendingACs` is now **empty** — all 12 ACs un-pended) and landed: `inverse` flags every returned recipe `outOfGamut` when `bestDeltaE00 = min(ΔE00 over candidates) > opts.gamutThreshold` (5.0) via `Recipe.asOutOfGamut()`; a new `Recipe.asOutOfGamut()` copier (sets only `outOfGamut:true`); `RecipeState.outOfGamut` getter (`recipes.isNotEmpty && recipes.first.outOfGamut`); `GamutBanner` renders "OUT OF GAMUT" when `state.outOfGamut`; `_RecipeCard` renders "Nearest possible — not an exact match" when `recipe.outOfGamut`. The grader ran the **real** `SubtractiveMixingEngine` (temporary probe, deleted) and the touched unit suites (`subtractive_engine_test.dart`, `mixing_engine_test.dart`, `recipe_state_test.dart`, `recipes_screen_test.dart` — **+78 all green**). Recomputed engine output over the shipped fixtures:
+
+| target (fixture) | palette | min ΔE00 | ranked.first ΔE00 | every recipe `outOfGamut` | verdicts |
+| --- | --- | --- | --- | --- | --- |
+| `SAMPLE_VIVID_TURQUOISE` (72, −38, −14) | My paints (5) | **22.68** | 22.68 | **true** (5/5) | all "far off" |
+| `SAMPLE_DEEP_OLIVE` (42, −1.2561, 23.97) | My paints (5) | 3.34 | 3.37 | **false** (0/5) | best "very close" |
+| pre-retarget `_target` (42, −8.65, 26.63) | My paints (4) | **9.31** | 9.49 | **true** | — |
+
+Note the olive's `ranked.first` ΔE00 (3.37) is **not** the minimum (3.34): the D-8 tie-break ranks a marginally-farther cleaner 2-paint mix first. ENGINE-5 thresholds on `min`, not `ranked.first`, so a cleaner-but-farther leader can never spuriously tip an in-gamut target out of gamut (3.34 ≤ 5 ⇒ not flagged) — the `min` choice is deliberately correct. Conversely, because the flag is set from `min > threshold`, whenever a target is flagged out of gamut **every** returned recipe necessarily has ΔE00 ≥ min > threshold, so AC-9's per-recipe `deltaE00 > gamutThreshold` assertion is logically entailed by the flag (not an independent accident).
+
+| Test | Grade | Rules checked | Justification / what it rejects |
+| --- | --- | --- | --- |
+| **AC-9 — `TestAC09_OutOfGamut`** | **A (full)** | G1, G3/G5 (genuine in-gamut control via a fresh app), G4 (`findsOneWidget` exact "OUT OF GAMUT"; per-recipe `outOfGamut`/ΔE00), G6 | **Main path:** `SAMPLE_VIVID_TURQUOISE` over "My paints" — verified geometrically unreachable (a\* −38 below every palette masstone a\*: White −0.5 / Ochre 12 / Black 0 / Ultra 18 / Venetian 32, all > −5) and, with the real engine, best ΔE00 **22.68 ≫ 5**. Then: "OUT OF GAMUT" `findsOneWidget` scoped to `GamutBanner.regionKey`; `recipes isNotEmpty`; **every** recipe `outOfGamut==true` and `deltaE00 > gamutThreshold`. **Control:** a second `givenRecipes` with in-gamut `SAMPLE_DEEP_OLIVE` (best 3.34 ≤ 5) — banner `findsNothing`, every recipe `outOfGamut==false`. **Rejects:** a constant-on banner (control shows it hidden), a constant out-of-gamut flag either way (control false / main true), and a false "match" (`outOfGamut` + ΔE00 > 5 + the card's "Nearest possible — not an exact match" label). Control present, nothing deferred — **full A**. |
+
+**Harness `givenRecipes` change — legitimate isolation fix, NOT a weakening.** ENGINE-5 added `pumpWidget(const SizedBox())` + `pump()` before each fresh app pump. WHY: `RecipesHomeScreen._controller` is `late final` (built once in the State's `initState`); AC-9 is the only AC test that calls `givenRecipes` twice (out-of-gamut target, then in-gamut control). Without the reset, the second `pumpWidget(buildApp(...))` reuses the first app's `State`/controller (same widget type ⇒ element reused ⇒ `initState` not re-run), so the "in-gamut control" would keep the **turquoise** target and the banner would still read OUT OF GAMUT — the control's `findsNothing` would **fail**, not spuriously pass. The reset disposes the prior State so the next pump builds a new controller over the in-gamut deps, making the control genuinely fresh. It is **fail-closed** (its absence breaks AC-9, never hides a bug) and for every other AC (each calls `givenRecipes` exactly once) it only prepends one empty frame before the app, resetting nothing within a scenario and asserting on no intermediate frame. No neighbour is weakened.
+
+**Changed unit assertion (`subtractive_engine_test.dart` ~line 232) — correct and honest.** The "every recipe uses only palette paints…" test runs over the pre-retarget `_target` (a\* −8.65) and the 4-paint `_myPaints`, and now asserts every recipe `outOfGamut isTrue`. Verified with the real engine: best ΔE00 **9.31 > 5**, so this fixture genuinely is out of gamut — flipping the assertion to `isTrue` reflects the real behaviour, not a weakening. The in-gamut flag path (reachable olive, false) is covered separately in the new "out of gamut (ENGINE-5…)" group, which also pins the threshold-tracking (same olive out of gamut under a 1.0 ceiling; same turquoise in gamut under a 100 ceiling), so the flag is proven to track `MixOptions.gamutThreshold`, not a hardcoded constant.
+
+**G6 — no bleed.** `asOutOfGamut()` copies only `outOfGamut`, keeping `verdict`/`muddying`/`deltaE00`/`components`/`predictedColor`/trace, so AC-5 (verdict), AC-6 (ordering), AC-7 (trace), AC-8 (muddying) are untouched; the flag is applied **after** ranking and `sublist(topK)`, so AC-4's 3–5 window and AC-6's order are preserved. `mixing_engine_test.dart`'s `asOutOfGamut` test asserts exactly "sets only the flag, every other field kept"; `recipe_state_test.dart` pins the getter (false with no recipes / in-gamut, true for a leading out-of-gamut recipe); `recipes_screen_test.dart`'s GamutBanner + card tests each carry an in-gamut control (banner hidden / no "not an exact match" label for a reachable target).
+
+### Re-affirmation of the other 11 ACs (ENGINE-5 did not touch their behaviour)
+
+| AC | Grade | Note |
+| --- | --- | --- |
+| AC-1 Choose saved target | A | Untouched. Warm-Sand start control + L42/C24/h93 decomposition. |
+| AC-2 Manual refused | A | Untouched. Valid L50 control vs refused L140; target kept. |
+| AC-3 Palette-constrained | A | Untouched. Every component by `paint.id ∈ paletteIds`. |
+| AC-4 Top recipes | A | Untouched. `length inInclusiveRange(3,5)` preserved — the out-of-gamut flag is set after ranking + topK, so the window is unchanged. |
+| AC-5 Close verdict | A | Untouched. Verdict vs independent reference + farther-band control. `asOutOfGamut` keeps `verdict`. |
+| AC-6 Prefer fewer | A | Untouched. 2-paint-above-3-paint near-tie; flag applied after ranking, order unchanged. |
+| AC-7 Trace "a touch of" | A | Untouched. `SAMPLE_DEEP_UMBER` sub-2% Titanium White, measured control. Note: Deep Umber is in gamut, so trace cards are unflagged — no interaction. |
+| AC-8 Muddying | A | Untouched. Known crossing vs clean control. Deep Olive in gamut, unaffected. |
+| AC-10 Wet/dry | A | Untouched. Oil target, dry darker + less saturated. `withPredictedColor` keeps `outOfGamut`. |
+| AC-11 Speak target | A | Untouched. Labelled substrings `Lightness 42` / `chroma 24` / `hue 93`. |
+| AC-12 Speak recipe | A | Untouched. Per-component `\d+ parts?` / "a touch of". |
+
+Fixture-guard / scaffold rows (ITEST-1) remain valid: the pending-gate test now demands all 12 un-pended (`pendingACs` empty, `unpended` holds all 12, `length == 0`); the Vivid-Turquoise geometry guard and the real-engine reachability guard (olive 3.34 ≤ 5, turquoise 22.68 > 5) still hold; the five Sharma pairs + self-distance-0 stay A.
+
+### Summary — ENGINE-5 re-grade
+
+Grade counts across the **12** un-pended ACs: **12×A, 0×A-limited, 0×B.** AC-9 is **full A** (control present, nothing deferred).
+
+Bs to fix: **none.**
+
+Judgement calls:
+- **AC-9 is full A, not A-limited.** The in-gamut control (fresh Deep Olive app) and the genuinely-unreachable turquoise fixture together reject a constant-on banner, a constant flag in either direction, and a false match; the card's "Nearest possible — not an exact match" label closes the "not as a match" clause. Nothing is deferred to a later phase.
+- **Harness reset is a correctness fix.** It is required for AC-9's control to render a real second app (not a reused `late final` controller), is fail-closed, and prepends only an inert empty frame for the single-call ACs — no weakening.
+- **Thresholding on `min`, not `ranked.first`, is deliberately correct** (the D-8 tie-break can seat a cleaner-but-farther mix first; the olive's first=3.37 vs min=3.34 proves the two differ). It prevents a cleaner leader from tipping an in-gamut target out of gamut and makes the per-recipe ΔE00 > ceiling assertion entailed by the flag.
+- **Determinism:** `pumpAndSettle` throughout; engine ranking is a total order; all unit suites green (+78) and the integration suite reported green at +24 (all 12 ACs, AC-9 passing).
+
+Gate recommendation: **PASS** — AC-9 grades full A against the implemented ENGINE-5 behaviour; the full 12-AC un-pended suite re-verifies at the full-A bar with no Bs; the harness `givenRecipes` change is a legitimate, fail-closed isolation fix that weakens no neighbouring AC.

@@ -1,6 +1,6 @@
 # Module ENGINE — the mixing engine
 
-**Status:** In progress — **ENGINE-3 done** (per-recipe ΔE00 + "very close" verdict band, D-7; prefer-fewer-paints ranking, D-8; AC-5/AC-6 green). Remaining: **ENGINE-5** (AC-9 out-of-gamut) — startable now, serial on the engine. ENGINE-2/4/6 + RECIPE-3/4 done; G-5/G-6 resolved
+**Status:** ✅ Done — **ENGINE-5 done** (AC-9 out-of-gamut: target marked OUT OF GAMUT, nearest mix offered as nearest not a match, D-10; 12×A grade). All six ENGINE phases complete; all 12 bs-04 ACs coded, un-pended and green. G-4/G-5/G-6 resolved. Next: SIGNOFF-1
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (`Paint`, `PaintMedium`), `lib/recipes/engine/mixing_engine.dart`
 (`MixingEngine` interface, `Recipe`, `RecipeComponent`, `MixOptions`), `lib/recipes/engine/subtractive_engine.dart`
@@ -17,7 +17,7 @@ types), ENGINE's own behaviour phases, every recipe-detail AC
 | 2 | behavior | AC-3, AC-4 | ✅ Done | 19,431,437 | 50m 12s |
 | 3 | behavior | AC-5, AC-6 | ✅ Done | 12,441,399 | 27m 36s |
 | 4 | behavior | AC-7, AC-8 | ✅ Done | 19,391,961 | 38m 16s |
-| 5 | behavior | AC-9 | ⬜ Todo | | |
+| 5 | behavior | AC-9 | ✅ Done | 11,054,873 | 21m 45s |
 | 6 | behavior | AC-10 | ✅ Done | 12,666,200 | 18m 55s |
 
 ## Interface reconciliation
@@ -364,6 +364,62 @@ Trace "a touch of" + muddying landed; AC-7 and AC-8 un-pended and green end-to-e
   2. Un-pend AC-9; unit-test the threshold boundary (an in-gamut target is not flagged; an unreachable one is, and still returns a nearest).
 - **Exit criteria:** AC-9 green; default suite green; unit gate + 100% coverage touched.
 - **Acceptance gate:** un-pend AC-9; suite green (`TestAC09_*` + earlier); grade gate passed.
+
+### Result
+
+Out-of-gamut marking landed; AC-9 un-pended and green end-to-end. The feature's **last behaviour
+phase** — all 12 ACs are now coded and un-pended.
+
+- **Engine** (`subtractive_engine.dart`): `inverse` computes `bestDeltaE00` = the **minimum** ΔE00 over
+  all candidates (not `ranked.first`, which the D-8 tie-break can set to a marginally-farther *cleaner*
+  mix); when it exceeds `opts.gamutThreshold` (5.0, D-10) every returned recipe is flagged via the new
+  `Recipe.asOutOfGamut()` (`mixing_engine.dart`) — the nearest possible, never a claimed match. The verdict
+  band is unchanged (at ΔE00 > 5 it already reads "close"/"in the ballpark"/"far off", never "very close"),
+  so the flag is the honest signal, not a rewritten verdict.
+- **State / UI**: `RecipeState.outOfGamut` (derived getter, mirrors `hasRecipes`) drives `GamutBanner`,
+  which renders "OUT OF GAMUT" (with a screen-reader semantics label) when out of gamut and collapses to
+  its keyed anchor otherwise; `_RecipeCard` adds "Nearest possible — not an exact match" when the recipe is
+  out of gamut.
+- **Un-pended** AC-9 (row deleted in `bs04/pending.dart`; added to `recipes_test.dart`'s `unpended` set —
+  all 12 now un-pended, `pendingACs` empty).
+- **Harness fix (recorded):** `givenRecipes` now resets the tree (`pumpWidget(SizedBox)` + `pump()`) before
+  each app pump. AC-9 is the only AC test that opens the app twice (out-of-gamut target, then in-gamut
+  control); `RecipesHomeScreen._controller` is `late final`, so the 2nd pump reused the 1st controller and
+  the control saw the turquoise banner. Invisible at the shell baseline (banner always hidden). Fail-closed
+  (without it the control *fails*, never spuriously passes); no AC assertion weakened — graded a legitimate
+  isolation fix.
+- **Changed unit assertion (recorded):** `subtractive_engine_test.dart`'s AC-3/AC-4 property test asserted
+  `_target.outOfGamut isFalse`; the pre-retarget `_target` (a\* −8.65) is genuinely out of gamut under the
+  real engine (best ΔE00 ≈ 9.31 > 5), so it now asserts `isTrue`. The in-gamut path + threshold-tracking are
+  covered by the new out-of-gamut unit group (reachable olive; a threshold-driven control proving the
+  boundary is `MixOptions.gamutThreshold`, not a constant).
+- **Gates:** `flutter analyze` clean; **unit 579 green** (+9: engine out-of-gamut group ×3, `asOutOfGamut`
+  copier, state getter, banner out/in-gamut ×2, card label + control ×2); **100% line coverage on all 16
+  touched files** (`coverage_gate.dart main` PASS); **recipes acceptance suite green** under the verify lock
+  (`-d 5AB9D06D…`: +24, every AC incl. `TestAC09_*`, nothing pending).
+- **Grade gate:** an independent grader (fresh context) graded the full un-pended suite **12×A, 0×B** — AC-9
+  **full A** (in-gamut control present, nothing deferred); the harness reset judged a legitimate isolation
+  fix; no neighbour weakened (the flag is applied after ranking/topK, so AC-4/5/6/7/8/10 are untouched).
+  Grid § *ENGINE-5 re-grade*.
+- **Fix passes: 1/3** — the first integration run failed only on AC-9's in-gamut control (the stale-controller
+  harness flaw); the `givenRecipes` reset fixed it. The engine, state and UI passed on the first run.
+- **Tokens / Time:** 11,054,873 · 21m 45s.
+
+### Checkpoint / Handoff
+
+- **Frozen for SIGNOFF-1:**
+  - `inverse` flags `Recipe.outOfGamut` on every returned recipe when `min ΔE00 > opts.gamutThreshold`
+    (D-10), via `asOutOfGamut()`; `RecipeState.outOfGamut` = `recipes.isNotEmpty && recipes.first.outOfGamut`;
+    `GamutBanner` renders `GamutBanner.markerText` ('OUT OF GAMUT'); `_RecipeCard` shows the
+    nearest-not-a-match label. Verdict, ordering, trace, muddying and wet/dry are unchanged.
+  - **All 12 ACs are coded, un-pended and green; `pendingACs` is empty.** No known gaps.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under
+  the lock: `$C with-lock bs-04-mixing-recipes <PHASE> --wait 900 -- bash -c "export PATH=…; cd <repo> &&
+  flutter test integration_test/recipes_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685"`. **SIGNOFF-1 runs
+  the full cross-feature regression** (every feature's acceptance suite).
+- **Next phase:** **SIGNOFF-1** — the sign-off packet + summary page + human approval. No behaviour phases
+  remain.
 
 ## Phase 6 — Wet/dry transform (ENGINE-6)
 

@@ -29,6 +29,13 @@ const _recipe = Recipe(
   predictedColor: ColorCoordinates(lightness: 96, a: 0, b: 2),
   deltaE00: 1.2,
 );
+const _nearestRecipe = Recipe(
+  medium: PaintMedium.acrylic,
+  components: [RecipeComponent(paint: _white, partsFraction: 1)],
+  predictedColor: ColorCoordinates(lightness: 96, a: 0, b: 2),
+  deltaE00: 22.0,
+  outOfGamut: true,
+);
 
 void main() {
   group('RecipeState', () {
@@ -44,6 +51,23 @@ void main() {
     test('hasRecipes is true once a recipe is present', () {
       const state = RecipeState(target: _olive, recipes: [_recipe]);
       expect(state.hasRecipes, isTrue);
+    });
+
+    test('outOfGamut reads the solve result: false with no recipes or an '
+        'in-gamut mix, true when the offered mixes are out of gamut (AC-9)', () {
+      // No recipes yet — nothing is out of gamut.
+      expect(const RecipeState(target: _olive).outOfGamut, isFalse);
+      // An in-gamut recipe (its own flag false) — not out of gamut.
+      expect(
+        const RecipeState(target: _olive, recipes: [_recipe]).outOfGamut,
+        isFalse,
+      );
+      // The engine flags the whole returned set together when unreachable, so a
+      // leading out-of-gamut recipe marks the target out of gamut.
+      expect(
+        const RecipeState(target: _olive, recipes: [_nearestRecipe]).outOfGamut,
+        isTrue,
+      );
     });
 
     test('value equality over every field', () {

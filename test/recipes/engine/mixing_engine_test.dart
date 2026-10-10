@@ -311,5 +311,27 @@ void main() {
       expect(rendered.outOfGamut, flagged.outOfGamut);
       expect(rendered.muddying, flagged.muddying);
     });
+
+    test('asOutOfGamut sets only the flag (AC-9 nearest, not a match)', () {
+      const inGamut = Recipe(
+        medium: PaintMedium.oil,
+        components: [RecipeComponent(paint: _ochre, partsFraction: 1)],
+        predictedColor: _predicted,
+        deltaE00: 7.4,
+        verdict: 'noticeably off',
+        muddying: true,
+      );
+      expect(inGamut.outOfGamut, isFalse);
+      final nearest = inGamut.asOutOfGamut();
+      expect(nearest.outOfGamut, isTrue);
+      // Every other field is carried unchanged — the parts, distance and verdict
+      // are the same; only the flag that marks it "nearest, not a match" moves.
+      expect(nearest.medium, inGamut.medium);
+      expect(nearest.components, inGamut.components);
+      expect(nearest.predictedColor, inGamut.predictedColor);
+      expect(nearest.deltaE00, inGamut.deltaE00);
+      expect(nearest.verdict, inGamut.verdict);
+      expect(nearest.muddying, inGamut.muddying);
+    });
   });
 }

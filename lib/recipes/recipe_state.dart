@@ -61,6 +61,13 @@ class RecipeState {
   /// screen's results vs. empty-state rendering).
   bool get hasRecipes => recipes.isNotEmpty;
 
+  /// True when the target is out of gamut (AC-9): the solver could not reach it,
+  /// so every offered recipe is the nearest possible, not a match — this drives
+  /// the out-of-gamut banner. The engine flags the whole returned set together
+  /// (a target-level verdict), so the first recipe is representative; false when
+  /// there are no recipes or the best achievable mix is in gamut.
+  bool get outOfGamut => recipes.isNotEmpty && recipes.first.outOfGamut;
+
   @override
   bool operator ==(Object other) =>
       other is RecipeState &&

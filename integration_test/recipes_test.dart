@@ -82,8 +82,8 @@ void main() {
     // AC-2; ENGINE-2 → AC-3, AC-4; ENGINE-3 → AC-5, AC-6; ENGINE-4 → AC-7, AC-8;
     // ENGINE-5 → AC-9; ENGINE-6 → AC-10; RECIPE-4 → AC-11, AC-12.
     const unpended = <String>{
-      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', 'AC-10',
-      'AC-11', 'AC-12',
+      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', 'AC-9',
+      'AC-10', 'AC-11', 'AC-12',
     };
 
     test(

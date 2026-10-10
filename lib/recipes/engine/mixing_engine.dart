@@ -163,6 +163,25 @@ class Recipe {
         muddying: muddying,
       );
 
+  /// This recipe re-flagged [outOfGamut], every other field kept.
+  ///
+  /// Used by the engine when the target is unreachable (D-10; AC-9): the best
+  /// achievable mix cannot reach the target within the in-gamut ceiling, so
+  /// every offered recipe is the nearest possible and is marked so the screen
+  /// presents it as the nearest, never as a claimed match. The parts, distance
+  /// and verdict are unchanged — the verdict band at this distance is already a
+  /// worse-than-"very close" phrase, so the flag is the honest signal, not a
+  /// rewritten verdict.
+  Recipe asOutOfGamut() => Recipe(
+        medium: medium,
+        components: components,
+        predictedColor: predictedColor,
+        deltaE00: deltaE00,
+        verdict: verdict,
+        outOfGamut: true,
+        muddying: muddying,
+      );
+
   @override
   bool operator ==(Object other) =>
       other is Recipe &&
