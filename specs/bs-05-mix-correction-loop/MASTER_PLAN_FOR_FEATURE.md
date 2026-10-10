@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** In progress — shell stage closed (SCREEN-1 done); next ITEST-1 (acceptance harness, no gate). G-2 gates the behavior stage; G-4 gates ITEST-3/CORRECT-2/3/4/LOOP-6
+**Status:** In progress — ITEST-1 done (acceptance harness + scenes + smoke); next ITEST-2 ∥ ITEST-3 (one pending test per AC + red baseline). G-2 gates the behavior stage; G-4 gates ITEST-3/CORRECT-2/3/4/LOOP-6
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -144,7 +144,7 @@ discriminator is an in-test forward-model control (the suggested addition must r
 | CORRECT | [modules/CORRECT.md](modules/CORRECT.md) | The `CorrectionEngine` interface + impl: `Difference` (ΔE00 + verdict band + value-leading decomposition) and `Correction` (paint(s) to add via forward-model perturbation; trace "a touch of"; tolerance → no-correction) | bs-04 `MixingEngine`/`Paint`/palette, bs-03 `deltaE00`, color-science | 🔄 In progress |
 | LOOP | [modules/LOOP.md](modules/LOOP.md) | Scaffold; `CorrectionController`/state; capture wiring (check → measured `Sample` → compare); re-photograph re-check; save-confirmed → provenance promotion + persist; `CorrectionReadEndpoint`; `CorrectionEntry`/route in `buildApp`; spoken correction | bs-02 capture, bs-03 compare/`SampleSource`, domain `Provenance`, `Speech`, CORRECT | 🔄 In progress |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | The Correction screen UI: E26 Check my mix, the difference body (ΔE00 + verdict + decomposition), the correction body (paint + amount / "a touch of"), E27 Speak, E28 Re-photograph, E29 Save confirmed, the within-tolerance no-correction state, and the later-readout provenance | LOOP, CORRECT | 🏗 Shell done |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
 
 ## Dependency graph
 
@@ -198,8 +198,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | CORRECT-1 | shell: `CorrectionEngine` interface + `Difference`/`Correction` types + stub engine wired into deps | ✅ Done | 5,968,811 | 11m 31s | analyze clean; unit 598 + integ 86 green; gate 100% on 3 touched files; types + stub + `AppDependencies.correctionEngine` |
 | 3 | LOOP-2 | shell: `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` + `CorrectionEntry`/`toCorrection` route wired into buildApp | ✅ Done | 11,995,702 | 19m 40s (52m 25s) | analyze clean; unit 623 + integ 86 green; gate 100% on 7 touched files; inert actions throw; correctionEntry wins over captureSource; fix passes 0/3 |
 | 4 | SCREEN-1 | shell: Correction screen scaffold (E26–E29 + difference/correction/provenance regions) bound to controller | ✅ Done | 5,078,443 | 9m 25s | analyze clean; unit 632 green; gate 100% on 14 touched files; 6 keyed regions + `CorrectionScreen` replace the placeholder body; controls disabled until behaviour phases; fix passes 1/3 (test-finder only) |
-| 5 | ITEST-1 | acceptance-tests: harness, fixtures + scenes, pending gate (10 ACs), smoke | ⬜ Next | | | closes shell stage done; startable now (no gate) |
-| 6 | ITEST-2 | acceptance-tests: AC-1,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures + scenes, pending gate (10 ACs), smoke | ✅ Done | 8,454,576 | 20m 21s | analyze clean; unit 632 + integ 98 green (correction_test 12: smoke + 11 guards); grade 12×A/0×B; no lib/ touched |
+| 6 | ITEST-2 | acceptance-tests: AC-1,7,8,9,10 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-2,3,4,5,6 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | LOOP-3 | behavior AC-1 (*enabler*): check photographs the swatch + compares to target | ⬜ Todo | | | first after G-2; enables every other Given |
@@ -216,12 +216,14 @@ when the row is marked done.
 
 ## Next phase
 
-**ITEST-1 (acceptance-tests)** — **startable now** (no gate): the acceptance harness over the wired shells —
-fixtures + scenes, the pending gate (10 ACs), and a smoke test that finds every region `regionKey`. The
-shell stage is closed (CORRECT-1, LOOP-2, SCREEN-1 all done). Worktree `Nuance-bs05` on
-`feat/bs-05-mix-correction-loop`. After ITEST-1 come **ITEST-2 ∥ ITEST-3** (one pending test per AC + red
-baseline; **G-4** gates ITEST-3's AC-2..6), then the **ITEST-4** test review (**G-2**). G-2 gates the whole
-behavior stage; G-4 also gates CORRECT-2/3/4 and LOOP-6.
+**ITEST-2 ∥ ITEST-3 (acceptance-tests)** — both **startable now** against the ITEST-1 harness, in separate
+sessions. Each appends its pending `acTestWidgets` rows to the shared `integration_test/correction_test.dart`
+(ITEST-2 → AC-1,7,8,9,10 in the ITEST-2 group; ITEST-3 → AC-2,3,4,5,6 in the ITEST-3 group) + records the
+run-pending red baseline. They edit **one shared file**, so coordinate the disjoint groups (or run serially).
+**G-4 gates ITEST-3** (AC-2..6 detail: verdict words / tolerance / trace threshold / confirmed-tier label) —
+resolve it before finalizing ITEST-3's assertions; ITEST-2 is G-4-free. Then **ITEST-4** test review (**G-2**).
+G-2 gates the whole behavior stage; G-4 also gates CORRECT-2/3/4 and LOOP-6. Worktree `Nuance-bs05` on
+`feat/bs-05-mix-correction-loop`.
 
 ## Token usage
 
@@ -235,7 +237,8 @@ behavior stage; G-4 also gates CORRECT-2/3/4 and LOOP-6.
 | CORRECT-1 | 5dfe5431 | 2026-10-10 13:57 EDT | 14:08 | 11m 31s | 11m 31s | claude-opus-4-8 | 120 | 101,590 | 5,834,232 | 32,869 | 5,968,811 | shell done: CorrectionEngine interface + Difference/Correction/CorrectionAddition types + stub wired into AppDependencies; analyze clean, unit 598 + integ 86 green, gate 100% on 3 touched files |
 | LOOP-2 | 48315c68 | 2026-10-10 14:13 EDT | 15:05 | 52m 25s | 19m 40s | claude-opus-4-8 | 166 | 164,541 | 11,759,634 | 71,361 | 11,995,702 | shell done: CorrectionController/State + read endpoint + CorrectionEntry/toCorrection wired into buildApp (correctionEntry wins over captureSource); inert actions throw; analyze clean, unit 623 + integ 86 green, gate 100% on 7 touched files; fix passes 0/3 |
 | SCREEN-1 | daccf904 | 2026-10-10 15:21 EDT | 15:30 | 9m 25s | 9m 25s | claude-opus-4-8 | 106 | 98,673 | 4,944,021 | 35,643 | 5,078,443 | shell: Correction screen + 6 keyed regions; analyze clean, 632 unit green, coverage 100% on 14 files; fix passes 1/3 |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 15:30** | **4h 42m** | **1h 18m** |  | **622** | **883,123** | **33,874,069** | **280,938** | **35,038,752** |  |
+| ITEST-1 | 406ee85e | 2026-10-10 15:41 EDT | 16:02 | 20m 21s | 20m 21s | claude-opus-4-8 | 116 | 313,243 | 8,083,579 | 57,638 | 8,454,576 | harness + fixtures/scenes + smoke/guards; analyze clean, unit 632 + integ 98 green (correction_test 12), coverage gate 100% (14 branch files, no lib touched), grade 12A/0B |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 16:02** | **5h 03m** | **1h 39m** |  | **738** | **1,196,366** | **41,957,648** | **338,576** | **43,493,328** |  |
 
 ## Sign-off
 
