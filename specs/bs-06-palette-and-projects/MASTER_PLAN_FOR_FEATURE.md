@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** Not started — next DATA-1 (blocked: G-3 bs-04→main). G-1 spec approval ✅ resolved 2026-10-10
+**Status:** Not started — DATA-1 startable (G-1 ✅ + G-3 ✅ both resolved 2026-10-10). G-4 (data contracts + new deps) blocks stage 2 (DATA-2/PALETTE-1)
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -139,7 +139,7 @@ graph LR
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" banner) | DATA-1 | ✅ Resolved 2026-10-10: spec approved as-is; `.feature` first line stamped "Approved 2026-10-10 by Matt Quirk" — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
-| G-3 | dependency | bs-04 merged to `main` (bs-06 branches from `main` and needs bs-04 code) — closed by merging `feat/bs-04-mixing-recipes` → `main` | DATA-1 | Open |
+| G-3 | dependency | bs-04 merged to `main` (bs-06 branches from `main` and needs bs-04 code) — closed by merging `feat/bs-04-mixing-recipes` → `main` | DATA-1 | ✅ Resolved 2026-10-10: `feat/bs-04-mixing-recipes` (@ `28cbf04`, signed off) merged to `main` @ `2684ac6`; bs-04 foundation now present on `main`. DATA-1 can branch from `main` |
 | G-4 | decision | Pin bs-06 data contracts + confirm new project-local deps: (a) on-device DB package (D-1), (b) pdf package (D-6), (c) reviewed paint-dataset shape & provenance defaults (D-3), (d) project "size" field semantics (free text "24×30 in" vs structured units) | DATA-2, PALETTE-1 | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -180,9 +180,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**DATA-1** (scaffold) is first. **G-1** (approve the draft spec) ✅ resolved 2026-10-10 by Matt Quirk. Still **blocked by one gate**:
-- **G-3** — merge `feat/bs-04-mixing-recipes` → `main` so bs-06 can branch with bs-04's code present.
-Once G-3 closes, DATA-1 can run; **G-4** (data contracts + new deps) then blocks DATA-2/PALETTE-1 and should be answered before stage 2. Nothing is startable until G-3 clears.
+**DATA-1** (scaffold) is first and **now startable**: **G-1** (approve the draft spec) ✅ resolved 2026-10-10 by Matt Quirk, and **G-3** (bs-04 → `main`) ✅ resolved 2026-10-10 (merged @ `2684ac6`). DATA-1 branches `feat/bs-06-palette-and-projects` from `main`. **G-4** (data contracts + new deps) then blocks DATA-2/PALETTE-1 and should be answered before stage 2.
 
 ## Token usage
 
@@ -192,8 +190,8 @@ Once G-3 closes, DATA-1 can run; **G-4** (data contracts + new deps) then blocks
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | — | — | — | — | — | claude-opus-4-8 | — | — | — | — | — | plan written |
 | PLAN | 6be62965 | 2026-10-10 06:10 EDT | 06:55 | 45m 09s | 15m 59s | claude-opus-4-8 | 68 | 204,942 | 2,521,965 | 60,117 | 2,787,092 | plan written |
-| GATE-DECISION | 5f1f02a8 | 2026-10-10 07:28 EDT | 07:32 | 3m 30s | 3m 30s | claude-opus-4-8 | 40 | 48,071 | 1,279,486 | 14,456 | 1,342,053 | G-1 approved: bs-06 spec approved as-is by Matt Quirk; .feature stamped 'Approved 2026-10-10' |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 07:32** | **48m 39s** | **19m 29s** |  | **108** | **253,013** | **3,801,451** | **74,573** | **4,129,145** |  |
+| GATE-DECISION | 5f1f02a8 | 2026-10-10 07:28 EDT | 13:58 | 6h 29m | 10m 45s | claude-opus-4-8 | 78 | 183,442 | 2,815,515 | 31,337 | 3,030,372 | G-1 approved (spec approved as-is by Matt Quirk; .feature stamped) + G-3 resolved (bs-04 merged to main @ 2684ac6; DATA-1 startable) |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 13:58** | **7h 14m** | **26m 44s** |  | **146** | **388,384** | **5,337,480** | **91,454** | **5,817,464** |  |
 
 ## Sign-off
 

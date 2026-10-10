@@ -20,7 +20,7 @@
 
 ## Open gates
 
-- **G-1** (approve the draft spec) ✅ resolved 2026-10-10 by Matt Quirk. **G-3** still blocks Phase 1 (scaffold): bs-04 merged to `main`.
+- **G-1** (approve the draft spec) ✅ resolved 2026-10-10 by Matt Quirk. **G-3** (bs-04 merged to `main`) ✅ resolved 2026-10-10 (merged @ `2684ac6`). Phase 1 (scaffold) is now startable.
 - **G-4** blocks Phase 2 (shell): confirm the on-device DB package (D-1) and the reviewed-dataset/PDF decisions before building the store.
 
 ## Phase 1 — Scaffold
