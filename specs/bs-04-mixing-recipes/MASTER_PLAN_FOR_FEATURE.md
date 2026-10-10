@@ -1,7 +1,7 @@
 # Master Plan — Mixing recipes (bs-04)
 
 **Spec:** [bs-04-mixing-recipes.feature](../bs-04-mixing-recipes.feature)
-**Status:** In progress — **ENGINE-5 done** (AC-9 out-of-gamut; the last behaviour phase). **All 12 ACs are coded, un-pended and green; grade 12×A/0B.** Next **SIGNOFF-1** (packet + summary + human approval)
+**Status:** ⏸ Awaiting sign-off — **SIGNOFF-1 packet + summary page delivered** ([signoff/round-1.md](signoff/round-1.md)). All 12 ACs green, full cross-feature regression green (unit 635; cov 16/16; integ 91), fresh full-suite grid **24×A/0B**. A human approves or requests changes.
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mixing recipes* capability; *Mixing engine: options and the short-term choice* — **Spectral.js / subtractive KM for v1**, D3; NFR offline + recipe search ≤ ~1–2 s; honest out-of-gamut) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the deferred measured-pigment upgrade path behind the same `MixingEngine` interface) · [mixbox spec](../../docs/mixbox-spec.md) (reference-only, CC BY-NC) · [scope](../../docs/paint-color-app-scope.md) · [wireframe derivation](../wireframe-spec-derivation.md) · wireframe `Paint Color Assistant.dc.html` Recipes screen (S1.R1, E22–E25), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` @ `8518463` · **extends** the bs-01/02/03 foundation (same code home, confirmed by Matt across bs-01/02/03)
 
@@ -212,7 +212,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 13 | ENGINE-5 | behavior: AC-9 — out-of-gamut + nearest-not-a-match | ✅ Done | 11,054,873 | 21m 45s | `inverse` flags every recipe `outOfGamut` when min ΔE00 > gamutThreshold (D-10); banner "OUT OF GAMUT" + card "nearest, not a match"; AC-9 un-pended + green (integ +24, all 12 ACs); unit 579; 100% cov 16 touched; grade 12×A/0B (AC-9 full A); harness `givenRecipes` reset (AC-9 double-pump isolation); fix 1/3 |
 | 14 | ENGINE-6 | behavior: AC-10 — wet/dry toggle + dry prediction | ✅ Done | 12,666,200 | 18m 55s | per-medium wet→dry transform in `forward(dry:)` + `setMode` re-predict + E24 wired; AC-10 un-pended + green; unit 558; grade A (augmented drying-direction); fix 0/3 |
 | 15 | RECIPE-4 | behavior: AC-11, AC-12 — speak target; speak recipe | ✅ Done | 18,065,846 | 24m 45s | analyze clean; unit 566; 100% cov 16 touched; AC-11/AC-12 un-pended + green (integ +20 ~3, 3 skips = AC-5/6/9); grade 9A/0B (AC-11 label-swap + AC-12 parts-quantity augmentations closed); fix 0/3 |
-| 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | all behaviour + ITEST done; all 12 ACs green, 12×A grade — startable now |
+| 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting | 6,656,874 | 14m 54s | packet [signoff/round-1.md](signoff/round-1.md) + summary page + cost-per-ac; full cross-feature regression green (analyze clean; unit 635; cov PASS 16/16; integ 91 all 4 suites; bs-04 run-pending 25 identical); fresh full-suite grid 24×A/0B; awaiting human decision |
 | 17 | ITEST-5 | acceptance-tests: retarget `SAMPLE_DEEP_OLIVE` to a reachable olive (≤ ΔE00 5); update pinned-coordinate tests (AC-1/AC-11 + guards) + red baseline | ✅ Done | 10,631,343 | 18m 10s (18m 10s) | retargeted to L 42 / C 24 / h 93° (a −1.2561, b 23.9671), real engine best ΔE00 ≈ 3.34 ≤ 5; AC-1/AC-11 pins → 24/93, new engine-backed reachability guard added; analyze clean; unit 566; cov PASS (no lib); integ default +21 ~3 (AC-5/6/9 pending) / run-pending −3 fail clean at owner; grade 4×A/0B; fix 0/3 |
 | 18 | ITEST-6 | test-review: fresh review of the retargeted acceptance tests (G-6) | ✅ Done | 1,837,097 | 5m 35s (5m 35s) | packet assembled; regression green (analyze clean; unit 566; cov PASS 16/16; integ default +21 ~3 / run-pending +21 −3 clean); grid 4×A re-grade, AC-5/9 carry, 0B; **G-6 ✅ approved 2026-10-09 by Matt Quirk** → ENGINE-3/ENGINE-5 unblocked |
 
@@ -221,12 +221,14 @@ when the row is marked done.
 
 ## Next phase
 
-**ENGINE-5 ✅ Done 2026-10-09** (AC-9 out-of-gamut: `Recipe.outOfGamut` flagged when min ΔE00 > gamutThreshold,
-banner + card label; 12×A/0B grade). **All 12 ACs are coded, un-pended and green; no behaviour phases remain.**
+**SIGNOFF-1 ✅ packet delivered 2026-10-09** — all behaviour + ITEST phases done; all 12 ACs green; full
+cross-feature regression green (analyze clean; unit 635; coverage gate PASS 16/16; integration 91 across all 4
+feature suites; bs-04 run-pending 25 identical); fresh full-suite grade grid **24×A/0B**. Packet + summary page
++ cost-per-ac written to `signoff/`.
 
-**Next: SIGNOFF-1** (sign-off) — assemble the sign-off packet + the summary page, run the **full cross-feature
-regression** (every feature's acceptance suite + the repo's whole test target), then a human decides. The agent
-never approves. No gates block it (G-1..G-6 all resolved). It is the only remaining phase.
+**Awaiting the human sign-off decision** — no further agent phase. Record it with
+`/feature-next-phase --signoff bs-04-mixing-recipes approved | changes "<items>"`. The agent never approves.
+On **approved** the feature is Done; on **changes** each item becomes a phase before a fresh SIGNOFF-2.
 
 ## Token usage
 
@@ -261,10 +263,11 @@ never approves. No gates block it (G-1..G-6 all resolved). It is the only remain
 | SIGNOFF-DECISION | 224b1fc9 | 2026-10-09 16:22 EDT | 16:48 | 25m 38s | 3m 10s | claude-opus-4-8 | 54 | 53,363 | 1,795,522 | 13,409 | 1,862,348 | ITEST-6 approved |
 | ENGINE-3 | a8f8b62d | 2026-10-09 17:48 EDT | 18:15 | 27m 36s | 27m 36s | claude-opus-4-8 | 160 | 337,087 | 12,029,727 | 74,425 | 12,441,399 | verdict band (D-7, 'very close') + D-8 prefer-fewer ranking; AC-5/AC-6 un-pended + green; analyze clean; unit 570; 100% cov 16 touched; grade 11xA/0B; fix 0/3 |
 | ENGINE-5 | d3c73186 | 2026-10-09 20:58 EDT | 21:19 | 21m 45s | 21m 45s | claude-opus-4-8 | 134 | 361,771 | 10,619,915 | 73,053 | 11,054,873 | AC-9 out-of-gamut green; grade 12xA/0B; 12/12 ACs done |
-| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 21:19** | **19h 50m** | **8h 59m** |  | **3,038** | **5,097,879** | **199,469,631** | **1,295,138** | **205,865,686** |  |
+| SIGNOFF-1 | 29d66300 | 2026-10-09 21:32 EDT | 21:47 | 14m 54s | 14m 54s | claude-opus-4-8 | 118 | 251,503 | 6,363,617 | 41,636 | 6,656,874 | sign-off packet + summary page + cost-per-ac; full cross-feature regression green (analyze clean; unit 635; coverage gate PASS 16/16; integration 91 all 4 suites; bs-04 run-pending 25 identical); fresh full-suite grid 24xA/0B PASS; awaiting human decision |
+| **Feature total** |  | **2026-10-08 11:52 EDT** | **2026-10-09 21:47** | **20h 05m** | **9h 14m** |  | **3,156** | **5,349,382** | **205,833,248** | **1,336,774** | **212,522,560** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | — | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `ca877e4` | 24×A / 0B | ⏸ Awaiting |
