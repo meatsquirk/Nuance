@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅ (harness + fixtures + smoke); next ITEST-2 ∥ ITEST-3
+**Status:** In progress — ITEST-1 ✅, ITEST-2 ✅ (AC-1/2/3/4/5/11 pending + red baseline, graded 4×A 2×B-pending); next ITEST-3 → ITEST-4 (G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/palette_harness.dart`, `integration_test/palette_test.dart`, `integration_test/bs06/pending.dart`, bs-06 additions to `integration_test/fakes/` (fake file sink for photo + PDF export)
 **Depends on:** all shell phases (DATA-2, PALETTE-1, PROJECT-1, SCREEN-1) · **Blocks:** every behavior phase (via G-2)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | | |
-| 2 | acceptance-tests | AC-1,2,3,4,5,11 | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1,2,3,4,5,11 | ✅ Done | 10,977,843 | 25m 32s |
 | 3 | acceptance-tests | AC-6,7,8,9,10 | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -57,8 +57,25 @@ Landed the harness over the wired SCREEN-1 shells and proved it end-to-end on th
 - **Tasks:** one pending test per AC per the master catalogue (`TestAC01_SwitchViews`, `TestAC02_PaintIdentityProvenance`, `TestAC03_ProvenanceLegend`, `TestAC04_AddPaintFromDataset`, `TestAC05_SelectedPaletteDrivesRecipes`, `TestAC11_VisionCardEstimateAndOpen`); Givens built through public flows with precondition assertions naming owning phases; run-pending mode → record the red baseline below.
 - **Exit criteria:** suite green with these pending; red baseline recorded; grade grid all A (or *B pending <phase>* with an augmentation row).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+Registered one *pending* `acTestWidgets` per AC in `palette_test.dart`'s new `palette ACs (ITEST-2)` group (AC-1, 2, 3, 4, 5, 11), each Given built through a public flow (persistent save flows via `givenPalette`, or an E-control `when…`) and checked before the When.
+- **Files:** `integration_test/palette_test.dart` only (+ `import recipes/palette.dart` for `PaintPalette`). No `lib/` touched. Test names carry the `AC-n` id; the catalogue's `TestACnn_*` names are kept in the comments/scenario mapping.
+- **Default run (pending skipped):** 12/12 green on the iPhone-17 sim via the verify lock — the 6 new AC tests correctly skip.
+- **Red baseline (`--dart-define=BS06_RUN_PENDING=true`):** all 6 fail as intended (table below) — 5 on a Then, AC-4 on its Given-precondition naming PALETTE-2; every failure a clean `TestFailure` (no compile/harness error). Rest of the suite green.
+- **Scaffold-guard fix (recorded):** the DATA-1 guard `pendingSkipReason skips a pending AC by default…` read the *ambient* `runPending`, so it failed under run-pending mode (never exercised in ITEST-1, which ran no run-pending pass). Rewrote it to assert both modes deterministically via `forceRunPending: false/true` — strengthens the guard, does not weaken it.
+- **Grade gate:** independent adversarial grader (fresh subagent, given the prior grid + G1–G6) — **4×A, 2×B-pending — PASS**. A: AC-1, AC-3, AC-4 (A-with-caveat), AC-11. *B pending PALETTE-3*: AC-2 (badge/medium can't discriminate until the real tier renders). *B pending PALETTE-4*: AC-5 (only the active-palette re-point asserted; "recipes ⊆ Travel set" needs PALETTE-4's recipe seam). Both B rows have augmentation rows below. Grid: `behavior-test-completeness-bs-06-palette-and-projects.md` (ITEST-2 section appended).
+- **Grader finding folded in:** AC-2's `textContaining('Oil')` medium check is subsumed by the line text "Artists' Oil" (a medium-omitting impl would pass) — the medium can't be asserted non-subsumed until PALETTE-3 renders a medium widget, so the **TestAC02 augmentation was widened** to own that (plus the exact tier). AC-11 hardening (a second-profile control proving the label tracks the injected profile) is a non-blocking follow-on for SCREEN-3 — see handoff.
+- **Verification:** `flutter analyze` clean; no `lib/` change → unit coverage gate N/A (whole-set stays 100%). Fix passes: 1/3 (pass 1 fixed the run-pending scaffold-guard failure; the 6 AC reds are the intended baseline, not failures to fix).
+- **Tokens / Time:** see dashboard row (filled from the ledger).
+
+### Checkpoint / Handoff
+
+- **Frozen for ITEST-3 / the behaviour phases:** the `palette ACs (ITEST-2)` group registers AC-1/2/3/4/5/11; each un-pends by deleting its row in `bs06/pending.dart`. ITEST-3 adds the `projects` group (AC-6..10) to the **same file** — run serially against ITEST-2 (shared `palette_test.dart`), appending after this group.
+- **How each AC un-pends green:** AC-1 → SCREEN-2 (view toggle hides the non-active region); AC-2/AC-3 → PALETTE-3 (paint-row identity+badge, legend four tiers); AC-4 → PALETTE-2 (E32 picker offers the reviewed dataset, add preserves the dataset Paint); AC-5 → PALETTE-4 (selection re-points + its augmentation); AC-11 → SCREEN-3 (card renders the injected estimate + navigates).
+- **Augmentations owed (this phase's ACs):** TestAC02 → PALETTE-3 (exact provenance tier **and** medium at a non-subsumed grain); TestAC05 → PALETTE-4 (every returned recipe's paints ⊆ the selected palette, disjoint-palette control). SCREEN-3 should also add AC-11 a second-profile control (non-blocking hardening the grader recommended).
+- **Verification commands:** unchanged from ITEST-1 (see its handoff). Default: `flutter test integration_test/palette_test.dart -d <booted-udid>` via `coord.sh with-lock`; red baseline: add `--dart-define=BS06_RUN_PENDING=true`. Flutter SDK `/Users/matthew.quirk/development/flutter/bin`; booted sim udid mandatory.
+- **Known gaps:** AC-6..10 not yet written (ITEST-3). Behaviour un-built — the 6 ACs here stay pending/red until their owners land (all blocked on G-2).
 
 ## Phase 3 — AC tests: projects
 
@@ -83,23 +100,23 @@ Landed the harness over the wired SCREEN-1 shells and proved it end-to-end on th
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_SwitchViews | expect FAIL | Then: Projects region shown / paints gone | SCREEN-2 | — |
-| AC-2 | TestAC02_PaintIdentityProvenance | expect FAIL | Given precondition: add-paint (PALETTE-2) then Then: provenance badge | PALETTE-3 | — |
-| AC-3 | TestAC03_ProvenanceLegend | expect FAIL | Then: four tier strings | PALETTE-3 | — |
-| AC-4 | TestAC04_AddPaintFromDataset | expect FAIL | Then: provenance preserved on add | PALETTE-2 | — |
-| AC-5 | TestAC05_SelectedPaletteDrivesRecipes | expect FAIL | Then: recipes ⊆ selected palette | PALETTE-4 | — |
+| AC-1 | TestAC01_SwitchViews | **FAIL** (Then) | Then: paint-list region still present after switch (shell shows both views) — `palette_test.dart:245` | SCREEN-2 | **A** |
+| AC-2 | TestAC02_PaintIdentityProvenance | **FAIL** (Then) | Then: row has no "Winsor & Newton" (shell renders name only) — `:293`. *(Given seeded via the persistent save flow, not the E32 add flow — AC-2 depends only on its owner PALETTE-3, a deliberate deviation from the catalogue's add-flow Given.)* | PALETTE-3 | **B pending PALETTE-3** |
+| AC-3 | TestAC03_ProvenanceLegend | **FAIL** (Then) | Then: legend has no "Measured" (placeholder only) — `:323` | PALETTE-3 | **A** |
+| AC-4 | TestAC04_AddPaintFromDataset | **FAIL** (Given precond, names owner) | Given precondition: add-paint flow offers no "Ultramarine Blue" (E32 inert) — `:345` | PALETTE-2 | **A** (caveat) |
+| AC-5 | TestAC05_SelectedPaletteDrivesRecipes | **FAIL** (Then) | Then: selectedPalette stays "My paints" (selection inert) — `:391` | PALETTE-4 | **B pending PALETTE-4** |
 | AC-6 | TestAC06_ProjectsListSummary | expect FAIL | Given precondition: project (PROJECT-2) then Then: counts | PROJECT-3 | — |
 | AC-7 | TestAC07_OpenProjectNotePhoto | expect FAIL | Then: note + photo shown | PROJECT-4 | — |
 | AC-8 | TestAC08_NoteRetainedOnReopen | expect FAIL | Then: note after reopen | PROJECT-4 | — |
 | AC-9 | TestAC09_ConfusionPairFlagged | expect FAIL | Then: pair flagged | PROJECT-5 | — |
 | AC-10 | TestAC10_ExportPdfStudioSheet | expect FAIL | Then: PDF references samples+recipes | PROJECT-6 | — |
-| AC-11 | TestAC11_VisionCardEstimateAndOpen | expect FAIL | Then: estimate shown + navigation | SCREEN-3 | — |
+| AC-11 | TestAC11_VisionCardEstimateAndOpen | **FAIL** (Then) | Then: card has no "deutan-type, moderate" estimate (placeholder) — `:413` | SCREEN-3 | **A** |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC02 | provenance badge can't render until the real tier is shown | PALETTE-3 | assert the exact rendered provenance tier on the paint row | ⬜ Open |
-| TestAC05 | "recipes ⊆ Travel set" can't discriminate until selection re-points the solver | PALETTE-4 | assert every returned recipe's paints ⊆ the selected palette (disjoint-palette control) | ⬜ Open |
+| TestAC02 | badge + medium can't be asserted non-subsumed until the real tier/medium render (medium check currently subsumed by the "Artists' Oil" line text, grader finding) | PALETTE-3 | assert the exact rendered provenance tier **and** the medium at a non-subsumed grain (a dedicated medium label/widget, not the line text) on the paint row | ⬜ Open (confirmed + widened by ITEST-2) |
+| TestAC05 | "recipes ⊆ Travel set" can't discriminate until selection re-points the solver | PALETTE-4 | assert every returned recipe's paints ⊆ the selected palette (disjoint-palette control) | ⬜ Open (confirmed by ITEST-2) |
 | TestAC09 | a non-flag control needs real pair computation | PROJECT-5 | add a clearly-distinct pair and assert it is **not** flagged | ⬜ Open |
 | TestAC10 | PDF content can't be asserted until a real sheet is produced | PROJECT-6 | assert the produced PDF references each sample + each recipe | ⬜ Open |

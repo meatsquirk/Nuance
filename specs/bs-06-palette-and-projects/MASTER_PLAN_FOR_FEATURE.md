@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — stage 3 (acceptance tests): ITEST-1 ✅ (harness + fixtures + smoke, 12/12 green). Next: ITEST-2 ∥ ITEST-3 (one pending test per AC + red baseline) → ITEST-4 test review (**G-2**).
+**Status:** In progress — stage 3 (acceptance tests): ITEST-1 ✅, ITEST-2 ✅ (AC-1,2,3,4,5,11 pending + red baseline, graded 4×A 2×B-pending). Next: ITEST-3 (AC-6,7,8,9,10) → ITEST-4 test review (**G-2**).
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -114,7 +114,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 | PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | 🔄 In progress (PALETTE-1 ✅) |
 | PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | 🔄 In progress (PROJECT-1 ✅) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | 🔄 In progress (SCREEN-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1 ✅) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2 ✅) |
 
 ## Dependency graph
 
@@ -161,8 +161,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | PROJECT-1 | shell: Project model + ProjectSource (persistent) + ProjectController + persistent SampleSource write-side + ProjectReadEndpoint | ✅ Done | 6,635,157 | 11m 41s | both shells done; SCREEN-1 now startable |
 | 5 | SCREEN-1 | shell: Palette screen + keyed regions + E30–E34 controls + nav + mount read endpoints | ✅ Done | 12,251,452 | 17m 44s | carried deferred prod store wiring (async main + path_provider + sqlite3_flutter_libs); unit 688 green (+15); coverage 100% on 24 touched; both read endpoints mounted; opens on Capture (paletteEntry null) |
 | 6 | ITEST-1 | acceptance-tests: harness over wired shells, fixtures, pending gate (all ACs pending), smoke test | ✅ Done | 11,716,367 | 29m 01s | harness + 2 smoke + 6 fixture guards; 12/12 green on sim; graded 15×A |
-| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,11 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
-| 8 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
+| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,11 (pending) + red baseline | ✅ Done | 10,977,843 | 25m 32s | 6 pending AC tests; default 12/12 green, run-pending 6 red (clean); graded 4×A 2×B-pending PASS; fixed a run-pending scaffold-guard bug |
+| 8 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Next | | | serial after ITEST-2 (shared `palette_test.dart`) |
 | 9 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 10 | PALETTE-2 | AC-4 add paint from reviewed dataset | ⬜ Todo | | | |
 | 11 | PALETTE-3 | AC-2 + AC-3 paint identity/provenance badge + legend | ⬜ Todo | | | after PALETTE-2 |
@@ -180,11 +180,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ITEST-1 ✅ done** (acceptance-tests, harness): `palette_harness.dart` (Given/When/Then vocabulary over the SCREEN-1 shells via `buildApp` + a `PaletteEntry`; the four fixtures; an independent deutan confusion reference reused from bs-03; `givenPalette` seeds persistent sources over an in-memory store via their save flows), `fakes/fake_file_sink.dart` (recording `SourcePhotoStore`), and in `palette_test.dart` 2 never-pending smoke tests + 6 fixture guards (the DATA-1 pending-gate guards stay). Fixture amendment: two vision profiles (`deutanModerate` 0.6 for AC-11, `deutanDichromat` full for AC-9) — see the Fixtures table. Analyze clean; unit 688 green (no `lib/` touched); acceptance 12/12 green on the iPhone-17 sim via the verify lock; graded **15×A, 0×B — PASS**.
+**ITEST-2 ✅ done** (acceptance-tests, palette ACs): added one pending `acTestWidgets` per AC for AC-1,2,3,4,5,11 to `palette_test.dart`. Default run 12/12 green (6 pending skipped); run-pending red baseline all 6 fail cleanly (5 on a Then, AC-4 on its Given-precondition naming PALETTE-2). Graded by a fresh independent grader: **4×A, 2×B-pending — PASS** (AC-2 → PALETTE-3, AC-5 → PALETTE-4; both have augmentation rows). Fixed a latent DATA-1 scaffold-guard bug that only fails under run-pending. No `lib/` touched.
 
-Startable now (∥, disjoint groups in the same `palette_test.dart` but separable by AC set):
-- **ITEST-2** — pending `acTestWidgets` for AC-1,2,3,4,5,11 + run-pending red baseline + grade.
-- **ITEST-3** — pending `acTestWidgets` for AC-6,7,8,9,10 + red baseline + grade. (AC-9 injects `deutanDichromat`; builds project Givens through PROJECT-2 flows with preconditions naming PROJECT-2.)
+Next (serial — shares `palette_test.dart` with ITEST-2):
+- **ITEST-3** — pending `acTestWidgets` for AC-6,7,8,9,10 + run-pending red baseline + grade. Builds project Givens through PROJECT-2 flows with preconditions naming PROJECT-2; AC-9 injects `deutanDichromat`.
 - Then **ITEST-4** test review assembles the packet and opens **G-2**.
 
 All behavior phases (PALETTE-2→4, PROJECT-2→6, SCREEN-2/3) remain blocked on **G-2** (approve the acceptance tests at ITEST-4).
@@ -204,7 +203,8 @@ All behavior phases (PALETTE-2→4, PROJECT-2→6, SCREEN-2/3) remain blocked on
 | PROJECT-1 | 0ac74fa0 | 2026-10-10 15:41 EDT | 15:52 | 11m 41s | 11m 41s | claude-opus-4-8 | 98 | 149,926 | 6,432,815 | 52,318 | 6,635,157 | shell: Project model + ProjectSource/PersistentProjectSource + ProjectController + ProjectReadEndpoint (lib/projects/); PersistentSampleSource write-side + public sample JSON mapping (lib/compare/sample_source.dart); unit 673 green (+26); coverage 100% on all touched files; no buildApp/main/pubspec change |
 | SCREEN-1 | 71851d57 | 2026-10-10 16:20 EDT | 16:37 | 17m 44s | 17m 44s | claude-opus-4-8 | 166 | 175,618 | 12,002,233 | 73,435 | 12,251,452 | shell: PaletteScreen + keyed region widgets (E30-E34 inert) + PaletteHomeScreen mounting PaletteReadEndpoint/ProjectReadEndpoint; PaletteEntry marker + projectSource on AppDependencies + buildApp branch; toSelfAssessment() route + bs-07 placeholder; deferred prod store wiring in main.dart (async main + path_provider + sqlite3_flutter_libs, file-backed DriftPersistentStore + FileSourcePhotoStore, loaded persistent sources); unit 688 green (+15); coverage 100% on 24 touched; app still opens on Capture |
 | ITEST-1 | caea7679 | 2026-10-10 17:34 EDT | 18:03 | 29m 01s | 29m 01s | claude-opus-4-8 | 150 | 328,281 | 11,292,734 | 95,202 | 11,716,367 | harness over wired shells: palette_harness.dart (G/W/T vocabulary + 4 fixtures + independent deutan reference + givenPalette) + fakes/fake_file_sink.dart + 2 smoke + 6 fixture guards; analyze clean, unit 688 green, acceptance 12/12 on sim via verify lock; graded 15xA 0xB PASS; fixture amendment: two profiles (deutanModerate 0.6 AC-11, deutanDichromat full AC-9) |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 18:03** | **8h 57m** | **2h 08m** |  | **908** | **1,442,255** | **55,879,523** | **475,125** | **57,797,811** |  |
+| ITEST-2 | c39c9bf6 | 2026-10-10 18:20 EDT | 18:46 | 25m 32s | 25m 32s | claude-opus-4-8 | 160 | 262,709 | 10,644,906 | 70,068 | 10,977,843 | acceptance-tests AC-1,2,3,4,5,11: 6 pending acTestWidgets; default 12/12 green, run-pending 6 red (5 Then, AC-4 Given-precond naming PALETTE-2), clean; graded 4xA 2xB-pending (AC-2->PALETTE-3, AC-5->PALETTE-4) PASS; fixed run-pending scaffold-guard bug; no lib/ touched |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 18:46** | **9h 22m** | **2h 34m** |  | **1,068** | **1,704,964** | **66,524,429** | **545,193** | **68,775,654** |  |
 
 ## Sign-off
 

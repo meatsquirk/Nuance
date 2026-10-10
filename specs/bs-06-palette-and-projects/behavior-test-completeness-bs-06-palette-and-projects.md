@@ -45,3 +45,34 @@ pass. (Follow-on, not blocking: when PROJECT-5 lands the real detector,
 consider giving the projection reference external numeric validation, and have
 PROJECT-4 wire per-project open keys so `whenOpenProject(name)` honours its
 docstring.)
+
+## Phase graded: ITEST-2 (AC tests — AC-1,2,3,4,5,11)
+
+This is an **independent, adversarial** grade of the ITEST-2 per-AC tests only —
+the six `acTestWidgets` in `group('palette ACs (ITEST-2)', …)` for AC-1, AC-2,
+AC-3, AC-4, AC-5 and AC-11. I did not write these tests. I graded the test
+*design* — whether each would discriminate a wrong implementation once the
+behaviour exists — against rules G1–G6, judging the code as it stands today
+(pending or not). I re-read the authoritative AC text, the harness
+vocabulary/fixtures, the reviewed dataset, and every SCREEN-1 shell each test is
+wired to. The ITEST-1 harness/smoke/fixture rows above are unchanged. Two tests
+are **B pending** against existing augmentation rows (TestAC02→PALETTE-3,
+TestAC05→PALETTE-4, both ⬜ Open in `modules/ITEST.md`); no test is an
+unsanctioned B, so the phase passes. One finding (AC-2 medium subsumption) is
+recorded below and must widen the PALETTE-3 augmentation.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-1** `switch between the My paints and Projects views` | A | Given checked through the public surface (`PaintListRegion.regionKey` present after `givenPalette(twoPalettes)`). When drives the real E31 control (`whenSwitchToProjects`). Then asserts the spec's "instead of" grain exactly: `ProjectsRegion` present **and** `PaintListRegion` `findsNothing` after a `pumpAndSettle` settle point — rejects the shell's both-at-once layout (the actual red-baseline failure) and a toggle that shows both. Paired control switches back and asserts the mutually-exclusive inverse, proving the reading changes **both** ways (G3). Rejects: non-toggling, one-way, and show-both impls. |
+| **AC-2** `each paint lists its identity and provenance badge` | B pending PALETTE-3 | Given fully checked via `myPaints` (brand/line/medium/pigmentIndex/provenance). Then asserts identity strings + a "Measured" badge scoped to the paint-list region, rejecting the shell's name-only row. **Limited (sanctioned):** every reviewed paint is `measured` and `Paint.provenance` defaults to `measured`, so a hardcoded-"Measured" badge passes — the exact-tier discrimination needs a differently-tiered paint, scheduled as the PALETTE-3 augmentation (TestAC02, row exists). **Additional defect this grader found (not yet in the augmentation):** the medium sub-assertion `find.textContaining('Oil')` is subsumed by the line `"Artists' Oil"`, so an impl that renders brand/line/pigment but **omits the medium entirely** still passes. The PALETTE-3 augmentation must be widened to assert the medium at a non-subsumed grain (e.g. a dedicated medium label/widget), not only the provenance tier. |
+| **AC-3** `the provenance legend explains the four confidence tiers` | A | Given checks the legend region is present. Then asserts all four tiers by their **exact** spec strings scoped to the legend region, including the long forms `'Estimated — not yet verified'` and `'Confirmed — you measured this'` (not the short `label` getters) — rejects a legend missing any tier or using the abbreviated label. The four strings are static explanatory copy, so asserting fixed text is correct (not a data-derived value). Rejects the shell placeholder and any partial/renamed legend. |
+| **AC-4** `add a paint by choosing from the shipped dataset` | A (with caveat) | Given checked (`myPaints` empty), add flow opened via the real E32 control, and the picker precondition (`'Ultramarine Blue'` offered) asserted before the When — all through public flows (G2: the real `kReviewedPaints` via the real controller, no fake override). Then asserts full `Paint` **value-equality** to the exact dataset entry, so it rejects a free-hand / blanked / fabricated / wrong-masstone / dropped-pigment-index paint. **Caveat (verified, non-blocking):** the reviewed dataset is uniformly `ProvenanceTier.measured` and `Paint.provenance` defaults to `measured`, so "provenance preserved" cannot be separated from a hardcoded-measured impl — but no non-measured reviewed paint exists in v1 to build a control from, and value-equality is the strongest available assertion and does pin the measured value that is the dataset's. A-with-caveat, not B: it rejects the realistic wrong impls and asserts the named observable at full grain. If a non-measured reviewed paint is ever shipped, add a preserved-tier control. |
+| **AC-5** `selecting a palette re-points recipe search at it` | B pending PALETTE-4 | Given checked (palette order + `selectedPalette == 'My paints'` as the initial active). When drives selection through the harness precondition that names PALETTE-4. Then asserts the **active-palette re-point** (`selectedPalette == 'Travel set'` and its disjoint id-set) — a proxy, **not** the spec's named observable "recipe search solves only against Travel set". **Limited (sanctioned):** no recipe-solving surface is mounted on the Palette screen until PALETTE-4, so an impl that moves the active pointer but does not re-point the solver would pass now; the "every recipe's paints ⊆ selected palette" control is the PALETTE-4 augmentation (TestAC05, row exists). |
+| **AC-11** `the vision-profile card shows the estimate and opens the self-assessment` | A | Given checks the card is present and `selfAssessmentOpen` is false (the baseline for the navigation control). Estimate Then asserts the exact string `'deutan-type, moderate'` scoped to the card region, driven by the **injected** `deutanModerate` profile (configured Given, G2 — the test sets the input profile, not the card text). Navigation Then asserts `selfAssessmentOpen` flips false→true after `whenRetakeAssessment`, with the pre-check acting as its before/after control (G3). Rejects a blank card, a wrong estimate, and a no-op retake. **Recommended hardening (non-blocking):** only one profile is exercised, so a card that ignores the profile and prints a constant `'deutan-type, moderate'` would pass the estimate step; a second-profile control (e.g. a protan/severe `CvdProfile`, asserting a different rendered estimate) would prove the label tracks the injected profile. Graded A — it rejects multiple plausible wrong impls and asserts the exact named observable from the configured Given — but the control is cheap and should be added. |
+
+**Counts: 4×A, 2×B pending — PASS (no unsanctioned B).** AC-1/AC-3/AC-4/AC-11
+meet the bar; AC-2 (PALETTE-3) and AC-5 (PALETTE-4) are B against existing,
+confirmed augmentation rows. Blocking finding: none. Required fold-in: the
+PALETTE-3 augmentation for TestAC02 must also assert the **medium** at a
+non-subsumed grain (today `'Oil'` is satisfied by the line `"Artists' Oil"`), in
+addition to the exact provenance tier.
