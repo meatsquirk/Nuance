@@ -11,7 +11,6 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
-import 'package:paint_color_assistant/recipes/recipes_stub.dart';
 
 Sample _sample(String name) => Sample(
       coordinates: const ColorCoordinates(lightness: 58, a: 24, b: 30),
@@ -56,7 +55,8 @@ void main() {
   testWidgets('toRecipes carries the sample as the mixing target',
       (tester) async {
     await _pushRoute(tester, router.toRecipes(_sample('Deep Olive Green')));
-    expect(find.byType(RecipesStubScreen), findsOneWidget);
+    expect(find.byType(RecipesHomeScreen), findsOneWidget);
+    expect(find.text('Recipes'), findsOneWidget);
     expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
   });
 
