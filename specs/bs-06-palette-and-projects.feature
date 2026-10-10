@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-10 by Matt Quirk (derived 2026-10-05 by /wireframe-behavior-specs)
 Feature: Palette and projects
   The painter declares the paints they physically own as one or more named
   palettes, each paint carrying its provenance, and organises saved colours into

@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** Not started — next DATA-1 (blocked: G-1 spec approval, G-3 bs-04→main)
+**Status:** Not started — next DATA-1 (blocked: G-3 bs-04→main). G-1 spec approval ✅ resolved 2026-10-10
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -137,7 +137,7 @@ graph LR
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" banner) | DATA-1 | Open |
+| G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" banner) | DATA-1 | ✅ Resolved 2026-10-10: spec approved as-is; `.feature` first line stamped "Approved 2026-10-10 by Matt Quirk" — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-3 | dependency | bs-04 merged to `main` (bs-06 branches from `main` and needs bs-04 code) — closed by merging `feat/bs-04-mixing-recipes` → `main` | DATA-1 | Open |
 | G-4 | decision | Pin bs-06 data contracts + confirm new project-local deps: (a) on-device DB package (D-1), (b) pdf package (D-6), (c) reviewed paint-dataset shape & provenance defaults (D-3), (d) project "size" field semantics (free text "24×30 in" vs structured units) | DATA-2, PALETTE-1 | Open |
@@ -180,10 +180,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**DATA-1** (scaffold) is first but **blocked by two gates**:
-- **G-1** — approve the draft spec. Resolve: `/feature-next-phase --gate bs-06-palette-and-projects G-1 approved`.
+**DATA-1** (scaffold) is first. **G-1** (approve the draft spec) ✅ resolved 2026-10-10 by Matt Quirk. Still **blocked by one gate**:
 - **G-3** — merge `feat/bs-04-mixing-recipes` → `main` so bs-06 can branch with bs-04's code present.
-Once both close, DATA-1 can run; **G-4** (data contracts + new deps) then blocks DATA-2/PALETTE-1 and should be answered before stage 2. Nothing is startable until G-1 and G-3 clear.
+Once G-3 closes, DATA-1 can run; **G-4** (data contracts + new deps) then blocks DATA-2/PALETTE-1 and should be answered before stage 2. Nothing is startable until G-3 clears.
 
 ## Token usage
 
@@ -193,7 +192,8 @@ Once both close, DATA-1 can run; **G-4** (data contracts + new deps) then blocks
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | — | — | — | — | — | claude-opus-4-8 | — | — | — | — | — | plan written |
 | PLAN | 6be62965 | 2026-10-10 06:10 EDT | 06:55 | 45m 09s | 15m 59s | claude-opus-4-8 | 68 | 204,942 | 2,521,965 | 60,117 | 2,787,092 | plan written |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 06:55** | **45m 09s** | **15m 59s** |  | **68** | **204,942** | **2,521,965** | **60,117** | **2,787,092** |  |
+| GATE-DECISION | 5f1f02a8 | 2026-10-10 07:28 EDT | 07:32 | 3m 30s | 3m 30s | claude-opus-4-8 | 40 | 48,071 | 1,279,486 | 14,456 | 1,342,053 | G-1 approved: bs-06 spec approved as-is by Matt Quirk; .feature stamped 'Approved 2026-10-10' |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 07:32** | **48m 39s** | **19m 29s** |  | **108** | **253,013** | **3,801,451** | **74,573** | **4,129,145** |  |
 
 ## Sign-off
 
