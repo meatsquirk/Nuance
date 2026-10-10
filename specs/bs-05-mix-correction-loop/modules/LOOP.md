@@ -28,7 +28,7 @@
 
 ## Open gates
 
-- **G-4(d)** (blocks LOOP-6): the confirmed-tier label string / shared-label change. See the master plan.
+- **G-4(d)** ✅ Resolved 2026-10-10 17:35 EDT — Matt Quirk: keep the shared `Provenance.label` for `confirmed` = "Confirmed" (unchanged for bs-04); LOOP-6 sets the confirmed `Provenance.note` to carry **"Confirmed — you measured this"**, rendered by the readout's provenance region (label + note). No shared-label change. LOOP-6 unblocked. See the master plan.
 
 ## Phase 1 — Scaffold (LOOP-1)
 
@@ -141,7 +141,7 @@ Scaffold complete; no product code (`lib/**`) touched — only `integration_test
 - **Kind:** behavior
 - **Target AC:** AC-9 (full), AC-10 (full)
 - **Depends on:** LOOP-3, G-4(d) · **Blocks:** SIGNOFF-1 (serial with LOOP-5)
-- **Files:** `correction_controller.dart` (`saveConfirmed()`), the provenance promotion (domain `Provenance` label per G-4(d)), SCREEN-1's `SaveRegion` (E29), `ProvenanceBadge` reuse for the readout
+- **Files:** `correction_controller.dart` (`saveConfirmed()`), the provenance promotion (set the confirmed `Provenance.note` = "Confirmed — you measured this" per G-4(d) — **do not** change the shared `Provenance.label`), SCREEN-1's `SaveRegion` (E29), and the readout's provenance region extended to render the confirmed note (label + note)
 - **Tasks:**
   1. `saveConfirmed()` promotes the target to `ProvenanceTier.confirmed`, label "Confirmed — you measured this", a note recording it was confirmed after the painter's own swatch photo, appending the measured swatch as an `EvidencePoint`; persist to `sampleSource` (D-8).
   2. **Honest-provenance guard:** refuse promotion without a measured swatch (`state.mixedSwatch` present) — never graduate on anything but the painter's own photographic evidence.

@@ -25,7 +25,7 @@
 
 ## Open gates
 
-- **G-4** (blocks CORRECT-2/3/4 + ITEST-3): verdict words + tolerance (b), trace threshold (c), illustrative amounts (a). Resolve before un-pending AC-2..AC-6. See the master plan's *Open gates*.
+- **G-4** ✅ Resolved 2026-10-10 17:35 EDT — Matt Quirk: (a) amounts **illustrative** (assert properties, not literals); (b) verdict words **"noticeably off" / "very close"** binding, tolerance **ΔE00 ≤ 2** (named constant); (c) trace threshold **0.02** (2% by volume, reuse bs-04's idiom). CORRECT-2/3/4 and ITEST-3 unblocked. Full decision in the master plan's *Open gates*.
 
 ## Phase 1 — Engine interface + types (CORRECT-1)
 
