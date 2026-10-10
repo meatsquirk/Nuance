@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** Not started — DATA-1 startable (G-1 ✅ + G-3 ✅ both resolved 2026-10-10). G-4 (data contracts + new deps) blocks stage 2 (DATA-2/PALETTE-1)
+**Status:** In progress — DATA-1 (scaffold) ✅ done @ branch `feat/bs-06-palette-and-projects` off `main` `bfd4289`. Next **DATA-2**, but all of stage 2 (DATA-2/PALETTE-1/PROJECT-1) is blocked by **G-4** (data contracts + new deps) — resolve G-4 to proceed.
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -110,7 +110,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ⬜ Todo |
+| DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | 🟡 In progress |
 | PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | ⬜ Todo |
 | PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | ⬜ Todo |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | ⬜ Todo |
@@ -155,8 +155,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | DATA-1 | scaffold: branch from main, baseline, gate sanity, BS06_RUN_PENDING + bs06/pending.dart + runner target | ⬜ Next | | | blocked by G-1, G-3 |
-| 2 | DATA-2 | shell: on-device persistent store + wiring into AppDependencies/buildApp + source-photo storage seam | ⬜ Todo | | | blocked by G-4 |
+| 1 | DATA-1 | scaffold: branch from main, baseline, gate sanity, BS06_RUN_PENDING + bs06/pending.dart + runner target | ✅ Done | 4,537,759 | 11m 44s | branch @ `bfd4289`; unit 579 green; gate proven both ways; 11 ACs pending |
+| 2 | DATA-2 | shell: on-device persistent store + wiring into AppDependencies/buildApp + source-photo storage seam | ⬜ Next | | | blocked by G-4 |
 | 3 | PALETTE-1 | shell: extend Paint (brand/line/provenance); PaletteController + persistent PaletteSource; reviewed dataset + loader; PaletteReadEndpoint | ⬜ Todo | | | ∥ PROJECT-1; blocked by G-4; edits bs-04 files |
 | 4 | PROJECT-1 | shell: Project model + ProjectSource (persistent) + ProjectController + persistent SampleSource write-side + ProjectReadEndpoint | ⬜ Todo | | | ∥ PALETTE-1 |
 | 5 | SCREEN-1 | shell: Palette screen + keyed regions + E30–E34 controls + nav + mount read endpoints | ⬜ Todo | | | |
@@ -180,7 +180,12 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**DATA-1** (scaffold) is first and **now startable**: **G-1** (approve the draft spec) ✅ resolved 2026-10-10 by Matt Quirk, and **G-3** (bs-04 → `main`) ✅ resolved 2026-10-10 (merged @ `2684ac6`). DATA-1 branches `feat/bs-06-palette-and-projects` from `main`. **G-4** (data contracts + new deps) then blocks DATA-2/PALETTE-1 and should be answered before stage 2.
+**DATA-1** (scaffold) ✅ done — branch `feat/bs-06-palette-and-projects` off `main` `bfd4289` (worktree `Nuance-bs06`); baseline green; pending gate seeded with all 11 ACs; gate proven both ways.
+
+**Stage 2 is fully blocked by G-4** — a decision gate. Nothing is startable until it is resolved:
+- **G-4** must confirm (a) the on-device DB package (D-1), (b) the pdf package (D-6), (c) the reviewed paint-dataset shape + provenance defaults (D-3), (d) project "size" field semantics (D — free text vs structured).
+- Once G-4 resolves: **DATA-2** (store shell) runs first, then **PALETTE-1 ∥ PROJECT-1** (disjoint dirs), then SCREEN-1 → ITEST stage.
+- No `--parallel` window is open yet (all stage-2 phases depend on DATA-2 or G-4).
 
 ## Token usage
 
@@ -191,7 +196,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PLAN | — | — | — | — | — | claude-opus-4-8 | — | — | — | — | — | plan written |
 | PLAN | 6be62965 | 2026-10-10 06:10 EDT | 06:55 | 45m 09s | 15m 59s | claude-opus-4-8 | 68 | 204,942 | 2,521,965 | 60,117 | 2,787,092 | plan written |
 | GATE-DECISION | 5f1f02a8 | 2026-10-10 07:28 EDT | 13:58 | 6h 29m | 10m 45s | claude-opus-4-8 | 78 | 183,442 | 2,815,515 | 31,337 | 3,030,372 | G-1 approved (spec approved as-is by Matt Quirk; .feature stamped) + G-3 resolved (bs-04 merged to main @ 2684ac6; DATA-1 startable) |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 13:58** | **7h 14m** | **26m 44s** |  | **146** | **388,384** | **5,337,480** | **91,454** | **5,817,464** |  |
+| DATA-1 | 3816a462 | 2026-10-10 14:13 EDT | 14:25 | 11m 44s | 11m 44s | claude-opus-4-8 | 78 | 122,747 | 4,374,719 | 40,215 | 4,537,759 | scaffold: branch @ bfd4289; baseline analyze clean / unit 579 / coverage gate PASS; bs06/pending.dart seeded 11 ACs + palette_test.dart runner (3 guards green on sim); gate proven fail-on-gap + pass-on-clean; no product code |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 14:25** | **7h 25m** | **38m 28s** |  | **224** | **511,131** | **9,712,199** | **131,669** | **10,355,223** |  |
 
 ## Sign-off
 
