@@ -16,9 +16,15 @@ import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/palette/palette_read_endpoint.dart';
+import 'package:paint_color_assistant/palette/palette_screen.dart';
+import 'package:paint_color_assistant/projects/project.dart';
+import 'package:paint_color_assistant/projects/project_read_endpoint.dart';
+import 'package:paint_color_assistant/projects/project_source.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
 import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
 import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
+import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
@@ -209,6 +215,30 @@ void main() {
       );
       expect(identical(deps.paletteSource, source), isTrue);
       expect(identical(deps.recipesEntry, entry), isTrue);
+    });
+
+    test('defaults the project source to an empty in-memory catalogue (bs-06)',
+        () {
+      expect(_deps().projectSource, isA<InMemoryProjectSource>());
+      expect(_deps().projectSource.projects(), isEmpty);
+    });
+
+    test('defaults the palette entry to null (opens on Readout — bs-06)', () {
+      expect(_deps().paletteEntry, isNull);
+    });
+
+    test('keeps an explicitly injected project source and palette entry', () {
+      const source = InMemoryProjectSource();
+      const entry = PaletteEntry();
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        projectSource: source,
+        paletteEntry: entry,
+      );
+      expect(identical(deps.projectSource, source), isTrue);
+      expect(identical(deps.paletteEntry, entry), isTrue);
     });
   });
 
@@ -548,6 +578,70 @@ void main() {
       );
       expect(deps.store, same(store));
       expect(deps.sourcePhotoStore, same(photos));
+    });
+  });
+
+  group('PaletteEntry', () {
+    test('is a plain opt-in marker', () {
+      // Non-const so the const constructor line is covered.
+      // ignore: prefer_const_constructors
+      expect(PaletteEntry(), isA<PaletteEntry>());
+    });
+  });
+
+  group('PaletteHomeScreen', () {
+    AppDependencies paletteDeps({
+      PaletteSource paletteSource = const InMemoryPaletteSource(),
+      ProjectSource projectSource = const InMemoryProjectSource(),
+    }) =>
+        AppDependencies(
+          colorScience: const ColorScienceImpl(),
+          speech: const NoopSpeech(),
+          haptics: const NoopHaptics(),
+          paletteEntry: const PaletteEntry(),
+          paletteSource: paletteSource,
+          projectSource: projectSource,
+        );
+
+    testWidgets('buildApp opens on the Palette screen when an entry is set',
+        (tester) async {
+      await tester.pumpWidget(buildApp(paletteDeps()));
+      expect(find.byType(PaletteHomeScreen), findsOneWidget);
+      expect(find.byType(PaletteScreen), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Palette'), findsOneWidget);
+    });
+
+    testWidgets('wraps its subtree in both read endpoints for the suite',
+        (tester) async {
+      await tester.pumpWidget(buildApp(paletteDeps()));
+      expect(find.byKey(PaletteReadEndpoint.endpointKey), findsOneWidget);
+      expect(find.byKey(ProjectReadEndpoint.endpointKey), findsOneWidget);
+    });
+
+    testWidgets('builds its controllers over the injected sources',
+        (tester) async {
+      final palettes = InMemoryPaletteSource(
+        catalogue: const [PaintPalette(name: 'My paints')],
+      );
+      final projects = InMemoryProjectSource(
+        catalogue: const [Project(id: 'p1', name: 'Harbor at Dusk')],
+      );
+      await tester.pumpWidget(
+        buildApp(paletteDeps(paletteSource: palettes, projectSource: projects)),
+      );
+      final context = tester.element(find.byType(PaletteScreen));
+      expect(PaletteReadEndpoint.of(context).palettes, hasLength(1));
+      expect(ProjectReadEndpoint.of(context).projects, hasLength(1));
+    });
+
+    testWidgets('disposes its controllers when removed from the tree',
+        (tester) async {
+      await tester.pumpWidget(buildApp(paletteDeps()));
+      expect(find.byType(PaletteHomeScreen), findsOneWidget);
+      // Replacing the tree tears the home screen down; a leaked ChangeNotifier
+      // would trip the flutter_test dispose-guard.
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      expect(find.byType(PaletteHomeScreen), findsNothing);
     });
   });
 }

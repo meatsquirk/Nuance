@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — DATA ✅, PALETTE-1 ✅, PROJECT-1 ✅ (shells). Next: **SCREEN-1** (shell; mounts read endpoints + the deferred prod store wiring), then the ITEST stage.
+**Status:** In progress — stage 2 (component shells) complete: DATA ✅, PALETTE-1 ✅, PROJECT-1 ✅, SCREEN-1 ✅. Next: the **ITEST stage** (ITEST-1 harness → ITEST-2 ∥ ITEST-3 → ITEST-4 test review, **G-2**).
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -113,7 +113,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 | DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ✅ Done |
 | PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | 🔄 In progress (PALETTE-1 ✅) |
 | PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | 🔄 In progress (PROJECT-1 ✅) |
-| SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | ⬜ Todo |
+| SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | 🔄 In progress (SCREEN-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
 ## Dependency graph
@@ -159,8 +159,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | DATA-2 | shell: on-device persistent store + wiring into AppDependencies/buildApp + source-photo storage seam | ✅ Done | 7,998,582 | 17m 03s (18m 14s) | drift store behind `PersistentStore`; `SourcePhotoStore`; seams on AppDependencies; unit 617 green; coverage 100% on 5 touched files; G-4 resolved |
 | 3 | PALETTE-1 | shell: extend Paint (brand/line/provenance); PaletteController + persistent PaletteSource; reviewed dataset + loader; PaletteReadEndpoint | ✅ Done | 8,841,030 | 14m 46s | Paint +brand/line/provenance (default measured); PersistentPaletteSource; kReviewedPaints + loader; unit 647 green; coverage 100% on 10 touched; bs-04 suite green on-sim; prod wiring deferred to SCREEN-1 |
 | 4 | PROJECT-1 | shell: Project model + ProjectSource (persistent) + ProjectController + persistent SampleSource write-side + ProjectReadEndpoint | ✅ Done | 6,635,157 | 11m 41s | both shells done; SCREEN-1 now startable |
-| 5 | SCREEN-1 | shell: Palette screen + keyed regions + E30–E34 controls + nav + mount read endpoints | ⬜ Next | | | carries deferred prod store wiring |
-| 6 | ITEST-1 | acceptance-tests: harness over wired shells, fixtures, pending gate (all ACs pending), smoke test | ⬜ Todo | | | |
+| 5 | SCREEN-1 | shell: Palette screen + keyed regions + E30–E34 controls + nav + mount read endpoints | ✅ Done | 12,251,452 | 17m 44s | carried deferred prod store wiring (async main + path_provider + sqlite3_flutter_libs); unit 688 green (+15); coverage 100% on 24 touched; both read endpoints mounted; opens on Capture (paletteEntry null) |
+| 6 | ITEST-1 | acceptance-tests: harness over wired shells, fixtures, pending gate (all ACs pending), smoke test | ⬜ Next | | | |
 | 7 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,11 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 8 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
 | 9 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
@@ -180,12 +180,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**PROJECT-1 ✅ done** (shell): `Project` model + `ProjectSource`/`PersistentProjectSource` (over DATA's store, keyed by id) + `ProjectController` skeleton (`ConfusionPair` typedef; shell `openedProject`/`confusionPairs`/`lastExport`) + `ProjectReadEndpoint`, all in disjoint `lib/projects/`; `PersistentSampleSource` write-side + public `sampleToJson`/`sampleFromJson` added to `lib/compare/sample_source.dart` (read signature unchanged). Unit 673 green (+26), 100% coverage on touched; no `buildApp`/`main.dart`/`pubspec` change. Both shells (PALETTE-1, PROJECT-1) are now done.
+**SCREEN-1 ✅ done** (shell): the `PaletteScreen` + keyed region widgets (paint list E32, legend, palette selector, projects list E33/E34, vision-profile card E30) with inert controls, both views rendered at once so every region key resolves; `PaletteEntry` marker + `AppDependencies.paletteEntry`/`projectSource` + a `buildApp` branch + `PaletteHomeScreen` mounting both read endpoints; `AppRouter.toSelfAssessment()` → a bs-07 `SelfAssessmentEntryScreen` placeholder (D-7); and the **deferred production store wiring** in `main.dart` — async `main` + `productionDependencies()` opens the file-backed `DriftPersistentStore` (path_provider) + `FileSourcePhotoStore`, builds + loads the persistent sources, and a pure `assembleDependencies(...)` keeps the app opening on Capture (`paletteEntry` left null). `pubspec` gains path_provider + sqlite3_flutter_libs. Unit 688 green (+15), coverage 100% on 24 touched files. **Stage 2 (component shells) is complete.**
 
-Startable now:
-- **SCREEN-1** (shell) — Palette screen + keyed regions + E30–E34 controls + nav + **mount both read endpoints** (`PaletteReadEndpoint`, `ProjectReadEndpoint`). **Carries the deferred production store wiring**: inject the real file-backed `DriftPersistentStore` + `FileSourcePhotoStore` into `main.dart` (async main + `path_provider` + `sqlite3_flutter_libs`), since SCREEN-1 is the first phase whose screen actually reads the store. PALETTE-1/PROJECT-1 deliberately left `main.dart`/`pubspec` deps untouched.
+Startable now (the **ITEST stage**, acceptance-tests):
+- **ITEST-1** — the harness over the wired shells: build the real app through `buildApp(deps)` with a `PaletteEntry` + an in-memory-backed `DriftPersistentStore`/`InMemorySourcePhotoStore` and the fixtures, the pending gate (all 11 ACs pending), and a smoke test. Blocks ITEST-2/3.
+- Then **ITEST-2 ∥ ITEST-3** (disjoint test files: palette ACs 1/2/3/4/5/11 vs project ACs 6/7/8/9/10) + red baseline, then **ITEST-4** test review (**G-2**).
 
-Then the **ITEST stage** (ITEST-1 harness → ITEST-2 ∥ ITEST-3 → ITEST-4 test review, **G-2**). All behavior phases (PALETTE-2→4, PROJECT-2→6, SCREEN-2/3) remain blocked on **G-2** (approve the acceptance tests at ITEST-4).
+All behavior phases (PALETTE-2→4, PROJECT-2→6, SCREEN-2/3) remain blocked on **G-2** (approve the acceptance tests at ITEST-4).
 
 ## Token usage
 
@@ -200,7 +201,8 @@ Then the **ITEST stage** (ITEST-1 harness → ITEST-2 ∥ ITEST-3 → ITEST-4 te
 | DATA-2 | ad757ac6 | 2026-10-10 14:47 EDT | 15:05 | 18m 14s | 17m 03s | claude-opus-4-8 | 128 | 132,804 | 7,802,103 | 63,547 | 7,998,582 | shell: on-device persistent store (drift) + source-photo store behind AppDependencies seams; G-4 resolved; unit+coverage gate PASS (617 tests, 100% on 5 touched files) |
 | PALETTE-1 | 7fe936a4 | 2026-10-10 15:21 EDT | 15:36 | 14m 46s | 14m 46s | claude-opus-4-8 | 142 | 144,495 | 8,637,439 | 58,954 | 8,841,030 | shell: Paint +brand/line/provenance (default measured, additive); PaletteController + PaletteReadEndpoint; PersistentPaletteSource over DATA store; reviewed CSV dataset + parseReviewedPaints loader + kReviewedPaints; unit 647 green (+30); coverage 100% on 10 touched lib files; bs-04 acceptance suite 24/24 green on-sim; prod store wiring deferred to SCREEN-1 |
 | PROJECT-1 | 0ac74fa0 | 2026-10-10 15:41 EDT | 15:52 | 11m 41s | 11m 41s | claude-opus-4-8 | 98 | 149,926 | 6,432,815 | 52,318 | 6,635,157 | shell: Project model + ProjectSource/PersistentProjectSource + ProjectController + ProjectReadEndpoint (lib/projects/); PersistentSampleSource write-side + public sample JSON mapping (lib/compare/sample_source.dart); unit 673 green (+26); coverage 100% on all touched files; no buildApp/main/pubspec change |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 15:52** | **8h 10m** | **1h 21m** |  | **592** | **938,356** | **32,584,556** | **306,488** | **33,829,992** |  |
+| SCREEN-1 | 71851d57 | 2026-10-10 16:20 EDT | 16:37 | 17m 44s | 17m 44s | claude-opus-4-8 | 166 | 175,618 | 12,002,233 | 73,435 | 12,251,452 | shell: PaletteScreen + keyed region widgets (E30-E34 inert) + PaletteHomeScreen mounting PaletteReadEndpoint/ProjectReadEndpoint; PaletteEntry marker + projectSource on AppDependencies + buildApp branch; toSelfAssessment() route + bs-07 placeholder; deferred prod store wiring in main.dart (async main + path_provider + sqlite3_flutter_libs, file-backed DriftPersistentStore + FileSourcePhotoStore, loaded persistent sources); unit 688 green (+15); coverage 100% on 24 touched; app still opens on Capture |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 16:37** | **8h 28m** | **1h 39m** |  | **758** | **1,113,974** | **44,586,789** | **379,923** | **46,081,444** |  |
 
 ## Sign-off
 

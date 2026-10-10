@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/sample.dart';
+import '../palette/self_assessment_entry_screen.dart';
 import '../readout/readout_screen.dart';
 import 'build_app.dart';
 
@@ -56,6 +57,20 @@ class AppRouter {
   Route<void> toRecipes(Sample target) {
     return MaterialPageRoute<void>(
       builder: (_) => RecipesHomeScreen(target: target),
+    );
+  }
+
+  /// A route to the CVD self-assessment entry (bs-06 D-7).
+  ///
+  /// The Palette screen's vision-profile card (AC-11, E30) opens this when the
+  /// painter chooses to retake the self-assessment. The destination is the
+  /// [SelfAssessmentEntryScreen] placeholder bs-06 owns; bs-07 replaces that
+  /// screen behind this same route, so the card's navigation never changes.
+  /// SCREEN-3 wires the card's control to this route; the route itself is added
+  /// in the SCREEN-1 shell.
+  Route<void> toSelfAssessment() {
+    return MaterialPageRoute<void>(
+      builder: (_) => const SelfAssessmentEntryScreen(),
     );
   }
 }

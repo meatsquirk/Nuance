@@ -10,6 +10,7 @@ import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/palette/self_assessment_entry_screen.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
 
 Sample _sample(String name) => Sample(
@@ -80,5 +81,12 @@ void main() {
 
     expect(find.byType(ReadoutScreen), findsOneWidget);
     expect(find.text('Warm Terracotta'), findsWidgets);
+  });
+
+  testWidgets('toSelfAssessment opens the CVD self-assessment entry (bs-06 D-7)',
+      (tester) async {
+    await _pushRoute(tester, router.toSelfAssessment());
+    expect(find.byType(SelfAssessmentEntryScreen), findsOneWidget);
+    expect(find.text('CVD self-assessment'), findsOneWidget);
   });
 }

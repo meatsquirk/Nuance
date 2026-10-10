@@ -40,10 +40,18 @@ dependencies:
   # type-safe. The store sits behind the `PersistentStore` interface so the
   # recipes/compare/project sources persist through it without depending on
   # drift directly; tests substitute an in-memory-backed double. The file-backed
-  # native binding (path_provider + sqlite3_flutter_libs) is platform wiring
-  # added with the first persistent source consumer (PALETTE-1/PROJECT-1),
-  # mirroring how bs-02 deferred native capture behind `CaptureSource`.
+  # native binding (path_provider + sqlite3_flutter_libs) is the platform wiring
+  # SCREEN-1 adds, since it is the first phase whose screen reads the store.
   drift: ^2.35.2
+
+  # File-backed native binding for the drift store (bs-06 SCREEN-1). path_provider
+  # resolves the application-documents directory the SQLite file and source-photo
+  # files live under; sqlite3_flutter_libs bundles the native SQLite library for
+  # the iOS/Android app builds (host `flutter test` uses the system libsqlite3).
+  # Only `main.dart` depends on them; the store stays a pure-Dart component over
+  # an injected executor, so the unit suite runs without a device.
+  path_provider: ^2.1.4
+  sqlite3_flutter_libs: ^0.5.24
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +73,12 @@ dev_dependencies:
   # from the coverage gate (tool/coverage_gate.dart).
   drift_dev: ^2.35.1
   build_runner: ^2.16.2
+
+  # Substitute a fake application-documents directory so main.dart's production
+  # store wiring (path_provider) is exercised under host `flutter test`
+  # (bs-06 SCREEN-1 smoke test).
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
