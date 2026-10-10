@@ -11,6 +11,7 @@ import '../capture/source/capture_source.dart';
 import '../color_science/color_science.dart';
 import '../correction/correction_controller.dart';
 import '../correction/correction_read_endpoint.dart';
+import '../correction/correction_screen.dart';
 import '../correction/engine/correction_engine.dart';
 import '../correction/engine/correction_engine_impl.dart';
 import '../compare/comparison_controller.dart';
@@ -564,11 +565,9 @@ class _RecipesHomeScreenState extends State<RecipesHomeScreen> {
 /// symmetric to [RecipesHomeScreen]; the one exception is [captureSource], which
 /// has no const default (a camera is scene-specific) and so is required.
 ///
-/// The body is the LOOP-2 **placeholder** — a "Correction" app bar over the
-/// target's name, exactly as the recipes home read before its screen phase.
-/// SCREEN-1 replaces it with the real Correction screen (E26–E29) composed over
-/// the owned controller; the controller ownership and the read endpoint stay
-/// here.
+/// The body is the [CorrectionScreen] (SCREEN-1) composed over the owned
+/// controller — the check, difference, correction, speak, re-photograph and save
+/// regions (E26–E29); the controller ownership and the read endpoint stay here.
 class CorrectionHomeScreen extends StatefulWidget {
   /// Creates the correction home correcting [currentMix] toward [target], over
   /// the given seams.
@@ -643,10 +642,7 @@ class _CorrectionHomeScreenState extends State<CorrectionHomeScreen> {
     return CorrectionReadEndpoint(
       key: CorrectionReadEndpoint.endpointKey,
       controller: _controller,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Correction')),
-        body: Text('Correction target: ${widget.target.name ?? '(unnamed)'}'),
-      ),
+      child: CorrectionScreen(controller: _controller),
     );
   }
 }
