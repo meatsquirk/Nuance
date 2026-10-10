@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — DATA module ✅ done (scaffold + persistent store shell). G-4 resolved (drift / pdf+printing / measured / free-text). Next: **PALETTE-1 ∥ PROJECT-1** (shells, disjoint dirs).
+**Status:** In progress — DATA ✅, PALETTE-1 ✅ (shell). Next: **PROJECT-1** (shell, ∥ window), then SCREEN-1.
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -111,7 +111,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ✅ Done |
-| PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | ⬜ Todo |
+| PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | 🔄 In progress (PALETTE-1 ✅) |
 | PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | ⬜ Todo |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
@@ -157,8 +157,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | DATA-1 | scaffold: branch from main, baseline, gate sanity, BS06_RUN_PENDING + bs06/pending.dart + runner target | ✅ Done | 4,537,759 | 11m 44s | branch @ `bfd4289`; unit 579 green; gate proven both ways; 11 ACs pending |
 | 2 | DATA-2 | shell: on-device persistent store + wiring into AppDependencies/buildApp + source-photo storage seam | ✅ Done | 7,998,582 | 17m 03s (18m 14s) | drift store behind `PersistentStore`; `SourcePhotoStore`; seams on AppDependencies; unit 617 green; coverage 100% on 5 touched files; G-4 resolved |
-| 3 | PALETTE-1 | shell: extend Paint (brand/line/provenance); PaletteController + persistent PaletteSource; reviewed dataset + loader; PaletteReadEndpoint | ⬜ Next | | | ∥ PROJECT-1; edits bs-04 files |
-| 4 | PROJECT-1 | shell: Project model + ProjectSource (persistent) + ProjectController + persistent SampleSource write-side + ProjectReadEndpoint | ⬜ Todo | | | ∥ PALETTE-1 |
+| 3 | PALETTE-1 | shell: extend Paint (brand/line/provenance); PaletteController + persistent PaletteSource; reviewed dataset + loader; PaletteReadEndpoint | ✅ Done | 8,841,030 | 14m 46s | Paint +brand/line/provenance (default measured); PersistentPaletteSource; kReviewedPaints + loader; unit 647 green; coverage 100% on 10 touched; bs-04 suite green on-sim; prod wiring deferred to SCREEN-1 |
+| 4 | PROJECT-1 | shell: Project model + ProjectSource (persistent) + ProjectController + persistent SampleSource write-side + ProjectReadEndpoint | ⬜ Next | | | ∥ window; SCREEN-1 follows both |
 | 5 | SCREEN-1 | shell: Palette screen + keyed regions + E30–E34 controls + nav + mount read endpoints | ⬜ Todo | | | |
 | 6 | ITEST-1 | acceptance-tests: harness over wired shells, fixtures, pending gate (all ACs pending), smoke test | ⬜ Todo | | | |
 | 7 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,11 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
@@ -180,12 +180,15 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**DATA module ✅ done** — DATA-1 (scaffold) + DATA-2 (persistent store shell). `PersistentStore`/drift + `SourcePhotoStore` exist behind nullable `AppDependencies` seams; G-4 resolved.
+**PALETTE-1 ✅ done** (shell): `Paint` extended (brand/line/provenance, default measured); `PaletteController` + `PaletteReadEndpoint`; `PersistentPaletteSource` over DATA's store; reviewed CSV dataset + `parseReviewedPaints` loader + `kReviewedPaints`. Unit 647 green, 100% coverage on touched, bs-04 acceptance suite re-run green on-sim.
 
-Startable now (parallel window open):
-- **PALETTE-1** — persistent `PaletteSource` + `PaletteController` + reviewed CSV dataset + loader + `PaletteReadEndpoint`; extends `Paint` (brand/line/provenance). Edits bs-04-owned `lib/domain/paint.dart` + `lib/recipes/palette_source.dart` — serialize against any concurrent bs-04/bs-05 work on those files.
-- **PROJECT-1** — `Project` model + persistent `ProjectSource` + `ProjectController` + write-side `SampleSource` + `ProjectReadEndpoint`.
-- PALETTE-1 ∥ PROJECT-1 run concurrently (disjoint `lib/palette/` vs `lib/projects/`); each owns its own production wiring of the real drift store + file photo store (path_provider + sqlite native libs land there). **SCREEN-1** follows both, then the ITEST stage (G-2).
+Startable now:
+- **PROJECT-1** (shell, ∥ window still open) — `Project` model + persistent `ProjectSource` + `ProjectController` + write-side `SampleSource` + `ProjectReadEndpoint`, in disjoint `lib/projects/`. Does **not** touch `lib/palette/` or `lib/domain/paint.dart`.
+
+Then, after both shells:
+- **SCREEN-1** — Palette screen + keyed regions + E30–E34 + nav + mount read endpoints. **Carries the deferred production store wiring**: inject the real file-backed `DriftPersistentStore` + `FileSourcePhotoStore` into `main.dart` (async main + `path_provider` + `sqlite3_flutter_libs`), since SCREEN-1 is the first phase whose screen actually reads the store. PALETTE-1 deliberately left `main.dart`/`pubspec` deps untouched to avoid a merge conflict with PROJECT-1.
+
+All behavior phases remain blocked on **G-2** (approve the acceptance tests at ITEST-4). ITEST stage follows SCREEN-1.
 
 ## Token usage
 
@@ -198,7 +201,8 @@ Startable now (parallel window open):
 | GATE-DECISION | 5f1f02a8 | 2026-10-10 07:28 EDT | 13:58 | 6h 29m | 10m 45s | claude-opus-4-8 | 78 | 183,442 | 2,815,515 | 31,337 | 3,030,372 | G-1 approved (spec approved as-is by Matt Quirk; .feature stamped) + G-3 resolved (bs-04 merged to main @ 2684ac6; DATA-1 startable) |
 | DATA-1 | 3816a462 | 2026-10-10 14:13 EDT | 14:25 | 11m 44s | 11m 44s | claude-opus-4-8 | 78 | 122,747 | 4,374,719 | 40,215 | 4,537,759 | scaffold: branch @ bfd4289; baseline analyze clean / unit 579 / coverage gate PASS; bs06/pending.dart seeded 11 ACs + palette_test.dart runner (3 guards green on sim); gate proven fail-on-gap + pass-on-clean; no product code |
 | DATA-2 | ad757ac6 | 2026-10-10 14:47 EDT | 15:05 | 18m 14s | 17m 03s | claude-opus-4-8 | 128 | 132,804 | 7,802,103 | 63,547 | 7,998,582 | shell: on-device persistent store (drift) + source-photo store behind AppDependencies seams; G-4 resolved; unit+coverage gate PASS (617 tests, 100% on 5 touched files) |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 15:05** | **7h 44m** | **55m 31s** |  | **352** | **643,935** | **17,514,302** | **195,216** | **18,353,805** |  |
+| PALETTE-1 | 7fe936a4 | 2026-10-10 15:21 EDT | 15:36 | 14m 46s | 14m 46s | claude-opus-4-8 | 142 | 144,495 | 8,637,439 | 58,954 | 8,841,030 | shell: Paint +brand/line/provenance (default measured, additive); PaletteController + PaletteReadEndpoint; PersistentPaletteSource over DATA store; reviewed CSV dataset + parseReviewedPaints loader + kReviewedPaints; unit 647 green (+30); coverage 100% on 10 touched lib files; bs-04 acceptance suite 24/24 green on-sim; prod store wiring deferred to SCREEN-1 |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 15:36** | **7h 58m** | **1h 10m** |  | **494** | **788,430** | **26,151,741** | **254,170** | **27,194,835** |  |
 
 ## Sign-off
 

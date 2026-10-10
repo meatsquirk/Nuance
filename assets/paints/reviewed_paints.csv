@@ -1,0 +1,26 @@
+# Reviewed paint dataset (bs-06 PALETTE-1) — the paints the painter may add.
+#
+# A curated, reviewed build artifact (SI D6): the painter adds paints only from
+# this shipped dataset, never free-hand (spec v1 boundary). Each entry carries
+# the painter-facing identity the Palette screen lists — brand, product line,
+# binder medium and Colour Index pigment code — plus its masstone in canonical
+# CIELAB and a provenance tier (G-4: the reviewed dataset defaults to
+# "measured"). The provenance is preserved when a paint is added (AC-4).
+#
+# Mirrored verbatim by `kReviewedPaints` in lib/palette/paint_dataset.dart — the
+# const is what runs (the catalogue is read synchronously), and this asset is
+# the committed source of truth; drift between the two is caught by
+# test/palette/reviewed_paint_dataset_test.dart via `parseReviewedPaints`.
+# Keep the two in the same order.
+#
+# Columns: id, name, brand, line, medium, pigment_index, provenance,
+#          cielab_l, cielab_a, cielab_b
+id,name,brand,line,medium,pigment_index,provenance,cielab_l,cielab_a,cielab_b
+pw6,Titanium White,Winsor & Newton,Artists' Oil,oil,PW6,measured,96,0,2
+pb29,Ultramarine Blue,Winsor & Newton,Artists' Oil,oil,PB29,measured,32,18,-52
+py35,Cadmium Yellow,Winsor & Newton,Artists' Oil,oil,PY35,measured,82,8,78
+pr108,Cadmium Red,Winsor & Newton,Artists' Oil,oil,PR108,measured,48,60,40
+pbk9,Ivory Black,Winsor & Newton,Artists' Oil,oil,PBk9,measured,12,0,1
+py42,Yellow Ochre,Winsor & Newton,Artists' Oil,oil,PY42,measured,60,12,46
+pbr7,Raw Umber,Winsor & Newton,Artists' Oil,oil,PBr7,measured,32,8,18
+pg7,Phthalo Green,Winsor & Newton,Artists' Oil,oil,PG7,measured,42,-42,10

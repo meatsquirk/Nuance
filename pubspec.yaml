@@ -83,6 +83,10 @@ flutter:
     # iscc_nbs.csv is the named-colour catalogue mirrored by kNamedColors in
     # naming.dart (COLOR-3). The whole directory is bundled.
     - assets/color/
+    # Reviewed paint dataset (bs-06 PALETTE-1). reviewed_paints.csv is the
+    # paints the painter may add, mirrored by kReviewedPaints in
+    # lib/palette/paint_dataset.dart. The whole directory is bundled.
+    - assets/paints/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
