@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | scaffold | — | ⬜ Todo | | |
+| 1 | scaffold | — | ✅ Done | 2,465,803 | 11m 57s |
 | 2 | shell | — | ⬜ Todo | | |
 | 3 | behavior | AC-1 (*enabler*) | ⬜ Todo | | |
 | 4 | behavior | AC-7 | ⬜ Todo | | |
@@ -42,6 +42,48 @@
   3. Confirm the coverage gate (`tool/coverage_gate.dart`) passes clean and FAILs on a planted gap.
   4. Seed `integration_test/bs05/pending.dart` (flag `BS05_RUN_PENDING`, `pendingACs` = all 10, `behaviorPhases` = the behaviour phase ids), mirroring `bs04/pending.dart`. **No product code.**
 - **Exit criteria:** tooling proven both ways; baseline recorded; no `lib/` change.
+
+### Result — LOOP-1
+
+Scaffold complete; no product code (`lib/**`) touched — only `integration_test/bs05/pending.dart` added.
+
+- **Branch / worktree:** `feat/bs-05-mix-correction-loop` in worktree `/Users/matthew.quirk/Nuance-bs05`,
+  based at `main` **@ `2684ac6`** (the bs-04 merge; G-3). `BASE = 3390b27` (the branch tip = `main` tip: the
+  bs-05 `PLAN`/`G-1`/`G-3` commits are plan-only — `git diff 2684ac6 3390b27 -- lib` empty — so the `lib` base
+  is identical to the bs-04 merge). No product code committed this phase.
+- **Baseline (Flutter 3.47.6 stable, iPhone 17 sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`):** `flutter analyze`
+  clean; unit **579 green** (`flutter test --coverage`); integration **86 green**
+  (`flutter test integration_test/ -d <sim>` — bs-01 readout/harness + bs-02 capture + bs-03 comparison +
+  bs-04 recipes, under the verify lock). All existing suites green.
+- **Coverage gate proven both ways:** `dart run tool/coverage_gate.dart main` — PASS clean ("no touched
+  lib/**.dart files", exit 0); FAIL (exit 1) on a planted untracked `lib/_gate_probe.dart` ("NO COVERAGE
+  DATA"); probe removed, tree clean.
+- **BS05 pending runner:** `integration_test/bs05/pending.dart` added (mirror of `bs04/pending.dart`), keyed
+  `BS05_RUN_PENDING`. Unlike bs-04 (empty at scaffold), per this phase's plan `pendingACs` is **seeded with all
+  10 ACs** mapped to the phase that un-pends each: AC-1→LOOP-3; AC-2,3→CORRECT-2; AC-4,5→CORRECT-3;
+  AC-6→CORRECT-4; AC-7→LOOP-4; AC-8→LOOP-5; AC-9,10→LOOP-6. `behaviorPhases` = {LOOP-3, LOOP-4, LOOP-5, LOOP-6,
+  CORRECT-2, CORRECT-3, CORRECT-4}. `flutter analyze` clean with it present.
+- **Coverage gate for this phase:** no `lib` touched ⇒ nothing to gate, PASS. **Fix passes: 0/3** (passed first run).
+- **Tokens / Time:** 2,465,803 · 11m 57s.
+
+### Checkpoint / Handoff — LOOP-1
+
+- **Frozen for shells:** the pending-gate API in `integration_test/bs05/pending.dart` — `pendingACs`,
+  `behaviorPhases`, `runPending`, `pendingSkipReason(acId, {forceRunPending})`,
+  `acTestWidgets(acId, description, body)`. Un-pend flag `BS05_RUN_PENDING`. The bs-05 integration test file
+  will be `integration_test/correction_test.dart` (ITEST-1/2/3), harness `integration_test/correction_harness.dart`.
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration on the
+  iOS sim under the verify lock:
+  `$C with-lock bs-05-mix-correction-loop <PHASE> --wait 900 -- bash -c "export PATH=…; cd /Users/matthew.quirk/Nuance-bs05 && flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685"`.
+  Run-pending (on-device): `flutter test integration_test/correction_test.dart -d <sim> --dart-define=BS05_RUN_PENDING=true`.
+- **Next phase:** CORRECT-1 (shell) — `CorrectionEngine` interface + `Difference`/`Correction` types + stub
+  engine wired into `AppDependencies`. LOOP-2 follows CORRECT-1 (needs its types); SCREEN-1 follows LOOP-2.
+- **Known gaps / notes:** no product code yet. Carry-over flake (master plan *Known flakes*): a `const`
+  constructor line can intermittently read uncovered on `flutter test --coverage` — re-run once if the gate
+  flags an untouched file. Always pass `-d <booted-udid>` to the integration suite (no device ⇒ zero tests,
+  false green). Untracked bs-06..bs-14 specs + `docs/` sit in the tree from a prior branch; not part of bs-05
+  and not committed by this phase.
 
 ## Phase 2 — Controller + state + endpoint + entry/route (LOOP-2)
 
