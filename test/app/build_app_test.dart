@@ -21,6 +21,8 @@ import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
 import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
+import 'package:paint_color_assistant/store/persistent_store.dart';
+import 'package:paint_color_assistant/store/source_photo_store.dart';
 
 const _olive = Sample(
   name: 'Deep Olive Green',
@@ -526,6 +528,26 @@ void main() {
       final a = AppScope(dependencies: deps, child: const SizedBox());
       final b = AppScope(dependencies: deps, child: const SizedBox());
       expect(a.updateShouldNotify(b), isFalse);
+    });
+
+    test('defaults the persistence seams to null (no store wired, bs-06)', () {
+      final deps = _deps();
+      expect(deps.store, isNull);
+      expect(deps.sourcePhotoStore, isNull);
+    });
+
+    test('carries an injected persistent store and source-photo sink', () {
+      final store = InMemoryPersistentStore();
+      final photos = InMemorySourcePhotoStore();
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        store: store,
+        sourcePhotoStore: photos,
+      );
+      expect(deps.store, same(store));
+      expect(deps.sourcePhotoStore, same(photos));
     });
   });
 }

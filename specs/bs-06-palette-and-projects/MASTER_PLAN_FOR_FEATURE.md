@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — DATA-1 (scaffold) ✅ done @ branch `feat/bs-06-palette-and-projects` off `main` `bfd4289`. Next **DATA-2**, but all of stage 2 (DATA-2/PALETTE-1/PROJECT-1) is blocked by **G-4** (data contracts + new deps) — resolve G-4 to proceed.
+**Status:** In progress — DATA module ✅ done (scaffold + persistent store shell). G-4 resolved (drift / pdf+printing / measured / free-text). Next: **PALETTE-1 ∥ PROJECT-1** (shells, disjoint dirs).
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -110,7 +110,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | 🟡 In progress |
+| DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ✅ Done |
 | PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | ⬜ Todo |
 | PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | ⬜ Todo |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | ⬜ Todo |
@@ -140,7 +140,7 @@ graph LR
 | G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" banner) | DATA-1 | ✅ Resolved 2026-10-10: spec approved as-is; `.feature` first line stamped "Approved 2026-10-10 by Matt Quirk" — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-3 | dependency | bs-04 merged to `main` (bs-06 branches from `main` and needs bs-04 code) — closed by merging `feat/bs-04-mixing-recipes` → `main` | DATA-1 | ✅ Resolved 2026-10-10: `feat/bs-04-mixing-recipes` (@ `28cbf04`, signed off) merged to `main` @ `2684ac6`; bs-04 foundation now present on `main`. DATA-1 can branch from `main` |
-| G-4 | decision | Pin bs-06 data contracts + confirm new project-local deps: (a) on-device DB package (D-1), (b) pdf package (D-6), (c) reviewed paint-dataset shape & provenance defaults (D-3), (d) project "size" field semantics (free text "24×30 in" vs structured units) | DATA-2, PALETTE-1 | Open |
+| G-4 | decision | Pin bs-06 data contracts + confirm new project-local deps: (a) on-device DB package (D-1), (b) pdf package (D-6), (c) reviewed paint-dataset shape & provenance defaults (D-3), (d) project "size" field semantics (free text "24×30 in" vs structured units) | DATA-2, PALETTE-1 | ✅ Resolved 2026-10-10: (a) **drift** (SQLite, typed); (b) **pdf + printing** (added by PROJECT-6 for AC-10); (c) reviewed dataset = CSV asset (`assets/color/*.csv` convention) with default provenance tier **measured**; (d) project size = **free text** (e.g. `24×30 in`) — Matt Quirk |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -156,8 +156,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | DATA-1 | scaffold: branch from main, baseline, gate sanity, BS06_RUN_PENDING + bs06/pending.dart + runner target | ✅ Done | 4,537,759 | 11m 44s | branch @ `bfd4289`; unit 579 green; gate proven both ways; 11 ACs pending |
-| 2 | DATA-2 | shell: on-device persistent store + wiring into AppDependencies/buildApp + source-photo storage seam | ⬜ Next | | | blocked by G-4 |
-| 3 | PALETTE-1 | shell: extend Paint (brand/line/provenance); PaletteController + persistent PaletteSource; reviewed dataset + loader; PaletteReadEndpoint | ⬜ Todo | | | ∥ PROJECT-1; blocked by G-4; edits bs-04 files |
+| 2 | DATA-2 | shell: on-device persistent store + wiring into AppDependencies/buildApp + source-photo storage seam | ✅ Done | 7,998,582 | 17m 03s (18m 14s) | drift store behind `PersistentStore`; `SourcePhotoStore`; seams on AppDependencies; unit 617 green; coverage 100% on 5 touched files; G-4 resolved |
+| 3 | PALETTE-1 | shell: extend Paint (brand/line/provenance); PaletteController + persistent PaletteSource; reviewed dataset + loader; PaletteReadEndpoint | ⬜ Next | | | ∥ PROJECT-1; edits bs-04 files |
 | 4 | PROJECT-1 | shell: Project model + ProjectSource (persistent) + ProjectController + persistent SampleSource write-side + ProjectReadEndpoint | ⬜ Todo | | | ∥ PALETTE-1 |
 | 5 | SCREEN-1 | shell: Palette screen + keyed regions + E30–E34 controls + nav + mount read endpoints | ⬜ Todo | | | |
 | 6 | ITEST-1 | acceptance-tests: harness over wired shells, fixtures, pending gate (all ACs pending), smoke test | ⬜ Todo | | | |
@@ -180,12 +180,12 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**DATA-1** (scaffold) ✅ done — branch `feat/bs-06-palette-and-projects` off `main` `bfd4289` (worktree `Nuance-bs06`); baseline green; pending gate seeded with all 11 ACs; gate proven both ways.
+**DATA module ✅ done** — DATA-1 (scaffold) + DATA-2 (persistent store shell). `PersistentStore`/drift + `SourcePhotoStore` exist behind nullable `AppDependencies` seams; G-4 resolved.
 
-**Stage 2 is fully blocked by G-4** — a decision gate. Nothing is startable until it is resolved:
-- **G-4** must confirm (a) the on-device DB package (D-1), (b) the pdf package (D-6), (c) the reviewed paint-dataset shape + provenance defaults (D-3), (d) project "size" field semantics (D — free text vs structured).
-- Once G-4 resolves: **DATA-2** (store shell) runs first, then **PALETTE-1 ∥ PROJECT-1** (disjoint dirs), then SCREEN-1 → ITEST stage.
-- No `--parallel` window is open yet (all stage-2 phases depend on DATA-2 or G-4).
+Startable now (parallel window open):
+- **PALETTE-1** — persistent `PaletteSource` + `PaletteController` + reviewed CSV dataset + loader + `PaletteReadEndpoint`; extends `Paint` (brand/line/provenance). Edits bs-04-owned `lib/domain/paint.dart` + `lib/recipes/palette_source.dart` — serialize against any concurrent bs-04/bs-05 work on those files.
+- **PROJECT-1** — `Project` model + persistent `ProjectSource` + `ProjectController` + write-side `SampleSource` + `ProjectReadEndpoint`.
+- PALETTE-1 ∥ PROJECT-1 run concurrently (disjoint `lib/palette/` vs `lib/projects/`); each owns its own production wiring of the real drift store + file photo store (path_provider + sqlite native libs land there). **SCREEN-1** follows both, then the ITEST stage (G-2).
 
 ## Token usage
 
@@ -197,7 +197,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PLAN | 6be62965 | 2026-10-10 06:10 EDT | 06:55 | 45m 09s | 15m 59s | claude-opus-4-8 | 68 | 204,942 | 2,521,965 | 60,117 | 2,787,092 | plan written |
 | GATE-DECISION | 5f1f02a8 | 2026-10-10 07:28 EDT | 13:58 | 6h 29m | 10m 45s | claude-opus-4-8 | 78 | 183,442 | 2,815,515 | 31,337 | 3,030,372 | G-1 approved (spec approved as-is by Matt Quirk; .feature stamped) + G-3 resolved (bs-04 merged to main @ 2684ac6; DATA-1 startable) |
 | DATA-1 | 3816a462 | 2026-10-10 14:13 EDT | 14:25 | 11m 44s | 11m 44s | claude-opus-4-8 | 78 | 122,747 | 4,374,719 | 40,215 | 4,537,759 | scaffold: branch @ bfd4289; baseline analyze clean / unit 579 / coverage gate PASS; bs06/pending.dart seeded 11 ACs + palette_test.dart runner (3 guards green on sim); gate proven fail-on-gap + pass-on-clean; no product code |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 14:25** | **7h 25m** | **38m 28s** |  | **224** | **511,131** | **9,712,199** | **131,669** | **10,355,223** |  |
+| DATA-2 | ad757ac6 | 2026-10-10 14:47 EDT | 15:05 | 18m 14s | 17m 03s | claude-opus-4-8 | 128 | 132,804 | 7,802,103 | 63,547 | 7,998,582 | shell: on-device persistent store (drift) + source-photo store behind AppDependencies seams; G-4 resolved; unit+coverage gate PASS (617 tests, 100% on 5 touched files) |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 15:05** | **7h 44m** | **55m 31s** |  | **352** | **643,935** | **17,514,302** | **195,216** | **18,353,805** |  |
 
 ## Sign-off
 

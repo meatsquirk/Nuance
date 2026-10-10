@@ -36,6 +36,15 @@ dependencies:
   cupertino_icons: ^1.0.8
   color_models: ^2.0.0
 
+  # On-device persistent store (bs-06 DATA-2, plan D-1 / G-4). SQLite-backed,
+  # type-safe. The store sits behind the `PersistentStore` interface so the
+  # recipes/compare/project sources persist through it without depending on
+  # drift directly; tests substitute an in-memory-backed double. The file-backed
+  # native binding (path_provider + sqlite3_flutter_libs) is platform wiring
+  # added with the first persistent source consumer (PALETTE-1/PROJECT-1),
+  # mirroring how bs-02 deferred native capture behind `CaptureSource`.
+  drift: ^2.35.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -50,6 +59,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  # drift schema code generation (`dart run build_runner build`). Generates the
+  # `*.g.dart` beside `lib/store/app_database.dart`; generated files are exempt
+  # from the coverage gate (tool/coverage_gate.dart).
+  drift_dev: ^2.35.1
+  build_runner: ^2.16.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

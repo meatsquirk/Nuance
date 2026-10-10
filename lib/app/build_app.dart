@@ -23,6 +23,8 @@ import '../recipes/palette_source.dart';
 import '../recipes/recipe_controller.dart';
 import '../recipes/recipe_read_endpoint.dart';
 import '../recipes/recipes_screen.dart';
+import '../store/persistent_store.dart';
+import '../store/source_photo_store.dart';
 import 'router.dart';
 
 /// The sample the shipped bs-01 app opens the Readout screen on.
@@ -92,6 +94,8 @@ class AppDependencies {
     this.mixingEngine = const SubtractiveMixingEngine(),
     this.paletteSource = const InMemoryPaletteSource(),
     this.recipesEntry,
+    this.store,
+    this.sourcePhotoStore,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -181,6 +185,29 @@ class AppDependencies {
   /// bs-04 acceptance harness injects one to drive each recipes scenario through
   /// this same assembly entry.
   final RecipesEntry? recipesEntry;
+
+  /// The on-device persistent store the bs-06 palette/project sources write
+  /// through (DATA-2, plan D-1), or null when no persistence is wired.
+  ///
+  /// null (the default) preserves today's in-memory-only assembly: no screen
+  /// reads the store yet, so [buildApp] does not branch on it. **PALETTE-1** and
+  /// **PROJECT-1** build the persistent `PaletteSource` / `ProjectSource` /
+  /// write-side `SampleSource` over this seam, and the production wiring injects
+  /// a file-backed [DriftPersistentStore] here (the platform-wiring step that
+  /// also adds path_provider + the sqlite native libs, deferred like bs-02's
+  /// native capture). The acceptance harness injects an
+  /// [InMemoryPersistentStore] so the suite runs without a real database.
+  final PersistentStore? store;
+
+  /// The on-device source-photo sink a project's photo is stored through
+  /// (DATA-2, plan D-10), or null when no persistence is wired.
+  ///
+  /// Paired with [store]: the project keeps only the reference this sink
+  /// returns, never the pixels. null (the default) keeps today's assembly;
+  /// PROJECT-1 consumes it, production injects a [FileSourcePhotoStore] over the
+  /// application-documents directory, and the acceptance harness injects an
+  /// [InMemorySourcePhotoStore].
+  final SourcePhotoStore? sourcePhotoStore;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.

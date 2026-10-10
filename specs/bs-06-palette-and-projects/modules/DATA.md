@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 4,537,759 | 11m 44s |
-| 2 | shell | — | ⬜ Next | | |
+| 2 | shell | — | ✅ Done | 7,998,582 | 17m 03s (18m 14s) |
 
 ## Interface reconciliation
 
@@ -21,7 +21,7 @@
 ## Open gates
 
 - **G-1** (approve the draft spec) ✅ resolved 2026-10-10 by Matt Quirk. **G-3** (bs-04 merged to `main`) ✅ resolved 2026-10-10 (merged @ `2684ac6`). Phase 1 (scaffold) ✅ Done.
-- **G-4** blocks Phase 2 (shell): confirm the on-device DB package (D-1) and the reviewed-dataset/PDF decisions before building the store. **DATA-2 cannot start until G-4 is resolved.**
+- **G-4** ✅ resolved 2026-10-10 by Matt Quirk: (a) DB = **drift** (SQLite, typed); (b) PDF = **pdf + printing** (added by PROJECT-6 for AC-10, not DATA-2); (c) reviewed paint-dataset = CSV asset (`assets/color/*.csv` convention), default provenance tier **measured**; (d) project "size" = **free text** (e.g. `24×30 in`). DATA-2 added the `drift` dependency only; pdf/printing and the native file binding (path_provider + sqlite libs) are deferred to their consumer phases.
 
 ## Phase 1 — Scaffold
 
@@ -67,6 +67,19 @@
   4. Wire the store into `AppDependencies`/`buildApp` in the existing injection pattern; production assembly unchanged in behaviour (no screen yet).
 - **Exit criteria:** unit gate (100% line coverage on touched `lib/` files) passes; existing suite stays green; store opens/migrates and round-trips a primitive in a unit test; no behaviour change to shipped screens.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- Landed the on-device store shell behind a storage-engine-agnostic seam. New `lib/store/`: `PersistentStore` (generic document CRUD — `put`/`get`/`list`/`delete`/`close` over collection + id + JSON-shaped map) with an `InMemoryPersistentStore` double; `DriftPersistentStore` (SQLite via `drift`, executor-injected, `.memory()` factory) over `AppDatabase`; the `documents` table defined in `documents.drift` (SQL input, so the component holds no compile-time-only column getters); `SourcePhotoStore` (D-10) with `FileSourcePhotoStore` (directory-injected, on-device) + `InMemorySourcePhotoStore` double. `AppDependencies` gains nullable `store` / `sourcePhotoStore` seams (default null — no screen reads them; `buildApp` unchanged). Added `drift` + dev `drift_dev`/`build_runner` (project-local). `main.dart` untouched: the file-backed native binding (path_provider + sqlite native libs) and pdf/printing are deferred to their consumer phases, mirroring bs-02's deferral of native capture.
+- Fix passes: 1/3 — first gate run FAILED coverage on `app_database.dart` (5 drift `Table` column/primaryKey getters are codegen-time-only, never executed at runtime); fixed by moving the table to a `documents.drift` SQL input (no Dart getters) rather than adding a coverage-ignore. Re-run: PASS.
+- Tests: 617 unit/widget passing (was 579; +38). Store contract run against all three backings (in-memory, drift memory, drift file — cross-instance persistence proven). Coverage (touched `lib/`): `build_app.dart`, `app_database.dart`, `drift_persistent_store.dart`, `persistent_store.dart`, `source_photo_store.dart` all **100%** (gate PASS vs `main`); `app_database.g.dart` exempt.
+- G-4 resolved this session (drift / pdf+printing / measured / free-text — see Open gates).
+- Justified exclusions: on-sim acceptance runner not re-run — DATA-2 touches no screen/widget/integration code and adds no AC tests; the host suite (which compiles `buildApp`) is green, so the pending-gate runner is unchanged (consistent with DATA-1's note).
+- Closed by: unit gate + coverage gate pass; store opens/migrates + round-trips in unit tests; no shipped-screen behaviour change.
+- Tokens: see master ledger (DATA-2 row). **Phase total: 7,998,582 tokens, 17m 03s active (18m 14s wall).**
+
+### Checkpoint / Handoff
+
+- **Frozen:** `PersistentStore` contract (`put`/`get`/`list`/`delete`/`close`; `StoredDocument` = `({String id, Map<String,Object?> data})`); `SourcePhotoStore` contract (`save`/`read`/`exists`/`delete`, bytes as `Uint8List`). Doubles `InMemoryPersistentStore` / `InMemorySourcePhotoStore` are the harness/unit substitutes. `AppDependencies.store` / `.sourcePhotoStore` seams (nullable). `documents` table shape (collection,id,body JSON) + `schemaVersion = 1` — a shape change needs a drift migration.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main`. After editing `lib/store/app_database.dart` or `documents.drift`, regenerate with `dart run build_runner build` (writes `app_database.g.dart`, committed, coverage-exempt). Flutter SDK `/Users/matthew.quirk/development/flutter/bin`. drift's `NativeDatabase.memory()` runs under host `flutter test` on this Mac (system libsqlite3) — no sim needed for the store.
+- **Known gaps:** store not yet wired into production (`main.dart` still injects no store — the file-backed binding + path_provider + `sqlite3_flutter_libs` land with the first consumer); no entity schemas yet (paints/projects persist via PALETTE-1/PROJECT-1 mapping onto the document store); pdf/printing not yet added (PROJECT-6).
+- **Next phase should:** DATA-2 unblocks **PALETTE-1 ∥ PROJECT-1** (disjoint dirs; PALETTE-1 also edits the bs-04 `Paint`). Each builds its persistent source over `PersistentStore` (serialising entities to JSON maps), owns its production wiring of the real `DriftPersistentStore`/`FileSourcePhotoStore` (so `main.dart`/async-main + path_provider + sqlite libs land there), and adds its read endpoint. SCREEN-1 follows both.
