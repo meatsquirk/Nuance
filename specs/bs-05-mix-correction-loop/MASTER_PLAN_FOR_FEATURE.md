@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** Not started — next LOOP-1 (blocked by G-1 spec approval + G-3 bs-04 merge)
+**Status:** Not started — next LOOP-1 (startable: G-1 + G-3 resolved 2026-10-10; G-2/G-4 still open but gate later phases, not LOOP-1)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -176,9 +176,9 @@ re-photograph), keeping the screen side file-disjoint across the windows above.
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (the `.feature` is "Draft: awaiting owner approval"; record approval as its first line, as bs-01..bs-04 did) | LOOP-1 | Open |
+| G-1 | decision | Approve the spec (the `.feature` is "Draft: awaiting owner approval"; record approval as its first line, as bs-01..bs-04 did) | LOOP-1 | ✅ Resolved 2026-10-10 09:20 EDT: spec approved as-is; `.feature` first line stamped "Approved 2026-10-10 by Matt Quirk" — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase (LOOP-3, CORRECT-2/3/4, LOOP-4/5/6) | Open |
-| G-3 | dependency | **bs-04 (with its bs-01/02/03 foundation) merged to `main`.** bs-04 is signed off at `ca877e4` but lives only on `feat/bs-04-mixing-recipes`; `main` lacks its `lib/` code. bs-05 branches from `main` at that merge (Matt 2026-10-10). Closed by: a human merges bs-04 → `main` | LOOP-1, all shells | Open |
+| G-3 | dependency | **bs-04 (with its bs-01/02/03 foundation) merged to `main`.** bs-04 is signed off at `ca877e4` but lives only on `feat/bs-04-mixing-recipes`; `main` lacks its `lib/` code. bs-05 branches from `main` at that merge (Matt 2026-10-10). Closed by: a human merges bs-04 → `main` | LOOP-1, all shells | ✅ Resolved 2026-10-10 09:20 EDT: bs-04 (signed off at `28cbf04`) merged into local `main` at merge commit `2684ac6` (`--no-ff`), by Matt Quirk's direction — **not yet pushed**; bs-05 branches from this `main` — Matt Quirk |
 | G-4 | decision | **Spec-data / engine / domain reconciliation (spec author).** Confirm: **(a)** the pinned correction amounts ("about one part more Titanium White", "a touch of Yellow Ochre") are **illustrative** and the ACs assert behavioural properties (names the right paint; direction reduces ΔE00; sub-trace → "a touch of") — or a literal is binding and its authoritative value; **(b)** the verdict words "noticeably off" / "very close" (D-4) and the **tolerance ΔE00 ≤ 2** (D-6); **(c)** the **trace threshold** for "a touch of" (D-7); **(d)** the confirmed-tier label string **"Confirmed — you measured this"** — change the shared `Provenance.label` for `ProvenanceTier.confirmed`, or carry the phrase via `note` (D-8), and whether changing the shared label is acceptable given bs-04's existing `confirmed` usage | ITEST-3, CORRECT-2, CORRECT-3, CORRECT-4, LOOP-6 | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -194,7 +194,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | LOOP-1 | scaffold: branch from main @ bs-04 merge, baseline, confirm coverage gate, BS05 pending runner | ⬜ Next | | | blocked by G-1 + G-3 |
+| 1 | LOOP-1 | scaffold: branch from main @ bs-04 merge, baseline, confirm coverage gate, BS05 pending runner | ⬜ Next | | | G-1 + G-3 resolved 2026-10-10; startable |
 | 2 | CORRECT-1 | shell: `CorrectionEngine` interface + `Difference`/`Correction` types + stub engine wired into deps | ⬜ Todo | | | |
 | 3 | LOOP-2 | shell: `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` + `CorrectionEntry`/`toCorrection` route wired into buildApp | ⬜ Todo | | | needs CORRECT-1 types |
 | 4 | SCREEN-1 | shell: Correction screen scaffold (E26–E29 + difference/correction/provenance regions) bound to controller | ⬜ Todo | | | needs LOOP-2 |
@@ -216,12 +216,12 @@ when the row is marked done.
 
 ## Next phase
 
-**LOOP-1 (scaffold)** — blocked by two gates that must close first:
-- **G-1** (decision): approve the spec (it is still "Draft: awaiting owner approval").
-- **G-3** (dependency): merge bs-04 → `main` so the foundation bs-05 extends is on the base branch.
-Once both close, LOOP-1 branches `feat/bs-05-mix-correction-loop` from `main` @ the bs-04 merge, records the
-baseline, confirms the coverage gate, and seeds `integration_test/bs05/pending.dart` (BS05_RUN_PENDING, 10 ACs).
-No product code. Nothing else is startable until LOOP-1 is done (shells serialize behind it).
+**LOOP-1 (scaffold)** — now **startable**: G-1 (spec approved) and G-3 (bs-04 merged to local `main` @ `2684ac6`)
+both resolved 2026-10-10. A worktree is prepared on branch `feat/bs-05-mix-correction-loop` based at that `main`
+(see the Session log / claim). LOOP-1's remaining work: record the baseline test run, confirm the coverage gate
+passes clean + fails on a planted gap, and seed `integration_test/bs05/pending.dart` (BS05_RUN_PENDING, 10 ACs).
+No product code. Nothing else is startable until LOOP-1 is done (shells serialize behind it). G-2 gates the
+behavior stage; G-4 gates ITEST-3/CORRECT-2/3/4/LOOP-6.
 
 ## Token usage
 
@@ -230,7 +230,8 @@ No product code. Nothing else is startable until LOOP-1 is done (shells serializ
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | eeb3127a | 2026-10-10 04:37 EDT | 05:20 | 43m 21s | 13m 49s | claude-opus-4-8 | 106 | 256,812 | 5,917,039 | 64,934 | 6,238,891 | plan written: 17 phases (16 session-log rows + the enabler), 4 modules, 10 ACs; G-1/G-3/G-4 open, G-2 open |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 05:20** | **43m 21s** | **13m 49s** |  | **106** | **256,812** | **5,917,039** | **64,934** | **6,238,891** |  |
+| GATE-DECISION | 58107723 | 2026-10-10 06:47 EDT | 09:22 | 2h 34m | 12m 22s | claude-opus-4-8 | 68 | 178,708 | 3,062,238 | 50,088 | 3,291,102 | G-1 approved (spec stamped) + G-3 closed: bs-04 merged to local main @ 2684ac6 (not pushed); LOOP-1 now startable |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 09:22** | **3h 17m** | **26m 11s** |  | **174** | **435,520** | **8,979,277** | **115,022** | **9,529,993** |  |
 
 ## Sign-off
 

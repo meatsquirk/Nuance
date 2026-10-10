@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-10 by Matt Quirk (G-1) — derived 2026-10-05 by /wireframe-behavior-specs
 Feature: Mix-correction loop
   After mixing a recipe, the painter photographs the actual swatch and the app
   compares it to the target, states how far off it is, and suggests a concrete
