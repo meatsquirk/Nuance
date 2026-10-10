@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** In progress — ITEST-1 done (acceptance harness + scenes + smoke); next ITEST-2 ∥ ITEST-3 (one pending test per AC + red baseline). G-2 gates the behavior stage; G-4 gates ITEST-3/CORRECT-2/3/4/LOOP-6
+**Status:** In progress — ITEST-2 done (AC-1,7,8,9,10 pending tests + red baseline, 5×A); next ITEST-3 (AC-2,3,4,5,6 pending tests + red baseline). G-2 gates the behavior stage; G-4 resolved
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -199,8 +199,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | LOOP-2 | shell: `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` + `CorrectionEntry`/`toCorrection` route wired into buildApp | ✅ Done | 11,995,702 | 19m 40s (52m 25s) | analyze clean; unit 623 + integ 86 green; gate 100% on 7 touched files; inert actions throw; correctionEntry wins over captureSource; fix passes 0/3 |
 | 4 | SCREEN-1 | shell: Correction screen scaffold (E26–E29 + difference/correction/provenance regions) bound to controller | ✅ Done | 5,078,443 | 9m 25s | analyze clean; unit 632 green; gate 100% on 14 touched files; 6 keyed regions + `CorrectionScreen` replace the placeholder body; controls disabled until behaviour phases; fix passes 1/3 (test-finder only) |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures + scenes, pending gate (10 ACs), smoke | ✅ Done | 8,454,576 | 20m 21s | analyze clean; unit 632 + integ 98 green (correction_test 12: smoke + 11 guards); grade 12×A/0×B; no lib/ touched |
-| 6 | ITEST-2 | acceptance-tests: AC-1,7,8,9,10 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
-| 7 | ITEST-3 | acceptance-tests: AC-2,3,4,5,6 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
+| 6 | ITEST-2 | acceptance-tests: AC-1,7,8,9,10 (pending) + red baseline | ✅ Done | 4,978,132 | 18m 00s | 5 pending ACs; default 98 green/5 skipped; run-pending 5 fail cleanly (AC-1 Then; AC-7/8/9/10 Given precond → LOOP-4/5/6); grade 5×A/0×B; no lib/ touched |
+| 7 | ITEST-3 | acceptance-tests: AC-2,3,4,5,6 (pending) + red baseline | ⬜ Next | | | G-4 resolved; ∥-safe w/ ITEST-2 (done) |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | LOOP-3 | behavior AC-1 (*enabler*): check photographs the swatch + compares to target | ⬜ Todo | | | first after G-2; enables every other Given |
 | 10 | CORRECT-2 | behavior AC-2, AC-3: ΔE00 + verdict; value-leading decomposition | ⬜ Todo | | | ∥ LOOP-4/5/6 |
@@ -216,13 +216,13 @@ when the row is marked done.
 
 ## Next phase
 
-**ITEST-2 ∥ ITEST-3 (acceptance-tests)** — both **startable now** against the ITEST-1 harness, in separate
-sessions. Each appends its pending `acTestWidgets` rows to the shared `integration_test/correction_test.dart`
-(ITEST-2 → AC-1,7,8,9,10 in the ITEST-2 group; ITEST-3 → AC-2,3,4,5,6 in the ITEST-3 group) + records the
-run-pending red baseline. They edit **one shared file**, so coordinate the disjoint groups (or run serially).
-**G-4 gates ITEST-3** (AC-2..6 detail: verdict words / tolerance / trace threshold / confirmed-tier label) —
-resolve it before finalizing ITEST-3's assertions; ITEST-2 is G-4-free. Then **ITEST-4** test review (**G-2**).
-G-2 gates the whole behavior stage; G-4 also gates CORRECT-2/3/4 and LOOP-6. Worktree `Nuance-bs05` on
+**ITEST-3 (acceptance-tests)** — **startable now**: ITEST-2 is done and G-4 is resolved (the AC-2..6 detail
+it gated — verdict words "noticeably off"/"very close", tolerance ΔE00 ≤ 2, trace threshold 0.02, confirmed
+phrase via `note`). Append the five pending `acTestWidgets` for AC-2,3,4,5,6 to the **ITEST-3 group** in
+`integration_test/correction_test.dart` (below the now-complete ITEST-2 group — disjoint, so no merge risk) +
+record the run-pending red baseline. Seed `TestAC02`'s within-tolerance control as an augmentation owned by
+CORRECT-4; AC-4's forward-score control in-test. Then **ITEST-4** test review (**G-2**). G-2 gates the whole
+behavior stage; G-4 also gates CORRECT-2/3/4 and LOOP-6. Worktree `Nuance-bs05` on
 `feat/bs-05-mix-correction-loop`.
 
 ## Token usage
@@ -239,7 +239,8 @@ G-2 gates the whole behavior stage; G-4 also gates CORRECT-2/3/4 and LOOP-6. Wor
 | SCREEN-1 | daccf904 | 2026-10-10 15:21 EDT | 15:30 | 9m 25s | 9m 25s | claude-opus-4-8 | 106 | 98,673 | 4,944,021 | 35,643 | 5,078,443 | shell: Correction screen + 6 keyed regions; analyze clean, 632 unit green, coverage 100% on 14 files; fix passes 1/3 |
 | ITEST-1 | 406ee85e | 2026-10-10 15:41 EDT | 16:02 | 20m 21s | 20m 21s | claude-opus-4-8 | 116 | 313,243 | 8,083,579 | 57,638 | 8,454,576 | harness + fixtures/scenes + smoke/guards; analyze clean, unit 632 + integ 98 green (correction_test 12), coverage gate 100% (14 branch files, no lib touched), grade 12A/0B |
 | GATE-DECISION | bf84bc26 | 2026-10-10 16:29 EDT | 17:36 | 1h 07m | 4m 54s | claude-opus-4-8 | 32 | 32,074 | 2,956,759 | 17,317 | 3,006,182 | G-4 resolved (Matt Quirk): (a) amounts illustrative—assert properties; (b) verdict words 'noticeably off'/'very close' binding + tolerance ΔE00≤2; (c) trace threshold 0.02 (2% vol, reuse bs-04); (d) confirmed phrase 'Confirmed — you measured this' carried via note, shared Provenance.label unchanged. ITEST-3 + CORRECT-2/3/4 + LOOP-6 unblocked |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 17:36** | **6h 10m** | **1h 43m** |  | **770** | **1,228,440** | **44,914,407** | **355,893** | **46,499,510** |  |
+| ITEST-2 | b38c13b1 | 2026-10-10 17:35 EDT | 17:53 | 18m 00s | 18m 00s | claude-opus-4-8 | 88 | 218,609 | 4,727,655 | 31,780 | 4,978,132 | 5 pending AC tests (AC-1,7,8,9,10) + red baseline; grade 5xA/0B; default 98 green/5 skip; run-pending 5 fail cleanly |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 17:53** | **6h 28m** | **2h 01m** |  | **858** | **1,447,049** | **49,642,062** | **387,673** | **51,477,642** |  |
 
 ## Sign-off
 

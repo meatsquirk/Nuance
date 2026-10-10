@@ -20,6 +20,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/correction/correction_read_endpoint.dart';
 import 'package:paint_color_assistant/correction/regions/check_region.dart';
 import 'package:paint_color_assistant/correction/regions/correction_region.dart';
@@ -30,6 +31,8 @@ import 'package:paint_color_assistant/correction/regions/speak_region.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
+import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/readout/provenance_region.dart';
 
 import 'correction_harness.dart';
 
@@ -40,6 +43,27 @@ double _hueDeg(ColorCoordinates c) {
   if (h < 0) h += 360.0;
   return h;
 }
+
+/// The painter later opens the saved value's full readout (AC-10): pushes the
+/// real `router.toReadout` route onto the running app's navigator, which sits
+/// under the app's `AppScope`, so the pushed [ReadoutScreen] reads the same
+/// injected services. The confirmed [sample] comes from the public save surface,
+/// so this is "the value is shown in a later readout", not a hand-built screen.
+Future<void> _showInLaterReadout(WidgetTester tester, Sample sample) async {
+  final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+  await navigator.push(const AppRouter().toReadout(sample));
+  await tester.pumpAndSettle();
+}
+
+/// The concatenated non-empty [Text] under [regionKey] (the rendered words a
+/// painter reads in that region), for asserting a region's plain-language output.
+String _plainTextUnder(WidgetTester tester, Key regionKey) => tester
+    .widgetList<Text>(
+      find.descendant(of: find.byKey(regionKey), matching: find.byType(Text)),
+    )
+    .map((t) => t.data ?? '')
+    .where((s) => s.isNotEmpty)
+    .join(' ');
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -305,4 +329,215 @@ void main() {
   // CorrectionReadEndpoint state seam + the FakeSpeech log). Keep the two groups
   // disjoint.
   // =========================================================================
+
+  group('ITEST-2 — AC-1, AC-7, AC-8, AC-9, AC-10 (check / loop / provenance)',
+      () {
+    acTestWidgets(
+        'AC-1',
+        'TestAC01_CheckPhotographsAndCompares — checking photographs the '
+            'swatch and compares it to the target', (tester) async {
+      // Given: the Correction screen open on Deep Olive Green + its current
+      // mix, the physical swatch reading SCENE_OFF, nothing checked yet.
+      final h = await givenCorrection(tester, scene: SCENE_OFF);
+      expect(h.state.target, SAMPLE_DEEP_OLIVE,
+          reason: 'AC-1 Given: correcting toward Deep Olive Green');
+      expect(h.state.mixedSwatch, isNull,
+          reason: 'AC-1 Given: no swatch photographed yet');
+      expect(h.state.difference, isNull,
+          reason: 'AC-1 Given: no comparison yet');
+      expect(find.widgetWithText(ElevatedButton, 'Check my mix'), findsOneWidget,
+          reason: 'AC-1 Given: the E26 check control is present');
+
+      // When: the painter checks the mix (E26).
+      await h.whenCheck(); // LOOP-3 wires CorrectionController.checkMix
+
+      // Then: the swatch was photographed as a *measured* sample, and compared
+      // to the target — a difference whose ΔE00 is the real swatch→target
+      // distance (graded against the independent reference), not zero (which
+      // would be the target compared with itself).
+      final swatch = h.state.mixedSwatch;
+      expect(swatch, isA<Sample>(),
+          reason: 'AC-1: the check photographs the swatch (LOOP-3)');
+      expect(swatch!.provenance.tier, ProvenanceTier.measured,
+          reason: 'AC-1: the photographed swatch is a measured reading');
+      final diff = h.state.difference;
+      expect(diff, isNotNull,
+          reason: 'AC-1: the swatch is compared to the target (LOOP-3)');
+      expect(
+          diff!.deltaE00,
+          closeTo(
+              referenceDeltaE00(
+                  swatch.coordinates, SAMPLE_DEEP_OLIVE.coordinates),
+              0.1),
+          reason: 'AC-1: the stated distance is the swatch→target ΔE00');
+      expect(diff.deltaE00, greaterThan(kToleranceDeltaE00),
+          reason: 'AC-1: SCENE_OFF is a real off-reading, not target vs itself');
+    });
+
+    acTestWidgets(
+        'AC-7',
+        'TestAC07_SpeakCorrection — the painter hears the difference and the '
+            'paints to add spoken', (tester) async {
+      // Given: a checked SCENE_OFF mix with a computed correction, and nothing
+      // spoken yet.
+      final h = await givenCorrection(tester, scene: SCENE_OFF);
+      await h.whenCheck();
+      final correction = h.state.correction;
+      expect(correction, isNotNull,
+          reason: 'AC-7 Given: a correction has been computed for the swatch '
+              '(LOOP-4 speaks the check+correct result)');
+      expect(correction!.isEmpty, isFalse,
+          reason: 'AC-7 Given: SCENE_OFF needs a non-empty correction to speak');
+      final diff = h.state.difference;
+      expect(diff, isNotNull, reason: 'AC-7 Given: a difference is shown');
+      expect(h.speech.utterances, isEmpty,
+          reason: 'AC-7 Given: nothing is spoken before the painter asks');
+
+      // When: the painter asks to speak the correction (E27).
+      await h.whenSpeakCorrection(); // LOOP-4
+
+      // Then: exactly one utterance, stating the difference (its verdict) and
+      // each paint to add.
+      expect(h.speech.utterances, hasLength(1),
+          reason: 'AC-7: one spoken utterance for the correction (LOOP-4)');
+      final spoken = h.speech.utterances.single;
+      expect(spoken, contains(diff!.verdict),
+          reason: 'AC-7: the spoken output states the difference');
+      for (final add in correction.additions) {
+        expect(spoken, contains(add.paint.name),
+            reason: 'AC-7: the spoken output names each paint to add '
+                '(${add.paint.name})');
+      }
+    });
+
+    acTestWidgets(
+        'AC-8',
+        'TestAC08_RephotographRechecks — re-photographing re-checks the swatch '
+            'against the target', (tester) async {
+      // Given: a first-checked SCENE_OFF mix showing a difference/verdict.
+      final h = await givenCorrection(tester, scene: SCENE_OFF);
+      await h.whenCheck();
+      final before = h.state.difference;
+      expect(before, isNotNull,
+          reason: 'AC-8 Given: the first check shows a difference '
+              '(LOOP-5 re-runs that check)');
+      final beforeDelta = before!.deltaE00;
+
+      // The painter applied the correction; the physical swatch now reads
+      // closer (SCENE_CLOSER — still beyond tolerance, so a genuine step).
+      h.source.rephotographAs(SCENE_CLOSER);
+
+      // When: the painter re-photographs the swatch (E28).
+      await h.whenRephotograph(); // LOOP-5
+
+      // Then: a new swatch is measured from the new scene and re-compared, and
+      // the distance/verdict improve (not stale, not a no-op).
+      final after = h.state.difference;
+      expect(after, isNotNull,
+          reason: 'AC-8: the re-photograph re-compares to the target (LOOP-5)');
+      expect(h.state.mixedSwatch!.coordinates.lightness,
+          closeTo(SCENE_CLOSER.groundTruth.lightness, 1.0),
+          reason: 'AC-8: the swatch was re-measured from the new scene');
+      expect(after!.deltaE00, lessThan(beforeDelta),
+          reason: 'AC-8: the re-checked distance is smaller than before');
+    });
+
+    acTestWidgets(
+        'AC-9',
+        'TestAC09_SaveConfirmed — saving a satisfactory mix promotes the value '
+            'to Confirmed by the painter', (tester) async {
+      // Given: a checked, within-tolerance mix for Deep Olive Green — the
+      // painter's own measured swatch, on a target not already confirmed.
+      final h = await givenCorrection(tester, scene: SCENE_CLOSE);
+      await h.whenCheck();
+      final swatch = h.state.mixedSwatch;
+      expect(swatch, isA<Sample>(),
+          reason: 'AC-9 Given: a photographed swatch (LOOP-6 saves the checked '
+              'mix)');
+      expect(swatch!.provenance.tier, ProvenanceTier.measured,
+          reason: "AC-9 Given: the swatch is the painter's own measured "
+              'reading');
+      expect(h.state.difference?.withinTolerance, isTrue,
+          reason: 'AC-9 Given: the mix is satisfactory (within tolerance)');
+      expect(h.state.target.provenance.tier, isNot(ProvenanceTier.confirmed),
+          reason: 'AC-9 Given: the target is not already Confirmed');
+
+      // When: the painter saves the mix as confirmed (E29).
+      await h.whenSaveConfirmed(); // LOOP-6
+
+      // Then: the value is promoted to Confirmed — you measured this, with a
+      // note recording it was confirmed after the painter photographed their
+      // own swatch, and the measured swatch is kept as evidence and persisted.
+      final saved = h.state.savedProvenance;
+      expect(saved, isNotNull,
+          reason: 'AC-9: saving records the promoted provenance (LOOP-6)');
+      expect(saved!.tier, ProvenanceTier.confirmed,
+          reason: 'AC-9: promoted to the Confirmed tier');
+      // Robust to G-4(d) (the confirmed phrasing may live in the label or the
+      // note): the painter-facing provenance conveys self-measurement.
+      final rendered = '${saved.label} ${saved.note ?? ''}';
+      expect(rendered, contains('Confirmed'),
+          reason: 'AC-9: the value reads as Confirmed');
+      expect(rendered, contains('you measured this'),
+          reason: 'AC-9: the value reads "Confirmed — you measured this"');
+      expect(saved.note, isNotNull,
+          reason: 'AC-9: a note records how it was confirmed');
+      expect(saved.note, contains('photograph'),
+          reason: 'AC-9: the note records it was confirmed after the painter '
+              'photographed their own swatch');
+      final held = h.controller.savedSamples
+          .where((s) => s.name == SAMPLE_DEEP_OLIVE.name)
+          .toList();
+      expect(held, isNotEmpty,
+          reason: 'AC-9: the confirmed sample is persisted to the SampleSource '
+              '(LOOP-6)');
+      expect(held.single.provenance.tier, ProvenanceTier.confirmed,
+          reason: 'AC-9: the persisted sample carries the Confirmed tier');
+      expect(held.single.evidence.map((e) => e.coordinates),
+          contains(swatch.coordinates),
+          reason: 'AC-9: the measured swatch is appended as evidence');
+
+      // Control (honest-provenance rule, D-8): saving without a photographed
+      // swatch does not promote anything.
+      final h2 = await givenCorrection(tester, scene: SCENE_CLOSE);
+      await h2.whenSaveConfirmed(); // no check first
+      expect(h2.state.savedProvenance, isNull,
+          reason: 'AC-9 control: no promotion without the painter photographing '
+              'their own swatch');
+    });
+
+    acTestWidgets(
+        'AC-10',
+        'TestAC10_ConfirmedInReadout — a confirmed value carries its Confirmed '
+            'provenance into a later readout', (tester) async {
+      // Given: the painter saved a confirmed mix for Deep Olive Green (AC-9
+      // flow), so the SampleSource holds the confirmed value.
+      final h = await givenCorrection(tester, scene: SCENE_CLOSE);
+      await h.whenCheck();
+      await h.whenSaveConfirmed();
+      final held = h.controller.savedSamples
+          .where((s) =>
+              s.name == SAMPLE_DEEP_OLIVE.name &&
+              s.provenance.tier == ProvenanceTier.confirmed)
+          .toList();
+      expect(held, isNotEmpty,
+          reason: 'AC-10 Given: a confirmed Deep Olive Green mix is saved '
+              '(LOOP-6)');
+      final confirmed = held.single;
+
+      // When: that value is shown in a later readout (router.toReadout).
+      await _showInLaterReadout(tester, confirmed);
+
+      // Then: the later Readout's provenance region carries the Confirmed
+      // phrasing and its note — not the pre-confirmation provenance.
+      expect(find.widgetWithText(AppBar, 'Readout'), findsOneWidget,
+          reason: 'AC-10: a later Readout is shown');
+      final provenanceText =
+          _plainTextUnder(tester, ProvenanceRegion.regionKey);
+      expect(provenanceText, contains('Confirmed'),
+          reason: 'AC-10: the readout states Confirmed, not the old tier');
+      expect(provenanceText, contains('you measured this'),
+          reason: 'AC-10: the readout carries the "you measured this" phrasing');
+    });
+  });
 }

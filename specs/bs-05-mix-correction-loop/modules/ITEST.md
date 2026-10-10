@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 done (harness + fixtures + scenes + smoke); next ITEST-2 ∥ ITEST-3
+**Status:** In progress — ITEST-1, ITEST-2 done (harness + AC-1,7,8,9,10 pending tests + red baseline); next ITEST-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/correction_test.dart`, `integration_test/correction_harness.dart`, `integration_test/bs05/pending.dart`; reuses `integration_test/fakes/` (`fake_capture_source.dart`, `fake_speech.dart`, `fake_haptics.dart`)
 **Depends on:** all shell phases (CORRECT-1, LOOP-2, SCREEN-1) · **Blocks:** every behaviour phase (via the pending tests they un-pend) and G-2
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,454,576 | 20m 21s |
-| 2 | acceptance-tests | AC-1, AC-7, AC-8, AC-9, AC-10 (pending) | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1, AC-7, AC-8, AC-9, AC-10 (pending) | ✅ Done | 4,978,132 | 18m 00s |
 | 3 | acceptance-tests | AC-2, AC-3, AC-4, AC-5, AC-6 (pending) | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -32,6 +32,7 @@
 - **Kind:** acceptance-tests
 - **Tasks:** one pending `acTestWidgets` per AC per the master catalogue (the loop/provenance ACs); record the run-pending red baseline (each fails cleanly at its owner-naming Then/precondition). `∥ ITEST-3` — disjoint rows in the shared `correction_test.dart`/harness (coordinate edits).
 - **Exit criteria:** analyze clean; unit green; integration default green (all pending) / run-pending these 5 fail cleanly; grade gate pass; red baseline recorded below.
+- **Result (ITEST-2, ✅):** the five loop/provenance AC tests, one pending `acTestWidgets` each, appended to the ITEST-2 group in `correction_test.dart` (+235 lines); `fakes/fake_capture_source.dart` gained a `rephotographAs`/`_liveScene` scene-swap (test infra only, AC-8 re-photograph; no-op for bs-02..bs-04 when unused). No `lib/` touched. **Gates:** analyze clean; unit **632 green** (`flutter test --coverage`); coverage gate **100%** on the 14 touched branch `lib/` files (no `lib/` added this phase); integration **default green** on sim `5AB9D06D…` — full suite **98 green / 5 skipped** (the 5 pending ACs). **Red baseline** (run-pending, `BS05_RUN_PENDING=true`, `correction_test.dart`): **12 pass / 5 fail**, every failure clean — AC-1 on its Then (`mixedSwatch` null, LOOP-3), AC-7/8/9/10 on a Given precondition naming the owner (LOOP-4/LOOP-5/LOOP-6/LOOP-6); no compile errors/panics/harness errors. **Grade gate: 5×A, 0×B** (independent grader, fresh context — grid `behavior-test-completeness-bs-05-mix-correction-loop.md`: AC-1 ΔE00 graded vs the independent `referenceDeltaE00` and rejects target-vs-itself; AC-7 exactly-one-utterance; AC-8 genuine re-measure via `closeTo(39,1.0)` + strict ΔE00 decrease, SCENE_CLOSER 4.95 < SCENE_OFF 10.06; AC-9 honest-provenance control + G-4(d)-robust phrasing; AC-10 real `router.toReadout` render). No new augmentations (none green at baseline; the one TestAC02 augmentation is ITEST-3's). Fix passes: **0/3** (every gate passed first run).
 
 ## Phase 3 — AC-2, AC-3, AC-4, AC-5, AC-6 (pending) + red baseline (ITEST-3)
 
@@ -50,16 +51,16 @@
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_CheckPhotographsAndCompares | | | LOOP-3 | |
+| AC-1 | TestAC01_CheckPhotographsAndCompares | fail (clean) | Then: `state.mixedSwatch` null (check not wired) | LOOP-3 | A |
 | AC-2 | TestAC02_DeltaEAndVerdict | | | CORRECT-2 | |
 | AC-3 | TestAC03_ValueLeadingDecomposition | | | CORRECT-2 | |
 | AC-4 | TestAC04_ConcreteCorrection | | | CORRECT-3 | |
 | AC-5 | TestAC05_TouchOf | | | CORRECT-3 | |
 | AC-6 | TestAC06_WithinTolerance | | | CORRECT-4 | |
-| AC-7 | TestAC07_SpeakCorrection | | | LOOP-4 | |
-| AC-8 | TestAC08_RephotographRechecks | | | LOOP-5 | |
-| AC-9 | TestAC09_SaveConfirmed | | | LOOP-6 | |
-| AC-10 | TestAC10_ConfirmedInReadout | | | LOOP-6 | |
+| AC-7 | TestAC07_SpeakCorrection | fail (clean) | Given precond: `correction` null | LOOP-4 | A |
+| AC-8 | TestAC08_RephotographRechecks | fail (clean) | Given precond: first-check `difference` null | LOOP-5 | A |
+| AC-9 | TestAC09_SaveConfirmed | fail (clean) | Given precond: photographed `swatch` null | LOOP-6 | A |
+| AC-10 | TestAC10_ConfirmedInReadout | fail (clean) | Given precond: no confirmed sample saved | LOOP-6 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behaviour phases -->
 
@@ -78,3 +79,10 @@
 - **Verification commands** (unchanged from the shell phases): `export PATH="$HOME/development/flutter/bin:$PATH"`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; integration under the verify lock on sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`:
   `$C with-lock bs-05-mix-correction-loop <PHASE> --wait 900 -- bash -c 'export PATH=…; cd /Users/matthew.quirk/Nuance-bs05 && flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'`. Run-pending: append `--dart-define=BS05_RUN_PENDING=true` (and target `integration_test/correction_test.dart`).
 - **Known gaps / notes:** the `const`-constructor coverage flake (bs-01..bs-05) still applies — re-run `flutter test --coverage` once if the gate flags an untouched file. Always pass `-d <booted-udid>` (no device ⇒ zero integration tests, false green). The shared `fake_speech.dart`/`fake_haptics.dart` doc comments still cite bs-03/bs-04 AC numbers (AC-8/AC-12) — cosmetic, in the shared fakes, not the bs-05 tests.
+
+### After ITEST-2 (for ITEST-3)
+
+- **ITEST-2 done** — the ITEST-2 group (AC-1,7,8,9,10) is complete and graded 5×A; frozen interfaces above are unchanged. ITEST-3 appends the AC-2,3,4,5,6 tests to the **ITEST-3 group** in `correction_test.dart`, below the ITEST-2 group (disjoint — no merge risk now that ITEST-2 has landed).
+- **New test affordance (AC-8 added it):** `FakeCaptureSource.rephotographAs(SceneSpec)` swaps the live scene for the next capture (and `_liveScene`/`normaliseAgainstCard` follow it). ITEST-3 doesn't need it, but it's there.
+- **G-4 is resolved** — ITEST-3's detail assertions are now final: verdict words **"noticeably off"** (beyond) / **"very close"** (within), tolerance **ΔE00 ≤ 2**, trace threshold **0.02** (2% vol), confirmed phrase via `note` (not the shared label). Seed `TestAC02`'s within-tolerance control as an augmentation owned by **CORRECT-4** (already in the augmentations table); put AC-4's forward-score control in-test.
+- **Grade gate:** run the independent grader in a fresh context against the full grid; give it the ITEST-1+ITEST-2 grid so grades don't drift.
