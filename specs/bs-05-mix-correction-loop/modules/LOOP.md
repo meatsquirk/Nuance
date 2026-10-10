@@ -1,6 +1,6 @@
 # Module LOOP — correction loop controller + wiring
 
-**Status:** Not started
+**Status:** In progress — LOOP-1/LOOP-2 done; next LOOP-3 (behavior, after the shell + acceptance stages)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/correction_controller.dart`, `lib/correction/correction_state.dart`, `lib/correction/correction_read_endpoint.dart`, `lib/correction/correction_speech.dart`, the `CorrectionEntry`/`CorrectionHomeScreen` branch in `lib/app/build_app.dart`, `AppRouter.toCorrection` in `lib/app/router.dart`, the provenance promotion (via `Sample.copyWith` + `EvidencePoint`; the confirmed-tier label per G-4(d))
 **Depends on:** bs-02 capture (`CaptureController`/`CaptureSource`), bs-03 `deltaE00`/`SampleSource`, domain `Provenance`/`Sample`/`EvidencePoint`, `Speech`, CORRECT (engine) · **Blocks:** SCREEN-1, SIGNOFF-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 2,465,803 | 11m 57s |
-| 2 | shell | — | ⬜ Todo | | |
+| 2 | shell | — | ✅ Done | 11,995,702 | 19m 40s (52m 25s) |
 | 3 | behavior | AC-1 (*enabler*) | ⬜ Todo | | |
 | 4 | behavior | AC-7 | ⬜ Todo | | |
 | 5 | behavior | AC-8 | ⬜ Todo | | |
@@ -150,6 +150,54 @@ Scaffold complete; no product code (`lib/**`) touched — only `integration_test
 - **Exit criteria:** unit + coverage gate pass on touched files.
 - **Acceptance gate:** un-pend AC-9, AC-10; `TestAC09_SaveConfirmed`, `TestAC10_ConfirmedInReadout` green; full suite (all 10 ACs) green.
 
-### Result  <!-- filled on completion -->
+### Result — LOOP-2
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Inert shell complete: the correction controller, its state and read endpoint, and the `CorrectionEntry` /
+`CorrectionHomeScreen` / `toCorrection` wiring — no behaviour yet (every action throws until its phase).
+
+- **Landed (`lib/`):** `correction_state.dart` (`CorrectionState`: `target`, `currentMix`, `mixedSwatch?`,
+  `difference?`, `correction?`, `savedProvenance?`, `hasChecked`, value-equal); `correction_controller.dart`
+  (`CorrectionController extends ChangeNotifier` over the frozen CORRECT-1 seams; the four actions `checkMix` /
+  `rephotograph` / `speakCorrection` / `saveConfirmed` throw `UnimplementedError` naming their phase, mirroring
+  the RECIPE-2 shell); `correction_read_endpoint.dart` (`CorrectionReadEndpoint` + `endpointKey` + `of`).
+  `build_app.dart` gains `CorrectionEntry{target, currentMix}`, `AppDependencies.correctionEntry`, the
+  `CorrectionHomeScreen` (owns the controller, wraps the endpoint, placeholder "Correction" body until SCREEN-1)
+  and the `home:` branch; `router.dart` gains `toCorrection(target, currentMix)`.
+- **Design note (recorded):** the correction loop *reuses* `AppDependencies.captureSource` as its camera (D-2),
+  but that field also selects bs-02's Capture screen — so the `correctionEntry` branch is checked **before**
+  `captureSource` in `buildApp`, and the harness injects both a correction entry and a (fake) capture source.
+  `captureSource` is the one `CorrectionHomeScreen` seam without a const default (a camera is scene-specific),
+  so it is `required`; `toCorrection` reads it from the enclosing `AppScope` (as `toReadout` reads its services).
+- **Gate:** `flutter analyze` clean; unit **623 green** (`flutter test --coverage`, +25 new: state 6, controller
+  7, endpoint 3, build_app 7 incl. the correction-wins-over-capture branch, router 1, plus the CorrectionEntry
+  ctor); coverage gate **100% on all 7 touched `lib/` files** (`dart run tool/coverage_gate.dart main` — the 7
+  include CORRECT-1's engine files, absent from `main`, still fully covered). Existing suite stayed green:
+  **integration 86 green** on the iPhone 17 sim under the verify lock (shared `build_app.dart` / `router.dart`
+  changed, so the bs-01–04 suites were re-run). **Fix passes: 0/3** (passed first run).
+- **Augmentations:** none (shell adds no AC coverage; no acceptance test touched). **Tokens / Time:**
+  11,995,702 · 19m 40s (52m 25s).
+
+### Checkpoint / Handoff — LOOP-2
+
+- **Frozen for the next phases (SCREEN-1 then the behaviour phases):**
+  - `CorrectionController({required CaptureSource captureSource, required Sample target, required Recipe
+    currentMix, required PaletteSource paletteSource, required CorrectionEngine correctionEngine, MixingEngine
+    mixingEngine = const SubtractiveMixingEngine(), SampleSource sampleSource = const InMemorySampleSource(),
+    Speech speech = const NoopSpeech(), AppRouter router = const AppRouter()})`. Read getters: `state`,
+    `savedSamples`. Actions throw until: `checkMix`→LOOP-3, `rephotograph`→LOOP-5, `speakCorrection`→LOOP-4,
+    `saveConfirmed`→LOOP-6. The first real mutation adds the `_emit`/notify path (RECIPE pattern).
+  - `CorrectionState({required target, required currentMix, mixedSwatch, difference, correction,
+    savedProvenance})` + `hasChecked`.
+  - `CorrectionReadEndpoint.endpointKey = Key('correction-read-endpoint')`, `CorrectionReadEndpoint.of(context)`.
+  - `CorrectionHomeScreen` (in `build_app.dart`): ctor takes the seams (captureSource required); it is where the
+    SCREEN-1 Correction screen replaces the placeholder body. `CorrectionEntry{target, currentMix}` +
+    `AppRouter.toCorrection(target, currentMix)`.
+- **Verification commands:** unchanged from LOOP-1 (export PATH; `flutter analyze`; `flutter test --coverage`;
+  `dart run tool/coverage_gate.dart main`; integration under the verify lock on the iPhone 17 sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`).
+- **Next phase:** SCREEN-1 (shell) — the Correction screen scaffold (E26–E29 + difference/correction/provenance
+  regions) bound to the controller, replacing `CorrectionHomeScreen`'s placeholder body. SCREEN-1 closes the
+  shell stage; ITEST-1/2/3 (acceptance) and the ITEST-4 test review (G-2) follow.
+- **Known gaps / notes:** no behaviour yet (actions inert). The `const`-constructor coverage flake from LOOP-1
+  still applies — re-run `flutter test --coverage` once if the gate flags an untouched file. Always pass
+  `-d <booted-udid>` to the integration suite.

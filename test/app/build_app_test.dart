@@ -11,11 +11,13 @@ import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/correction/correction_read_endpoint.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
@@ -29,11 +31,33 @@ const _olive = Sample(
   coordinates: ColorCoordinates(lightness: 42, a: -5, b: 20),
   provenance: Provenance(ProvenanceTier.measured),
 );
+const _white = Paint(
+  id: 'pw6',
+  name: 'Titanium White',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 96, a: 0, b: 2),
+);
+const _mix = Recipe(
+  medium: PaintMedium.acrylic,
+  components: [RecipeComponent(paint: _white, partsFraction: 1)],
+  predictedColor: ColorCoordinates(lightness: 96, a: 0, b: 2),
+  deltaE00: 1.2,
+);
 
 SoftwareCaptureSource _captureSource() => SoftwareCaptureSource(
       const SceneSpec(
         groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
       ),
+    );
+
+/// Deps that open the Correction loop: a correction entry plus a fake capture
+/// source for its camera (the entry wins over the capture source in `buildApp`).
+AppDependencies _correctionDeps() => AppDependencies(
+      colorScience: const ColorScienceImpl(),
+      speech: const NoopSpeech(),
+      haptics: const NoopHaptics(),
+      captureSource: _captureSource(),
+      correctionEntry: const CorrectionEntry(target: _olive, currentMix: _mix),
     );
 
 AppDependencies _captureDeps(SoftwareCaptureSource source) => AppDependencies(
@@ -228,6 +252,23 @@ void main() {
       expect(identical(deps.paletteSource, source), isTrue);
       expect(identical(deps.recipesEntry, entry), isTrue);
     });
+
+    test('defaults the correction entry to null (opens on Readout — D-2)', () {
+      expect(_deps().correctionEntry, isNull);
+    });
+
+    test('keeps an explicitly injected correction entry', () {
+      const entry = CorrectionEntry(target: _olive, currentMix: _mix);
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        correctionEntry: entry,
+      );
+      expect(identical(deps.correctionEntry, entry), isTrue);
+      expect(deps.correctionEntry!.target, _olive);
+      expect(deps.correctionEntry!.currentMix, _mix);
+    });
   });
 
   group('buildApp', () {
@@ -397,6 +438,20 @@ void main() {
       expect(find.text('Recipes'), findsOneWidget);
       expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget);
     });
+
+    testWidgets(
+        'opens on the Correction screen when a correction entry is set, '
+        'winning over the capture source (D-2)', (tester) async {
+      await tester.pumpWidget(buildApp(_correctionDeps()));
+
+      // The correction entry is checked before the capture source, so the loop
+      // opens on the Correction screen and reuses the source as its camera.
+      expect(find.byType(CorrectionHomeScreen), findsOneWidget);
+      expect(find.byType(CaptureHomeScreen), findsNothing);
+      expect(find.byType(ReadoutScreen), findsNothing);
+      expect(find.widgetWithText(AppBar, 'Correction'), findsOneWidget);
+      expect(find.text('Correction target: Deep Olive Green'), findsOneWidget);
+    });
   });
 
   group('RecipesHomeScreen', () {
@@ -449,6 +504,68 @@ void main() {
       // ignore: prefer_const_constructors
       final entry = RecipesEntry(target: _olive);
       expect(entry.target, _olive);
+    });
+  });
+
+  group('CorrectionEntry', () {
+    test('carries the target and the current mix', () {
+      // Constructed at runtime (non-const) so the constructor line is covered.
+      // ignore: prefer_const_constructors
+      final entry = CorrectionEntry(target: _olive, currentMix: _mix);
+      expect(entry.target, _olive);
+      expect(entry.currentMix, _mix);
+    });
+  });
+
+  group('CorrectionHomeScreen', () {
+    Widget home({Sample target = _olive}) => MaterialApp(
+          home: CorrectionHomeScreen(
+            target: target,
+            currentMix: _mix,
+            captureSource: _captureSource(),
+          ),
+        );
+
+    testWidgets('renders the named target under a Correction app bar',
+        (tester) async {
+      await tester.pumpWidget(home());
+      expect(find.widgetWithText(AppBar, 'Correction'), findsOneWidget);
+      expect(find.text('Correction target: Deep Olive Green'), findsOneWidget);
+    });
+
+    testWidgets('falls back to (unnamed) for a target with no name',
+        (tester) async {
+      const unnamed = Sample(
+        coordinates: ColorCoordinates(lightness: 42, a: -5, b: 20),
+        provenance: Provenance(ProvenanceTier.measured),
+      );
+      await tester.pumpWidget(home(target: unnamed));
+      expect(find.text('Correction target: (unnamed)'), findsOneWidget);
+    });
+
+    testWidgets('wraps its subtree in a CorrectionReadEndpoint over the mix',
+        (tester) async {
+      await tester.pumpWidget(home());
+      expect(find.byKey(CorrectionReadEndpoint.endpointKey), findsOneWidget);
+      final context = tester.element(find.byType(Scaffold));
+      final controller = CorrectionReadEndpoint.of(context);
+      expect(controller.state.target, _olive);
+      expect(controller.state.currentMix, _mix);
+      expect(controller.state.hasChecked, isFalse);
+    });
+
+    testWidgets('disposes its controller when removed from the tree',
+        (tester) async {
+      await tester.pumpWidget(home());
+      final controller = tester
+          .widget<CorrectionReadEndpoint>(
+            find.byKey(CorrectionReadEndpoint.endpointKey),
+          )
+          .controller;
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      expect(find.byType(CorrectionHomeScreen), findsNothing);
+      // A disposed ChangeNotifier throws if listened to again.
+      expect(() => controller.addListener(() {}), throwsFlutterError);
     });
   });
 

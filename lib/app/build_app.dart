@@ -9,6 +9,8 @@ import '../capture/capture_read_endpoint.dart';
 import '../capture/capture_screen.dart';
 import '../capture/source/capture_source.dart';
 import '../color_science/color_science.dart';
+import '../correction/correction_controller.dart';
+import '../correction/correction_read_endpoint.dart';
 import '../correction/engine/correction_engine.dart';
 import '../correction/engine/correction_engine_impl.dart';
 import '../compare/comparison_controller.dart';
@@ -73,6 +75,31 @@ class RecipesEntry {
   final Sample target;
 }
 
+/// Opt-in that opens the app on the Correction screen for a [currentMix] the
+/// painter mixed toward [target] (bs-05 D-2), symmetric to bs-04's recipes
+/// entry.
+///
+/// When [AppDependencies.correctionEntry] carries one, [buildApp] launches to
+/// the [CorrectionHomeScreen] — a `CorrectionController` photographing the
+/// swatch through [AppDependencies.captureSource] and reading it through
+/// [AppDependencies.correctionEngine] — so the acceptance harness enters the
+/// loop through the one assembly entry. It is checked **before**
+/// [AppDependencies.captureSource] because the correction loop *reuses* the
+/// injected capture source as its own camera (D-2); setting the capture source
+/// alone still opens bs-02's Capture screen. Like the recipes entry it carries a
+/// [currentMix], because a correction is always against a specific mix toward a
+/// specific colour. null (the default) preserves bs-01's Readout entry.
+class CorrectionEntry {
+  /// Creates the correction-entry marker for [currentMix] toward [target].
+  const CorrectionEntry({required this.target, required this.currentMix});
+
+  /// The colour the mixed swatch is corrected toward.
+  final Sample target;
+
+  /// The recipe the painter mixed toward [target] — the correction adds to it.
+  final Recipe currentMix;
+}
+
 /// The app-wide services assembled once at startup and injected down the tree.
 ///
 /// A single immutable holder so production (`main.dart`) and the acceptance
@@ -95,6 +122,7 @@ class AppDependencies {
     this.correctionEngine = const SubtractiveCorrectionEngine(),
     this.paletteSource = const InMemoryPaletteSource(),
     this.recipesEntry,
+    this.correctionEntry,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -194,6 +222,16 @@ class AppDependencies {
   /// bs-04 acceptance harness injects one to drive each recipes scenario through
   /// this same assembly entry.
   final RecipesEntry? recipesEntry;
+
+  /// Opens the app on the Correction screen for a mix when present (bs-05 D-2).
+  ///
+  /// null (the default) keeps bs-01's Readout entry; a [CorrectionEntry] makes
+  /// [buildApp] launch to the [CorrectionHomeScreen], correcting the entry's
+  /// [CorrectionEntry.currentMix] toward its [CorrectionEntry.target]. It wins
+  /// over [captureSource] (the loop reuses that source as its camera), so the
+  /// bs-05 acceptance harness injects a correction entry **and** a fake capture
+  /// source to drive each correction scenario through this one assembly entry.
+  final CorrectionEntry? correctionEntry;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -229,11 +267,14 @@ class AppScope extends InheritedWidget {
 /// Builds the root widget of the Paint Color Assistant.
 ///
 /// The single production assembly entry (D-7): it injects [deps] via [AppScope]
-/// and wires the router into a [MaterialApp]. The app opens on the Capture
-/// screen when a [AppDependencies.captureSource] is injected (bs-02), on the
-/// [ComparisonHomeScreen] when a [AppDependencies.comparisonEntry] is injected
-/// (bs-03 D-8), on the [RecipesHomeScreen] when a [AppDependencies.recipesEntry]
-/// is injected (bs-04 D-6), and otherwise on the [ReadoutScreen] for
+/// and wires the router into a [MaterialApp]. The app opens on the
+/// [CorrectionHomeScreen] when a [AppDependencies.correctionEntry] is injected
+/// (bs-05 D-2 — checked first, as the loop reuses the capture source as its
+/// camera), on the Capture screen when a [AppDependencies.captureSource] is
+/// injected (bs-02), on the [ComparisonHomeScreen] when a
+/// [AppDependencies.comparisonEntry] is injected (bs-03 D-8), on the
+/// [RecipesHomeScreen] when a [AppDependencies.recipesEntry] is injected (bs-04
+/// D-6), and otherwise on the [ReadoutScreen] for
 /// [AppDependencies.initialSample] (bs-01's entry). `main.dart` and the
 /// acceptance harnesses construct the app through this one entry, differing only
 /// in the injected services, the initial sample, the capture source and the
@@ -244,7 +285,19 @@ Widget buildApp(AppDependencies deps) {
     child: MaterialApp(
       title: 'Paint Color Assistant',
       theme: ThemeData(useMaterial3: true),
-      home: deps.captureSource != null
+      home: deps.correctionEntry != null
+          ? CorrectionHomeScreen(
+              target: deps.correctionEntry!.target,
+              currentMix: deps.correctionEntry!.currentMix,
+              captureSource: deps.captureSource!,
+              paletteSource: deps.paletteSource,
+              correctionEngine: deps.correctionEngine,
+              mixingEngine: deps.mixingEngine,
+              sampleSource: deps.sampleSource,
+              speech: deps.speech,
+              router: deps.router,
+            )
+          : deps.captureSource != null
           ? const CaptureHomeScreen()
           : deps.comparisonEntry != null
               ? ComparisonHomeScreen(
@@ -496,6 +549,104 @@ class _RecipesHomeScreenState extends State<RecipesHomeScreen> {
       key: RecipeReadEndpoint.endpointKey,
       controller: _controller,
       child: RecipesScreen(controller: _controller),
+    );
+  }
+}
+
+/// The Correction screen the app opens on when a correction entry is wired, and
+/// the destination of the Recipes → correction handoff (`AppRouter.toCorrection`).
+///
+/// It owns the [CorrectionController] over the injected capture source / engine
+/// / palettes correcting [currentMix] toward [target], and wraps its subtree in
+/// a [CorrectionReadEndpoint] so the acceptance suite can observe the correction
+/// state. The seams are passed in (not read from [AppScope]) so the handoff
+/// route renders the carried mix even when pushed outside an [AppScope],
+/// symmetric to [RecipesHomeScreen]; the one exception is [captureSource], which
+/// has no const default (a camera is scene-specific) and so is required.
+///
+/// The body is the LOOP-2 **placeholder** — a "Correction" app bar over the
+/// target's name, exactly as the recipes home read before its screen phase.
+/// SCREEN-1 replaces it with the real Correction screen (E26–E29) composed over
+/// the owned controller; the controller ownership and the read endpoint stay
+/// here.
+class CorrectionHomeScreen extends StatefulWidget {
+  /// Creates the correction home correcting [currentMix] toward [target], over
+  /// the given seams.
+  const CorrectionHomeScreen({
+    required this.target,
+    required this.currentMix,
+    required this.captureSource,
+    this.paletteSource = const InMemoryPaletteSource(),
+    this.correctionEngine = const SubtractiveCorrectionEngine(),
+    this.mixingEngine = const SubtractiveMixingEngine(),
+    this.sampleSource = const InMemorySampleSource(),
+    this.speech = const NoopSpeech(),
+    this.router = const AppRouter(),
+    super.key,
+  });
+
+  /// The colour the mixed swatch is corrected toward (AC-1).
+  final Sample target;
+
+  /// The recipe the painter mixed toward [target] (AC-4/AC-5).
+  final Recipe currentMix;
+
+  /// The capture source the swatch is photographed through (bs-02 D-2).
+  final CaptureSource captureSource;
+
+  /// The owned palettes the correction's additions are drawn from (AC-4/AC-5).
+  final PaletteSource paletteSource;
+
+  /// The swappable engine the difference and correction are read through
+  /// (D-2/D-3).
+  final CorrectionEngine correctionEngine;
+
+  /// The swappable mixing engine the correction scores candidates through.
+  final MixingEngine mixingEngine;
+
+  /// The saved-sample catalogue a confirmed mix is persisted to (D-8).
+  final SampleSource sampleSource;
+
+  /// Spoken-output sink the speak-correction control drives (AC-7). Defaults to
+  /// the inert [NoopSpeech]; the acceptance harness injects a recording fake.
+  final Speech speech;
+
+  /// Typed navigation the controller uses. Defaults to a plain [AppRouter]; the
+  /// production assembly passes `AppDependencies.router`.
+  final AppRouter router;
+
+  @override
+  State<CorrectionHomeScreen> createState() => _CorrectionHomeScreenState();
+}
+
+class _CorrectionHomeScreenState extends State<CorrectionHomeScreen> {
+  late final CorrectionController _controller = CorrectionController(
+    captureSource: widget.captureSource,
+    target: widget.target,
+    currentMix: widget.currentMix,
+    paletteSource: widget.paletteSource,
+    correctionEngine: widget.correctionEngine,
+    mixingEngine: widget.mixingEngine,
+    sampleSource: widget.sampleSource,
+    speech: widget.speech,
+    router: widget.router,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CorrectionReadEndpoint(
+      key: CorrectionReadEndpoint.endpointKey,
+      controller: _controller,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Correction')),
+        body: Text('Correction target: ${widget.target.name ?? '(unnamed)'}'),
+      ),
     );
   }
 }
