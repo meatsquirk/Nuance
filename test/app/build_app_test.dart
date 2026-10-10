@@ -11,6 +11,8 @@ import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/correction/engine/correction_engine.dart';
+import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
@@ -183,6 +185,24 @@ void main() {
       );
       expect(identical(deps.mixingEngine, engine), isTrue);
       expect(deps.mixingEngine, isA<MixingEngine>());
+    });
+
+    test(
+        'defaults the correction engine to the stub SubtractiveCorrectionEngine '
+        '(D-2/D-3)', () {
+      expect(_deps().correctionEngine, isA<SubtractiveCorrectionEngine>());
+    });
+
+    test('keeps an explicitly injected correction engine', () {
+      const engine = SubtractiveCorrectionEngine();
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        correctionEngine: engine,
+      );
+      expect(identical(deps.correctionEngine, engine), isTrue);
+      expect(deps.correctionEngine, isA<CorrectionEngine>());
     });
 
     test('defaults the palette source to an empty in-memory catalogue (D-5)',

@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** In progress — next CORRECT-1 (shell; needs no gate. LOOP-1 scaffold done; G-2 gates the behavior stage, G-4 gates ITEST-3/CORRECT-2/3/4/LOOP-6)
+**Status:** In progress — next LOOP-2 (shell; needs no gate. CORRECT-1 done; G-2 gates the behavior stage, G-4 gates ITEST-3/CORRECT-2/3/4/LOOP-6)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -141,7 +141,7 @@ discriminator is an in-test forward-model control (the suggested addition must r
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| CORRECT | [modules/CORRECT.md](modules/CORRECT.md) | The `CorrectionEngine` interface + impl: `Difference` (ΔE00 + verdict band + value-leading decomposition) and `Correction` (paint(s) to add via forward-model perturbation; trace "a touch of"; tolerance → no-correction) | bs-04 `MixingEngine`/`Paint`/palette, bs-03 `deltaE00`, color-science | ⬜ Todo |
+| CORRECT | [modules/CORRECT.md](modules/CORRECT.md) | The `CorrectionEngine` interface + impl: `Difference` (ΔE00 + verdict band + value-leading decomposition) and `Correction` (paint(s) to add via forward-model perturbation; trace "a touch of"; tolerance → no-correction) | bs-04 `MixingEngine`/`Paint`/palette, bs-03 `deltaE00`, color-science | 🔄 In progress |
 | LOOP | [modules/LOOP.md](modules/LOOP.md) | Scaffold; `CorrectionController`/state; capture wiring (check → measured `Sample` → compare); re-photograph re-check; save-confirmed → provenance promotion + persist; `CorrectionReadEndpoint`; `CorrectionEntry`/route in `buildApp`; spoken correction | bs-02 capture, bs-03 compare/`SampleSource`, domain `Provenance`, `Speech`, CORRECT | 🔄 In progress |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | The Correction screen UI: E26 Check my mix, the difference body (ΔE00 + verdict + decomposition), the correction body (paint + amount / "a touch of"), E27 Speak, E28 Re-photograph, E29 Save confirmed, the within-tolerance no-correction state, and the later-readout provenance | LOOP, CORRECT | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
@@ -195,8 +195,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | LOOP-1 | scaffold: branch from main @ bs-04 merge, baseline, confirm coverage gate, BS05 pending runner | ✅ Done | 2,465,803 | 11m 57s | analyze clean; unit 579 + integ 86 green; gate PASS clean / FAIL planted; bs05/pending.dart seeded (10 ACs); no `lib/` |
-| 2 | CORRECT-1 | shell: `CorrectionEngine` interface + `Difference`/`Correction` types + stub engine wired into deps | ⬜ Next | | | startable now (no gate); defines the types LOOP-2 needs |
-| 3 | LOOP-2 | shell: `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` + `CorrectionEntry`/`toCorrection` route wired into buildApp | ⬜ Todo | | | needs CORRECT-1 types |
+| 2 | CORRECT-1 | shell: `CorrectionEngine` interface + `Difference`/`Correction` types + stub engine wired into deps | ✅ Done | 5,968,811 | 11m 31s | analyze clean; unit 598 + integ 86 green; gate 100% on 3 touched files; types + stub + `AppDependencies.correctionEngine` |
+| 3 | LOOP-2 | shell: `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` + `CorrectionEntry`/`toCorrection` route wired into buildApp | ⬜ Next | | | needs CORRECT-1 types (now frozen) |
 | 4 | SCREEN-1 | shell: Correction screen scaffold (E26–E29 + difference/correction/provenance regions) bound to controller | ⬜ Todo | | | needs LOOP-2 |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures + scenes, pending gate (10 ACs), smoke | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
@@ -216,12 +216,12 @@ when the row is marked done.
 
 ## Next phase
 
-**CORRECT-1 (shell)** — **startable now** (no gate): the first component shell. Define the `CorrectionEngine`
-interface + the `Difference` (ΔE00 + verdict band + value-leading decomposition) and `Correction` (paint(s)
-to add; trace flag; note) types + a stub engine wired into `AppDependencies`; 100% coverage on touched files,
-existing suite stays green. Worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`.
-Then the shells **serialize**: LOOP-2 (needs CORRECT-1's types) → SCREEN-1 (needs LOOP-2's controller).
-G-2 gates the whole behavior stage (ITEST-4 packet); G-4 gates ITEST-3 and CORRECT-2/3/4/LOOP-6.
+**LOOP-2 (shell)** — **startable now** (no gate): build `CorrectionController`/`CorrectionState` over the
+frozen CORRECT-1 seams, a `CorrectionReadEndpoint`, and the `CorrectionEntry`/`toCorrection` route wired into
+`buildApp` — consuming `AppDependencies.correctionEngine` (do not compute math in the controller). 100%
+coverage on touched files; existing suite stays green. Worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`.
+Then SCREEN-1 (needs LOOP-2's controller) closes the shell stage. The acceptance stage (ITEST-1/2/3) follows,
+then the ITEST-4 test review (G-2). G-2 gates the whole behavior stage; G-4 gates ITEST-3 and CORRECT-2/3/4/LOOP-6.
 
 ## Token usage
 
@@ -232,7 +232,8 @@ G-2 gates the whole behavior stage (ITEST-4 packet); G-4 gates ITEST-3 and CORRE
 | PLAN | eeb3127a | 2026-10-10 04:37 EDT | 05:20 | 43m 21s | 13m 49s | claude-opus-4-8 | 106 | 256,812 | 5,917,039 | 64,934 | 6,238,891 | plan written: 17 phases (16 session-log rows + the enabler), 4 modules, 10 ACs; G-1/G-3/G-4 open, G-2 open |
 | GATE-DECISION | 58107723 | 2026-10-10 06:47 EDT | 09:22 | 2h 34m | 12m 22s | claude-opus-4-8 | 68 | 178,708 | 3,062,238 | 50,088 | 3,291,102 | G-1 approved (spec stamped) + G-3 closed: bs-04 merged to local main @ 2684ac6 (not pushed); LOOP-1 now startable |
 | LOOP-1 | 844dae14 | 2026-10-10 09:30 EDT | 09:42 | 11m 57s | 11m 57s | claude-opus-4-8 | 56 | 82,799 | 2,356,905 | 26,043 | 2,465,803 | scaffold complete; analyze clean, unit 579 + integ 86 green, coverage gate PASS clean / FAIL planted, bs05/pending.dart seeded (10 ACs); no lib/ touched; fix passes 0/3 |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 09:42** | **3h 29m** | **38m 08s** |  | **230** | **518,319** | **11,336,182** | **141,065** | **11,995,796** |  |
+| CORRECT-1 | 5dfe5431 | 2026-10-10 13:57 EDT | 14:08 | 11m 31s | 11m 31s | claude-opus-4-8 | 120 | 101,590 | 5,834,232 | 32,869 | 5,968,811 | shell done: CorrectionEngine interface + Difference/Correction/CorrectionAddition types + stub wired into AppDependencies; analyze clean, unit 598 + integ 86 green, gate 100% on 3 touched files |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 14:08** | **3h 40m** | **49m 39s** |  | **350** | **619,909** | **17,170,414** | **173,934** | **17,964,607** |  |
 
 ## Sign-off
 

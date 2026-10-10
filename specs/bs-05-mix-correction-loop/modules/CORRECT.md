@@ -1,6 +1,6 @@
 # Module CORRECT — correction engine
 
-**Status:** Not started
+**Status:** In progress — CORRECT-1 done; CORRECT-2 next (behavior, gated by G-2 + G-4)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/engine/correction_engine.dart` (interface + `Difference`/`Correction` types), `lib/correction/engine/correction_engine_impl.dart` (the v1 impl), `lib/correction/engine/correction_words.dart` (verdict band + value-leading phrasing)
 **Depends on:** bs-04 `MixingEngine`/`Paint`/`PaintPalette`/`Recipe` · bs-03 `deltaE00` (`lib/compare/difference.dart`) · color-science (`labToCielch`, `hueFamilyWord`, `words.dart`) · CORRECT-1 is a shell (stub wired by LOOP via `AppDependencies.correctionEngine`) · **Blocks:** LOOP-2 (needs the types), SCREEN-1, the CORRECT-2/3/4 behaviour phases
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 5,968,811 | 11m 31s |
 | 2 | behavior | AC-2, AC-3 | ⬜ Todo | | |
 | 3 | behavior | AC-4, AC-5 | ⬜ Todo | | |
 | 4 | behavior | AC-6 | ⬜ Todo | | |
@@ -82,6 +82,47 @@
 - **Acceptance gate:** un-pend AC-6; the suite green for `TestAC06_WithinTolerance` (+ all earlier ACs); `TestAC02`'s augmentation green.
 - **Augments:** `TestAC02`: the "very close" within-tolerance control reading.
 
-### Result  <!-- filled on completion -->
+### Result — CORRECT-1
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Shell complete: the `CorrectionEngine` interface + its value types, plus a stub engine wired into
+`AppDependencies`. Behaviour unchanged — no real math, no screen reads it yet.
+
+- **Landed:** `lib/correction/engine/correction_engine.dart` — `abstract interface class CorrectionEngine`
+  (`difference(Sample mixedSwatch, Sample target)`, `correct(Sample, Sample, Recipe currentMix, PaintPalette)`)
+  + value-equal, `const` types `Difference` (deltaE00, verdict, valueReading, hueReading, withinTolerance),
+  `Correction` (`additions`; `isEmpty`), `CorrectionAddition` (paint, parts, isTrace, techniqueNote).
+  `lib/correction/engine/correction_engine_impl.dart` — `const SubtractiveCorrectionEngine` stub returning an
+  inert `Difference` (ΔE00 0, empty readings, not within tolerance) + empty `Correction`.
+  `lib/app/build_app.dart` — `AppDependencies.correctionEngine` (default `const SubtractiveCorrectionEngine()`),
+  symmetric to `mixingEngine`; no call site changed.
+- **Verification (Flutter 3.47.6, iPhone 17 sim `5AB9D06D…`):** `flutter analyze` clean; unit **598 green**
+  (`flutter test --coverage`); integration **86 green** (`flutter test integration_test/ -d <sim>`, under the
+  verify lock) — the build_app change broke no existing acceptance suite.
+- **Coverage gate:** `dart run tool/coverage_gate.dart main` — **100%** on all 3 touched files
+  (`build_app.dart`, `correction_engine.dart`, `correction_engine_impl.dart`). No exclusions.
+- **Tests added:** `test/correction/engine/correction_engine_test.dart` (type ctors/==/hashCode/toString, each
+  field's inequality, both toString branches, runtime-const lines), `correction_engine_impl_test.dart` (stub
+  inert difference + empty correction + interface type), and two `build_app_test.dart` cases (default +
+  injected correction engine), mirroring the bs-04 engine-type test idiom.
+- **No AC** (shell) → no acceptance/grade gate. **Fix passes: 1/3** (import of `domain/paint.dart` added after
+  the first analyze; no logic change).
+
+### Checkpoint / Handoff — CORRECT-1
+
+- **Frozen for consumers:** `CorrectionEngine` (two seams: `difference` before `correct`), the types
+  `Difference` / `Correction` / `CorrectionAddition`, and `AppDependencies.correctionEngine`. **LOOP-2**
+  constructs the `CorrectionController` over `AppDependencies.correctionEngine` (do not let the controller
+  compute the math itself); SCREEN-1 then binds the regions. CORRECT-2 fills `difference()`, CORRECT-3
+  `correct()`, CORRECT-4 the within-tolerance short-circuit — all behind this unchanged interface.
+- **Interface note:** `Difference` fields are all `required` (a reading is never silently partial); the stub
+  passes explicit inert values. `Correction()` defaults to empty additions (the no-correction state).
+- **Verification commands** (export PATH first — `export PATH="$HOME/development/flutter/bin:$PATH"`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · integration under
+  the verify lock: `$C with-lock bs-05-mix-correction-loop <PHASE> --wait 900 -- bash -c "export PATH=…; cd
+  /Users/matthew.quirk/Nuance-bs05 && flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685"`.
+- **Known gaps / notes:** stub only — `difference`/`correct` are inert until CORRECT-2/3/4 (G-4 gates those).
+  Carry-over flake (master *Known flakes*): a `const` ctor line can intermittently read uncovered on
+  `--coverage`; re-run once if the gate flags an untouched file (did not recur this phase). Untracked
+  bs-06..bs-14 specs + `docs/` remain in the tree from a prior branch; not part of bs-05, not committed here.
+- **Next phase:** LOOP-2 (shell) — `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` +
+  `CorrectionEntry`/`toCorrection` route in `buildApp`, consuming `AppDependencies.correctionEngine`.

@@ -9,6 +9,8 @@ import '../capture/capture_read_endpoint.dart';
 import '../capture/capture_screen.dart';
 import '../capture/source/capture_source.dart';
 import '../color_science/color_science.dart';
+import '../correction/engine/correction_engine.dart';
+import '../correction/engine/correction_engine_impl.dart';
 import '../compare/comparison_controller.dart';
 import '../compare/comparison_read_endpoint.dart';
 import '../compare/comparison_screen.dart';
@@ -90,6 +92,7 @@ class AppDependencies {
     this.sampleSource = const InMemorySampleSource(),
     this.comparisonEntry,
     this.mixingEngine = const SubtractiveMixingEngine(),
+    this.correctionEngine = const SubtractiveCorrectionEngine(),
     this.paletteSource = const InMemoryPaletteSource(),
     this.recipesEntry,
   });
@@ -163,6 +166,16 @@ class AppDependencies {
   /// (`docs/custom-mixing-engine-design.md`) is the deferred swap-in behind the
   /// same [MixingEngine] interface. A shell for now — no screen reads it yet.
   final MixingEngine mixingEngine;
+
+  /// The correction engine the Mix-correction loop reads a checked mix through
+  /// (bs-05 D-2/D-3).
+  ///
+  /// Defaults to the shipped stub [SubtractiveCorrectionEngine]; **LOOP-2**
+  /// passes it to the `CorrectionController` so the controller never computes
+  /// the difference or the correction itself, and the measured-pigment engine is
+  /// the deferred swap-in behind the same [CorrectionEngine] interface. A shell
+  /// for now — no screen reads it yet (LOOP-2 wires the controller).
+  final CorrectionEngine correctionEngine;
 
   /// The owned palettes the Recipes solver is constrained to choose among
   /// (bs-04 D-5).
