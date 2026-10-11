@@ -1,6 +1,6 @@
 # Module CORRECT — correction engine
 
-**Status:** In progress — CORRECT-1 done; CORRECT-2 next (behavior, gated by G-2 + G-4)
+**Status:** In progress — CORRECT-1, CORRECT-2 done (AC-2/AC-3 green); CORRECT-3 next (behavior)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/engine/correction_engine.dart` (interface + `Difference`/`Correction` types), `lib/correction/engine/correction_engine_impl.dart` (the v1 impl), `lib/correction/engine/correction_words.dart` (verdict band + value-leading phrasing)
 **Depends on:** bs-04 `MixingEngine`/`Paint`/`PaintPalette`/`Recipe` · bs-03 `deltaE00` (`lib/compare/difference.dart`) · color-science (`labToCielch`, `hueFamilyWord`, `words.dart`) · CORRECT-1 is a shell (stub wired by LOOP via `AppDependencies.correctionEngine`) · **Blocks:** LOOP-2 (needs the types), SCREEN-1, the CORRECT-2/3/4 behaviour phases
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 5,968,811 | 11m 31s |
-| 2 | behavior | AC-2, AC-3 | ⬜ Todo | | |
+| 2 | behavior | AC-2, AC-3 | ✅ Done | 13,621,264 | 32m 47s |
 | 3 | behavior | AC-4, AC-5 | ⬜ Todo | | |
 | 4 | behavior | AC-6 | ⬜ Todo | | |
 
@@ -126,3 +126,56 @@ Shell complete: the `CorrectionEngine` interface + its value types, plus a stub 
   bs-06..bs-14 specs + `docs/` remain in the tree from a prior branch; not part of bs-05, not committed here.
 - **Next phase:** LOOP-2 (shell) — `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` +
   `CorrectionEntry`/`toCorrection` route in `buildApp`, consuming `AppDependencies.correctionEngine`.
+
+### Result — CORRECT-2
+
+The difference reading is live (AC-2, AC-3): a checked mix now shows its ΔE00 with a plain verdict and a
+value-leading decomposition.
+
+- **Landed (`lib/`):** `engine/correction_words.dart` (new) — `verdictFor(deltaE00)` (the beyond-tolerance
+  band word "noticeably off"; CORRECT-4 adds the within-tolerance "very close" branch), `valueReadingFor` ("too
+  dark by N" / "too light by N" / "matched on value" from `round(targetL − mixedL)`, value-leading D-5),
+  `hueReadingFor` ("shifted toward <family>" via `hueFamilyWord` of the mixed hue, or "hue on target" below a
+  1° shift). `engine/correction_engine_impl.dart` — `difference()` fills `verdict`/`valueReading`/`hueReading`
+  (ΔE00 still bs-03's shipped `deltaE00`; hue angles via the shared `labToCielch`; `withinTolerance` stays
+  false — CORRECT-4). `regions/difference_region.dart` — reads `controller.state.difference` and renders the
+  ΔE00+verdict line, then value, then hue (placeholder before a check). `correction_screen.dart` — passes the
+  controller to `DifferenceRegion` (one line; the screen's per-region wiring, as with `CheckRegion`).
+- **Un-pended:** AC-2, AC-3 (`integration_test/bs05/pending.dart`; `unpended` set in `correction_test.dart`).
+- **Gate:** `flutter analyze` clean; unit **641 green** (`flutter test --coverage`; +3: the new
+  `correction_words_test.dart`, an added checked-render screen test, the engine-impl test updated to the filled
+  readings); coverage gate **100% on all touched files** (`dart run tool/coverage_gate.dart main`). **Acceptance
+  (iPhone 17 sim under the verify lock):** full `integration_test/` default **101 pass / 7 skip** (was 99/9 at
+  LOOP-3 — AC-2 + AC-3 moved skip→pass; no bs-01..bs-04 regression); the 7 skips are the still-pending
+  AC-4…AC-10.
+- **Grade:** independent fresh-context re-grade of the un-pended AC tests — **AC-1 A, AC-3 A, AC-2 B pending
+  CORRECT-4** (the pre-seeded limitation: a single off-reading can't show the verdict tracks distance; the
+  within-tolerance "very close" control is CORRECT-4's AC-6 augmentation). No blockers, no drift. Grid appended.
+- **Augmentations:** none made here (TestAC02's is owned by CORRECT-4); none newly enabled (AC-1 is a different
+  AC — G6).
+- **Fix passes: 1/3** (first `flutter analyze` flagged an angle-bracket doc comment in `correction_words.dart`
+  and `const`-map double keys in the new unit test — both test/doc, no product/logic change).
+- **Tokens / Time:** 13,621,264 · 32m 47s.
+
+### Checkpoint / Handoff — CORRECT-2
+
+- **Frozen for the next phases:**
+  - `SubtractiveCorrectionEngine.difference()` returns a complete `Difference` — real ΔE00, `verdict`
+    "noticeably off", the value-leading `valueReading`/`hueReading` — with `withinTolerance: false`.
+  - `correction_words.dart`: `verdictFor` / `valueReadingFor` / `hueReadingFor` are the shared phrasing seam.
+  - `DifferenceRegion(controller:)` renders the difference body from `state.difference`.
+- **⚠ For CORRECT-3 (same engine file, serial next):** fill `correct()` (the palette search via
+  `MixingEngine.forward`) **and extend `checkMix` to also store `state.correction`** (carried from LOOP-3's
+  handoff — the controller still sets only `difference`). CORRECT-3 wires `CorrectionRegion(controller:)` into
+  `correction_screen.dart` the same way this phase wired `DifferenceRegion`.
+- **⚠ For CORRECT-4 (serial after CORRECT-3):** add the within-tolerance branch — set `withinTolerance =
+  deltaE00 ≤ tolerance` (a **named constant**, G-4b/D-6 = ΔE00 2) and make `verdictFor` return "very close"
+  within tolerance; make `correct()` return an empty `Correction` within tolerance; then **close the TestAC02
+  augmentation** (add the SCENE_CLOSE "very close" control) and re-grade TestAC02 to A.
+- **Verification commands:** unchanged from CORRECT-1 (export PATH; `flutter analyze`; `flutter test
+  --coverage`; `dart run tool/coverage_gate.dart main`; integration under the verify lock on the iPhone 17 sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; bs-05 run-pending via `… correction_test.dart -d <sim>
+  --dart-define=BS05_RUN_PENDING=true`).
+- **Known gaps / notes:** AC-2 is functionally green but graded **B pending CORRECT-4** (open augmentation) —
+  so AC-2 is **not** ✅ in the master AC-coverage table until CORRECT-4 closes it. The `const`-ctor coverage
+  flake still applies (did not recur). Always pass `-d <booted-udid>` to the integration suite.

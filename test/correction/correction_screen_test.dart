@@ -106,6 +106,47 @@ void main() {
       expect(_buttonEnabled(tester, 'Re-photograph swatch'), isFalse);
       expect(_buttonEnabled(tester, 'Save confirmed mix'), isFalse);
     });
+
+    testWidgets(
+        'shows the ΔE00, verdict and value-leading decomposition once checked '
+        '(CORRECT-2)', (tester) async {
+      final controller = _controller();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(home: CorrectionScreen(controller: controller)),
+      );
+
+      // Check the mix (E26): photographs the swatch and reads the difference,
+      // and the screen rebuilds on the controller's notification.
+      await tester.tap(find.text('Check my mix'));
+      await tester.pumpAndSettle();
+
+      final difference = controller.state.difference;
+      expect(difference, isNotNull);
+      expect(difference!.verdict, 'noticeably off',
+          reason: 'the scene sits beyond tolerance (G-4b)');
+
+      // Rendered in the difference body: the verdict, then the value reading,
+      // then the hue reading (value leads for a CVD painter, D-5).
+      final region = find.byKey(DifferenceRegion.regionKey);
+      expect(
+        find.descendant(of: region, matching: find.textContaining('noticeably off')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: region, matching: find.textContaining('too dark')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+            of: region, matching: find.textContaining('shifted toward green')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Check the mix to see how it differs from the target.'),
+        findsNothing,
+      );
+    });
   });
 
   group('CheckRegion', () {
@@ -140,7 +181,9 @@ void main() {
   group('DifferenceRegion', () {
     testWidgets('keeps its anchor and shows the pre-check placeholder',
         (tester) async {
-      await _pumpRegion(tester, const DifferenceRegion());
+      final controller = _controller();
+      addTearDown(controller.dispose);
+      await _pumpRegion(tester, DifferenceRegion(controller: controller));
 
       expect(find.byKey(DifferenceRegion.regionKey), findsOneWidget);
       expect(

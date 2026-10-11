@@ -41,8 +41,8 @@ void main() {
     });
 
     test(
-        'difference reports the real ΔE00 distance (LOOP-3); verdict / readings '
-        'still empty until CORRECT-2 / CORRECT-4', () {
+        'difference reports the real ΔE00 distance (D-2), the off verdict and '
+        'the value-leading decomposition (CORRECT-2)', () {
       final difference = engine.difference(_mixed, _target);
       expect(
         difference.deltaE00,
@@ -52,10 +52,16 @@ void main() {
       );
       expect(difference.deltaE00, greaterThan(0),
           reason: 'a real off-reading has a non-zero distance');
-      expect(difference.verdict, isEmpty); // CORRECT-2
-      expect(difference.valueReading, isEmpty); // CORRECT-2
-      expect(difference.hueReading, isEmpty); // CORRECT-2
-      expect(difference.withinTolerance, isFalse); // CORRECT-4
+      expect(difference.verdict, 'noticeably off',
+          reason: 'a beyond-tolerance mix reads "noticeably off" (G-4b)');
+      // _mixed L 36 vs _target L 42 → too dark by 6 (value leads, D-5).
+      expect(difference.valueReading, 'too dark by 6',
+          reason: 'the value reading states the L* gap and its sign');
+      // _mixed a -4 / b 18 → hue ≈ 102° (green family) vs the target's ≈ 104°.
+      expect(difference.hueReading, contains('green'),
+          reason: 'the hue reading names the shifted-toward family');
+      expect(difference.withinTolerance, isFalse,
+          reason: 'the tolerance short-circuit is CORRECT-4');
     });
 
     test('correct returns an empty correction', () {

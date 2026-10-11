@@ -44,8 +44,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// of [behaviorPhases].
 const Map<String, String> pendingACs = {
   // AC-1 un-pended by LOOP-3 (check photographs the swatch + compares to target).
-  'AC-2': 'CORRECT-2', // ΔE00 + plain verdict
-  'AC-3': 'CORRECT-2', // value-leading decomposition
+  // AC-2, AC-3 un-pended by CORRECT-2 (ΔE00 + plain verdict; value-leading
+  // decomposition).
   'AC-4': 'CORRECT-3', // concrete correction: paint + amount
   'AC-5': 'CORRECT-3', // small correction → "a touch of"
   'AC-6': 'CORRECT-4', // within tolerance → "very close", no correction

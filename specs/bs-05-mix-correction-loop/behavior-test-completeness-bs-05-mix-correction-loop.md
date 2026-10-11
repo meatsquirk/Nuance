@@ -91,3 +91,18 @@ Judgement calls:
 - **G6 (one AC per test).** None of the five asserts another AC's behaviour: AC-6 asserts both "very close" and no-correction because both are AC-6's own Thens (a within-tolerance mix needs no correction); AC-4's forward control is its own AC's physics; AC-3 uses only the decomposition readings.
 
 Gate recommendation: **PASS** — four of the five ITEST-3 AC tests meet the grade-A bar, and the fifth (`TestAC02`) is **B pending CORRECT-4** with its augmentation row scheduled, which the suite permits as an all-A-equivalent state for the G-2 test review.
+
+## Summary — CORRECT-2 (behaviour grade of the un-pended AC tests: AC-1, AC-2, AC-3)
+
+Graded 2026-10-11 by an independent grader (fresh context), given the prior grid. CORRECT-2 un-pended AC-2 + AC-3 and implemented the difference reading (`SubtractiveCorrectionEngine.difference`, `correction_words.dart`, `DifferenceRegion`); the test bodies are unchanged, so this re-grades the three now-un-pended AC tests against the real code.
+
+Grade counts: **2×A (AC-1, AC-3), 1×B pending CORRECT-4 (AC-2)**.
+
+Blockers (sub-A rows that are NOT a sanctioned *B pending <later-phase>*): **none**. No drift vs the prior grid — AC-1 A→A, AC-3 A→A, AC-2 B-pending→B-pending (same rule G5).
+
+Judgement calls:
+- **AC-3 held tightly by the real code.** `valueReadingFor` computes `round(targetL − mixedL)` → "too dark by 6" for SCENE_OFF (same operands and rounding the test uses), `hueFamilyWord(≈114°)` → "green", and `DifferenceRegion` renders value then hue, so the test's sign / magnitude / family / value-leads-hue-order assertions all discriminate. Stays **A**.
+- **AC-2 is B pending CORRECT-4 for exactly the pre-seeded reason.** `verdictFor(deltaE00)` returns the constant 'noticeably off' (CORRECT-4 adds the within-tolerance "very close" branch), so a single off-reading cannot show the verdict *tracks* distance (G5) — the decisive within-tolerance control is CORRECT-4's AC-6 augmentation. The test's other assertions (ΔE00 vs the independent `referenceDeltaE00`; the exact 'noticeably off'; the rendered body) are sound and unregressed. Not a blocker.
+- **AC-1 unchanged** (real measured swatch + real ΔE00 from LOOP-3) → **A**.
+
+Gate recommendation: **PASS** — the two un-pended-this-phase tests plus the carried AC-1 meet the bar (AC-2's single sub-A is the scheduled CORRECT-4 augmentation).
