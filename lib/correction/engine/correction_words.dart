@@ -8,17 +8,28 @@ import '../../color_science/words.dart' show hueFamilyWord;
 /// engine and the difference region share them unchanged — bs-05 owns this band
 /// (it does not import bs-03's or bs-04's). CORRECT-2 lands the beyond-tolerance
 /// verdict and the value/hue readings; CORRECT-4 adds the within-tolerance "very
-/// close" branch when it wires the tolerance short-circuit.
+/// close" branch, keyed on [correctionToleranceDeltaE00].
+
+/// The perceptual distance (CIEDE2000) at or below which a checked mix is "good
+/// enough" — it reads "very close" and no correction is offered (D-6, G-4(b)).
+///
+/// The single named anchor for the tolerance across bs-05: [verdictFor] reads it
+/// for the within-tolerance verdict and the `SubtractiveCorrectionEngine` reads
+/// it for the `withinTolerance` flag and the correction ramp, so the verdict and
+/// the suppression can never drift apart.
+const double correctionToleranceDeltaE00 = 2.0;
 
 /// The plain-language verdict for a checked mix's perceptual distance [deltaE00]
-/// (D-4, G-4b).
+/// (D-4, G-4b): "very close" at or within [correctionToleranceDeltaE00], else
+/// "noticeably off".
 ///
-/// CORRECT-2 lands the beyond-tolerance band: every reading the engine produces
-/// here is outside tolerance, so the mix reads "noticeably off". CORRECT-4 adds
-/// the within-tolerance "very close" branch keyed on the ΔE00 tolerance;
-/// threading [deltaE00] now keeps that extension to this body, not the call site.
+/// Threading [deltaE00] keeps the tolerance split here, in the shared phrasing
+/// seam, rather than at the call site — so the verdict tracks the distance the
+/// difference body shows.
 String verdictFor(double deltaE00) {
-  return 'noticeably off';
+  return deltaE00 <= correctionToleranceDeltaE00
+      ? 'very close'
+      : 'noticeably off';
 }
 
 /// The leading value reading (D-5): how the mixed lightness [mixedLightness]

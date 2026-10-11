@@ -12,7 +12,7 @@
 | 1 | shell | — | ✅ Done | 5,968,811 | 11m 31s |
 | 2 | behavior | AC-2, AC-3 | ✅ Done | 13,621,264 | 32m 47s |
 | 3 | behavior | AC-4, AC-5 | ✅ Done | 26,610,719 | 1h 03m |
-| 4 | behavior | AC-6 | ⬜ Todo | | |
+| 4 | behavior | AC-6 | ✅ Done | 10,423,853 | 1h 06m |
 
 ## Interface reconciliation
 
@@ -246,3 +246,55 @@ The concrete correction is live (AC-4, AC-5): a checked mix now names the one pa
 - **Known gaps / notes:** amounts are illustrative (G-4a) — the ACs assert direction, the trace/measured band
   and the forward-model improvement, not literals. The `const`-ctor coverage flake still applies (did not
   recur). Always pass `-d <booted-udid>` to the integration suite.
+
+### Result — CORRECT-4
+
+The within-tolerance short-circuit is live (AC-6): a checked mix at or within ΔE00 2 now reads **"very close"**,
+is flagged `withinTolerance`, and shows no correction. This also closes the pre-seeded TestAC02 augmentation,
+so **AC-2 ✅** and **AC-6 ✅**.
+
+- **Landed (`lib/`):** `engine/correction_words.dart` — a shared `const double correctionToleranceDeltaE00 = 2.0`
+  (the single named tolerance anchor, D-6/G-4b), and `verdictFor` now returns **"very close"** at or within it,
+  else "noticeably off". `engine/correction_engine_impl.dart` — `difference()` sets
+  `withinTolerance: distance <= correctionToleranceDeltaE00`; the private `_toleranceDeltaE00` is retired in
+  favour of the shared constant (the ramp reads it, so verdict and suppression cannot drift). `correct()`
+  already returned an empty `Correction` within tolerance (ramp 0) — unchanged logic, shared-constant anchor.
+  The difference/correction regions already render the verdict and the empty-correction state (CORRECT-2/3), so
+  no region change was needed.
+- **Un-pended:** AC-6 (`integration_test/bs05/pending.dart`; added to the `unpended` set in `correction_test.dart`).
+- **Augmentation made:** **TestAC02 closed** — added a within-tolerance "very close" CONTROL (SCENE_CLOSE) to
+  `TestAC02_DeltaEAndVerdict`, proving the verdict *tracks* distance (discriminates against a constant
+  "noticeably off"; strengthens AC-2's own verdict step only, G6). No new augmentation enabled.
+- **Gate:** `flutter analyze` clean; unit **655 green** (`flutter test --coverage`; +3: two `verdictFor`
+  tests — within-tolerance "very close" + the exact tolerance boundary — and a `difference()`
+  within-tolerance case); coverage gate **100% on all 15 touched files** (`dart run tool/coverage_gate.dart main`).
+  **Acceptance (iPhone 17 sim `5AB9D06D…` under the verify lock):** run-pending `correction_test.dart`
+  **19 pass / 3 fail** (AC-6 moved fail→pass; the 3 remaining clean fails are the still-pending AC-7/AC-9/AC-10);
+  full `integration_test/` default **105 pass / 3 skip** (AC-6 moved skip→pass; the 3 skips are exactly pending
+  AC-7/9/10; no bs-01..bs-05 regression — full cross-feature suite "All tests passed").
+- **Grade:** independent fresh-context re-grade of every un-pended AC test — **7×A, 0×B** (AC-1, AC-2, AC-3,
+  AC-4, AC-5, AC-6, AC-8). **AC-2 B-pending→A** (augmentation closed; the "very close" control is a genuine
+  discriminator — recomputed SCENE_CLOSE ΔE00 0.956 → "very close" vs SCENE_OFF 10.06 → "noticeably off");
+  **AC-6 pending→A**; the carried five A→A (no regression on the beyond-tolerance path). Grid:
+  `behavior-test-completeness-…md` (CORRECT-4 re-grade section appended). Gate recommendation PASS.
+- **Fix passes: 0/3** (analyze + all gates passed on the first full run).
+- **Tokens / Time:** 10,423,853 · 1h 06m (active time includes a cold Xcode rebuild after `flutter clean`).
+
+### Checkpoint / Handoff — CORRECT-4
+
+- **CORRECT module complete.** All four AC-6/AC-2/AC-3/AC-4/AC-5 behaviours are live behind the frozen
+  `CorrectionEngine` interface; the correction stage of bs-05 is done. The remaining bs-05 behaviour phases are
+  LOOP-4 (AC-7, speak) and LOOP-6 (AC-9/AC-10, save + provenance), both independent of this file.
+- **Frozen for consumers:** `correctionToleranceDeltaE00` (the one tolerance anchor — read it, don't re-litter
+  ΔE00 2 across the code); `verdictFor(deltaE00)` returns "very close" / "noticeably off" split on it;
+  `difference().withinTolerance` is `distance <= correctionToleranceDeltaE00`. LOOP-4's speak output reads the
+  existing `state.difference` / `state.correction` (a within-tolerance check has a "very close" difference and
+  an empty correction — speak must handle the no-correction case).
+- **Verification commands:** unchanged from CORRECT-3 (export PATH; `flutter analyze`; `flutter test --coverage`;
+  `dart run tool/coverage_gate.dart main`; integration under the verify lock on sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`). **Run the `--dart-define=BS05_RUN_PENDING=true` run before a plain
+  run, or `flutter clean` between them** — a stale on-device define is a silent false result (this phase ran a
+  `flutter clean` between the two, which forces a slow cold Xcode rebuild; budget ~40m for the default suite
+  after a clean).
+- **Known gaps / notes:** the `const`-ctor coverage flake still applies (did not recur). Always pass
+  `-d <booted-udid>` to the integration suite.

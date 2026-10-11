@@ -3,11 +3,24 @@ import 'package:paint_color_assistant/correction/engine/correction_words.dart';
 
 void main() {
   group('verdictFor', () {
-    test('reads a beyond-tolerance mix as "noticeably off" (CORRECT-2 band)',
-        () {
+    test('reads a beyond-tolerance mix as "noticeably off"', () {
       for (final distance in <double>[2.1, 6, 10, 42]) {
         expect(verdictFor(distance), 'noticeably off');
       }
+    });
+
+    test('reads a within-tolerance mix as "very close" (CORRECT-4, G-4b)', () {
+      for (final distance in <double>[0, 0.5, 1, 1.9]) {
+        expect(verdictFor(distance), 'very close');
+      }
+    });
+
+    test('splits exactly at the tolerance boundary (ΔE00 2 is still close)',
+        () {
+      // Just inside (≤ tolerance) is "very close"; a hair outside flips to off.
+      expect(verdictFor(correctionToleranceDeltaE00), 'very close');
+      expect(verdictFor(correctionToleranceDeltaE00 - 1e-9), 'very close');
+      expect(verdictFor(correctionToleranceDeltaE00 + 1e-9), 'noticeably off');
     });
   });
 

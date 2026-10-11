@@ -110,11 +110,14 @@ void main() {
 
   group('pending gate', () {
     // Un-pended by the behaviour phases so far: AC-1 (LOOP-3), AC-2 + AC-3
-    // (CORRECT-2), AC-4 + AC-5 (CORRECT-3), AC-8 (LOOP-5). Each behaviour phase
-    // adds its AC here as it deletes the row in `bs05/pending.dart`: LOOP-3 →
-    // AC-1; CORRECT-2 → AC-2, AC-3; CORRECT-3 → AC-4, AC-5; CORRECT-4 → AC-6;
-    // LOOP-4 → AC-7; LOOP-5 → AC-8; LOOP-6 → AC-9, AC-10.
-    const unpended = <String>{'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-8'};
+    // (CORRECT-2), AC-4 + AC-5 (CORRECT-3), AC-6 (CORRECT-4), AC-8 (LOOP-5). Each
+    // behaviour phase adds its AC here as it deletes the row in
+    // `bs05/pending.dart`: LOOP-3 → AC-1; CORRECT-2 → AC-2, AC-3; CORRECT-3 →
+    // AC-4, AC-5; CORRECT-4 → AC-6; LOOP-4 → AC-7; LOOP-5 → AC-8; LOOP-6 → AC-9,
+    // AC-10.
+    const unpended = <String>{
+      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-8', //
+    };
 
     test(
       'pending map is the exact complement of the un-pended ACs across all 10, '
@@ -578,11 +581,30 @@ void main() {
       expect(shown, contains('noticeably off'),
           reason: 'AC-2: the verdict is rendered on the difference body');
 
-      // LIMITED (augmented by CORRECT-4): one off-reading cannot show the verdict
-      // *tracks* distance (a constant "noticeably off" would also pass here). The
-      // decisive within-tolerance control ("very close") needs CORRECT-4's
-      // tolerance verdict, so it is the TestAC02 augmentation. Grade: B pending
-      // CORRECT-4.
+      // CONTROL (CORRECT-4 augmentation, discriminating): the same surface on a
+      // within-tolerance mix must read a *different* verdict — proving the
+      // verdict tracks distance and is not a constant "noticeably off" (the wrong
+      // implementation the off-reading alone could not reject). This strengthens
+      // AC-2's own "plain verdict" step; the within-tolerance suppression of the
+      // correction is AC-6's concern (G6), asserted there.
+      final close = await givenCorrection(tester, scene: SCENE_CLOSE);
+      await close.whenCheck();
+      final closeDiff = close.state.difference;
+      expect(closeDiff, isNotNull,
+          reason: 'AC-2 control: the within-tolerance check shows a difference');
+      expect(
+          referenceDeltaE00(close.state.mixedSwatch!.coordinates,
+              SAMPLE_DEEP_OLIVE.coordinates),
+          lessThanOrEqualTo(kToleranceDeltaE00),
+          reason: 'AC-2 control: SCENE_CLOSE sits within ΔE00 tolerance');
+      expect(closeDiff!.verdict, 'very close',
+          reason: 'AC-2 control: a within-tolerance mix reads "very close", so '
+              'the verdict tracks distance (not a constant "noticeably off")');
+      expect(closeDiff.verdict, isNot('noticeably off'),
+          reason: 'AC-2 control: the two scenes yield distinct verdicts');
+      final closeShown = _plainTextUnder(tester, DifferenceRegion.regionKey);
+      expect(closeShown, contains('very close'),
+          reason: 'AC-2 control: the "very close" verdict is rendered');
     });
 
     acTestWidgets(
