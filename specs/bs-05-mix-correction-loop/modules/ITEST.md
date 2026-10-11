@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1, ITEST-2, ITEST-3 done (harness + all 10 ACs pending + red baseline); next ITEST-4 (test review, G-2)
+**Status:** In progress — ITEST-1/2/3 done; ITEST-4 packet assembled + full regression green, ⏸ Awaiting review (G-2 awaiting decision)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/correction_test.dart`, `integration_test/correction_harness.dart`, `integration_test/bs05/pending.dart`; reuses `integration_test/fakes/` (`fake_capture_source.dart`, `fake_speech.dart`, `fake_haptics.dart`)
 **Depends on:** all shell phases (CORRECT-1, LOOP-2, SCREEN-1) · **Blocks:** every behaviour phase (via the pending tests they un-pend) and G-2
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,454,576 | 20m 21s |
 | 2 | acceptance-tests | AC-1, AC-7, AC-8, AC-9, AC-10 (pending) | ✅ Done | 4,978,132 | 18m 00s |
 | 3 | acceptance-tests | AC-2, AC-3, AC-4, AC-5, AC-6 (pending) | ✅ Done | 6,375,988 | 20m 29s |
-| 4 | test-review | — (G-2) | ⬜ Todo | | |
+| 4 | test-review | — (G-2) | ⏸ Awaiting review | 3,442,451 | 16m 03s |
 
 ## Interface reconciliation
 
@@ -47,6 +47,37 @@
 - **Kind:** test-review
 - **Tasks:** assemble the review packet (the 10 AC tests + guards, the grade grid, the red baseline, the augmentation schedule); run the full regression (analyze; unit; coverage; integration default + run-pending under the lock). A human decides **G-2**. Approval flips ITEST-4 done and opens the behaviour stage; "changes requested" becomes ITEST change phases + a fresh review.
 - **Exit criteria:** packet complete; regression green; **G-2** recorded by a human.
+
+### Review packet (ITEST-4) — for G-2
+
+**What this is:** the complete bs-05 acceptance suite put in front of a human before any correction behaviour is coded. Ten AC tests (one per AC), each *pending* and red-baselined against the wired shells, plus the harness/guard scaffold. Approving **G-2** opens the behaviour stage (LOOP-3 enabler first, then CORRECT-2/3/4 serial ∥ LOOP-4 ∥ LOOP-5/6 serial); "changes requested" turns each item into an ITEST change phase and a fresh review.
+
+**Look at first:** (1) **AC-9** — the honest-provenance promotion is the loop's one irreversible act; confirm the test rejects promoting *without* the painter's own measured swatch. (2) **AC-2 / AC-3** — the CVD-first "value leads" presentation and the exact verdict words "noticeably off"/"very close" (G-4(b)). (3) **AC-4** — that the correction is judged *physically* (adding the paint reduces the independently-recomputed ΔE00), not against a pinned number (G-4(a)). (4) the one **B pending CORRECT-4** (AC-2) and its augmentation row.
+
+**Real vs faked:** the whole app is assembled through `buildApp` with a `CorrectionEntry` — real capture path, `CorrectionEngine`, `MixingEngine.forward`, `deltaE00`, controller, screen, routing, `Provenance`, `SampleSource`. Faked (infrastructure only): `FakeCaptureSource` (configured ground-truth scene), `FakeSpeech`, `FakeHaptics`. Every scenario's ΔE00 is graded against an **independent** in-harness CIEDE2000 (`referenceDeltaE00`, the five Sharma–Wu–Dalal pairs reproduced to 1e-4), never the product metric — so no AC grades the implementation against itself.
+
+| AC | Test | Given (built via public flows → checked) | When | Then (exact) + Rejects |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_CheckPhotographsAndCompares` | Open Correction on `SAMPLE_DEEP_OLIVE` + `RECIPE_DEEP_OLIVE`, scene `SCENE_OFF`; asserted `target` set, `mixedSwatch`/`difference` null, E26 present | tap "Check my mix" (E26) | `mixedSwatch` is a measured `Sample` **and** `difference.deltaE00` `closeTo(referenceDeltaE00, 0.1)` (10.06 > tol). **Rejects:** doesn't photograph; photographs but no compare; target-vs-itself (≈0) |
+| AC-2 | `TestAC02_DeltaEAndVerdict` | a checked mix on `SCENE_OFF`; asserted `difference` present | the comparison is shown | `difference.deltaE00` `closeTo(referenceDeltaE00, 0.1)` **and** verdict **"noticeably off"** rendered. **Rejects:** ΔE absent; constant verdict (decisive within-tol "very close" control is the CORRECT-4 augmentation) |
+| AC-3 | `TestAC03_ValueLeadingDecomposition` | the `SCENE_OFF` checked mix (measured L≈36 vs target 42; hue toward green); `difference` present | the comparison is shown | the **leading** reading is value — **"too dark by 6"** — then hue **"shifted toward green"**. **Rejects:** leads with hue; wrong sign; wrong hue family |
+| AC-4 | `TestAC04_ConcreteCorrection` | the `SCENE_OFF` checked mix + `RECIPE_DEEP_OLIVE` + `PALETTE_MY_PAINTS`; `difference` present | the correction is shown | `correction` names **Titanium White** with a positive amount **and** adding it to the recipe reduces the **real** `forward`-predicted ΔE00 (independent reference, in-test control). **Rejects:** no white / a darkening paint; a paint outside the palette; an ΔE-increasing addition |
+| AC-5 | `TestAC05_TouchOf` | a checked mix on `SCENE_OCHRE_TRACE` whose best addition of Yellow Ochre is sub-trace (< 0.02); addition fraction asserted below threshold | the correction is shown | the Yellow Ochre adjustment renders **"a touch of"** + a technique note, not a measured part. **Rejects:** a numeric part; no "a touch of"; the trace silently dropped |
+| AC-6 | `TestAC06_WithinTolerance` | a checked mix on `SCENE_CLOSE`; `difference.deltaE00 ≤ 2` (0.96) asserted | the comparison is shown | verdict **"very close"** **and** `correction` empty / no correction shown (after settle). **Rejects:** suggests a correction anyway; verdict not "very close"; tolerance ignored |
+| AC-7 | `TestAC07_SpeakCorrection` | the `SCENE_OFF` checked mix with a computed correction; `FakeSpeech` empty; correction present asserted | tap Speak correction (E27) | `FakeSpeech` has **exactly one** utterance stating the difference **and** the paint(s) to add. **Rejects:** speaks nothing; omits paints; omits difference; multiple utterances |
+| AC-8 | `TestAC08_RephotographRechecks` | the `SCENE_OFF` checked mix showing a difference; reconfigure to `SCENE_CLOSER` (correction applied) | re-photograph (E28) | the new swatch is re-measured (raw L `closeTo(39, 1.0)`; stale L36 fails) **and** `difference.deltaE00` strictly decreases (4.95 < 10.06). **Rejects:** no-op; doesn't re-measure; stale verdict |
+| AC-9 | `TestAC09_SaveConfirmed` | a checked, satisfactory mix (`SCENE_CLOSE`, within tol, measured swatch); asserted measured + within tolerance | save as confirmed (E29) | target promoted to tier `confirmed`, carries **"Confirmed — you measured this"** (via `note`, G-4(d)) **and** the measured swatch appended as evidence in `SampleSource`. **Rejects:** stays measured/estimated; no note; **promotes without the painter's photographed swatch** (in-test honest-provenance control) |
+| AC-10 | `TestAC10_ConfirmedInReadout` | a saved confirmed mix (AC-9 flow); `SampleSource` holds the confirmed sample | the value is shown in a later readout (`router.toReadout`) | the readout's `ProvenanceRegion`/badge carries **"…you measured this"**. **Rejects:** shows the old provenance; label not the confirmed phrasing; the note lost |
+
+**Red baseline** (run-pending, `BS05_RUN_PENDING=true`): **12 pass / 10 fail — every failure clean** (a Then or a Given precondition naming the owning phase; no compile errors, panics or harness errors — every type/field the tests touch exists in `lib/`). Per-test rows in the *Red baseline* table below. Owners: AC-1→LOOP-3; AC-2/AC-3→CORRECT-2; AC-4/AC-5→CORRECT-3; AC-6→CORRECT-4; AC-7→LOOP-4; AC-8→LOOP-5; AC-9/AC-10→LOOP-6.
+
+**Augmentation schedule** (one open row): `TestAC02` is *limited* — one off-reading cannot show the verdict *tracks* distance (a constant "noticeably off" would pass) — closed by **CORRECT-4**, which adds the within-tolerance "very close" control. See the *Test augmentations* table.
+
+**Grade grid:** `behavior-test-completeness-bs-05-mix-correction-loop.md` — **24 rows = 23×A + 1 (AC-2 B pending CORRECT-4)**. The one B is the scheduled pending augmentation, not a defect; no other B. The test-review preconditions permit *B pending <phase>* with an augmentation row as an all-A-equivalent state.
+
+**Full regression (this phase, ITEST-4 @ `65f2662`):** `flutter analyze` **clean**; unit `flutter test --coverage` **632 pass**; coverage gate `dart run tool/coverage_gate.dart main` **100% on all 14 touched `lib/` files**; **full cross-feature integration suite** (`flutter test integration_test/ -d 5AB9D06D…`, under the verify lock) **98 pass / 10 skipped — All tests passed** (the 10 skipped are the bs-05 pending ACs; every shipped feature green — readout/harness/recipes/capture/comparison + bs-05 smoke & guards); **bs-05 run-pending** (`--dart-define=BS05_RUN_PENDING=true`) **12 pass / 10 fail, every failure clean** (a Then or an owner-naming Given precondition; no compile errors/panics/harness errors) — the unchanged red baseline.
+
+**Decision:** record G-2 with `/feature-next-phase --gate bs-05-mix-correction-loop G-2 approved | "<changes>"`.
 
 ## Red baseline  <!-- filled by ITEST-2/3 -->
 
