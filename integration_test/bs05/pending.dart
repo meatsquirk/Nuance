@@ -50,7 +50,7 @@ const Map<String, String> pendingACs = {
   'AC-5': 'CORRECT-3', // small correction → "a touch of"
   'AC-6': 'CORRECT-4', // within tolerance → "very close", no correction
   'AC-7': 'LOOP-4', // speak the correction (E27)
-  'AC-8': 'LOOP-5', // re-photograph re-checks (E28)
+  // AC-8 un-pended by LOOP-5 (re-photograph re-checks the swatch — E28).
   'AC-9': 'LOOP-6', // save confirmed → promote provenance (E29)
   'AC-10': 'LOOP-6', // a confirmed value shows its provenance in later readouts
 };

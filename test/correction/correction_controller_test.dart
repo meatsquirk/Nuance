@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
+import 'package:paint_color_assistant/capture/source/frame.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/compare/difference.dart' show deltaE00;
 import 'package:paint_color_assistant/compare/sample_source.dart';
@@ -57,6 +60,28 @@ CorrectionController _controller({
 const _offScene = SceneSpec(
   groundTruth: ColorCoordinates(lightness: 36, a: -12.2, b: 27.4),
 );
+
+/// A corrected-mix scene sitting much nearer [_olive] than [_offScene], so a
+/// re-photograph of it reads a smaller distance (the painter adjusted the mix).
+const _closerScene = SceneSpec(
+  groundTruth: ColorCoordinates(lightness: 41, a: -6, b: 21),
+);
+
+/// A [SoftwareCaptureSource] whose live scene the test swaps between captures,
+/// so a re-photograph reads a different swatch than the first check (AC-8) —
+/// the unit-test analogue of the acceptance suite's `FakeCaptureSource`.
+class _RephotographSource extends SoftwareCaptureSource {
+  _RephotographSource(super.scene);
+
+  SceneSpec? _next;
+
+  /// Stages [scene] for the *next* capture, leaving earlier captures untouched.
+  void rephotographAs(SceneSpec scene) => _next = scene;
+
+  @override
+  Stream<Frame> get frames =>
+      _next == null ? super.frames : SoftwareCaptureSource(_next!).frames;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -148,10 +173,71 @@ void main() {
       });
     });
 
-    group('actions still inert until their phase', () {
-      test('rephotograph throws until LOOP-5', () {
-        expect(() => _controller().rephotograph(), throwsUnimplementedError);
+    group('rephotograph (LOOP-5, AC-8)', () {
+      CorrectionController sourceController(CaptureSource source) =>
+          CorrectionController(
+            captureSource: source,
+            target: _olive,
+            currentMix: _mix,
+            paletteSource: const InMemoryPaletteSource(),
+            correctionEngine: const SubtractiveCorrectionEngine(),
+          );
+
+      test(
+          're-measures a fresh swatch and re-reads the difference, replacing the '
+          'prior reading with the new scene', () async {
+        final source = _RephotographSource(_offScene);
+        final controller = sourceController(source);
+        await controller.checkMix();
+        final firstSwatch = controller.state.mixedSwatch;
+        final firstDelta = controller.state.difference!.deltaE00;
+        expect(firstSwatch, isNotNull, reason: 'the first check photographs it');
+
+        // The painter adjusts the mix; the swatch now reads closer to target.
+        source.rephotographAs(_closerScene);
+        var notified = 0;
+        controller.addListener(() => notified++);
+
+        await controller.rephotograph();
+
+        final swatch = controller.state.mixedSwatch;
+        expect(swatch, isNotNull,
+            reason: 'the re-photograph re-measures the swatch');
+        expect(swatch!.provenance.tier, ProvenanceTier.measured,
+            reason: 'a re-photographed swatch is a measured reading');
+        expect(swatch.coordinates, isNot(firstSwatch!.coordinates),
+            reason: 'the re-measured swatch is the new scene, not the first');
+        final difference = controller.state.difference;
+        expect(difference, isNotNull,
+            reason: 'the re-photograph re-compares to the target');
+        expect(difference!.deltaE00,
+            deltaE00(swatch.coordinates, _olive.coordinates),
+            reason: 'the re-checked distance is read through the engine');
+        expect(difference.deltaE00, lessThan(firstDelta),
+            reason: 'the closer swatch reads a smaller distance (AC-8)');
+        expect(controller.state.correction, isNull,
+            reason: 'a fresh photo clears any prior correction until CORRECT-3');
+        expect(notified, greaterThanOrEqualTo(1),
+            reason: 're-photograph notifies the screen and the read endpoint');
       });
+
+      test('leaves the state untouched when the feed yields no frame', () async {
+        final controller = sourceController(
+          _RephotographSource(const SceneSpec(
+            groundTruth: ColorCoordinates(lightness: 36, a: -12.2, b: 27.4),
+            frames: [],
+          )),
+        );
+
+        await controller.rephotograph();
+
+        expect(controller.state.mixedSwatch, isNull);
+        expect(controller.state.difference, isNull);
+        expect(controller.state.hasChecked, isFalse);
+      });
+    });
+
+    group('actions still inert until their phase', () {
       test('speakCorrection throws until LOOP-4', () {
         expect(() => _controller().speakCorrection(), throwsUnimplementedError);
       });

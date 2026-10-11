@@ -1,6 +1,6 @@
 # Module LOOP — correction loop controller + wiring
 
-**Status:** In progress — LOOP-1/LOOP-2/LOOP-3 done; LOOP-5 (AC-8) and LOOP-6 (AC-9/10) now startable (both depend on LOOP-3, serial with each other on the controller); LOOP-4 (AC-7) waits on CORRECT-3
+**Status:** In progress — LOOP-1/LOOP-2/LOOP-3/LOOP-5 done (AC-8 un-pended + green); LOOP-6 (AC-9/10) startable (depends on LOOP-3); LOOP-4 (AC-7) waits on CORRECT-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/correction_controller.dart`, `lib/correction/correction_state.dart`, `lib/correction/correction_read_endpoint.dart`, `lib/correction/correction_speech.dart`, the `CorrectionEntry`/`CorrectionHomeScreen` branch in `lib/app/build_app.dart`, `AppRouter.toCorrection` in `lib/app/router.dart`, the provenance promotion (via `Sample.copyWith` + `EvidencePoint`; the confirmed-tier label per G-4(d))
 **Depends on:** bs-02 capture (`CaptureController`/`CaptureSource`), bs-03 `deltaE00`/`SampleSource`, domain `Provenance`/`Sample`/`EvidencePoint`, `Speech`, CORRECT (engine) · **Blocks:** SCREEN-1, SIGNOFF-1
@@ -13,7 +13,7 @@
 | 2 | shell | — | ✅ Done | 11,995,702 | 19m 40s (52m 25s) |
 | 3 | behavior | AC-1 (*enabler*) | ✅ Done | 15,659,660 | 29m 27s |
 | 4 | behavior | AC-7 | ⬜ Todo | | |
-| 5 | behavior | AC-8 | ⬜ Todo | | |
+| 5 | behavior | AC-8 | ✅ Done | 7,036,729 | 28m 15s |
 | 6 | behavior | AC-9, AC-10 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -256,3 +256,63 @@ difference from the target, and E26 "Check my mix" is wired to it.
   waits on CORRECT-3. In-feed draining idiom reused from LOOP-3's `checkMix` for LOOP-5's `rephotograph`.
 - **Known gaps / notes:** the `const`-constructor coverage flake still applies — re-run `--coverage` once if
   the gate flags an untouched file. Always pass `-d <booted-udid>` to the integration suite.
+
+### Result — LOOP-5
+
+The re-photograph loop is live (AC-8): `CorrectionController.rephotograph` re-drives the camera to a fresh
+measured swatch and re-reads its difference from the target, replacing the prior reading, and E28
+"Re-photograph swatch" is wired to it. Run in **parallel** (worktree `Nuance-bs05-LOOP5`, branch
+`phase/bs-05-mix-correction-loop/LOOP-5`, based at the bs-05 tip `a4f97b7`) while CORRECT-2 held the engine
+strand — disjoint ownership (controller + rephotograph region vs engine + difference/words).
+
+- **Landed (`lib/`):** `correction_controller.dart` — `rephotograph()` mirrors `checkMix`'s bs-02 capture idiom
+  (fresh `CaptureController`, drain the finite feed via a zero-delay timer, `commit()` the measured swatch),
+  then `_emit`s a new state with the re-measured `mixedSwatch` + a fresh `correctionEngine.difference(...)`;
+  a frameless feed leaves the state untouched; like the check it reads the difference only and clears any prior
+  `correction` (a fresh photo invalidates it — CORRECT-3 will add the correction to both paths). `checkMix` was
+  **not** touched, so the merge with CORRECT-3's `checkMix` extension stays clean. `regions/rephotograph_region.dart`
+  — E28 `TextButton` enabled, `onPressed: () => controller.rephotograph()`, now takes the controller.
+  `correction_screen.dart` — passes the controller to `RephotographRegion` (line change only).
+- **Scope note (shared assembly file):** `correction_screen.dart` is the shared region-assembly surface both
+  strands wire into; LOOP-5 touched only its `RephotographRegion(...)` line (CORRECT-2 touches the
+  `DifferenceRegion(...)` line), different lines → clean merge.
+- **Gate:** `flutter analyze` clean; unit **634 green** (`flutter test --coverage`, +1 net: controller −1 inert
+  throw-test +2 rephotograph tests, screen RephotographRegion test now taps the enabled control); coverage gate
+  **100% on all touched files** (`dart run tool/coverage_gate.dart main` — reports the 14 correction files vs
+  `main`; this phase changed `correction_controller.dart`, `regions/rephotograph_region.dart`,
+  `correction_screen.dart`). **Acceptance (iPhone 17 sim `5AB9D06D…` under the verify lock):** AC-8 un-pended in
+  `bs05/pending.dart`; `TestAC08_RephotographRechecks` green — run-pending **14 pass / 8 fail** (was 13/9; AC-8
+  flipped green, AC-2…AC-7/AC-9/AC-10 still fail cleanly), default **100 pass / 8 skip** (was 99/9; no regression
+  across bs-01…bs-04 + AC-1). **Grade:** AC-8 retains its ITEST-2 **A** — `TestAC08`'s body is unchanged; the
+  only acceptance-file edits were the standard un-pend bookkeeping (the `pending gate` group's `unpended` set
+  `{'AC-1'}`→`{'AC-1','AC-8'}` and dropping the AC-8 row in `bs05/pending.dart`), never a weakening. No
+  augmentation assigned to LOOP-5. **Fix passes: 1/3** (first run-pending flagged the `pending gate` guard
+  "AC-8 must still have a pending entry" — expected un-pend bookkeeping; fixed by adding AC-8 to `unpended`; no
+  product change).
+- **Tokens / Time:** 7,036,729 · 28m 15s.
+
+### Checkpoint / Handoff — LOOP-5
+
+- **Frozen for the next phases:**
+  - `CorrectionController.rephotograph()` re-drives capture → sets `state.mixedSwatch` (measured) +
+    `state.difference` and notifies through `_emit`, replacing the prior reading; it reads the difference only
+    and leaves `state.correction` null (same as `checkMix` at this tip).
+  - `RephotographRegion({required CorrectionController controller})` — E28 enabled, wired to `rephotograph()`.
+- **⚠ Carry-forward for CORRECT-3 (the merge):** CORRECT-3 extends `checkMix` to also compute + store
+  `state.correction` (per LOOP-3's handoff). `rephotograph` deliberately duplicates the capture idiom rather
+  than share a helper, to keep this parallel branch's merge with CORRECT-3's `checkMix` edit clean. **Once both
+  land, a follow-up should extend `rephotograph` the same way (compute the correction) and may unify the two via
+  a shared private `_photographAndCheck()` helper** — AC-8 does not read `correction`, so LOOP-5 did not need it.
+- **⚠ Merge note (LOOP-6, serial on the controller):** LOOP-6 (`saveConfirmed`) also edits
+  `correction_controller.dart`; it lands after LOOP-5 on its own branch and merges the `saveConfirmed` stub
+  region — disjoint from the `rephotograph` method body.
+- **Verification commands:** unchanged (export PATH; `flutter analyze`; `flutter test --coverage`;
+  `dart run tool/coverage_gate.dart main`; integration under the verify lock on the iPhone 17 sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; bs-05 run-pending via
+  `flutter test integration_test/correction_test.dart -d <sim> --dart-define=BS05_RUN_PENDING=true`).
+- **Next phases:** LOOP-6 (AC-9/AC-10) startable now (depends on LOOP-3); CORRECT-2 → CORRECT-3 → CORRECT-4 on
+  the engine strand (CORRECT-2 was in flight this session); LOOP-4 (AC-7) after CORRECT-3.
+- **Known gaps / notes:** the `const`-constructor coverage flake still applies — re-run `--coverage` once if the
+  gate flags an untouched file. Always pass `-d <booted-udid>` to the integration suite. This phase's branch
+  must be merged into `feat/bs-05-mix-correction-loop` and rolled up (`--reconcile`) before the master plan
+  reflects it.
