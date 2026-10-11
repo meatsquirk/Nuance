@@ -659,11 +659,10 @@ void main() {
     });
 
     // AC-7 — opening a project shows its notes and source photo (owner
-    // PROJECT-4). Limited at this phase: "the source photo is shown" can only be
-    // asserted as *an image is rendered* (`find.byType(Image)`) until PROJECT-4
-    // mounts the open-project view — tying the shown photo to the project's
-    // source bytes (a keyed/scoped widget over `harborPhotoRef`/`harborPhotoBytes`)
-    // is the PROJECT-4 augmentation. Graded *B pending PROJECT-4*.
+    // PROJECT-4). Augmented here (PROJECT-4) to close the ITEST-3 limit: the
+    // shown photo is scoped to the keyed open-project view and tied to the
+    // project's stored bytes (`harborPhotoRef` → `harborPhotoBytes`), so a
+    // decorative or wrong-bytes image no longer passes.
     acTestWidgets(
         'AC-7', 'opening a project shows its note and source photo',
         (tester) async {
@@ -692,11 +691,31 @@ void main() {
           reason: 'opening makes it the opened project (PROJECT-4)');
       expect(harness.openedProject?.sourcePhotoRef, harborPhotoRef,
           reason: 'the opened project carries its source-photo reference');
-      expect(find.textContaining(harborNote), findsWidgets,
-          reason: 'the note is shown in the open-project view (PROJECT-4)');
-      expect(find.byType(Image), findsWidgets,
+      expect(
+        find.descendant(
+          of: find.byKey(ProjectsRegion.openProjectViewKey),
+          matching: find.textContaining(harborNote),
+        ),
+        findsWidgets,
+        reason: 'the note is shown in the open-project view (PROJECT-4)',
+      );
+      // The source photo is shown in the open-project view — and it is the
+      // project's *own* stored photo (augmentation): scope the image to the
+      // keyed open-project view and assert its bytes are the ones stored under
+      // `harborPhotoRef`, so a decorative or wrong-bytes image fails.
+      final photo = find.descendant(
+        of: find.byKey(ProjectsRegion.openProjectViewKey),
+        matching: find.byType(Image),
+      );
+      expect(photo, findsOneWidget,
           reason: 'the source photo is shown in the open-project view '
               '(PROJECT-4 renders the stored bytes)');
+      final image = tester.widget<Image>(photo).image;
+      expect(image, isA<MemoryImage>(),
+          reason: 'the photo is rendered from the stored bytes, not an asset');
+      expect((image as MemoryImage).bytes, harborPhotoBytes,
+          reason: 'the shown photo is the project\'s own source bytes '
+              '(tied to harborPhotoRef → harborPhotoBytes)');
     });
 
     // AC-8 — a note kept with a project is retained when it is reopened (owner
@@ -840,12 +859,10 @@ void main() {
       // Seeded with AC-1..AC-11 (DATA-1); each behaviour phase deletes its AC's
       // row here as it un-pends it, so this set shrinks by one per delivered AC.
       // Un-pended so far: AC-4 (PALETTE-2), AC-2 + AC-3 (PALETTE-3),
-      // AC-1 (SCREEN-2), AC-11 (SCREEN-3), AC-5 (PALETTE-4), AC-6 (PROJECT-3).
-      // Asserts exact contents (non-vacuous) and that every pending key is a
-      // real AC in AC-1..AC-11.
+      // AC-1 (SCREEN-2), AC-11 (SCREEN-3), AC-5 (PALETTE-4), AC-6 (PROJECT-3),
+      // AC-7 + AC-8 (PROJECT-4). Asserts exact contents (non-vacuous) and that
+      // every pending key is a real AC in AC-1..AC-11.
       const expected = {
-        'AC-7',
-        'AC-8',
         'AC-9',
         'AC-10',
       };
@@ -870,10 +887,10 @@ void main() {
       // run-pending passes, and a pending AC's default-skip is null-reason only
       // when not forced. (Reading the ambient mode made this fail under
       // --dart-define=BS06_RUN_PENDING=true; ITEST-2 records the fix.)
-      // AC-7 is a still-pending example (AC-1/AC-2/AC-3/AC-5/AC-6/AC-11 were
-      // un-pended by SCREEN-2 / PALETTE-3 / PALETTE-4 / PROJECT-3 / SCREEN-3).
-      expect(pendingSkipReason('AC-7', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-7', forceRunPending: true), isNull);
+      // AC-9 is a still-pending example (AC-1/2/3/5/6/7/8/11 were un-pended by
+      // SCREEN-2 / PALETTE-3 / PALETTE-4 / PROJECT-3 / PROJECT-4 / SCREEN-3).
+      expect(pendingSkipReason('AC-9', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-9', forceRunPending: true), isNull);
       // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);

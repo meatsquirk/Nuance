@@ -528,11 +528,18 @@ class PaletteHarness {
 
   /// Opens the project named [name] from the Projects list (E33, AC-7/AC-8).
   ///
-  /// Inert until PROJECT-4 wires the open control; `warnIfMissed` is off.
+  /// The projects list lives in the Projects view (SCREEN-2's E31 toggle), so
+  /// this first switches to it, then taps the named project's row — which
+  /// PROJECT-4 wires to open that specific project (the open control is
+  /// per-project, closing ITEST-1's `whenOpenProject(name)`-ignores-`name`
+  /// follow-on).
   Future<void> whenOpenProject(String name) async {
+    await whenSwitchToProjects();
     await tester.tap(
-      find.byKey(ProjectsRegion.openProjectKey),
-      warnIfMissed: false,
+      find.descendant(
+        of: find.byKey(ProjectsRegion.regionKey),
+        matching: find.text(name),
+      ),
     );
     await tester.pumpAndSettle();
   }

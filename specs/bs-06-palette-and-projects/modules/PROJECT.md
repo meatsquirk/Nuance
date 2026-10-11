@@ -1,6 +1,6 @@
 # Module PROJECT — projects
 
-**Status:** In progress — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler), PROJECT-3 ✅ (AC-6); PROJECT-4 startable, PROJECT-5/6 after PROJECT-4 (G-2 resolved)
+**Status:** In progress — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler), PROJECT-3 ✅ (AC-6), PROJECT-4 ✅ (AC-7+AC-8); PROJECT-5 (AC-9) startable, then PROJECT-6 (AC-10)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/projects/` (Project model, ProjectSource, ProjectController, read endpoint, confusion-pair flagging, PDF export), `lib/compare/sample_source.dart` (persistent write-side on the existing seam — bs-03/04-owned, coordinate), `pubspec.yaml` (pdf package)
 **Depends on:** DATA (store), reuses bs-03 `lib/a11y/cvd/confusion_check.dart` + injected `CvdProfile` · **Blocks:** SCREEN (renders project state)
@@ -12,7 +12,7 @@
 | 1 | shell | — | ✅ Done | 6,635,157 | 11m 41s |
 | 2 | behavior (enabler) | — | ✅ Done | 4,357,106 | 18m 54s |
 | 3 | behavior | AC-6 | ✅ Done | 9,896,853 | 23m 58s |
-| 4 | behavior | AC-7, AC-8 | ⬜ Todo | | |
+| 4 | behavior | AC-7, AC-8 | ✅ Done | 17,986,707 | 35m 50s |
 | 5 | behavior | AC-9 | ⬜ Todo | | |
 | 6 | behavior | AC-10 | ⬜ Todo | | |
 
@@ -123,8 +123,27 @@
 - **Tasks:** opening a project exposes its note + source photo; the note persists and is shown again after the project is closed and reopened.
 - **Acceptance gate:** un-pend AC-7, AC-8; suite green through AC-8; note round-trips across reopen (control: another project shows no note).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (AC-7 + AC-8):** `ProjectController.openProject(String projectId)` sets `openedProject` to the live working-list project (so a reopened project carries its retained note + source-photo reference, AC-8) and notifies; `StateError` on an unknown id. `ProjectsRegion` now renders an open flow: each project row is a tappable `GestureDetector` (keyed `projectRowKey(id)`) opening that project by id, the E33 `openProjectKey` button opens the first project (inert only when the list is empty), and a keyed `_OpenProjectView` (`openProjectViewKey`) shows the opened project's note verbatim plus its source photo — `_SourcePhoto` loads the bytes from the injected `SourcePhotoStore` (`AppScope.of(context).sourcePhotoStore`) by `sourcePhotoRef` and renders `Image.memory` (D-10: the project keeps only the reference; `errorBuilder` swallows the suite's non-decodable placeholder bytes so the `Image` still mounts). `E34` export stays inert (PROJECT-6).
+- **Cross-module touches (recorded):** besides the PROJECT-owned `project_controller.dart`, this phase edited `lib/palette/projects_region.dart` (SCREEN-owned — mounts the open-project view; the plan Files listed only the controller) and the harness `integration_test/palette_harness.dart` (`whenOpenProject(name)` now switches to the Projects view and taps the **named** project's row, closing ITEST-1's "`name` ignored" follow-on — SCREEN-2's E31 toggle means the list is no longer mounted in the default view). Sequential single-session run, so no claim conflict.
+- **Augmentation (TestAC07 → PROJECT-4, closed):** AC-7's photo Then was a bare unscoped `find.byType(Image)` (B pending). Now scoped to `openProjectViewKey` and tied to the stored bytes: `isA<MemoryImage>()` + `(image as MemoryImage).bytes == harborPhotoBytes` — rejects a decorative/wrong-bytes image; the note Then is likewise scoped. Discriminates against pre-PROJECT-4 code (no open-project view existed). Row marked ✅.
+- **Acceptance (sim iPhone 17, under the verify lock):** AC-7 + AC-8 un-pended (deleted their `bs06/pending.dart` rows; scaffold-guard `expected` set → `{AC-9, AC-10}`; still-pending example moved to AC-9). **Default run 21 passed / 2 skipped** (AC-9/AC-10 pending). **Run-pending:** AC-7 ✅, AC-8 ✅ green; AC-9 red on its own Then (`confusionPairs == []`, PROJECT-5) and AC-10 red on its own Then (`lastExport == null`, PROJECT-6) — the still-pending red baseline preserved, and AC-10 now fails on PROJECT-6's Then rather than the open precondition (PROJECT-4 wired opening, so AC-10's "has opened the project" Given is now real).
+- **Unit + coverage:** `flutter analyze` clean. `flutter test --coverage` → **741 passing** (+7: `openProject` found/retained/StateError; four open-project-view widget tests covering note+photo, E33-first, no-note/no-photo, absent-bytes). Coverage gate vs `main`: **100%** line on all 27 touched `lib/` files (incl. `lib/palette/projects_region.dart` + `lib/projects/project_controller.dart`).
+- **Grade gate:** independent fresh-subagent adversarial re-grade (given the full prior grid + G1–G6) of all 9 un-pended ACs — **9×A, 0×B — PASS**. **AC-7 cleared B pending PROJECT-4 → A** via the TestAC07 augmentation; AC-8 unregressed and G6-distinct; AC-1/2/3/4/5/6/11 unregressed (AC-6 specifically not broken by the tappable-row/open-view change). AC-4 keeps its standing uniform-measured-dataset data caveat (not a G-rule violation).
+- **Fix passes:** 0/3 — analyze, unit, coverage and both acceptance runs passed on the first full run. (An initial acceptance run failed to load the test because `FNP_COORD_REPO` pointed `coord.sh` at the main checkout, not the worktree — an invocation/cwd error, fixed by pointing it at the worktree; the shared git common-dir keeps the verify lock the same. Not a code fix pass.)
+- **Closed by:** unit + coverage gate; acceptance suite green (default) with AC-7/AC-8 green under run-pending and the still-pending baseline preserved; grade gate all-A.
+- Tokens: see master ledger (PROJECT-4 row). **Phase total: 17,986,707 tokens, 35m 50s active (35m 50s wall).**
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces (new this phase):**
+  - `ProjectController.openProject(String projectId)` → sets `openedProject` to the live working-list project (retained note + `sourcePhotoRef`), notifies; `StateError` if the id is absent. `openedProject` now returns that project (was always null).
+  - `ProjectsRegion.openProjectViewKey` → `Key('palette-open-project-view')`: the open-project view, scope for the shown note + photo. Project rows are tappable (`projectRowKey(id)`) and open by id; `openProjectKey` (E33) opens the first project. The open-project view reads the source photo from `AppScope.of(context).sourcePhotoStore` by `sourcePhotoRef` and renders `Image.memory` (with `errorBuilder`).
+  - Harness: `whenOpenProject(name)` switches to the Projects view and taps the named row (per-project open).
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/palette_test.dart -d <udid>` (± `--dart-define=BS06_RUN_PENDING=true`) via `coord.sh with-lock BS-06 <phase>` — **set `FNP_COORD_REPO` to the worktree (`/Users/matthew.quirk/Nuance-bs06`), not the main checkout**, or `coord.sh` runs the test from main. Flutter SDK `/Users/matthew.quirk/development/flutter/bin`; sim udid used: `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (iPhone 17).
+- **Known gaps / deferred:** `confusionPairs`/`lastExport` still shell state. **PROJECT-5** (AC-9) is next — iterate the opened project's saved-sample pairs through the injected bs-03 `DichromatConfusionCheck` + `CvdProfile` and render the flagged pairs + a "check by value" warning (its augmentation TestAC09 adds the non-flag control); then **PROJECT-6** (AC-10) produces `lastExport` (adds the pdf package). Both build on the open flow this phase landed — AC-9/AC-10's `whenOpenProject` Given is now real.
+- **Next phase should:** run PROJECT-5 (AC-9). One phase per session.
 
 ## Phase 5 — AC-9 confusion pair flagged
 

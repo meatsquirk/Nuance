@@ -265,4 +265,57 @@ void main() {
       );
     });
   });
+
+  group('openProject (PROJECT-4)', () {
+    test('opens a project by id, making it the opened project and notifying',
+        () {
+      const study = Project(id: 'old-study', name: 'Old Study');
+      final controller = ProjectController(
+        source: const InMemoryProjectSource(catalogue: [_harbor, study]),
+      );
+      expect(controller.openedProject, isNull);
+
+      var notified = 0;
+      controller.addListener(() => notified++);
+
+      controller.openProject('p-harbor');
+
+      expect(controller.openedProject, same(_harbor));
+      expect(controller.openedProject!.name, 'Harbor at Dusk');
+      expect(notified, 1);
+    });
+
+    test('reopens a project with its retained note and source photo (AC-8)',
+        () async {
+      final store = InMemoryPersistentStore();
+      final seed = PersistentProjectSource(store);
+      await seed.load();
+      final writer = ProjectController(source: seed);
+      await writer.createProject(id: 'p1', name: 'Harbor');
+      const note = 'Keep the hull and wall values 2 steps apart.';
+      await writer.saveNote('p1', note);
+      final photos = InMemorySourcePhotoStore();
+      await writer.attachSourcePhoto(
+          'p1', photos, Uint8List.fromList(const [1, 2, 3, 4]));
+
+      // A fresh controller over the same store — the "reopen" after a restart.
+      final reopened = PersistentProjectSource(store);
+      await reopened.load();
+      final controller = ProjectController(source: reopened);
+
+      controller.openProject('p1');
+
+      expect(controller.openedProject!.note, note,
+          reason: 'the saved note is retained when the project is reopened');
+      expect(controller.openedProject!.sourcePhotoRef, isNotNull,
+          reason: 'the source-photo reference is retained');
+    });
+
+    test('opening an unknown project id throws a StateError', () {
+      final controller =
+          ProjectController(source: const InMemoryProjectSource());
+      expect(() => controller.openProject('missing'), throwsStateError);
+      expect(controller.openedProject, isNull);
+    });
+  });
 }

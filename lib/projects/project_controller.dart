@@ -30,10 +30,10 @@ typedef ConfusionPair = ({Sample a, Sample b});
 /// and persisting through [PersistentProjectSource.saveProject] so the change
 /// survives a restart (an in-memory source keeps it in memory only, like
 /// `PaletteController`). The remaining observables stay shell state until their
-/// phase: PROJECT-3 computes the list summary (AC-6); PROJECT-4 opens a
-/// project's note and photo (AC-7/AC-8); PROJECT-5 fills [confusionPairs]
-/// (AC-9); PROJECT-6 produces [lastExport] (AC-10). No CVD, recipe or export
-/// math is done here.
+/// phase: **PROJECT-4** (this phase) opens a project's note and photo
+/// (AC-7/AC-8) through [openProject]; PROJECT-5 fills [confusionPairs] (AC-9);
+/// PROJECT-6 produces [lastExport] (AC-10). No CVD, recipe or export math is
+/// done here.
 class ProjectController extends ChangeNotifier {
   /// Creates the controller over [source], reading the projects it lists once at
   /// construction (a fresh install's source is empty — the shell default).
@@ -50,6 +50,8 @@ class ProjectController extends ChangeNotifier {
 
   List<Project> _projects;
 
+  Project? _openedProject;
+
   /// The painter's projects, in listing order (read-only). AC-6 renders each
   /// one's size, counts and last edit; PROJECT-3 computes that summary.
   List<Project> get projects => List<Project>.unmodifiable(_projects);
@@ -61,8 +63,12 @@ class ProjectController extends ChangeNotifier {
       [for (final project in _projects) ProjectSummary.of(project)];
 
   /// The project currently opened in the open-project view (AC-7/AC-8), or null
-  /// when none is open. PROJECT-4 drives opening; the shell has none open.
-  Project? get openedProject => null;
+  /// when none is open (the state before any [openProject] call).
+  ///
+  /// [openProject] sets it to the live working-list project, so its note and
+  /// source-photo reference are the retained ones (AC-8: a note saved on a
+  /// project is shown again when it is reopened).
+  Project? get openedProject => _openedProject;
 
   /// The confusable sample pairs flagged within the opened project (AC-9), or an
   /// empty list when none are (the shell's state). PROJECT-5 computes these.
@@ -72,6 +78,23 @@ class ProjectController extends ChangeNotifier {
   /// (AC-10), or null when nothing has been exported (the shell's state).
   /// PROJECT-6 produces it through a faked file sink in tests.
   Uint8List? get lastExport => null;
+
+  /// Opens the project identified by [projectId] into the open-project view
+  /// (AC-7/AC-8), making it the [openedProject] and notifying listeners.
+  ///
+  /// The opened project is taken from the controller's live working list, so a
+  /// project seeded or edited through the persistent save flow is reopened with
+  /// its retained note and source-photo reference (AC-8). Throws a [StateError]
+  /// when no project carries [projectId].
+  void openProject(String projectId) {
+    final project = _projects.firstWhere(
+      (project) => project.id == projectId,
+      orElse: () =>
+          throw StateError('no project with id "$projectId" to open'),
+    );
+    _openedProject = project;
+    notifyListeners();
+  }
 
   /// Creates a new project [id]/[name] (optionally with a free-text [size],
   /// G-4), stamps it edited now, appends it to [projects] and persists it.

@@ -257,3 +257,42 @@ verified unaffected by PROJECT-3's `projects_region` / `project_controller` /
 `'1 recipe'` substring is subsumed by `'1 recipes'` — is a cosmetic pluralisation
 grain gap, not a G-rule failure, and the count value and swap-rejection still
 hold). No test downgraded from its prior grade.
+
+---
+
+## Phase graded: PROJECT-4 (behavior — AC-7 + AC-8 un-pended)
+
+Fresh, independent, adversarial re-grade (I did not write these tests) of every
+currently un-pended bs-06 AC — **AC-7** and **AC-8** (just un-pended by
+PROJECT-4, graded hardest), plus **AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-11**
+for regression. AC-9/AC-10 remain pending (`bs06/pending.dart`) and were not
+graded. Method: read the authoritative spec, the AC tests + harness, and the
+PROJECT-4 production code (`ProjectController.openProject`,
+`ProjectsRegion._OpenProjectView`/`_SourcePhoto`, the tappable rows, the keyed
+`openProjectViewKey`), and the `FakeFileSink`; verified every Given/When/Then
+against the real widget tree and confirmed the AC-7 augmentation discriminates
+against pre-PROJECT-4 code. I ran nothing and edited nothing but this grid.
+Prior sections above are unchanged.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-7** `opening a project shows its note and source photo` | A (clears prior *B pending PROJECT-4*) | The TestAC07 augmentation closes the ITEST-3 bare-`find.byType(Image)` limit. **G1** Givens checked through the read endpoint before the When: `project.note==harborNote`, `project.sourcePhotoRef==harborPhotoRef`, the photo round-trips (`photos.read(harborPhotoRef)==harborPhotoBytes`), and the `openedProject==null` before/after control. **G2** the configured Given answers: `openProject` sets `_openedProject` to the live working-list project, and `_SourcePhoto` renders `Image.memory` from `store.read(sourcePhotoRef)` — the project's own stored bytes, not a literal. **G4 at grain/value:** the note is scoped to `openProjectViewKey` (`find.descendant(of: openProjectViewKey, find.textContaining(harborNote))`), and the photo is (a) scoped to `openProjectViewKey` → `findsOneWidget`, (b) `isA<MemoryImage>()` (rejects an `Image.asset`/decorative asset image), (c) `(image as MemoryImage).bytes == harborPhotoBytes` — verified the `FakeFileSink.read` returns a value-equal `Uint8List.fromList` copy and the `equals` matcher compares element-wise, so the bytes assertion holds by value. **G5 discriminates:** scoping + MemoryImage-type + exact-bytes reject a decorative image, a wrong-bytes image, and an asset image; and against pre-PROJECT-4 code (no open-project view, `openProjectViewKey` absent, `openProject` inert) the scoped `findsOneWidget` and the `openedProject?.name` Then both fail — the augmentation genuinely requires PROJECT-4. **G6** AC-7 only (note + photo of the opened project). No residual. |
+| **AC-8** `a note kept with a project is retained when it is reopened` | A (unchanged) | Not regressed by PROJECT-4. Still G4-tight — `openedProject?.note==harborNote` at the model grain **and** the verbatim rendered `find.textContaining(harborNote)`, with the `harborNote.isNotEmpty` guard closing the vacuous-`""` hole. `whenOpenProject` now taps the real per-project row (PROJECT-4 wired the per-project open, honouring the ITEST-1 docstring follow-on), so the When is a genuine open rather than an inert forward-drive. **G6 holds — distinct from AC-7:** AC-8 asserts only the retained note value (never the photo); AC-7 asserts note+photo. **Caveat (documented, unchanged):** "retained across reopen" is carried by `givenPalette`'s persistent seed→load round-trip, not an app-driven edit/close/reopen cycle — it tests "the exact persisted note is shown on open", still a distinct discriminating assertion → A. |
+| **AC-6** `the projects list shows each project size, counts and last edit` | A (unchanged) | Not regressed by PROJECT-4, which added the open-project view and made rows tappable in `projects_region.dart`. AC-6 never opens a project, so `openedProject==null` and no `_OpenProjectView` is rendered; the summary rows still render name/size/counts/last-edit under `projectRowKey` (the key now sits on the wrapping `GestureDetector`, and the scoped `find.descendant` Thens still resolve the row's `Text` children). Per-row scoping, the 6≠3 / 2≠1 count asymmetries and the Old-Study `not-today` control all hold. |
+| **AC-1** `switch between the My paints and Projects views` | A (unchanged) | Not regressed. PROJECT-4 changed only what `ProjectsRegion` renders *inside* its subtree (tappable rows + open-project view); `ProjectsRegion.regionKey` and the E31 view toggle are untouched, so the mutually-exclusive `if/else` presence/absence and both-ways control still hold. |
+| **AC-2** `each paint lists its identity and provenance badge` | A (unchanged) | Not regressed. `paint_list_region` / `paint_row` / `provenance_badge` and the keyed badge/medium widgets + differently-tiered control are entirely outside PROJECT-4's touched files. |
+| **AC-3** `the provenance legend explains the four confidence tiers` | A (unchanged) | Not regressed. Static legend copy, independent of the projects-region changes. |
+| **AC-4** `add a paint by choosing from the shipped dataset` | A (with caveat, unchanged) | Not regressed. `addPaintFromDataset` and the E32 picker are untouched by PROJECT-4. Same long-standing, non-blocking uniform-measured-dataset caveat (a data limit, not a G-rule violation). |
+| **AC-5** `selecting a palette re-points recipe search at it` | A (unchanged) | Not regressed. The recipe-controller / selector / `onPaletteSelected` wiring is in different files; PROJECT-4's `openProject` is additive and does not touch the palette/recipe surface the TestAC05 augmentation exercises. |
+| **AC-11** `the vision-profile card shows the estimate and opens the self-assessment` | A (unchanged) | Not regressed. `VisionProfileCard` + second-profile control are independent of the projects region / project controller changes. |
+
+**Counts: 9×A, 0×B pending — PASS (no unsanctioned B).** AC-7 clears from *B
+pending PROJECT-4* to a clean **A**: the TestAC07 augmentation ties the shown
+photo to the keyed open-project view and the project's own stored bytes
+(`harborPhotoRef → harborPhotoBytes`, value-equal) and scopes the note to that
+view too, rejecting a decorative / wrong-bytes / asset image and discriminating
+against pre-PROJECT-4 code (no open-project view existed). AC-8 is unregressed
+and remains G6-distinct from AC-7 (note value only, no photo). AC-1/2/3/4/5/6/11
+verified unaffected by PROJECT-4's `projects_region` / `project_controller`
+changes. **No augmentation remains owed by PROJECT-4** (TestAC07 is now closed).
+No test downgraded from its prior grade.

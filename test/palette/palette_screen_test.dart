@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
@@ -17,6 +19,7 @@ import 'package:paint_color_assistant/projects/project_controller.dart';
 import 'package:paint_color_assistant/projects/project_source.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
+import 'package:paint_color_assistant/store/source_photo_store.dart';
 
 PaletteController _paletteController({List<PaintPalette> catalogue = const []}) =>
     PaletteController(source: InMemoryPaletteSource(catalogue: catalogue));
@@ -28,16 +31,20 @@ Future<void> _pump(
   WidgetTester tester, {
   required PaletteController palette,
   required ProjectController project,
+  SourcePhotoStore? photos,
 }) {
   return tester.pumpWidget(
     // PaletteScreen reads the injected CvdProfile / router from the enclosing
     // AppScope (SCREEN-3 wires the vision-profile card), as the real assembly
-    // does; the suite's default deutan profile and router suffice here.
+    // does; the suite's default deutan profile and router suffice here. The
+    // open-project view reads the source-photo store from the same scope
+    // (PROJECT-4), so a photo test injects one here.
     AppScope(
-      dependencies: const AppDependencies(
-        colorScience: ColorScienceImpl(),
-        speech: NoopSpeech(),
-        haptics: NoopHaptics(),
+      dependencies: AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        sourcePhotoStore: photos,
       ),
       child: MaterialApp(
         home: PaletteScreen(
@@ -47,6 +54,26 @@ Future<void> _pump(
       ),
     ),
   );
+}
+
+/// A [SourcePhotoStore] whose [read] always returns [_bytes] (or null when none),
+/// so the open-project view's photo path can be exercised without the filesystem.
+class _StubPhotos implements SourcePhotoStore {
+  _StubPhotos(this._bytes);
+
+  final Uint8List? _bytes;
+
+  @override
+  Future<Uint8List?> read(String reference) async => _bytes;
+
+  @override
+  Future<String> save(Uint8List bytes) async => 'ref';
+
+  @override
+  Future<bool> exists(String reference) async => _bytes != null;
+
+  @override
+  Future<void> delete(String reference) async {}
 }
 
 void main() {
@@ -111,12 +138,14 @@ void main() {
     });
 
     testWidgets(
-        'E30/E31/E32 controls are wired while the still-inert E33/E34 '
-        'controls have no action', (tester) async {
+        'E30/E31/E32/E33 controls are wired while the still-inert E34 '
+        'control has no action', (tester) async {
       await _pump(
         tester,
         palette: _paletteController(),
-        project: _projectController(),
+        project: _projectController(
+          catalogue: const [Project(id: 'p1', name: 'Harbor at Dusk')],
+        ),
       );
 
       // E32 Add paint is now active (PALETTE-2, AC-4).
@@ -141,8 +170,8 @@ void main() {
       expect(segments.every((b) => b.onPressed != null), isTrue,
           reason: 'SCREEN-2 wires the E31 view selector (AC-1)');
 
-      // E33 Open / E34 Export stay inert in the Projects view (their behaviour
-      // phases wire them); reach them by the E31 toggle.
+      // E33 Open is now wired (PROJECT-4, AC-7/AC-8) while E34 Export stays
+      // inert (PROJECT-6, AC-10); reach them by the E31 toggle.
       await tester.tap(
         find.descendant(
           of: find.byKey(PaletteScreen.viewSelectorKey),
@@ -150,13 +179,15 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      for (final key in [
-        ProjectsRegion.openProjectKey,
-        ProjectsRegion.exportKey,
-      ]) {
-        final button = tester.widget<TextButton>(find.byKey(key));
-        expect(button.onPressed, isNull, reason: '$key must be inert');
-      }
+      final open =
+          tester.widget<TextButton>(find.byKey(ProjectsRegion.openProjectKey));
+      expect(open.onPressed, isNotNull,
+          reason: 'PROJECT-4 wires the open-project control (AC-7/AC-8), active '
+              'when a project exists');
+      final export =
+          tester.widget<TextButton>(find.byKey(ProjectsRegion.exportKey));
+      expect(export.onPressed, isNull,
+          reason: 'E34 export stays inert until PROJECT-6 (AC-10)');
     });
 
     testWidgets(
@@ -296,6 +327,113 @@ void main() {
       expect(inRow(find.textContaining('0 samples')), findsOneWidget);
       expect(inRow(find.textContaining('0 recipes')), findsOneWidget);
       expect(inRow(find.text('Edited today')), findsOneWidget);
+    });
+  });
+
+  group('open-project view (PROJECT-4)', () {
+    Future<void> pumpProjects(
+      WidgetTester tester, {
+      required ProjectController project,
+      SourcePhotoStore? photos,
+    }) async {
+      await _pump(
+          tester, palette: _paletteController(), project: project, photos: photos);
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(PaletteScreen.viewSelectorKey),
+          matching: find.widgetWithText(TextButton, 'Projects'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+        'AC-7/AC-8: tapping a project row opens it, showing its note and its '
+        'own source photo', (tester) async {
+      final bytes = Uint8List.fromList(const [1, 2, 3, 4]);
+      const note = 'Keep the hull and wall values 2 steps apart.';
+      final project = _projectController(
+        catalogue: const [
+          Project(
+            id: 'harbor-at-dusk',
+            name: 'Harbor at Dusk',
+            note: note,
+            sourcePhotoRef: 'harbor-source-photo',
+          ),
+        ],
+      );
+      await pumpProjects(tester, project: project, photos: _StubPhotos(bytes));
+
+      // No project is open to begin with.
+      expect(project.openedProject, isNull);
+      expect(find.byKey(ProjectsRegion.openProjectViewKey), findsNothing);
+
+      // Tapping the project's row opens it (E33, AC-7).
+      await tester.tap(find.byKey(ProjectsRegion.projectRowKey('harbor-at-dusk')));
+      await tester.pumpAndSettle();
+
+      expect(project.openedProject?.name, 'Harbor at Dusk');
+      final view = find.byKey(ProjectsRegion.openProjectViewKey);
+      expect(view, findsOneWidget);
+      // The note is shown in the open-project view.
+      expect(find.descendant(of: view, matching: find.text(note)),
+          findsOneWidget);
+      // The source photo is shown, rendered from the project's own stored bytes.
+      final photo =
+          find.descendant(of: view, matching: find.byType(Image));
+      expect(photo, findsOneWidget);
+      final image = tester.widget<Image>(photo).image;
+      expect(image, isA<MemoryImage>());
+      expect((image as MemoryImage).bytes, bytes);
+    });
+
+    testWidgets(
+        'the E33 Open control opens the first project (AC-7)', (tester) async {
+      final project = _projectController(
+        catalogue: const [Project(id: 'p1', name: 'Harbor at Dusk')],
+      );
+      await pumpProjects(tester, project: project);
+
+      await tester.tap(find.byKey(ProjectsRegion.openProjectKey));
+      await tester.pumpAndSettle();
+
+      expect(project.openedProject?.id, 'p1');
+    });
+
+    testWidgets(
+        'an opened project with no note and no photo shows the view without '
+        'either', (tester) async {
+      final project = _projectController(
+        catalogue: const [Project(id: 'p1', name: 'Untitled')],
+      );
+      await pumpProjects(tester, project: project);
+
+      await tester.tap(find.byKey(ProjectsRegion.projectRowKey('p1')));
+      await tester.pumpAndSettle();
+
+      final view = find.byKey(ProjectsRegion.openProjectViewKey);
+      expect(view, findsOneWidget);
+      expect(find.descendant(of: view, matching: find.byType(Image)),
+          findsNothing);
+    });
+
+    testWidgets(
+        'an opened project whose photo bytes are absent shows no image',
+        (tester) async {
+      final project = _projectController(
+        catalogue: const [
+          Project(id: 'p1', name: 'Harbor', sourcePhotoRef: 'missing'),
+        ],
+      );
+      await pumpProjects(tester, project: project, photos: _StubPhotos(null));
+
+      await tester.tap(find.byKey(ProjectsRegion.projectRowKey('p1')));
+      await tester.pumpAndSettle();
+
+      final view = find.byKey(ProjectsRegion.openProjectViewKey);
+      expect(view, findsOneWidget);
+      expect(find.descendant(of: view, matching: find.byType(Image)),
+          findsNothing);
     });
   });
 }
