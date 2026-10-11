@@ -252,7 +252,7 @@ SCREEN-2/3) stays blocked until a human records the G-2 decision.
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
 | TestAC02 | badge + medium can't be asserted non-subsumed until the real tier/medium render (medium check currently subsumed by the "Artists' Oil" line text, grader finding) | PALETTE-3 | assert the exact rendered provenance tier **and** the medium at a non-subsumed grain (a dedicated medium label/widget, not the line text) on the paint row | ⬜ Open (confirmed + widened by ITEST-2) |
-| TestAC05 | "recipes ⊆ Travel set" can't discriminate until selection re-points the solver | PALETTE-4 | assert every returned recipe's paints ⊆ the selected palette (disjoint-palette control) | ⬜ Open (confirmed by ITEST-2) |
+| TestAC05 | "recipes ⊆ Travel set" can't discriminate until selection re-points the solver | PALETTE-4 | assert every returned recipe's paints ⊆ the selected palette (disjoint-palette control) | ✅ Closed by PALETTE-4 (AC-5 → A) |
 | TestAC07 | "the source photo is shown" is a type-only `find.byType(Image)` untied to the source photo until PROJECT-4 mounts the open-project view (a decorative/wrong-bytes image would pass) | PROJECT-4 | assert the source photo via a widget keyed/scoped to the open-project view and tied to `harborPhotoRef`/`harborPhotoBytes` (not a bare `Image` type-match) | ⬜ Open (added by ITEST-3 grade) |
 | TestAC09 | a non-flag control needs real pair computation | PROJECT-5 | add a clearly-distinct pair and assert it is **not** flagged | ⬜ Open |
 | TestAC10 | PDF content can't be asserted until a real sheet is produced | PROJECT-6 | assert the produced PDF references each sample + each recipe | ⬜ Open |

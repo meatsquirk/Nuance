@@ -115,6 +115,34 @@ void main() {
       expect(controller.selectedPalette, _myPaints);
       expect(notifications, 0);
     });
+
+    test('re-points recipe search through onPaletteSelected on a change (AC-5)',
+        () {
+      final selected = <PaintPalette>[];
+      final controller = PaletteController(
+        source: const InMemoryPaletteSource(catalogue: [_myPaints, _travel]),
+        onPaletteSelected: selected.add,
+      );
+
+      controller.selectPalette(_travel);
+
+      // Fired exactly once, with the newly-active palette — the hook the Palette
+      // screen wires to the bs-04 RecipeController.selectPalette (D-5).
+      expect(selected, [_travel]);
+    });
+
+    test('does not fire onPaletteSelected when the palette is unchanged (AC-5)',
+        () {
+      final selected = <PaintPalette>[];
+      final controller = PaletteController(
+        source: const InMemoryPaletteSource(catalogue: [_myPaints, _travel]),
+        onPaletteSelected: selected.add,
+      );
+
+      controller.selectPalette(_myPaints); // already selected — no re-solve
+
+      expect(selected, isEmpty);
+    });
   });
 
   group('addPaintFromDataset (AC-4)', () {

@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — behavior stage (stage 4), 5/10 behavior phases done (PALETTE-2 ✅ AC-4, PALETTE-3 ✅ AC-2+AC-3, PROJECT-2 ✅ enabler, SCREEN-2 ✅ AC-1, SCREEN-3 ✅ AC-11; SCREEN module complete). Next startable: PALETTE-4, PROJECT-3, PROJECT-4.
+**Status:** In progress — behavior stage (stage 4), 6/10 behavior phases done (PALETTE-2 ✅ AC-4, PALETTE-3 ✅ AC-2+AC-3, PALETTE-4 ✅ AC-5, PROJECT-2 ✅ enabler, SCREEN-2 ✅ AC-1, SCREEN-3 ✅ AC-11; PALETTE + SCREEN modules complete). Next startable: PROJECT-3, PROJECT-4.
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -43,7 +43,7 @@
 | AC-2 | Each paint is listed with its identity and provenance badge | ITEST-2 `TestAC02_PaintIdentityProvenance` | PALETTE-3 | ✅ Done |
 | AC-3 | The provenance legend explains the four confidence tiers | ITEST-2 `TestAC03_ProvenanceLegend` | PALETTE-3 | ✅ Done |
 | AC-4 | The painter adds a paint by choosing from the shipped dataset | ITEST-2 `TestAC04_AddPaintFromDataset` | PALETTE-2 | ✅ Done |
-| AC-5 | Selecting a palette makes recipes solve against it | ITEST-2 `TestAC05_SelectedPaletteDrivesRecipes` | PALETTE-4 | ⬜ Todo |
+| AC-5 | Selecting a palette makes recipes solve against it | ITEST-2 `TestAC05_SelectedPaletteDrivesRecipes` | PALETTE-4 | ✅ Done |
 | AC-6 | The projects list shows each project's size, counts and last edit | ITEST-3 `TestAC06_ProjectsListSummary` | PROJECT-3 | ⬜ Todo |
 | AC-7 | Opening a project shows its notes and source photo | ITEST-3 `TestAC07_OpenProjectNotePhoto` | PROJECT-4 | ⬜ Todo |
 | AC-8 | A note kept with a project is retained when it is reopened | ITEST-3 `TestAC08_NoteRetainedOnReopen` | PROJECT-4 | ⬜ Todo |
@@ -111,7 +111,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ✅ Done |
-| PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | 🔄 In progress (PALETTE-1, PALETTE-2, PALETTE-3 ✅) |
+| PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | ✅ Complete (PALETTE-1, PALETTE-2, PALETTE-3, PALETTE-4 ✅) |
 | PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | 🔄 In progress (PROJECT-1, PROJECT-2 ✅) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | ✅ Done (SCREEN-1, SCREEN-2, SCREEN-3 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 ✅; ITEST-4 ✅ G-2 approved) |
@@ -166,9 +166,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 9 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,760,963 | 3m 34s | packet assembled across ITEST-2+3; **G-2 approved 2026-10-11** (Matt Quirk) — behavior stage unblocked |
 | 10 | PALETTE-2 | AC-4 add paint from reviewed dataset | ✅ Done | 8,539,454 | 17m 29s | add-from-dataset: `addPaintFromDataset` (preserves dataset provenance, persists via `PersistentPaletteSource`) + E32 picker in `paint_list_region`; AC-4 un-pended + green; unit 694 (+6); coverage 100% on 24 touched; grade AC-4 A(caveat); fix passes 0/3 |
 | 11 | PALETTE-3 | AC-2 + AC-3 paint identity/provenance badge + legend | ✅ Done | 7,967,376 | 26m 47s | PaintRow (identity + provenance badge) + ProvenanceLegend (4 exact tiers); AC-2+AC-3 un-pended + green; TestAC02 augmentation (exact tier + dedicated medium label + differently-tiered control); unit 699 (+5); coverage 100% on 26 touched; grade 3×A PASS; fix passes 1/3 |
-| 12 | PALETTE-4 | AC-5 selected palette drives recipes | ⬜ Next | | | after PALETTE-3 (done) |
+| 12 | PALETTE-4 | AC-5 selected palette drives recipes | ✅ Done | 21,939,959 | 45m 27s | shared RecipeController on PaletteHomeScreen under RecipeReadEndpoint; PaletteController.onPaletteSelected → bs-04 RecipeController.selectPalette (frozen API reused); selector options tappable; AC-5 un-pended + green; TestAC05 closed (recipes ⊆ selected palette + disjoint control); unit 721, coverage 100% on 26 touched; grade 6×A PASS; fix passes 1/3 (harness scroll) |
 | 13 | PROJECT-2 | enabler: create project + attach samples/recipes/note/photo | ✅ Done | 4,357,106 | 18m 54s | enabler (no AC): ProjectController create/attach (samples+recipes+size+note+photo), persists via saveProject; unit 100% on touched file; acceptance default green; AC-6..10 red on own Thens (baseline unchanged) |
-| 14 | PROJECT-3 | AC-6 projects list size/counts/last-edit | ⬜ Todo | | | after PROJECT-2 |
+| 14 | PROJECT-3 | AC-6 projects list size/counts/last-edit | ⬜ Next | | | after PROJECT-2 |
 | 15 | PROJECT-4 | AC-7 + AC-8 open note+photo; note retained on reopen | ⬜ Todo | | | after PROJECT-2 |
 | 16 | PROJECT-5 | AC-9 confusion pair flagged within project | ⬜ Todo | | | after PROJECT-2 |
 | 17 | PROJECT-6 | AC-10 export PDF studio sheet | ⬜ Todo | | | after PROJECT-2 |
@@ -180,12 +180,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-PALETTE-3 ✅ (AC-2+AC-3), PROJECT-2 ✅ (enabler), SCREEN-2 ✅ (AC-1), SCREEN-3 ✅ (AC-11) merged + reconciled; SCREEN module complete. Startable now, concurrent in separate sessions on disjoint files:
-- **PALETTE-4** — AC-5 selected palette drives recipes (`lib/palette/palette_controller.dart` + wiring to bs-04 `RecipeController.selectPalette`); makes the owed TestAC05 augmentation. Owns `palette_controller.dart` outright now.
+PALETTE-4 ✅ (AC-5) done — **PALETTE module complete**; only the PROJECT chain remains before sign-off. Startable now, concurrent in separate sessions on disjoint `lib/projects/` files (serialize PROJECT-3 vs PROJECT-4 only if they touch the same file):
 - **PROJECT-3** — AC-6 projects list size/counts/last-edit (`lib/projects/`).
 - **PROJECT-4** — AC-7 + AC-8 open note+photo; note retained on reopen (`lib/projects/`). Precedes PROJECT-5 and PROJECT-6.
 
-Graph-gated (run after their dep): PROJECT-5 (AC-9) and PROJECT-6 (AC-10) after PROJECT-4. Each session runs exactly one phase. SIGNOFF-1 last.
+Graph-gated (run after their dep): PROJECT-5 (AC-9) and PROJECT-6 (AC-10) after PROJECT-4. Each session runs exactly one phase. SIGNOFF-1 last (after all 10 behavior phases done — 6/10 now).
 
 ## Token usage
 
@@ -212,7 +211,8 @@ Graph-gated (run after their dep): PROJECT-5 (AC-9) and PROJECT-6 (AC-10) after 
 | SCREEN-2 | agent-af | 2026-10-11 06:41 EDT | 07:11 | 30m 22s | 30m 22s | claude-opus-4-8 | 98 | 164,998 | 5,105,690 | 706 | 5,271,492 | AC-1 un-pended + green (toggle); unit 695 pass + 100% coverage on 24 touched files; acceptance 14 pass/9 pending/0 fail; graded 2xA PASS; fix 1/3 |
 | SCREEN-3 | agent-a9 | 2026-10-11 06:41 EDT | 07:24 | 43m 03s | 43m 03s | claude-opus-4-8 | 142 | 368,627 | 9,682,213 | 1,101 | 10,052,083 | AC-11 un-pended + green; coverage 100% touched; grade AC-11 A; fix passes 0/3 |
 | RECONCILE | f879fef0 | 2026-10-11 07:36 EDT | 07:57 | 20m 57s | 20m 57s | claude-opus-4-8 | 152 | 135,793 | 7,338,670 | 49,006 | 7,523,621 | applied 4 deferred rollups (PROJECT-2, PALETTE-3, SCREEN-2, SCREEN-3) to master plan after merging their phase branches into feat/bs-06; AC-1/2/3/11 ✅, SCREEN module complete, 5/10 behavior phases done; next PALETTE-4 |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 07:57** | **20h 23m** | **5h 45m** |  | **1,966** | **3,431,109** | **118,403,270** | **746,721** | **122,583,066** |  |
+| PALETTE-4 | 6c5f4007 | 2026-10-11 09:20 EDT | 10:06 | 45m 29s | 45m 27s | claude-opus-4-8 | 274 | 334,784 | 21,521,788 | 83,113 | 21,939,959 | behavior: AC-5 un-pended + green; shared RecipeController on PaletteHomeScreen (RecipeReadEndpoint) re-pointed by PaletteController.onPaletteSelected -> frozen bs-04 RecipeController.selectPalette; selector options tappable; TestAC05 closed (recipes subset of selected palette + disjoint control); unit 721, coverage 100% on 26 touched, acceptance 18 pass/5 pending, grade 6xA PASS; fix passes 1/3 (harness scroll) |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 10:06** | **21h 08m** | **6h 30m** |  | **2,240** | **3,765,893** | **139,925,058** | **829,834** | **144,523,025** |  |
 
 ## Sign-off
 

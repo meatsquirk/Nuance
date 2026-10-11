@@ -1,6 +1,6 @@
 # Module PALETTE — paints & palettes
 
-**Status:** In progress — PALETTE-1 ✅ (shell), PALETTE-2 ✅ (AC-4), PALETTE-3 ✅ (AC-2/AC-3); PALETTE-4 (AC-5) startable next
+**Status:** ✅ Complete — PALETTE-1 ✅ (shell), PALETTE-2 ✅ (AC-4), PALETTE-3 ✅ (AC-2/AC-3), PALETTE-4 ✅ (AC-5); module done
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (schema extension — **bs-04-owned, coordinate**), `lib/recipes/palette_source.dart` (write-side on the existing seam — bs-04-owned), `lib/palette/` (PaletteController, read endpoint, dataset loader), `assets/paints/` (reviewed dataset asset)
 **Depends on:** DATA (store) · **Blocks:** SCREEN (renders palette state), PALETTE-4 wires into RECIPE (bs-04 `RecipeController`)
@@ -12,7 +12,7 @@
 | 1 | shell | — | ✅ Done | 8,841,030 | 14m 46s |
 | 2 | behavior | AC-4 | ✅ Done | 8,539,454 | 17m 29s |
 | 3 | behavior | AC-2, AC-3 | ✅ Done | 7,967,376 | 26m 47s |
-| 4 | behavior | AC-5 | ⬜ Todo | | |
+| 4 | behavior | AC-5 | ✅ Done | 21,939,959 | 45m 27s |
 
 ## Interface reconciliation
 
@@ -137,5 +137,28 @@
 - **Acceptance gate:** un-pend AC-5; `palette_test.dart` green through AC-5; `RecipeReadEndpoint.selectedPalette` reflects the selection and recipes ⊆ the selected palette.
 - **Augments:** `TestAC05`: strengthen the "recipes ⊆ Travel set" assertion once selection is real (closes the pre-seeded limit).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (AC-5 — full):** selecting a palette on the Palette screen now re-points recipe search at it. `PaletteController` gained an optional `onPaletteSelected` callback; `selectPalette` fires it (after notifying) **only on an actual change** (the no-op guard still returns first). `PaletteSelectorRegion` now renders each palette as a tappable `InkWell` (`optionKeyFor(name)`) whose `onTap` calls `controller.selectPalette(palette)` — was inert `Text`. `PaletteHomeScreen` (`lib/app/build_app.dart`) now owns a shared **bs-04 `RecipeController`** over the injected `sampleSource`/`paletteSource`/`mixingEngine` mixing toward `initialSample`, wraps its subtree in a `RecipeReadEndpoint`, and wires `onPaletteSelected: _recipeController.selectPalette` — so selection calls the **frozen** `RecipeController.selectPalette`, which re-solves against only the selected palette (D-5). No bs-04 solve code reopened; only its public `selectPalette` API is reused.
+- **Deviation from the declared file list (recorded):** Phase Files named `palette_controller.dart` + "wiring to recipe_controller.dart". The wiring is realised in `lib/app/build_app.dart`'s `PaletteHomeScreen` (owns the shared controller + endpoint) and `lib/palette/palette_selector_region.dart` (the tappable options the acceptance `whenSelectPalette` drives) — both required for AC-5's observable. `recipe_controller.dart` itself is **unchanged** (API reused, not edited). The harness `whenSelectPalette` was changed from a precondition-asserting stub to a real scroll-into-view + tap (the selector is the last region in the scrolling My-paints view); a test mechanic, not a weakened assertion.
+- **Un-pended:** deleted `'AC-5': 'PALETTE-4'` in `integration_test/bs06/pending.dart`; updated the scaffold guard's exact still-pending set to `{AC-6,7,8,9,10}` and moved the guard's pending example from AC-5 to AC-6 (kept exact/non-vacuous).
+- **Augmentations (TestAC05 — made):** AC-5's test now asserts the spec's named observable through the `RecipeReadEndpoint` — `recipeSelectedPalette` re-points `My paints`→`Travel set` **and** every component of every returned recipe is a Travel-set paint by id (`recipes isNotEmpty` before and after), with the disjoint "My paints"/"Travel set" control and a pre-selection control (recipes ⊆ My paints). Discriminating: against pre-PALETTE-4 code the `RecipeReadEndpoint.of` lookup throws (no endpoint mounted) and an ignore-selection impl yields My-paints components. TestAC05 **closed** in `modules/ITEST.md`.
+- **Verification:** `flutter analyze` clean (dropped an unused import). `flutter test --coverage` → **721 unit/widget passing** (+22: +4 controller callback/no-op, +3 selector region, +2 build_app recipe-wiring, and the harness-driven deltas). Coverage gate vs `main`: **100%** line coverage on all **26** touched `lib/` files (incl. `palette_controller.dart`, `palette_selector_region.dart`, `build_app.dart`). Acceptance (`palette_test.dart`, default mode, iPhone 17 sim `5AB9D06D…` under the verify lock): **18 passing, 5 skipped** — AC-5 executes green, the remaining AC-6..10 correctly pending; whole suite green. No cross-feature suite needed (only `lib/palette/` + the bs-06-only `PaletteHomeScreen` branch of `build_app.dart` were touched; other home screens unchanged).
+- **Grade gate:** independent adversarial re-grade (fresh subagent, G1–G6, given the full prior grid) of every un-pended AC test — **AC-5 = A** (cleared from *B pending PALETTE-4*), AC-1/AC-2/AC-3/AC-11 = A, AC-4 = A (with the unchanged uniform-measured-dataset caveat). **6×A — PASS (no unsanctioned B).** No augmentation remains owed. Grid: `behavior-test-completeness-bs-06-palette-and-projects.md` (PALETTE-4 section appended).
+- **Fix passes:** 1/3 — pass 1 fixed only the acceptance harness: `whenSelectPalette` tapped the selector option without scrolling it into view (the taller paint rows push the selector below the 600px test viewport), so the tap silently missed; added `ensureVisible` + dropped `warnIfMissed:false` so a genuine miss now fails. All product gates (analyze, unit, coverage) passed on the first full run; the recipe wiring itself was correct from the first run (the pre-selection control assertions passed at the failure point).
+- **Justified exclusions:** none.
+- Tokens: see master ledger (PALETTE-4 row). **Phase total: see dashboard row.**
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces:**
+  - `PaletteController({required PaletteSource source, List<Paint> reviewedDataset = kReviewedPaints, void Function(PaintPalette)? onPaletteSelected})` — `selectPalette(palette)` now also calls `onPaletteSelected(palette)` on an actual change (after `notifyListeners`), null-safe; the no-op guard (`palette == _selectedPalette`) returns before firing. `addPaintFromDataset` unchanged (does **not** fire the callback — see gaps).
+  - `PaletteSelectorRegion.optionKeyFor(String name)` → `Key('palette-option-$name')`; each palette renders as an `InkWell` (that key) wrapping the name `Text` (`'$name (active)'` when active), `onTap: controller.selectPalette(palette)`. `regionKey` unchanged.
+  - `PaletteHomeScreen` (`lib/app/build_app.dart`) owns a shared `RecipeController` (over `deps.sampleSource`/`paletteSource`/`mixingEngine`, target `deps.initialSample`) mounted under `RecipeReadEndpoint.endpointKey`, disposed with the screen; `PaletteController.onPaletteSelected` is wired to its `selectPalette`. Nesting: `RecipeReadEndpoint` → `PaletteReadEndpoint` → `ProjectReadEndpoint` → `PaletteScreen`.
+  - Harness (`integration_test/palette_harness.dart`): new getters `recipeController` (via `RecipeReadEndpoint`), `recipeSelectedPalette`, `recipes`; `whenSelectPalette(name)` scrolls the option into view and taps it.
+- **Verification commands:** unchanged — `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/palette_test.dart -d <booted-udid>` under `coord.sh with-lock BS-06 <PHASE>` (with-lock cds to `$FNP_COORD_REPO` = primary checkout, so wrap: `-- bash -c 'cd <worktree> && flutter test …'`). Flutter SDK `/Users/matthew.quirk/development/flutter/bin`. Booted sim this session: iPhone 17 `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Known gaps / deferred:**
+  - **PALETTE module is complete** (all of AC-2/3/4/5 delivered). No remaining PALETTE phase.
+  - `addPaintFromDataset` (AC-4) still re-points only the screen's active palette, **not** the shared `RecipeController`, when a paint is added to the active "My paints". Out of AC-5's scope (which is *selection*); if a future AC needs the recipe solver to follow in-place palette edits, wire `addPaintFromDataset` through `onPaletteSelected` too. Non-blocking.
+  - The Palette screen's `RecipeController` mixes toward `initialSample` (the current reading / demo sample); it is a shared-state re-point seam, not a visible recipe surface on this screen (the `RecipeReadEndpoint` is a test observation seam — production reads the controller it owns). The Recipes screen (bs-04) remains the recipe UI.
+- **Next phase should:** no PALETTE phase remains. Startable now, concurrent in separate sessions on disjoint files: PROJECT-3 (AC-6), PROJECT-4 (AC-7+AC-8); then PROJECT-5 (AC-9) and PROJECT-6 (AC-10) after PROJECT-4. SIGNOFF-1 last (after all behavior done).

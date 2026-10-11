@@ -634,12 +634,55 @@ void main() {
       expect(ProjectReadEndpoint.of(context).projects, hasLength(1));
     });
 
+    testWidgets('mounts a RecipeReadEndpoint sharing the selected palette (AC-5)',
+        (tester) async {
+      final palettes = InMemoryPaletteSource(
+        catalogue: const [
+          PaintPalette(name: 'My paints'),
+          PaintPalette(name: 'Travel set'),
+        ],
+      );
+      await tester.pumpWidget(buildApp(paletteDeps(paletteSource: palettes)));
+      final context = tester.element(find.byType(PaletteScreen));
+      expect(find.byKey(RecipeReadEndpoint.endpointKey), findsOneWidget);
+      // Recipe search opens constrained to the first listed palette (D-5) — the
+      // same one the PaletteController makes active.
+      expect(
+        RecipeReadEndpoint.of(context).state.selectedPalette?.name,
+        'My paints',
+      );
+    });
+
+    testWidgets('selecting a palette re-points the shared RecipeController (AC-5)',
+        (tester) async {
+      final palettes = InMemoryPaletteSource(
+        catalogue: const [
+          PaintPalette(name: 'My paints'),
+          PaintPalette(name: 'Travel set'),
+        ],
+      );
+      await tester.pumpWidget(buildApp(paletteDeps(paletteSource: palettes)));
+      final context = tester.element(find.byType(PaletteScreen));
+      final paletteController = PaletteReadEndpoint.of(context);
+
+      // Selecting the second palette on the Palette screen must re-solve recipes
+      // against it — the bs-06 → bs-04 wiring (onPaletteSelected → selectPalette).
+      paletteController.selectPalette(paletteController.palettes[1]);
+      await tester.pump();
+
+      expect(
+        RecipeReadEndpoint.of(context).state.selectedPalette?.name,
+        'Travel set',
+      );
+    });
+
     testWidgets('disposes its controllers when removed from the tree',
         (tester) async {
       await tester.pumpWidget(buildApp(paletteDeps()));
       expect(find.byType(PaletteHomeScreen), findsOneWidget);
       // Replacing the tree tears the home screen down; a leaked ChangeNotifier
-      // would trip the flutter_test dispose-guard.
+      // (palette, project or the shared recipe controller) would trip the
+      // flutter_test dispose-guard.
       await tester.pumpWidget(const MaterialApp(home: SizedBox()));
       expect(find.byType(PaletteHomeScreen), findsNothing);
     });

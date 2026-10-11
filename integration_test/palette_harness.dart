@@ -52,6 +52,8 @@ import 'package:paint_color_assistant/projects/project_source.dart';
 import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
+import 'package:paint_color_assistant/recipes/recipe_controller.dart';
+import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
 
 import 'fakes/fake_file_sink.dart';
@@ -426,6 +428,22 @@ class PaletteHarness {
           find.byKey(ProjectReadEndpoint.endpointKey))
       .controller;
 
+  /// The shared recipe controller the palette selection re-points (AC-5), read
+  /// through the [RecipeReadEndpoint] the Palette home screen wraps its subtree
+  /// in since PALETTE-4.
+  RecipeController get recipeController => tester
+      .widget<RecipeReadEndpoint>(find.byKey(RecipeReadEndpoint.endpointKey))
+      .controller;
+
+  /// The palette recipe search currently solves against (AC-5), or null — the
+  /// recipe side of the selection, independent of [selectedPalette] (the Palette
+  /// screen's own active palette). PALETTE-4 keeps the two in step.
+  PaintPalette? get recipeSelectedPalette =>
+      recipeController.state.selectedPalette;
+
+  /// The recipes the solver last returned over [recipeSelectedPalette] (AC-5).
+  List<Recipe> get recipes => recipeController.state.recipes;
+
   /// The painter's palettes, in listing order (AC-5).
   List<PaintPalette> get palettes => paletteController.palettes;
 
@@ -485,9 +503,12 @@ class PaletteHarness {
 
   /// Selects the palette named [name] as the active palette (AC-5).
   ///
-  /// The selector (E32 region) renders the palettes but has no select action
-  /// until PALETTE-4; the precondition names that owner if the option is not
-  /// offered, so an AC-5 test written now fails cleanly at the red baseline.
+  /// Taps the palette's option in the selector region (E32), which PALETTE-4
+  /// wires to `PaletteController.selectPalette`; the precondition names that
+  /// owner if the option is not offered. The selector is the last region in the
+  /// scrolling My-paints view, so the option is scrolled into view before the
+  /// tap (a test mechanic — the taller paint rows push it below the test
+  /// viewport, as PALETTE-3 noted for the projects region).
   Future<void> whenSelectPalette(String name) async {
     final option = find.descendant(
       of: find.byKey(PaletteSelectorRegion.regionKey),
@@ -499,7 +520,9 @@ class PaletteHarness {
       reason: 'the palette selector must offer "$name" to select it '
           '(PALETTE-4 wires selection, AC-5)',
     );
-    await tester.tap(option.first, warnIfMissed: false);
+    await tester.ensureVisible(option.first);
+    await tester.pumpAndSettle();
+    await tester.tap(option.first);
     await tester.pumpAndSettle();
   }
 

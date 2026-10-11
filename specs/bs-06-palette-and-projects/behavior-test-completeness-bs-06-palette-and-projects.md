@@ -191,3 +191,33 @@ violation, so not a B). AC-11 is a clean A: SCREEN-3's second-profile control
 (protan/mild) closes the only ITEST-2 hardening note (G5), proving the estimate
 reads the injected `CvdProfile` rather than a hard-coded string. No B rows; no
 augmentation owed by either test; no downgrade from the prior grid.
+
+## Phase graded: PALETTE-4 (behavior — AC-5 un-pended)
+
+Independent adversarial re-grade (fresh grader, given the full prior grid + G1–G6)
+of every currently un-pended bs-06 AC — AC-1, AC-2, AC-3, AC-4, AC-5, AC-11 —
+after PALETTE-4 mounted a shared `RecipeController` under a `RecipeReadEndpoint`
+on `PaletteHomeScreen`, wired `PaletteController.onPaletteSelected →
+RecipeController.selectPalette`, made the selector options real tappable
+`InkWell`s, and added the TestAC05 augmentation to the AC-5 test. The grader ran
+nothing and edited nothing; each Given/When/Then was verified against the
+production code the test exercises.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-5** `selecting a palette re-points recipe search at it` | A (clears prior *B pending PALETTE-4*) | TestAC05 now asserts the **spec's named observable**, not the old `selectedPalette` proxy: via the `RecipeReadEndpoint`, `recipeSelectedPalette` re-points `'My paints'`→`'Travel set'` **and** every component of every returned recipe is a Travel-set paint by id, with `recipes isNotEmpty` both before and after (closes the vacuous-empty hole). **G1** every Given checked through the public surface before the When — palette order `['My paints','Travel set']`, screen `selectedPalette=='My paints'`, recipe side `recipeSelectedPalette=='My paints'` (D-5 first-listed), `recipes` non-empty, and a pre-selection control loop proving every recipe component ⊆ My-paints ids. **G2** the configured Given answers: `whenSelectPalette('Travel set')` scrolls to and taps the real `InkWell` (`onTap → controller.selectPalette`), which fires `onPaletteSelected → RecipeController.selectPalette`, which emits `recipes: _solve(engine, target, Travel set)` — no script/fake. **G5 discriminates:** the fixtures are disjoint by id (`pw6/py42/pbr7/pbk9` vs `pb29/py35/pr108`, guarded), so an impl that moved only the screen pointer and left the solver on My paints yields My-paints components, failing `expect(travelIds, contains(component.paint.id))`; and against pre-PALETTE-4 code the `RecipeReadEndpoint.of` lookup throws (no endpoint mounted), so the Given-check on `recipeSelectedPalette` fails there — the augmentation genuinely requires PALETTE-4. **G6** asserts AC-5 only. **G4** exact active-palette name, exact Travel id-set, per-component membership for every returned recipe. Note (not a limit): `inverse()` only ever builds components from `palette.paints`, so ⊆ holds by construction once the solver re-points — the load-bearing discriminators are the `recipeSelectedPalette` re-point + the disjoint-set control; the ⊆ check still asserts the raw observable and guards a stale-recipes impl. No residual. |
+| **AC-1** `switch between the My paints and Projects views` | A (unchanged) | Not regressed. PALETTE-4 touched the selector region and recipe wiring, not the E31 view toggle; the mutually-exclusive `if/else` and both-ways control are intact. The new `RecipeReadEndpoint` wrapper adds a layer but changes no region key. |
+| **AC-2** `each paint lists its identity and provenance badge` | A (unchanged) | Not regressed. Paint-row rendering (badge/medium keyed widgets + differently-tiered control) is untouched by the selector/recipe wiring. |
+| **AC-3** `the provenance legend explains the four confidence tiers` | A (unchanged) | Not regressed. Static legend copy, independent of PALETTE-4's changes. |
+| **AC-4** `add a paint by choosing from the shipped dataset` | A (with caveat, unchanged) | Not regressed. `addPaintFromDataset` is untouched; the new `onPaletteSelected` param is optional (default null) and `_replaceMyPaints` keeps the active palette on My paints. Same long-standing, non-blocking uniform-measured-dataset caveat. |
+| **AC-11** `the vision-profile card shows the estimate and opens the self-assessment` | A (unchanged) | Not regressed. Vision card + second-profile control are independent of the selector/recipe wiring. |
+
+**Counts: 6×A (AC-4 with caveat) — PASS (no unsanctioned B).** AC-5 clears from
+*B pending PALETTE-4* to a clean **A**: the TestAC05 augmentation asserts the
+real named observable (`recipeSelectedPalette` re-point + every recipe's
+components ⊆ selected palette) with a disjoint-set control that discriminates
+both an ignore-selection impl and pre-PALETTE-4 code (where the
+`RecipeReadEndpoint` lookup throws). **TestAC05 is now closed; no augmentation
+remains owed by PALETTE-4.** No test downgraded; AC-1/2/3/4/11 verified
+unaffected by the palette_controller / palette_selector_region / build_app /
+harness changes.

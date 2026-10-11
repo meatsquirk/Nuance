@@ -565,15 +565,17 @@ class _RecipesHomeScreenState extends State<RecipesHomeScreen> {
 /// The Palette screen the app opens on when a palette entry is wired (bs-06
 /// SCREEN-1).
 ///
-/// It owns a [PaletteController] over [AppDependencies.paletteSource] and a
-/// [ProjectController] over [AppDependencies.projectSource] — both read from the
-/// enclosing [AppScope] (the sources are loaded before assembly, so the
-/// controllers read them synchronously) — and wraps its subtree in the
-/// [PaletteReadEndpoint] and [ProjectReadEndpoint] the acceptance suite observes,
-/// symmetric to the capture / comparison / recipes homes. The body is the
-/// [PaletteScreen], composed over the two owned controllers (SCREEN-1); the view
-/// toggle, the paint/legend rendering, the palette selection and the
-/// vision-profile estimate land in their behaviour phases.
+/// It owns a [PaletteController] over [AppDependencies.paletteSource], a
+/// [ProjectController] over [AppDependencies.projectSource], and — since
+/// PALETTE-4 — a shared [RecipeController] the palette selection re-points
+/// (AC-5, D-5) — all read from the enclosing [AppScope] (the sources are loaded
+/// before assembly, so the controllers read them synchronously). It wraps its
+/// subtree in the [RecipeReadEndpoint], [PaletteReadEndpoint] and
+/// [ProjectReadEndpoint] the acceptance suite observes, symmetric to the
+/// capture / comparison / recipes homes. The body is the [PaletteScreen],
+/// composed over the paint/project controllers (SCREEN-1); the view toggle, the
+/// paint/legend rendering, the palette selection and the vision-profile estimate
+/// land in their behaviour phases.
 class PaletteHomeScreen extends StatefulWidget {
   const PaletteHomeScreen({super.key});
 
@@ -584,6 +586,7 @@ class PaletteHomeScreen extends StatefulWidget {
 class _PaletteHomeScreenState extends State<PaletteHomeScreen> {
   PaletteController? _paletteController;
   ProjectController? _projectController;
+  RecipeController? _recipeController;
 
   @override
   void didChangeDependencies() {
@@ -591,7 +594,25 @@ class _PaletteHomeScreenState extends State<PaletteHomeScreen> {
     // Build the controllers once, over the sources injected above.
     if (_paletteController == null) {
       final deps = AppScope.of(context);
-      _paletteController = PaletteController(source: deps.paletteSource);
+      // The shared recipe-solving state the Palette screen's palette selection
+      // re-points (bs-06 AC-5, D-5). It reuses the frozen bs-04 [RecipeController]
+      // over the same owned palettes / engine / catalogue the Recipes screen
+      // solves through, mixing toward the current reading ([initialSample]) so
+      // there is a solve to constrain; selecting a palette calls its frozen
+      // [RecipeController.selectPalette], which re-solves against only that
+      // palette. Observed by the acceptance suite through the [RecipeReadEndpoint].
+      _recipeController = RecipeController(
+        sampleSource: deps.sampleSource,
+        paletteSource: deps.paletteSource,
+        mixingEngine: deps.mixingEngine,
+        target: deps.initialSample,
+        speech: deps.speech,
+        router: deps.router,
+      );
+      _paletteController = PaletteController(
+        source: deps.paletteSource,
+        onPaletteSelected: _recipeController!.selectPalette,
+      );
       _projectController = ProjectController(source: deps.projectSource);
     }
   }
@@ -600,20 +621,25 @@ class _PaletteHomeScreenState extends State<PaletteHomeScreen> {
   void dispose() {
     _paletteController?.dispose();
     _projectController?.dispose();
+    _recipeController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return PaletteReadEndpoint(
-      key: PaletteReadEndpoint.endpointKey,
-      controller: _paletteController!,
-      child: ProjectReadEndpoint(
-        key: ProjectReadEndpoint.endpointKey,
-        controller: _projectController!,
-        child: PaletteScreen(
-          paletteController: _paletteController!,
-          projectController: _projectController!,
+    return RecipeReadEndpoint(
+      key: RecipeReadEndpoint.endpointKey,
+      controller: _recipeController!,
+      child: PaletteReadEndpoint(
+        key: PaletteReadEndpoint.endpointKey,
+        controller: _paletteController!,
+        child: ProjectReadEndpoint(
+          key: ProjectReadEndpoint.endpointKey,
+          controller: _projectController!,
+          child: PaletteScreen(
+            paletteController: _paletteController!,
+            projectController: _projectController!,
+          ),
         ),
       ),
     );

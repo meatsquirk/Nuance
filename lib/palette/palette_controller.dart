@@ -14,8 +14,9 @@ import 'paint_dataset.dart';
 /// tracks which palette is active on this screen. The AC behaviour lands in the
 /// behaviour phases: PALETTE-2 adds `addPaintFromDataset` (persisting through
 /// [PersistentPaletteSource.savePalette]); PALETTE-4 wires [selectPalette] on to
-/// the bs-04 `RecipeController.selectPalette` so recipes re-solve against the
-/// selected palette (AC-5, D-5). No mixing or recipe code is reopened here.
+/// the bs-04 `RecipeController.selectPalette` via [onPaletteSelected] so recipes
+/// re-solve against the selected palette (AC-5, D-5). No mixing or recipe code
+/// is reopened here — only the frozen `selectPalette` API is reused.
 class PaletteController extends ChangeNotifier {
   /// Creates the controller over [source], offering [reviewedDataset] as the
   /// paints that may be added (the shipped [kReviewedPaints] by default).
@@ -25,6 +26,7 @@ class PaletteController extends ChangeNotifier {
   PaletteController({
     required PaletteSource source,
     this.reviewedDataset = kReviewedPaints,
+    this.onPaletteSelected,
   }) : _source = source {
     _palettes = source.palettes();
     _selectedPalette = _palettes.isEmpty ? null : _palettes.first;
@@ -35,6 +37,17 @@ class PaletteController extends ChangeNotifier {
 
   /// The reviewed paints the painter may add from (AC-4; no free-hand values).
   final List<Paint> reviewedDataset;
+
+  /// Re-points recipe search when the painter selects a palette (AC-5, D-5).
+  ///
+  /// Invoked from [selectPalette] with the newly-active palette so the Palette
+  /// screen can call the bs-04 `RecipeController.selectPalette` (wired by
+  /// `PaletteHomeScreen`), which re-solves recipes against only that palette.
+  /// Null in the shell and unit contexts that have no recipe surface; the
+  /// callback — not a direct `RecipeController` reference — keeps this controller
+  /// decoupled from the recipes feature (the screen owns the wiring). It fires
+  /// only on an actual change (the no-op guard in [selectPalette] returns first).
+  final void Function(PaintPalette palette)? onPaletteSelected;
 
   /// The palette catalogue seam. Read in the constructor to seed [palettes];
   /// when it can persist (a [PersistentPaletteSource]), [addPaintFromDataset]
@@ -62,15 +75,18 @@ class PaletteController extends ChangeNotifier {
     return const [];
   }
 
-  /// Makes [palette] the active palette and notifies listeners.
+  /// Makes [palette] the active palette, notifies listeners and re-points recipe
+  /// search at it (AC-5).
   ///
-  /// A no-op when [palette] is already selected. PALETTE-4 extends this to also
-  /// re-point the bs-04 `RecipeController` so recipe search re-solves against
-  /// the selection (AC-5); here it only tracks the screen's active palette.
+  /// A no-op when [palette] is already selected (so recipes are not needlessly
+  /// re-solved). Otherwise the screen's active palette moves and, through
+  /// [onPaletteSelected], the bs-04 `RecipeController` re-solves recipes against
+  /// only the selected palette (D-5) — the solve code itself is untouched.
   void selectPalette(PaintPalette palette) {
     if (palette == _selectedPalette) return;
     _selectedPalette = palette;
     notifyListeners();
+    onPaletteSelected?.call(palette);
   }
 
   /// Adds [paint] — chosen from the reviewed [reviewedDataset] — to the "My

@@ -432,32 +432,63 @@ void main() {
     });
 
     // AC-5 — selecting a palette makes recipes solve against it (owner
-    // PALETTE-4). Limited at this phase: no recipe surface is mounted on the
-    // Palette screen until PALETTE-4, so only the active-palette re-point is
-    // asserted here; the "every recipe's paints ⊆ the selected palette" control
-    // is the PALETTE-4 augmentation. Graded *B pending PALETTE-4*.
+    // PALETTE-4). PALETTE-4 mounts the shared `RecipeController` on the Palette
+    // screen (observed via the `RecipeReadEndpoint`) and wires palette selection
+    // to its frozen `selectPalette`, so this now asserts not just the
+    // active-palette re-point but that *every returned recipe's paints ⊆ the
+    // selected palette* — the TestAC05 augmentation, with the disjoint "My
+    // paints" / "Travel set" control that rejects an impl ignoring selection.
     acTestWidgets(
         'AC-5', 'selecting a palette re-points recipe search at it',
         (tester) async {
       // Given the painter has palettes "My paints" and "Travel set" (disjoint
-      // paints), the first listed active to begin with.
+      // paints), the first listed active to begin with — on both the screen's
+      // active palette and the recipe side (recipe search opens on the first
+      // listed palette, D-5), with a target already solving to recipes.
       final harness = await givenPalette(tester, palettes: twoPalettes);
       expect(harness.palettes.map((p) => p.name), ['My paints', 'Travel set']);
       expect(harness.selectedPalette?.name, 'My paints',
           reason: 'the first listed palette is active to begin with');
+      expect(harness.recipeSelectedPalette?.name, 'My paints',
+          reason: 'recipe search opens constrained to the first palette (D-5)');
+      expect(harness.recipes, isNotEmpty,
+          reason: 'the set target solves to recipes to constrain (ENGINE-2)');
+      // Control: before selection, every recipe uses only "My paints" paints.
+      final myPaintsIds = PALETTE_MY_PAINTS.paints.map((p) => p.id).toSet();
+      final travelIds = PALETTE_TRAVEL_SET.paints.map((p) => p.id).toSet();
+      for (final recipe in harness.recipes) {
+        for (final component in recipe.components) {
+          expect(myPaintsIds, contains(component.paint.id),
+              reason: '${component.paint.name} is not in "My paints" — recipes '
+                  'must use only the initially-selected palette');
+        }
+      }
 
       // When the painter selects "Travel set" as the active palette.
       await harness.whenSelectPalette('Travel set');
 
-      // Then recipe search solves only against "Travel set": the active palette
-      // re-points to it (rejects an impl that ignores selection / stays on My
-      // paints). The "recipes ⊆ Travel set" control arrives with PALETTE-4.
+      // Then recipe search solves only against "Travel set": the screen's active
+      // palette AND the recipe solver both re-point to it (rejects an impl that
+      // ignores selection / stays on My paints), and every component of every
+      // returned recipe is a Travel-set paint — the disjoint sets make this
+      // discriminate (a My-paints paint here would fail).
       expect(harness.selectedPalette?.name, 'Travel set');
+      expect(harness.recipeSelectedPalette?.name, 'Travel set',
+          reason: 'selection re-points the shared RecipeController (D-5)');
       expect(
         harness.selectedPalette?.paints.map((p) => p.id).toSet(),
-        PALETTE_TRAVEL_SET.paints.map((p) => p.id).toSet(),
+        travelIds,
         reason: 'the active palette is the disjoint Travel set, not My paints',
       );
+      expect(harness.recipes, isNotEmpty,
+          reason: 'the re-solve over Travel set returns recipes to check');
+      for (final recipe in harness.recipes) {
+        for (final component in recipe.components) {
+          expect(travelIds, contains(component.paint.id),
+              reason: '${component.paint.name} is not in "Travel set" — recipes '
+                  'must use only the selected palette');
+        }
+      }
     });
 
     // AC-11 — the vision-profile card shows the current estimate and opens the
@@ -769,10 +800,10 @@ void main() {
       // Seeded with AC-1..AC-11 (DATA-1); each behaviour phase deletes its AC's
       // row here as it un-pends it, so this set shrinks by one per delivered AC.
       // Un-pended so far: AC-4 (PALETTE-2), AC-2 + AC-3 (PALETTE-3),
-      // AC-1 (SCREEN-2). Asserts exact contents (non-vacuous) and that every
-      // pending key is a real AC in AC-1..AC-11.
+      // AC-1 (SCREEN-2), AC-11 (SCREEN-3), AC-5 (PALETTE-4). Asserts exact
+      // contents (non-vacuous) and that every pending key is a real AC in
+      // AC-1..AC-11.
       const expected = {
-        'AC-5',
         'AC-6',
         'AC-7',
         'AC-8',
@@ -800,10 +831,10 @@ void main() {
       // run-pending passes, and a pending AC's default-skip is null-reason only
       // when not forced. (Reading the ambient mode made this fail under
       // --dart-define=BS06_RUN_PENDING=true; ITEST-2 records the fix.)
-      // AC-5 is a still-pending example (AC-1/AC-2/AC-3/AC-11 were un-pended by
-      // SCREEN-2 / PALETTE-3 / SCREEN-3).
-      expect(pendingSkipReason('AC-5', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-5', forceRunPending: true), isNull);
+      // AC-6 is a still-pending example (AC-1/AC-2/AC-3/AC-5/AC-11 were un-pended
+      // by SCREEN-2 / PALETTE-3 / PALETTE-4 / SCREEN-3).
+      expect(pendingSkipReason('AC-6', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-6', forceRunPending: true), isNull);
       // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
