@@ -170,7 +170,15 @@ void main() {
       // Palette-selector marks the active (first) palette and lists the other.
       expect(find.text('My paints (active)'), findsOneWidget);
       expect(find.text('Travel set'), findsOneWidget);
-      // Projects region lists the project.
+      // Projects region lists the project. The screen is a lazy ListView and
+      // PALETTE-3's taller multi-line paint rows push the projects region below
+      // the viewport, so scroll it into view before asserting (it is not built
+      // off-screen otherwise).
+      await tester.scrollUntilVisible(
+        find.text('Harbor at Dusk'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Harbor at Dusk'), findsOneWidget);
     });
   });

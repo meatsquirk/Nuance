@@ -24,6 +24,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/palette/paint_list_region.dart';
@@ -35,6 +36,8 @@ import 'package:paint_color_assistant/palette/provenance_legend_region.dart';
 import 'package:paint_color_assistant/palette/vision_profile_card.dart';
 import 'package:paint_color_assistant/projects/project_read_endpoint.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
+import 'package:paint_color_assistant/widgets/paint_row.dart';
+import 'package:paint_color_assistant/widgets/provenance_badge.dart';
 
 import 'palette_harness.dart';
 
@@ -254,33 +257,56 @@ void main() {
     });
 
     // AC-2 — each paint lists its identity and provenance badge (owner
-    // PALETTE-3). Limited at this phase: the badge can only be asserted as
-    // present/"Measured" until PALETTE-3 renders the real tier — the exact-tier
-    // control (a differently-tiered paint) is the PALETTE-3 augmentation. Graded
-    // *B pending PALETTE-3*.
+    // PALETTE-3). Un-pended + augmented by PALETTE-3: the row's exact rendered
+    // provenance tier and its medium are asserted at a non-subsumed grain (the
+    // dedicated badge/medium widgets, not the "Artists' Oil" line text), with a
+    // differently-tiered, different-medium control paint that rejects an impl
+    // hardcoding "Measured"/"Oil" on every row (TestAC02).
     acTestWidgets(
         'AC-2', 'each paint lists its identity and provenance badge',
         (tester) async {
       // Given the My paints palette contains "Titanium White" by Winsor &
       // Newton, Artists' Oil, pigment PW6, read with a spectrophotometer
-      // (Measured) — seeded through the persistent save flow.
+      // (Measured) — seeded through the persistent save flow. A second paint,
+      // "Phthalo Green" (an *acrylic*, *estimated*), is seeded as the TestAC02
+      // control so each paint's own tier and medium are the ones answering.
       final titaniumWhite =
           reviewedDataset.firstWhere((p) => p.name == 'Titanium White');
+      const control = Paint(
+        id: 'ctrl-estimated',
+        name: 'Phthalo Green',
+        brand: 'Liquitex',
+        line: 'Heavy Body',
+        medium: PaintMedium.acrylic,
+        pigmentIndex: 'PG7',
+        masstone: ColorCoordinates(lightness: 40, a: -40, b: 10),
+        provenance: ProvenanceTier.estimated,
+      );
       final harness = await givenPalette(
         tester,
         palettes: [
-          PaintPalette(name: 'My paints', paints: [titaniumWhite]),
+          PaintPalette(name: 'My paints', paints: [titaniumWhite, control]),
         ],
       );
-      // Given check (through the read endpoint): the paint is in My paints with
-      // the full identity the row must render.
-      expect(harness.myPaints.map((p) => p.name), ['Titanium White']);
-      final white = harness.myPaints.single;
+      // Given check (through the read endpoint): both paints are in My paints,
+      // each with the full identity its row must render.
+      expect(harness.myPaints.map((p) => p.name),
+          ['Titanium White', 'Phthalo Green']);
+      final white =
+          harness.myPaints.firstWhere((p) => p.name == 'Titanium White');
+      expect(white.id, 'pw6');
       expect(white.brand, 'Winsor & Newton');
       expect(white.line, "Artists' Oil");
       expect(white.medium, PaintMedium.oil);
       expect(white.pigmentIndex, 'PW6');
       expect(white.provenance, ProvenanceTier.measured);
+      final green =
+          harness.myPaints.firstWhere((p) => p.name == 'Phthalo Green');
+      expect(green.id, 'ctrl-estimated');
+      expect(green.medium, PaintMedium.acrylic,
+          reason: 'the control is a different medium from "Titanium White"');
+      expect(green.provenance, ProvenanceTier.estimated,
+          reason: 'the control carries a different tier from "Titanium White"');
 
       // When the My paints list is shown (it is, after givenPalette).
       // Then "Titanium White" is listed with its brand, line, medium and
@@ -299,8 +325,38 @@ void main() {
       expect(inPaintList(find.textContaining('PW6')), findsWidgets,
           reason: 'the pigment index is shown on the row');
       expect(inPaintList(find.textContaining('Measured')), findsWidgets,
-          reason: 'the provenance badge is shown (not colour alone) — '
-              'PALETTE-3 adds the exact-tier control via its augmentation');
+          reason: 'the provenance badge is shown (not colour alone)');
+
+      // --- TestAC02 augmentation (PALETTE-3) ---
+      // The EXACT rendered provenance tier, read from each paint's own badge
+      // widget (not a row substring), so a hardcoded tier is caught.
+      ProvenanceBadge badgeOf(String id) => tester.widget<ProvenanceBadge>(
+          find.byKey(PaintRow.badgeKeyFor(id)));
+      expect(badgeOf('pw6').provenance.tier, ProvenanceTier.measured,
+          reason: '"Titanium White" renders its own Measured tier');
+
+      // The medium at its own grain — the dedicated medium label widget, NOT
+      // the "Artists' Oil" line text — so "Oil" is asserted as the medium.
+      Text mediumOf(String id) =>
+          tester.widget<Text>(find.byKey(PaintRow.mediumKeyFor(id)));
+      expect(mediumOf('pw6').data, 'Oil',
+          reason: 'the medium label reads exactly "Oil" (not the line text)');
+
+      // Control: the differently-tiered, different-medium paint renders its OWN
+      // tier and medium — rejecting an impl that hardcodes Measured/Oil per row.
+      expect(badgeOf('ctrl-estimated').provenance.tier,
+          ProvenanceTier.estimated);
+      expect(mediumOf('ctrl-estimated').data, 'Acrylic');
+      // The control's exact tier word is rendered on its badge (not colour
+      // alone): "Estimated", distinct from "Titanium White"'s "Measured".
+      expect(
+        find.descendant(
+          of: find.byKey(PaintRow.badgeKeyFor('ctrl-estimated')),
+          matching: find.text('Estimated'),
+        ),
+        findsOneWidget,
+        reason: 'the control badge states its own "Estimated" tier',
+      );
     });
 
     // AC-3 — the provenance legend explains the four confidence tiers (owner
@@ -683,12 +739,11 @@ void main() {
         () {
       // Seeded with AC-1..AC-11 (DATA-1); each behaviour phase deletes its AC's
       // row here as it un-pends it, so this set shrinks by one per delivered AC.
-      // Un-pended so far: AC-4 (PALETTE-2). Asserts exact contents (non-vacuous)
-      // and that every pending key is a real AC in AC-1..AC-11.
+      // Un-pended so far: AC-4 (PALETTE-2), AC-2 + AC-3 (PALETTE-3). Asserts
+      // exact contents (non-vacuous) and that every pending key is a real AC in
+      // AC-1..AC-11.
       const expected = {
         'AC-1',
-        'AC-2',
-        'AC-3',
         'AC-5',
         'AC-6',
         'AC-7',

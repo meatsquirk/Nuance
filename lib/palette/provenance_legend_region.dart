@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/provenance_legend.dart';
+
 /// The provenance-legend region of the Palette screen's My-paints view
 /// (wireframe S1.R1 — the provenance legend body).
 ///
-/// Explains the four confidence tiers a paint's provenance may carry (AC-3).
-/// This shell renders only a labelled placeholder; PALETTE-3 fills in the four
-/// exact tier strings ("Measured", "Calculated", "Estimated — not yet
-/// verified", "Confirmed — you measured this"). The region keeps its
-/// [regionKey] so the acceptance finder and PALETTE-3 have a stable anchor.
+/// Explains the four confidence tiers a paint's provenance may carry (AC-3):
+/// "Measured", "Calculated", "Estimated — not yet verified" and "Confirmed —
+/// you measured this", rendered by the [ProvenanceLegend] widget. The region
+/// keeps its [regionKey] so the acceptance finder has a stable anchor.
 class ProvenanceLegendRegion extends StatelessWidget {
   const ProvenanceLegendRegion({super.key});
 
@@ -24,8 +25,8 @@ class ProvenanceLegendRegion extends StatelessWidget {
           'Provenance legend',
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        // PALETTE-3 renders the four confidence tiers here (AC-3).
-        const Text('Confidence tiers shown here'),
+        // The four confidence tiers, each by its exact spec string (AC-3).
+        const ProvenanceLegend(),
       ],
     );
   }

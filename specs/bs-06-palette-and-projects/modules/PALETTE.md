@@ -1,6 +1,6 @@
 # Module PALETTE — paints & palettes
 
-**Status:** In progress — PALETTE-1 ✅ (shell), PALETTE-2 ✅ (AC-4); PALETTE-3 (AC-2/AC-3) startable next
+**Status:** In progress — PALETTE-1 ✅ (shell), PALETTE-2 ✅ (AC-4), PALETTE-3 ✅ (AC-2/AC-3); PALETTE-4 (AC-5) startable next
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (schema extension — **bs-04-owned, coordinate**), `lib/recipes/palette_source.dart` (write-side on the existing seam — bs-04-owned), `lib/palette/` (PaletteController, read endpoint, dataset loader), `assets/paints/` (reviewed dataset asset)
 **Depends on:** DATA (store) · **Blocks:** SCREEN (renders palette state), PALETTE-4 wires into RECIPE (bs-04 `RecipeController`)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 8,841,030 | 14m 46s |
 | 2 | behavior | AC-4 | ✅ Done | 8,539,454 | 17m 29s |
-| 3 | behavior | AC-2, AC-3 | ⬜ Todo | | |
+| 3 | behavior | AC-2, AC-3 | ✅ Done | 7,967,376 | 26m 47s |
 | 4 | behavior | AC-5 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -104,8 +104,29 @@
 - **Acceptance gate:** un-pend AC-2, AC-3; `palette_test.dart` green through AC-3.
 - **Augments:** `TestAC02`: strengthen the badge assertion to the real rendered tier (closes the pre-seeded limit).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (AC-2 + AC-3 — full):** new `lib/widgets/paint_row.dart` (`PaintRow`) renders each paint's identity — name, a `brand · line · pigment index` line, the **medium** as its own labelled widget (`PaintRow.mediumKeyFor(id)` → "Oil"/"Acrylic", distinct from the "Artists' Oil" line text) — plus a `ProvenanceBadge(Provenance(paint.provenance))` stating the tier in words, never colour alone (keys `rowKeyFor`/`mediumKeyFor`/`badgeKeyFor`). New `lib/widgets/provenance_legend.dart` (`ProvenanceLegend`) renders one keyed entry per `ProvenanceTier` with AC-3's four exact strings ("Measured", "Calculated", "Estimated — not yet verified", "Confirmed — you measured this"). `paint_list_region.dart` now renders `PaintRow` per paint (was `Text(paint.name)`); `provenance_legend_region.dart` now renders `ProvenanceLegend` (was a placeholder). No controller change needed (AC-2/AC-3 are pure rendering over the existing `myPaints` read). `palette_screen.dart` **not** touched (SCREEN-owned).
+- **Un-pended:** deleted the `AC-2`/`AC-3` rows in `integration_test/bs06/pending.dart`; updated the scaffold guard's `expected` still-pending set to `{AC-1,5,6,7,8,9,10,11}` (kept exact/non-vacuous).
+- **Augmentations (TestAC02 — made):** widened AC-2's acceptance test to assert the **exact rendered tier** via the per-paint `ProvenanceBadge` widget (not a row substring) **and** the **medium** via the dedicated `mediumKeyFor` label (closing the `find.textContaining('Oil')` subsumption the ITEST-2 grader flagged), with a differently-tiered, different-medium control paint ("Phthalo Green", acrylic/estimated) seeded through the persistent save flow — rejecting a hardcoded Measured/Oil row. Discriminating: every new assertion fails against the pre-PALETTE-3 name-only row.
+- **Verification:** `flutter analyze` clean. `flutter test --coverage` → **699 unit/widget passing** (+5: paint_row 3, provenance_legend 2). Coverage gate vs `main`: **100%** line coverage on all **26** touched `lib/` files (incl. the two new widgets). Acceptance (`palette_test.dart`, default mode, iPhone 17 sim `5AB9D06D…` under the verify lock): **15 passing, 8 skipped** — AC-2, AC-3, AC-4 execute green, the other 8 ACs correctly still pending. One pre-existing shell unit test (`palette_screen_test.dart` "seeded state…") needed a `scrollUntilVisible` before its off-screen projects assertion, because the taller multi-line paint rows push the last region past the lazy ListView's 600px test viewport — a test-mechanic scroll, not a weakened assertion (recorded here).
+- **Grade gate:** independent adversarial re-grade (fresh subagent, G1–G6, given the full prior grid) of every un-pended AC test — **AC-2 = A** (cleared from *B pending PALETTE-3*), **AC-3 = A**, **AC-4 = A (with caveat)**. **3×A — PASS (no unsanctioned B).** No augmentation remains owed by PALETTE-3. Grid: `behavior-test-completeness-bs-06-palette-and-projects.md` (PALETTE-3 section appended).
+- **Fix passes:** 1/3 — pass 1 fixed only the `palette_screen_test.dart` lazy-ListView scroll (above); all product gates passed on the first full run.
+- **Justified exclusions:** none.
+- Tokens: see master ledger (PALETTE-3 row). **Phase total: see dashboard row / ledger.**
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces:**
+  - `PaintRow({required Paint paint})` (`lib/widgets/paint_row.dart`) — renders a paint's identity + `ProvenanceBadge`. Stable keys: `PaintRow.rowKeyFor(id)`, `PaintRow.mediumKeyFor(id)` (dedicated medium label), `PaintRow.badgeKeyFor(id)`. `static String mediumLabel(PaintMedium)` → "Oil"/"Acrylic".
+  - `ProvenanceLegend()` (`lib/widgets/provenance_legend.dart`) — one entry per `ProvenanceTier`; `ProvenanceLegend.entryKeyFor(tier)`, `static String legendText(tier)` (the four exact AC-3 strings).
+  - `PaintListRegion` / `ProvenanceLegendRegion` keep their `regionKey`s unchanged; they now delegate rendering to the two widgets above.
+  - Unchanged: all PALETTE-1/PALETTE-2 frozen interfaces (`PaletteController`, `addPaintFromDataset`, `datasetPickerKey`, `PersistentPaletteSource`).
+- **Verification commands:** unchanged — `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/palette_test.dart -d <booted-udid>` under `coord.sh with-lock BS-06 <PHASE>` (the with-lock cds to `$FNP_COORD_REPO` = the primary checkout, so wrap the command: `-- bash -c 'cd <worktree> && flutter test …'`). Flutter SDK `/Users/matthew.quirk/development/flutter/bin`. Booted sim this session: iPhone 17 `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Known gaps / deferred:**
+  - **PALETTE-4 (AC-5)** wires `selectPalette` → `RecipeController.selectPalette` and makes the owed **TestAC05** augmentation (recipes ⊆ the selected palette). It edits `palette_controller.dart` — this phase did **not** touch that file, so no merge concern with PALETTE-3's committed work.
+  - Production still opens on Capture (paletteEntry null); the real Palette screen is only reached under the acceptance harness / SCREEN wiring. The paint row renders no colour swatch (AC-2 requires identity + badge, not colour) — a future UX nicety, not an AC.
+- **Next phase should:** PALETTE-4 (AC-5) — startable now (dep PALETTE-3 done). Runs concurrently with the PROJECT chain, SCREEN-2 and SCREEN-3 (disjoint files); it is the only remaining PALETTE phase and owns `palette_controller.dart` outright now.
 
 ## Phase 4 — AC-5 selected palette drives recipes
 
