@@ -1,6 +1,6 @@
 # Module PROJECT — projects
 
-**Status:** In progress — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler); PROJECT-3/4/5/6 startable (G-2 resolved)
+**Status:** In progress — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler), PROJECT-3 ✅ (AC-6); PROJECT-4 startable, PROJECT-5/6 after PROJECT-4 (G-2 resolved)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/projects/` (Project model, ProjectSource, ProjectController, read endpoint, confusion-pair flagging, PDF export), `lib/compare/sample_source.dart` (persistent write-side on the existing seam — bs-03/04-owned, coordinate), `pubspec.yaml` (pdf package)
 **Depends on:** DATA (store), reuses bs-03 `lib/a11y/cvd/confusion_check.dart` + injected `CvdProfile` · **Blocks:** SCREEN (renders project state)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 6,635,157 | 11m 41s |
 | 2 | behavior (enabler) | — | ✅ Done | 4,357,106 | 18m 54s |
-| 3 | behavior | AC-6 | ⬜ Todo | | |
+| 3 | behavior | AC-6 | ✅ Done | 9,896,853 | 23m 58s |
 | 4 | behavior | AC-7, AC-8 | ⬜ Todo | | |
 | 5 | behavior | AC-9 | ⬜ Todo | | |
 | 6 | behavior | AC-10 | ⬜ Todo | | |
@@ -96,8 +96,25 @@
 - **Tasks:** compute and expose each project's size, sample count, recipe count and last-edited label for the Projects list.
 - **Acceptance gate:** un-pend AC-6; `palette_test.dart` green through AC-6 (counts exact: 24×30 in, 6 samples, 3 recipes, edited today).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (AC-6):** New `lib/projects/project_summary.dart` — `ProjectSummary` row read-model + `ProjectSummary.of(project, {now})`: pluralised `sampleCountLabel`/`recipeCountLabel` and a derived relative `lastEditedLabel` (calendar-day granularity → `Edited today` / `Edited yesterday` / `Edited N days ago`, null when never edited; `now` injected for determinism). `ProjectController` gains an additive `projectSummaries` getter (maps `projects` in order). `ProjectsRegion` now renders each project as a keyed row (`projectRowKey(id)`) of name + a `size · counts` detail line + the relative last-edit line, replacing the shell's name-only `Text`.
+- **Acceptance (sim iPhone 17 Pro):** AC-6 un-pended (deleted its `bs06/pending.dart` row; scaffold-guard `expected` set + example AC moved to AC-7). Default run **19 passed / 4 skipped** (AC-7/8/9/10 pending); run-pending **AC-6 green, AC-7/8/9/10 red on their own Thens** (baseline unchanged).
+- **Augmentation (TestAC06, owned here):** added an older-second-project **control** ("Old Study", edited 3 days ago, `9×12 in`, 2 samples, 1 recipe) and scoped every Then to its own `projectRowKey` — asserts the control row does **not** read "today", closing ITEST-3's non-blocking hardcoded-`today` follow-on. Discriminates: a row hardcoding `Edited today` fails the control.
+- **Unit + coverage:** 734 tests green (+ `project_summary_test.dart` covering every `_plural` and `_lastEditedLabel` branch; `projectSummaries` getter test; a `ProjectsRegion` populated-row widget test). Coverage gate 100% line on all 27 touched `lib/` files (incl. the new `project_summary.dart`). `flutter analyze` clean.
+- **Grade gate:** independent adversarial re-grade (fresh subagent, given the full prior grid + G1–G6) of all 7 un-pended ACs — **7×A (AC-4 with its standing data caveat), 0×B — PASS**. AC-6 clears the prior ITEST-3 hardcoded-`today` residual to a clean A (control discriminates; both Givens checked; per-row scoped; 6≠3 and 2≠1 reject count swaps; G6 clean). AC-1/2/3/4/5/11 verified unregressed. No augmentation owed.
+- **Non-blocking residual (grader):** the control's `textContaining('1 recipe')` is a substring of `'1 recipes'`, so acceptance-level pluralisation grain is under-pinned; the exact singular is already pinned by `project_summary_test.dart`. Recorded, not owed.
+- **Fix passes:** 0/3 (green on first full run). **Tokens / Time:** 9,896,853 / 23m 58s (incl. the grade-gate subagent).
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces (new this phase):**
+  - `ProjectSummary` (`lib/projects/project_summary.dart`): `ProjectSummary.of(Project, {DateTime? now})` + fields `id`/`name`/`size`/`sampleCount`/`recipeCount`/`lastEditedLabel` and `sampleCountLabel`/`recipeCountLabel`. Pure projection, no widgets/persistence.
+  - `ProjectController.projectSummaries` → `List<ProjectSummary>` in `projects` order (additive; `projects`/`openedProject`/`confusionPairs`/`lastExport` unchanged).
+  - `ProjectsRegion.projectRowKey(String id)` → stable per-row `Key` for scoped row assertions.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/palette_test.dart -d <udid>` (± `--dart-define=BS06_RUN_PENDING=true`) via `coord.sh with-lock BS-06 <phase>`. Flutter SDK `/Users/matthew.quirk/development/flutter/bin`; sim udid used: `36DD0BF6-C1F4-4958-856D-B021AC8A03EC` (iPhone 17 Pro).
+- **Known gaps / deferred:** `openedProject`/`confusionPairs`/`lastExport` still shell state. **PROJECT-4** (AC-7/AC-8) is next and must precede PROJECT-5 (AC-9) and PROJECT-6 (AC-10); all three build on PROJECT-2's create/attach API and seed Givens through the persistent save flow. The open-project view PROJECT-4 mounts can reuse `ProjectSummary`/`projectRowKey` if useful but is not required to.
+- **Next phase should:** run PROJECT-4 (AC-7 + AC-8) — the last startable PROJECT phase before PROJECT-5/6. One phase per session.
 
 ## Phase 4 — AC-7 + AC-8 open note+photo; note retained
 

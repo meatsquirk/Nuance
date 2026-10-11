@@ -44,7 +44,6 @@ import 'package:flutter_test/flutter_test.dart';
 /// of [behaviorPhases]. (The enabler PROJECT-2 owns no AC and is intentionally
 /// absent — it makes the Givens of the PROJECT ACs real, but un-pends nothing.)
 const Map<String, String> pendingACs = {
-  'AC-6': 'PROJECT-3', // projects list size/counts/last-edit
   'AC-7': 'PROJECT-4', // open project note + photo
   'AC-8': 'PROJECT-4', // note retained on reopen
   'AC-9': 'PROJECT-5', // confusion pair flagged within a project

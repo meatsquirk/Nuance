@@ -70,6 +70,42 @@ void main() {
     });
   });
 
+  group('projectSummaries (PROJECT-3)', () {
+    test('summarises each project in listing order (size, counts, last edit)',
+        () {
+      final harbor = Project(
+        id: 'harbor-at-dusk',
+        name: 'Harbor at Dusk',
+        size: '24×30 in',
+        samples: const [_sample, _sample, _sample],
+        recipes: [_recipe, _recipe],
+        lastEdited: DateTime.now(),
+      );
+      const study = Project(id: 'old-study', name: 'Old Study');
+      final controller = ProjectController(
+        source: InMemoryProjectSource(catalogue: [harbor, study]),
+      );
+
+      final summaries = controller.projectSummaries;
+      expect(summaries.map((s) => s.id), ['harbor-at-dusk', 'old-study']);
+      expect(summaries.first.size, '24×30 in');
+      expect(summaries.first.sampleCountLabel, '3 samples');
+      expect(summaries.first.recipeCountLabel, '2 recipes');
+      expect(summaries.first.lastEditedLabel, 'Edited today');
+      // The shelled second project (no size, no edits) summarises to its
+      // zero-counts, null-size, never-edited form.
+      expect(summaries.last.size, isNull);
+      expect(summaries.last.sampleCountLabel, '0 samples');
+      expect(summaries.last.lastEditedLabel, isNull);
+    });
+
+    test('a fresh install has no summaries', () {
+      final controller =
+          ProjectController(source: const InMemoryProjectSource());
+      expect(controller.projectSummaries, isEmpty);
+    });
+  });
+
   group('createProject (PROJECT-2 enabler)', () {
     test(
         'creates a project, stamps it edited now, appends it and persists '

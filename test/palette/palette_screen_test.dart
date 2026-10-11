@@ -261,5 +261,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Harbor at Dusk'), findsOneWidget);
     });
+
+    testWidgets(
+        'AC-6: a project row shows its size, counts and relative last edit',
+        (tester) async {
+      final project = _projectController(
+        catalogue: [
+          Project(
+            id: 'harbor-at-dusk',
+            name: 'Harbor at Dusk',
+            size: '24×30 in',
+            lastEdited: DateTime.now(),
+          ),
+        ],
+      );
+      await _pump(tester, palette: _paletteController(), project: project);
+
+      // Reach the Projects view (E31), then scope to the project's own row.
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(PaletteScreen.viewSelectorKey),
+          matching: find.widgetWithText(TextButton, 'Projects'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      Finder inRow(Finder m) => find.descendant(
+            of: find.byKey(ProjectsRegion.projectRowKey('harbor-at-dusk')),
+            matching: m,
+          );
+      // The detail line carries the free-text size and both (zero) counts; a
+      // separate line carries the relative last edit.
+      expect(inRow(find.textContaining('24×30 in')), findsOneWidget);
+      expect(inRow(find.textContaining('0 samples')), findsOneWidget);
+      expect(inRow(find.textContaining('0 recipes')), findsOneWidget);
+      expect(inRow(find.text('Edited today')), findsOneWidget);
+    });
   });
 }

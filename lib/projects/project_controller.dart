@@ -5,6 +5,7 @@ import '../recipes/engine/mixing_engine.dart';
 import '../store/source_photo_store.dart';
 import 'project.dart';
 import 'project_source.dart';
+import 'project_summary.dart';
 
 /// A pair of a project's saved samples flagged as confusable for the painter's
 /// colour-vision profile (bs-06 AC-9).
@@ -52,6 +53,12 @@ class ProjectController extends ChangeNotifier {
   /// The painter's projects, in listing order (read-only). AC-6 renders each
   /// one's size, counts and last edit; PROJECT-3 computes that summary.
   List<Project> get projects => List<Project>.unmodifiable(_projects);
+
+  /// The painter's projects as list-row summaries (AC-6): each project's size,
+  /// saved-sample and recipe counts and a relative last-edited label, in the
+  /// same order as [projects]. The Projects region renders these (PROJECT-3).
+  List<ProjectSummary> get projectSummaries =>
+      [for (final project in _projects) ProjectSummary.of(project)];
 
   /// The project currently opened in the open-project view (AC-7/AC-8), or null
   /// when none is open. PROJECT-4 drives opening; the shell has none open.

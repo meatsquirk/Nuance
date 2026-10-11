@@ -221,3 +221,39 @@ both an ignore-selection impl and pre-PALETTE-4 code (where the
 remains owed by PALETTE-4.** No test downgraded; AC-1/2/3/4/11 verified
 unaffected by the palette_controller / palette_selector_region / build_app /
 harness changes.
+
+---
+
+## Phase graded: PROJECT-3 (behavior — AC-6 un-pended)
+
+Fresh independent adversarial re-grade, given the full prior grid and the G1–G6
+rubric, of every currently un-pended bs-06 AC — **AC-6** (just un-pended by
+PROJECT-3, graded hardest), plus **AC-1, AC-2, AC-3, AC-4, AC-5, AC-11** for
+regression (AC-7/8/9/10 remain pending and were not graded). PROJECT-3 is
+uncommitted working-tree change and touches `lib/palette/projects_region.dart`,
+`lib/projects/project_controller.dart`, the new `lib/projects/project_summary.dart`,
+the AC-6 test and the pending gate; each Given/When/Then was verified against the
+production code the test actually exercises. The grader **ran nothing and edited
+nothing** but this grid. Prior sections above are unchanged.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-6** `the projects list shows each project size, counts and last edit` | A (clears the prior ITEST-3 hardcoded-`today` residual) | **G1** both Givens checked through the read endpoint before the When: harbor (`name=='Harbor at Dusk'`, `size=='24×30 in'`, `samples==6`, `recipes==3`, `lastEdited` non-null, `inDays==0`) **and** the new control "Old Study" (`size=='9×12 in'`, `samples==2`, `recipes==1`, `inDays==3`). **G2** the configured Given answers: the last-edit label is derived by `ProjectSummary._lastEditedLabel` (calendar-day granularity → `Edited today` / `Edited yesterday` / `Edited N days ago`) off each project's own seeded `lastEdited` via `projectSummaries`, not a script. **G3** the negative Then is settled and controlled: `inRow('old-study', saysToday) → findsNothing` is asserted after `whenSwitchToProjects`'s `pumpAndSettle`, and is paired with the positive `inRow('harbor-at-dusk', saysToday) → findsWidgets`, proving the label genuinely varies between rows. **G4** at grain/value, scoped per-row via `ProjectsRegion.projectRowKey(id)` so no reading bleeds across projects: exact size strings, `6 samples`/`3 recipes` for harbor and `2 samples`/`1 recipe` for the control. **G5 — the control genuinely discriminates a hardcode (verified against production):** I confirmed `_lastEditedLabel` renders `Edited 3 days ago` for the 3-days-ago project, which does **not** contain "today"; a row that hardcoded `Text('Edited today')` (the exact ITEST-3 follow-on cheat) would make `inRow('old-study', saysToday)` find a widget and fail — so the cheat is killed. The 6≠3 and 2≠1 count asymmetries reject a sample/recipe count swap, and the per-row scoping rejects the shell's name-only row (the red-baseline failure). **G6** AC-6 only — no open/confusion/export (AC-7..10) behaviour asserted. **Residual (non-blocking, cosmetic, not owed an augmentation):** the control's recipe assertion uses `find.textContaining('1 recipe')`, which is a substring of `'1 recipes'`, so a mis-pluralised `'1 recipes'` would still pass — the production `_plural` is correct (`'1 recipe'`), and the *count value* 1 is still pinned and the swap still caught, so this is a cosmetic grain gap, not a G-rule failure. Clears the prior hardcoded-`today` residual that ITEST-3 recorded as the PROJECT-3 follow-on. |
+| **AC-1** `switch between the My paints and Projects views` | A (unchanged) | Not regressed. PROJECT-3 changed only what `ProjectsRegion` renders *inside* its subtree (rows via `projectSummaries`); `ProjectsRegion.regionKey` and the E31 view toggle in `palette_screen` are untouched, so the mutually-exclusive `if/else` presence/absence assertions and the both-ways control still hold. |
+| **AC-2** `each paint lists its identity and provenance badge` | A (unchanged) | Not regressed. `paint_list_region` / `paint_row` / `provenance_badge` and the keyed badge/medium widgets plus the differently-tiered control are entirely outside PROJECT-3's touched files. |
+| **AC-3** `the provenance legend explains the four confidence tiers` | A (unchanged) | Not regressed. Static legend copy in `provenance_legend_region`, untouched by the projects-row changes. |
+| **AC-4** `add a paint by choosing from the shipped dataset` | A (with caveat, unchanged) | Not regressed. `addPaintFromDataset` and the E32 picker are untouched by PROJECT-3. Same long-standing, non-blocking uniform-measured-dataset caveat (a data limit, not a G-rule violation). |
+| **AC-5** `selecting a palette re-points recipe search at it` | A (unchanged) | Not regressed. The `RecipeController` / selector / `onPaletteSelected` wiring is in different files; PROJECT-3's `projectSummaries` getter is additive to `ProjectController` and does not touch the palette/recipe surface the TestAC05 augmentation exercises. |
+| **AC-11** `the vision-profile card shows the estimate and opens the self-assessment` | A (unchanged) | Not regressed. `VisionProfileCard` and the second-profile control are independent of the projects region / project controller changes. |
+
+**Counts: 7×A (AC-4 with caveat) — PASS (no unsanctioned B).** AC-6 un-pends to a
+clean **A**: the PROJECT-3 older-second-project control (Old Study, edited 3 days
+ago) asserts a derived relative last-edit label that genuinely discriminates a
+hardcoded "today" (production renders `Edited 3 days ago`, verified), with per-row
+scoping and distinct counts that reject a count swap and the shell's name-only row
+— closing the hardcoded-`today` residual ITEST-3 handed forward. AC-1/2/3/4/5/11
+verified unaffected by PROJECT-3's `projects_region` / `project_controller` /
+`project_summary` changes. **No augmentation is owed** (the only new finding — the
+`'1 recipe'` substring is subsumed by `'1 recipes'` — is a cosmetic pluralisation
+grain gap, not a G-rule failure, and the count value and swap-rejection still
+hold). No test downgraded from its prior grade.

@@ -34,6 +34,7 @@ import 'package:paint_color_assistant/palette/palette_selector_region.dart';
 import 'package:paint_color_assistant/palette/projects_region.dart';
 import 'package:paint_color_assistant/palette/provenance_legend_region.dart';
 import 'package:paint_color_assistant/palette/vision_profile_card.dart';
+import 'package:paint_color_assistant/projects/project.dart';
 import 'package:paint_color_assistant/projects/project_read_endpoint.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/widgets/paint_row.dart';
@@ -568,31 +569,50 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('project ACs (ITEST-3)', () {
-    Finder inProjects(Finder m) => find.descendant(
-          of: find.byKey(ProjectsRegion.regionKey),
-          matching: m,
-        );
-
     // AC-6 — the projects list shows each project's size, counts and last edit
-    // (owner PROJECT-3).
+    // (owner PROJECT-3). Augmented here (PROJECT-3) with an older-second-project
+    // **control**: a project last edited days ago must *not* read "today", so a
+    // row that hardcodes "today" (the ITEST-3 follow-on) is rejected.
     acTestWidgets(
         'AC-6', 'the projects list shows each project size, counts and '
             'last edit', (tester) async {
       // Given the painter has a project "Harbor at Dusk" (24×30 in, 6 samples,
       // 3 recipes, last edited today) — seeded through the persistent save flow.
-      final harness = await givenPalette(tester, projects: [harborProject]);
-      // Given check (through the read endpoint): the project is present with the
-      // size/counts/last-edit the summary row must render.
-      final project = harness.projects.single;
-      expect(project.name, 'Harbor at Dusk');
-      expect(project.size, '24×30 in');
-      expect(project.samples, hasLength(6));
-      expect(project.recipes, hasLength(3));
-      expect(project.lastEdited, isNotNull);
+      // And a control project "Old Study" last edited three days ago (distinct
+      // size/counts), so the relative last-edit must be derived, not hardcoded.
+      final old = Project(
+        id: 'old-study',
+        name: 'Old Study',
+        size: '9×12 in',
+        samples: harborSamples.take(2).toList(),
+        recipes: harborRecipes.take(1).toList(),
+        lastEdited: DateTime.now().subtract(const Duration(days: 3)),
+      );
+      final harness =
+          await givenPalette(tester, projects: [harborProject, old]);
+      // Given check (through the read endpoint): both projects are present with
+      // the size/counts/last-edit each summary row must render.
+      final harbor =
+          harness.projects.firstWhere((p) => p.id == 'harbor-at-dusk');
+      final study = harness.projects.firstWhere((p) => p.id == 'old-study');
+      expect(harbor.name, 'Harbor at Dusk');
+      expect(harbor.size, '24×30 in');
+      expect(harbor.samples, hasLength(6));
+      expect(harbor.recipes, hasLength(3));
+      expect(harbor.lastEdited, isNotNull);
       expect(
-        DateTime.now().difference(project.lastEdited!).inDays,
+        DateTime.now().difference(harbor.lastEdited!).inDays,
         0,
-        reason: 'the fixture is edited today, so the row must read "today"',
+        reason: 'the fixture is edited today, so its row must read "today"',
+      );
+      expect(study.size, '9×12 in');
+      expect(study.samples, hasLength(2));
+      expect(study.recipes, hasLength(1));
+      expect(
+        DateTime.now().difference(study.lastEdited!).inDays,
+        3,
+        reason: 'the control is edited 3 days ago, so its row must not read '
+            '"today"',
       );
 
       // When the Projects list is shown (switch to the Projects view — inert in
@@ -600,22 +620,42 @@ void main() {
       await harness.whenSwitchToProjects();
       expect(find.byKey(ProjectsRegion.regionKey), findsOneWidget);
 
-      // Then the row shows the size, both counts (distinct, so a swap is caught)
-      // and that it was edited today — not the name alone (the shell's state).
-      expect(inProjects(find.textContaining('24×30 in')), findsWidgets,
+      // Scope each assertion to the owning project's own row, so a reading can't
+      // bleed across projects.
+      Finder inRow(String projectId, Finder m) => find.descendant(
+            of: find.byKey(ProjectsRegion.projectRowKey(projectId)),
+            matching: m,
+          );
+      bool saysToday(Widget w) =>
+          w is Text && (w.data ?? '').toLowerCase().contains('today');
+
+      // Then the Harbor row shows its size, both counts (distinct, so a swap is
+      // caught) and that it was edited today — not the name alone (the shell).
+      expect(inRow('harbor-at-dusk', find.textContaining('24×30 in')),
+          findsWidgets,
           reason: 'the free-text size is shown on the row (PROJECT-3)');
-      expect(inProjects(find.textContaining('6 samples')), findsWidgets,
+      expect(inRow('harbor-at-dusk', find.textContaining('6 samples')),
+          findsWidgets,
           reason: 'the sample count is shown on the row');
-      expect(inProjects(find.textContaining('3 recipes')), findsWidgets,
+      expect(inRow('harbor-at-dusk', find.textContaining('3 recipes')),
+          findsWidgets,
           reason: 'the recipe count is shown on the row (6≠3 rejects a swap)');
-      expect(
-        inProjects(find.byWidgetPredicate(
-          (w) => w is Text && (w.data ?? '').toLowerCase().contains('today'),
-        )),
-        findsWidgets,
-        reason: 'the row shows it was edited today (PROJECT-3 renders the '
-            'relative last-edit)',
-      );
+      expect(inRow('harbor-at-dusk', find.byWidgetPredicate(saysToday)),
+          findsWidgets,
+          reason: 'the row shows it was edited today (PROJECT-3 renders the '
+              'relative last-edit)');
+
+      // Control: the three-days-ago project shows its own distinct size/counts
+      // and must NOT read "today" — a hardcoded "today" label fails here.
+      expect(inRow('old-study', find.textContaining('9×12 in')), findsWidgets,
+          reason: 'the control row shows its own size');
+      expect(inRow('old-study', find.textContaining('2 samples')), findsWidgets,
+          reason: 'the control row shows its own sample count');
+      expect(inRow('old-study', find.textContaining('1 recipe')), findsWidgets,
+          reason: 'the control row shows its own recipe count (singular)');
+      expect(inRow('old-study', find.byWidgetPredicate(saysToday)), findsNothing,
+          reason: 'a project edited 3 days ago must not read "today" — the '
+              'last-edit label is derived, not hardcoded');
     });
 
     // AC-7 — opening a project shows its notes and source photo (owner
@@ -800,11 +840,10 @@ void main() {
       // Seeded with AC-1..AC-11 (DATA-1); each behaviour phase deletes its AC's
       // row here as it un-pends it, so this set shrinks by one per delivered AC.
       // Un-pended so far: AC-4 (PALETTE-2), AC-2 + AC-3 (PALETTE-3),
-      // AC-1 (SCREEN-2), AC-11 (SCREEN-3), AC-5 (PALETTE-4). Asserts exact
-      // contents (non-vacuous) and that every pending key is a real AC in
-      // AC-1..AC-11.
+      // AC-1 (SCREEN-2), AC-11 (SCREEN-3), AC-5 (PALETTE-4), AC-6 (PROJECT-3).
+      // Asserts exact contents (non-vacuous) and that every pending key is a
+      // real AC in AC-1..AC-11.
       const expected = {
-        'AC-6',
         'AC-7',
         'AC-8',
         'AC-9',
@@ -831,10 +870,10 @@ void main() {
       // run-pending passes, and a pending AC's default-skip is null-reason only
       // when not forced. (Reading the ambient mode made this fail under
       // --dart-define=BS06_RUN_PENDING=true; ITEST-2 records the fix.)
-      // AC-6 is a still-pending example (AC-1/AC-2/AC-3/AC-5/AC-11 were un-pended
-      // by SCREEN-2 / PALETTE-3 / PALETTE-4 / SCREEN-3).
-      expect(pendingSkipReason('AC-6', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-6', forceRunPending: true), isNull);
+      // AC-7 is a still-pending example (AC-1/AC-2/AC-3/AC-5/AC-6/AC-11 were
+      // un-pended by SCREEN-2 / PALETTE-3 / PALETTE-4 / PROJECT-3 / SCREEN-3).
+      expect(pendingSkipReason('AC-7', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-7', forceRunPending: true), isNull);
       // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
