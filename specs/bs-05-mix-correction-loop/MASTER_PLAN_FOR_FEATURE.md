@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** In progress — CORRECT-2 done (AC-3 ✅; AC-2 green, B pending CORRECT-4); next CORRECT-3 ∥ LOOP-5/LOOP-6 (LOOP-5 in flight, parallel) ∥ LOOP-4 (after CORRECT-3). G-2/G-4 resolved
+**Status:** In progress — CORRECT-2 + LOOP-5 done (AC-3, AC-8 ✅; AC-2 green, B pending CORRECT-4); next CORRECT-3 ∥ LOOP-6 ∥ LOOP-4 (after CORRECT-3). G-2/G-4 resolved
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -62,7 +62,7 @@ route (`toCorrection`), controller, `CorrectionEngine`, or `bs05/` suite exist �
 | AC-5 | A small correction is expressed as a touch of | ITEST-3 `TestAC05_TouchOf` | CORRECT-3 | ⬜ Todo |
 | AC-6 | A mix already within tolerance needs no correction | ITEST-3 `TestAC06_WithinTolerance` | CORRECT-4 | ⬜ Todo |
 | AC-7 | The painter hears the correction spoken | ITEST-2 `TestAC07_SpeakCorrection` | LOOP-4 | ⬜ Todo |
-| AC-8 | Re-photographing the swatch re-checks it against the target | ITEST-2 `TestAC08_RephotographRechecks` | LOOP-5 | ⬜ Todo |
+| AC-8 | Re-photographing the swatch re-checks it against the target | ITEST-2 `TestAC08_RephotographRechecks` | LOOP-5 | ✅ Done |
 | AC-9 | Saving a satisfactory mix promotes it to Confirmed by the painter | ITEST-2 `TestAC09_SaveConfirmed` | LOOP-6 | ⬜ Todo |
 | AC-10 | A value confirmed by the painter shows its Confirmed provenance in later readouts | ITEST-2 `TestAC10_ConfirmedInReadout` | LOOP-6 | ⬜ Todo |
 
@@ -207,7 +207,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 11 | CORRECT-3 | behavior AC-4, AC-5: concrete correction (paint + amount); "a touch of" | ⬜ Next | | | after CORRECT-2; ∥ LOOP-4 (after CORRECT-3), LOOP-5/6 |
 | 12 | CORRECT-4 | behavior AC-6: within tolerance → "very close" + no correction | ⬜ Todo | | | after CORRECT-3 |
 | 13 | LOOP-4 | behavior AC-7: speak the correction (E27) | ⬜ Todo | | | after CORRECT-3; ∥ CORRECT, LOOP-5/6 |
-| 14 | LOOP-5 | behavior AC-8: re-photograph re-checks (E28) | ⬜ Todo | | | after LOOP-3; serial w/ LOOP-6 |
+| 14 | LOOP-5 | behavior AC-8: re-photograph re-checks (E28) | ✅ Done | 7,036,729 | 28m 15s | parallel worktree; reconciled into feat/bs-05 @ merge 95a403e; after LOOP-3; serial w/ LOOP-6 |
 | 15 | LOOP-6 | behavior AC-9, AC-10: save confirmed → promote provenance; later readout shows it | ⬜ Todo | | | after LOOP-3; serial w/ LOOP-5 |
 | 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -216,17 +216,18 @@ when the row is marked done.
 
 ## Next phase
 
-**CORRECT-2 done (AC-3 ✅ green; AC-2 green but B pending CORRECT-4).** The difference reading (ΔE00 + verdict +
-value-leading decomposition) ships behind the engine; `DifferenceRegion` renders it. Startable strands:
-**CORRECT-3** (AC-4, AC-5 — concrete correction) next on the engine, then CORRECT-4 (AC-6, which also closes
-TestAC02's augmentation → AC-2 ✅); ∥ **LOOP-4** (AC-7) once CORRECT-3 lands; ∥ `{LOOP-5 (AC-8) → LOOP-6
-(AC-9/10)}`. **LOOP-5 is in flight now** (parallel session, worktree `Nuance-bs05-LOOP5`, claim held) — its
-rollup will reconcile into this plan later; don't edit its rows. Ownership: CORRECT-* own the engine +
-difference/correction regions; LOOP-5/6 own the controller + rephotograph/save regions + provenance.
-**⚠ CORRECT-3 must extend `checkMix` to also compute + store `state.correction`** (the check still sets only
-`difference`) — LOOP-4's Given and CORRECT-3's own tests need it (see CORRECT Checkpoint — CORRECT-2). Start
-with `/feature-next-phase bs-05-mix-correction-loop CORRECT-3` (use `--parallel` for a concurrent strand).
-bs-05 worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`; G-2/G-4 resolved.
+**CORRECT-2 (AC-2/AC-3) + LOOP-5 (AC-8) done — the check, its difference reading, and the re-photograph loop
+are in.** AC-3 ✅ green; AC-2 green but B pending CORRECT-4; AC-8 ✅ (LOOP-5 reconciled into feat/bs-05 at merge
+95a403e). Remaining startable strands: **CORRECT-3** (AC-4, AC-5 — concrete correction) next on the engine,
+then CORRECT-4 (AC-6, which also closes TestAC02's augmentation → AC-2 ✅); ∥ **LOOP-4** (AC-7) once CORRECT-3
+lands; ∥ **LOOP-6** (AC-9/10, depends on LOOP-3 only; now unblocked on the controller since LOOP-5 landed).
+Disjoint ownership: CORRECT-* own the engine + difference/correction regions; LOOP-6 owns the controller
+`saveConfirmed` + save region + provenance promotion. **⚠ CORRECT-3 must extend `checkMix` to also compute +
+store `state.correction`** (the check still sets only `difference`) — LOOP-4's Given and CORRECT-3's own tests
+need it (see CORRECT Checkpoint — CORRECT-2); a follow-up should then extend LOOP-5's `rephotograph` the same
+way and may unify the two capture paths (see LOOP Checkpoint — LOOP-5). Start with
+`/feature-next-phase bs-05-mix-correction-loop CORRECT-3` (use `--parallel` for a concurrent strand). bs-05
+worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`; G-2/G-4 resolved.
 
 ## Token usage
 
@@ -248,7 +249,8 @@ bs-05 worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`; G-2/G-4 resolv
 | SIGNOFF-DECISION | 57545616 | 2026-10-10 21:50 EDT | 21:52 | 1m 36s | 1m 36s | claude-opus-4-8 | 32 | 20,940 | 2,078,840 | 6,427 | 2,106,239 | ITEST-4 approved |
 | LOOP-3 | a0ab0bd7 | 2026-10-10 21:51 EDT | 22:20 | 29m 27s | 29m 27s | claude-opus-4-8 | 178 | 210,829 | 15,355,146 | 93,507 | 15,659,660 | AC-1 un-pended; TestAC01 green (run-pending 13/9, default 99 pass/9 skip); unit 633 + coverage 100% on touched; engine difference() ΔE00 filled; fix passes 1/3 |
 | CORRECT-2 | f021beeb | 2026-10-10 21:55 EDT | 2026-10-11 06:18 | 8h 23m | 32m 47s | claude-opus-4-8 | 168 | 348,838 | 13,172,558 | 99,700 | 13,621,264 | AC-2,AC-3 un-pended; AC-3 green/A, AC-2 green/B pending CORRECT-4; default 101 pass/7 skip; coverage 100% touched; fix passes 1/3 |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 06:18** | **15h 58m** | **3h 42m** |  | **1,408** | **2,385,519** | **89,644,548** | **651,769** | **92,683,244** |  |
+| LOOP-5 | c3f6e055 | 2026-10-11 05:54 EDT | 06:22 | 28m 15s | 28m 15s | claude-opus-4-8 | 126 | 139,257 | 6,842,428 | 54,918 | 7,036,729 | AC-8 un-pended + green; unit 634 + coverage 100% on touched; acceptance run-pending 14/8, default 100/8; grade A |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 06:22** | **16h 26m** | **4h 10m** |  | **1,534** | **2,524,776** | **96,486,976** | **706,687** | **99,719,973** |  |
 
 ## Sign-off
 
