@@ -119,3 +119,21 @@ PALETTE-2 implementation preserves provenance exactly, and the caveat is the sam
 uniform-measured-dataset limit the ITEST-2 grid already recorded (no augmentation
 owed — the remaining ITEST-2 augmentations TestAC02/TestAC05 belong to PALETTE-3 /
 PALETTE-4).
+
+## Phase graded: PALETTE-3 (behavior — AC-2 + AC-3 un-pended)
+
+Independent adversarial re-grade (fresh subagent, given the full prior grid +
+G1–G6) of every currently-un-pended AC test — AC-2 (with its new TestAC02
+augmentation), AC-3, and AC-4 (regression check). The grader ran nothing and
+edited nothing.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-2** `each paint lists its identity and provenance badge` | A (clears prior *B pending PALETTE-3*) | The TestAC02 augmentation closes both recorded gaps. (a) **Exact tier via the badge widget, not a substring:** `badgeOf('pw6').provenance.tier == ProvenanceTier.measured` reads `tester.widget<ProvenanceBadge>(find.byKey(PaintRow.badgeKeyFor('pw6')))`; the badge's provenance is `Provenance(paint.provenance)`, the paint's own configured value (G2). (b) **Medium at a non-subsumed grain:** `mediumOf('pw6').data == 'Oil'` reads the dedicated `Text` keyed `PaintRow.mediumKeyFor('pw6')`, a separate widget from the identity line "Artists' Oil" — killing the old `find.textContaining('Oil')` subsumption, so an impl that omits the medium now fails. (c) **Control paint differing in both tier and medium:** "Phthalo Green" (acrylic, estimated), seeded through the persistent save flow, renders its own `estimated`/`Acrylic` and the exact word "Estimated" on its badge — rejects an impl hardcoding Measured/Oil on every row (G5). G1: both paints pinned by name-list, id, medium and provenance before the When; the exact 2-element list rejects "no other X". G6: all assertions are AC-2's identity+badge. **Discriminates:** every new assertion fails against the pre-PALETTE-3 `Text(paint.name)` row (the keyed badge/medium widgets did not exist). |
+| **AC-3** `the provenance legend explains the four confidence tiers` | A (unchanged) | Asserts all four tiers by their **exact** spec strings scoped to `ProvenanceLegendRegion.regionKey`, including the long forms 'Estimated — not yet verified' and 'Confirmed — you measured this', which `ProvenanceLegend.legendText` renders verbatim — rejecting a legend that uses the short `Provenance.label` or omits a tier. Static explanatory copy, so fixed-text assertion is correct (G4). Not regressed by the AC-2 edit (independent app build, static legend). |
+| **AC-4** `add a paint by choosing from the shipped dataset` | A (with caveat, unchanged) | Independent test; full `Paint` value-equality to the exact dataset entry + explicit provenance equality. No shared state with AC-2's edit. Caveat is the long-standing uniform-measured-dataset limit (documented, non-blocking, not owed to PALETTE-3). |
+
+**Counts: 3×A (AC-4 with caveat) — PASS (no unsanctioned B).** AC-2 cleared from
+*B pending PALETTE-3* to A via the TestAC02 augmentation (exact rendered tier +
+dedicated medium label + differently-tiered/different-medium control); AC-3 and
+AC-4 not regressed. No augmentation remains owed by PALETTE-3.

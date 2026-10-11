@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../domain/paint.dart';
+import '../widgets/paint_row.dart';
 import 'palette_controller.dart';
 
 /// The paint-list region of the Palette screen's My-paints view (wireframe
 /// S1.R1 — the paint list body, element E32 Add paint).
 ///
 /// Lists the paints in the painter's "My paints" palette, read from
-/// [PaletteController.myPaints], and offers the E32 add-paint control. This
-/// region renders each paint by name with an empty-state placeholder; the real
-/// row rendering (brand/line/medium/pigment index + a provenance **badge**,
-/// AC-2) lands in PALETTE-3. PALETTE-2 (AC-4) wires the add control to open the
+/// [PaletteController.myPaints], and offers the E32 add-paint control. Each
+/// paint renders as a [PaintRow] — its identity (brand/line/medium/pigment
+/// index) with a provenance **badge**, never colour alone (AC-2, PALETTE-3) —
+/// or an empty-state placeholder. PALETTE-2 (AC-4) wires the add control to open the
 /// reviewed-dataset picker: choosing a paint adds it to "My paints" through
 /// [PaletteController.addPaintFromDataset]. The region keeps its [regionKey] and
 /// the add control its [addPaintKey] so the acceptance finders and the later
@@ -41,7 +42,9 @@ class PaintListRegion extends StatelessWidget {
         if (paints.isEmpty)
           const Text('No paints yet')
         else
-          for (final paint in paints) Text(paint.name),
+          // Each paint renders its identity (brand/line/medium/pigment index)
+          // and a provenance badge — never colour alone (AC-2).
+          for (final paint in paints) PaintRow(paint: paint),
         // E32 Add paint (AC-4): opens the reviewed-dataset picker; choosing a
         // paint adds it to "My paints" with its dataset provenance preserved.
         TextButton(
