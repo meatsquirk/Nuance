@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅, ITEST-2 ✅, ITEST-3 ✅ (all 11 ACs pending + red baseline; grades 6×A 5×B-pending); next ITEST-4 test review (G-2)
+**Status:** ⏸ Awaiting review — ITEST-1 ✅, ITEST-2 ✅, ITEST-3 ✅; ITEST-4 packet assembled, **G-2 awaiting decision** (approve the acceptance tests before any behavior is coded)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/palette_harness.dart`, `integration_test/palette_test.dart`, `integration_test/bs06/pending.dart`, bs-06 additions to `integration_test/fakes/` (fake file sink for photo + PDF export)
 **Depends on:** all shell phases (DATA-2, PALETTE-1, PROJECT-1, SCREEN-1) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | | |
 | 2 | acceptance-tests | AC-1,2,3,4,5,11 | ✅ Done | 10,977,843 | 25m 32s |
 | 3 | acceptance-tests | AC-6,7,8,9,10 | ✅ Done | 6,732,201 | 27m 32s |
-| 4 | test-review | — (G-2) | ⬜ Next | | |
+| 4 | test-review | — (G-2) | ⏸ Awaiting review | 1,760,963 | 3m 34s |
 
 ## Interface reconciliation
 
@@ -109,8 +109,126 @@ Registered one *pending* `acTestWidgets` per AC in `palette_test.dart`'s new `pr
 - **Preconditions:** ITEST-2 + ITEST-3 done; whole-suite grade grid all A (or *B pending <phase>*).
 - **Tasks:** assemble the review packet (per AC: test name, Given checks, When, Then + Rejects in a line or two; red-baseline summary; augmentations scheduled + closing phase; grid path + counts; what to look at first). Set this phase `⏸ Awaiting review`, G-2 *awaiting decision*; stop with: `/feature-next-phase --gate bs-06-palette-and-projects G-2 approved | "<changes>"`.
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Review packet (G-2) — for human approval
+
+The acceptance suite for bs-06 (11 pending integration tests, one per AC) is ready for review
+**before any behavior is coded**. All tests live in `integration_test/palette_test.dart` and drive the
+real app assembled by `buildApp` through the keyed widget tree + read endpoints; only infrastructure
+(speech/haptics, the source-photo/PDF file sink, the on-device store) is faked — no colour/ΔE/confusion
+math is faked. Each AC un-pends by deleting its row in `integration_test/bs06/pending.dart`; its owning
+behavior phase then makes it pass.
+
+**Look at first (reviewer):**
+1. **The vision-profile fixture split** (Interface reconciliation, above): the plan asked for one app-wide
+   `deutanModerate` profile for both AC-9 and AC-11, but the shipped `DichromatConfusionCheck` only fires
+   when a pair's post-projection ΔE00 < 3.0 (D-5) — a *moderate* deutan never reaches that, so it would
+   flag nothing. AC-9's spec names only "the painter's confusion line" (no severity), so the harness
+   exposes two profiles: `deutanModerate` (AC-11's estimate text + suite default) and `deutanDichromat`
+   (full; AC-9's genuine collapse). **Please confirm this is acceptable.**
+2. **AC-8's "reopen" is a persistent seed→load round-trip**, not an app-driven close/reopen (the app has no
+   close yet). It genuinely tests "the exact persisted note is shown on open" — a distinct discriminating
+   assertion from AC-7 — but it is not an in-app reopen cycle. Flagged so the Given/When comments don't
+   mislead.
+3. **The five B-pending grades** (AC-2, AC-5, AC-7, AC-9, AC-10): each is a test that cannot fully
+   discriminate until the behavior it checks exists, and each has a scheduled augmentation row (below) that
+   its owning phase must close to A. No B is being handed over as an "optional" item.
+
+**Per-AC (test name · Given checks · When · Then + Rejects):**
+
+- **AC-1 · `TestAC01_SwitchViews`** (owner SCREEN-2, grade **A**)
+  - *Given:* My paints view is shown to start (`PaintListRegion` present).
+  - *When:* painter switches to Projects (`whenSwitchToProjects`, E31).
+  - *Then:* Projects region present **and** paint list `findsNothing` — shown *instead of*, not alongside; a paired control switches back and asserts the inverse. *Rejects:* a toggle that shows both, a one-way/stuck toggle.
+
+- **AC-2 · `TestAC02_PaintIdentityProvenance`** (owner PALETTE-3, grade **B pending PALETTE-3**)
+  - *Given:* "Titanium White" seeded in My paints; checked via `myPaints` for brand/line/medium/`PW6`/`provenance == measured`.
+  - *When:* the My paints list is shown.
+  - *Then:* row shows name, brand, line, medium, pigment index **and** the "Measured" badge (not colour alone), scoped to the paint-list region. *Rejects:* a name/colour-only row. *Limited:* every reviewed paint is `measured` and the default is `measured`, so a hardcoded badge passes, and the medium check `'Oil'` is subsumed by the line "Artists' Oil" — PALETTE-3 augmentation must assert the **exact tier** (differently-tiered paint) **and** the **medium at a non-subsumed grain**.
+
+- **AC-3 · `TestAC03_ProvenanceLegend`** (owner PALETTE-3, grade **A**)
+  - *Given:* legend region present.
+  - *When:* the legend is shown.
+  - *Then:* all four tiers by their exact spec strings — "Measured", "Calculated", "Estimated — not yet verified", "Confirmed — you measured this". *Rejects:* a placeholder legend or a subset of tiers.
+
+- **AC-4 · `TestAC04_AddPaintFromDataset`** (owner PALETTE-2, grade **A** with caveat)
+  - *Given:* My paints empty; painter opens the add-paint flow (`whenAddPaint`, E32). Given precond (names PALETTE-2): the reviewed dataset is offered, listing "Ultramarine Blue".
+  - *When:* painter chooses "Ultramarine Blue" from the dataset.
+  - *Then:* exactly the reviewed-dataset `Paint` is added — `equals(ultramarine)`, provenance/pigment/masstone preserved. *Rejects:* a free-hand or blanked value, a lost-provenance copy.
+
+- **AC-5 · `TestAC05_SelectedPaletteDrivesRecipes`** (owner PALETTE-4, grade **B pending PALETTE-4**)
+  - *Given:* palettes "My paints" + "Travel set" (disjoint), first active; checked via `palettes`/`selectedPalette`.
+  - *When:* painter selects "Travel set" (`whenSelectPalette`).
+  - *Then:* `selectedPalette` re-points to Travel set with its disjoint id-set. *Rejects:* an impl that ignores selection / stays on My paints. *Limited:* no recipe surface is mounted until PALETTE-4, so this asserts the active-pointer proxy, not the spec's "recipes solve only against Travel set" — PALETTE-4 augmentation adds "every returned recipe's paints ⊆ selected palette" + disjoint control.
+
+- **AC-6 · `TestAC06_ProjectsListSummary`** (owner PROJECT-3, grade **A**)
+  - *Given:* "Harbor at Dusk" seeded (24×30 in, 6 samples, 3 recipes, edited today); checked via `projects.single` incl. `lastEdited` `inDays == 0`.
+  - *When:* Projects list is shown.
+  - *Then:* row shows the size string, `'6 samples'`, `'3 recipes'` (6≠3 catches a swap) and a case-insensitive "today", scoped to `ProjectsRegion`. *Rejects:* the shell's name-only row. *Non-blocking follow-on:* PROJECT-3 should add an older-second-project control so "today" can't be hardcoded.
+
+- **AC-7 · `TestAC07_OpenProjectNotePhoto`** (owner PROJECT-4, grade **B pending PROJECT-4**)
+  - *Given:* "Harbor at Dusk" has a note + source photo (seeded into the file sink, round-trips); `openedProject` null to start.
+  - *When:* painter opens the project (`whenOpenProject`).
+  - *Then:* `openedProject` is "Harbor at Dusk" carrying its `sourcePhotoRef`; the note text is shown; an `Image` is rendered. *Rejects:* no-open, note/photo absent. *Limited:* the photo Then is a bare `find.byType(Image)` untied to the source bytes — PROJECT-4 augmentation ties the shown photo to `harborPhotoRef`/`harborPhotoBytes` via a keyed/scoped widget.
+
+- **AC-8 · `TestAC08_NoteRetainedOnReopen`** (owner PROJECT-4, grade **A**)
+  - *Given:* note saved on "Harbor at Dusk", read back from the loaded persistent source (the *retained* value, non-empty guard against a vacuous "" match).
+  - *When:* painter reopens the project.
+  - *Then:* `openedProject?.note == harborNote` at the model grain **and** shown verbatim. *Rejects:* a default/placeholder/truncated note. *Caveat (see item 2):* "reopen" is the persistent seed→load round-trip, not an app-driven close/reopen.
+
+- **AC-9 · `TestAC09_ConfusionPairFlagged`** (owner PROJECT-5, grade **B pending PROJECT-5**)
+  - *Given:* project holds "Mid Raw Umber" + "Ultramarine Shadow" under a full `deutanDichromat`; the pair is confirmed confusable via the harness's **independent** `referenceConfusable` (never the shipped detector it grades — G2).
+  - *When:* painter opens the project.
+  - *Then:* exactly that pair appears in `confusionPairs` and a "check …" warning is shown. *Rejects:* no-flag, wrong-pair. *Limited:* `anyElement` can't reject an over-flagging impl at baseline — PROJECT-5 augmentation adds a clearly-distinct pair asserted **not** flagged.
+
+- **AC-10 · `TestAC10_ExportPdfStudioSheet`** (owner PROJECT-6, grade **B pending PROJECT-6**)
+  - *Given:* "Harbor at Dusk" (6 samples, 3 recipes), `lastExport` null; project opened (Given precond names PROJECT-4, which precedes PROJECT-6).
+  - *When:* painter exports the project (`whenExportProject`, D-6 — bytes, no disk write).
+  - *Then:* `lastExport` is non-null and begins with the `%PDF-` magic bytes. *Rejects:* a null/empty/placeholder blob. *Limited:* content ("references each sample + each recipe") needs a real PDF — PROJECT-6 augmentation asserts it.
+
+- **AC-11 · `TestAC11_VisionCardEstimateAndOpen`** (owner SCREEN-3, grade **A**)
+  - *Given:* `deutanModerate` injected (configured Given, G2); card present; `selfAssessmentOpen` false.
+  - *When:* painter chooses to retake from the card (`whenRetakeAssessment`).
+  - *Then:* card shows the exact estimate "deutan-type, moderate" (from the injected profile); `selfAssessmentOpen` flips false→true. *Rejects:* a blank/wrong card, a no-op retake. *Non-blocking follow-on:* SCREEN-3 should add a second-profile control so the label can't be a constant.
+
+**Red-baseline summary** (run-pending mode, `--dart-define=BS06_RUN_PENDING=true`): all 11 AC tests fail
+cleanly — 9 on a Then, 2 (AC-4, AC-10) on a Given precondition naming the owning phase; every failure a
+`TestFailure` (no compile/harness/panic error). Default run (pending skipped): **12/12 green** (2 smoke +
+6 fixture guards + the scaffold-guard group; the 11 AC tests correctly skip). Rest of the suite green.
+Per-test rows: the *Red baseline* table below.
+
+**Augmentations scheduled** (the five B-pending tests reach A when their owner closes these — *Test
+augmentations* table below): TestAC02 → PALETTE-3 · TestAC05 → PALETTE-4 · TestAC07 → PROJECT-4 ·
+TestAC09 → PROJECT-5 · TestAC10 → PROJECT-6.
+
+**Grade grid:** `specs/bs-06-palette-and-projects/behavior-test-completeness-bs-06-palette-and-projects.md`
+— ITEST-1 scaffold/harness/fixtures **15×A**; ITEST-2 (AC-1,2,3,4,5,11) **4×A, 2×B-pending**; ITEST-3
+(AC-6,7,8,9,10) **2×A, 3×B-pending**. Whole-suite AC grades: **6×A, 5×B-pending — no unsanctioned B**.
+All grades by fresh independent adversarial graders.
+
+**To record the decision:** `/feature-next-phase --gate bs-06-palette-and-projects G-2 approved | "<changes>"`
+
+### Result
+
+ITEST-4 (test-review) assembled the G-2 review packet above across ITEST-2 (AC-1,2,3,4,5,11) and ITEST-3
+(AC-6,7,8,9,10): per-AC test name, Given checks, When, Then + Rejects; the red-baseline summary; the five
+scheduled augmentations with closing phases; the grade-grid path and counts; and the three items to look
+at first (the vision-profile fixture split needing confirmation, AC-8's round-trip "reopen" caveat, the
+five sanctioned B-pending grades). No `lib/` and no test code touched — plan files only. Phase set
+`⏸ Awaiting review`; **G-2** set *awaiting decision*. The behavior stage (PALETTE-2→4, PROJECT-2→6,
+SCREEN-2/3) stays blocked until a human records the G-2 decision.
+
+### Checkpoint / Handoff
+
+- **Awaiting the human decision on G-2.** Record with
+  `/feature-next-phase --gate bs-06-palette-and-projects G-2 approved | "<changes requested>"`.
+- **On approval:** ITEST-4 flips to ✅ Done and every behavior phase unblocks. Startable first:
+  PALETTE-2 (AC-4), PROJECT-2 (enabler), SCREEN-2 (AC-1), SCREEN-3 (AC-11) — those with no behavior
+  dependency; PALETTE-3/4 and PROJECT-3→6 follow per the dependency graph (PROJECT-4 before PROJECT-5 and
+  PROJECT-6). Each behavior phase un-pends its AC (delete the row in `bs06/pending.dart`), makes its
+  augmentations, and re-grades every un-pended test to A.
+- **On changes requested:** each item becomes an ITEST change phase before the behavior stage, followed by
+  a fresh review.
+- **Verification commands:** unchanged (see ITEST-1 handoff). No verification run this phase (no code).
 
 ## Red baseline  <!-- filled by the AC-test phases (run-pending) -->
 
