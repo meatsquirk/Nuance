@@ -1,6 +1,6 @@
 # Module CORRECT — correction engine
 
-**Status:** In progress — CORRECT-1/2/3 done (AC-3/AC-4/AC-5 green; AC-2 green, B pending CORRECT-4); CORRECT-4 next (behavior)
+**Status:** ✅ Complete — CORRECT-1/2/3/4 done (AC-2/AC-3/AC-4/AC-5/AC-6 ✅; TestAC02 augmentation closed at CORRECT-4)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/engine/correction_engine.dart` (interface + `Difference`/`Correction` types), `lib/correction/engine/correction_engine_impl.dart` (the v1 impl), `lib/correction/engine/correction_words.dart` (verdict band + value-leading phrasing)
 **Depends on:** bs-04 `MixingEngine`/`Paint`/`PaintPalette`/`Recipe` · bs-03 `deltaE00` (`lib/compare/difference.dart`) · color-science (`labToCielch`, `hueFamilyWord`, `words.dart`) · CORRECT-1 is a shell (stub wired by LOOP via `AppDependencies.correctionEngine`) · **Blocks:** LOOP-2 (needs the types), SCREEN-1, the CORRECT-2/3/4 behaviour phases
