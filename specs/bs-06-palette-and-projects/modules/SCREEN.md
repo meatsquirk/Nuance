@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 12,251,452 | 17m 44s |
-| 2 | behavior | AC-1 | ⬜ Todo | | |
+| 2 | behavior | AC-1 | ✅ Done | 5,271,492 | 30m 22s |
 | 3 | behavior | AC-11 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -61,8 +61,24 @@
 - **Tasks:** E31 selector toggles the screen between the My-paints view and the Projects view (one visible at a time).
 - **Acceptance gate:** un-pend AC-1; `palette_test.dart` green — Projects region shown and paint-list region gone after the toggle.
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (AC-1):** `PaletteScreen` is now a `StatefulWidget` (the toggle needs mutable UI state that survives controller `notifyListeners` rebuilds — a `StatelessWidget` + `StatefulBuilder` cannot persist it across the enclosing `ListenableBuilder`). A private `_PaletteView { myPaints, projects }` holds which E31 view is shown (My paints to begin with); the two E31 `TextButton`s are now wired (`onPressed` → `setState`). The screen shows **one view at a time**: the My-paints view (`PaintListRegion` + `ProvenanceLegendRegion` + `PaletteSelectorRegion`) *or* the Projects view (`ProjectsRegion`), via a `if (showMyPaints) [...] else ProjectsRegion`, so the hidden view's regions leave the tree (`findsNothing`). `VisionProfileCard` (E30) and the E31 selector stay always-visible. **Scope kept tight for the SCREEN-3 merge:** the `const VisionProfileCard()` line, imports, router and region internals are untouched; only the class kind, the selector `onPressed`, and the region layout changed.
+- **AC un-pended:** AC-1 removed from `integration_test/bs06/pending.dart`. Suite edits forced by the toggle (recorded per the "record any other change to a test" rule; none weaken an AC test): the never-pending **smoke test** in `palette_test.dart` asserted "both views' regions present at once" — a SCREEN-1 *shell* invariant AC-1 directly supersedes (`findsNothing` vs `findsOneWidget` at the same state) — so it now asserts the My-paints view initially + reaches `ProjectsRegion` by switching; the two scaffold-guard tests that hard-coded `'AC-1'` (the pending-set and `pendingSkipReason` guards) were repointed to a still-pending AC (`'AC-2'`) and the un-pended-so-far comment updated. `test/palette/palette_screen_test.dart` widget tests updated for the toggle (regions reached per view) + a new `AC-1: the E31 selector toggles …` unit test.
+- **Verification:** `flutter analyze` clean. `flutter test --coverage` → **695 passing** (was 688). Coverage gate vs `main`: **100%** on all 24 touched `lib/` files (incl. `lib/palette/palette_screen.dart`). Acceptance `flutter test integration_test/palette_test.dart -d <iPhone 17 sim>` (under the global lock): **14 passing, 9 pending, 0 failing** — AC-1 un-pended + green, AC-4 still green; the 9 remaining ACs (2,3,5,6,7,8,9,10,11) correctly skipped as pending.
+- **Grade gate:** AC-1 — **A**; AC-4 (re-graded for regression) — **A (with caveat)**, confirmed not regressed by the toggle (AC-4 runs in the default My-paints view). **Counts: 2×A, 0×B pending — PASS** (no unsanctioned B, no downgrade). Independent fresh-subagent grade; grid: `behavior-test-completeness-bs-06-palette-and-projects.md`, § *Phase graded: SCREEN-2*.
+- **Augmentations:** none owed by AC-1 (the both-ways control is in the test already); no already-green neighbour (AC-4) can assert more from the toggle.
+- **Fix passes:** 1/3 — pass 1: the acceptance `pendingSkipReason` scaffold guard used `'AC-1'` as its example pending AC, which SCREEN-2 un-pends → repointed to `'AC-2'`. Unit gates were clean on the first run; the implementation was correct from the first run.
+- **Justified exclusions:** none — 100% on touched files.
+- Tokens: see master ledger (SCREEN-2 row). **Phase total: 5,271,492, 30m 22s active.**
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces:** `PaletteScreen` is now a `StatefulWidget` with the **same public constructor** (`{required paletteController, required projectController}`) and the **same `static const viewSelectorKey`** — no API change for callers or the harness. The E31 selector toggles `_PaletteView` (private); the My-paints view = `PaintListRegion` + `ProvenanceLegendRegion` + `PaletteSelectorRegion`, the Projects view = `ProjectsRegion`, shown **instead of** each other (the hidden view's regions are not in the tree). `VisionProfileCard` (E30) and the E31 Row are always mounted.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main`. Acceptance: `flutter test integration_test/palette_test.dart -d <booted-udid>` via `coord.sh with-lock` (global sim lock). Flutter SDK `/Users/matthew.quirk/development/flutter/bin`.
+- **Known gaps / deferred:** `VisionProfileCard` still a placeholder (no `CvdProfile` estimate) and `retakeKey` unwired — **SCREEN-3** (AC-11). ⚠️ **Projects-view reachability for PROJECT phases:** `ProjectsRegion` (and its `openProjectKey`/`exportKey`) is now **absent in the default My-paints view**; the harness `whenOpenProject`/`whenExportProject` tap `ProjectsRegion` keys **without first switching to the Projects view**, so AC-7/8/9/10 (PROJECT-4/5/6) must switch to Projects first (e.g. call `whenSwitchToProjects()` in those drivers/tests, or have `whenOpenProject` switch) or they will not find the control at their un-pend run. AC-6 (PROJECT-3) already calls `whenSwitchToProjects()`.
+- **⚠️ Merge with SCREEN-3:** SCREEN-3 also edits `lib/palette/palette_screen.dart` (VisionProfileCard estimate + router wiring) and `test/palette/palette_screen_test.dart`. SCREEN-2 changed `PaletteScreen` `StatelessWidget`→`StatefulWidget` (build body moved into `_PaletteScreenState`, `paletteController`→`widget.paletteController`); the `const VisionProfileCard()` line is left unchanged to ease SCREEN-3's edit. Expect a 3-way conflict at the class/State declaration — resolve by keeping the StatefulWidget shell and folding SCREEN-3's `VisionProfileCard(...)` + router callback onto the moved build method.
+- **Next phase:** SCREEN-3 (AC-11) is the only remaining SCREEN phase; it and the PALETTE/PROJECT chains run per the master graph. SIGNOFF-1 last.
 
 ## Phase 3 — AC-11 vision-profile card
 

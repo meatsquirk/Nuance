@@ -37,7 +37,7 @@ Future<void> _pump(
 
 void main() {
   group('PaletteScreen (shell)', () {
-    testWidgets('renders under a Palette app bar with every region resolvable',
+    testWidgets('renders under a Palette app bar showing the My-paints view',
         (tester) async {
       await _pump(
         tester,
@@ -46,13 +46,54 @@ void main() {
       );
 
       expect(find.widgetWithText(AppBar, 'Palette'), findsOneWidget);
-      // Every keyed region is present in the shell (both views at once).
+      // The persistent chrome and the My-paints view's regions are shown to
+      // begin with; the Projects region is reached by the E31 toggle (AC-1).
       expect(find.byKey(VisionProfileCard.regionKey), findsOneWidget);
       expect(find.byKey(PaletteScreen.viewSelectorKey), findsOneWidget);
       expect(find.byKey(PaintListRegion.regionKey), findsOneWidget);
       expect(find.byKey(ProvenanceLegendRegion.regionKey), findsOneWidget);
       expect(find.byKey(PaletteSelectorRegion.regionKey), findsOneWidget);
+      expect(find.byKey(ProjectsRegion.regionKey), findsNothing);
+    });
+
+    testWidgets(
+        'AC-1: the E31 selector toggles between the My-paints and Projects '
+        'views, one visible at a time', (tester) async {
+      await _pump(
+        tester,
+        palette: _paletteController(),
+        project: _projectController(),
+      );
+
+      Future<void> tapSegment(String label) async {
+        await tester.tap(
+          find.descendant(
+            of: find.byKey(PaletteScreen.viewSelectorKey),
+            matching: find.widgetWithText(TextButton, label),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      // Given the My-paints view is shown to begin with.
+      expect(find.byKey(PaintListRegion.regionKey), findsOneWidget);
+      expect(find.byKey(ProjectsRegion.regionKey), findsNothing);
+
+      // When switching to Projects, the projects list is shown instead of the
+      // paints (and the other My-paints regions go with them).
+      await tapSegment('Projects');
       expect(find.byKey(ProjectsRegion.regionKey), findsOneWidget);
+      expect(find.byKey(PaintListRegion.regionKey), findsNothing);
+      expect(find.byKey(ProvenanceLegendRegion.regionKey), findsNothing);
+      expect(find.byKey(PaletteSelectorRegion.regionKey), findsNothing);
+
+      // Control: switching back restores My paints and hides Projects, so the
+      // view changes both ways (not a one-way or stuck toggle).
+      await tapSegment('My paints');
+      expect(find.byKey(PaintListRegion.regionKey), findsOneWidget);
+      expect(find.byKey(ProvenanceLegendRegion.regionKey), findsOneWidget);
+      expect(find.byKey(PaletteSelectorRegion.regionKey), findsOneWidget);
+      expect(find.byKey(ProjectsRegion.regionKey), findsNothing);
     });
 
     testWidgets('the still-inert E30/E33/E34 controls have no action',
@@ -63,22 +104,21 @@ void main() {
         project: _projectController(),
       );
 
-      // E32 Add paint is wired by PALETTE-2 (AC-4) — exercised by the add-paint
-      // tests below; the rest stay inert until their behaviour phases.
-      for (final key in [
-        VisionProfileCard.retakeKey,
-        ProjectsRegion.openProjectKey,
-        ProjectsRegion.exportKey,
-      ]) {
-        final button = tester.widget<TextButton>(find.byKey(key));
-        expect(button.onPressed, isNull, reason: '$key must be inert');
-      }
-      // E32 Add paint is now active.
+      // E30 Retake (SCREEN-3) stays inert in the My-paints view; it is always
+      // shown.
+      expect(
+        tester.widget<TextButton>(find.byKey(VisionProfileCard.retakeKey))
+            .onPressed,
+        isNull,
+        reason: 'E30 retake stays inert until SCREEN-3',
+      );
+      // E32 Add paint is now active (PALETTE-2, AC-4).
       final addPaint =
           tester.widget<TextButton>(find.byKey(PaintListRegion.addPaintKey));
       expect(addPaint.onPressed, isNotNull,
           reason: 'PALETTE-2 wires the add-paint control (AC-4)');
-      // E31 selector segments are inert too.
+      // E31 selector segments are now wired (SCREEN-2, AC-1): each toggles a
+      // view.
       final segments = tester.widgetList<TextButton>(
         find.descendant(
           of: find.byKey(PaletteScreen.viewSelectorKey),
@@ -86,7 +126,25 @@ void main() {
         ),
       );
       expect(segments, isNotEmpty);
-      expect(segments.every((b) => b.onPressed == null), isTrue);
+      expect(segments.every((b) => b.onPressed != null), isTrue,
+          reason: 'SCREEN-2 wires the E31 view selector (AC-1)');
+
+      // E33 Open / E34 Export stay inert in the Projects view (their behaviour
+      // phases wire them); reach them by the E31 toggle.
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(PaletteScreen.viewSelectorKey),
+          matching: find.widgetWithText(TextButton, 'Projects'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (final key in [
+        ProjectsRegion.openProjectKey,
+        ProjectsRegion.exportKey,
+      ]) {
+        final button = tester.widget<TextButton>(find.byKey(key));
+        expect(button.onPressed, isNull, reason: '$key must be inert');
+      }
     });
 
     testWidgets(
@@ -141,8 +199,17 @@ void main() {
         project: _projectController(),
       );
 
+      // My-paints view placeholders.
       expect(find.text('No paints yet'), findsOneWidget);
       expect(find.text('No palettes yet'), findsOneWidget);
+      // The projects placeholder lives in the Projects view (reached via E31).
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(PaletteScreen.viewSelectorKey),
+          matching: find.widgetWithText(TextButton, 'Projects'),
+        ),
+      );
+      await tester.pumpAndSettle();
       expect(find.text('No projects yet'), findsOneWidget);
     });
 
@@ -165,20 +232,21 @@ void main() {
 
       await _pump(tester, palette: palette, project: project);
 
-      // Paint-list region shows the paint name.
+      // My-paints view: the paint-list region shows the paint name and the
+      // palette-selector marks the active (first) palette and lists the other.
       expect(find.text('Titanium White'), findsOneWidget);
-      // Palette-selector marks the active (first) palette and lists the other.
       expect(find.text('My paints (active)'), findsOneWidget);
       expect(find.text('Travel set'), findsOneWidget);
-      // Projects region lists the project. The screen is a lazy ListView and
-      // PALETTE-3's taller multi-line paint rows push the projects region below
-      // the viewport, so scroll it into view before asserting (it is not built
-      // off-screen otherwise).
-      await tester.scrollUntilVisible(
-        find.text('Harbor at Dusk'),
-        200,
-        scrollable: find.byType(Scrollable).first,
+      // Projects view (reached via E31): the projects region lists the project.
+      // Under SCREEN-2 the two views are mutually exclusive, so the project is
+      // reached by switching views (not by scrolling a single combined list).
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(PaletteScreen.viewSelectorKey),
+          matching: find.widgetWithText(TextButton, 'Projects'),
+        ),
       );
+      await tester.pumpAndSettle();
       expect(find.text('Harbor at Dusk'), findsOneWidget);
     });
   });

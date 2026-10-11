@@ -120,6 +120,8 @@ uniform-measured-dataset limit the ITEST-2 grid already recorded (no augmentatio
 owed — the remaining ITEST-2 augmentations TestAC02/TestAC05 belong to PALETTE-3 /
 PALETTE-4).
 
+---
+
 ## Phase graded: PALETTE-3 (behavior — AC-2 + AC-3 un-pended)
 
 Independent adversarial re-grade (fresh subagent, given the full prior grid +
@@ -137,3 +139,31 @@ edited nothing.
 *B pending PALETTE-3* to A via the TestAC02 augmentation (exact rendered tier +
 dedicated medium label + differently-tiered/different-medium control); AC-3 and
 AC-4 not regressed. No augmentation remains owed by PALETTE-3.
+
+---
+
+## Phase graded: SCREEN-2 (behavior — AC-1 un-pended)
+
+Independent adversarial re-grade by a fresh subagent (not the test author), given
+the prior grid above and the G1–G6 rubric, grading what the code does now. Scope
+is exactly the currently **un-pended** bs-06 AC acceptance tests: AC-1 (owner
+SCREEN-2, just landed) and AC-4 (owner PALETTE-2, already green). SCREEN-2 made
+`PaletteScreen` a `StatefulWidget` whose E31 selector Row toggles `_PaletteView`
+between `myPaints` and `projects`, rendering the My-paints regions
+(`PaintListRegion` + `ProvenanceLegendRegion` + `PaletteSelectorRegion`) or the
+`ProjectsRegion` via a mutually-exclusive `if (showMyPaints) … else …`. I verified
+every Given/When/Then of both tests against the real widget tree; the prior
+ITEST-1/2/3 and PALETTE-2 sections are unchanged.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-1** `switch between the My paints and Projects views` | A | **G1** Given checked through the public surface before the When — `PaintListRegion.regionKey` `findsOneWidget` after `givenPalette(twoPalettes)`, i.e. the screen is genuinely resting on My paints (the real default `_view == _PaletteView.myPaints`), not assumed. **G2** The When drives the real E31 control: `whenSwitchToProjects()` taps the `'Projects'` `TextButton` descendant of `viewSelectorKey`, now wired (`onPressed: () => _show(_PaletteView.projects)` → `setState`), so the view change comes from the real toggle state, not a fake/script. **G3** Negative Then settled: `PaintListRegion` `findsNothing` is asserted only after `whenSwitchToProjects()`'s `pumpAndSettle`, and is paired with a both-ways control (`whenSwitchToMyPaints()` restores `PaintListRegion` and hides `ProjectsRegion`), proving the reading changes in both directions, not one-way/stuck. **G4** Asserts the spec's "instead of" grain exactly — `ProjectsRegion.regionKey` present **and** `PaintListRegion.regionKey` `findsNothing` (the `if/else` renders one subtree, never both). **G5** Rejects a show-both toggle (the shell's old both-at-once layout — the real red-baseline failure), a non-toggling control, and a one-way/stuck toggle. **G6** Asserts AC-1 only. No downgrade from the prior grid's A. |
+| **AC-4** `add a paint by choosing from the shipped dataset` | A (with caveat) | Re-confirmed green and **not** regressed by SCREEN-2's toggle. **G1** `myPaints` empty checked; `whenAddPaint()` taps the real E32 `addPaintKey`, which SCREEN-2 leaves mounted in the default My-paints view (the test never switches views, so `PaintListRegion`/`addPaintKey` stay in the tree) and which PALETTE-2 wired to `_openDatasetPicker`; the picker precondition (`'Ultramarine Blue'` offered) is asserted before the tap. **G2** The picker reads `controller.reviewedDataset` = shipped `kReviewedPaints`; `addPaintFromDataset` appends the exact tapped `Paint` (`[...?current?.paints, paint]`, no field rewriting) and persists via `PersistentPaletteSource.savePalette`. **G4/G5** full `Paint` value-equality to the exact dataset entry + explicit `provenance` equality — rejects a free-hand / blanked / fabricated / wrong-masstone / dropped-pigment-index paint. **G6** AC-4 only. **Caveat (verified, non-blocking, unchanged from ITEST-2 / PALETTE-2):** every `kReviewedPaints` entry is `measured` and `Paint.provenance` defaults to `measured`, so "provenance preserved" cannot be separated from a hardcoded-`measured` impl; no non-measured reviewed paint exists in v1 to build a control from, and value-equality is the strongest assertion the data supports. If a non-measured reviewed paint is ever shipped, add a preserved-tier control. No downgrade. |
+
+**Counts: 2× A, 0× B pending — PASS (no unsanctioned B).** AC-1 is a clean A
+driving the real E31 toggle at the "instead of" grain with a both-ways control;
+AC-4 holds its A-with-caveat and is unaffected by the new toggle (it runs in the
+default My-paints view where the add control stays mounted). No test downgraded
+from its prior grade. No defect requires a fix in SCREEN-2: AC-1 has no gap, and
+AC-4's only limit is the pre-existing inherited uniform-measured-dataset caveat
+(not a sub-A, and not closable by any scheduled augmentation).

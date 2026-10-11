@@ -44,7 +44,6 @@ import 'package:flutter_test/flutter_test.dart';
 /// of [behaviorPhases]. (The enabler PROJECT-2 owns no AC and is intentionally
 /// absent — it makes the Givens of the PROJECT ACs real, but un-pends nothing.)
 const Map<String, String> pendingACs = {
-  'AC-1': 'SCREEN-2', // switch My paints / Projects views
   'AC-5': 'PALETTE-4', // selected palette drives recipes
   'AC-6': 'PROJECT-3', // projects list size/counts/last-edit
   'AC-7': 'PROJECT-4', // open project note + photo

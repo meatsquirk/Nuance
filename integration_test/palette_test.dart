@@ -58,14 +58,22 @@ void main() {
       expect(find.byKey(PaletteReadEndpoint.endpointKey), findsOneWidget);
       expect(find.byKey(ProjectReadEndpoint.endpointKey), findsOneWidget);
 
-      // Every region anchor the AC finders and behaviour phases rely on — both
-      // views' regions are present at once in the shell (SCREEN-1).
+      // The persistent chrome and the My-paints view's regions are shown to
+      // begin with. SCREEN-2's E31 selector now toggles the two views (AC-1),
+      // so the Projects region is reached by switching — one view at a time, not
+      // present alongside the paints.
       expect(find.byKey(VisionProfileCard.regionKey), findsOneWidget);
       expect(find.byKey(PaletteScreen.viewSelectorKey), findsOneWidget);
       expect(find.byKey(PaintListRegion.regionKey), findsOneWidget);
       expect(find.byKey(ProvenanceLegendRegion.regionKey), findsOneWidget);
       expect(find.byKey(PaletteSelectorRegion.regionKey), findsOneWidget);
+      expect(find.byKey(ProjectsRegion.regionKey), findsNothing);
+
+      // Switching reaches the Projects view's region, proving both views' shells
+      // wire end to end, then back so the resting state below is My paints.
+      await harness.whenSwitchToProjects();
       expect(find.byKey(ProjectsRegion.regionKey), findsOneWidget);
+      await harness.whenSwitchToMyPaints();
 
       // Opened empty (no seeds): the shell's resting state, read through the
       // endpoints the ACs observe. Nothing spoken, no haptics, no navigation.
@@ -739,11 +747,10 @@ void main() {
         () {
       // Seeded with AC-1..AC-11 (DATA-1); each behaviour phase deletes its AC's
       // row here as it un-pends it, so this set shrinks by one per delivered AC.
-      // Un-pended so far: AC-4 (PALETTE-2), AC-2 + AC-3 (PALETTE-3). Asserts
-      // exact contents (non-vacuous) and that every pending key is a real AC in
-      // AC-1..AC-11.
+      // Un-pended so far: AC-4 (PALETTE-2), AC-2 + AC-3 (PALETTE-3),
+      // AC-1 (SCREEN-2). Asserts exact contents (non-vacuous) and that every
+      // pending key is a real AC in AC-1..AC-11.
       const expected = {
-        'AC-1',
         'AC-5',
         'AC-6',
         'AC-7',
@@ -773,8 +780,9 @@ void main() {
       // run-pending passes, and a pending AC's default-skip is null-reason only
       // when not forced. (Reading the ambient mode made this fail under
       // --dart-define=BS06_RUN_PENDING=true; ITEST-2 records the fix.)
-      expect(pendingSkipReason('AC-1', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
+      // AC-2 is a still-pending example (AC-1 was un-pended by SCREEN-2).
+      expect(pendingSkipReason('AC-2', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
       // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);

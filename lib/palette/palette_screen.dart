@@ -20,12 +20,11 @@ import 'vision_profile_card.dart';
 /// projects list (E33/E34) — so the acceptance finders and the behaviour phases
 /// have stable anchors.
 ///
-/// This shell renders placeholders and inert controls with **both** views'
-/// regions present at once, so every region key resolves; SCREEN-2 makes the
-/// E31 selector toggle between the My-paints and Projects views (AC-1), and each
-/// region's real reading and action land in its behaviour phase (PALETTE-2..4,
-/// PROJECT-3..6, SCREEN-3).
-class PaletteScreen extends StatelessWidget {
+/// The E31 selector toggles between the My-paints view (paint list, provenance
+/// legend, palette selector) and the Projects view (projects list), with one
+/// visible at a time (AC-1); each region's real reading and action land in its
+/// behaviour phase (PALETTE-2..4, PROJECT-3..6, SCREEN-3).
+class PaletteScreen extends StatefulWidget {
   const PaletteScreen({
     required this.paletteController,
     required this.projectController,
@@ -43,35 +42,59 @@ class PaletteScreen extends StatelessWidget {
   final ProjectController projectController;
 
   @override
+  State<PaletteScreen> createState() => _PaletteScreenState();
+}
+
+/// Which of the two mutually-exclusive E31 views is showing (AC-1).
+enum _PaletteView { myPaints, projects }
+
+class _PaletteScreenState extends State<PaletteScreen> {
+  /// The view E31 is currently showing; My paints to begin with.
+  _PaletteView _view = _PaletteView.myPaints;
+
+  void _show(_PaletteView view) => setState(() => _view = view);
+
+  @override
   Widget build(BuildContext context) {
+    final showMyPaints = _view == _PaletteView.myPaints;
     return Scaffold(
       appBar: AppBar(title: const Text('Palette')),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge([paletteController, projectController]),
+          listenable: Listenable.merge(
+              [widget.paletteController, widget.projectController]),
           builder: (context, _) {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 const VisionProfileCard(),
                 const SizedBox(height: 12),
-                // E31 Paints or projects selector — wired by SCREEN-2 (AC-1).
-                // Present but inert in this shell.
+                // E31 Paints or projects selector — toggles which view is
+                // shown, one at a time (AC-1).
                 Row(
-                  key: viewSelectorKey,
-                  children: const [
-                    TextButton(onPressed: null, child: Text('My paints')),
-                    TextButton(onPressed: null, child: Text('Projects')),
+                  key: PaletteScreen.viewSelectorKey,
+                  children: [
+                    TextButton(
+                      onPressed: () => _show(_PaletteView.myPaints),
+                      child: const Text('My paints'),
+                    ),
+                    TextButton(
+                      onPressed: () => _show(_PaletteView.projects),
+                      child: const Text('Projects'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                PaintListRegion(controller: paletteController),
-                const SizedBox(height: 12),
-                const ProvenanceLegendRegion(),
-                const SizedBox(height: 12),
-                PaletteSelectorRegion(controller: paletteController),
-                const SizedBox(height: 12),
-                ProjectsRegion(controller: projectController),
+                // The two views are shown *instead of* each other (AC-1): the
+                // My-paints regions, or the projects list, never both at once.
+                if (showMyPaints) ...[
+                  PaintListRegion(controller: widget.paletteController),
+                  const SizedBox(height: 12),
+                  const ProvenanceLegendRegion(),
+                  const SizedBox(height: 12),
+                  PaletteSelectorRegion(controller: widget.paletteController),
+                ] else
+                  ProjectsRegion(controller: widget.projectController),
               ],
             );
           },
