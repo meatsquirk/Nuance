@@ -367,9 +367,97 @@ void main() {
       });
     });
 
-    group('actions still inert until their phase', () {
-      test('saveConfirmed throws until LOOP-6', () {
-        expect(() => _controller().saveConfirmed(), throwsUnimplementedError);
+    group('saveConfirmed (LOOP-6, AC-9)', () {
+      CorrectionController saveController(CaptureSource source) =>
+          CorrectionController(
+            captureSource: source,
+            target: _correctTarget, // starts estimated, so a confirm is real
+            currentMix: _mix,
+            paletteSource: const InMemoryPaletteSource(),
+            correctionEngine: const SubtractiveCorrectionEngine(),
+          );
+
+      test(
+          'promotes the checked target to Confirmed, records the note, appends '
+          'the measured swatch as evidence and persists it', () async {
+        final controller = saveController(SoftwareCaptureSource(_offScene));
+        await controller.checkMix();
+        final swatch = controller.state.mixedSwatch;
+        expect(swatch, isNotNull, reason: 'the check photographs the swatch');
+        expect(_correctTarget.provenance.tier,
+            isNot(ProvenanceTier.confirmed),
+            reason: 'the target starts pre-confirmed, so the promotion is real');
+        var notified = 0;
+        controller.addListener(() => notified++);
+
+        controller.saveConfirmed();
+
+        final saved = controller.state.savedProvenance;
+        expect(saved, isNotNull,
+            reason: 'saving records the promoted provenance');
+        expect(saved!.tier, ProvenanceTier.confirmed,
+            reason: 'promoted to the Confirmed tier (AC-9)');
+        expect(saved.label, 'Confirmed',
+            reason: 'the shared tier label is unchanged (G-4(d))');
+        expect(saved.note, isNotNull,
+            reason: 'a note records how it was confirmed');
+        expect(saved.note, contains('you measured this'),
+            reason: 'the painter-facing phrasing rides the note (G-4(d))');
+        expect(saved.note, contains('photograph'),
+            reason: 'the note records it was confirmed after the painter '
+                'photographed their own swatch (D-8)');
+        final held = controller.savedSamples
+            .where((s) => s.name == _correctTarget.name)
+            .toList();
+        expect(held, hasLength(1),
+            reason: 'the confirmed sample is exposed in the saved catalogue');
+        expect(held.single.provenance.tier, ProvenanceTier.confirmed,
+            reason: 'the persisted sample carries the Confirmed tier');
+        expect(held.single.evidence.map((e) => e.coordinates),
+            contains(swatch!.coordinates),
+            reason: 'the measured swatch is appended as evidence (append-only)');
+        expect(notified, greaterThanOrEqualTo(1),
+            reason: 'the save notifies the screen and the read endpoint');
+      });
+
+      test(
+          'honest-provenance guard: a save before any check promotes nothing',
+          () async {
+        final controller = saveController(SoftwareCaptureSource(_offScene));
+        var notified = 0;
+        controller.addListener(() => notified++);
+
+        controller.saveConfirmed(); // no check first
+
+        expect(controller.state.savedProvenance, isNull,
+            reason: 'no value graduates to Confirmed without the painter\'s own '
+                'measured swatch (D-8)');
+        expect(controller.state.hasChecked, isFalse);
+        expect(
+            controller.savedSamples
+                .where((s) => s.provenance.tier == ProvenanceTier.confirmed),
+            isEmpty,
+            reason: 'nothing is persisted when there is no swatch to confirm');
+        expect(notified, 0, reason: 'an inert save does not notify');
+      });
+
+      test('leaves the injected read-only catalogue untouched', () async {
+        final controller = CorrectionController(
+          captureSource: SoftwareCaptureSource(_offScene),
+          target: _correctTarget,
+          currentMix: _mix,
+          paletteSource: const InMemoryPaletteSource(),
+          correctionEngine: const SubtractiveCorrectionEngine(),
+          sampleSource: const InMemorySampleSource(samples: [_olive]),
+        );
+        await controller.checkMix();
+
+        controller.saveConfirmed();
+
+        expect(controller.savedSamples, hasLength(2),
+            reason: 'the seeded sample plus the newly confirmed one');
+        expect(controller.savedSamples.first, _olive,
+            reason: 'the injected catalogue is read first, unchanged');
       });
     });
   });

@@ -5,6 +5,7 @@ import '../app/router.dart';
 import '../capture/capture_controller.dart';
 import '../capture/source/capture_source.dart';
 import '../compare/sample_source.dart';
+import '../domain/provenance.dart';
 import '../domain/sample.dart';
 import '../recipes/engine/mixing_engine.dart';
 import '../recipes/engine/subtractive_engine.dart';
@@ -82,11 +83,22 @@ class CorrectionController extends ChangeNotifier {
   // them (LOOP-5), a save records the promoted provenance (LOOP-6).
   CorrectionState _state;
 
+  // The mixes the painter has confirmed this session, promoted to the confirmed
+  // tier (LOOP-6, AC-9). The injected [sampleSource] is the read-only bs-03 seam
+  // (bs-06 later backs it with the persistent catalogue); until then a confirmed
+  // mix is exposed here so [savedSamples] — and so a later readout (AC-10) —
+  // carries it, the plan's sanctioned "or exposes it for the readout" path.
+  final List<Sample> _confirmedSaves = [];
+
   /// The current observable correction state.
   CorrectionState get state => _state;
 
-  /// The saved samples the loop can promote into (empty until seeded).
-  List<Sample> get savedSamples => sampleSource.savedSamples();
+  /// The saved samples the loop reads and promotes into: the injected
+  /// [sampleSource]'s catalogue plus the mixes confirmed this session (AC-9),
+  /// read-only so callers cannot mutate either through it.
+  List<Sample> get savedSamples => List<Sample>.unmodifiable(
+        [...sampleSource.savedSamples(), ..._confirmedSaves],
+      );
 
   /// Photographs the mixed swatch and compares it to the target (AC-1).
   ///
@@ -195,9 +207,54 @@ class CorrectionController extends ChangeNotifier {
     if (utterance != null) await speech.speak(utterance);
   }
 
-  /// Saves the mix as confirmed, promoting the value's provenance (AC-9) —
-  /// LOOP-6.
-  void saveConfirmed() => throw UnimplementedError(_deferred('LOOP-6'));
+  /// Saves the mix as confirmed, promoting the value's provenance (AC-9).
+  ///
+  /// The painter is satisfied with the checked swatch and confirms it: the
+  /// [state] target is promoted to [ProvenanceTier.confirmed] — the only path to
+  /// that tier (SI; D-8) — carrying the [_confirmedNote] ("Confirmed — you
+  /// measured this…", G-4(d)) and the measured swatch appended as an append-only
+  /// [EvidencePoint] (D9), so a later readout reads the confirmed provenance
+  /// (AC-10). The shared [Provenance.label] is left unchanged (G-4(d)); the
+  /// painter-facing phrasing rides the note, rendered by the readout's provenance
+  /// region. The confirmed sample is added to the saved catalogue the controller
+  /// exposes (see [savedSamples]) and the promotion is recorded on the state.
+  ///
+  /// **Honest-provenance guard (D-8):** no value graduates to Confirmed without
+  /// the painter's own measured swatch — a save before any check is inert (the
+  /// E29 control is disabled in that state anyway), so nothing is promoted on
+  /// anything but the painter's own photographic evidence.
+  void saveConfirmed() {
+    final swatch = _state.mixedSwatch;
+    if (swatch == null) return;
+    final target = _state.target;
+    final confirmed = target.copyWith(
+      provenance: const Provenance(
+        ProvenanceTier.confirmed,
+        note: _confirmedNote,
+      ),
+      evidence: [
+        ...target.evidence,
+        EvidencePoint(coordinates: swatch.coordinates, source: 'own swatch'),
+      ],
+    );
+    _confirmedSaves.add(confirmed);
+    _emit(CorrectionState(
+      target: _state.target,
+      currentMix: _state.currentMix,
+      mixedSwatch: _state.mixedSwatch,
+      difference: _state.difference,
+      correction: _state.correction,
+      savedProvenance: confirmed.provenance,
+    ));
+  }
+
+  /// The note a confirmed mix carries (G-4(d) + D-8): the painter-facing
+  /// "Confirmed — you measured this" phrasing, recording that it was confirmed
+  /// after the painter photographed their own swatch. Carried on the
+  /// [Provenance.note] (the shared tier [Provenance.label] stays "Confirmed",
+  /// G-4(d)) and rendered by the readout's provenance region (AC-10).
+  static const String _confirmedNote =
+      'Confirmed — you measured this, after photographing your own swatch.';
 
   /// Replaces the observable [state] and notifies listeners.
   ///
@@ -208,7 +265,4 @@ class CorrectionController extends ChangeNotifier {
     _state = next;
     notifyListeners();
   }
-
-  static String _deferred(String phase) =>
-      'CorrectionController is a shell (LOOP-2); this action lands in $phase.';
 }

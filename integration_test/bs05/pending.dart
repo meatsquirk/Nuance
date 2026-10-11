@@ -43,6 +43,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// removes the row it owns as it un-pends that AC. Every owner must be a member
 /// of [behaviorPhases].
 const Map<String, String> pendingACs = {
+  // All 10 bs-05 ACs are un-pended — the behaviour stage is complete.
   // AC-1 un-pended by LOOP-3 (check photographs the swatch + compares to target).
   // AC-2, AC-3 un-pended by CORRECT-2 (ΔE00 + plain verdict; value-leading
   // decomposition).
@@ -51,8 +52,8 @@ const Map<String, String> pendingACs = {
   // AC-6 un-pended by CORRECT-4 (within tolerance → "very close", no correction).
   // AC-7 un-pended by LOOP-4 (speak the correction — E27).
   // AC-8 un-pended by LOOP-5 (re-photograph re-checks the swatch — E28).
-  'AC-9': 'LOOP-6', // save confirmed → promote provenance (E29)
-  'AC-10': 'LOOP-6', // a confirmed value shows its provenance in later readouts
+  // AC-9, AC-10 un-pended by LOOP-6 (save confirmed → promote provenance (E29);
+  // a confirmed value shows its provenance in later readouts).
 };
 
 /// The behaviour phases allowed to own a pending AC.

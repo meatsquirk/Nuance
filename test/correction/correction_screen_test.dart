@@ -151,8 +151,8 @@ void main() {
         findsOneWidget,
       );
       // The check (LOOP-3) and re-photograph (LOOP-5) controls are wired; speak
-      // (LOOP-4) is wired but disabled until a check gives it something to say;
-      // save (LOOP-6) still awaits its phase.
+      // (LOOP-4) and save (LOOP-6) are wired but disabled until a check gives
+      // them something to act on (an utterance / a swatch to confirm).
       expect(_buttonEnabled(tester, 'Check my mix'), isTrue);
       expect(_buttonEnabled(tester, 'Re-photograph swatch'), isTrue);
       expect(_buttonEnabled(tester, 'Speak correction'), isFalse);
@@ -371,12 +371,47 @@ void main() {
   });
 
   group('SaveRegion', () {
-    testWidgets('keeps its anchor and the disabled save control (E29)',
+    testWidgets('keeps its anchor and disables the save control before a check',
         (tester) async {
-      await _pumpRegion(tester, const SaveRegion());
+      // No checked swatch ⇒ nothing to confirm ⇒ the control is disabled.
+      final controller = _FixedStateController(_stateWith(null));
+      addTearDown(controller.dispose);
+      await _pumpRegion(tester, SaveRegion(controller: controller));
 
       expect(find.byKey(SaveRegion.regionKey), findsOneWidget);
       expect(_buttonEnabled(tester, 'Save confirmed mix'), isFalse);
+    });
+
+    testWidgets('enables the control once checked and saves confirmed (E29)',
+        (tester) async {
+      final controller = _controller();
+      addTearDown(controller.dispose);
+      // Pump the whole screen so the check (E26) can drive the state through the
+      // controller's capture idiom (its zero-delay timer needs pumping to fire).
+      await tester.pumpWidget(
+        MaterialApp(home: CorrectionScreen(controller: controller)),
+      );
+      expect(_buttonEnabled(tester, 'Save confirmed mix'), isFalse,
+          reason: 'nothing to confirm before a check');
+
+      // Check the mix (E26): there is now the painter's own measured swatch.
+      await tester.tap(find.text('Check my mix'));
+      await tester.pumpAndSettle();
+      expect(controller.state.hasChecked, isTrue);
+      expect(_buttonEnabled(tester, 'Save confirmed mix'), isTrue,
+          reason: 'E29 enables once there is a checked swatch to confirm');
+
+      // E29 Save confirmed mix drives CorrectionController.saveConfirmed (AC-9):
+      // it promotes the value to Confirmed and records it.
+      await tester.tap(find.text('Save confirmed mix'));
+      await tester.pumpAndSettle();
+      expect(controller.state.savedProvenance?.tier, ProvenanceTier.confirmed,
+          reason: 'tapping promotes the value to the Confirmed tier');
+      expect(
+          controller.savedSamples
+              .where((s) => s.provenance.tier == ProvenanceTier.confirmed),
+          isNotEmpty,
+          reason: 'the confirmed mix is exposed in the saved catalogue');
     });
   });
 }

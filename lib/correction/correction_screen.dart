@@ -52,7 +52,7 @@ class CorrectionScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 RephotographRegion(controller: controller),
                 const SizedBox(height: 12),
-                const SaveRegion(),
+                SaveRegion(controller: controller),
               ],
             );
           },

@@ -1,6 +1,6 @@
 # Module LOOP — correction loop controller + wiring
 
-**Status:** In progress — LOOP-1/LOOP-2/LOOP-3/LOOP-4/LOOP-5 done (AC-1/AC-7/AC-8 un-pended + green); LOOP-6 (AC-9/10) startable (depends on LOOP-3), then the module is complete
+**Status:** ✅ Complete — LOOP-1..LOOP-6 all done; AC-1/AC-7/AC-8/AC-9/AC-10 un-pended + green (the full behaviour stage, all 10 ACs, is complete); next is feature sign-off (SIGNOFF-1)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/correction_controller.dart`, `lib/correction/correction_state.dart`, `lib/correction/correction_read_endpoint.dart`, `lib/correction/correction_speech.dart`, the `CorrectionEntry`/`CorrectionHomeScreen` branch in `lib/app/build_app.dart`, `AppRouter.toCorrection` in `lib/app/router.dart`, the provenance promotion (via `Sample.copyWith` + `EvidencePoint`; the confirmed-tier label per G-4(d))
 **Depends on:** bs-02 capture (`CaptureController`/`CaptureSource`), bs-03 `deltaE00`/`SampleSource`, domain `Provenance`/`Sample`/`EvidencePoint`, `Speech`, CORRECT (engine) · **Blocks:** SCREEN-1, SIGNOFF-1
@@ -14,7 +14,7 @@
 | 3 | behavior | AC-1 (*enabler*) | ✅ Done | 15,659,660 | 29m 27s |
 | 4 | behavior | AC-7 | ✅ Done | 18,028,310 | 1h 02m |
 | 5 | behavior | AC-8 | ✅ Done | 7,036,729 | 28m 15s |
-| 6 | behavior | AC-9, AC-10 | ⬜ Todo | | |
+| 6 | behavior | AC-9, AC-10 | ✅ Done | 22,315,250 | 1h 30m |
 
 ## Interface reconciliation
 
@@ -378,3 +378,80 @@ reconciled inline.
   gate flags an untouched file. Always pass `-d <booted-udid>` to the integration suite. Carry-forward (from
   LOOP-5): `rephotograph` still reads the difference only and clears `state.correction`; a later pass may unify
   it with `checkMix`'s correction path via a shared `_photographAndCheck()` helper — not AC-blocking.
+
+### Result — LOOP-6
+
+Save-confirmed is live (AC-9) and a confirmed value carries its provenance into a later readout (AC-10) — the
+**last behaviour phase**. The full behaviour stage (all 10 ACs) is complete. Run sequentially in the primary
+bs-05 worktree (`Nuance-bs05`); reconciled inline.
+
+- **Landed (`lib/`):** `correction_controller.dart` — `saveConfirmed()` promotes the checked `state.target`
+  to `ProvenanceTier.confirmed` via `Sample.copyWith`, carrying the note **"Confirmed — you measured this,
+  after photographing your own swatch."** (G-4(d): the phrase rides `Provenance.note`; the shared
+  `Provenance.label` for `confirmed` is left "Confirmed", unchanged for bs-04), and appends the measured
+  swatch as an append-only `EvidencePoint(source: 'own swatch')` (D9). The **honest-provenance guard** (D-8)
+  refuses promotion when `state.mixedSwatch` is null — no value graduates to Confirmed without the painter's
+  own measured swatch. The promoted sample is exposed through a controller-local `_confirmedSaves` list merged
+  into `savedSamples` (see the persistence note below); `_emit` records `savedProvenance` and notifies. The
+  now-unused `_deferred` shell helper was removed (all four actions are implemented). `regions/save_region.dart`
+  — E29 `ElevatedButton` takes the controller, enabled iff `controller.state.hasChecked`, wired to
+  `saveConfirmed()`. `correction_screen.dart` — passes the controller to `SaveRegion` (one line).
+  `readout/provenance_region.dart` — `noteFor` now surfaces a **confirmed** reading's carried
+  `Provenance.note` (previously only `estimated` carried a note); `measured`/`calculated` still show none, so
+  AC-6/AC-7 are unaffected. A confirmed value's readout now reads "Confirmed" + the carried note (AC-10).
+- **Persistence note (D-8, plan-sanctioned):** `SampleSource` is the read-only bs-03 seam (bs-06 owns the
+  persistent catalogue), so LOOP-6 takes the plan's explicit alternative — LOOP.md *"writes a confirmed Sample
+  back to sampleSource **(or exposes it for the readout)**"* — exposing the confirmed mix through the
+  controller's `savedSamples` (injected catalogue ++ `_confirmedSaves`) rather than mutating the shared
+  read-only source. AC-9/AC-10 observe `controller.savedSamples`, which carries it; **bs-06** will back
+  `savedSamples` with the persistent store so a confirmed mix also reaches other screens.
+- **Gate:** `flutter analyze` clean; unit **668 green** (`flutter test --coverage`, +5 net: controller
+  −1 inert throw-test +3 saveConfirmed tests, provenance_region +2 confirmed-note tests, screen SaveRegion
+  group now 2 tests); coverage gate **100% on all touched files** (`dart run tool/coverage_gate.dart main` —
+  reports 17 correction/readout files vs `main`; this phase changed `correction_controller.dart`,
+  `regions/save_region.dart`, `correction_screen.dart`, `readout/provenance_region.dart`).
+  **Acceptance (iPhone 17 sim `5AB9D06D…` under the verify lock):** AC-9 + AC-10 un-pended in `bs05/pending.dart`
+  (the pending map is now **empty** — behaviour stage complete); `TestAC09_SaveConfirmed` + `TestAC10_
+  ConfirmedInReadout` green — run-pending **22 pass / 0 fail** (all 10 ACs green; was 20/2 at LOOP-4), default
+  full suite **108 pass / 0 skip** (was 106/2; AC-9/AC-10 flipped green, no regression across bs-01…bs-05).
+- **Grade:** independent re-grade in a fresh subagent of **every** un-pended AC test (AC-1..AC-10) →
+  **10×A / 0×B**, no blocker; AC-9 = A (holds the real `saveConfirmed` to the AC — tier/note/evidence/
+  persistence + the honest-provenance control), AC-10 = A. **No augmentation** open or newly required (the sole
+  ever-opened row, TestAC02, was closed by CORRECT-4). Grid: `behavior-test-completeness-bs-05-mix-correction-loop.md`.
+- **Test change recorded (not a weakening):** AC-10's `_showInLaterReadout` helper awaited
+  `navigator.push(...)`, whose Future completes only when the route is **popped**, so it blocked the test
+  forever (surfaced only now — at red baseline AC-10 failed its Given precondition before reaching the helper).
+  Fixed to `unawaited(navigator.push(...)); await tester.pumpAndSettle();` — fire-and-forget the push, pump the
+  transition. The Then assertions are unchanged; confirmed via a throwaway widget-test repro (pass in 1s) that
+  the product code is correct and only the helper's `await` was the defect. The rewritten second pending-gate
+  test asserts the behaviour-complete end state (empty map; every AC runs in both modes) — graded A.
+- **Augmentations:** none assigned to LOOP-6, none newly enabled. **Fix passes: 1/3** (the first run-pending
+  integration run hung on AC-10's `await navigator.push`; fixed the test helper — no product change — second
+  run green).
+- **Tokens / Time:** 22,315,250 · 1h 30m.
+
+### Checkpoint / Handoff — LOOP-6
+
+- **Behaviour stage complete.** All 10 ACs un-pended + green; `integration_test/bs05/pending.dart`'s
+  `pendingACs` map is empty. The only remaining phase is **SIGNOFF-1** (sign-off packet + summary page +
+  manual approval).
+- **Frozen for sign-off:**
+  - `CorrectionController.saveConfirmed()` promotes the checked target to `confirmed` (note
+    "Confirmed — you measured this, after photographing your own swatch.", measured swatch appended as
+    evidence), guarded on `state.mixedSwatch != null`; inert otherwise. `savedSamples` =
+    `sampleSource.savedSamples()` ++ the session's confirmed saves (unmodifiable).
+  - `SaveRegion({required CorrectionController controller})` — E29 enabled iff `state.hasChecked`.
+  - `ProvenanceRegion.noteFor` returns a confirmed reading's `Provenance.note` (shared `Provenance.label`
+    unchanged).
+- **Verification commands:** unchanged (export PATH; `flutter analyze`; `flutter test --coverage`;
+  `dart run tool/coverage_gate.dart main`; integration under the verify lock on the iPhone 17 sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; bs-05 run-pending via
+  `flutter test integration_test/correction_test.dart -d <sim> --dart-define=BS05_RUN_PENDING=true`).
+- **Next phase:** SIGNOFF-1 — the feature sign-off packet + summary page; a human records the decision.
+- **Known gaps / notes (for sign-off):** (1) **Persistence** — a confirmed mix is exposed via the controller's
+  `savedSamples`, not written to the shared read-only `SampleSource`; bs-06 (palette & projects) owns the
+  persistent catalogue and will back `savedSamples` so a confirmed value reaches other screens. (2) The
+  carry-forward from LOOP-5 remains: `rephotograph` reads the difference only and clears `state.correction`; a
+  later pass may unify `checkMix`/`rephotograph` via a shared `_photographAndCheck()` helper — not AC-blocking.
+  (3) The `const`-constructor coverage flake still applies — re-run `--coverage` once if the gate flags an
+  untouched file. Always pass `-d <booted-udid>` to the integration suite.

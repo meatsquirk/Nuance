@@ -15,6 +15,7 @@
 // `bs05/pending.dart`. Default `flutter test integration_test/correction_test.dart`
 // skips pending ACs; `--dart-define=BS05_RUN_PENDING=true` runs them.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -52,7 +53,10 @@ double _hueDeg(ColorCoordinates c) {
 /// so this is "the value is shown in a later readout", not a hand-built screen.
 Future<void> _showInLaterReadout(WidgetTester tester, Sample sample) async {
   final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-  await navigator.push(const AppRouter().toReadout(sample));
+  // Push the readout route, but do not await the returned Future: it completes
+  // only when the route is *popped*, so awaiting it would block the test forever
+  // (LOOP-6 fix — the push is fire-and-forget; the transition is pumped below).
+  unawaited(navigator.push(const AppRouter().toReadout(sample)));
   await tester.pumpAndSettle();
 }
 
@@ -109,14 +113,15 @@ void main() {
   );
 
   group('pending gate', () {
-    // Un-pended by the behaviour phases so far: AC-1 (LOOP-3), AC-2 + AC-3
-    // (CORRECT-2), AC-4 + AC-5 (CORRECT-3), AC-6 (CORRECT-4), AC-8 (LOOP-5). Each
-    // behaviour phase adds its AC here as it deletes the row in
-    // `bs05/pending.dart`: LOOP-3 → AC-1; CORRECT-2 → AC-2, AC-3; CORRECT-3 →
-    // AC-4, AC-5; CORRECT-4 → AC-6; LOOP-4 → AC-7; LOOP-5 → AC-8; LOOP-6 → AC-9,
-    // AC-10.
+    // Un-pended by the behaviour phases: AC-1 (LOOP-3), AC-2 + AC-3 (CORRECT-2),
+    // AC-4 + AC-5 (CORRECT-3), AC-6 (CORRECT-4), AC-7 (LOOP-4), AC-8 (LOOP-5),
+    // AC-9 + AC-10 (LOOP-6). Each behaviour phase added its AC here as it deleted
+    // the row in `bs05/pending.dart`: LOOP-3 → AC-1; CORRECT-2 → AC-2, AC-3;
+    // CORRECT-3 → AC-4, AC-5; CORRECT-4 → AC-6; LOOP-4 → AC-7; LOOP-5 → AC-8;
+    // LOOP-6 → AC-9, AC-10. The behaviour stage is complete: all 10 un-pended.
     const unpended = <String>{
-      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', //
+      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', //
+      'AC-6', 'AC-7', 'AC-8', 'AC-9', 'AC-10', //
     };
 
     test(
@@ -145,24 +150,21 @@ void main() {
     );
 
     test(
-        'the gate skips every pending AC by default and runs it in run-pending '
-        'mode', () {
-      expect(pendingACs, isNotEmpty,
-          reason: 'the harness scaffold seeds the pending map (LOOP-1)');
-      for (final ac in pendingACs.keys) {
-        expect(
-          pendingSkipReason(ac, forceRunPending: false),
-          isNotNull,
-          reason: '$ac is pending and must be skipped in the default run',
-        );
-        expect(
-          pendingSkipReason(ac, forceRunPending: true),
-          isNull,
-          reason: '$ac must execute in run-pending mode (the red baseline)',
-        );
+        'the behaviour stage is complete, so every AC runs in both modes and '
+        'the gate still short-circuits by mode', () {
+      // LOOP-6 un-pended the last two ACs, so the pending map is now empty —
+      // every AC-1..AC-10 executes in the default run and in run-pending mode.
+      expect(pendingACs, isEmpty,
+          reason: 'all 10 ACs un-pended (behaviour stage complete)');
+      for (var n = 1; n <= 10; n++) {
+        final ac = 'AC-$n';
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is un-pended and runs in the default run');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac runs in run-pending mode too');
       }
       // An AC absent from the map always runs, in either mode — the un-pended
-      // end state each behaviour phase moves its AC toward.
+      // end state every behaviour phase moved its AC to.
       expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
       // The ambient path (used by acTestWidgets) agrees with the current mode.

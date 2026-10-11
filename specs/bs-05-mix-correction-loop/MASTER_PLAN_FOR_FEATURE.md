@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** In progress — AC-7 ✅ (speak the correction); next LOOP-6 (AC-9/10 — save confirmed → provenance), then SIGNOFF-1. G-2/G-4 resolved
+**Status:** In progress — behaviour stage COMPLETE (all 10 ACs ✅, LOOP-6 done: save confirmed → provenance + later readout); next and last is SIGNOFF-1 (feature sign-off). G-2/G-4 resolved
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -63,8 +63,8 @@ route (`toCorrection`), controller, `CorrectionEngine`, or `bs05/` suite exist �
 | AC-6 | A mix already within tolerance needs no correction | ITEST-3 `TestAC06_WithinTolerance` | CORRECT-4 | ✅ |
 | AC-7 | The painter hears the correction spoken | ITEST-2 `TestAC07_SpeakCorrection` | LOOP-4 | ✅ Done |
 | AC-8 | Re-photographing the swatch re-checks it against the target | ITEST-2 `TestAC08_RephotographRechecks` | LOOP-5 | ✅ Done |
-| AC-9 | Saving a satisfactory mix promotes it to Confirmed by the painter | ITEST-2 `TestAC09_SaveConfirmed` | LOOP-6 | ⬜ Todo |
-| AC-10 | A value confirmed by the painter shows its Confirmed provenance in later readouts | ITEST-2 `TestAC10_ConfirmedInReadout` | LOOP-6 | ⬜ Todo |
+| AC-9 | Saving a satisfactory mix promotes it to Confirmed by the painter | ITEST-2 `TestAC09_SaveConfirmed` | LOOP-6 | ✅ Done |
+| AC-10 | A value confirmed by the painter shows its Confirmed provenance in later readouts | ITEST-2 `TestAC10_ConfirmedInReadout` | LOOP-6 | ✅ Done |
 
 ## Design decisions
 
@@ -142,7 +142,7 @@ discriminator is an in-test forward-model control (the suggested addition must r
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | CORRECT | [modules/CORRECT.md](modules/CORRECT.md) | The `CorrectionEngine` interface + impl: `Difference` (ΔE00 + verdict band + value-leading decomposition) and `Correction` (paint(s) to add via forward-model perturbation; trace "a touch of"; tolerance → no-correction) | bs-04 `MixingEngine`/`Paint`/palette, bs-03 `deltaE00`, color-science | ✅ Done |
-| LOOP | [modules/LOOP.md](modules/LOOP.md) | Scaffold; `CorrectionController`/state; capture wiring (check → measured `Sample` → compare); re-photograph re-check; save-confirmed → provenance promotion + persist; `CorrectionReadEndpoint`; `CorrectionEntry`/route in `buildApp`; spoken correction | bs-02 capture, bs-03 compare/`SampleSource`, domain `Provenance`, `Speech`, CORRECT | 🔄 In progress |
+| LOOP | [modules/LOOP.md](modules/LOOP.md) | Scaffold; `CorrectionController`/state; capture wiring (check → measured `Sample` → compare); re-photograph re-check; save-confirmed → provenance promotion + persist; `CorrectionReadEndpoint`; `CorrectionEntry`/route in `buildApp`; spoken correction | bs-02 capture, bs-03 compare/`SampleSource`, domain `Provenance`, `Speech`, CORRECT | ✅ Complete |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | The Correction screen UI: E26 Check my mix, the difference body (ΔE00 + verdict + decomposition), the correction body (paint + amount / "a touch of"), E27 Speak, E28 Re-photograph, E29 Save confirmed, the within-tolerance no-correction state, and the later-readout provenance | LOOP, CORRECT | 🏗 Shell done |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
 
@@ -208,27 +208,30 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | CORRECT-4 | behavior AC-6: within tolerance → "very close" + no correction | ✅ Done | 10,423,853 | 1h 06m | AC-6 ✅ + AC-2 ✅ (TestAC02 aug closed); default 105 pass/3 skip; run-pending 19/3 (red baseline intact: AC-7/9/10); grade 7×A/0×B; coverage 100%/15; fix 0/3; parallel worktree |
 | 13 | LOOP-4 | behavior AC-7: speak the correction (E27) | ✅ Done | 18,028,310 | 1h 02m | sequential (primary worktree); AC-7 ✅; default 106 pass/2 skip, run-pending 20/2 (red baseline intact AC-9/10); grade 8×A/0×B; coverage 100%/16; fix 1/3 |
 | 14 | LOOP-5 | behavior AC-8: re-photograph re-checks (E28) | ✅ Done | 7,036,729 | 28m 15s | parallel worktree; reconciled into feat/bs-05 @ merge 95a403e; after LOOP-3; serial w/ LOOP-6 |
-| 15 | LOOP-6 | behavior AC-9, AC-10: save confirmed → promote provenance; later readout shows it | ⬜ Next | | | startable; last behaviour phase; after LOOP-3; G-4(d) resolved |
-| 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+| 15 | LOOP-6 | behavior AC-9, AC-10: save confirmed → promote provenance; later readout shows it | ✅ Done | 22,315,250 | 1h 30m | sequential (primary worktree); AC-9/AC-10 ✅ (pending map now empty); default 108 pass/0 skip, run-pending 22/0; grade 10×A/0×B; coverage 100%/17; fix 1/3 (AC-10 test-helper `await push` bug); behaviour stage COMPLETE |
+| 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | startable — all behaviour done; a human records the decision |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**LOOP-4 (AC-7) done — the spoken correction is live.** `speakCorrection()` speaks the difference and the
-paints to add as one utterance via the new `correctionSpeech` builder (reusing the region phrasing; it handles
-the within-tolerance "No paints to add." case), and E27 is enabled once the mix is checked. Nine of ten ACs
-are in (AC-1..AC-8); grade 8×A/0×B.
+**LOOP-6 (AC-9/AC-10) done — the behaviour stage is COMPLETE (all 10 ACs ✅).** `saveConfirmed()` promotes the
+checked target to `ProvenanceTier.confirmed` with the note "Confirmed — you measured this, after photographing
+your own swatch." (G-4(d): phrase on `note`, shared label unchanged) and appends the measured swatch as
+evidence; the honest-provenance guard refuses promotion without the painter's own swatch. E29 is wired/enabled
+once checked, and the readout's provenance region renders the confirmed note (AC-10). Confirmed mixes are
+exposed via the controller's `savedSamples` (plan-sanctioned "or exposes it for the readout"; bs-06 backs it
+with the persistent store). Gate: unit 668 green, coverage 100%/17; run-pending 22/0, default 108 pass/0 skip;
+grade 10×A/0×B, no open augmentations.
 
-**One startable phase remains — LOOP-6** (AC-9/AC-10 — save confirmed → provenance promotion + later readout):
-owns the controller `saveConfirmed` + save region (E29) + provenance (D-8 phrase via `note`, G-4(d)) + the
-readout's confirmed-note render. It depends on LOOP-3 + G-4(d) (both resolved) and is the last behaviour phase.
-After it, **SIGNOFF-1**.
+**One phase remains — SIGNOFF-1** (feature sign-off): the sign-off packet + summary page; a human records the
+decision (the agent never approves). Start it with `/feature-next-phase bs-05-mix-correction-loop SIGNOFF-1`.
 
-**Known follow-up:** `rephotograph` reads the difference only and clears `state.correction`; a later pass may
-unify `checkMix`/`rephotograph` via a shared `_photographAndCheck()` helper (not AC-blocking). Start it with
-`/feature-next-phase bs-05-mix-correction-loop LOOP-6`. bs-05 worktree `Nuance-bs05` on
+**Known follow-ups for sign-off:** (1) a confirmed mix is exposed via the controller's `savedSamples`, not the
+shared read-only `SampleSource` — bs-06 owns the persistent catalogue. (2) `rephotograph` reads the difference
+only and clears `state.correction`; a later pass may unify `checkMix`/`rephotograph` via a shared
+`_photographAndCheck()` helper (not AC-blocking). bs-05 worktree `Nuance-bs05` on
 `feat/bs-05-mix-correction-loop`; G-2/G-4 resolved.
 
 ## Token usage
@@ -256,7 +259,8 @@ unify `checkMix`/`rephotograph` via a shared `_photographAndCheck()` helper (not
 | CORRECT-4 | 1daec8e7 | 2026-10-11 07:40 EDT | 08:46 | 1h 06m | 1h 06m | claude-opus-4-8 | 180 | 246,760 | 10,128,461 | 48,452 | 10,423,853 | AC-6 ✅ + AC-2 ✅ (TestAC02 aug closed); analyze clean, unit 655, coverage 100%/15; default 105 pass/3 skip, run-pending 19/3 (red baseline intact AC-7/9/10); grade 7×A/0×B; fix 0/3; CORRECT module complete |
 | RECONCILE | 3ca4b0fb | 2026-10-11 09:12 EDT | 09:15 | 3m 44s | 3m 44s | claude-opus-4-8 | 42 | 62,198 | 1,498,826 | 13,121 | 1,574,187 | merged phase/CORRECT-4 (d8df478) into feat/bs-05 @ merge 316a7f1; applied CORRECT-4 rollup (AC-2 ✅, AC-6 ✅, CORRECT module complete); CORRECT-4 ledger row added; worktree + phase branch removed, claim released |
 | LOOP-4 | 0c44f3a4 | 2026-10-11 09:18 EDT | 10:21 | 1h 02m | 1h 02m | claude-opus-4-8 | 266 | 293,127 | 17,678,958 | 55,959 | 18,028,310 | AC-7 ✅ speak the correction; analyze clean, unit 663, coverage 100%/16; default 106 pass/2 skip, run-pending 20/2 (red baseline intact AC-9/10); grade 8×A/0×B; fix 1/3 |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 10:21** | **19h 41m** | **7h 25m** |  | **2,280** | **3,581,052** | **151,769,714** | **1,003,996** | **156,357,042** |  |
+| LOOP-6 | 4f26b9e6 | 2026-10-11 17:43 EDT | 19:13 | 1h 30m | 1h 30m | claude-opus-4-8 | 256 | 385,147 | 21,832,806 | 97,041 | 22,315,250 | AC-9/AC-10 un-pended (save confirmed → provenance + later readout); behaviour stage COMPLETE (all 10 ACs green); run-pending 22/0, default 108/0; grade 10×A/0×B; coverage 100%/17; fix 1/3 |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 19:13** | **21h 11m** | **8h 55m** |  | **2,536** | **3,966,199** | **173,602,520** | **1,101,037** | **178,672,292** |  |
 
 ## Sign-off
 
