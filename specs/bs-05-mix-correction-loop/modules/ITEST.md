@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1/2/3 done; ITEST-4 packet assembled + full regression green, ⏸ Awaiting review (G-2 awaiting decision)
+**Status:** ✅ Done — ITEST-1/2/3/4 done; G-2 approved 2026-10-10 (acceptance tests signed off); behavior stage open
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/correction_test.dart`, `integration_test/correction_harness.dart`, `integration_test/bs05/pending.dart`; reuses `integration_test/fakes/` (`fake_capture_source.dart`, `fake_speech.dart`, `fake_haptics.dart`)
 **Depends on:** all shell phases (CORRECT-1, LOOP-2, SCREEN-1) · **Blocks:** every behaviour phase (via the pending tests they un-pend) and G-2
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,454,576 | 20m 21s |
 | 2 | acceptance-tests | AC-1, AC-7, AC-8, AC-9, AC-10 (pending) | ✅ Done | 4,978,132 | 18m 00s |
 | 3 | acceptance-tests | AC-2, AC-3, AC-4, AC-5, AC-6 (pending) | ✅ Done | 6,375,988 | 20m 29s |
-| 4 | test-review | — (G-2) | ⏸ Awaiting review | 3,442,451 | 16m 03s |
+| 4 | test-review | — (G-2) | ✅ Done | 3,442,451 | 16m 03s |
 
 ## Interface reconciliation
 
@@ -77,7 +77,7 @@
 
 **Full regression (this phase, ITEST-4 @ `65f2662`):** `flutter analyze` **clean**; unit `flutter test --coverage` **632 pass**; coverage gate `dart run tool/coverage_gate.dart main` **100% on all 14 touched `lib/` files**; **full cross-feature integration suite** (`flutter test integration_test/ -d 5AB9D06D…`, under the verify lock) **98 pass / 10 skipped — All tests passed** (the 10 skipped are the bs-05 pending ACs; every shipped feature green — readout/harness/recipes/capture/comparison + bs-05 smoke & guards); **bs-05 run-pending** (`--dart-define=BS05_RUN_PENDING=true`) **12 pass / 10 fail, every failure clean** (a Then or an owner-naming Given precondition; no compile errors/panics/harness errors) — the unchanged red baseline.
 
-**Decision:** record G-2 with `/feature-next-phase --gate bs-05-mix-correction-loop G-2 approved | "<changes>"`.
+**Decision:** ✅ **G-2 approved 2026-10-10 21:51 EDT — Matt Quirk.** Acceptance tests signed off as-is (10 pending AC tests, grid 23×A + 1×B pending CORRECT-4); behavior stage open, LOOP-3 (enabler, AC-1) next.
 
 ## Red baseline  <!-- filled by ITEST-2/3 -->
 
