@@ -1,6 +1,6 @@
 # Module PALETTE — paints & palettes
 
-**Status:** In progress — PALETTE-1 ✅ done (shell); PALETTE-2 (AC-4) startable once G-2 resolves
+**Status:** In progress — PALETTE-1 ✅ (shell), PALETTE-2 ✅ (AC-4); PALETTE-3 (AC-2/AC-3) startable next
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/paint.dart` (schema extension — **bs-04-owned, coordinate**), `lib/recipes/palette_source.dart` (write-side on the existing seam — bs-04-owned), `lib/palette/` (PaletteController, read endpoint, dataset loader), `assets/paints/` (reviewed dataset asset)
 **Depends on:** DATA (store) · **Blocks:** SCREEN (renders palette state), PALETTE-4 wires into RECIPE (bs-04 `RecipeController`)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 8,841,030 | 14m 46s |
-| 2 | behavior | AC-4 | ⬜ Todo | | |
+| 2 | behavior | AC-4 | ✅ Done | 8,539,454 | 17m 29s |
 | 3 | behavior | AC-2, AC-3 | ⬜ Todo | | |
 | 4 | behavior | AC-5 | ⬜ Todo | | |
 
@@ -68,10 +68,32 @@
 - **Tasks:** implement add-paint-from-dataset: choosing a dataset paint adds it to the active palette with the dataset's provenance preserved and persists it.
 - **Exit criteria:** unit gate; acceptance + grade gates below.
 - **Acceptance gate:** un-pend AC-4; `palette_test.dart` green (`TestAC04_AddPaintFromDataset` + all earlier ACs).
-- **Augments:** `TestAC02`: once paints can be added, AC-2's test builds its Given via this flow (precondition that named PALETTE-2 now resolves).
+- **Augments:** `TestAC02`: once paints can be added, AC-2's test builds its Given via this flow (precondition that named PALETTE-2 now resolves). *(Not owed — see Result: ITEST-2 seeded AC-2's Given directly, not through the add flow, so no AC-2 precondition names PALETTE-2; TestAC02's augmentation is owned by PALETTE-3.)*
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (AC-4 — full):** `PaletteController.addPaintFromDataset(Paint)` — appends the chosen reviewed-dataset paint to the "My paints" palette **exactly as the dataset holds it** (`paints: [...?current?.paints, paint]`, no per-field reconstruction, so provenance/pigment index/masstone are preserved), creating "My paints" if absent and keeping the active palette pointed at the updated instance when it was selected. Persists through `PersistentPaletteSource.savePalette` when the source can (production + acceptance wiring); an in-memory source (shell/unit tests) keeps the add in memory only. The E32 add control in `paint_list_region.dart` is wired (was inert): `onPressed` opens a reviewed-dataset picker (`showModalBottomSheet`, new `datasetPickerKey`) listing `controller.reviewedDataset` by name; tapping one returns that exact `Paint` and calls `addPaintFromDataset`; dismissing adds nothing.
+- **Deviation from the declared file list (recorded):** the phase's Files named only `palette_controller.dart` + `paint_dataset.dart`, but AC-4's acceptance test taps the real E32 control and then the picker, so the picker UI had to be wired in `lib/palette/paint_list_region.dart` too. `paint_dataset.dart` needed no change (the reviewed dataset already carries "Ultramarine Blue"). No PALETTE-3-owned rendering (identity/badge) was touched — only the add button's action + the picker.
+- **Un-pended:** deleted the `'AC-4': 'PALETTE-2'` row in `integration_test/bs06/pending.dart`. Updated the DATA-1 scaffold guard `pending map covers exactly AC-1..AC-11` → `pending map is exactly the still-pending ACs (shrinks as they land)`, asserting the explicit remaining set {AC-1,2,3,5,6,7,8,9,10,11} — kept honest (non-vacuous, every key a real AC), not weakened; each future behavior phase removes its own row.
+- **Augmentations:** none owed by PALETTE-2. The module plan's pre-seeded `TestAC02`-via-PALETTE-2 augmentation did not materialise: ITEST-2 seeded AC-2's Given directly via `givenPalette(palettes:…)`, so no AC-2 precondition names PALETTE-2; the only PALETTE-2 Given-precondition lives inside AC-4's own test and is now satisfied. TestAC02 (exact tier + medium) stays owned by PALETTE-3, TestAC05 by PALETTE-4.
+- **Verification:** `flutter analyze` clean. `flutter test --coverage` → **694 unit/widget passing** (+6: 5 controller tests incl. persistent round-trip + a non-measured-provenance paint that would catch a hardcoded-`measured` bug, and the screen picker test). Coverage gate vs `main`: **100%** line coverage on all **24** touched `lib/` files (incl. `palette_controller.dart`, `paint_list_region.dart`). Acceptance (`palette_test.dart`, default mode on iPhone-17 sim `5AB9D06D…` under the verify lock): **13 passing, 10 skipped** — AC-4 now executes **green**, the other 10 ACs correctly still pending; whole suite green. No cross-feature suite needed (only `lib/palette/` — bs-06-owned — was touched).
+- **Grade gate:** independent adversarial re-grade (fresh subagent, given the ITEST-2 grid + G1–G6) — **AC-4 = A (with caveat) — PASS**, no downgrade. Caveat (unchanged from ITEST-2): the shipped reviewed dataset is uniformly `measured` and `Paint.provenance` defaults to `measured`, so "provenance preserved" can't be separated from a hardcoded-`measured` impl at the acceptance layer — non-blocking (the impl appends the exact object; the new unit test uses an `estimated` dataset paint to catch that bug at the unit level). Grid: `behavior-test-completeness-bs-06-palette-and-projects.md` (PALETTE-2 section appended).
+- **Fix passes:** 0/3 — every gate passed on the first full run.
+- **Justified exclusions:** none.
+- Tokens: see master ledger (PALETTE-2 row). **Phase total: see dashboard row.**
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces:**
+  - `PaletteController.addPaintFromDataset(Paint paint) → Future<void>` — appends `paint` to the "My paints" palette (creating it if absent), preserving the paint verbatim; persists via `PersistentPaletteSource.savePalette` when the injected source supports it; notifies listeners. Adds no dedup (appends on repeat).
+  - `PaintListRegion.datasetPickerKey = Key('palette-dataset-picker')` — the reviewed-dataset picker (a `showModalBottomSheet` `ListView` of `ListTile(Text(paint.name))`) the E32 add control opens; a tap pops the chosen `Paint`.
+  - Unchanged: the PALETTE-1 frozen interfaces (`PaletteController({required PaletteSource source, …})`, `myPaints`, `selectPalette`, `PersistentPaletteSource`, etc.). The constructor signature is unchanged — the write seam is the private `_source` field read inside `addPaintFromDataset`.
+- **Verification commands:** unchanged from PALETTE-1 — `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/palette_test.dart -d <booted-udid>` under `coord.sh with-lock BS-06 <PHASE>`. Flutter SDK `/Users/matthew.quirk/development/flutter/bin`. Booted sim this session: iPhone 17 `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Known gaps / deferred:**
+  - **PALETTE-3 (AC-2/AC-3)** renders the paint row (brand/line/medium/pigment index + the provenance **badge**) and the provenance legend, and makes the owed **TestAC02** augmentation (exact tier **and** medium at a non-subsumed grain). It edits `paint_list_region.dart` — the add-button + picker wiring landed here must stay; PALETTE-3 adds row rendering alongside it.
+  - **PALETTE-4 (AC-5)** wires `selectPalette` → `RecipeController.selectPalette` and makes the owed **TestAC05** augmentation (recipes ⊆ the selected palette).
+  - Production still opens on Capture (paletteEntry null); the file-backed store wiring landed in SCREEN-1. The in-memory (non-persistent) branch of `addPaintFromDataset` is shell/test-only — production injects a `PersistentPaletteSource`.
+- **Next phase should:** PALETTE-3 (AC-2/AC-3) — startable now (its only dep PALETTE-2 is done). Runs concurrently with the PROJECT chain, SCREEN-2 and SCREEN-3 (disjoint files), but **serialize against PALETTE-4** on `palette_controller.dart`.
 
 ## Phase 3 — AC-2 + AC-3 paint identity/provenance + legend
 

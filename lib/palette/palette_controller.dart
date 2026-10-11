@@ -25,7 +25,7 @@ class PaletteController extends ChangeNotifier {
   PaletteController({
     required PaletteSource source,
     this.reviewedDataset = kReviewedPaints,
-  }) {
+  }) : _source = source {
     _palettes = source.palettes();
     _selectedPalette = _palettes.isEmpty ? null : _palettes.first;
   }
@@ -35,6 +35,12 @@ class PaletteController extends ChangeNotifier {
 
   /// The reviewed paints the painter may add from (AC-4; no free-hand values).
   final List<Paint> reviewedDataset;
+
+  /// The palette catalogue seam. Read in the constructor to seed [palettes];
+  /// when it can persist (a [PersistentPaletteSource]), [addPaintFromDataset]
+  /// saves the updated "My paints" palette through it so the add survives a
+  /// restart.
+  final PaletteSource _source;
 
   late List<PaintPalette> _palettes;
   PaintPalette? _selectedPalette;
@@ -65,5 +71,58 @@ class PaletteController extends ChangeNotifier {
     if (palette == _selectedPalette) return;
     _selectedPalette = palette;
     notifyListeners();
+  }
+
+  /// Adds [paint] — chosen from the reviewed [reviewedDataset] — to the "My
+  /// paints" palette and persists the palette (AC-4).
+  ///
+  /// The paint is appended to "My paints" exactly as the dataset holds it, so
+  /// its provenance tier, pigment index and masstone are preserved (no
+  /// free-hand or blanked value). If there is no "My paints" palette yet, one is
+  /// created to hold it. When [_source] can persist (a [PersistentPaletteSource]
+  /// — the production and acceptance wiring), the updated palette is saved
+  /// through it so the add survives a restart; an in-memory source (the shell
+  /// and unit tests) keeps the add in memory only. Listeners are notified so the
+  /// paint list re-renders.
+  Future<void> addPaintFromDataset(Paint paint) async {
+    final current = _myPaintsPalette();
+    final updated = PaintPalette(
+      name: myPaintsName,
+      paints: [...?current?.paints, paint],
+    );
+    _replaceMyPaints(updated);
+    final source = _source;
+    if (source is PersistentPaletteSource) {
+      await source.savePalette(updated);
+    }
+    notifyListeners();
+  }
+
+  /// The painter's "My paints" palette, or null when there is none yet.
+  PaintPalette? _myPaintsPalette() {
+    for (final palette in _palettes) {
+      if (palette.name == myPaintsName) return palette;
+    }
+    return null;
+  }
+
+  /// Replaces the "My paints" palette with [updated] (appending it when there is
+  /// none yet), keeping the active palette pointed at it when it was selected.
+  void _replaceMyPaints(PaintPalette updated) {
+    final next = <PaintPalette>[];
+    var replaced = false;
+    for (final palette in _palettes) {
+      if (palette.name == myPaintsName) {
+        next.add(updated);
+        replaced = true;
+      } else {
+        next.add(palette);
+      }
+    }
+    if (!replaced) next.add(updated);
+    _palettes = next;
+    if (_selectedPalette == null || _selectedPalette!.name == myPaintsName) {
+      _selectedPalette = updated;
+    }
   }
 }

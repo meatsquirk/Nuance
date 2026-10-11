@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — stage 3 (acceptance tests) complete and **G-2 approved**; behavior stage (stage 4) unblocked. Next startable: PALETTE-2, PROJECT-2, SCREEN-2, SCREEN-3.
+**Status:** In progress — behavior stage (stage 4), 1/10 behavior phases done (PALETTE-2 ✅ AC-4). Next startable: PALETTE-3, PROJECT-2, SCREEN-2, SCREEN-3.
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -42,7 +42,7 @@
 | AC-1 | The painter switches between the My paints and Projects views | ITEST-2 `TestAC01_SwitchViews` | SCREEN-2 | ⬜ Todo |
 | AC-2 | Each paint is listed with its identity and provenance badge | ITEST-2 `TestAC02_PaintIdentityProvenance` | PALETTE-3 | ⬜ Todo |
 | AC-3 | The provenance legend explains the four confidence tiers | ITEST-2 `TestAC03_ProvenanceLegend` | PALETTE-3 | ⬜ Todo |
-| AC-4 | The painter adds a paint by choosing from the shipped dataset | ITEST-2 `TestAC04_AddPaintFromDataset` | PALETTE-2 | ⬜ Todo |
+| AC-4 | The painter adds a paint by choosing from the shipped dataset | ITEST-2 `TestAC04_AddPaintFromDataset` | PALETTE-2 | ✅ Done |
 | AC-5 | Selecting a palette makes recipes solve against it | ITEST-2 `TestAC05_SelectedPaletteDrivesRecipes` | PALETTE-4 | ⬜ Todo |
 | AC-6 | The projects list shows each project's size, counts and last edit | ITEST-3 `TestAC06_ProjectsListSummary` | PROJECT-3 | ⬜ Todo |
 | AC-7 | Opening a project shows its notes and source photo | ITEST-3 `TestAC07_OpenProjectNotePhoto` | PROJECT-4 | ⬜ Todo |
@@ -111,7 +111,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ✅ Done |
-| PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | 🔄 In progress (PALETTE-1 ✅) |
+| PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | 🔄 In progress (PALETTE-1, PALETTE-2 ✅) |
 | PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | 🔄 In progress (PROJECT-1 ✅) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | 🔄 In progress (SCREEN-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 ✅; ITEST-4 ✅ G-2 approved) |
@@ -164,8 +164,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,11 (pending) + red baseline | ✅ Done | 10,977,843 | 25m 32s | 6 pending AC tests; default 12/12 green, run-pending 6 red (clean); graded 4×A 2×B-pending PASS; fixed a run-pending scaffold-guard bug |
 | 8 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 6,732,201 | 27m 32s | 5 pending AC tests; default 12/12 green, run-pending 5 red (4 Then, AC-10 Given-precond naming PROJECT-4), clean; graded 2×A 3×B-pending PASS (added TestAC07→PROJECT-4 row + AC-10 G1 check); no lib/ touched |
 | 9 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,760,963 | 3m 34s | packet assembled across ITEST-2+3; **G-2 approved 2026-10-11** (Matt Quirk) — behavior stage unblocked |
-| 10 | PALETTE-2 | AC-4 add paint from reviewed dataset | ⬜ Next | | | startable (no behavior dep) |
-| 11 | PALETTE-3 | AC-2 + AC-3 paint identity/provenance badge + legend | ⬜ Todo | | | after PALETTE-2 |
+| 10 | PALETTE-2 | AC-4 add paint from reviewed dataset | ✅ Done | 8,539,454 | 17m 29s | add-from-dataset: `addPaintFromDataset` (preserves dataset provenance, persists via `PersistentPaletteSource`) + E32 picker in `paint_list_region`; AC-4 un-pended + green; unit 694 (+6); coverage 100% on 24 touched; grade AC-4 A(caveat); fix passes 0/3 |
+| 11 | PALETTE-3 | AC-2 + AC-3 paint identity/provenance badge + legend | ⬜ Next | | | after PALETTE-2 (done) |
 | 12 | PALETTE-4 | AC-5 selected palette drives recipes | ⬜ Todo | | | |
 | 13 | PROJECT-2 | enabler: create project + attach samples/recipes/note/photo | ⬜ Todo | | | |
 | 14 | PROJECT-3 | AC-6 projects list size/counts/last-edit | ⬜ Todo | | | after PROJECT-2 |
@@ -180,15 +180,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**G-2 approved** (2026-10-11, Matt Quirk) — stage 3 closed, behavior stage (stage 4) open. Each behavior phase un-pends its AC (delete the row in `bs06/pending.dart`), closes any owed augmentation, and re-grades its un-pended test to A.
+PALETTE-2 ✅ (AC-4, un-pended + green). Startable now, runnable concurrently in separate sessions on disjoint files:
+- **PALETTE-3** — AC-2 + AC-3 paint identity/provenance badge + legend (`lib/palette/`); makes the owed TestAC02 augmentation. **Serialize against PALETTE-4** on `palette_controller.dart`.
+- **PROJECT-2** — enabler: create project + attach samples/recipes/note/photo (`lib/projects/`); gates all other PROJECT phases.
+- **SCREEN-2** — AC-1 switch My paints / Projects views.
+- **SCREEN-3** — AC-11 vision-profile card estimate + opens self-assessment (closes AC-11 2nd-profile follow-on).
 
-Startable now (no behavior dependency), runnable concurrently in separate sessions on disjoint files:
-- **PALETTE-2** — AC-4 add paint from reviewed dataset (`lib/palette/`)
-- **PROJECT-2** — enabler: create project + attach samples/recipes/note/photo (`lib/projects/`); gates all other PROJECT phases
-- **SCREEN-2** — AC-1 switch My paints / Projects views
-- **SCREEN-3** — AC-11 vision-profile card estimate + opens self-assessment (closes AC-11 2nd-profile follow-on)
-
-Graph-gated (run after their dep): PALETTE-3 (AC-2/3) then PALETTE-4 (AC-5) after PALETTE-2; PROJECT-3/4/5/6 after PROJECT-2, with PROJECT-4 before PROJECT-5 and PROJECT-6. Each session runs exactly one phase. SIGNOFF-1 last.
+Graph-gated (run after their dep): PALETTE-4 (AC-5) after PALETTE-3; PROJECT-3/4/5/6 after PROJECT-2, with PROJECT-4 before PROJECT-5 and PROJECT-6. Each session runs exactly one phase. SIGNOFF-1 last.
 
 ## Token usage
 
@@ -209,7 +207,8 @@ Graph-gated (run after their dep): PALETTE-3 (AC-2/3) then PALETTE-4 (AC-5) afte
 | ITEST-3 | 5caf0d6d | 2026-10-10 20:49 EDT | 21:16 | 27m 32s | 27m 32s | claude-opus-4-8 | 104 | 261,353 | 6,404,241 | 66,503 | 6,732,201 | acceptance-tests AC-6,7,8,9,10: 5 pending tests; default 12/12 green, run-pending 5 red clean (4 Then, AC-10 Given-precond PROJECT-4); graded 2xA 3xB-pending PASS; no lib/ touched |
 | ITEST-4 | 7ac52e81 | 2026-10-10 21:50 EDT | 21:54 | 3m 34s | 3m 34s | claude-opus-4-8 | 44 | 76,121 | 1,670,163 | 14,635 | 1,760,963 | test-review packet assembled; G-2 awaiting decision |
 | SIGNOFF-DECISION | fa344040 | 2026-10-10 22:01 EDT | 2026-10-11 05:53 | 7h 52m | 2m 33s | claude-opus-4-8 | 42 | 110,218 | 1,481,567 | 11,289 | 1,603,116 | ITEST-4 approved: G-2 acceptance suite approved as-is (two-profile split, AC-8 round-trip reopen, 5 sanctioned B-pending w/ augmentations) — Matt Quirk; behavior stage unblocked |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 05:53** | **17h 45m** | **3h 07m** |  | **1,258** | **2,152,656** | **76,080,400** | **637,620** | **78,871,934** |  |
+| PALETTE-2 | 9bf4d006 | 2026-10-11 05:54 EDT | 06:11 | 17m 29s | 17m 29s | claude-opus-4-8 | 120 | 247,609 | 8,235,150 | 56,575 | 8,539,454 | behavior: AC-4 add-paint-from-dataset un-pended + green (addPaintFromDataset preserves dataset provenance, persists via PersistentPaletteSource; E32 picker wired); unit 694 (+6), coverage 100% on 24 touched, acceptance 13 pass/10 pending, grade AC-4 A(caveat); fix passes 0/3 |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 06:11** | **18h 03m** | **3h 25m** |  | **1,378** | **2,400,265** | **84,315,550** | **694,195** | **87,411,388** |  |
 
 ## Sign-off
 

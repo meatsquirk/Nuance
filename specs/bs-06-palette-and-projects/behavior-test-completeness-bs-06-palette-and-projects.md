@@ -101,3 +101,21 @@ AC-7's bare `find.byType(Image)` — was resolved by adding the TestAC07 → PRO
 augmentation row; AC-10's G1 Given-check was folded in this phase). Non-blocking
 follow-on: a PROJECT-3 older-second-project control to kill a hardcoded-`'today'`
 cheat on AC-6.
+
+---
+
+## Phase graded: PALETTE-2 (behavior — AC-4 un-pended)
+
+Independent adversarial re-grade (fresh subagent, given the ITEST-2 grid + G1–G6)
+of the **un-pended** AC-4 test, now running green against the real
+`addPaintFromDataset` + E32 picker. Only un-pended AC in scope this phase.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-4** `add a paint by choosing from the shipped dataset` | A (with caveat) | **G1** Givens checked through the public surface before the When: `myPaints` empty asserted; `whenAddPaint()` drives the real E32 control (`addPaintKey` → `_openDatasetPicker` → `showModalBottomSheet`, now wired, not inert); picker precondition ("Ultramarine Blue" offered) asserted before the tap. **G2** The picker reads `controller.reviewedDataset` = shipped `kReviewedPaints` (not a fake override); `addPaintFromDataset` appends the exact tapped `Paint` (`[...?current?.paints, paint]`, no field rewriting) and persists via `PersistentPaletteSource.savePalette`, so provenance genuinely flows through. **G4** full `Paint` value-equality to the exact dataset entry + explicit `provenance` equality (`Paint.==` includes provenance). **G5** rejects a free-hand / blanked / fabricated / wrong-masstone / dropped-pigment-index paint. **G6** asserts AC-4 only. **Caveat (verified, non-blocking, unchanged from ITEST-2):** every `kReviewedPaints` entry is `measured` and `Paint.provenance` defaults to `measured`, so "provenance preserved" cannot be separated from a hardcoded-`measured` impl — no non-measured reviewed paint exists in v1 to build a control from. Non-blocking: the shipped impl preserves the exact object (no per-field reconstruction), value-equality is the strongest assertion the data supports, and the controller unit tests add a non-measured dataset paint (`estimated`) that *would* catch a hardcoded-`measured` bug at the unit level. If a non-measured reviewed paint is ever shipped, add a preserved-tier control to the AC-4 acceptance test. |
+
+**Counts: 1×A (with caveat), 0×B — PASS.** No downgrade from ITEST-2; the
+PALETTE-2 implementation preserves provenance exactly, and the caveat is the same
+uniform-measured-dataset limit the ITEST-2 grid already recorded (no augmentation
+owed — the remaining ITEST-2 augmentations TestAC02/TestAC05 belong to PALETTE-3 /
+PALETTE-4).

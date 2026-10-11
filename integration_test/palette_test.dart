@@ -679,8 +679,24 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('bs-06 pending gate (scaffold guard)', () {
-    test('pending map covers exactly AC-1..AC-11', () {
-      final expected = {for (var i = 1; i <= 11; i++) 'AC-$i'};
+    test('pending map is exactly the still-pending ACs (shrinks as they land)',
+        () {
+      // Seeded with AC-1..AC-11 (DATA-1); each behaviour phase deletes its AC's
+      // row here as it un-pends it, so this set shrinks by one per delivered AC.
+      // Un-pended so far: AC-4 (PALETTE-2). Asserts exact contents (non-vacuous)
+      // and that every pending key is a real AC in AC-1..AC-11.
+      const expected = {
+        'AC-1',
+        'AC-2',
+        'AC-3',
+        'AC-5',
+        'AC-6',
+        'AC-7',
+        'AC-8',
+        'AC-9',
+        'AC-10',
+        'AC-11',
+      };
       expect(pendingACs.keys.toSet(), expected);
     });
 

@@ -1,10 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
+import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/palette/paint_dataset.dart';
 import 'package:paint_color_assistant/palette/palette_controller.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
+import 'package:paint_color_assistant/store/persistent_store.dart';
 
 const _white = Paint(
   id: 'pw6',
@@ -17,6 +19,15 @@ const _blue = Paint(
   name: 'Ultramarine Blue',
   medium: PaintMedium.oil,
   masstone: ColorCoordinates(lightness: 32, a: 18, b: -52),
+);
+// A non-measured dataset paint, so "provenance preserved" is distinguishable
+// from a hardcoded-measured add.
+const _ochre = Paint(
+  id: 'py42',
+  name: 'Yellow Ochre',
+  medium: PaintMedium.oil,
+  masstone: ColorCoordinates(lightness: 60, a: 12, b: 46),
+  provenance: ProvenanceTier.estimated,
 );
 const _myPaints = PaintPalette(name: 'My paints', paints: [_white, _blue]);
 const _travel = PaintPalette(name: 'Travel set', paints: [_white]);
@@ -103,6 +114,91 @@ void main() {
 
       expect(controller.selectedPalette, _myPaints);
       expect(notifications, 0);
+    });
+  });
+
+  group('addPaintFromDataset (AC-4)', () {
+    test('appends the exact dataset paint to "My paints" and notifies',
+        () async {
+      final controller = PaletteController(
+        source: const InMemoryPaletteSource(
+          catalogue: [PaintPalette(name: 'My paints')],
+        ),
+      );
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      await controller.addPaintFromDataset(_ochre);
+
+      // The exact dataset paint is added — provenance tier preserved, not a
+      // default/blanked value (the dataset's own `estimated`, not `measured`).
+      expect(controller.myPaints, [_ochre]);
+      expect(controller.myPaints.single.provenance, ProvenanceTier.estimated);
+      expect(notifications, 1);
+    });
+
+    test('persists through a PersistentPaletteSource so the add survives reload',
+        () async {
+      final store = InMemoryPersistentStore();
+      final source = PersistentPaletteSource(store);
+      await source.savePalette(const PaintPalette(name: 'My paints'));
+      await source.load();
+      final controller = PaletteController(source: source);
+
+      await controller.addPaintFromDataset(_ochre);
+
+      expect(controller.myPaints, [_ochre]);
+      // A fresh source over the same store reads the persisted paint back.
+      final reloaded = PersistentPaletteSource(store);
+      await reloaded.load();
+      final myPaints =
+          reloaded.palettes().firstWhere((p) => p.name == 'My paints');
+      expect(myPaints.paints, [_ochre],
+          reason: 'the add was saved through the persistent source');
+    });
+
+    test('creates a "My paints" palette when there is none yet', () async {
+      final controller = PaletteController(
+        source: const InMemoryPaletteSource(catalogue: [_travel]),
+      );
+      expect(controller.myPaints, isEmpty);
+
+      await controller.addPaintFromDataset(_white);
+
+      expect(controller.myPaints, [_white]);
+      expect(controller.palettes.map((p) => p.name),
+          containsAll(<String>['Travel set', 'My paints']));
+      // Travel set was the active palette and stays active (not re-pointed).
+      expect(controller.selectedPalette, _travel);
+    });
+
+    test('selects the new "My paints" palette when nothing was selected',
+        () async {
+      final controller =
+          PaletteController(source: const InMemoryPaletteSource());
+      expect(controller.selectedPalette, isNull);
+
+      await controller.addPaintFromDataset(_white);
+
+      expect(controller.selectedPalette?.name, 'My paints');
+      expect(controller.selectedPalette?.paints, [_white]);
+    });
+
+    test('keeps the active "My paints" pointed at the updated palette',
+        () async {
+      final controller = PaletteController(
+        source: const InMemoryPaletteSource(
+          catalogue: [PaintPalette(name: 'My paints'), _travel],
+        ),
+      );
+      expect(controller.selectedPalette?.name, 'My paints');
+
+      await controller.addPaintFromDataset(_blue);
+
+      // The active palette follows the updated "My paints" (now holding _blue),
+      // not the stale empty instance.
+      expect(controller.selectedPalette?.name, 'My paints');
+      expect(controller.selectedPalette?.paints, [_blue]);
     });
   });
 }

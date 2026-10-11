@@ -55,22 +55,29 @@ void main() {
       expect(find.byKey(ProjectsRegion.regionKey), findsOneWidget);
     });
 
-    testWidgets('the E30–E34 controls are present but inert', (tester) async {
+    testWidgets('the still-inert E30/E33/E34 controls have no action',
+        (tester) async {
       await _pump(
         tester,
         palette: _paletteController(),
         project: _projectController(),
       );
 
+      // E32 Add paint is wired by PALETTE-2 (AC-4) — exercised by the add-paint
+      // tests below; the rest stay inert until their behaviour phases.
       for (final key in [
         VisionProfileCard.retakeKey,
-        PaintListRegion.addPaintKey,
         ProjectsRegion.openProjectKey,
         ProjectsRegion.exportKey,
       ]) {
         final button = tester.widget<TextButton>(find.byKey(key));
         expect(button.onPressed, isNull, reason: '$key must be inert');
       }
+      // E32 Add paint is now active.
+      final addPaint =
+          tester.widget<TextButton>(find.byKey(PaintListRegion.addPaintKey));
+      expect(addPaint.onPressed, isNotNull,
+          reason: 'PALETTE-2 wires the add-paint control (AC-4)');
       // E31 selector segments are inert too.
       final segments = tester.widgetList<TextButton>(
         find.descendant(
@@ -80,6 +87,51 @@ void main() {
       );
       expect(segments, isNotEmpty);
       expect(segments.every((b) => b.onPressed == null), isTrue);
+    });
+
+    testWidgets(
+        'AC-4: tapping Add paint opens the reviewed-dataset picker and '
+        'choosing a paint adds it to My paints with provenance preserved',
+        (tester) async {
+      final ultramarine =
+          kReviewedPaints.firstWhere((p) => p.name == 'Ultramarine Blue');
+      final palette = _paletteController(
+        catalogue: [
+          PaintPalette(name: PaletteController.myPaintsName),
+        ],
+      );
+      final project = _projectController();
+      await _pump(tester, palette: palette, project: project);
+
+      // Given: My paints is empty to begin with.
+      expect(palette.myPaints, isEmpty);
+      expect(find.text('No paints yet'), findsOneWidget);
+
+      // When: open the picker (E32) — it offers the reviewed dataset paints.
+      await tester.tap(find.byKey(PaintListRegion.addPaintKey));
+      await tester.pumpAndSettle();
+      expect(find.byKey(PaintListRegion.datasetPickerKey), findsOneWidget);
+      // The reviewed dataset is offered to choose from (top entries visible).
+      expect(find.text('Titanium White'), findsWidgets);
+      expect(find.text('Ultramarine Blue'), findsWidgets);
+
+      // When: choose "Ultramarine Blue".
+      await tester.tap(find.text('Ultramarine Blue').last);
+      await tester.pumpAndSettle();
+
+      // Then: the picker closed and the exact dataset paint is in My paints.
+      expect(find.byKey(PaintListRegion.datasetPickerKey), findsNothing);
+      expect(palette.myPaints, [ultramarine]);
+      expect(palette.myPaints.single.provenance, ultramarine.provenance);
+      // The new paint renders in the list, replacing the empty-state text.
+      expect(find.text('No paints yet'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(PaintListRegion.regionKey),
+          matching: find.text('Ultramarine Blue'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('empty state shows the placeholders', (tester) async {

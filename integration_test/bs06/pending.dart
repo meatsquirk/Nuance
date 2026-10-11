@@ -47,7 +47,6 @@ const Map<String, String> pendingACs = {
   'AC-1': 'SCREEN-2', // switch My paints / Projects views
   'AC-2': 'PALETTE-3', // paint identity + provenance badge
   'AC-3': 'PALETTE-3', // provenance legend (four tiers)
-  'AC-4': 'PALETTE-2', // add paint from the reviewed dataset
   'AC-5': 'PALETTE-4', // selected palette drives recipes
   'AC-6': 'PROJECT-3', // projects list size/counts/last-edit
   'AC-7': 'PROJECT-4', // open project note + photo
