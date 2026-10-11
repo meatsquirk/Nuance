@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅, ITEST-2 ✅ (AC-1/2/3/4/5/11 pending + red baseline, graded 4×A 2×B-pending); next ITEST-3 → ITEST-4 (G-2)
+**Status:** In progress — ITEST-1 ✅, ITEST-2 ✅, ITEST-3 ✅ (all 11 ACs pending + red baseline; grades 6×A 5×B-pending); next ITEST-4 test review (G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/palette_harness.dart`, `integration_test/palette_test.dart`, `integration_test/bs06/pending.dart`, bs-06 additions to `integration_test/fakes/` (fake file sink for photo + PDF export)
 **Depends on:** all shell phases (DATA-2, PALETTE-1, PROJECT-1, SCREEN-1) · **Blocks:** every behavior phase (via G-2)
@@ -11,8 +11,8 @@
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | | |
 | 2 | acceptance-tests | AC-1,2,3,4,5,11 | ✅ Done | 10,977,843 | 25m 32s |
-| 3 | acceptance-tests | AC-6,7,8,9,10 | ⬜ Todo | | |
-| 4 | test-review | — (G-2) | ⬜ Todo | | |
+| 3 | acceptance-tests | AC-6,7,8,9,10 | ✅ Done | 6,732,201 | 27m 32s |
+| 4 | test-review | — (G-2) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -84,8 +84,24 @@ Registered one *pending* `acTestWidgets` per AC in `palette_test.dart`'s new `pa
 - **Tasks:** one pending test per AC (`TestAC06_ProjectsListSummary`, `TestAC07_OpenProjectNotePhoto`, `TestAC08_NoteRetainedOnReopen`, `TestAC09_ConfusionPairFlagged`, `TestAC10_ExportPdfStudioSheet`); Givens via PROJECT-2 flows with precondition assertions naming PROJECT-2; run-pending → red baseline.
 - **Exit criteria:** as ITEST-2.
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+Registered one *pending* `acTestWidgets` per AC in `palette_test.dart`'s new `project ACs (ITEST-3)` group (AC-6, 7, 8, 9, 10), appended after ITEST-2's group in the same file (run serially — shared file).
+- **Files:** `integration_test/palette_test.dart` only. No `lib/` touched. Each Given is built through a public flow — the project seeded via `givenPalette(projects: [harborProject])` (production `PersistentProjectSource.saveProject` + `load()`, the same seam PROJECT-2 attaches through) — and checked through the read endpoints before the When. Following ITEST-2's AC-2 precedent, the Givens are seeded via the persistent save flow rather than PROJECT-2's not-yet-built create UI, so each test's red-baseline failure lands on its own owner's behaviour.
+- **Default run (pending skipped):** 12/12 green on the iPhone-17 sim via the verify lock — the 5 new AC tests correctly skip (11 pending total skipped).
+- **Red baseline (`--dart-define=BS06_RUN_PENDING=true`):** all 5 fail cleanly (table below) — 4 on a Then, AC-10 on its opened-project Given-precondition (naming PROJECT-4, which precedes PROJECT-6); every failure a clean `TestFailure` (no compile/harness error). Whole suite otherwise green (+12 −11).
+- **Grade gate:** independent adversarial grader (fresh subagent, given the ITEST-2 grid + G1–G6) — initially **2×A, 2×B-pending, 1 unsanctioned B** (FAIL): AC-7's "source photo is shown" rested on a bare, unscoped `find.byType(Image)` with no augmentation (G4). **Resolved in-phase:** added the **TestAC07 → PROJECT-4** augmentation row (tie the shown photo to `harborPhotoRef`/`harborPhotoBytes` via a keyed/scoped widget), and folded in AC-10's G1 opened-project Given-check. Re-graded **2×A (AC-6, AC-8), 3×B-pending (AC-7→PROJECT-4, AC-9→PROJECT-5, AC-10→PROJECT-6) — PASS (no unsanctioned B)**. Grid: `behavior-test-completeness-bs-06-palette-and-projects.md` (ITEST-3 section appended).
+- **Non-blocking follow-on:** PROJECT-3 should add an older-second-project control so AC-6's `'today'` can't be satisfied by a hardcoded string (same class as ITEST-2's AC-11 recommendation; recorded in the handoff, not a blocking augmentation).
+- **Verification:** `flutter analyze` clean; no `lib/` change → unit coverage gate N/A (whole-set stays 100%). Fix passes: 1/3 (pass 1 added the TestAC07 augmentation + AC-10 Given-check; the 5 AC reds are the intended baseline, not failures to fix).
+- **Tokens / Time:** see dashboard row (filled from the ledger).
+
+### Checkpoint / Handoff
+
+- **Frozen for ITEST-4 / the behaviour phases:** the `project ACs (ITEST-3)` group registers AC-6/7/8/9/10; each un-pends by deleting its row in `bs06/pending.dart`. All 11 ACs now have a pending test + red baseline. ITEST-4 (test review) assembles the packet across both groups and opens **G-2**.
+- **How each AC un-pends green:** AC-6 → PROJECT-3 (project-row summary: size/counts/last-edit); AC-7/AC-8 → PROJECT-4 (open-project view renders note + source photo; note retained on reopen); AC-9 → PROJECT-5 (`confusionPairs` filled for the opened project); AC-10 → PROJECT-6 (`lastExport` PDF). PROJECT-4 precedes PROJECT-6, so AC-10's opened-project Given is real by its un-pend run; PROJECT-4 precedes PROJECT-5, so AC-9's open is real by its un-pend run.
+- **Augmentations owed (this phase's ACs):** TestAC07 → PROJECT-4 (tie the shown source photo to `harborPhotoRef`/`harborPhotoBytes`, not a bare `Image` type-match); TestAC09 → PROJECT-5 (add a clearly-distinct pair, assert NOT flagged); TestAC10 → PROJECT-6 (assert the produced PDF references each sample + each recipe). Non-blocking: PROJECT-3 older-second-project `'today'` control.
+- **Verification commands:** unchanged from ITEST-1/2 (see ITEST-1 handoff). Default: `flutter test integration_test/palette_test.dart -d <booted-udid>` via `coord.sh with-lock`; red baseline: add `--dart-define=BS06_RUN_PENDING=true`. Flutter SDK `/Users/matthew.quirk/development/flutter/bin`; booted sim udid mandatory.
+- **Known gaps:** behaviour un-built — all 11 ACs stay pending/red until their owners land (all blocked on G-2). AC-8's "reopen" is the persistent seed→load round-trip, not an app-driven close/reopen (documented in the packet).
 
 ## Phase 4 — Test review (G-2)
 
@@ -105,11 +121,11 @@ Registered one *pending* `acTestWidgets` per AC in `palette_test.dart`'s new `pa
 | AC-3 | TestAC03_ProvenanceLegend | **FAIL** (Then) | Then: legend has no "Measured" (placeholder only) — `:323` | PALETTE-3 | **A** |
 | AC-4 | TestAC04_AddPaintFromDataset | **FAIL** (Given precond, names owner) | Given precondition: add-paint flow offers no "Ultramarine Blue" (E32 inert) — `:345` | PALETTE-2 | **A** (caveat) |
 | AC-5 | TestAC05_SelectedPaletteDrivesRecipes | **FAIL** (Then) | Then: selectedPalette stays "My paints" (selection inert) — `:391` | PALETTE-4 | **B pending PALETTE-4** |
-| AC-6 | TestAC06_ProjectsListSummary | expect FAIL | Given precondition: project (PROJECT-2) then Then: counts | PROJECT-3 | — |
-| AC-7 | TestAC07_OpenProjectNotePhoto | expect FAIL | Then: note + photo shown | PROJECT-4 | — |
-| AC-8 | TestAC08_NoteRetainedOnReopen | expect FAIL | Then: note after reopen | PROJECT-4 | — |
-| AC-9 | TestAC09_ConfusionPairFlagged | expect FAIL | Then: pair flagged | PROJECT-5 | — |
-| AC-10 | TestAC10_ExportPdfStudioSheet | expect FAIL | Then: PDF references samples+recipes | PROJECT-6 | — |
+| AC-6 | TestAC06_ProjectsListSummary | **FAIL** (Then) | Then: Projects region has no "24×30 in" (shell renders `project.name` only) — `palette_test.dart:489`. *(Project seeded via the persistent save flow; AC-6 depends only on its owner PROJECT-3's row summary.)* | PROJECT-3 | **A** |
+| AC-7 | TestAC07_OpenProjectNotePhoto | **FAIL** (Then) | Then: `openedProject` null — the project did not open (open is inert) — `:535` | PROJECT-4 | **B pending PROJECT-4** |
+| AC-8 | TestAC08_NoteRetainedOnReopen | **FAIL** (Then) | Then: `openedProject?.note` null after reopen (open inert) — `:567` | PROJECT-4 | **A** |
+| AC-9 | TestAC09_ConfusionPairFlagged | **FAIL** (Then) | Then: `confusionPairs` empty — no pair flagged (shell returns `const []`) — `:615`. Injects `deutanDichromat`; Given confirmed via the independent `referenceConfusable`. | PROJECT-5 | **B pending PROJECT-5** |
+| AC-10 | TestAC10_ExportPdfStudioSheet | **FAIL** (Given precond, names PROJECT-4) | Given precondition: `openedProject` null — "has opened the project" needs PROJECT-4's open (precedes PROJECT-6) — `:660`. The export Then (`lastExport` → `%PDF-`) is the discriminator once opened. | PROJECT-6 | **B pending PROJECT-6** |
 | AC-11 | TestAC11_VisionCardEstimateAndOpen | **FAIL** (Then) | Then: card has no "deutan-type, moderate" estimate (placeholder) — `:413` | SCREEN-3 | **A** |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
@@ -118,5 +134,6 @@ Registered one *pending* `acTestWidgets` per AC in `palette_test.dart`'s new `pa
 |---|---|---|---|---|
 | TestAC02 | badge + medium can't be asserted non-subsumed until the real tier/medium render (medium check currently subsumed by the "Artists' Oil" line text, grader finding) | PALETTE-3 | assert the exact rendered provenance tier **and** the medium at a non-subsumed grain (a dedicated medium label/widget, not the line text) on the paint row | ⬜ Open (confirmed + widened by ITEST-2) |
 | TestAC05 | "recipes ⊆ Travel set" can't discriminate until selection re-points the solver | PALETTE-4 | assert every returned recipe's paints ⊆ the selected palette (disjoint-palette control) | ⬜ Open (confirmed by ITEST-2) |
+| TestAC07 | "the source photo is shown" is a type-only `find.byType(Image)` untied to the source photo until PROJECT-4 mounts the open-project view (a decorative/wrong-bytes image would pass) | PROJECT-4 | assert the source photo via a widget keyed/scoped to the open-project view and tied to `harborPhotoRef`/`harborPhotoBytes` (not a bare `Image` type-match) | ⬜ Open (added by ITEST-3 grade) |
 | TestAC09 | a non-flag control needs real pair computation | PROJECT-5 | add a clearly-distinct pair and assert it is **not** flagged | ⬜ Open |
 | TestAC10 | PDF content can't be asserted until a real sheet is produced | PROJECT-6 | assert the produced PDF references each sample + each recipe | ⬜ Open |

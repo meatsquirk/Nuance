@@ -76,3 +76,28 @@ confirmed augmentation rows. Blocking finding: none. Required fold-in: the
 PALETTE-3 augmentation for TestAC02 must also assert the **medium** at a
 non-subsumed grain (today `'Oil'` is satisfied by the line `"Artists' Oil"`), in
 addition to the exact provenance tier.
+
+## Phase graded: ITEST-3 (AC tests — AC-6,7,8,9,10)
+
+This is an **independent, adversarial** grade of the ITEST-3 per-AC tests only —
+the five `acTestWidgets` in `group('project ACs (ITEST-3)', …)` for AC-6, AC-7,
+AC-8, AC-9 and AC-10. A fresh grader (not the author) graded against G1–G6, with
+the ITEST-2 grid above for continuity. Red baseline confirmed clean: all five
+fail on a Then / Given-precondition (TestFailure, no harness/compile error) at
+the cited lines. The ITEST-1/ITEST-2 rows above are unchanged.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-6** `projects list shows size, counts and last edit` | A | G1: every Given checked through the read endpoint before the When — name, `size=='24×30 in'`, `samples.length==6`, `recipes.length==3`, `lastEdited` non-null and `inDays==0`. G4 at grain: Thens assert the exact size string, `'6 samples'` and `'3 recipes'` scoped to `ProjectsRegion` (6≠3 so a count-swap is caught), plus a case-insensitive `'today'` Text. Rejects the shell's name-only row (the red-baseline failure at `:489`). **Residual (non-blocking, same class as ITEST-2's AC-11):** the `'today'` Then asserts the literal value, so a PROJECT-3 impl that hardcodes `Text('today')` rather than computing from `lastEdited` passes — a cheap older-second-project control is recommended for PROJECT-3 (recorded as a non-blocking handoff follow-on, matching AC-11's treatment). |
+| **AC-7** `opening a project shows its note and source photo` | B pending PROJECT-4 | G1 control: `openedProject` null to begin with; note round-trips via the sink. Note Then is strong — `find.textContaining(harborNote)` verbatim (the note string is long/distinctive). **Limited (sanctioned, new row):** "the source photo is shown" rests on a type-only, unscoped `find.byType(Image)` (`lib/` has zero `Image`s today, so it does catch "no photo", but a wrong PROJECT-4 rendering a decorative/wrong-bytes image passes); tying the shown photo to `harborPhotoRef`/`harborPhotoBytes` can only discriminate once PROJECT-4 mounts the open-project view. Added as the **TestAC07 → PROJECT-4** augmentation row. Red baseline fails at the opened-project Then (`:535`). |
+| **AC-8** `a note kept is retained when reopened` | A | G4-tight: asserts `openedProject?.note==harborNote` at the model grain **and** the verbatim rendered note, with a `harborNote.isNotEmpty` guard closing the vacuous-`""` hole — rejects a default/placeholder/truncated note (red baseline `:567`). G6 holds: distinct from AC-7 (AC-7 never asserts `openedProject.note`; AC-8 never asserts the photo). **Caveat (documented, non-blocking):** "retained across *reopen*" is carried by `givenPalette`'s persistent seed→load round-trip, not an app-driven edit/close/reopen cycle — it really tests "the exact persisted note is shown on open", still a distinct discriminating assertion → A. Noted in the review packet so the reviewer isn't misled by the comment. |
+| **AC-9** `confusable pair flagged within a project` | B pending PROJECT-5 | G2 exemplary: injected `deutanDichromat` drives the flag and the Given pair is confirmed via the harness's **independent** `referenceConfusable`, never the shipped `DichromatConfusionCheck` it grades. Then asserts the exact pair by name via `anyElement(unorderedEquals(...))` plus a `'check'` warning; red baseline fails on the empty `confusionPairs` (`:615`). **Limited (sanctioned):** `anyElement` can't reject an over-flagging impl until PROJECT-5 computes — the "clearly-distinct pair is NOT flagged" control is the existing **TestAC09 → PROJECT-5** row. |
+| **AC-10** `export a project as a PDF studio sheet` | B pending PROJECT-6 | Given checks name/6 samples/3 recipes, the `lastExport==null` control, **and** (G1 fix folded in this phase) the opened-project precondition naming PROJECT-4 after `whenOpenProject` — so the spec's "has opened the project" Given is checked; it is the clean red-baseline failure (`:660`, open inert; PROJECT-4 precedes PROJECT-6 so it passes by the un-pend run). Then asserts a real PDF: `isNotNull` + `%PDF-` magic bytes — rejects null/empty/placeholder blobs. **Limited (sanctioned):** the sheet's content ("references each sample and each recipe") needs a real PDF — the existing **TestAC10 → PROJECT-6** row. |
+
+**Counts: 2×A, 3×B pending — PASS (no unsanctioned B).** AC-6/AC-8 meet the bar;
+AC-7 (PROJECT-4, new row), AC-9 (PROJECT-5) and AC-10 (PROJECT-6) are B against
+augmentation rows. Blocking finding: none (the grader's one unsanctioned B —
+AC-7's bare `find.byType(Image)` — was resolved by adding the TestAC07 → PROJECT-4
+augmentation row; AC-10's G1 Given-check was folded in this phase). Non-blocking
+follow-on: a PROJECT-3 older-second-project control to kill a hardcoded-`'today'`
+cheat on AC-6.

@@ -431,6 +431,250 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // AC tests (ITEST-3) — projects.
+  //
+  // One *pending* `acTestWidgets` per AC in this phase's set (AC-6, 7, 8, 9,
+  // 10), appended after ITEST-2's group in the **same file** (run serially
+  // against ITEST-2 — shared `palette_test.dart`). Wired to the same pending
+  // gate: the default run skips them; `--dart-define=BS06_RUN_PENDING=true` runs
+  // them for the red baseline and each behaviour phase's un-pend run.
+  //
+  // The project Givens are seeded through the production **persistent** save
+  // flow (`givenPalette(projects: …)` → `PersistentProjectSource.saveProject` +
+  // `load()`) — a public flow, and the same seam the PROJECT-2 enabler attaches
+  // through. Following ITEST-2's AC-2 precedent, where a project AC depends only
+  // on its own rendering/behaviour owner the Given is seeded via that save flow
+  // rather than driven through PROJECT-2's not-yet-built create UI, so each
+  // test's red-baseline failure lands on *its own* owner's behaviour (a Then),
+  // not on a shared PROJECT-2 precondition. Every Given is checked through the
+  // read endpoints before the When. Owners: AC-6 → PROJECT-3, AC-7/AC-8 →
+  // PROJECT-4, AC-9 → PROJECT-5, AC-10 → PROJECT-6.
+  // -------------------------------------------------------------------------
+
+  group('project ACs (ITEST-3)', () {
+    Finder inProjects(Finder m) => find.descendant(
+          of: find.byKey(ProjectsRegion.regionKey),
+          matching: m,
+        );
+
+    // AC-6 — the projects list shows each project's size, counts and last edit
+    // (owner PROJECT-3).
+    acTestWidgets(
+        'AC-6', 'the projects list shows each project size, counts and '
+            'last edit', (tester) async {
+      // Given the painter has a project "Harbor at Dusk" (24×30 in, 6 samples,
+      // 3 recipes, last edited today) — seeded through the persistent save flow.
+      final harness = await givenPalette(tester, projects: [harborProject]);
+      // Given check (through the read endpoint): the project is present with the
+      // size/counts/last-edit the summary row must render.
+      final project = harness.projects.single;
+      expect(project.name, 'Harbor at Dusk');
+      expect(project.size, '24×30 in');
+      expect(project.samples, hasLength(6));
+      expect(project.recipes, hasLength(3));
+      expect(project.lastEdited, isNotNull);
+      expect(
+        DateTime.now().difference(project.lastEdited!).inDays,
+        0,
+        reason: 'the fixture is edited today, so the row must read "today"',
+      );
+
+      // When the Projects list is shown (switch to the Projects view — inert in
+      // the shell, which renders both regions at once; the region is present).
+      await harness.whenSwitchToProjects();
+      expect(find.byKey(ProjectsRegion.regionKey), findsOneWidget);
+
+      // Then the row shows the size, both counts (distinct, so a swap is caught)
+      // and that it was edited today — not the name alone (the shell's state).
+      expect(inProjects(find.textContaining('24×30 in')), findsWidgets,
+          reason: 'the free-text size is shown on the row (PROJECT-3)');
+      expect(inProjects(find.textContaining('6 samples')), findsWidgets,
+          reason: 'the sample count is shown on the row');
+      expect(inProjects(find.textContaining('3 recipes')), findsWidgets,
+          reason: 'the recipe count is shown on the row (6≠3 rejects a swap)');
+      expect(
+        inProjects(find.byWidgetPredicate(
+          (w) => w is Text && (w.data ?? '').toLowerCase().contains('today'),
+        )),
+        findsWidgets,
+        reason: 'the row shows it was edited today (PROJECT-3 renders the '
+            'relative last-edit)',
+      );
+    });
+
+    // AC-7 — opening a project shows its notes and source photo (owner
+    // PROJECT-4). Limited at this phase: "the source photo is shown" can only be
+    // asserted as *an image is rendered* (`find.byType(Image)`) until PROJECT-4
+    // mounts the open-project view — tying the shown photo to the project's
+    // source bytes (a keyed/scoped widget over `harborPhotoRef`/`harborPhotoBytes`)
+    // is the PROJECT-4 augmentation. Graded *B pending PROJECT-4*.
+    acTestWidgets(
+        'AC-7', 'opening a project shows its note and source photo',
+        (tester) async {
+      // Given the project "Harbor at Dusk" has a note and a source photo — the
+      // photo seeded into the file sink so it round-trips (D-10).
+      final harness = await givenPalette(
+        tester,
+        projects: [harborProject],
+        photos: {harborPhotoRef: harborPhotoBytes},
+      );
+      final project = harness.projects.single;
+      expect(project.note, harborNote, reason: 'the project carries a note');
+      expect(project.sourcePhotoRef, harborPhotoRef,
+          reason: 'the project references a source photo');
+      expect(await harness.photos.read(harborPhotoRef), harborPhotoBytes,
+          reason: 'the source photo round-trips through the file sink (D-10)');
+      // Control: nothing is open to begin with, so the Then shows a change.
+      expect(harness.openedProject, isNull);
+
+      // When the painter opens "Harbor at Dusk".
+      await harness.whenOpenProject('Harbor at Dusk');
+
+      // Then the project is opened, and its note and source photo are shown —
+      // not colour/sample data alone.
+      expect(harness.openedProject?.name, 'Harbor at Dusk',
+          reason: 'opening makes it the opened project (PROJECT-4)');
+      expect(harness.openedProject?.sourcePhotoRef, harborPhotoRef,
+          reason: 'the opened project carries its source-photo reference');
+      expect(find.textContaining(harborNote), findsWidgets,
+          reason: 'the note is shown in the open-project view (PROJECT-4)');
+      expect(find.byType(Image), findsWidgets,
+          reason: 'the source photo is shown in the open-project view '
+              '(PROJECT-4 renders the stored bytes)');
+    });
+
+    // AC-8 — a note kept with a project is retained when it is reopened (owner
+    // PROJECT-4). Distinct from AC-7 (G6): AC-8 asserts the exact note string is
+    // *retained* through the persistent save/load round-trip and shown verbatim
+    // on reopen — not merely that a note is shown.
+    acTestWidgets(
+        'AC-8', 'a note kept with a project is retained when it is reopened',
+        (tester) async {
+      // Given the painter has saved the note on "Harbor at Dusk" — seeded
+      // through the persistent save flow and read back from the loaded source,
+      // so the value under test is the *retained* one, not an in-memory fixture.
+      final harness = await givenPalette(tester, projects: [harborProject]);
+      final retained = harness.projects.single;
+      expect(retained.note, harborNote,
+          reason: 'the saved note is retained in the persistent source');
+      expect(harborNote, isNotEmpty); // guards against a vacuous "" match
+
+      // When the painter reopens "Harbor at Dusk".
+      await harness.whenOpenProject('Harbor at Dusk');
+
+      // Then the exact saved note is shown verbatim (rejects a default,
+      // placeholder or truncated note).
+      expect(harness.openedProject?.note, harborNote,
+          reason: 'the reopened project carries the retained note verbatim '
+              '(PROJECT-4)');
+      expect(find.textContaining(harborNote), findsWidgets,
+          reason: 'the retained note is shown on reopen');
+    });
+
+    // AC-9 — a confusable pair of saved samples is flagged within a project
+    // (owner PROJECT-5). Injects the full deuteranope (deutanDichromat): the
+    // shipped detector fires only near full dichromacy (D-5), and AC-9's spec
+    // names only "the painter's confusion line" (no severity).
+    //
+    // Limited at this phase: the non-flag control ("a clearly-distinct pair is
+    // NOT flagged") cannot discriminate until PROJECT-5 does the real
+    // computation (at baseline every pair is empty) — that control is the
+    // PROJECT-5 augmentation. Graded accordingly.
+    acTestWidgets(
+        'AC-9', 'a confusable pair of saved samples is flagged within a '
+            'project', (tester) async {
+      // Given "Harbor at Dusk" holds "Mid Raw Umber" and "Ultramarine Shadow",
+      // which fall on the deutan confusion line — confirmed by the harness's
+      // *independent* reference, so AC-9 is never graded against the shipped
+      // detector it checks. The app runs under a full deuteranope.
+      final harness = await givenPalette(
+        tester,
+        projects: [harborProject],
+        cvdProfile: deutanDichromat,
+      );
+      final sampleNames =
+          harness.projects.single.samples.map((s) => s.name).toSet();
+      expect(sampleNames,
+          containsAll(<String?>['Mid Raw Umber', 'Ultramarine Shadow']),
+          reason: 'the project holds the confusion pair');
+      expect(
+        referenceConfusable(SAMPLE_MID_RAW_UMBER.coordinates,
+            SAMPLE_ULTRAMARINE_SHADOW.coordinates),
+        isTrue,
+        reason: 'the Given pair falls on the deutan confusion line (independent '
+            'reference, not the shipped detector)',
+      );
+
+      // When the painter opens "Harbor at Dusk".
+      await harness.whenOpenProject('Harbor at Dusk');
+
+      // Then exactly the "Mid Raw Umber" / "Ultramarine Shadow" pair is flagged
+      // as a confusion pair, with a "check by value" warning shown.
+      final flaggedPairs =
+          harness.confusionPairs.map((p) => {p.a.name, p.b.name}).toList();
+      expect(
+        flaggedPairs,
+        anyElement(
+            unorderedEquals(<String?>['Mid Raw Umber', 'Ultramarine Shadow'])),
+        reason: 'the opened project flags the deutan confusion pair (PROJECT-5; '
+            'the non-flag control arrives with the PROJECT-5 augmentation)',
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Text && (w.data ?? '').toLowerCase().contains('check'),
+        ),
+        findsWidgets,
+        reason: 'a "check these by value" warning is shown for the flagged pair',
+      );
+    });
+
+    // AC-10 — the painter exports a project as a PDF studio sheet (owner
+    // PROJECT-6). D-6 keeps the produced sheet as `lastExport` bytes (no disk
+    // write).
+    //
+    // Limited at this phase: the sheet's *content* ("references each sample and
+    // each recipe") cannot be asserted until PROJECT-6 produces a real PDF —
+    // that is the PROJECT-6 augmentation. Here the Then asserts a PDF is
+    // produced. (PROJECT-4 wires opening and lands before PROJECT-6, so the
+    // open driven here is real by the un-pend run.)
+    acTestWidgets(
+        'AC-10', 'the painter exports a project as a PDF studio sheet',
+        (tester) async {
+      // Given the painter has opened the project "Harbor at Dusk" (6 samples, 3
+      // recipes to appear on the sheet).
+      final harness = await givenPalette(
+        tester,
+        projects: [harborProject],
+        photos: {harborPhotoRef: harborPhotoBytes},
+      );
+      final project = harness.projects.single;
+      expect(project.name, 'Harbor at Dusk');
+      expect(project.samples, hasLength(6));
+      expect(project.recipes, hasLength(3));
+      expect(harness.lastExport, isNull, reason: 'nothing exported yet');
+      await harness.whenOpenProject('Harbor at Dusk');
+      // Given precondition (the project is opened — spec's "has opened the
+      // project"): the open flow is PROJECT-4, which lands before PROJECT-6, so
+      // this passes by the AC-10 un-pend run. It fails cleanly at the red
+      // baseline (open inert), naming the owner.
+      expect(harness.openedProject?.name, 'Harbor at Dusk',
+          reason: 'the project must be opened before export (PROJECT-4 wires '
+              'opening; it precedes PROJECT-6)');
+
+      // When the painter exports the project to the device.
+      await harness.whenExportProject();
+
+      // Then a PDF studio sheet is produced (its samples/recipes content is the
+      // PROJECT-6 augmentation).
+      final pdf = harness.lastExport;
+      expect(pdf, isNotNull,
+          reason: 'exporting produces a PDF studio sheet (PROJECT-6, D-6)');
+      expect(String.fromCharCodes(pdf!.take(5)), '%PDF-',
+          reason: 'the produced bytes are a real PDF document');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Pending-gate scaffold guards (from DATA-1) — kept so the gate stays honest.
   // -------------------------------------------------------------------------
 
