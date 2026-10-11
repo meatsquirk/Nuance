@@ -296,3 +296,50 @@ and remains G6-distinct from AC-7 (note value only, no photo). AC-1/2/3/4/5/6/11
 verified unaffected by PROJECT-4's `projects_region` / `project_controller`
 changes. **No augmentation remains owed by PROJECT-4** (TestAC07 is now closed).
 No test downgraded from its prior grade.
+
+---
+
+## PROJECT-5 grade (AC-9 un-pended; full re-grade of all 10 un-pended ACs)
+
+Fresh, independent, adversarial re-grade (I did not write these tests), given the
+full prior grid and the G1–G6 rubric. **AC-9** (just un-pended by PROJECT-5,
+graded hardest with its new non-flag control) plus **AC-1, AC-2, AC-3, AC-4,
+AC-5, AC-6, AC-7, AC-8, AC-11** for regression. AC-10 is still pending
+(`bs06/pending.dart` → `PROJECT-6`; the scaffold guard pins `pendingACs` to
+exactly `{AC-10}`) and was **not** graded as a behaviour test. PROJECT-5 is a
+working-tree change (HEAD = PROJECT-4 @ 921fc9b) touching `bs06/pending.dart`,
+`palette_test.dart` (AC-9 augmentation), `build_app.dart` (wires
+`deps.confusionCheck` + `deps.cvdProfile` into `ProjectController`),
+`projects_region.dart` (renders the warning), `project_controller.dart`
+(`confusionPairs` via the new `flagConfusionPairs`), the new
+`lib/projects/confusion_pairs.dart`, and unit tests. I verified every
+Given/When/Then against the production code the test exercises, confirmed the
+detector under test is the shipped `DichromatConfusionCheck` (via
+`AppDependencies.confusionCheck` → `ProjectController._confusionCheck`), and
+**independently re-ran** a from-scratch CIEDE2000 + Viénot-1999 deutan projection
+over all 15 harbor pairs. I ran nothing in-repo and edited nothing but this grid.
+
+| AC | Test | Grade | Justification |
+|---|---|---|---|
+| AC-9 | `a confusable pair of saved samples is flagged within a project` | A (clears prior *B pending PROJECT-5*) | **G1** every Given checked through the public surface before the When: `harness.projects.single.samples` containsAll `{Mid Raw Umber, Ultramarine Shadow}` (read endpoint), and the pair is confirmed on the deutan confusion line via the harness's **independent** `referenceConfusable` — never the detector under test. **G2 exemplary:** the flag comes from the shipped `DichromatConfusionCheck` + injected `deutanDichromat` (`build_app` → `ProjectController(confusionCheck: deps.confusionCheck, cvdProfile: deps.cvdProfile)` → `confusionPairs` → `flagConfusionPairs(opened, _confusionCheck, _cvdProfile)`), not a script/override; the Given is graded against independent code, the behaviour against the shipped detector. A wrong profile injection would make the pair not collapse and fail the Then, so the configured profile genuinely answers. **G3** the negative Then (`Mid Raw Umber`/`Hull Red` NOT flagged) is settled after `whenOpenProject`'s `pumpAndSettle` and paired with the positive flag + `hasLength(1)` control, proving the list can and does change. **G4 at grain/value:** the raw observable `confusionPairs` is asserted by exact pair names (`anyElement(unorderedEquals(...))`), `hasLength(1)` (exactly one pair), and the rendered `check`-warning Text (only rendered when `confusionPairs.isNotEmpty`). **G5 discriminates — verified by independent math:** my own CIEDE2000+Viénot deutan projection gives Mid Raw Umber/Ultramarine Shadow normal ΔE00 22.02 / projected 0.77 (flags), Mid Raw Umber/Hull Red normal 11.96 / projected 5.95 (does not), and exactly one of 15 pairs flags — so a no-op impl fails `anyElement`+`hasLength(1)`, an over-flagging impl fails the Hull-Red non-flag control **and** `hasLength(1)` (15≠1), and a wrong-pair impl fails `anyElement`. Against pre-PROJECT-5 code (`confusionPairs` returned `const []`) every positive assertion fails, so the augmentation genuinely requires this phase. **G6** AC-9 only. The `check` warning uses a case-insensitive `'check'` substring Text predicate (not scoped to the open-project view) — the only `check` Text on the Projects view is the warning, and the pair-identity + `hasLength(1)` + non-flag control carry the discrimination, so this is a minor, non-blocking looseness, not a sub-A. Clean A. |
+| AC-1 | `switch between the My paints and Projects views` | A | Not regressed. PROJECT-5 touched only the confusion surface (project controller/region/wiring); the E31 view toggle, `ProjectsRegion.regionKey` and the mutually-exclusive `if/else` + both-ways control are untouched. |
+| AC-2 | `each paint lists its identity and provenance badge` | A | Not regressed. `paint_list_region`/`paint_row`/`provenance_badge` + keyed badge/medium widgets and the differently-tiered control are outside PROJECT-5's touched files. |
+| AC-3 | `the provenance legend explains the four confidence tiers` | A | Not regressed. Static legend copy, independent of the projects-confusion changes. |
+| AC-4 | `add a paint by choosing from the shipped dataset` | A (with caveat) | Not regressed. `addPaintFromDataset`/E32 picker untouched. Same long-standing, non-blocking uniform-measured-dataset caveat (a data limit, not a G-rule violation). |
+| AC-5 | `selecting a palette re-points recipe search at it` | A | Not regressed. The recipe-controller/selector/`onPaletteSelected` wiring is in different files; PROJECT-5's `confusionPairs` getter and the new `cvdProfile`/`confusionCheck` ctor params are additive and do not touch the palette/recipe surface. |
+| AC-6 | `the projects list shows each project size, counts and last edit` | A | Not regressed. AC-6 never opens a project, so `openedProject == null`, no `_OpenProjectView` (and no confusion warning) is rendered; summary rows under `projectRowKey` still render name/size/counts/derived last-edit with the Old-Study not-today control intact. |
+| AC-7 | `opening a project shows its note and source photo` | A | Not regressed. Opened under the default `deutanModerate`, where the harbor pair's projected ΔE00 ≈ 9.7 > 3.0 does **not** collapse, so `confusionPairs` is empty and no `check` warning text appears to interfere with the note/scoped-photo assertions (`Image.memory` bytes tied to `harborPhotoBytes`). |
+| AC-8 | `a note kept with a project is retained when it is reopened` | A | Not regressed. Same default moderate profile → no confusion warning; `openedProject?.note == harborNote` at model grain + verbatim rendered note, with the `isNotEmpty` vacuity guard, all hold. G6-distinct from AC-7. |
+| AC-11 | `the vision-profile card shows the estimate and opens the self-assessment` | A | Not regressed. `VisionProfileCard` + the second-profile (protan/mild) control are independent of the projects/confusion changes. |
+
+**Verdict: 10×A, 0×B — PASS (all A, no unsanctioned B).** AC-9 clears from *B
+pending PROJECT-5* to a clean **A**: the TestAC09 augmentation adds a real
+non-flag control (`Mid Raw Umber`/`Hull Red`, independently confirmed
+non-confusable) and `hasLength(1)`, both rejecting an over-flagging impl that the
+prior `anyElement`-only check could not; the detector under test is the shipped
+`DichromatConfusionCheck` while the Given is confirmed against the independent
+reference (G2); and an independent from-scratch CIEDE2000+Viénot re-run confirms
+exactly one of 15 harbor pairs flags under full deutan. AC-10 remains pending
+(PROJECT-6). AC-1/2/3/4/5/6/7/8/11 verified unaffected by the `build_app` /
+`projects_region` / `project_controller` / pending-gate changes. **No
+augmentation remains owed by PROJECT-5.**

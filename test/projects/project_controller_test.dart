@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
+import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
@@ -318,4 +320,70 @@ void main() {
       expect(controller.openedProject, isNull);
     });
   });
+
+  group('confusionPairs (PROJECT-5)', () {
+    final umber = _confusable('Mid Raw Umber', 42);
+    final shadow = _confusable('Ultramarine Shadow', 43);
+    final hull = _confusable('Hull Red', 80);
+    final confusing = Project(
+      id: 'p-harbor',
+      name: 'Harbor at Dusk',
+      samples: [umber, shadow, hull],
+    );
+    // Flags only the Umber/Shadow pair; Hull is clearly distinct.
+    final check = _StubConfusionCheck({
+      {umber.coordinates, shadow.coordinates},
+    });
+
+    test('is empty while no project is opened', () {
+      final controller = ProjectController(
+        source: InMemoryProjectSource(catalogue: [confusing]),
+        confusionCheck: check,
+      );
+      expect(controller.openedProject, isNull);
+      expect(controller.confusionPairs, isEmpty);
+    });
+
+    test('flags the opened project\'s confusable pair through the detector', () {
+      final controller = ProjectController(
+        source: InMemoryProjectSource(catalogue: [confusing]),
+        confusionCheck: check,
+        cvdProfile: const CvdProfile(type: CvdType.deutan),
+      );
+
+      controller.openProject('p-harbor');
+
+      expect(controller.confusionPairs, hasLength(1));
+      final pair = controller.confusionPairs.single;
+      expect({pair.a.name, pair.b.name},
+          {'Mid Raw Umber', 'Ultramarine Shadow'});
+    });
+
+    test('is empty when the opened project has no confusable pair', () {
+      final controller = ProjectController(
+        source: InMemoryProjectSource(catalogue: [confusing]),
+        confusionCheck: const _StubConfusionCheck({}),
+      );
+      controller.openProject('p-harbor');
+      expect(controller.confusionPairs, isEmpty);
+    });
+  });
+}
+
+/// A sample at [lightness] on the neutral axis, named [name].
+Sample _confusable(String name, double lightness) => Sample(
+      name: name,
+      coordinates: ColorCoordinates(lightness: lightness, a: 0, b: 0),
+      provenance: const Provenance(ProvenanceTier.measured),
+    );
+
+/// A [ConfusionCheck] that flags exactly the listed unordered coordinate pairs.
+class _StubConfusionCheck implements ConfusionCheck {
+  const _StubConfusionCheck(this._flagged);
+
+  final Set<Set<ColorCoordinates>> _flagged;
+
+  @override
+  bool confusable(ColorCoordinates a, ColorCoordinates b, CvdProfile profile) =>
+      _flagged.any((pair) => pair.length == 2 && pair.containsAll([a, b]));
 }

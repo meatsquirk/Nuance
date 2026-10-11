@@ -2,10 +2,15 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
+import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/domain/provenance.dart';
+import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/palette/paint_dataset.dart';
 import 'package:paint_color_assistant/palette/paint_list_region.dart';
 import 'package:paint_color_assistant/palette/palette_controller.dart';
@@ -24,8 +29,33 @@ import 'package:paint_color_assistant/store/source_photo_store.dart';
 PaletteController _paletteController({List<PaintPalette> catalogue = const []}) =>
     PaletteController(source: InMemoryPaletteSource(catalogue: catalogue));
 
-ProjectController _projectController({List<Project> catalogue = const []}) =>
-    ProjectController(source: InMemoryProjectSource(catalogue: catalogue));
+ProjectController _projectController({
+  List<Project> catalogue = const [],
+  ConfusionCheck confusionCheck = const DichromatConfusionCheck(),
+}) =>
+    ProjectController(
+      source: InMemoryProjectSource(catalogue: catalogue),
+      confusionCheck: confusionCheck,
+    );
+
+/// A [ConfusionCheck] that flags exactly the listed unordered coordinate pairs,
+/// so the open-project view's confusion warning can be exercised without
+/// bs-03's CVD math (that is acceptance-tested against the real detector).
+class _StubConfusionCheck implements ConfusionCheck {
+  const _StubConfusionCheck(this._flagged);
+
+  final Set<Set<ColorCoordinates>> _flagged;
+
+  @override
+  bool confusable(ColorCoordinates a, ColorCoordinates b, CvdProfile profile) =>
+      _flagged.any((pair) => pair.length == 2 && pair.containsAll([a, b]));
+}
+
+Sample _sample(String name, double lightness) => Sample(
+      name: name,
+      coordinates: ColorCoordinates(lightness: lightness, a: 0, b: 0),
+      provenance: const Provenance(ProvenanceTier.measured),
+    );
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -433,6 +463,52 @@ void main() {
       final view = find.byKey(ProjectsRegion.openProjectViewKey);
       expect(view, findsOneWidget);
       expect(find.descendant(of: view, matching: find.byType(Image)),
+          findsNothing);
+    });
+
+    testWidgets(
+        'AC-9: an opened project with a confusable pair shows a check-by-value '
+        'warning naming the pair', (tester) async {
+      final umber = _sample('Mid Raw Umber', 42);
+      final shadow = _sample('Ultramarine Shadow', 43);
+      final hull = _sample('Hull Red', 80);
+      final project = _projectController(
+        catalogue: [
+          Project(
+            id: 'p1',
+            name: 'Harbor at Dusk',
+            samples: [umber, shadow, hull],
+          ),
+        ],
+        confusionCheck: _StubConfusionCheck({
+          {umber.coordinates, shadow.coordinates},
+        }),
+      );
+      await pumpProjects(tester, project: project);
+
+      await tester.tap(find.byKey(ProjectsRegion.projectRowKey('p1')));
+      await tester.pumpAndSettle();
+
+      final view = find.byKey(ProjectsRegion.openProjectViewKey);
+      // A "check these by value" warning is shown for the flagged pair.
+      expect(
+        find.descendant(
+          of: view,
+          matching: find.byWidgetPredicate(
+            (w) => w is Text && (w.data ?? '').toLowerCase().contains('check'),
+          ),
+        ),
+        findsOneWidget,
+      );
+      // The flagged pair is named; the clearly-distinct Hull Red is not paired.
+      expect(
+        find.descendant(
+          of: view,
+          matching: find.text('Mid Raw Umber and Ultramarine Shadow'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.descendant(of: view, matching: find.textContaining('Hull Red')),
           findsNothing);
     });
   });

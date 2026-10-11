@@ -91,6 +91,7 @@ class ProjectsRegion extends StatelessWidget {
           _OpenProjectView(
             project: opened,
             photos: AppScope.of(context).sourcePhotoStore,
+            confusionPairs: controller.confusionPairs,
           ),
       ],
     );
@@ -142,10 +143,18 @@ class _ProjectRow extends StatelessWidget {
 /// pixels (D-10) — and rendered as an [Image] once its bytes are read. The photo
 /// is omitted when the project carries no reference or no photo store is wired.
 class _OpenProjectView extends StatelessWidget {
-  const _OpenProjectView({required this.project, required this.photos});
+  const _OpenProjectView({
+    required this.project,
+    required this.photos,
+    required this.confusionPairs,
+  });
 
   final Project project;
   final SourcePhotoStore? photos;
+
+  /// The project's saved-sample pairs flagged as confusable for the painter
+  /// (AC-9); each is shown under a "check these by value" warning.
+  final List<ConfusionPair> confusionPairs;
 
   @override
   Widget build(BuildContext context) {
@@ -160,6 +169,13 @@ class _OpenProjectView extends StatelessWidget {
         if (note != null) Text(note),
         if (reference != null && store != null)
           _SourcePhoto(store: store, reference: reference),
+        // AC-9: pairs that look identical to the painter are flagged to check
+        // by value. Shown only when at least one pair collapses.
+        if (confusionPairs.isNotEmpty) ...[
+          const Text('Check these by value — they may look identical to you:'),
+          for (final pair in confusionPairs)
+            Text('${pair.a.name} and ${pair.b.name}'),
+        ],
       ],
     );
   }

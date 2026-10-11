@@ -613,7 +613,11 @@ class _PaletteHomeScreenState extends State<PaletteHomeScreen> {
         source: deps.paletteSource,
         onPaletteSelected: _recipeController!.selectPalette,
       );
-      _projectController = ProjectController(source: deps.projectSource);
+      _projectController = ProjectController(
+        source: deps.projectSource,
+        confusionCheck: deps.confusionCheck,
+        cvdProfile: deps.cvdProfile,
+      );
     }
   }
 

@@ -44,7 +44,6 @@ import 'package:flutter_test/flutter_test.dart';
 /// of [behaviorPhases]. (The enabler PROJECT-2 owns no AC and is intentionally
 /// absent — it makes the Givens of the PROJECT ACs real, but un-pends nothing.)
 const Map<String, String> pendingACs = {
-  'AC-9': 'PROJECT-5', // confusion pair flagged within a project
   'AC-10': 'PROJECT-6', // export PDF studio sheet
 };
 

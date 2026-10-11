@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 
+import '../a11y/cvd/confusion_check.dart';
+import '../a11y/cvd/cvd_profile.dart';
 import '../domain/sample.dart';
 import '../recipes/engine/mixing_engine.dart';
 import '../store/source_photo_store.dart';
+import 'confusion_pairs.dart';
 import 'project.dart';
 import 'project_source.dart';
 import 'project_summary.dart';
@@ -13,8 +16,7 @@ import 'project_summary.dart';
 /// The shape the open-project view renders as a "check these by value" warning
 /// and the acceptance suite reads off [ProjectController.confusionPairs].
 /// PROJECT-5 fills the list by iterating the opened project's sample pairs
-/// through the injected bs-03 `DichromatConfusionCheck` (D-4); the shell exposes
-/// the shape only (always empty).
+/// through the injected bs-03 `DichromatConfusionCheck` (D-4).
 typedef ConfusionPair = ({Sample a, Sample b});
 
 /// The Projects screen's state: the painter's projects, the opened project, the
@@ -30,10 +32,11 @@ typedef ConfusionPair = ({Sample a, Sample b});
 /// and persisting through [PersistentProjectSource.saveProject] so the change
 /// survives a restart (an in-memory source keeps it in memory only, like
 /// `PaletteController`). The remaining observables stay shell state until their
-/// phase: **PROJECT-4** (this phase) opens a project's note and photo
-/// (AC-7/AC-8) through [openProject]; PROJECT-5 fills [confusionPairs] (AC-9);
-/// PROJECT-6 produces [lastExport] (AC-10). No CVD, recipe or export math is
-/// done here.
+/// phase: **PROJECT-4** opens a project's note and photo (AC-7/AC-8) through
+/// [openProject]; **PROJECT-5** (this phase) flags the opened project's
+/// confusable sample pairs in [confusionPairs] (AC-9), reusing bs-03's injected
+/// `DichromatConfusionCheck` + `CvdProfile`; PROJECT-6 produces [lastExport]
+/// (AC-10). No CVD math is done here — the projection lives behind the detector.
 class ProjectController extends ChangeNotifier {
   /// Creates the controller over [source], reading the projects it lists once at
   /// construction (a fresh install's source is empty — the shell default).
@@ -42,11 +45,20 @@ class ProjectController extends ChangeNotifier {
   /// list the create/attach flows extend, and [source] is kept so those flows
   /// can persist through it when it is a [PersistentProjectSource]. A persistent
   /// source is [PersistentProjectSource.load]ed before the controller is built.
-  ProjectController({required ProjectSource source})
-      : _source = source,
+  ProjectController({
+    required ProjectSource source,
+    this._confusionCheck = const DichromatConfusionCheck(),
+    this._cvdProfile = const CvdProfile(type: CvdType.deutan),
+  })  : _source = source,
         _projects = [...source.projects()];
 
   final ProjectSource _source;
+
+  /// The injected bs-03 detector + profile used to flag an opened project's
+  /// confusable sample pairs (AC-9); defaults match `AppDependencies` (the
+  /// shipped [DichromatConfusionCheck] against a full deutan).
+  final ConfusionCheck _confusionCheck;
+  final CvdProfile _cvdProfile;
 
   List<Project> _projects;
 
@@ -71,8 +83,17 @@ class ProjectController extends ChangeNotifier {
   Project? get openedProject => _openedProject;
 
   /// The confusable sample pairs flagged within the opened project (AC-9), or an
-  /// empty list when none are (the shell's state). PROJECT-5 computes these.
-  List<ConfusionPair> get confusionPairs => const [];
+  /// empty list when no project is open or none of its pairs collapse.
+  ///
+  /// Iterates the [openedProject]'s saved-sample pairs through the injected
+  /// bs-03 [ConfusionCheck] + [CvdProfile] ([flagConfusionPairs], D-4/D-5) — the
+  /// open-project view renders these as a "check these by value" warning. No
+  /// CVD math is done here; the projection lives behind the detector.
+  List<ConfusionPair> get confusionPairs {
+    final opened = _openedProject;
+    if (opened == null) return const [];
+    return flagConfusionPairs(opened, _confusionCheck, _cvdProfile);
+  }
 
   /// The bytes of the most recent PDF studio sheet exported from a project
   /// (AC-10), or null when nothing has been exported (the shell's state).

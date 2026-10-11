@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — behavior stage (stage 4), 8/10 behavior phases done (PALETTE-2 ✅ AC-4, PALETTE-3 ✅ AC-2+AC-3, PALETTE-4 ✅ AC-5, PROJECT-2 ✅ enabler, PROJECT-3 ✅ AC-6, PROJECT-4 ✅ AC-7+AC-8, SCREEN-2 ✅ AC-1, SCREEN-3 ✅ AC-11; PALETTE + SCREEN modules complete). Next startable: PROJECT-5 (then PROJECT-6).
+**Status:** In progress — behavior stage (stage 4), 9/10 behavior phases done (PALETTE-2 ✅ AC-4, PALETTE-3 ✅ AC-2+AC-3, PALETTE-4 ✅ AC-5, PROJECT-2 ✅ enabler, PROJECT-3 ✅ AC-6, PROJECT-4 ✅ AC-7+AC-8, PROJECT-5 ✅ AC-9, SCREEN-2 ✅ AC-1, SCREEN-3 ✅ AC-11; PALETTE + SCREEN modules complete). Next startable: PROJECT-6 (AC-10) — the last behavior phase, then SIGNOFF-1.
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -47,7 +47,7 @@
 | AC-6 | The projects list shows each project's size, counts and last edit | ITEST-3 `TestAC06_ProjectsListSummary` | PROJECT-3 | ✅ Done |
 | AC-7 | Opening a project shows its notes and source photo | ITEST-3 `TestAC07_OpenProjectNotePhoto` | PROJECT-4 | ✅ Done |
 | AC-8 | A note kept with a project is retained when it is reopened | ITEST-3 `TestAC08_NoteRetainedOnReopen` | PROJECT-4 | ✅ Done |
-| AC-9 | A confusable pair of saved samples is flagged within a project | ITEST-3 `TestAC09_ConfusionPairFlagged` | PROJECT-5 | ⬜ Todo |
+| AC-9 | A confusable pair of saved samples is flagged within a project | ITEST-3 `TestAC09_ConfusionPairFlagged` | PROJECT-5 | ✅ Done |
 | AC-10 | The painter exports a project as a PDF studio sheet | ITEST-3 `TestAC10_ExportPdfStudioSheet` | PROJECT-6 | ⬜ Todo |
 | AC-11 | The vision-profile card shows the current estimate and opens the self-assessment | ITEST-2 `TestAC11_VisionCardEstimateAndOpen` | SCREEN-3 | ✅ Done |
 
@@ -112,7 +112,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 |---|---|---|---|---|
 | DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ✅ Done |
 | PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | ✅ Complete (PALETTE-1, PALETTE-2, PALETTE-3, PALETTE-4 ✅) |
-| PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | 🔄 In progress (PROJECT-1, PROJECT-2, PROJECT-3, PROJECT-4 ✅; PROJECT-5/6 left) |
+| PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | 🔄 In progress (PROJECT-1, PROJECT-2, PROJECT-3, PROJECT-4, PROJECT-5 ✅; PROJECT-6 left) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | ✅ Done (SCREEN-1, SCREEN-2, SCREEN-3 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 ✅; ITEST-4 ✅ G-2 approved) |
 
@@ -170,8 +170,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 13 | PROJECT-2 | enabler: create project + attach samples/recipes/note/photo | ✅ Done | 4,357,106 | 18m 54s | enabler (no AC): ProjectController create/attach (samples+recipes+size+note+photo), persists via saveProject; unit 100% on touched file; acceptance default green; AC-6..10 red on own Thens (baseline unchanged) |
 | 14 | PROJECT-3 | AC-6 projects list size/counts/last-edit | ✅ Done | 9,896,853 | 23m 58s | ProjectSummary row read-model (size · counts · relative last-edit) + `projectSummaries` getter + keyed ProjectsRegion rows; AC-6 un-pended + green (default 19/4, run-pending AC-6 green / AC-7-10 red baseline); TestAC06 older-project control closes the hardcoded-`today` follow-on; unit 734, coverage 100% on 27 touched; grade 7×A PASS; fix passes 0/3 |
 | 15 | PROJECT-4 | AC-7 + AC-8 open note+photo; note retained on reopen | ✅ Done | 17,986,707 | 35m 50s | `openProject` + open-project view (note + source photo from the store, scoped/keyed); tappable rows open by id, E33 opens first; AC-7+AC-8 un-pended + green (default 21/2, run-pending AC-7/8 green, AC-9/10 red on own Thens — AC-10 now on PROJECT-6's Then as open is real); TestAC07 augmentation closed (AC-7 B→A); unit 741, coverage 100% on 27 touched; grade 9×A PASS; fix passes 0/3 |
-| 16 | PROJECT-5 | AC-9 confusion pair flagged within project | ⬜ Next | | | after PROJECT-4 |
-| 17 | PROJECT-6 | AC-10 export PDF studio sheet | ⬜ Todo | | | after PROJECT-2 |
+| 16 | PROJECT-5 | AC-9 confusion pair flagged within project | ✅ Done | 10,633,359 | 17m 26s | `confusion_pairs.dart` glue over bs-03 detector; AC-9 un-pended + green (default 22/1, run-pending AC-9 green / AC-10 red baseline); TestAC09 closed (non-flag control + hasLength(1)); unit 749, coverage 100% on 28 touched; grade 10×A PASS (AC-9 clean A); fix passes 0/3 |
+| 17 | PROJECT-6 | AC-10 export PDF studio sheet | ⬜ Next | | | after PROJECT-2; last behavior phase |
 | 18 | SCREEN-2 | AC-1 switch My paints / Projects views | ✅ Done | 5,271,492 | 30m 22s | toggle: PaletteScreen→StatefulWidget, E31 wired, My-paints view ⇄ Projects view (one at a time); AC-1 un-pended, 14/9/0 acceptance, graded A; smoke+scaffold-guard+widget tests updated for the toggle |
 | 19 | SCREEN-3 | AC-11 vision-profile card estimate + opens self-assessment | ✅ Done | 10,052,083 | 43m 03s | AC-11 un-pended + green; coverage 100% on touched (vision_profile_card.dart, palette_screen.dart); grade AC-11 A; added 2nd-profile control; fix passes 0/3 |
 | 20 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
@@ -180,10 +180,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-PROJECT-4 ✅ (AC-7 + AC-8) done — 8/10 behavior phases complete; only PROJECT-5 (AC-9) and PROJECT-6 (AC-10) remain before sign-off.
-- **PROJECT-5** — AC-9 confusion pair flagged within a project (`lib/projects/confusion_pairs.dart` + `project_controller.dart`): iterate the opened project's saved-sample pairs through the injected bs-03 `DichromatConfusionCheck` + `CvdProfile`, render the flagged pairs + "check by value" warning. **The one startable phase**; its open-project Given is real (PROJECT-4 landed opening). Closes its TestAC09 augmentation (non-flag control).
+PROJECT-5 ✅ (AC-9) done — 9/10 behavior phases complete; only PROJECT-6 (AC-10) remains before sign-off.
+- **PROJECT-6** — AC-10 export a project as a PDF studio sheet (`lib/projects/project_export.dart` + `project_controller.dart` + `pubspec.yaml`): generate a PDF of the opened project's samples + recipes, expose it as `lastExport` (adds the `pdf` + `printing` packages, G-4; file write faked in tests), and close its TestAC10 augmentation (assert the PDF references each sample + each recipe). **The one startable phase**; its open-project Given is real (PROJECT-4). Its AC-10 test currently red at baseline on `lastExport == null`.
 
-Graph-gated: PROJECT-6 (AC-10, adds the pdf package) after PROJECT-5 ordering isn't required — PROJECT-6 depends on PROJECT-2, not PROJECT-5 — but run one phase per session. SIGNOFF-1 last (after all 10 behavior phases done — 8/10 now).
+SIGNOFF-1 last (after all 10 behavior phases done — 9/10 now; only AC-10 left). SIGNOFF-1 runs the full cross-feature regression + assembles the sign-off packet + summary page for a human decision.
 
 ## Token usage
 
@@ -213,7 +213,8 @@ Graph-gated: PROJECT-6 (AC-10, adds the pdf package) after PROJECT-5 ordering is
 | PALETTE-4 | 6c5f4007 | 2026-10-11 09:20 EDT | 10:06 | 45m 29s | 45m 27s | claude-opus-4-8 | 274 | 334,784 | 21,521,788 | 83,113 | 21,939,959 | behavior: AC-5 un-pended + green; shared RecipeController on PaletteHomeScreen (RecipeReadEndpoint) re-pointed by PaletteController.onPaletteSelected -> frozen bs-04 RecipeController.selectPalette; selector options tappable; TestAC05 closed (recipes subset of selected palette + disjoint control); unit 721, coverage 100% on 26 touched, acceptance 18 pass/5 pending, grade 6xA PASS; fix passes 1/3 (harness scroll) |
 | PROJECT-3 | 6cbad558 | 2026-10-11 17:43 EDT | 18:07 | 23m 58s | 23m 58s | claude-opus-4-8 | 174 | 243,410 | 9,602,235 | 51,034 | 9,896,853 | AC-6 un-pended + green; 7xA grade PASS; coverage 100% on 27 touched; fix passes 0/3 |
 | PROJECT-4 | 09698782 | 2026-10-11 18:15 EDT | 18:51 | 35m 50s | 35m 50s | claude-opus-4-8 | 208 | 335,752 | 17,568,875 | 81,872 | 17,986,707 | AC-7+AC-8 un-pended + green; grade 9xA PASS (AC-7 B->A); coverage 100% on 27 touched; fix passes 0/3 |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 18:51** | **22h 08m** | **7h 30m** |  | **2,622** | **4,345,055** | **167,096,168** | **962,740** | **172,406,585** |  |
+| PROJECT-5 | cc220bea | 2026-10-11 18:56 EDT | 19:14 | 17m 26s | 17m 26s | claude-opus-4-8 | 170 | 286,826 | 10,293,396 | 52,967 | 10,633,359 | AC-9 un-pended + green (default 22/1, run-pending AC-9 green / AC-10 red baseline); confusion_pairs.dart glue over bs-03 detector; TestAC09 closed (non-flag control + hasLength(1)); unit 749, coverage 100% on 28 touched; grade 10xA PASS (AC-9 clean A); fix passes 0/3 |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 19:14** | **22h 26m** | **7h 48m** |  | **2,792** | **4,631,881** | **177,389,564** | **1,015,707** | **183,039,944** |  |
 
 ## Sign-off
 

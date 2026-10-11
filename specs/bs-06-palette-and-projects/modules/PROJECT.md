@@ -1,6 +1,6 @@
 # Module PROJECT — projects
 
-**Status:** In progress — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler), PROJECT-3 ✅ (AC-6), PROJECT-4 ✅ (AC-7+AC-8); PROJECT-5 (AC-9) startable, then PROJECT-6 (AC-10)
+**Status:** In progress — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler), PROJECT-3 ✅ (AC-6), PROJECT-4 ✅ (AC-7+AC-8), PROJECT-5 ✅ (AC-9); PROJECT-6 (AC-10) startable (last PROJECT phase)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/projects/` (Project model, ProjectSource, ProjectController, read endpoint, confusion-pair flagging, PDF export), `lib/compare/sample_source.dart` (persistent write-side on the existing seam — bs-03/04-owned, coordinate), `pubspec.yaml` (pdf package)
 **Depends on:** DATA (store), reuses bs-03 `lib/a11y/cvd/confusion_check.dart` + injected `CvdProfile` · **Blocks:** SCREEN (renders project state)
@@ -13,7 +13,7 @@
 | 2 | behavior (enabler) | — | ✅ Done | 4,357,106 | 18m 54s |
 | 3 | behavior | AC-6 | ✅ Done | 9,896,853 | 23m 58s |
 | 4 | behavior | AC-7, AC-8 | ✅ Done | 17,986,707 | 35m 50s |
-| 5 | behavior | AC-9 | ⬜ Todo | | |
+| 5 | behavior | AC-9 | ✅ Done | 10,633,359 | 17m 26s |
 | 6 | behavior | AC-10 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -153,8 +153,29 @@
 - **Acceptance gate:** un-pend AC-9; suite green; the seeded confusable pair is flagged and a clearly-distinct pair is **not** (control).
 - **Augments:** `TestAC09`: strengthen with the non-flag control once real pairs are computed (closes the pre-seeded limit).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (AC-9):** New `lib/projects/confusion_pairs.dart` — pure glue `flagConfusionPairs(project, check, profile)` that enumerates the project's saved-sample pairs and keeps the ones the injected bs-03 [`ConfusionCheck`] reports confusable for the [`CvdProfile`] (no new CVD math; the Viénot projection + ΔE00 live behind the detector, D-4/D-5). `ProjectController` now takes an injected `confusionCheck` + `cvdProfile` (defaulted to `DichromatConfusionCheck()` / full deutan, matching `AppDependencies`) and its `confusionPairs` getter computes from the `openedProject` (empty when none open). `buildApp` wires the controller with `deps.confusionCheck` + `deps.cvdProfile`. The open-project view (`_OpenProjectView` in `lib/palette/projects_region.dart`) renders a "Check these by value — they may look identical to you:" warning plus each flagged pair's names when `confusionPairs` is non-empty.
+- **Cross-module touches (recorded):** besides the PROJECT-owned `project_controller.dart` + new `confusion_pairs.dart`, this phase edited `lib/palette/projects_region.dart` (SCREEN-owned — the open-project view renders the warning; the plan Files listed only the controller + glue) and `lib/app/build_app.dart` (one wiring line, passing the app-wide detector/profile into the controller). Sequential single-session run (bs-06 worktree), so no claim conflict.
+- **Augmentation (TestAC09 → PROJECT-5, closed):** the AC-9 test's `anyElement` positive flag couldn't reject an over-flagging impl at baseline. Now a clearly-distinct control pair ("Mid Raw Umber" / "Hull Red", confirmed non-confusable by the harness's **independent** `referenceConfusable`) is asserted **not** flagged, and exactly one pair is flagged (`hasLength(1)`) — both reject an over-flagger; discriminates against pre-PROJECT-5 code (`confusionPairs` was `const []`). Row marked ✅.
+- **Acceptance (sim iPhone 17, under the verify lock):** AC-9 un-pended (deleted its `bs06/pending.dart` row; scaffold-guard `expected` → `{AC-10}`; still-pending example moved to AC-10). **Default run 22 passed / 1 skipped** (AC-10 pending). **Run-pending:** AC-9 ✅ green; AC-10 red on its own Then (`lastExport == null`, PROJECT-6) — the still-pending baseline preserved.
+- **Unit + coverage:** `flutter analyze` clean. `flutter test --coverage` → **749 passing** (+8: `flagConfusionPairs` enumeration branches — confusable/distinct/empty/<2-samples — in `confusion_pairs_test.dart`; `confusionPairs` getter opened/not-opened/no-pair in `project_controller_test.dart`; the open-project confusion-warning widget test in `palette_screen_test.dart`). Coverage gate vs `main`: **100%** line on all 28 touched `lib/` files (incl. the new `confusion_pairs.dart` + `project_controller.dart` + `projects_region.dart`).
+- **Grade gate:** independent fresh-subagent adversarial re-grade (given the full prior grid + G1–G6) of all 10 un-pended ACs — **10×A, 0×B — PASS**. **AC-9 cleared B pending PROJECT-5 → clean A** (G2 exemplary: flag from the shipped detector, Given confirmed via the independent reference; the grader independently re-ran a from-scratch CIEDE2000 + Viénot-1999 deutan projection over all 15 harbor pairs — exactly one flags: Mid Raw Umber/Ultramarine Shadow proj ΔE00 ≈ 0.77 vs normal ≈ 22.0; Hull Red pair proj ≈ 5.95 not flagged). AC-1/2/3/4/5/6/7/8/11 verified unregressed (AC-7/8 open under the default moderate profile where the pair does not collapse, so no spurious warning). AC-4 keeps its standing uniform-measured-dataset data caveat. No augmentation owed (TestAC09 closed).
+- **Non-blocking note (grader):** the AC-9 integration test's "check" warning assertion is a case-insensitive `'check'` substring `Text` predicate not scoped to the open-project view; the only such `Text` on the Projects view is the warning, and pair-identity + `hasLength(1)` + the non-flag control carry the discrimination. The widget test (`palette_screen_test.dart`) scopes its warning + pair-name assertions to `openProjectViewKey`. Recorded, not owed.
+- **Fix passes:** 0/3 — analyze, unit, coverage and both acceptance runs passed on the first full run. (The two `prefer_initializing_formals`/`type_init_formals` analyze infos on the new constructor params were resolved by using private named initializing formals before the first gate run — not a code fix pass.)
+- **Closed by:** unit + coverage gate; acceptance suite green (default) with AC-9 green under run-pending and the still-pending AC-10 baseline preserved; grade gate all-A.
+- Tokens: see master ledger (PROJECT-5 row). **Phase total: 10,633,359 tokens, 17m 26s active (17m 26s wall).**
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces (new this phase):**
+  - `flagConfusionPairs(Project project, ConfusionCheck check, CvdProfile profile)` → `List<ConfusionPair>` (`lib/projects/confusion_pairs.dart`): pure pairwise enumeration over `project.samples`, keeping `check.confusable(a.coordinates, b.coordinates, profile)` pairs in sample order; empty for < 2 samples. No CVD math of its own.
+  - `ProjectController({required source, ConfusionCheck confusionCheck = const DichromatConfusionCheck(), CvdProfile cvdProfile = const CvdProfile(type: CvdType.deutan)})` — defaults match `AppDependencies`. `confusionPairs` now computes from `openedProject` via `flagConfusionPairs` (was always `const []`); empty when no project is open. `openedProject`/`lastExport`/create/attach/open unchanged.
+  - `ProjectsRegion` open-project view (`openProjectViewKey`) renders "Check these by value — they may look identical to you:" + one `Text('<a> and <b>')` per flagged pair when `controller.confusionPairs` is non-empty.
+  - `buildApp` wires `ProjectController(confusionCheck: deps.confusionCheck, cvdProfile: deps.cvdProfile)`.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/palette_test.dart -d <udid>` (± `--dart-define=BS06_RUN_PENDING=true`) via `coord.sh with-lock BS-06 <phase>` — **set `FNP_COORD_REPO` to the worktree (`/Users/matthew.quirk/Nuance-bs06`), not the main checkout**. Flutter SDK `/Users/matthew.quirk/development/flutter/bin`; sim udid used: `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (iPhone 17).
+- **Known gaps / deferred:** `lastExport` still shell state. **PROJECT-6** (AC-10) is the last behavior phase — generate a PDF studio sheet of the opened project's samples + recipes, expose it as `lastExport` (adds the `pdf` + `printing` packages, G-4), and close its TestAC10 augmentation (assert the PDF references each sample + recipe). Its open-project Given is real (PROJECT-4). After PROJECT-6, only SIGNOFF-1 remains.
+- **Next phase should:** run PROJECT-6 (AC-10). One phase per session.
 
 ## Phase 6 — AC-10 export PDF studio sheet
 

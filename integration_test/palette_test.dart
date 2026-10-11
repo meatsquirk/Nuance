@@ -751,10 +751,12 @@ void main() {
     // shipped detector fires only near full dichromacy (D-5), and AC-9's spec
     // names only "the painter's confusion line" (no severity).
     //
-    // Limited at this phase: the non-flag control ("a clearly-distinct pair is
-    // NOT flagged") cannot discriminate until PROJECT-5 does the real
-    // computation (at baseline every pair is empty) — that control is the
-    // PROJECT-5 augmentation. Graded accordingly.
+    // PROJECT-5 augmentation (TestAC09, closed here): with real computation the
+    // control now discriminates — a clearly-distinct pair ("Mid Raw Umber" /
+    // "Hull Red", confirmed non-confusable by the independent reference) is
+    // asserted NOT flagged, and exactly one pair is flagged. Both reject an
+    // over-flagging impl (one that flags every pair), which an `anyElement`
+    // check alone could not.
     acTestWidgets(
         'AC-9', 'a confusable pair of saved samples is flagged within a '
             'project', (tester) async {
@@ -791,8 +793,7 @@ void main() {
         flaggedPairs,
         anyElement(
             unorderedEquals(<String?>['Mid Raw Umber', 'Ultramarine Shadow'])),
-        reason: 'the opened project flags the deutan confusion pair (PROJECT-5; '
-            'the non-flag control arrives with the PROJECT-5 augmentation)',
+        reason: 'the opened project flags the deutan confusion pair',
       );
       expect(
         find.byWidgetPredicate(
@@ -800,6 +801,28 @@ void main() {
         ),
         findsWidgets,
         reason: 'a "check these by value" warning is shown for the flagged pair',
+      );
+
+      // Augmentation (TestAC09): the control — "Mid Raw Umber" / "Hull Red" is
+      // clearly distinct even for the full deutan (independent reference), so it
+      // must NOT be flagged; and exactly one pair is flagged. Both reject an
+      // over-flagging impl that an `anyElement` positive check cannot.
+      expect(
+        referenceConfusable(SAMPLE_MID_RAW_UMBER.coordinates,
+            SAMPLE_HULL_RED.coordinates),
+        isFalse,
+        reason: 'the control pair is clearly distinct (independent reference)',
+      );
+      expect(
+        flaggedPairs,
+        isNot(contains(unorderedEquals(<String?>['Mid Raw Umber', 'Hull Red']))),
+        reason: 'a clearly-distinct pair is not flagged (non-flag control)',
+      );
+      expect(
+        flaggedPairs,
+        hasLength(1),
+        reason: 'exactly the one deutan confusion pair is flagged, not every '
+            'pair (rejects an over-flagging impl)',
       );
     });
 
@@ -860,10 +883,9 @@ void main() {
       // row here as it un-pends it, so this set shrinks by one per delivered AC.
       // Un-pended so far: AC-4 (PALETTE-2), AC-2 + AC-3 (PALETTE-3),
       // AC-1 (SCREEN-2), AC-11 (SCREEN-3), AC-5 (PALETTE-4), AC-6 (PROJECT-3),
-      // AC-7 + AC-8 (PROJECT-4). Asserts exact contents (non-vacuous) and that
-      // every pending key is a real AC in AC-1..AC-11.
+      // AC-7 + AC-8 (PROJECT-4), AC-9 (PROJECT-5). Asserts exact contents
+      // (non-vacuous) and that every pending key is a real AC in AC-1..AC-11.
       const expected = {
-        'AC-9',
         'AC-10',
       };
       expect(pendingACs.keys.toSet(), expected);
@@ -887,10 +909,10 @@ void main() {
       // run-pending passes, and a pending AC's default-skip is null-reason only
       // when not forced. (Reading the ambient mode made this fail under
       // --dart-define=BS06_RUN_PENDING=true; ITEST-2 records the fix.)
-      // AC-9 is a still-pending example (AC-1/2/3/5/6/7/8/11 were un-pended by
-      // SCREEN-2 / PALETTE-3 / PALETTE-4 / PROJECT-3 / PROJECT-4 / SCREEN-3).
-      expect(pendingSkipReason('AC-9', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-9', forceRunPending: true), isNull);
+      // AC-10 is the last still-pending example (AC-1/2/3/5/6/7/8/9/11 were
+      // un-pended by SCREEN-2 / PALETTE-3 / PALETTE-4 / PROJECT-3/4/5 / SCREEN-3).
+      expect(pendingSkipReason('AC-10', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-10', forceRunPending: true), isNull);
       // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
