@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** In progress — CORRECT module complete (AC-2/AC-3/AC-4/AC-5/AC-6 ✅, AC-8 ✅); next LOOP-4 ∥ LOOP-6 (AC-7, AC-9/10). G-2/G-4 resolved
+**Status:** In progress — AC-7 ✅ (speak the correction); next LOOP-6 (AC-9/10 — save confirmed → provenance), then SIGNOFF-1. G-2/G-4 resolved
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -61,7 +61,7 @@ route (`toCorrection`), controller, `CorrectionEngine`, or `bs05/` suite exist �
 | AC-4 | A concrete correction names the paint and the amount to add | ITEST-3 `TestAC04_ConcreteCorrection` | CORRECT-3 | ✅ Done |
 | AC-5 | A small correction is expressed as a touch of | ITEST-3 `TestAC05_TouchOf` | CORRECT-3 | ✅ Done |
 | AC-6 | A mix already within tolerance needs no correction | ITEST-3 `TestAC06_WithinTolerance` | CORRECT-4 | ✅ |
-| AC-7 | The painter hears the correction spoken | ITEST-2 `TestAC07_SpeakCorrection` | LOOP-4 | ⬜ Todo |
+| AC-7 | The painter hears the correction spoken | ITEST-2 `TestAC07_SpeakCorrection` | LOOP-4 | ✅ Done |
 | AC-8 | Re-photographing the swatch re-checks it against the target | ITEST-2 `TestAC08_RephotographRechecks` | LOOP-5 | ✅ Done |
 | AC-9 | Saving a satisfactory mix promotes it to Confirmed by the painter | ITEST-2 `TestAC09_SaveConfirmed` | LOOP-6 | ⬜ Todo |
 | AC-10 | A value confirmed by the painter shows its Confirmed provenance in later readouts | ITEST-2 `TestAC10_ConfirmedInReadout` | LOOP-6 | ⬜ Todo |
@@ -206,9 +206,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 10 | CORRECT-2 | behavior AC-2, AC-3: ΔE00 + verdict; value-leading decomposition | ✅ Done | 13,621,264 | 32m 47s | AC-3 ✅; AC-2 green but B pending CORRECT-4 (aug). default 101 pass/7 skip; grade AC-1/AC-3 A, AC-2 B-pending; fix 1/3 |
 | 11 | CORRECT-3 | behavior AC-4, AC-5: concrete correction (paint + amount); "a touch of" | ✅ Done | 26,610,719 | 1h 03m | value-leading single addition; amount = closing step × distance-beyond-tolerance ramp; AC-4/AC-5 ✅; also reconciled LOOP-5 |
 | 12 | CORRECT-4 | behavior AC-6: within tolerance → "very close" + no correction | ✅ Done | 10,423,853 | 1h 06m | AC-6 ✅ + AC-2 ✅ (TestAC02 aug closed); default 105 pass/3 skip; run-pending 19/3 (red baseline intact: AC-7/9/10); grade 7×A/0×B; coverage 100%/15; fix 0/3; parallel worktree |
-| 13 | LOOP-4 | behavior AC-7: speak the correction (E27) | ⬜ Next | | | startable; ∥ LOOP-6 (both independent of the engine, now complete) |
+| 13 | LOOP-4 | behavior AC-7: speak the correction (E27) | ✅ Done | 18,028,310 | 1h 02m | sequential (primary worktree); AC-7 ✅; default 106 pass/2 skip, run-pending 20/2 (red baseline intact AC-9/10); grade 8×A/0×B; coverage 100%/16; fix 1/3 |
 | 14 | LOOP-5 | behavior AC-8: re-photograph re-checks (E28) | ✅ Done | 7,036,729 | 28m 15s | parallel worktree; reconciled into feat/bs-05 @ merge 95a403e; after LOOP-3; serial w/ LOOP-6 |
-| 15 | LOOP-6 | behavior AC-9, AC-10: save confirmed → promote provenance; later readout shows it | ⬜ Todo | | | after LOOP-3; serial w/ LOOP-5 |
+| 15 | LOOP-6 | behavior AC-9, AC-10: save confirmed → promote provenance; later readout shows it | ⬜ Next | | | startable; last behaviour phase; after LOOP-3; G-4(d) resolved |
 | 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
@@ -216,21 +216,20 @@ when the row is marked done.
 
 ## Next phase
 
-**CORRECT-4 (AC-6) done — the CORRECT module is complete.** The within-tolerance short-circuit is live: a
-checked mix at or within ΔE00 2 reads "very close", is flagged `withinTolerance`, and shows no correction
-(`correctionToleranceDeltaE00` is the single tolerance anchor). This closed the TestAC02 augmentation, so
-**AC-2 ✅** alongside **AC-6 ✅**. Difference/correction detail (AC-2..AC-6) and the re-photograph loop (AC-8)
-are all in. Two startable strands remain, disjoint by file:
-- **LOOP-4** (AC-7 — speak the correction, E27): owns `correction_speech.dart`; speak must handle the
-  within-tolerance no-correction case ("very close", empty correction).
-- **LOOP-6** (AC-9/10 — save confirmed → provenance promotion + later readout): owns the controller
-  `saveConfirmed` + save region + provenance (D-8 phrase via `note`).
+**LOOP-4 (AC-7) done — the spoken correction is live.** `speakCorrection()` speaks the difference and the
+paints to add as one utterance via the new `correctionSpeech` builder (reusing the region phrasing; it handles
+the within-tolerance "No paints to add." case), and E27 is enabled once the mix is checked. Nine of ten ACs
+are in (AC-1..AC-8); grade 8×A/0×B.
 
-LOOP-4 and LOOP-6 are file-disjoint and may run concurrently. After both, **SIGNOFF-1**.
+**One startable phase remains — LOOP-6** (AC-9/AC-10 — save confirmed → provenance promotion + later readout):
+owns the controller `saveConfirmed` + save region (E29) + provenance (D-8 phrase via `note`, G-4(d)) + the
+readout's confirmed-note render. It depends on LOOP-3 + G-4(d) (both resolved) and is the last behaviour phase.
+After it, **SIGNOFF-1**.
+
 **Known follow-up:** `rephotograph` reads the difference only and clears `state.correction`; a later pass may
-share `checkMix`'s correction path (not AC-blocking). Start a strand with
-`/feature-next-phase bs-05-mix-correction-loop LOOP-4` (or LOOP-6; `--parallel` for concurrent strands).
-bs-05 worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`; G-2/G-4 resolved.
+unify `checkMix`/`rephotograph` via a shared `_photographAndCheck()` helper (not AC-blocking). Start it with
+`/feature-next-phase bs-05-mix-correction-loop LOOP-6`. bs-05 worktree `Nuance-bs05` on
+`feat/bs-05-mix-correction-loop`; G-2/G-4 resolved.
 
 ## Token usage
 
@@ -256,7 +255,8 @@ bs-05 worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`; G-2/G-4 resolv
 | CORRECT-3 | ece9cbfd | 2026-10-11 06:24 EDT | 07:27 | 1h 03m | 1h 03m | claude-opus-4-8 | 258 | 454,191 | 25,976,493 | 179,777 | 26,610,719 | AC-4,AC-5 un-pended + green; value-leading single-addition engine (ramped amount); analyze clean, unit 652, coverage 100%/15 touched; run-pending 18/4 (red baseline intact), default 104/4; grade 5×A + AC-2 B pending CORRECT-4; fix passes 0/3; session also reconciled LOOP-5 (merge 95a403e + rollup 07563c9) |
 | CORRECT-4 | 1daec8e7 | 2026-10-11 07:40 EDT | 08:46 | 1h 06m | 1h 06m | claude-opus-4-8 | 180 | 246,760 | 10,128,461 | 48,452 | 10,423,853 | AC-6 ✅ + AC-2 ✅ (TestAC02 aug closed); analyze clean, unit 655, coverage 100%/15; default 105 pass/3 skip, run-pending 19/3 (red baseline intact AC-7/9/10); grade 7×A/0×B; fix 0/3; CORRECT module complete |
 | RECONCILE | 3ca4b0fb | 2026-10-11 09:12 EDT | 09:15 | 3m 44s | 3m 44s | claude-opus-4-8 | 42 | 62,198 | 1,498,826 | 13,121 | 1,574,187 | merged phase/CORRECT-4 (d8df478) into feat/bs-05 @ merge 316a7f1; applied CORRECT-4 rollup (AC-2 ✅, AC-6 ✅, CORRECT module complete); CORRECT-4 ledger row added; worktree + phase branch removed, claim released |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 09:15** | **18h 39m** | **6h 23m** |  | **2,014** | **3,287,925** | **134,090,756** | **948,037** | **138,328,732** |  |
+| LOOP-4 | 0c44f3a4 | 2026-10-11 09:18 EDT | 10:21 | 1h 02m | 1h 02m | claude-opus-4-8 | 266 | 293,127 | 17,678,958 | 55,959 | 18,028,310 | AC-7 ✅ speak the correction; analyze clean, unit 663, coverage 100%/16; default 106 pass/2 skip, run-pending 20/2 (red baseline intact AC-9/10); grade 8×A/0×B; fix 1/3 |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 10:21** | **19h 41m** | **7h 25m** |  | **2,280** | **3,581,052** | **151,769,714** | **1,003,996** | **156,357,042** |  |
 
 ## Sign-off
 

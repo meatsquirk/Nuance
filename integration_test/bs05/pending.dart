@@ -49,7 +49,7 @@ const Map<String, String> pendingACs = {
   // AC-4, AC-5 un-pended by CORRECT-3 (concrete correction: paint + amount;
   // small correction → "a touch of").
   // AC-6 un-pended by CORRECT-4 (within tolerance → "very close", no correction).
-  'AC-7': 'LOOP-4', // speak the correction (E27)
+  // AC-7 un-pended by LOOP-4 (speak the correction — E27).
   // AC-8 un-pended by LOOP-5 (re-photograph re-checks the swatch — E28).
   'AC-9': 'LOOP-6', // save confirmed → promote provenance (E29)
   'AC-10': 'LOOP-6', // a confirmed value shows its provenance in later readouts

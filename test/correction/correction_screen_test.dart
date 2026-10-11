@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/correction/correction_controller.dart';
 import 'package:paint_color_assistant/correction/correction_screen.dart';
@@ -47,7 +48,17 @@ const _mix = Recipe(
   deltaE00: 1.2,
 );
 
-CorrectionController _controller({Sample target = _olive}) => CorrectionController(
+/// Records the utterances a speak control drives, so E27's wiring (AC-7) can be
+/// asserted at the widget level.
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
+}
+
+CorrectionController _controller({Sample target = _olive, Speech? speech}) =>
+    CorrectionController(
       captureSource: SoftwareCaptureSource(
         const SceneSpec(
           groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
@@ -57,6 +68,7 @@ CorrectionController _controller({Sample target = _olive}) => CorrectionControll
       currentMix: _mix,
       paletteSource: const InMemoryPaletteSource(),
       correctionEngine: const SubtractiveCorrectionEngine(),
+      speech: speech ?? const NoopSpeech(),
     );
 
 /// A controller whose [state] is fixed, so the correction region's render
@@ -138,8 +150,9 @@ void main() {
         find.text('Check the mix to see the paints to add.'),
         findsOneWidget,
       );
-      // The check (LOOP-3) and re-photograph (LOOP-5) controls are wired; the
-      // rest await their phases.
+      // The check (LOOP-3) and re-photograph (LOOP-5) controls are wired; speak
+      // (LOOP-4) is wired but disabled until a check gives it something to say;
+      // save (LOOP-6) still awaits its phase.
       expect(_buttonEnabled(tester, 'Check my mix'), isTrue);
       expect(_buttonEnabled(tester, 'Re-photograph swatch'), isTrue);
       expect(_buttonEnabled(tester, 'Speak correction'), isFalse);
@@ -294,12 +307,46 @@ void main() {
   });
 
   group('SpeakRegion', () {
-    testWidgets('keeps its anchor and the disabled speak control (E27)',
+    testWidgets('keeps its anchor and disables the speak control before a check',
         (tester) async {
-      await _pumpRegion(tester, const SpeakRegion());
+      // No difference yet ⇒ nothing to speak ⇒ the control is disabled.
+      final controller = _FixedStateController(_stateWith(null));
+      addTearDown(controller.dispose);
+      await _pumpRegion(tester, SpeakRegion(controller: controller));
 
       expect(find.byKey(SpeakRegion.regionKey), findsOneWidget);
       expect(_buttonEnabled(tester, 'Speak correction'), isFalse);
+    });
+
+    testWidgets('enables the control once checked and speaks the correction (E27)',
+        (tester) async {
+      final speech = _RecordingSpeech();
+      final controller = _controller(speech: speech);
+      addTearDown(controller.dispose);
+      // Pump the whole screen so the check (E26) can drive the state through the
+      // controller's capture idiom (its zero-delay timer needs pumping to fire).
+      await tester.pumpWidget(
+        MaterialApp(home: CorrectionScreen(controller: controller)),
+      );
+      expect(_buttonEnabled(tester, 'Speak correction'), isFalse,
+          reason: 'nothing to speak before a check');
+
+      // Check the mix (E26): the state gains a difference to speak.
+      await tester.tap(find.text('Check my mix'));
+      await tester.pumpAndSettle();
+      expect(controller.state.difference, isNotNull);
+      expect(_buttonEnabled(tester, 'Speak correction'), isTrue,
+          reason: 'E27 enables once the mix is checked');
+
+      // E27 Speak correction drives CorrectionController.speakCorrection (AC-7):
+      // it speaks the difference and the paints to add as one utterance.
+      await tester.tap(find.text('Speak correction'));
+      await tester.pumpAndSettle();
+      expect(speech.utterances, hasLength(1),
+          reason: 'tapping speaks the correction once');
+      expect(speech.utterances.single,
+          contains(controller.state.difference!.verdict),
+          reason: 'the spoken output states the difference');
     });
   });
 

@@ -8,6 +8,7 @@ import 'package:paint_color_assistant/capture/source/software_capture_source.dar
 import 'package:paint_color_assistant/compare/difference.dart' show deltaE00;
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/correction/correction_controller.dart';
+import 'package:paint_color_assistant/correction/correction_speech.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
@@ -75,9 +76,19 @@ class _InertCaptureSource implements CaptureSource {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
+/// Records every utterance the controller speaks, so a speak action's output
+/// (AC-7) can be asserted without a real speech backend.
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
+}
+
 CorrectionController _controller({
   SampleSource? sampleSource,
   PaletteSource? paletteSource,
+  Speech? speech,
 }) =>
     CorrectionController(
       captureSource: _InertCaptureSource(),
@@ -86,6 +97,7 @@ CorrectionController _controller({
       paletteSource: paletteSource ?? const InMemoryPaletteSource(),
       correctionEngine: const SubtractiveCorrectionEngine(),
       sampleSource: sampleSource ?? const InMemorySampleSource(),
+      speech: speech ?? const NoopSpeech(),
     );
 
 /// An off-reading scene whose ground truth sits clear of [_olive] (too dark and
@@ -304,10 +316,58 @@ void main() {
       });
     });
 
-    group('actions still inert until their phase', () {
-      test('speakCorrection throws until LOOP-4', () {
-        expect(() => _controller().speakCorrection(), throwsUnimplementedError);
+    group('speakCorrection (LOOP-4, AC-7)', () {
+      test(
+          'speaks the checked difference and each paint to add as one utterance, '
+          'built through the speech builder', () async {
+        final speech = _RecordingSpeech();
+        final controller = CorrectionController(
+          captureSource: SoftwareCaptureSource(_offScene),
+          target: _correctTarget,
+          currentMix: _correctMix,
+          paletteSource:
+              const InMemoryPaletteSource(catalogue: [_correctPalette]),
+          correctionEngine: const SubtractiveCorrectionEngine(),
+          speech: speech,
+        );
+        await controller.checkMix();
+        final difference = controller.state.difference;
+        final correction = controller.state.correction;
+        expect(difference, isNotNull);
+        expect(correction, isNotNull);
+        expect(correction!.isEmpty, isFalse,
+            reason: 'an off mix over a real palette yields paints to add');
+
+        await controller.speakCorrection();
+
+        expect(speech.utterances, hasLength(1),
+            reason: 'the correction is spoken as exactly one utterance');
+        final spoken = speech.utterances.single;
+        expect(spoken, correctionSpeech(controller.state),
+            reason: 'the controller speaks exactly the builder output — it does '
+                'not phrase the utterance itself (D-2/D-3)');
+        expect(spoken, contains(difference!.verdict),
+            reason: 'the utterance states the difference verdict');
+        for (final addition in correction.additions) {
+          expect(spoken, contains(addition.paint.name),
+              reason: 'the utterance names each paint to add '
+                  '(${addition.paint.name})');
+        }
       });
+
+      test('is inert before the mix is checked — nothing to speak', () async {
+        final speech = _RecordingSpeech();
+        final controller = _controller(speech: speech);
+
+        await controller.speakCorrection();
+
+        expect(controller.state.hasChecked, isFalse);
+        expect(speech.utterances, isEmpty,
+            reason: 'with no reading yet there is nothing to speak');
+      });
+    });
+
+    group('actions still inert until their phase', () {
       test('saveConfirmed throws until LOOP-6', () {
         expect(() => _controller().saveConfirmed(), throwsUnimplementedError);
       });

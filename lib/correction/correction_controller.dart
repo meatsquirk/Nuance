@@ -10,6 +10,7 @@ import '../recipes/engine/mixing_engine.dart';
 import '../recipes/engine/subtractive_engine.dart';
 import '../recipes/palette.dart';
 import '../recipes/palette_source.dart';
+import 'correction_speech.dart';
 import 'correction_state.dart';
 import 'engine/correction_engine.dart';
 
@@ -177,10 +178,22 @@ class CorrectionController extends ChangeNotifier {
     }
   }
 
-  /// Speaks the difference and the paints to add as one utterance (AC-7) —
-  /// LOOP-4.
-  Future<void> speakCorrection() =>
-      throw UnimplementedError(_deferred('LOOP-4'));
+  /// Speaks the difference and the paints to add as one utterance (AC-7).
+  ///
+  /// Builds the utterance from the checked [state] via [correctionSpeech] — the
+  /// difference's verdict and value-leading decomposition followed by each paint
+  /// to add — and sends it to [Speech.speak] exactly once, so the painter hears
+  /// the whole correction as one utterance rather than a stream of fragments.
+  /// The controller never phrases that output itself; the builder reuses the
+  /// strings the difference and correction regions show, so heard and seen stay
+  /// in step (D-2/D-3). With no reading yet ([correctionSpeech] null, the mix
+  /// not checked) there is nothing to speak, so the action is inert — the E27
+  /// control is disabled in that state anyway. Speaking does not change the
+  /// reading, so it does not notify.
+  Future<void> speakCorrection() async {
+    final utterance = correctionSpeech(_state);
+    if (utterance != null) await speech.speak(utterance);
+  }
 
   /// Saves the mix as confirmed, promoting the value's provenance (AC-9) —
   /// LOOP-6.

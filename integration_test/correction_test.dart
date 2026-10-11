@@ -116,7 +116,7 @@ void main() {
     // AC-4, AC-5; CORRECT-4 → AC-6; LOOP-4 → AC-7; LOOP-5 → AC-8; LOOP-6 → AC-9,
     // AC-10.
     const unpended = <String>{
-      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-8', //
+      'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', //
     };
 
     test(

@@ -1,6 +1,6 @@
 # Module LOOP — correction loop controller + wiring
 
-**Status:** In progress — LOOP-1/LOOP-2/LOOP-3/LOOP-5 done (AC-8 un-pended + green); LOOP-6 (AC-9/10) startable (depends on LOOP-3); LOOP-4 (AC-7) waits on CORRECT-3
+**Status:** In progress — LOOP-1/LOOP-2/LOOP-3/LOOP-4/LOOP-5 done (AC-1/AC-7/AC-8 un-pended + green); LOOP-6 (AC-9/10) startable (depends on LOOP-3), then the module is complete
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/correction_controller.dart`, `lib/correction/correction_state.dart`, `lib/correction/correction_read_endpoint.dart`, `lib/correction/correction_speech.dart`, the `CorrectionEntry`/`CorrectionHomeScreen` branch in `lib/app/build_app.dart`, `AppRouter.toCorrection` in `lib/app/router.dart`, the provenance promotion (via `Sample.copyWith` + `EvidencePoint`; the confirmed-tier label per G-4(d))
 **Depends on:** bs-02 capture (`CaptureController`/`CaptureSource`), bs-03 `deltaE00`/`SampleSource`, domain `Provenance`/`Sample`/`EvidencePoint`, `Speech`, CORRECT (engine) · **Blocks:** SCREEN-1, SIGNOFF-1
@@ -12,7 +12,7 @@
 | 1 | scaffold | — | ✅ Done | 2,465,803 | 11m 57s |
 | 2 | shell | — | ✅ Done | 11,995,702 | 19m 40s (52m 25s) |
 | 3 | behavior | AC-1 (*enabler*) | ✅ Done | 15,659,660 | 29m 27s |
-| 4 | behavior | AC-7 | ⬜ Todo | | |
+| 4 | behavior | AC-7 | ✅ Done | 18,028,310 | 1h 02m |
 | 5 | behavior | AC-8 | ✅ Done | 7,036,729 | 28m 15s |
 | 6 | behavior | AC-9, AC-10 | ⬜ Todo | | |
 
@@ -316,3 +316,65 @@ strand — disjoint ownership (controller + rephotograph region vs engine + diff
   gate flags an untouched file. Always pass `-d <booted-udid>` to the integration suite. This phase's branch
   must be merged into `feat/bs-05-mix-correction-loop` and rolled up (`--reconcile`) before the master plan
   reflects it.
+
+### Result — LOOP-4
+
+The spoken correction is live (AC-7): `CorrectionController.speakCorrection` speaks the difference and the
+paints to add as a single utterance through the injected `Speech` seam, and E27 "Speak correction" is wired to
+it — enabled once the mix is checked. Run **sequentially** in the primary bs-05 worktree (`Nuance-bs05`);
+reconciled inline.
+
+- **Landed (`lib/`):** NEW `correction/correction_speech.dart` — `String? correctionSpeech(CorrectionState)`:
+  null before a check (`difference` null), else one utterance stating the difference (verdict + ΔE00 + the
+  value-leading decomposition, mirroring `DifferenceRegion`) and the correction — each addition as
+  `add about N parts of <paint>` (AC-4) or trace `a touch of <paint>` (AC-5), or `No paints to add.` for the
+  within-tolerance empty/null correction (AC-6). Reuses `CorrectionRegion`'s phrasing so heard = seen; the
+  spoken counterpart of `comparisonSpeech`/`recipeSpeech`. `correction_controller.dart` — `speakCorrection()`
+  now builds via `correctionSpeech(_state)` and calls `speech.speak(...)` exactly once when non-null (inert
+  otherwise, like `ComparisonController.speak`), replacing the `UnimplementedError` stub.
+  `regions/speak_region.dart` — E27 `TextButton` takes the controller, enabled iff
+  `correctionSpeech(controller.state) != null` (nothing to speak before a check — the bs-03 E6 pattern), wired
+  to `speakCorrection()`. `correction_screen.dart` — passes the controller to `SpeakRegion` (one line).
+- **Gate:** `flutter analyze` clean; unit **663 green** (`flutter test --coverage`, +29 net: new
+  `correction_speech_test.dart` 6, controller +2 speakCorrection tests −1 inert throw-test, screen SpeakRegion
+  group now 2 tests, plus the rebalanced region/controller tests); coverage gate **100% on all 16 touched
+  files** (`dart run tool/coverage_gate.dart main` — includes the new `correction_speech.dart` and
+  `speak_region.dart`). **Acceptance (iPhone 17 sim `5AB9D06D…` under the verify lock):** AC-7 un-pended in
+  `bs05/pending.dart`; `TestAC07_SpeakCorrection` green — run-pending **20 pass / 2 fail** (AC-9/AC-10 still
+  fail cleanly on their LOOP-6 Given preconditions; red baseline intact), default **106 pass / 2 skip** (was
+  105/3; AC-7 flipped green, no regression across bs-01…bs-04 + AC-1..AC-6/AC-8).
+- **Grade:** independent re-grade of every un-pended AC test (AC-1..AC-8) → **8×A / 0×B**, no blocker; AC-7 = A
+  (holds the real builder/controller to the AC and rejects silent / multiple / omitted-difference /
+  omitted-paint impls; traced the real SCENE_OFF utterance = verdict "noticeably off" + one Titanium White
+  addition). No drift; the grid's LOOP-4 re-grade section records it.
+- **Augmentations:** none assigned to LOOP-4, and none newly enabled — AC-7 speaks existing readings, adding no
+  stronger assertion to another already-green AC (G6). **Fix passes: 1/3** (the first `--coverage` run flagged
+  the SpeakRegion "enables + speaks" widget test, which called `await controller.checkMix()` directly in a
+  `testWidgets` body — a zero-delay capture timer that never fires without a pump; rewritten to pump the full
+  screen and tap "Check my mix" then "Speak correction", the proven idiom; no product change).
+- **Tokens / Time:** 18,028,310 · 1h 02m.
+
+### Checkpoint / Handoff — LOOP-4
+
+- **Frozen for the next phase (LOOP-6, then SIGNOFF-1):**
+  - `correctionSpeech(CorrectionState)` — null until checked; otherwise the one-utterance difference + paints
+    (or "No paints to add." within tolerance). Pure; reuses `CorrectionRegion` phrasing.
+  - `CorrectionController.speakCorrection()` speaks `correctionSpeech(_state)` once when non-null, inert
+    otherwise; does not notify (speaking doesn't change the reading).
+  - `SpeakRegion({required CorrectionController controller})` — E27 enabled iff there is something to speak.
+- **⚠ Merge note (LOOP-6, serial on the controller):** LOOP-6 (`saveConfirmed`) edits
+  `correction_controller.dart` too; `speakCorrection` is a self-contained method body and the new
+  `correction_speech.dart` import is additive, so LOOP-6's `saveConfirmed` body merges cleanly. LOOP-6 also
+  touches `correction_screen.dart` (wiring `SaveRegion`) — a different line than this phase's `SpeakRegion`
+  line.
+- **Verification commands:** unchanged (export PATH; `flutter analyze`; `flutter test --coverage`;
+  `dart run tool/coverage_gate.dart main`; integration under the verify lock on the iPhone 17 sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; bs-05 run-pending via
+  `flutter test integration_test/correction_test.dart -d <sim> --dart-define=BS05_RUN_PENDING=true`).
+- **Next phase:** LOOP-6 (AC-9/AC-10 — save confirmed → provenance promotion + later readout) is the last
+  behaviour phase; after it, SIGNOFF-1. LOOP-6 depends on LOOP-3 + G-4(d) (both resolved) and is file-disjoint
+  from this phase.
+- **Known gaps / notes:** the `const`-constructor coverage flake still applies — re-run `--coverage` once if the
+  gate flags an untouched file. Always pass `-d <booted-udid>` to the integration suite. Carry-forward (from
+  LOOP-5): `rephotograph` still reads the difference only and clears `state.correction`; a later pass may unify
+  it with `checkMix`'s correction path via a shared `_photographAndCheck()` helper — not AC-blocking.
