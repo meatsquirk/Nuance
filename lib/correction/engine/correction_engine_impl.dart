@@ -13,9 +13,9 @@ import 'correction_words.dart';
 ///
 /// [difference] reports the real perceptual distance — the shipped CIEDE2000
 /// (bs-03's `deltaE00`) between the swatch and the target — with its plain
-/// verdict and value-leading decomposition (CORRECT-2, AC-2/AC-3); the
-/// within-tolerance flag stays off until CORRECT-4 wires the tolerance
-/// short-circuit. [correct] searches the owned palette for the one paint to add
+/// verdict and value-leading decomposition (CORRECT-2, AC-2/AC-3); a mix at or
+/// within [correctionToleranceDeltaE00] reads "very close" and is flagged
+/// `withinTolerance` (CORRECT-4, AC-6). [correct] searches the owned palette for the one paint to add
 /// that most closes the gap, leading with value (CORRECT-3, AC-4/AC-5): it rides
 /// bs-04's [MixingEngine.forward] model to score candidate additions, so the
 /// suggestion is a real physical ratio, never an invented number (D-3). Wired in
@@ -42,15 +42,15 @@ class SubtractiveCorrectionEngine implements CorrectionEngine {
     final tgt = target.coordinates;
     // The distance is the shipped CIEDE2000 (bs-03) — read through this seam
     // rather than computed here (D-2). Hue angles come through the shared
-    // `labToCielch` derivation (D-5). The within-tolerance short-circuit lands
-    // in CORRECT-4.
+    // `labToCielch` derivation (D-5). A mix at or within tolerance is "very
+    // close" (verdictFor) and flagged withinTolerance (D-6/G-4b, CORRECT-4).
     final distance = deltaE00(mixed, tgt);
     return Difference(
       deltaE00: distance,
       verdict: verdictFor(distance),
       valueReading: valueReadingFor(tgt.lightness, mixed.lightness),
       hueReading: hueReadingFor(labToCielch(mixed).hue, labToCielch(tgt).hue),
-      withinTolerance: false,
+      withinTolerance: distance <= correctionToleranceDeltaE00,
     );
   }
 
@@ -100,9 +100,9 @@ class SubtractiveCorrectionEngine implements CorrectionEngine {
     // How far beyond tolerance the mix sits scales the correction from a gentle
     // touch (just over tolerance — add a little and re-photograph, the loop) to
     // a full measured part (far off). A mix at or within tolerance needs no
-    // correction (ramp 0; CORRECT-4 makes that an explicit "very close").
-    final ramp = ((distance - _toleranceDeltaE00) /
-            (_fullCorrectionDeltaE00 - _toleranceDeltaE00))
+    // correction (ramp 0 → empty; `difference` flags it "very close", CORRECT-4).
+    final ramp = ((distance - correctionToleranceDeltaE00) /
+            (_fullCorrectionDeltaE00 - correctionToleranceDeltaE00))
         .clamp(0.0, 1.0);
     final amount = step * ramp;
     if (amount <= 0) return const Correction();
@@ -210,15 +210,10 @@ class SubtractiveCorrectionEngine implements CorrectionEngine {
   /// (G-4(c): 2% by volume; D-7, the same idiom bs-04's recipes use).
   static const double _traceThreshold = 0.02;
 
-  /// The distance at or below which no correction is offered (D-6 / G-4(b); the
-  /// ramp anchor). CORRECT-4 wires the matching "very close" verdict and the
-  /// within-tolerance flag on this same value.
-  static const double _toleranceDeltaE00 = 2.0;
-
   /// The distance at or beyond which the correction is at full strength (a
-  /// measured part). Between tolerance and here it ramps from a touch to a part:
-  /// a mix only just beyond tolerance is corrected gently and re-photographed
-  /// (the loop), not over-corrected in one step.
+  /// measured part). Between `correctionToleranceDeltaE00` and here it ramps from
+  /// a touch to a part: a mix only just beyond tolerance is corrected gently and
+  /// re-photographed (the loop), not over-corrected in one step.
   static const double _fullCorrectionDeltaE00 = 10.0;
 
   /// The search grid for the closing amount (parts by volume). Coarse by design

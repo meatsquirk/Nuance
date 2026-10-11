@@ -98,7 +98,7 @@
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC02 | one off-reading cannot show the verdict tracks distance (it could be a constant "noticeably off") | CORRECT-4 | a within-tolerance reading that reads "very close" (decisive control) | ⬜ Open |
+| TestAC02 | one off-reading cannot show the verdict tracks distance (it could be a constant "noticeably off") | CORRECT-4 | a within-tolerance reading that reads "very close" (decisive control) | ✅ Closed CORRECT-4 (within-tolerance "very close" control added; discriminates — fails a constant-verdict impl) |
 
 ## Checkpoint / Handoff (after ITEST-1)
 

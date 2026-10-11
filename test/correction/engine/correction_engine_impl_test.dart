@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/compare/difference.dart' show deltaE00;
 import 'package:paint_color_assistant/correction/engine/correction_engine.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
+import 'package:paint_color_assistant/correction/engine/correction_words.dart'
+    show correctionToleranceDeltaE00;
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
@@ -121,7 +123,20 @@ void main() {
       expect(difference.hueReading, contains('green'),
           reason: 'the hue reading names the shifted-toward family');
       expect(difference.withinTolerance, isFalse,
-          reason: 'the tolerance short-circuit is CORRECT-4');
+          reason: 'a beyond-tolerance mix is not flagged within tolerance');
+    });
+
+    test(
+        'difference flags a within-tolerance mix "very close" (CORRECT-4, AC-6)',
+        () {
+      final difference = _engine.difference(_withinTolerance, _target);
+      expect(
+          difference.deltaE00, lessThanOrEqualTo(correctionToleranceDeltaE00),
+          reason: 'the fixture really sits within ΔE00 tolerance');
+      expect(difference.withinTolerance, isTrue,
+          reason: 'a mix at or within tolerance is flagged within tolerance');
+      expect(difference.verdict, 'very close',
+          reason: 'a within-tolerance mix reads "very close" (G-4b)');
     });
 
     group('correct (CORRECT-3, AC-4/AC-5)', () {
