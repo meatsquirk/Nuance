@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — stage 3 (acceptance tests) complete; ITEST-4 packet assembled, **⏸ awaiting the G-2 decision** (approve the acceptance tests before the behavior stage).
+**Status:** In progress — stage 3 (acceptance tests) complete and **G-2 approved**; behavior stage (stage 4) unblocked. Next startable: PALETTE-2, PROJECT-2, SCREEN-2, SCREEN-3.
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -114,7 +114,7 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 | PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | 🔄 In progress (PALETTE-1 ✅) |
 | PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | 🔄 In progress (PROJECT-1 ✅) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | 🔄 In progress (SCREEN-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1/2/3 ✅; ITEST-4 ⏸ awaiting G-2) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 ✅; ITEST-4 ✅ G-2 approved) |
 
 ## Dependency graph
 
@@ -138,7 +138,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" banner) | DATA-1 | ✅ Resolved 2026-10-10: spec approved as-is; `.feature` first line stamped "Approved 2026-10-10 by Matt Quirk" — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏳ Awaiting decision (ITEST-4 packet assembled 2026-10-10; record via `--gate bs-06-palette-and-projects G-2 approved \| "<changes>"`) |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-11: acceptance suite approved as-is — the two-profile fixture split (`deutanModerate`/`deutanDichromat`) confirmed acceptable, AC-8's persistent seed→load round-trip "reopen" accepted, and the 5 sanctioned B-pending grades accepted with their scheduled augmentations owed by the owning behavior phases — Matt Quirk |
 | G-3 | dependency | bs-04 merged to `main` (bs-06 branches from `main` and needs bs-04 code) — closed by merging `feat/bs-04-mixing-recipes` → `main` | DATA-1 | ✅ Resolved 2026-10-10: `feat/bs-04-mixing-recipes` (@ `28cbf04`, signed off) merged to `main` @ `2684ac6`; bs-04 foundation now present on `main`. DATA-1 can branch from `main` |
 | G-4 | decision | Pin bs-06 data contracts + confirm new project-local deps: (a) on-device DB package (D-1), (b) pdf package (D-6), (c) reviewed paint-dataset shape & provenance defaults (D-3), (d) project "size" field semantics (free text "24×30 in" vs structured units) | DATA-2, PALETTE-1 | ✅ Resolved 2026-10-10: (a) **drift** (SQLite, typed); (b) **pdf + printing** (added by PROJECT-6 for AC-10); (c) reviewed dataset = CSV asset (`assets/color/*.csv` convention) with default provenance tier **measured**; (d) project size = **free text** (e.g. `24×30 in`) — Matt Quirk |
 
@@ -163,8 +163,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-1 | acceptance-tests: harness over wired shells, fixtures, pending gate (all ACs pending), smoke test | ✅ Done | 11,716,367 | 29m 01s | harness + 2 smoke + 6 fixture guards; 12/12 green on sim; graded 15×A |
 | 7 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,11 (pending) + red baseline | ✅ Done | 10,977,843 | 25m 32s | 6 pending AC tests; default 12/12 green, run-pending 6 red (clean); graded 4×A 2×B-pending PASS; fixed a run-pending scaffold-guard bug |
 | 8 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 6,732,201 | 27m 32s | 5 pending AC tests; default 12/12 green, run-pending 5 red (4 Then, AC-10 Given-precond naming PROJECT-4), clean; graded 2×A 3×B-pending PASS (added TestAC07→PROJECT-4 row + AC-10 G1 check); no lib/ touched |
-| 9 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,760,963 | 3m 34s | packet assembled across ITEST-2+3; **G-2 awaiting decision**; no code touched |
-| 10 | PALETTE-2 | AC-4 add paint from reviewed dataset | ⬜ Todo | | | |
+| 9 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,760,963 | 3m 34s | packet assembled across ITEST-2+3; **G-2 approved 2026-10-11** (Matt Quirk) — behavior stage unblocked |
+| 10 | PALETTE-2 | AC-4 add paint from reviewed dataset | ⬜ Next | | | startable (no behavior dep) |
 | 11 | PALETTE-3 | AC-2 + AC-3 paint identity/provenance badge + legend | ⬜ Todo | | | after PALETTE-2 |
 | 12 | PALETTE-4 | AC-5 selected palette drives recipes | ⬜ Todo | | | |
 | 13 | PROJECT-2 | enabler: create project + attach samples/recipes/note/photo | ⬜ Todo | | | |
@@ -180,13 +180,15 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ITEST-4 ⏸ awaiting review** (test-review): assembled the G-2 review packet in `modules/ITEST.md` across ITEST-2 (AC-1,2,3,4,5,11) + ITEST-3 (AC-6,7,8,9,10) — per-AC test name / Given checks / When / Then + Rejects; red-baseline summary; the 5 scheduled augmentations + closing phases; grade-grid path + counts (6×A, 5×B-pending, no unsanctioned B); and 3 items to review first (vision-profile fixture split needing confirmation; AC-8's round-trip "reopen"; the sanctioned B-pending grades). Plan files only — no code touched. **G-2** set *awaiting decision*.
+**G-2 approved** (2026-10-11, Matt Quirk) — stage 3 closed, behavior stage (stage 4) open. Each behavior phase un-pends its AC (delete the row in `bs06/pending.dart`), closes any owed augmentation, and re-grades its un-pended test to A.
 
-**Blocked on a human decision — stop here.** Record it with:
-- `/feature-next-phase --gate bs-06-palette-and-projects G-2 approved` — or
-- `/feature-next-phase --gate bs-06-palette-and-projects G-2 "<changes requested>"`
+Startable now (no behavior dependency), runnable concurrently in separate sessions on disjoint files:
+- **PALETTE-2** — AC-4 add paint from reviewed dataset (`lib/palette/`)
+- **PROJECT-2** — enabler: create project + attach samples/recipes/note/photo (`lib/projects/`); gates all other PROJECT phases
+- **SCREEN-2** — AC-1 switch My paints / Projects views
+- **SCREEN-3** — AC-11 vision-profile card estimate + opens self-assessment (closes AC-11 2nd-profile follow-on)
 
-On approval, the behavior stage unblocks: PALETTE-2 (AC-4), PROJECT-2 (enabler), SCREEN-2 (AC-1), SCREEN-3 (AC-11) are startable first (no behavior dependency); PALETTE-3/4 and PROJECT-3→6 follow the graph (PROJECT-2 before all PROJECTs; PROJECT-4 before PROJECT-5 and PROJECT-6). On changes requested, each item becomes an ITEST change phase, then a fresh review.
+Graph-gated (run after their dep): PALETTE-3 (AC-2/3) then PALETTE-4 (AC-5) after PALETTE-2; PROJECT-3/4/5/6 after PROJECT-2, with PROJECT-4 before PROJECT-5 and PROJECT-6. Each session runs exactly one phase. SIGNOFF-1 last.
 
 ## Token usage
 
@@ -206,7 +208,8 @@ On approval, the behavior stage unblocks: PALETTE-2 (AC-4), PROJECT-2 (enabler),
 | ITEST-2 | c39c9bf6 | 2026-10-10 18:20 EDT | 18:46 | 25m 32s | 25m 32s | claude-opus-4-8 | 160 | 262,709 | 10,644,906 | 70,068 | 10,977,843 | acceptance-tests AC-1,2,3,4,5,11: 6 pending acTestWidgets; default 12/12 green, run-pending 6 red (5 Then, AC-4 Given-precond naming PALETTE-2), clean; graded 4xA 2xB-pending (AC-2->PALETTE-3, AC-5->PALETTE-4) PASS; fixed run-pending scaffold-guard bug; no lib/ touched |
 | ITEST-3 | 5caf0d6d | 2026-10-10 20:49 EDT | 21:16 | 27m 32s | 27m 32s | claude-opus-4-8 | 104 | 261,353 | 6,404,241 | 66,503 | 6,732,201 | acceptance-tests AC-6,7,8,9,10: 5 pending tests; default 12/12 green, run-pending 5 red clean (4 Then, AC-10 Given-precond PROJECT-4); graded 2xA 3xB-pending PASS; no lib/ touched |
 | ITEST-4 | 7ac52e81 | 2026-10-10 21:50 EDT | 21:54 | 3m 34s | 3m 34s | claude-opus-4-8 | 44 | 76,121 | 1,670,163 | 14,635 | 1,760,963 | test-review packet assembled; G-2 awaiting decision |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 21:54** | **9h 53m** | **3h 05m** |  | **1,216** | **2,042,438** | **74,598,833** | **626,331** | **77,268,818** |  |
+| SIGNOFF-DECISION | fa344040 | 2026-10-10 22:01 EDT | 2026-10-11 05:53 | 7h 52m | 2m 33s | claude-opus-4-8 | 42 | 110,218 | 1,481,567 | 11,289 | 1,603,116 | ITEST-4 approved: G-2 acceptance suite approved as-is (two-profile split, AC-8 round-trip reopen, 5 sanctioned B-pending w/ augmentations) — Matt Quirk; behavior stage unblocked |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 05:53** | **17h 45m** | **3h 07m** |  | **1,258** | **2,152,656** | **76,080,400** | **637,620** | **78,871,934** |  |
 
 ## Sign-off
 

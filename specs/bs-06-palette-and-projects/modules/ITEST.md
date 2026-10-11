@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ⏸ Awaiting review — ITEST-1 ✅, ITEST-2 ✅, ITEST-3 ✅; ITEST-4 packet assembled, **G-2 awaiting decision** (approve the acceptance tests before any behavior is coded)
+**Status:** ✅ Done — ITEST-1 ✅, ITEST-2 ✅, ITEST-3 ✅, ITEST-4 ✅ (**G-2 approved 2026-10-11, Matt Quirk** — acceptance suite accepted as-is; behavior stage unblocked)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/palette_harness.dart`, `integration_test/palette_test.dart`, `integration_test/bs06/pending.dart`, bs-06 additions to `integration_test/fakes/` (fake file sink for photo + PDF export)
 **Depends on:** all shell phases (DATA-2, PALETTE-1, PROJECT-1, SCREEN-1) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | | |
 | 2 | acceptance-tests | AC-1,2,3,4,5,11 | ✅ Done | 10,977,843 | 25m 32s |
 | 3 | acceptance-tests | AC-6,7,8,9,10 | ✅ Done | 6,732,201 | 27m 32s |
-| 4 | test-review | — (G-2) | ⏸ Awaiting review | 1,760,963 | 3m 34s |
+| 4 | test-review | — (G-2) | ✅ Done | 1,760,963 | 3m 34s |
 
 ## Interface reconciliation
 
@@ -219,15 +219,16 @@ SCREEN-2/3) stays blocked until a human records the G-2 decision.
 
 ### Checkpoint / Handoff
 
-- **Awaiting the human decision on G-2.** Record with
-  `/feature-next-phase --gate bs-06-palette-and-projects G-2 approved | "<changes requested>"`.
-- **On approval:** ITEST-4 flips to ✅ Done and every behavior phase unblocks. Startable first:
-  PALETTE-2 (AC-4), PROJECT-2 (enabler), SCREEN-2 (AC-1), SCREEN-3 (AC-11) — those with no behavior
-  dependency; PALETTE-3/4 and PROJECT-3→6 follow per the dependency graph (PROJECT-4 before PROJECT-5 and
-  PROJECT-6). Each behavior phase un-pends its AC (delete the row in `bs06/pending.dart`), makes its
-  augmentations, and re-grades every un-pended test to A.
-- **On changes requested:** each item becomes an ITEST change phase before the behavior stage, followed by
-  a fresh review.
+- **G-2 approved 2026-10-11 (Matt Quirk)** — acceptance suite accepted as-is: the two-profile fixture
+  split (`deutanModerate`/`deutanDichromat`) confirmed acceptable, AC-8's persistent seed→load round-trip
+  "reopen" accepted, and the 5 sanctioned B-pending grades accepted with their augmentations owed by the
+  owning behavior phases. ITEST-4 ✅ Done; stage 3 closed; every behavior phase unblocked.
+- **Behavior stage now open.** Startable first (no behavior dependency): PALETTE-2 (AC-4), PROJECT-2
+  (enabler), SCREEN-2 (AC-1), SCREEN-3 (AC-11); PALETTE-3/4 and PROJECT-3→6 follow per the dependency graph
+  (PROJECT-2 before all PROJECTs; PROJECT-4 before PROJECT-5 and PROJECT-6). Each behavior phase un-pends
+  its AC (delete the row in `bs06/pending.dart`), closes its owed augmentation (TestAC02→PALETTE-3,
+  TestAC05→PALETTE-4, TestAC07→PROJECT-4, TestAC09→PROJECT-5, TestAC10→PROJECT-6), and re-grades every
+  un-pended test to A.
 - **Verification commands:** unchanged (see ITEST-1 handoff). No verification run this phase (no code).
 
 ## Red baseline  <!-- filled by the AC-test phases (run-pending) -->
