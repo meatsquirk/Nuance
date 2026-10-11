@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 12,251,452 | 17m 44s |
 | 2 | behavior | AC-1 | ⬜ Todo | | |
-| 3 | behavior | AC-11 | ⬜ Todo | | |
+| 3 | behavior | AC-11 | ✅ Done | 10,052,083 | 43m 03s |
 
 ## Interface reconciliation
 
@@ -71,5 +71,17 @@
 - **Tasks:** the vision-profile card shows the current estimate from the injected `CvdProfile` (e.g. "deutan-type, moderate"); choosing "retake the self-assessment" navigates to the bs-07 self-assessment entry placeholder.
 - **Acceptance gate:** un-pend AC-11; suite green — the estimate text is shown AND navigation to the self-assessment entry is observed.
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+- **Landed (AC-11):** `VisionProfileCard` now takes the injected `CvdProfile` + `AppRouter`; it shows the estimate `"<type>-type, <mild|moderate|strong>"` (e.g. "deutan-type, moderate" at severity 0.6) and its E30 "Retake the self-assessment" control pushes `AppRouter.toSelfAssessment()` to the bs-07 `SelfAssessmentEntryScreen` placeholder. `PaletteScreen` reads `AppScope.of(context).cvdProfile`/`.router` and passes them into the card (tight one-region edit; added only the `build_app.dart` AppScope import).
+- **router.dart NOT modified** — `toSelfAssessment()` already existed (SCREEN-1) and is fully covered by `router_test.dart`; nothing to add there.
+- **Un-pended AC-11**: removed its row from `integration_test/bs06/pending.dart` and from the scaffold-guard `expected` set in `palette_test.dart`. Added the AC-11 **second-profile control** (protan/mild) to the acceptance test — closes the ITEST-2 grader's recommended hardening (now rejects a hard-coded estimate string).
+- **Gates:** `flutter analyze` clean · unit `flutter test --coverage` **698 passed** · `coverage_gate.dart main` **100% on all 24 touched lib files** (incl. `vision_profile_card.dart`, `palette_screen.dart`) · acceptance `palette_test.dart` on iPhone 17 sim: **AC-11 un-pended + green, suite green** (AC-1/2/3/5/6/7/8/9/10 still pending their owners) · grade gate (fresh independent grader): **AC-4 A, AC-11 A — 2×A, 0×B**, no augmentation owed.
+- **Fix passes:** 0/3 (passed first full run; the one acceptance re-run was a harness-path + added-control correction, not a code-fix pass).
+- **Tokens:** 10,052,083 · **Time:** 43m 03s
+
+### Checkpoint / Handoff
+- **Frozen interfaces:** `VisionProfileCard({required CvdProfile profile, required AppRouter router})`; `regionKey`/`retakeKey` unchanged. `PaletteScreen` reads the profile+router from the enclosing `AppScope` (as the real `buildApp` assembly provides). `AppRouter.toSelfAssessment()` → `SelfAssessmentEntryScreen` unchanged.
+- **Verification:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance via `coord.sh with-lock BS-06 SCREEN-3 -- bash -c 'cd <worktree> && flutter test integration_test/palette_test.dart -d <booted-udid>'` (with-lock cd's to the coord repo, so the command must cd into the worktree itself).
+- **Known gaps:** none for AC-11 (full close).
+- **⚠ MERGE (reconcile):** `lib/palette/palette_screen.dart`, `test/palette/palette_screen_test.dart` and `integration_test/palette_test.dart` are **also edited by the concurrent SCREEN-2 (AC-1 view-toggle)**. Edits here were kept region-disjoint (the vision-profile-card line / the E30-retake assertion / the AC-11 test block + its `expected`-set line), so a 3-way merge should combine cleanly — review carefully.
+- **Next phase should:** the SCREEN module completes once SCREEN-2 (AC-1) lands; then the feature's remaining PALETTE/PROJECT behaviour phases + SIGNOFF-1.

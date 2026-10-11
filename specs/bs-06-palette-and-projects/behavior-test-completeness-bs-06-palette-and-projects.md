@@ -119,3 +119,27 @@ PALETTE-2 implementation preserves provenance exactly, and the caveat is the sam
 uniform-measured-dataset limit the ITEST-2 grid already recorded (no augmentation
 owed — the remaining ITEST-2 augmentations TestAC02/TestAC05 belong to PALETTE-3 /
 PALETTE-4).
+
+---
+
+## SCREEN-3 grade (AC-4, AC-11 — un-pended)
+
+Independent, adversarial re-grade (fresh subagent, given the prior grid + G1–G6)
+of the two currently un-pended AC tests — **AC-4** (owner PALETTE-2) and **AC-11**
+(just delivered by SCREEN-3). Graded against what the code does now: for AC-4 the
+real `addPaintFromDataset` + E32 `showModalBottomSheet` picker; for AC-11 the real
+`VisionProfileCard` reading the injected `CvdProfile` and the `router.toSelfAssessment`
+navigation to `SelfAssessmentEntryScreen`. SCREEN-3 also added a second-profile
+control (protan/mild) to the AC-11 test. No other rows touched.
+
+| Test | Grade | Justification |
+|---|---|---|
+| **AC-4** `add a paint by choosing from the shipped dataset` | A (with caveat) | Verified against the live PALETTE-2 impl. **G1** every Given checked through the public surface before the When: `myPaints` empty asserted; `whenAddPaint()` drives the real E32 control (`addPaintKey` → `_openDatasetPicker` → `showModalBottomSheet`, now wired); the picker precondition ("Ultramarine Blue" offered) asserted before the tap. **G2** the configured Given answers: the picker lists `controller.reviewedDataset` = shipped `kReviewedPaints` (no fake override), the tapped `ListTile` pops the exact `Paint`, and `addPaintFromDataset` appends it verbatim (`[...?current?.paints, paint]`, no field rewriting) and persists via `PersistentPaletteSource.savePalette`. **G3** n/a (no negative/"never" Then). **G4** at grain/value: full `Paint` value-equality to the exact dataset entry plus explicit `provenance` equality (`Paint.==` includes provenance). **G5** rejects a free-hand / blanked / fabricated / wrong-masstone / dropped-pigment-index paint, and a picker that offers nothing. **G6** asserts AC-4 only. **Caveat (unchanged, non-blocking):** every `kReviewedPaints` entry is `measured` and `Paint.provenance` defaults to `measured`, so "provenance preserved" cannot be separated from a hardcoded-`measured` impl — no non-measured reviewed paint exists in v1 to build a control from; value-equality is the strongest assertion the data supports. No downgrade from PALETTE-2's A-with-caveat; the caveat is a data limit, not a G-rule violation. |
+| **AC-11** `the vision-profile card shows the estimate and opens the self-assessment` | A | **G1** every Given checked through the public surface before the When: the card region is present, `selfAssessmentOpen` is false to begin with, and the estimate Then ("deutan-type, moderate" scoped to `VisionProfileCard.regionKey`) is asserted *before* `whenRetakeAssessment` — the configured profile Given surfaced through the card. **G2** the configured Given answers: the estimate is rendered by the card from the injected `deutanModerate` (`'${profile.type.name}-type, ${_severityWord(profile.severity)}'`), not a script/fake overriding it; the second-profile control proves the text tracks the injected `CvdProfile`. **G3** negative Thens settled with controls: `selfAssessmentOpen` false→true across the `whenRetakeAssessment` settle point (before/after control), and the control app's `find.textContaining('deutan-type, moderate'), findsNothing` is asserted after a fresh `givenPalette(protan)` `pumpAndSettle`, paired with the positive `'protan-type, mild'` assertion that shows the reading can change. **G4** at grain/value: exact estimate strings (`'deutan-type, moderate'`, `'protan-type, mild'`) scoped to the card region; `selfAssessmentOpen` boolean at the navigation grain. **G5** rejects a blank card, a wrong estimate, a no-op retake, and — via the SCREEN-3 second-profile control — a card that hard-codes a constant estimate string (this closes the ITEST-2 grader's recommended second-profile hardening). **G6** asserts AC-11 only (estimate display + navigation; the second profile strengthens only AC-11). **No downgrade** — upgrade in strength over ITEST-2's A: the recommended-but-missing control is now present, so AC-11 is a clean A with no residual. |
+
+**Counts: 2×A, 0×B — PASS (all A).** AC-4 holds at A (with the same unchanged,
+non-blocking uniform-measured-dataset caveat — a data limit, not a G-rule
+violation, so not a B). AC-11 is a clean A: SCREEN-3's second-profile control
+(protan/mild) closes the only ITEST-2 hardening note (G5), proving the estimate
+reads the injected `CvdProfile` rather than a hard-coded string. No B rows; no
+augmentation owed by either test; no downgrade from the prior grid.

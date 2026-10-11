@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/build_app.dart';
 import '../projects/project_controller.dart';
 import 'paint_list_region.dart';
 import 'palette_controller.dart';
@@ -53,7 +54,12 @@ class PaletteScreen extends StatelessWidget {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const VisionProfileCard(),
+                // E30 vision-profile card — reads the injected CvdProfile and
+                // router from the enclosing AppScope (SCREEN-3, AC-11).
+                VisionProfileCard(
+                  profile: AppScope.of(context).cvdProfile,
+                  router: AppScope.of(context).router,
+                ),
                 const SizedBox(height: 12),
                 // E31 Paints or projects selector — wired by SCREEN-2 (AC-1).
                 // Present but inert in this shell.

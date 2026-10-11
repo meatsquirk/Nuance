@@ -1,22 +1,41 @@
 import 'package:flutter/material.dart';
 
+import '../a11y/cvd/cvd_profile.dart';
+import '../app/router.dart';
+
 /// The vision-profile card on the Palette screen (wireframe S1.R1, element E30).
 ///
-/// Shows the painter's current colour-vision estimate and offers to retake the
-/// CVD self-assessment (AC-11). This shell renders a labelled placeholder and
-/// an inert retake control; SCREEN-3 reads the injected `CvdProfile` to show the
-/// real estimate (e.g. "deutan-type, moderate") and wires the retake control to
-/// navigate to the bs-07 self-assessment entry (D-7, the placeholder route this
-/// phase adds). The card keeps its [regionKey] and the control its [retakeKey]
-/// so the acceptance finder and SCREEN-3 have stable anchors.
+/// Shows the painter's current colour-vision estimate from the injected
+/// [profile] (AC-11) — the dichromacy class and a plain-word severity, e.g.
+/// "deutan-type, moderate" — and offers to retake the CVD self-assessment:
+/// choosing "retake the self-assessment" (E30) navigates via [router] to the
+/// bs-07 self-assessment entry placeholder (`AppRouter.toSelfAssessment`, D-7).
+/// bs-06 only *reads* the estimate and navigates; it never writes the profile
+/// (bs-07 populates it). The card keeps its [regionKey] and the control its
+/// [retakeKey] so the acceptance finder has stable anchors.
 class VisionProfileCard extends StatelessWidget {
-  const VisionProfileCard({super.key});
+  const VisionProfileCard({
+    required this.profile,
+    required this.router,
+    super.key,
+  });
 
   /// Stable anchor for the vision-profile card (AC-11).
   static const Key regionKey = ValueKey('palette-vision-profile-card');
 
-  /// Stable anchor for the E30 retake control (wired by SCREEN-3, AC-11).
+  /// Stable anchor for the E30 retake control (AC-11).
   static const Key retakeKey = ValueKey('palette-retake-assessment-button');
+
+  /// The painter's current colour-vision estimate (D-7), read-only here.
+  final CvdProfile profile;
+
+  /// Typed navigation used to open the self-assessment entry (D-7).
+  final AppRouter router;
+
+  /// The estimate as shown on the card: the dichromacy class plus a plain-word
+  /// severity, e.g. "deutan-type, moderate" (AC-11).
+  String get _estimate =>
+      '${profile.type.name}-type, ${_severityWord(profile.severity)}';
 
   @override
   Widget build(BuildContext context) {
@@ -31,14 +50,12 @@ class VisionProfileCard extends StatelessWidget {
               'Vision profile',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            // SCREEN-3 renders the current estimate here from the injected
-            // CvdProfile (AC-11).
-            const Text('Your current estimate is shown here'),
-            // E30 Retake the self-assessment — wired by SCREEN-3 (AC-11) to the
-            // bs-07 entry route. Inert in this shell.
+            Text('Your current estimate is $_estimate'),
+            // E30 Retake the self-assessment — opens the bs-07 entry (D-7).
             TextButton(
               key: retakeKey,
-              onPressed: null,
+              onPressed: () =>
+                  Navigator.of(context).push(router.toSelfAssessment()),
               child: const Text('Retake the self-assessment'),
             ),
           ],
@@ -46,4 +63,12 @@ class VisionProfileCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Maps a [CvdProfile.severity] (0..1) to the plain word the card shows, so the
+/// estimate reads naturally (e.g. "moderate" for a mid deuteranomaly).
+String _severityWord(double severity) {
+  if (severity < 1 / 3) return 'mild';
+  if (severity < 2 / 3) return 'moderate';
+  return 'strong';
 }
