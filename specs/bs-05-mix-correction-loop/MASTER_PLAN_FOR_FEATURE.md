@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** In progress — G-2 approved (acceptance tests signed off); behavior stage open, next LOOP-3 (enabler, AC-1). G-4 resolved
+**Status:** In progress — LOOP-3 done (AC-1 un-pended + green); next CORRECT-2 ∥ LOOP-5 ∥ LOOP-6 (LOOP-4 after CORRECT-3). G-2/G-4 resolved
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -55,7 +55,7 @@ route (`toCorrection`), controller, `CorrectionEngine`, or `bs05/` suite exist �
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | Checking the mix photographs the swatch and compares it to the target | ITEST-2 `TestAC01_CheckPhotographsAndCompares` | LOOP-3 | ⬜ Todo |
+| AC-1 | Checking the mix photographs the swatch and compares it to the target | ITEST-2 `TestAC01_CheckPhotographsAndCompares` | LOOP-3 | ✅ Done |
 | AC-2 | The difference from the target is stated as a delta-E with a plain verdict | ITEST-3 `TestAC02_DeltaEAndVerdict` | CORRECT-2 | ⬜ Todo |
 | AC-3 | The difference is decomposed and leads with value for a CVD painter | ITEST-3 `TestAC03_ValueLeadingDecomposition` | CORRECT-2 | ⬜ Todo |
 | AC-4 | A concrete correction names the paint and the amount to add | ITEST-3 `TestAC04_ConcreteCorrection` | CORRECT-3 | ⬜ Todo |
@@ -202,8 +202,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-2 | acceptance-tests: AC-1,7,8,9,10 (pending) + red baseline | ✅ Done | 4,978,132 | 18m 00s | 5 pending ACs; default 98 green/5 skipped; run-pending 5 fail cleanly (AC-1 Then; AC-7/8/9/10 Given precond → LOOP-4/5/6); grade 5×A/0×B; no lib/ touched |
 | 7 | ITEST-3 | acceptance-tests: AC-2,3,4,5,6 (pending) + red baseline | ✅ Done | 6,375,988 | 20m 29s | 5 pending ACs; default 12 green/10 skip; run-pending 12/10, 5 ITEST-3 fail cleanly (Given precond → CORRECT-2/2/3/3/4); grade 4×A + AC-2 B pending CORRECT-4; no lib/ |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 3,442,451 | 16m 03s | packet assembled; full regression green (analyze clean; unit 632; coverage 100%/14 files; integration 98 pass/10 skip default; run-pending 12/10 clean red baseline); G-2 approved 2026-10-10 21:51 EDT — Matt Quirk |
-| 9 | LOOP-3 | behavior AC-1 (*enabler*): check photographs the swatch + compares to target | ⬜ Next | | | startable once G-2 approved; enables every other Given |
-| 10 | CORRECT-2 | behavior AC-2, AC-3: ΔE00 + verdict; value-leading decomposition | ⬜ Todo | | | ∥ LOOP-4/5/6 |
+| 9 | LOOP-3 | behavior AC-1 (*enabler*): check photographs the swatch + compares to target | ✅ Done | 15,659,660 | 29m 27s | analyze clean; unit 633 green; gate 100% touched; AC-1 un-pended, TestAC01 green (run-pending 13/9, default 99 pass/9 skip); engine `difference()` ΔE00 filled (verdict → CORRECT-2); fix passes 1/3 |
+| 10 | CORRECT-2 | behavior AC-2, AC-3: ΔE00 + verdict; value-leading decomposition | ⬜ Next | | | ∥ LOOP-5, LOOP-6 (LOOP-4 after CORRECT-3) |
 | 11 | CORRECT-3 | behavior AC-4, AC-5: concrete correction (paint + amount); "a touch of" | ⬜ Todo | | | after CORRECT-2 |
 | 12 | CORRECT-4 | behavior AC-6: within tolerance → "very close" + no correction | ⬜ Todo | | | after CORRECT-3 |
 | 13 | LOOP-4 | behavior AC-7: speak the correction (E27) | ⬜ Todo | | | after CORRECT-3; ∥ CORRECT, LOOP-5/6 |
@@ -216,14 +216,17 @@ when the row is marked done.
 
 ## Next phase
 
-**G-2 approved — the behavior stage is open.** The acceptance suite is signed off (10 pending AC tests,
-grid 23×A + 1×B pending CORRECT-4). **LOOP-3** (enabler, AC-1: the check photographs the swatch + compares
-to the target) runs **first and alone** — it makes every other phase's Givens possible (a checked mix with a
-`mixedSwatch`/`difference`). After LOOP-3: `{CORRECT-2 → CORRECT-3 → CORRECT-4}` serial (shared
-`correction_test.dart`/engine) ∥ **LOOP-4** (AC-7) ∥ `{LOOP-5 (AC-8), LOOP-6 (AC-9/10)}` serial. G-4
-(resolved) also gates CORRECT-2/3/4 and LOOP-6. Start with
-`/feature-next-phase bs-05-mix-correction-loop` (→ LOOP-3). Worktree `Nuance-bs05` on
-`feat/bs-05-mix-correction-loop`.
+**LOOP-3 done (AC-1 green) — the enabler is in.** A checked mix now carries a measured `mixedSwatch` and a
+real-ΔE00 `difference`, so every other behaviour phase's Given ("a checked mix") is possible. Three strands
+are now startable **in parallel sessions**: `{CORRECT-2 → CORRECT-3 → CORRECT-4}` serial (shared
+`correction_test.dart` + engine) ∥ `{LOOP-5 (AC-8) → LOOP-6 (AC-9/10)}` serial (both edit the controller) —
+and **LOOP-4** (AC-7) once CORRECT-3 lands. Pick disjoint ownership: CORRECT-* own the engine + difference /
+correction regions; LOOP-5/6 own the controller + rephotograph/save regions + provenance.
+**⚠ CORRECT-3 must extend `checkMix` to also compute + store `state.correction`** (LOOP-3 reads the
+difference only) — LOOP-4's Given and CORRECT-3's own tests need it (see LOOP module Checkpoint — LOOP-3).
+Start a strand with `/feature-next-phase bs-05-mix-correction-loop CORRECT-2` (or `… LOOP-5`). Use
+`--parallel` for concurrent strands (claim + worktree). Worktree `Nuance-bs05` on
+`feat/bs-05-mix-correction-loop`; G-2/G-4 resolved.
 
 ## Token usage
 
@@ -243,7 +246,8 @@ to the target) runs **first and alone** — it makes every other phase's Givens 
 | ITEST-3 | 418a5b00 | 2026-10-10 18:19 EDT | 18:39 | 20m 29s | 20m 29s | claude-opus-4-8 | 104 | 248,083 | 6,084,444 | 43,357 | 6,375,988 | 5 pending AC tests (AC-2,3,4,5,6) + red baseline; default 12 green/10 skip; run-pending 12/10, 5 ITEST-3 fail cleanly (Given precond → CORRECT-2/2/3/3/4); grade 4×A + AC-2 B pending CORRECT-4; no lib/ touched; fix passes 0/3 |
 | ITEST-4 | 22542feb | 2026-10-10 20:48 EDT | 21:04 | 16m 04s | 16m 03s | claude-opus-4-8 | 68 | 109,780 | 3,311,498 | 21,105 | 3,442,451 | packet assembled; full regression green (analyze clean; unit 632; coverage 100%/14; integration 98 pass/10 skip default; run-pending 12/10 clean red baseline); ⏸ awaiting G-2 decision |
 | SIGNOFF-DECISION | 57545616 | 2026-10-10 21:50 EDT | 21:52 | 1m 36s | 1m 36s | claude-opus-4-8 | 32 | 20,940 | 2,078,840 | 6,427 | 2,106,239 | ITEST-4 approved |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 21:52** | **7h 06m** | **2h 40m** |  | **1,062** | **1,825,852** | **61,116,844** | **458,562** | **63,402,320** |  |
+| LOOP-3 | a0ab0bd7 | 2026-10-10 21:51 EDT | 22:20 | 29m 27s | 29m 27s | claude-opus-4-8 | 178 | 210,829 | 15,355,146 | 93,507 | 15,659,660 | AC-1 un-pended; TestAC01 green (run-pending 13/9, default 99 pass/9 skip); unit 633 + coverage 100% on touched; engine difference() ΔE00 filled; fix passes 1/3 |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 22:20** | **7h 35m** | **3h 09m** |  | **1,240** | **2,036,681** | **76,471,990** | **552,069** | **79,061,980** |  |
 
 ## Sign-off
 

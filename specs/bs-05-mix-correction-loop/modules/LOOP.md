@@ -1,6 +1,6 @@
 # Module LOOP — correction loop controller + wiring
 
-**Status:** In progress — LOOP-1/LOOP-2 done; next LOOP-3 (behavior, after the shell + acceptance stages)
+**Status:** In progress — LOOP-1/LOOP-2/LOOP-3 done; LOOP-5 (AC-8) and LOOP-6 (AC-9/10) now startable (both depend on LOOP-3, serial with each other on the controller); LOOP-4 (AC-7) waits on CORRECT-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/correction_controller.dart`, `lib/correction/correction_state.dart`, `lib/correction/correction_read_endpoint.dart`, `lib/correction/correction_speech.dart`, the `CorrectionEntry`/`CorrectionHomeScreen` branch in `lib/app/build_app.dart`, `AppRouter.toCorrection` in `lib/app/router.dart`, the provenance promotion (via `Sample.copyWith` + `EvidencePoint`; the confirmed-tier label per G-4(d))
 **Depends on:** bs-02 capture (`CaptureController`/`CaptureSource`), bs-03 `deltaE00`/`SampleSource`, domain `Provenance`/`Sample`/`EvidencePoint`, `Speech`, CORRECT (engine) · **Blocks:** SCREEN-1, SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 2,465,803 | 11m 57s |
 | 2 | shell | — | ✅ Done | 11,995,702 | 19m 40s (52m 25s) |
-| 3 | behavior | AC-1 (*enabler*) | ⬜ Todo | | |
+| 3 | behavior | AC-1 (*enabler*) | ✅ Done | 15,659,660 | 29m 27s |
 | 4 | behavior | AC-7 | ⬜ Todo | | |
 | 5 | behavior | AC-8 | ⬜ Todo | | |
 | 6 | behavior | AC-9, AC-10 | ⬜ Todo | | |
@@ -201,3 +201,58 @@ Inert shell complete: the correction controller, its state and read endpoint, an
 - **Known gaps / notes:** no behaviour yet (actions inert). The `const`-constructor coverage flake from LOOP-1
   still applies — re-run `flutter test --coverage` once if the gate flags an untouched file. Always pass
   `-d <booted-udid>` to the integration suite.
+
+### Result — LOOP-3
+
+The check is live (AC-1): `CorrectionController.checkMix` photographs the mixed swatch and reads its
+difference from the target, and E26 "Check my mix" is wired to it.
+
+- **Landed (`lib/`):** `correction_controller.dart` — `checkMix()` drives the injected `captureSource` through
+  a fresh bs-02 `CaptureController` (its finite feed drained via a zero-delay timer, then `commit()`), stores
+  the committed **measured** `Sample` as `state.mixedSwatch`, and sets `state.difference =
+  correctionEngine.difference(swatch, target)`; a frameless feed leaves the state untouched. Added the private
+  `_emit(next)` mutation/notify seam (bs-04 `RecipeController` pattern) and dropped the shell's
+  `prefer_final_fields` ignore. `engine/correction_engine_impl.dart` — `SubtractiveCorrectionEngine.difference`
+  now returns the **real** ΔE00 via bs-03's shipped `deltaE00(…coordinates)` (verdict / value / hue readings
+  and the within-tolerance flag stay inert for CORRECT-2 / CORRECT-4). `regions/check_region.dart` — E26 button
+  enabled, `onPressed: () => controller.checkMix()`.
+- **Scope note (engine touch):** the LOOP-3 plan lists only the controller + CheckRegion, but AC-1's
+  `TestAC01` reads `state.difference.deltaE00` as the real swatch→target distance, and the design requires the
+  controller to read it *through* the engine (D-2, "never computes that math itself"). So LOOP-3 fills the
+  engine's ΔE00 line ("ΔE00 only is enough for AC-1" in the phase plan); CORRECT-2 (serial, next on the engine)
+  completes `difference()` with the verdict + value-leading decomposition. No file-ownership clash (serial).
+- **Gate:** `flutter analyze` clean; unit **633 green** (`flutter test --coverage`, +1 net: controller +2
+  checkMix tests, engine impl test updated to the real-ΔE00 assertion, screen test now taps the enabled
+  control); coverage gate **100% on all touched files** (`dart run tool/coverage_gate.dart main` — reports the
+  14 correction files the branch adds vs `main`; this phase changed `correction_controller.dart`,
+  `engine/correction_engine_impl.dart`, `regions/check_region.dart`). **Acceptance (iPhone 17 sim under the
+  verify lock):** AC-1 un-pended in `bs05/pending.dart`; `TestAC01_CheckPhotographsAndCompares` green —
+  run-pending **13 pass / 9 fail** (was 12/10; AC-1 flipped green, AC-2…AC-10 still fail cleanly), default
+  **99 pass / 9 skip** (was 98/10; no regression across bs-01…bs-04). **Grade:** AC-1 retains its ITEST-2 **A**
+  (test body unchanged — only the pending row + the `unpended` guard set moved); no augmentation assigned to
+  LOOP-3. **Fix passes: 1/3** (first `--coverage` run flagged the two SCREEN-1 shell tests asserting the check
+  control *disabled* and one uncovered closure line in `check_region.dart`; fixed by enabling the control in
+  those tests and tapping it — no product change).
+- **Tokens / Time:** 15,659,660 · 29m 27s.
+
+### Checkpoint / Handoff — LOOP-3
+
+- **Frozen for the next phases:**
+  - `CorrectionController.checkMix()` now sets `state.mixedSwatch` (measured) + `state.difference` and notifies
+    through `_emit`. It reads the difference **only**; `state.correction` stays null after a check.
+  - `SubtractiveCorrectionEngine.difference()` returns the real ΔE00 with empty verdict/value/hue and
+    `withinTolerance: false`.
+- **⚠ Carry-forward for CORRECT-3 (and before LOOP-4):** a check must also populate `state.correction` for
+  `TestAC04`/`TestAC05` (CORRECT-3) and `TestAC07`'s Given (LOOP-4, which reads `state.correction` non-empty).
+  LOOP-3 deliberately did not — CORRECT-3 owns `correct()` and must **extend `checkMix` to also call
+  `correctionEngine.correct(mixedSwatch, target, currentMix, palette)` and store the result** (the palette
+  comes from `paletteSource`). This is a controller edit landing in CORRECT-3; LOOP-4's Given depends on it.
+- **Verification commands:** unchanged (export PATH; `flutter analyze`; `flutter test --coverage`;
+  `dart run tool/coverage_gate.dart main`; integration under the verify lock on the iPhone 17 sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; bs-05 run-pending via
+  `flutter test integration_test/correction_test.dart -d <sim> --dart-define=BS05_RUN_PENDING=true`).
+- **Next phases:** CORRECT-2 (AC-2/AC-3, next on the engine) ∥ LOOP-5 (AC-8) ∥ LOOP-6 (AC-9/AC-10) — LOOP-5 and
+  LOOP-6 both depend on LOOP-3 only and are serial with each other (both edit the controller). LOOP-4 (AC-7)
+  waits on CORRECT-3. In-feed draining idiom reused from LOOP-3's `checkMix` for LOOP-5's `rephotograph`.
+- **Known gaps / notes:** the `const`-constructor coverage flake still applies — re-run `--coverage` once if
+  the gate flags an untouched file. Always pass `-d <booted-udid>` to the integration suite.

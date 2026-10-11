@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../a11y/speech.dart';
 import '../app/router.dart';
+import '../capture/capture_controller.dart';
 import '../capture/source/capture_source.dart';
 import '../compare/sample_source.dart';
 import '../domain/sample.dart';
@@ -24,11 +25,10 @@ import 'engine/correction_engine.dart';
 /// confirmed mix is persisted to (D-8), and the [speech] sink — plus the typed
 /// [router] and the mixing [target] / [currentMix] the loop corrects.
 ///
-/// This is the LOOP-2 **shell**: it establishes the state shape, the seams and
-/// the read getter, but every painter *action* ([checkMix] / [rephotograph] /
-/// [speakCorrection] / [saveConfirmed]) is declared here and throws until its
-/// behaviour phase fills it — exactly as bs-04's recipe controller deferred its
-/// actions. No photography, comparison, speech or save happens yet.
+/// [checkMix] (LOOP-3) photographs the swatch and reads the difference; the
+/// remaining painter *actions* ([rephotograph] / [speakCorrection] /
+/// [saveConfirmed]) are declared here and throw until their behaviour phase
+/// fills them, exactly as bs-04's recipe controller deferred its actions.
 class CorrectionController extends ChangeNotifier {
   /// Creates a controller correcting [currentMix] toward [target], over the
   /// given seams.
@@ -75,11 +75,9 @@ class CorrectionController extends ChangeNotifier {
   /// app.
   final AppRouter router;
 
-  // Reassigned by the behaviour phases: the check fills the swatch / difference
-  // / correction (LOOP-3, CORRECT-2/3/4), a re-photograph replaces them
-  // (LOOP-5), a save records the promoted provenance (LOOP-6). Only assigned
-  // once in this inert shell, hence the ignore — it is not final by design.
-  // ignore: prefer_final_fields
+  // Reassigned through [_emit] as the painter acts: the check fills the swatch /
+  // difference / correction (LOOP-3, CORRECT-2/3/4), a re-photograph replaces
+  // them (LOOP-5), a save records the promoted provenance (LOOP-6).
   CorrectionState _state;
 
   /// The current observable correction state.
@@ -88,14 +86,40 @@ class CorrectionController extends ChangeNotifier {
   /// The saved samples the loop can promote into (empty until seeded).
   List<Sample> get savedSamples => sampleSource.savedSamples();
 
-  // --- Actions deferred to the behaviour phases (inert in this shell) ---
-  //
-  // Each throws until its phase fills it; the phase that adds the first real
-  // mutation also adds the private emit/notify path these will route through.
-
-  /// Photographs the mixed swatch and compares it to the target (AC-1) —
-  /// LOOP-3.
-  Future<void> checkMix() => throw UnimplementedError(_deferred('LOOP-3'));
+  /// Photographs the mixed swatch and compares it to the target (AC-1).
+  ///
+  /// Drives the injected [captureSource] through a bs-02 [CaptureController] to a
+  /// committed, *measured* [Sample] — the painter's own physical swatch read back
+  /// as colour (D-2) — then reads how it differs from the [state] target through
+  /// the [correctionEngine] (the controller never computes that colour maths
+  /// itself, D-2/D-3). The measured swatch and its [Difference] land on the
+  /// state, moving the screen from its pre-check state to the difference reading.
+  /// A feed that yields no frame leaves the state untouched.
+  ///
+  /// Only the difference is read here: AC-1 needs the ΔE00, [CorrectionEngine]'s
+  /// stub supplies it now and CORRECT-2 adds the verdict + value-leading
+  /// decomposition. CORRECT-3 extends this check to also read the concrete
+  /// [Correction] (so [speakCorrection]/the correction body have one to show).
+  Future<void> checkMix() async {
+    final capture = CaptureController(source: captureSource);
+    try {
+      // Let the finite live feed drain into the capture controller — its events
+      // are microtasks, so a zero-delay timer resumes us only once they have all
+      // been read — then commit the averaged reading as the measured swatch.
+      await Future<void>.delayed(Duration.zero);
+      capture.commit();
+      final swatch = capture.state.lastCommittedSample;
+      if (swatch == null) return;
+      _emit(CorrectionState(
+        target: _state.target,
+        currentMix: _state.currentMix,
+        mixedSwatch: swatch,
+        difference: correctionEngine.difference(swatch, _state.target),
+      ));
+    } finally {
+      capture.dispose();
+    }
+  }
 
   /// Re-photographs the swatch and re-checks it against the target (AC-8) —
   /// LOOP-5.
@@ -109,6 +133,16 @@ class CorrectionController extends ChangeNotifier {
   /// Saves the mix as confirmed, promoting the value's provenance (AC-9) —
   /// LOOP-6.
   void saveConfirmed() => throw UnimplementedError(_deferred('LOOP-6'));
+
+  /// Replaces the observable [state] and notifies listeners.
+  ///
+  /// The single mutation seam the behaviour actions move the state through (the
+  /// bs-04 `RecipeController` pattern), so every transition rebuilds the screen
+  /// and the acceptance read endpoint the same way.
+  void _emit(CorrectionState next) {
+    _state = next;
+    notifyListeners();
+  }
 
   static String _deferred(String phase) =>
       'CorrectionController is a shell (LOOP-2); this action lands in $phase.';

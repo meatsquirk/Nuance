@@ -43,7 +43,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// removes the row it owns as it un-pends that AC. Every owner must be a member
 /// of [behaviorPhases].
 const Map<String, String> pendingACs = {
-  'AC-1': 'LOOP-3', // check photographs the swatch + compares to the target
+  // AC-1 un-pended by LOOP-3 (check photographs the swatch + compares to target).
   'AC-2': 'CORRECT-2', // ΔE00 + plain verdict
   'AC-3': 'CORRECT-2', // value-leading decomposition
   'AC-4': 'CORRECT-3', // concrete correction: paint + amount

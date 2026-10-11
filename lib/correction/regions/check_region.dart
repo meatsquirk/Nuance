@@ -11,18 +11,17 @@ import '../correction_controller.dart';
 /// read from [CorrectionController.state], and the "Check my mix" control (E26)
 /// that photographs the mixed swatch and compares it to that target (AC-1).
 ///
-/// This is the SCREEN-1 **shell**: the target line is bound to the controller,
-/// but the control is disabled until LOOP-3 wires [CorrectionController.checkMix]
-/// to it. The region keeps its [regionKey] so the acceptance smoke test and the
-/// behaviour phases have a stable anchor.
+/// The target line is bound to the controller and the "Check my mix" control is
+/// wired to [CorrectionController.checkMix] (LOOP-3, AC-1). The region keeps its
+/// [regionKey] so the acceptance smoke test and the behaviour phases have a
+/// stable anchor.
 class CheckRegion extends StatelessWidget {
   const CheckRegion({required this.controller, super.key});
 
   /// Stable anchor for the check region.
   static const Key regionKey = ValueKey('correction-check-region');
 
-  /// The controller supplying the correction target and (later) the check
-  /// action.
+  /// The controller supplying the correction target and the check action.
   final CorrectionController controller;
 
   @override
@@ -33,11 +32,11 @@ class CheckRegion extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Correction target: ${target.name ?? '(unnamed)'}'),
-        // E26 Check my mix — wired by LOOP-3 (AC-1): photographs the swatch and
-        // compares it to the target. Disabled in this shell.
-        const ElevatedButton(
-          onPressed: null,
-          child: Text('Check my mix'),
+        // E26 Check my mix (AC-1): photographs the mixed swatch and compares it
+        // to the target through the controller.
+        ElevatedButton(
+          onPressed: () => controller.checkMix(),
+          child: const Text('Check my mix'),
         ),
       ],
     );

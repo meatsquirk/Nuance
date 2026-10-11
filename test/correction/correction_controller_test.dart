@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
+import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
+import 'package:paint_color_assistant/compare/difference.dart' show deltaE00;
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/correction/correction_controller.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
@@ -50,7 +52,15 @@ CorrectionController _controller({
       sampleSource: sampleSource ?? const InMemorySampleSource(),
     );
 
+/// An off-reading scene whose ground truth sits clear of [_olive] (too dark and
+/// shifted), so a checked swatch reads a real, non-zero distance from the target.
+const _offScene = SceneSpec(
+  groundTruth: ColorCoordinates(lightness: 36, a: -12.2, b: 27.4),
+);
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('CorrectionController', () {
     test('holds the injected seams', () {
       final controller = _controller();
@@ -81,10 +91,64 @@ void main() {
       expect(controller.savedSamples, [_olive]);
     });
 
-    group('actions are inert in the LOOP-2 shell', () {
-      test('checkMix throws until LOOP-3', () {
-        expect(() => _controller().checkMix(), throwsUnimplementedError);
+    group('checkMix (LOOP-3, AC-1)', () {
+      CorrectionController checkController(CaptureSource source) =>
+          CorrectionController(
+            captureSource: source,
+            target: _olive,
+            currentMix: _mix,
+            paletteSource: const InMemoryPaletteSource(),
+            correctionEngine: const SubtractiveCorrectionEngine(),
+          );
+
+      test(
+          'photographs the swatch as a measured sample and reads its difference '
+          'from the target', () async {
+        final controller = checkController(SoftwareCaptureSource(_offScene));
+        var notified = 0;
+        controller.addListener(() => notified++);
+
+        await controller.checkMix();
+
+        final swatch = controller.state.mixedSwatch;
+        expect(swatch, isNotNull,
+            reason: 'the check photographs the swatch');
+        expect(swatch!.provenance.tier, ProvenanceTier.measured,
+            reason: 'a photographed swatch is a measured reading');
+        expect(controller.state.hasChecked, isTrue);
+        final difference = controller.state.difference;
+        expect(difference, isNotNull,
+            reason: 'the swatch is compared to the target');
+        expect(difference!.deltaE00,
+            deltaE00(swatch.coordinates, _olive.coordinates),
+            reason: 'the stated distance is the swatch→target ΔE00, read '
+                'through the engine');
+        expect(difference.deltaE00, greaterThan(0),
+            reason: 'an off-reading is a real, non-zero distance');
+        expect(controller.state.correction, isNull,
+            reason: 'LOOP-3 reads the difference only; CORRECT-3 adds the '
+                'concrete correction');
+        expect(notified, greaterThanOrEqualTo(1),
+            reason: 'the check notifies the screen and the read endpoint');
       });
+
+      test('leaves the state unchecked when the feed yields no frame', () async {
+        final controller = checkController(
+          SoftwareCaptureSource(const SceneSpec(
+            groundTruth: ColorCoordinates(lightness: 36, a: -12.2, b: 27.4),
+            frames: [],
+          )),
+        );
+
+        await controller.checkMix();
+
+        expect(controller.state.mixedSwatch, isNull);
+        expect(controller.state.difference, isNull);
+        expect(controller.state.hasChecked, isFalse);
+      });
+    });
+
+    group('actions still inert until their phase', () {
       test('rephotograph throws until LOOP-5', () {
         expect(() => _controller().rephotograph(), throwsUnimplementedError);
       });

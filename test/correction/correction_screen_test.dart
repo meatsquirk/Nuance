@@ -100,8 +100,8 @@ void main() {
         find.text('Check the mix to see the paints to add.'),
         findsOneWidget,
       );
-      // Every control is disabled in the shell until its behaviour phase.
-      expect(_buttonEnabled(tester, 'Check my mix'), isFalse);
+      // The check control is wired (LOOP-3); the rest await their phases.
+      expect(_buttonEnabled(tester, 'Check my mix'), isTrue);
       expect(_buttonEnabled(tester, 'Speak correction'), isFalse);
       expect(_buttonEnabled(tester, 'Re-photograph swatch'), isFalse);
       expect(_buttonEnabled(tester, 'Save confirmed mix'), isFalse);
@@ -109,15 +109,22 @@ void main() {
   });
 
   group('CheckRegion', () {
-    testWidgets('shows the named target and the disabled check control (E26)',
+    testWidgets('shows the named target and checks the mix on tap (E26)',
         (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
       await _pumpRegion(tester, CheckRegion(controller: controller));
 
       expect(find.text('Correction target: Deep Olive Green'), findsOneWidget);
-      // E26 Check my mix is wired by LOOP-3; disabled in this shell.
-      expect(_buttonEnabled(tester, 'Check my mix'), isFalse);
+      expect(_buttonEnabled(tester, 'Check my mix'), isTrue);
+
+      // E26 Check my mix drives CorrectionController.checkMix (AC-1): it
+      // photographs the swatch and reads the difference from the target.
+      await tester.tap(find.text('Check my mix'));
+      await tester.pumpAndSettle();
+      expect(controller.state.hasChecked, isTrue);
+      expect(controller.state.mixedSwatch, isNotNull);
+      expect(controller.state.difference, isNotNull);
     });
 
     testWidgets('falls back to (unnamed) for a target with no name',

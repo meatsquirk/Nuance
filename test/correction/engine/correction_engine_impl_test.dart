@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/compare/difference.dart' show deltaE00;
 import 'package:paint_color_assistant/correction/engine/correction_engine.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
@@ -32,21 +33,29 @@ const _currentMix = Recipe(
 );
 
 void main() {
-  group('SubtractiveCorrectionEngine (stub)', () {
+  group('SubtractiveCorrectionEngine', () {
     const engine = SubtractiveCorrectionEngine();
 
     test('is a CorrectionEngine', () {
       expect(engine, isA<CorrectionEngine>());
     });
 
-    test('difference is inert — zero distance, empty readings, not in tolerance',
-        () {
+    test(
+        'difference reports the real ΔE00 distance (LOOP-3); verdict / readings '
+        'still empty until CORRECT-2 / CORRECT-4', () {
       final difference = engine.difference(_mixed, _target);
-      expect(difference.deltaE00, 0);
-      expect(difference.verdict, isEmpty);
-      expect(difference.valueReading, isEmpty);
-      expect(difference.hueReading, isEmpty);
-      expect(difference.withinTolerance, isFalse);
+      expect(
+        difference.deltaE00,
+        deltaE00(_mixed.coordinates, _target.coordinates),
+        reason: 'the engine delegates its distance to the shipped bs-03 '
+            'deltaE00 (D-2), not a hand-rolled copy',
+      );
+      expect(difference.deltaE00, greaterThan(0),
+          reason: 'a real off-reading has a non-zero distance');
+      expect(difference.verdict, isEmpty); // CORRECT-2
+      expect(difference.valueReading, isEmpty); // CORRECT-2
+      expect(difference.hueReading, isEmpty); // CORRECT-2
+      expect(difference.withinTolerance, isFalse); // CORRECT-4
     });
 
     test('correct returns an empty correction', () {
