@@ -491,6 +491,27 @@ void main() {
       expect(harness.selfAssessmentOpen, isTrue,
           reason: 'retake navigates to the CVD self-assessment entry '
               '(SCREEN-3, bs-07 placeholder route)');
+
+      // Control (second profile): the estimate tracks the *injected* profile,
+      // not a fixed string. A protan, mild profile shows "protan-type, mild"
+      // and no longer "deutan-type, moderate" — rejecting a card that hard-codes
+      // the default estimate. (Closes the AC-11 second-profile follow-on the
+      // ITEST-2 grader recommended.)
+      final other = await givenPalette(
+        tester,
+        cvdProfile: const CvdProfile(type: CvdType.protan, severity: 0.2),
+      );
+      expect(other.selfAssessmentOpen, isFalse);
+      expect(
+        find.descendant(
+          of: find.byKey(VisionProfileCard.regionKey),
+          matching: find.textContaining('protan-type, mild'),
+        ),
+        findsWidgets,
+        reason: 'the estimate reads the injected profile (protan, mild)',
+      );
+      expect(find.textContaining('deutan-type, moderate'), findsNothing,
+          reason: 'the default estimate is gone — not a hard-coded string');
     });
   });
 
@@ -757,7 +778,6 @@ void main() {
         'AC-8',
         'AC-9',
         'AC-10',
-        'AC-11',
       };
       expect(pendingACs.keys.toSet(), expected);
     });

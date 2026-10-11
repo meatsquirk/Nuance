@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/haptics.dart';
+import 'package:paint_color_assistant/a11y/speech.dart';
+import 'package:paint_color_assistant/app/build_app.dart';
+import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/palette/paint_dataset.dart';
 import 'package:paint_color_assistant/palette/paint_list_region.dart';
 import 'package:paint_color_assistant/palette/palette_controller.dart';
@@ -26,10 +30,20 @@ Future<void> _pump(
   required ProjectController project,
 }) {
   return tester.pumpWidget(
-    MaterialApp(
-      home: PaletteScreen(
-        paletteController: palette,
-        projectController: project,
+    // PaletteScreen reads the injected CvdProfile / router from the enclosing
+    // AppScope (SCREEN-3 wires the vision-profile card), as the real assembly
+    // does; the suite's default deutan profile and router suffice here.
+    AppScope(
+      dependencies: const AppDependencies(
+        colorScience: ColorScienceImpl(),
+        speech: NoopSpeech(),
+        haptics: NoopHaptics(),
+      ),
+      child: MaterialApp(
+        home: PaletteScreen(
+          paletteController: palette,
+          projectController: project,
+        ),
       ),
     ),
   );
@@ -96,27 +110,25 @@ void main() {
       expect(find.byKey(ProjectsRegion.regionKey), findsNothing);
     });
 
-    testWidgets('the still-inert E30/E33/E34 controls have no action',
-        (tester) async {
+    testWidgets(
+        'E30/E31/E32 controls are wired while the still-inert E33/E34 '
+        'controls have no action', (tester) async {
       await _pump(
         tester,
         palette: _paletteController(),
         project: _projectController(),
       );
 
-      // E30 Retake (SCREEN-3) stays inert in the My-paints view; it is always
-      // shown.
-      expect(
-        tester.widget<TextButton>(find.byKey(VisionProfileCard.retakeKey))
-            .onPressed,
-        isNull,
-        reason: 'E30 retake stays inert until SCREEN-3',
-      );
       // E32 Add paint is now active (PALETTE-2, AC-4).
       final addPaint =
           tester.widget<TextButton>(find.byKey(PaintListRegion.addPaintKey));
       expect(addPaint.onPressed, isNotNull,
           reason: 'PALETTE-2 wires the add-paint control (AC-4)');
+      // E30 Retake the self-assessment is now active (SCREEN-3, AC-11).
+      final retake =
+          tester.widget<TextButton>(find.byKey(VisionProfileCard.retakeKey));
+      expect(retake.onPressed, isNotNull,
+          reason: 'SCREEN-3 wires the retake control (AC-11)');
       // E31 selector segments are now wired (SCREEN-2, AC-1): each toggles a
       // view.
       final segments = tester.widgetList<TextButton>(

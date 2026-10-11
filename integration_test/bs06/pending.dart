@@ -50,7 +50,6 @@ const Map<String, String> pendingACs = {
   'AC-8': 'PROJECT-4', // note retained on reopen
   'AC-9': 'PROJECT-5', // confusion pair flagged within a project
   'AC-10': 'PROJECT-6', // export PDF studio sheet
-  'AC-11': 'SCREEN-3', // vision-profile card estimate + opens self-assessment
 };
 
 /// The behaviour phases allowed to own a pending AC.
