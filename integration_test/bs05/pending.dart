@@ -46,8 +46,8 @@ const Map<String, String> pendingACs = {
   // AC-1 un-pended by LOOP-3 (check photographs the swatch + compares to target).
   // AC-2, AC-3 un-pended by CORRECT-2 (ΔE00 + plain verdict; value-leading
   // decomposition).
-  'AC-4': 'CORRECT-3', // concrete correction: paint + amount
-  'AC-5': 'CORRECT-3', // small correction → "a touch of"
+  // AC-4, AC-5 un-pended by CORRECT-3 (concrete correction: paint + amount;
+  // small correction → "a touch of").
   'AC-6': 'CORRECT-4', // within tolerance → "very close", no correction
   'AC-7': 'LOOP-4', // speak the correction (E27)
   // AC-8 un-pended by LOOP-5 (re-photograph re-checks the swatch — E28).

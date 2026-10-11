@@ -46,7 +46,7 @@ class CorrectionScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 DifferenceRegion(controller: controller),
                 const SizedBox(height: 12),
-                const CorrectionRegion(),
+                CorrectionRegion(controller: controller),
                 const SizedBox(height: 12),
                 const SpeakRegion(),
                 const SizedBox(height: 12),

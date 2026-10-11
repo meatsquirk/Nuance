@@ -15,6 +15,7 @@ import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
 import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
+import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 
 const _olive = Sample(
@@ -33,6 +34,38 @@ const _mix = Recipe(
   components: [RecipeComponent(paint: _white, partsFraction: 1)],
   predictedColor: ColorCoordinates(lightness: 96, a: 0, b: 2),
   deltaE00: 1.2,
+);
+
+// Fixtures for the CORRECT-3 correction-over-palette test: the owned paints, the
+// Deep-Olive target and the current mix with room for the search to perturb.
+const _ochre = Paint(
+  id: 'py43',
+  name: 'Yellow Ochre',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 60, a: 12, b: 46),
+);
+const _black = Paint(
+  id: 'pbk9',
+  name: 'Ivory Black',
+  medium: PaintMedium.acrylic,
+  masstone: ColorCoordinates(lightness: 16, a: 0, b: 1),
+);
+const _correctTarget = Sample(
+  name: 'Deep Olive Green',
+  coordinates: ColorCoordinates(lightness: 42, a: -1.2561, b: 23.9671),
+  provenance: Provenance(ProvenanceTier.estimated),
+);
+const _correctPalette =
+    PaintPalette(name: 'My paints', paints: [_white, _ochre, _black]);
+const _correctMix = Recipe(
+  medium: PaintMedium.acrylic,
+  components: [
+    RecipeComponent(paint: _ochre, partsFraction: 0.55),
+    RecipeComponent(paint: _black, partsFraction: 0.25),
+    RecipeComponent(paint: _white, partsFraction: 0.20),
+  ],
+  predictedColor: ColorCoordinates(lightness: 31, a: 0, b: 8),
+  deltaE00: 12,
 );
 
 /// An inert [CaptureSource] for the LOOP-2 shell: the controller never drives
@@ -150,11 +183,43 @@ void main() {
                 'through the engine');
         expect(difference.deltaE00, greaterThan(0),
             reason: 'an off-reading is a real, non-zero distance');
-        expect(controller.state.correction, isNull,
-            reason: 'LOOP-3 reads the difference only; CORRECT-3 adds the '
-                'concrete correction');
+        expect(controller.state.correction, isNotNull,
+            reason: 'CORRECT-3: the check also reads the concrete correction');
+        expect(controller.state.correction!.isEmpty, isTrue,
+            reason: 'with no palette (this controller) there are no paints to '
+                'add, so the correction is empty — not null');
         expect(notified, greaterThanOrEqualTo(1),
             reason: 'the check notifies the screen and the read endpoint');
+      });
+
+      test(
+          'reads the concrete correction over the selected palette, delegating '
+          'to the engine (CORRECT-3)', () async {
+        final controller = CorrectionController(
+          captureSource: SoftwareCaptureSource(_offScene),
+          target: _correctTarget,
+          currentMix: _correctMix,
+          paletteSource:
+              const InMemoryPaletteSource(catalogue: [_correctPalette]),
+          correctionEngine: const SubtractiveCorrectionEngine(),
+        );
+
+        await controller.checkMix();
+
+        final swatch = controller.state.mixedSwatch;
+        expect(swatch, isNotNull);
+        final correction = controller.state.correction;
+        expect(correction, isNotNull,
+            reason: 'the check reads the correction over the palette');
+        expect(
+          correction,
+          const SubtractiveCorrectionEngine()
+              .correct(swatch!, _correctTarget, _correctMix, _correctPalette),
+          reason: 'the controller delegates the correction to the engine — it '
+              'does not compute the colour maths itself (D-2/D-3)',
+        );
+        expect(correction!.isEmpty, isFalse,
+            reason: 'an off mix over a real palette yields a correction');
       });
 
       test('leaves the state unchecked when the feed yields no frame', () async {
@@ -216,7 +281,9 @@ void main() {
         expect(difference.deltaE00, lessThan(firstDelta),
             reason: 'the closer swatch reads a smaller distance (AC-8)');
         expect(controller.state.correction, isNull,
-            reason: 'a fresh photo clears any prior correction until CORRECT-3');
+            reason: 'a fresh photo clears any prior correction — rephotograph '
+                'reads the difference only (CORRECT-3 wired the correction into '
+                'checkMix; unifying re-photograph is a follow-up)');
         expect(notified, greaterThanOrEqualTo(1),
             reason: 're-photograph notifies the screen and the read endpoint');
       });

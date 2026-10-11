@@ -1,6 +1,6 @@
 # Module CORRECT — correction engine
 
-**Status:** In progress — CORRECT-1, CORRECT-2 done (AC-2/AC-3 green); CORRECT-3 next (behavior)
+**Status:** In progress — CORRECT-1/2/3 done (AC-3/AC-4/AC-5 green; AC-2 green, B pending CORRECT-4); CORRECT-4 next (behavior)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/engine/correction_engine.dart` (interface + `Difference`/`Correction` types), `lib/correction/engine/correction_engine_impl.dart` (the v1 impl), `lib/correction/engine/correction_words.dart` (verdict band + value-leading phrasing)
 **Depends on:** bs-04 `MixingEngine`/`Paint`/`PaintPalette`/`Recipe` · bs-03 `deltaE00` (`lib/compare/difference.dart`) · color-science (`labToCielch`, `hueFamilyWord`, `words.dart`) · CORRECT-1 is a shell (stub wired by LOOP via `AppDependencies.correctionEngine`) · **Blocks:** LOOP-2 (needs the types), SCREEN-1, the CORRECT-2/3/4 behaviour phases
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 5,968,811 | 11m 31s |
 | 2 | behavior | AC-2, AC-3 | ✅ Done | 13,621,264 | 32m 47s |
-| 3 | behavior | AC-4, AC-5 | ⬜ Todo | | |
+| 3 | behavior | AC-4, AC-5 | ✅ Done | 26,610,719 | 1h 03m |
 | 4 | behavior | AC-6 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -179,3 +179,70 @@ value-leading decomposition.
 - **Known gaps / notes:** AC-2 is functionally green but graded **B pending CORRECT-4** (open augmentation) —
   so AC-2 is **not** ✅ in the master AC-coverage table until CORRECT-4 closes it. The `const`-ctor coverage
   flake still applies (did not recur). Always pass `-d <booted-udid>` to the integration suite.
+
+### Result — CORRECT-3
+
+The concrete correction is live (AC-4, AC-5): a checked mix now names the one paint to add and how much,
+"a touch of" for a trace.
+
+- **Landed (`lib/`):** `engine/correction_engine_impl.dart` — `correct()` now searches the owned palette
+  (was an inert empty `Correction`). It is **value-leading** (D-5): a too-dark mix → the palette's lightest
+  paint (white), a too-light mix → the darkest, a value-matched mix → the paint whose best addition most
+  reduces the distance (hue/chroma). The amount is the closing step (perturb the current mix's parts,
+  `MixingEngine.forward`-predict, apply the predicted change to the *measured* swatch so the model error
+  cancels, keep the amount that most reduces `deltaE00`) **scaled by how far beyond tolerance the mix sits** —
+  a mix only just over tolerance gets a conservative *touch* and a re-photograph (the loop), a far mix a
+  measured part. Sub-trace (< 0.02 by volume, G-4c) → `isTrace` + a static technique note (D-7, bs-04's
+  idiom). The engine gained an injected `mixingEngine` (default `const SubtractiveMixingEngine`). Within
+  tolerance the ramp is 0 → empty `Correction` (CORRECT-4 makes that an explicit "very close").
+  `correction_controller.dart` — `checkMix` now also computes `state.correction` over the selected palette
+  (the first palette the `paletteSource` lists; empty catalogue → no correction); the controller still never
+  does the maths itself (D-2/D-3). `regions/correction_region.dart` — reads `controller.state.correction`:
+  renders each addition as `a touch of <paint>` + note (trace) or `Add about N parts of <paint>` (measured),
+  and a no-correction line when empty. `correction_screen.dart` — passes the controller to `CorrectionRegion`.
+- **Un-pended:** AC-4, AC-5 (`integration_test/bs05/pending.dart`; added to the `unpended` set in
+  `correction_test.dart`).
+- **Gate:** `flutter analyze` clean; unit **652 green** (`flutter test --coverage`; +11 net — the new engine
+  search suite, a controller correction-over-palette test, three `CorrectionRegion` render tests, less the
+  retired "correct returns empty" stub test); coverage gate **100% on all 15 touched files**
+  (`dart run tool/coverage_gate.dart main`). **Acceptance (iPhone 17 sim `5AB9D06D…` under the verify lock):**
+  run-pending `correction_test.dart` **18 pass / 4 fail** (AC-1,2,3,4,5,8 green; only AC-6,7,9,10 still fail
+  cleanly = red baseline intact); full `integration_test/` default **104 pass / 4 skip** (AC-4 + AC-5 moved
+  skip→pass; the 4 skips are exactly the pending AC-6,7,9,10; no bs-01..bs-05 regression).
+- **Grade:** independent fresh-context re-grade of every un-pended AC test — **AC-1 A, AC-3 A, AC-4 A, AC-5 A,
+  AC-8 A, AC-2 B pending CORRECT-4** (5×A + the one pre-scheduled augmentation). AC-4's in-test forward-model
+  control genuinely decreases ΔE00 (before 12.686 → after 9.493); AC-5's sub-trace ochre (0.0126 < 0.02) comes
+  out of the real tolerance-scaled ramp. No downgrades, no drift. Grid: `behavior-test-completeness-…md`
+  (CORRECT-3 re-grade section appended).
+- **Augmentations:** none made here; none newly enabled (the sole open row, TestAC02 → CORRECT-4, is untouched).
+- **Fix passes: 0/3** (analyze + all gates passed on the first full run; the only pre-run iteration was design
+  verification against the real forward model via throwaway probes, since the correction amounts are
+  illustrative, G-4a).
+- **Tokens / Time:** 26,610,719 · 1h 03m (this session also reconciled LOOP-5 — merge `95a403e`
+  + rollup `07563c9` — before the phase; see the master plan session log / RECONCILE commits).
+
+### Checkpoint / Handoff — CORRECT-3
+
+- **Frozen for the next phase (CORRECT-4, serial next on the same engine file):**
+  - `SubtractiveCorrectionEngine.correct()` returns the single value-leading addition with its `parts`,
+    `isTrace` and `techniqueNote`; it already returns an **empty** `Correction` when the mix is at/within
+    tolerance (the ramp is 0 at ΔE00 ≤ 2). CORRECT-4's remaining work is on `difference()`: set
+    `withinTolerance = deltaE00 ≤ tolerance` and make `verdictFor` return **"very close"** within tolerance
+    (it still returns the constant "noticeably off" today — that is why AC-2 stays B). The tolerance anchor
+    the ramp uses is the private `_toleranceDeltaE00 = 2.0` in `correction_engine_impl.dart` (D-6/G-4b); lift
+    it to the shared named constant CORRECT-4 wants.
+  - After CORRECT-4 lands the within-tolerance verdict, **close the TestAC02 augmentation** (add the
+    SCENE_CLOSE "very close" control) and re-grade TestAC02 to A → AC-2 ✅.
+  - `CorrectionRegion(controller:)` renders the correction body; its empty-state line ("No paints to add.")
+    is where CORRECT-4 can surface the "very close / no correction needed" wording if desired.
+- **⚠ Still open (noted at LOOP-5):** `rephotograph` reads the difference only and **clears** `state.correction`
+  (a fresh photo invalidates the old correction). A follow-up may extend `rephotograph` to also compute the
+  correction (the same `checkMix` path) and unify the two capture methods — not required by any AC.
+- **Verification commands:** unchanged from CORRECT-2 (export PATH; `flutter analyze`; `flutter test
+  --coverage`; `dart run tool/coverage_gate.dart main`; integration under the verify lock on the iPhone 17 sim
+  `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; bs-05 run-pending via `… correction_test.dart -d <sim>
+  --dart-define=BS05_RUN_PENDING=true`). **Run the `--dart-define` run before a plain run, or `flutter clean`
+  between them** — flutter reuses the cached on-device build, so a stale define is a silent false result.
+- **Known gaps / notes:** amounts are illustrative (G-4a) — the ACs assert direction, the trace/measured band
+  and the forward-model improvement, not literals. The `const`-ctor coverage flake still applies (did not
+  recur). Always pass `-d <booted-udid>` to the integration suite.

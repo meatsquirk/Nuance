@@ -8,6 +8,7 @@ import '../compare/sample_source.dart';
 import '../domain/sample.dart';
 import '../recipes/engine/mixing_engine.dart';
 import '../recipes/engine/subtractive_engine.dart';
+import '../recipes/palette.dart';
 import '../recipes/palette_source.dart';
 import 'correction_state.dart';
 import 'engine/correction_engine.dart';
@@ -96,10 +97,13 @@ class CorrectionController extends ChangeNotifier {
   /// state, moving the screen from its pre-check state to the difference reading.
   /// A feed that yields no frame leaves the state untouched.
   ///
-  /// Only the difference is read here: AC-1 needs the ΔE00, [CorrectionEngine]'s
-  /// stub supplies it now and CORRECT-2 adds the verdict + value-leading
-  /// decomposition. CORRECT-3 extends this check to also read the concrete
-  /// [Correction] (so [speakCorrection]/the correction body have one to show).
+  /// Both the difference and the concrete correction are read here (CORRECT-3):
+  /// the [Difference] (ΔE00 + verdict + value-leading decomposition, AC-2/AC-3)
+  /// and the [Correction] — the paint(s) to add, drawn from the owned palette
+  /// (AC-4/AC-5) — so the correction body and [speakCorrection] have one to
+  /// show. The correction is searched over the painter's selected palette (the
+  /// first palette the [paletteSource] lists; an empty catalogue yields no
+  /// correction). The controller never computes that math itself (D-2/D-3).
   Future<void> checkMix() async {
     final capture = CaptureController(source: captureSource);
     try {
@@ -115,10 +119,26 @@ class CorrectionController extends ChangeNotifier {
         currentMix: _state.currentMix,
         mixedSwatch: swatch,
         difference: correctionEngine.difference(swatch, _state.target),
+        correction: correctionEngine.correct(
+          swatch,
+          _state.target,
+          _state.currentMix,
+          _selectedPalette(),
+        ),
       ));
     } finally {
       capture.dispose();
     }
+  }
+
+  /// The palette the correction's additions are drawn from: the first palette
+  /// the [paletteSource] lists, or an empty palette when the catalogue is empty
+  /// (then the engine offers no correction).
+  PaintPalette _selectedPalette() {
+    final palettes = paletteSource.palettes();
+    return palettes.isEmpty
+        ? const PaintPalette(name: '', paints: [])
+        : palettes.first;
   }
 
   /// Re-photographs the swatch and re-checks it against the target (AC-8).
