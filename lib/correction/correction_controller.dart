@@ -121,9 +121,41 @@ class CorrectionController extends ChangeNotifier {
     }
   }
 
-  /// Re-photographs the swatch and re-checks it against the target (AC-8) —
-  /// LOOP-5.
-  Future<void> rephotograph() => throw UnimplementedError(_deferred('LOOP-5'));
+  /// Re-photographs the swatch and re-checks it against the target (AC-8).
+  ///
+  /// The painter adjusts the physical mix and photographs again: this re-drives
+  /// the [captureSource] through a fresh bs-02 [CaptureController] to a new,
+  /// *measured* [Sample] — the same capture idiom [checkMix] rides (D-2) — then
+  /// reads its [Difference] from the target through the [correctionEngine]
+  /// (D-2/D-3). The new swatch and difference *replace* the prior ones on the
+  /// state, so the loop re-runs in place: the screen moves from the first
+  /// reading to the re-checked one. A feed that yields no frame leaves the state
+  /// untouched.
+  ///
+  /// Like [checkMix], this reads the difference only and clears any prior
+  /// [Correction] — a fresh photograph invalidates the old correction. Once
+  /// CORRECT-3 extends the check to also compute the correction, this shares
+  /// that path (the two can then be unified); until then a re-photograph, like a
+  /// first check, leaves `state.correction` null.
+  Future<void> rephotograph() async {
+    final capture = CaptureController(source: captureSource);
+    try {
+      // Drain the finite live feed (microtask events) before committing the
+      // averaged reading as the re-measured swatch — mirrors checkMix.
+      await Future<void>.delayed(Duration.zero);
+      capture.commit();
+      final swatch = capture.state.lastCommittedSample;
+      if (swatch == null) return;
+      _emit(CorrectionState(
+        target: _state.target,
+        currentMix: _state.currentMix,
+        mixedSwatch: swatch,
+        difference: correctionEngine.difference(swatch, _state.target),
+      ));
+    } finally {
+      capture.dispose();
+    }
+  }
 
   /// Speaks the difference and the paints to add as one utterance (AC-7) —
   /// LOOP-4.

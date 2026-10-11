@@ -100,10 +100,11 @@ void main() {
         find.text('Check the mix to see the paints to add.'),
         findsOneWidget,
       );
-      // The check control is wired (LOOP-3); the rest await their phases.
+      // The check (LOOP-3) and re-photograph (LOOP-5) controls are wired; the
+      // rest await their phases.
       expect(_buttonEnabled(tester, 'Check my mix'), isTrue);
+      expect(_buttonEnabled(tester, 'Re-photograph swatch'), isTrue);
       expect(_buttonEnabled(tester, 'Speak correction'), isFalse);
-      expect(_buttonEnabled(tester, 'Re-photograph swatch'), isFalse);
       expect(_buttonEnabled(tester, 'Save confirmed mix'), isFalse);
     });
   });
@@ -174,12 +175,22 @@ void main() {
   });
 
   group('RephotographRegion', () {
-    testWidgets('keeps its anchor and the disabled re-photograph control (E28)',
+    testWidgets('keeps its anchor and re-photographs the swatch on tap (E28)',
         (tester) async {
-      await _pumpRegion(tester, const RephotographRegion());
+      final controller = _controller();
+      addTearDown(controller.dispose);
+      await _pumpRegion(tester, RephotographRegion(controller: controller));
 
       expect(find.byKey(RephotographRegion.regionKey), findsOneWidget);
-      expect(_buttonEnabled(tester, 'Re-photograph swatch'), isFalse);
+      expect(_buttonEnabled(tester, 'Re-photograph swatch'), isTrue);
+
+      // E28 Re-photograph swatch drives CorrectionController.rephotograph
+      // (AC-8): it re-measures the swatch and re-reads the difference.
+      await tester.tap(find.text('Re-photograph swatch'));
+      await tester.pumpAndSettle();
+      expect(controller.state.hasChecked, isTrue);
+      expect(controller.state.mixedSwatch, isNotNull);
+      expect(controller.state.difference, isNotNull);
     });
   });
 
