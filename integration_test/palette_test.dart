@@ -800,9 +800,10 @@ void main() {
       // run-pending passes, and a pending AC's default-skip is null-reason only
       // when not forced. (Reading the ambient mode made this fail under
       // --dart-define=BS06_RUN_PENDING=true; ITEST-2 records the fix.)
-      // AC-2 is a still-pending example (AC-1 was un-pended by SCREEN-2).
-      expect(pendingSkipReason('AC-2', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
+      // AC-5 is a still-pending example (AC-1/AC-2/AC-3/AC-11 were un-pended by
+      // SCREEN-2 / PALETTE-3 / SCREEN-3).
+      expect(pendingSkipReason('AC-5', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-5', forceRunPending: true), isNull);
       // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
