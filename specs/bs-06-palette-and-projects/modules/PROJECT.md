@@ -1,6 +1,6 @@
 # Module PROJECT — projects
 
-**Status:** In progress — PROJECT-1 ✅ done (shell); PROJECT-2 (enabler) startable once G-2 resolves
+**Status:** In progress — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler); PROJECT-3/4/5/6 startable (G-2 resolved)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/projects/` (Project model, ProjectSource, ProjectController, read endpoint, confusion-pair flagging, PDF export), `lib/compare/sample_source.dart` (persistent write-side on the existing seam — bs-03/04-owned, coordinate), `pubspec.yaml` (pdf package)
 **Depends on:** DATA (store), reuses bs-03 `lib/a11y/cvd/confusion_check.dart` + injected `CvdProfile` · **Blocks:** SCREEN (renders project state)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 6,635,157 | 11m 41s |
-| 2 | behavior (enabler) | — | ⬜ Todo | | |
+| 2 | behavior (enabler) | — | ✅ Done | 4,357,106 | 18m 54s |
 | 3 | behavior | AC-6 | ⬜ Todo | | |
 | 4 | behavior | AC-7, AC-8 | ⬜ Todo | | |
 | 5 | behavior | AC-9 | ⬜ Todo | | |
@@ -66,8 +66,28 @@
 - **Exit criteria:** unit gate; acceptance gate below.
 - **Acceptance gate:** suite stays green; the precondition failures this unblocks (AC-6/7/8/9/10 Givens) disappear under the run-pending mode (those ACs remain pending on their own Thens).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (enabler, no AC):** `ProjectController` gained the create/attach behaviour that makes a project real through public calls, mirroring `PaletteController.addPaintFromDataset`: `createProject({id, name, size?})` (stamps `lastEdited`, appends, persists), `attachSamples` / `attachRecipes` (append), `setSize`, `saveNote`, `attachSourcePhoto(id, SourcePhotoStore, bytes)` (writes bytes to the store, records the returned `sourcePhotoRef` — pixels never held on the project, D-10). Each change re-stamps `lastEdited` and persists through `PersistentProjectSource.saveProject` when the source can (a `PersistentProjectSource`); an in-memory source keeps the working list in memory only. A private `_mutate` helper finds the project by id (throws `StateError` if absent), applies the change via `copyWith`, replaces it in the working list, persists and `notifyListeners()`. The constructor now keeps `_source` and seeds a **mutable** working list from `source.projects()` (signature `ProjectController({required ProjectSource source})` unchanged).
+- **Scope:** only `lib/projects/project_controller.dart` was modified. `lib/projects/project_source.dart` and `lib/compare/sample_source.dart` were **not** touched — PROJECT-1's `saveProject`/`load` and the reused `sampleToJson` already suffice; `attachSourcePhoto` takes the `SourcePhotoStore` as a parameter because `buildApp` wires the controller with `source:` only (no photo store), which is SCREEN-1-owned and out of this phase's file set.
+- **Verification:** `flutter analyze` clean. `flutter test --coverage` → **704 passing**. Coverage gate vs `main`: **100%** on all touched files (incl. `lib/projects/project_controller.dart`; both branches of `_persist` and the `_mutate` not-found throw covered). Acceptance (iPhone 17 sim, under the global verify lock): **default run green 13/13** (10 pending skipped); **run-pending** AC-4 green, AC-1/2/3/5/6/7/8/9/10/11 red on their **own** owners' Thens/preconditions (AC-10 on PROJECT-4's open precondition) — the ITEST-4 red baseline, **unchanged** by this enabler.
+- **Grade gate:** PROJECT-2 un-pends no AC and touched no acceptance-suite file. The only un-pended AC test (AC-4) was re-graded **A** by a fresh independent subagent against G1–G6 (matches the prior grid; confirmed PROJECT-2 could not have affected it). All-A grade grid stands.
+- **Deviation (recorded):** the implemented ITEST-3 tests seed the Harbor project via the persistent save flow, not via a PROJECT-2 precondition, so no "PROJECT-2-precondition failure" existed to clear — the enabler's acceptance gate reduces to "suite green + baseline unchanged", both met. (ITEST-2/3 deviation from the plan's AC-test-design prose, documented in `palette_test.dart` and the rollup.)
+- **Fix passes:** 0/3 — analyze, unit, coverage and both acceptance runs passed on the first full run.
+- **Closed by:** unit + coverage gate; acceptance suite green (default) with the red baseline unchanged (run-pending); grade gate all-A.
+- Tokens: see master ledger (PROJECT-2 row, deferred to rollup). **Phase total: 4,357,106 tokens, 18m 54s active (18m 54s wall).**
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces (new this phase, on `ProjectController`):**
+  - `Future<Project> createProject({required String id, required String name, String? size})` — creates, stamps `lastEdited = now`, appends to `projects`, persists, notifies; returns the created project.
+  - `Future<Project> attachSamples(String projectId, List<Sample> samples)` / `Future<Project> attachRecipes(String projectId, List<Recipe> recipes)` — **append** (do not replace); re-stamp + persist + notify; `StateError` if `projectId` is absent.
+  - `Future<Project> setSize(String projectId, String size)` / `Future<Project> saveNote(String projectId, String note)` — set the field; re-stamp + persist + notify.
+  - `Future<Project> attachSourcePhoto(String projectId, SourcePhotoStore photos, Uint8List bytes)` — `photos.save(bytes)` → records the returned reference as `sourcePhotoRef`; re-stamp + persist + notify.
+  - Persistence rule: changes persist only when the injected `ProjectSource` is a `PersistentProjectSource` (production + acceptance wiring); `projects` always reflects the controller's own working list. Reads (`openedProject`/`confusionPairs`/`lastExport`) are still shell state (PROJECT-4/5/6).
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/palette_test.dart -d <udid>` (± `--dart-define=BS06_RUN_PENDING=true`) via `coord.sh with-lock BS-06 <phase>`. Flutter SDK `/Users/matthew.quirk/development/flutter/bin`.
+- **Known gaps / deferred:** no create/attach **UI** yet (controls inert in the SCREEN-1 shell); `openedProject`/`confusionPairs`/`lastExport` unimplemented. PROJECT-3 computes the AC-6 list summary (size/counts/last-edit label) off `projects`; PROJECT-4 wires open + exposes note/photo (AC-7/8) and must precede PROJECT-5/6; PROJECT-5 fills `confusionPairs` (AC-9); PROJECT-6 produces `lastExport` (AC-10, adds the pdf package). All four build on the create/attach API above and seed their Givens through the persistent save flow.
+- **Next phase should:** any of PROJECT-3, PROJECT-4 (both on `lib/projects/project_controller.dart` — serialize the two against each other), PALETTE-3, SCREEN-2, SCREEN-3 — all startable now (G-2/G-4 resolved). PROJECT-5 and PROJECT-6 wait on PROJECT-4.
 
 ## Phase 3 — AC-6 projects list summary
 
