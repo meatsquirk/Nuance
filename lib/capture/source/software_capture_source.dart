@@ -245,12 +245,19 @@ class SoftwareCaptureSource implements CaptureSource {
 
   // SOURCE-2: [colorSpace] reports the space the feed is actually captured in —
   // Display P3 on a wide-gamut device, the sRGB fallback otherwise (AC-6, AC-8)
-  // — mapped from the frame space via [CaptureColorSpace.ofFrame]. SOURCE-3
-  // still switches [captureMode] to raw on RAW-capable devices.
+  // — mapped from the frame space via [CaptureColorSpace.ofFrame]. A RAW-capable
+  // device captures in the widest space it offers, so its [colorSpace] is the
+  // same Display P3 the wide-gamut selection already yields (SCENE_RAW is
+  // wide-gamut); processed-vs-RAW is carried orthogonally by [captureMode].
   @override
   CaptureColorSpace get colorSpace =>
       CaptureColorSpace.ofFrame(_captureFrameSpace);
 
+  // SOURCE-3: a RAW-capable device captures unprocessed frames (AC-7) — RAW in
+  // the widest space it offers; every other device stays on the processed
+  // (sRGB/JPEG-style) pipeline. The controller stamps this onto the committed
+  // `Sample.captureMode`.
   @override
-  CaptureMode get captureMode => CaptureMode.processed;
+  CaptureMode get captureMode =>
+      scene.supportsRaw ? CaptureMode.raw : CaptureMode.processed;
 }

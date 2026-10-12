@@ -1,7 +1,7 @@
 # Master Plan — Advanced capture (bs-09)
 
 **Spec:** [bs-09-advanced-capture.feature](../bs-09-advanced-capture.feature)
-**Status:** In progress — behavior stage; CAPTURE-5 done (AC-5 ✅, 7/10 behavior ACs; module CAPTURE complete); next SOURCE-3 (AC-7) ∥ SOURCE-4 (AC-9/10, merge-serial); no open gate
+**Status:** In progress — behavior stage; SOURCE-3 done (AC-7 ✅, 8/10 behavior ACs; modules CAPTURE + SCREEN complete); next SOURCE-4 (AC-9/10) — the last behaviour phase; no open gate
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) §"Cross-platform strategy" (CaptureSource / wide colour space / RAW fallback; D2), §"Capture & sampling" (torch, multi-point) · [scope](../../docs/paint-color-app-scope.md) §4.1 (flash/torch *Should*, multi-point *Should*, RAW/DNG *Could*) · **no wireframe yet** (the spec is proposed ahead of any mock; a future revision adds its UX)
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-02's capture surface and bs-03's comparison, both already merged to `main` (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -46,7 +46,7 @@
 | AC-4 | Each multi-point reading keeps its own position and value | ITEST-2 `TestAC04_EachPointKeepsPositionValue` | SCREEN-3 | ✅ Done |
 | AC-5 | Any two sampled points can be sent to a comparison | ITEST-2 `TestAC05_TwoPointsToComparison` | CAPTURE-5 | ✅ Done |
 | AC-6 | A capture is tagged with the colour space it was taken in | ITEST-3 `TestAC06_TaggedWithColourSpace` | SOURCE-2 | ✅ Done |
-| AC-7 | RAW capture is used where the device supports it | ITEST-3 `TestAC07_RawWhereSupported` | SOURCE-3 | ⬜ Todo |
+| AC-7 | RAW capture is used where the device supports it | ITEST-3 `TestAC07_RawWhereSupported` | SOURCE-3 | ✅ Done |
 | AC-8 | A device without wide-gamut capture falls back and labels the narrower space | ITEST-3 `TestAC08_FallbackLabelsNarrower` | SOURCE-2 | ✅ Done |
 | AC-9 | The capture interface returns a normalized, colour-space-tagged sample | ITEST-3 `TestAC09_NormalizedTaggedSample` | SOURCE-4 | ⬜ Todo |
 | AC-10 | The rest of the app never sees the platform capture difference | ITEST-3 `TestAC10_PlatformAgnosticSample` | SOURCE-4 | ⬜ Todo |
@@ -122,7 +122,7 @@ SOURCE-4; it is *pending* until then, not a limited test.
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` torch control + colour-space/RAW capability, selection + fallback, normalization contract, two-platform modelling; extended `SceneSpec`/`FakeCaptureSource` | bs-02 source | 🔄 In progress (SOURCE-1 + SOURCE-2/AC-6+AC-8 done; next SOURCE-3 (AC-7) ∥ SOURCE-4 (AC-9/10), merge-serial on the source files) |
+| SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` torch control + colour-space/RAW capability, selection + fallback, normalization contract, two-platform modelling; extended `SceneSpec`/`FakeCaptureSource` | bs-02 source | 🔄 In progress (SOURCE-1 + SOURCE-2/AC-6+AC-8 + SOURCE-3/AC-7 done; next SOURCE-4 (AC-9/10) — the last SOURCE phase) |
 | CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | ✅ Done (CAPTURE-1..5 — AC-2/AC-3/AC-5 un-pended) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Capture screen: torch control + colour-temperature warning banner; multi-point markers + per-point readings display; send-to-comparison control | CAPTURE | ✅ Done (SCREEN-1 + SCREEN-2/AC-1 + SCREEN-3/AC-4 done; module complete) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 + ITEST-4 review; all 10 AC tests pending + red baseline; G-2 approved 2026-10-12) |
@@ -183,8 +183,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | SCREEN-3 | behavior: AC-4 — readings shown, each keeping position + its own value | ✅ Done | 5,045,197 | 10m 17s | AC-4 un-pended + green; no new lib logic (readings list state-driven from SCREEN-1 over CAPTURE-4); unit 909; cov 100% (12 files); accept default +17/~4/0-fail; grade AC-4 A (6 A/0 below); 0 fix passes |
 | 13 | CAPTURE-5 | behavior: AC-5 — send two readings to the comparison (pair handoff) | ✅ Done | 14,461,630 | 21m 37s | AC-5 un-pended + green; `sendPairToComparison` → `pairToCompare` + screen listener pushes `toComparisonPair` (router shell unchanged); unit 916; cov 100% (13 files); accept default 18 pass/3 pending; grade AC-5 A (7 A/0 below); 0 fix passes |
 | 14 | SOURCE-2 | behavior: AC-6, AC-8 — colour-space selection + narrower fallback + tag threaded to Sample | ✅ Done | 14,008,491 | 2h 43m | AC-6+AC-8 green; colour-space selection (displayP3/srgb) + space-aware sampling; unit 905; cov 100% (2 files); accept 15 pass/6 pending; grade 5 A; 1 fix pass |
-| 15 | SOURCE-3 | behavior: AC-7 — RAW capture where supported + capture mode | ⬜ Next | | | startable (SOURCE-2 done); merge-serial w/ SOURCE-4 on source files |
-| 16 | SOURCE-4 | behavior: AC-9, AC-10 — normalized+tagged contract + platform-agnostic | ⬜ Next | | | startable (SOURCE-2 done); normalizes as capture contract (no whenCalibrate); merge-serial w/ SOURCE-3 |
+| 15 | SOURCE-3 | behavior: AC-7 — RAW capture where supported + capture mode | ✅ Done | 5,375,373 | 13m 59s | AC-7 un-pended + green; one-line `captureMode` getter (`supportsRaw ? raw : processed`); commit already threads it + colorSpace already displayP3 on wide SCENE_RAW; unit 917; cov 100% (13 files); accept default 19 pass/2 pending; grade 8 A (suite 24 A); 0 fix passes |
+| 16 | SOURCE-4 | behavior: AC-9, AC-10 — normalized+tagged contract + platform-agnostic | ⬜ Next | | | startable (SOURCE-2 done); normalizes as capture contract (no whenCalibrate); last behaviour phase |
 | 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
@@ -192,17 +192,17 @@ when the row is marked done.
 
 ## Next phase
 
-**CAPTURE-5 done (AC-5 ✅; 7/10 behaviour ACs; module CAPTURE complete).** No open gate. Only the SOURCE
-colour-space/RAW/normalization chain remains before sign-off. Behaviour stage, one phase/session.
+**SOURCE-3 done (AC-7 ✅; 8/10 behaviour ACs; modules CAPTURE + SCREEN complete).** No open gate. Only
+SOURCE-4 (the normalization contract) remains before sign-off. Behaviour stage, one phase/session.
 
-- **Startable now (base a worktree on `feat/bs-09` HEAD): SOURCE-3 and SOURCE-4 — merge-serial** (both edit
-  the same SOURCE source files, so run them one at a time / reconcile between).
-  - **SOURCE-3** (AC-7) — RAW capture where supported + capture mode.
-  - **SOURCE-4** (AC-9/10) — normalized+tagged contract + platform-agnostic; normalizes as a capture
-    **contract** (no `whenCalibrate`).
-- **Then:** SIGNOFF-1 after SOURCE-3 and SOURCE-4.
+- **Startable now (base a worktree on `feat/bs-09` HEAD): SOURCE-4 — the last behaviour phase.**
+  - **SOURCE-4** (AC-9/10) — normalized + colour-space-tagged capture **contract** (no `whenCalibrate`),
+    platform-agnostic: normalization must remove `SceneSpec.rawColorShift` so `SCENE_ANDROID` (+10) and
+    `SCENE_IOS` (−8) land on identical CIELAB + identical tag. `sampling.dart` / `normaliseAgainstCard` is the
+    platform seam. AC-9/AC-10 are red at baseline today (offset not yet removed) — the expected pending state.
+- **Then:** SIGNOFF-1 after SOURCE-4.
 - **Each un-pend must (a) delete its row in `bs09/pending.dart` and (b) add its AC to the `unpended` set in
-  `advanced_capture_test.dart`'s scaffold guard** (so far: AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-8). The
+  `advanced_capture_test.dart`'s scaffold guard** (so far: AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8). The
   `pendingSkipReason` guard is self-maintaining (reads its pending example from `pendingACs.keys.first`).
 - **Acceptance runs need a booted sim under `coord.sh with-lock`** (host gates don't):
   `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-…`; run-pending adds
@@ -235,7 +235,8 @@ colour-space/RAW/normalization chain remains before sign-off. Behaviour stage, o
 | RECONCILE | eb9fd616 | 2026-10-12 17:09 EDT | 17:12 | 2m 50s | 2m 50s | claude-opus-4-8 | 42 | 46,984 | 1,342,034 | 11,597 | 1,400,657 | applied SCREEN-3 rollup (AC-4 ✅, module SCREEN complete); merged phase branch ff → 978f883; master plan + ledger updated |
 | CAPTURE-5 | 3a3a92cb | 2026-10-12 17:29 EDT | 17:51 | 21m 37s | 21m 37s | claude-opus-4-8 | 222 | 302,105 | 14,095,043 | 64,260 | 14,461,630 | AC-5 un-pended + green; unit 916, cov 100% (13 files), accept default 18 pass/3 pending; grade 7 A/0 below; 0 fix passes |
 | RECONCILE | 0e23621e | 2026-10-12 18:02 EDT | 18:05 | 3m 40s | 3m 40s | claude-opus-4-8 | 40 | 49,868 | 1,268,478 | 14,156 | 1,332,542 | applied CAPTURE-5 rollup: ff-merged phase branch (ce594bf→51f8efa) into feat/bs-09; master plan AC-5 ✅ + CAPTURE module done (7/10 behaviour ACs) + ledger row; worktree/branch cleanup pending |
-| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 18:05** | **14h 19m** | **7h 31m** |  | **2,206** | **3,334,982** | **121,083,575** | **853,169** | **125,273,932** |  |
+| SOURCE-3 | 07521598 | 2026-10-12 19:31 EDT | 19:45 | 13m 59s | 13m 59s | claude-opus-4-8 | 100 | 221,754 | 5,127,456 | 26,063 | 5,375,373 | AC-7 un-pended + green; unit 917/cov 100% (13 files)/accept default 19 pass 2 pending/grade 8 A (suite 24 A); 0 fix passes |
+| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 19:45** | **14h 33m** | **7h 45m** |  | **2,306** | **3,556,736** | **126,211,031** | **879,232** | **130,649,305** |  |
 
 ## Sign-off
 

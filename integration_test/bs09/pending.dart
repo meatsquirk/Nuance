@@ -61,7 +61,8 @@ const Map<String, String> pendingACs = {
   // both comparison slots at once).
   // AC-6 and AC-8 un-pended by SOURCE-2 (colour-space selection + narrower
   // fallback + the tag threaded onto Sample.colorSpace).
-  'AC-7': 'SOURCE-3',
+  // AC-7 un-pended by SOURCE-3 (RAW capture in the widest space on a
+  // RAW-capable device).
   'AC-9': 'SOURCE-4',
   'AC-10': 'SOURCE-4',
 };

@@ -214,7 +214,8 @@ void main() {
       ));
       expect(source.colorSpace, CaptureColorSpace.displayP3,
           reason: 'a wide-gamut device captures in the widest space it offers');
-      // captureMode is still the processed pipeline — SOURCE-3 switches RAW.
+      // A wide-gamut device that is not RAW-capable still captures processed —
+      // the mode tracks `supportsRaw`, not the gamut.
       expect(source.captureMode, CaptureMode.processed);
     });
 
@@ -225,6 +226,19 @@ void main() {
       expect(source.colorSpace, CaptureColorSpace.srgb,
           reason: 'the narrower standard space is selected and labelled');
       expect(source.captureMode, CaptureMode.processed);
+    });
+
+    test('captures RAW in the widest space on a RAW-capable device (AC-7)', () {
+      final source = SoftwareCaptureSource(const SceneSpec(
+        groundTruth: groundTruth,
+        supportsRaw: true,
+        supportsWideGamut: true,
+      ));
+      // RAW-capable → the mode is raw and the space is the widest it offers
+      // (Display P3), not the processed sRGB pipeline.
+      expect(source.captureMode, CaptureMode.raw);
+      expect(source.colorSpace, CaptureColorSpace.displayP3,
+          reason: 'RAW uses the widest space the device offers');
     });
 
     test('tags the generated feed with its capture space, encoding wide-gamut '

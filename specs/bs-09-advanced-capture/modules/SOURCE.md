@@ -1,6 +1,6 @@
 # Module SOURCE — CaptureSource extensions (torch, colour space, RAW, normalization)
 
-**Status:** In progress — SOURCE-1, SOURCE-2 done (AC-6 ✅, AC-8 ✅); next SOURCE-3 (AC-7) ∥ SOURCE-4 (AC-9/10) — both edit the SOURCE source files, so run merge-serial
+**Status:** In progress — SOURCE-1, SOURCE-2, SOURCE-3 done (AC-6 ✅, AC-8 ✅, AC-7 ✅); next SOURCE-4 (AC-9/10) — the last SOURCE phase before sign-off
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/capture_source.dart`, `lib/capture/source/frame.dart`,
 `lib/capture/source/software_capture_source.dart`, `lib/capture/source/sampling.dart`,
@@ -13,7 +13,7 @@
 |---|---|---|---|---|---|
 | SOURCE-1 | shell | — | ✅ Done | 5,166,894 | 15m 59s |
 | SOURCE-2 | behavior | AC-6, AC-8 | ✅ Done | 14,008,491 | 2h 43m |
-| SOURCE-3 | behavior | AC-7 | ⬜ Todo | | |
+| SOURCE-3 | behavior | AC-7 | ✅ Done | 5,375,373 | 13m 59s |
 | SOURCE-4 | behavior | AC-9, AC-10 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -208,3 +208,49 @@ None specific to SOURCE. G-2 (test review) blocks SOURCE-2/3/4 as behavior phase
   dylib), else the ios build fails. macOS has no `timeout`; redirect long runs to a file.
 - **Known gaps:** `captureMode` is still the `processed` constant (SOURCE-3); platform raw offset is not yet
   removed by normalization (SOURCE-4). Imported photos default to sRGB frames (unaffected).
+
+### Result — SOURCE-3  <!-- 2026-10-12 -->
+
+- **RAW capture where supported (AC-7).** `SoftwareCaptureSource.captureMode` now returns
+  `scene.supportsRaw ? CaptureMode.raw : CaptureMode.processed` — a RAW-capable device captures unprocessed
+  frames; every other device stays on the processed (sRGB/JPEG-style) pipeline. The one-line getter is the
+  only product change: the commit path (`capture_controller.commit()`, CAPTURE-2) already stamps
+  `source.captureMode` onto `Sample.captureMode`, and `colorSpace` already yields `displayP3` on the
+  wide-gamut `SCENE_RAW` (SOURCE-2's `_captureFrameSpace`), so RAW's "widest space" tag needs no new code.
+- **No new enums/signatures:** reused SOURCE-1's `CaptureMode`; the abstract `CaptureSource` interface is
+  unchanged, so every `implements CaptureSource` double and `FakeCaptureSource` (inherits the getter) needs
+  no edit. Refreshed two stale forward-reference comments (the `colorSpace`/`captureMode` getters).
+- **Gates:** `flutter analyze` clean. Unit `flutter test --coverage` → **917 passed** (+1 new: a RAW-capable
+  source asserts `captureMode == raw` + `colorSpace == displayP3`, covering the `raw` branch; the `processed`
+  branch is covered by the existing wide/narrow cases). Coverage gate `dart run tool/coverage_gate.dart main`
+  → **100%** on the touched lib file (`software_capture_source.dart`) and all 13 branch-vs-main files.
+  Acceptance (default, under the device lock on iPhone 17 sim): **19 passed / 2 skipped** (AC-9, AC-10 pending
+  SOURCE-4), with `AC-7 RawWhereSupported` now green (un-pended). Run-pending: AC-1..AC-8 pass, AC-9/AC-10
+  fail their Thens — the designed red baseline for the unbuilt SOURCE-4 normalization, not a regression.
+  Grades: fresh adversarial subagent re-graded every un-pended AC test (AC-1..AC-8) + the modified scaffold
+  guard — **8 A / 0 below A**; whole-suite running total **24 A / 0 below A**, no row needs fixing.
+- **Augmentations:** none (the ITEST packet scheduled none for AC-7; its RAW-vs-processed control is in-test
+  and discriminates as soon as SOURCE-3 landed). SOURCE-3 strengthens no already-green AC test (`captureMode`
+  is orthogonal to the torch / multi-point / colour-space paths; only AC-7 reads it).
+- Fix passes: 0/3 (all gates green on first run).
+
+### Checkpoint / Handoff — SOURCE-3
+
+- **Frozen for SOURCE-4 (same source files — base a worktree on this phase's branch or merge it in):**
+  `SoftwareCaptureSource.captureMode` = `scene.supportsRaw ? raw : processed`; `colorSpace` unchanged
+  (`ofFrame(_captureFrameSpace)`, displayP3 iff wide-gamut). `Sample` carries `colorSpace` + `captureMode`
+  (both threaded in CAPTURE-2's commit) and the coordinates the controller builds from
+  `normaliseAgainstCard`. SOURCE-4 is the only remaining behaviour phase.
+  - **SOURCE-4 (AC-9/10, platform-agnostic):** guarantee the capture *contract* — every committed sample is
+    normalized (canonical CIELAB) and carries a non-null `colorSpace`, independent of platform. Normalization
+    must remove `SceneSpec.rawColorShift` so `SCENE_ANDROID` (+10) and `SCENE_IOS` (−8) land on the identical
+    CIELAB + identical tag. `sampling.dart`/`normaliseAgainstCard` is the place for the platform seam. AC-9/10
+    are red at baseline today (the offset is not yet removed) — the expected pending state, not a limited test.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host). Acceptance under the lock: `coord.sh with-lock bs-09-advanced-capture <PHASE> --wait 900 -- bash
+  -c 'cd /Users/matthew.quirk/Nuance-bs09 && export PATH=/Users/matthew.quirk/development/flutter/bin:$PATH &&
+  flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'` (add
+  `--dart-define=BS09_RUN_PENDING=true` for run-pending). The worktree's `.dart_tool/hooks_runner/shared`
+  sqlite3/objective_c cache is already seeded (SOURCE-2). macOS has no `timeout`; redirect long runs to a file.
+- **Known gaps:** platform raw offset is not yet removed by normalization (SOURCE-4 owns AC-9/AC-10). After
+  SOURCE-4 the behaviour stage is complete → SIGNOFF-1.
