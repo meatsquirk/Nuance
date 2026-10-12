@@ -36,7 +36,10 @@ class ColorChip extends StatelessWidget {
               margin: const EdgeInsets.only(right: 8),
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
-          Text(label),
+          // Flexible so a long label wraps within the available width instead of
+          // overflowing the row — a multi-point reading's label carries its
+          // position and full colour value and can be wider than the region.
+          Flexible(child: Text(label)),
         ],
       ),
     );

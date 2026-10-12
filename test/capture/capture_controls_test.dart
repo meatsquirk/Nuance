@@ -281,7 +281,7 @@ void main() {
     expect(_torchLabel(tester), 'Torch');
   });
 
-  testWidgets('"Sample points" drives the deferred sampleMarkedPoints '
+  testWidgets('"Sample points" drives the live sampleMarkedPoints '
       '(AC-3, CAPTURE-4)', (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
@@ -291,10 +291,12 @@ void main() {
         tester.widget<TextButton>(find.byKey(CaptureControls.samplePointsKey));
     expect(button.onPressed, isNotNull);
 
+    // Multi-point sampling is live as of CAPTURE-4: a tap reaches real
+    // behaviour and raises no deferred throw.
     await tester.tap(find.byKey(CaptureControls.samplePointsKey));
     await tester.pump();
-    expect(tester.takeException(), isA<UnimplementedError>(),
-        reason: 'multi-point sampling lands in CAPTURE-4');
+    expect(tester.takeException(), isNull,
+        reason: 'multi-point sampling is live — not a deferred throw');
   });
 
   testWidgets('"Send to comparison" drives the deferred sendPairToComparison '

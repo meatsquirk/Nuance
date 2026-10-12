@@ -53,7 +53,8 @@ const Map<String, String> pendingACs = {
   // AC-1 un-pended by SCREEN-2 (torch control + colour-temperature warning
   // banner; rendered in SCREEN-1 over CAPTURE-3's torch mechanism).
   // AC-2 un-pended by CAPTURE-3 (torch mechanism + litByTorch stamp).
-  'AC-3': 'CAPTURE-4',
+  // AC-3 un-pended by CAPTURE-4 (multi-point sampling: markPoint +
+  // sampleMarkedPoints → one reading per point).
   'AC-4': 'SCREEN-3',
   'AC-5': 'CAPTURE-5',
   'AC-6': 'SOURCE-2',
