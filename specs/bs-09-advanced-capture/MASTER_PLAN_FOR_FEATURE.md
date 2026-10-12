@@ -1,7 +1,7 @@
 # Master Plan — Advanced capture (bs-09)
 
 **Spec:** [bs-09-advanced-capture.feature](../bs-09-advanced-capture.feature)
-**Status:** In progress — ITEST-4 packet assembled; phase ⏸ Awaiting review, **G-2 awaiting a human decision** (blocks every behavior phase); ITEST-1/2/3 done, all 10 AC tests pending + red baseline, suite 24 A
+**Status:** In progress — acceptance stage complete; **G-2 approved 2026-10-12**, ITEST-4 done; all 10 behavior phases open across two concurrent tracks (CAPTURE/SCREEN + SOURCE); 10 AC tests pending, suite 24 A
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) §"Cross-platform strategy" (CaptureSource / wide colour space / RAW fallback; D2), §"Capture & sampling" (torch, multi-point) · [scope](../../docs/paint-color-app-scope.md) §4.1 (flash/torch *Should*, multi-point *Should*, RAW/DNG *Could*) · **no wireframe yet** (the spec is proposed ahead of any mock; a future revision adds its UX)
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-02's capture surface and bs-03's comparison, both already merged to `main` (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -125,7 +125,7 @@ SOURCE-4; it is *pending* until then, not a limited test.
 | SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` torch control + colour-space/RAW capability, selection + fallback, normalization contract, two-platform modelling; extended `SceneSpec`/`FakeCaptureSource` | bs-02 source | 🔄 In progress (SOURCE-1 done) |
 | CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | 🔄 In progress (CAPTURE-1, CAPTURE-2 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Capture screen: torch control + colour-temperature warning banner; multi-point markers + per-point readings display; send-to-comparison control | CAPTURE | 🔄 In progress (SCREEN-1 done) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1/2/3 done — all 10 AC tests pending + red baseline; ITEST-4 review next) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 + ITEST-4 review; all 10 AC tests pending + red baseline; G-2 approved 2026-10-12) |
 
 ## Dependency graph
 
@@ -154,7 +154,7 @@ handoff) — coordinate with any live bs-01/bs-03 nav work.
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line). The spec is **proposed ahead of any wireframe** — approving accepts building these scope §4.1 Should/Could features now, with UX to be re-linked when a mock revision adds them | CAPTURE-1 | ✅ Resolved 2026-10-12: approved — Matt Quirk (spec first line stamped; scope §4.1 Should/Could capture features accepted to build now) |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision (ITEST-4 packet assembled 2026-10-12 — [modules/ITEST.md § Review packet](modules/ITEST.md#phase-itest-4--test-review-g-2)) |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-12 11:34 EDT: approved — Matt Quirk (ITEST-4 packet accepted: 24 A / 0-below, clean red baseline, no augmentations; 3 judgment calls confirmed; all 10 behavior phases open) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -175,8 +175,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness over bs-02's, fixtures, pending gate (10 ACs), smoke | ✅ Done | 8,883,964 | 54m 53s (57m 55s) | unit 892 + integ 142 green; cov 100%; 0 fix passes; harness+7 fixtures+10 guard/smoke; no AC tests yet |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ✅ Done | 8,028,691 | 18m 58s (21m 23s) | default green, run-pending red (AC-1..5); grade 5 A; guard fix (bs-08 parity) |
 | 7 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 8,511,371 | 23m 24s | default green (+11 ~10); run-pending red all 10 ACs (AC-6..10 on Thens, AC-1..5 on UnimplementedError); grade 5 A (suite 24 A); fake applies rawColorShift + rebootCaptureOf helper (non-AC infra); 1 fix pass |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,911,381 | 7m 15s | packet assembled (per-AC catalogue + red baseline + 24 A grid + fixtures + 3 read-first judgment calls); regression reconfirmed green (analyze clean, unit 892, cov 100%, default accept +11 ~10); no code; **G-2 awaiting human decision** |
-| 9 | CAPTURE-3 | behavior: AC-2 — torch mechanism (turn on/off, CT warning, acknowledge) + commit stamps litByTorch | ⬜ Todo (blocked by G-2) | | | ∥ SOURCE track |
+| 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,911,381 | 7m 15s | packet assembled (per-AC catalogue + red baseline + 24 A grid + fixtures + 3 read-first judgment calls); regression reconfirmed green (analyze clean, unit 892, cov 100%, default accept +11 ~10); no code; **G-2 approved 2026-10-12 — Matt Quirk** |
+| 8a | SIGNOFF-DECISION | ITEST-4 approved (G-2 test review) | ✅ Done | 1,643,744 | 3m 07s | Matt Quirk approved the acceptance-test packet 2026-10-12 11:34 EDT; ITEST-4 closed; all 10 behavior phases opened |
+| 9 | CAPTURE-3 | behavior: AC-2 — torch mechanism (turn on/off, CT warning, acknowledge) + commit stamps litByTorch | ⬜ Next | | | startable now; ∥ SOURCE-2 track |
 | 10 | SCREEN-2 | behavior: AC-1 — torch control + colour-temperature warning banner | ⬜ Todo | | | after CAPTURE-3 |
 | 11 | CAPTURE-4 | behavior: AC-3 — markPoint + sampleMarkedPoints → one reading per point | ⬜ Todo | | | after CAPTURE-3 (controller) |
 | 12 | SCREEN-3 | behavior: AC-4 — readings shown, each keeping position + its own value | ⬜ Todo | | | after CAPTURE-4; ∥-risk SCREEN-2 |
@@ -191,22 +192,18 @@ when the row is marked done.
 
 ## Next phase
 
-**Acceptance stage is test-complete and reviewed — ITEST-4 packet is assembled; the one open gate G-2 now
-awaits a human decision.** NO behaviour phase is startable until G-2 is decided. The review packet lives in
-[modules/ITEST.md § Review packet — ITEST-4](modules/ITEST.md#phase-itest-4--test-review-g-2): per-AC
-catalogue, red-baseline summary, the 24 A grade grid, fixtures/real-vs-faked, and **3 read-first judgment
-calls** (the fake's platform raw offset as fixture-infra not faked behaviour; SOURCE-4 normalizing as the
-capture *contract* since AC-9/10 don't call `whenCalibrate`; AC-8's in-test wide control making its
-green-at-baseline primary sound). No augmentations.
+**G-2 is approved (2026-10-12 — Matt Quirk); the acceptance stage is complete and ITEST-4 is done.** All ten
+behaviour phases are now open, with **no open gate left**. Two tracks run **concurrently** (disjoint files) —
+start either, one phase per session, each in its own `--parallel` worktree where they overlap:
 
-- **Human decides G-2 next:** `/feature-next-phase --gate bs-09-advanced-capture G-2 approved | "<changes>"`.
-  The agent never approves. On **changes requested**, each item becomes an ITEST change phase before any
-  behaviour, then a fresh review.
-- **On G-2 approved**, G-2 resolves and ITEST-4 is done, and **two tracks open concurrently** (disjoint
-  files): the **CAPTURE/SCREEN track** — CAPTURE-3 (torch) → SCREEN-2 (banner) ∥ CAPTURE-4 (multi-point) →
-  {SCREEN-3 (readings), CAPTURE-5 (comparison handoff)} — and the **SOURCE track** — SOURCE-2 (colour-space
-  + fallback, AC-6/8) → {SOURCE-3 (RAW, AC-7), SOURCE-4 (normalization, AC-9/10)}. SOURCE-4 must normalize
-  the committed sample as part of the capture **contract** (AC-9/AC-10 do not call `whenCalibrate`).
+- **CAPTURE/SCREEN track** — **CAPTURE-3** (torch, AC-2) → **SCREEN-2** (banner, AC-1) ∥ **CAPTURE-4**
+  (multi-point, AC-3) → {**SCREEN-3** (readings, AC-4), **CAPTURE-5** (comparison handoff, AC-5)}.
+- **SOURCE track** — **SOURCE-2** (colour-space + fallback, AC-6/8) → {**SOURCE-3** (RAW, AC-7),
+  **SOURCE-4** (normalization, AC-9/10)}. SOURCE-4 must normalize the committed sample as part of the capture
+  **contract** (AC-9/AC-10 do **not** call `whenCalibrate`).
+- **Startable now (no deps):** CAPTURE-3 and SOURCE-2 (disjoint files — safe to run in parallel sessions).
+  SCREEN-2 waits on CAPTURE-3; CAPTURE-4 waits on CAPTURE-3's controller; SCREEN-3/CAPTURE-5 wait on
+  CAPTURE-4; SOURCE-3/SOURCE-4 wait on SOURCE-2.
 - **Acceptance runs need a booted sim under `coord.sh with-lock`** (host gates don't):
   `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-…`; run-pending adds
   `--dart-define=BS09_RUN_PENDING=true`. Always pass `-d <udid>` (no device ⇒ zero tests, false green). The
@@ -228,7 +225,8 @@ green-at-baseline primary sound). No augmentations.
 | ITEST-2 | c410d754 | 2026-10-12 09:38 EDT | 09:59 | 21m 23s | 18m 58s | claude-opus-4-8 | 136 | 260,342 | 7,705,425 | 62,788 | 8,028,691 | default green (+11 ~5); run-pending red baseline AC-1..5 (all UnimplementedError naming a bs-09 phase); unit 892/cov 100% (no lib touched); grade 5 A / 0 below A (suite 16 A); 1 fix pass (deterministic ITEST-1 guard, bs-08 parity) |
 | ITEST-3 | 23365e01 | 2026-10-12 10:16 EDT | 10:40 | 23m 24s | 23m 24s | claude-opus-4-8 | 126 | 248,370 | 8,190,882 | 71,993 | 8,511,371 | default green (+11 ~10); run-pending red baseline all 10 ACs (AC-6..10 on Thens: displayP3/raw/wide-control/normalize/platform-agnostic; AC-1..5 unchanged UnimplementedError); unit 892/cov 100% (no lib); grade 5 A / 0 below (suite 24 A); 1 fix pass (rebootCaptureOf for Navigator reuse); fake applies rawColorShift + rebootCaptureOf helper (non-AC test infra) |
 | ITEST-4 | f940c427 | 2026-10-12 10:59 EDT | 11:06 | 7m 15s | 7m 15s | claude-opus-4-8 | 48 | 72,320 | 1,820,247 | 18,766 | 1,911,381 | test-review: packet assembled; regression reconfirmed green (analyze clean, unit 892, cov 100% on 10 files, default accept +11 ~10); suite 24 A / 0 below; no augmentations; no code; G-2 awaiting human decision |
-| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 11:06** | **9h 48m** | **3h 00m** |  | **998** | **1,490,883** | **55,406,030** | **470,748** | **57,368,659** |  |
+| SIGNOFF-DECISION | f1b02778 | 2026-10-12 11:32 EDT | 11:35 | 3m 38s | 3m 07s | claude-opus-4-8 | 46 | 52,522 | 1,578,811 | 12,365 | 1,643,744 | ITEST-4 approved |
+| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 11:35** | **9h 52m** | **3h 03m** |  | **1,044** | **1,543,405** | **56,984,841** | **483,113** | **59,012,403** |  |
 
 ## Sign-off
 

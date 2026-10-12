@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite (bs-09)
 
-**Status:** In progress — ITEST-1/2/3/4 done-or-awaiting; ITEST-4 packet assembled, phase ⏸ Awaiting review, **G-2** awaiting a human decision (blocks every behavior phase)
+**Status:** ✅ Done — ITEST-1/2/3/4 all done; **G-2 approved 2026-10-12 (Matt Quirk)**; all 10 AC tests pending + red baseline, suite 24 A; every behavior phase now open
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/advanced_capture_test.dart`,
 `integration_test/advanced_capture_harness.dart`, `integration_test/bs09/pending.dart`,
@@ -14,7 +14,7 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,883,964 | 54m 53s (57m 55s) |
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 (pending) | ✅ Done | 8,028,691 | 18m 58s (21m 23s) |
 | ITEST-3 | acceptance-tests | AC-6,7,8,9,10 (pending) | ✅ Done | 8,511,371 | 23m 24s |
-| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1,911,381 | 7m 15s |
+| ITEST-4 | test-review | — (G-2) | ✅ Done | 1,911,381 | 7m 15s |
 
 ## Interface reconciliation
 
@@ -250,7 +250,7 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 - **Tasks:** assemble the review packet (per-AC catalogue + red baseline + grade grid + fixtures); full
   regression green with the 10 pending; raise **G-2** for a human decision.
 - **Exit criteria:** packet complete; G-2 recorded by a human (the agent never approves).
-- **Status:** ⏸ Awaiting review (packet below; **G-2** *awaiting decision*). No code ran in this phase.
+- **Status:** ✅ Done — **G-2 approved 2026-10-12 11:34 EDT by Matt Quirk** (packet below; 24 A / 0-below, clean red baseline, no augmentations; 3 judgment calls confirmed; all 10 behavior phases opened). No code ran in this phase.
 
 ### Review packet — ITEST-4 (2026-10-12)
 
