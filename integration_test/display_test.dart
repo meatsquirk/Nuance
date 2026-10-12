@@ -43,9 +43,10 @@ void main() {
       // by one per delivered AC. Un-pended so far: AC-2 (DISPLAY-3, simulation
       // off = trichromat), AC-3 (DISPLAY-4, simulate a chosen type alongside
       // the original), AC-4 (DISPLAY-5, severity slider sets simulation
-      // strength) and AC-5 (DISPLAY-6, grayscale clears an active simulation).
-      // The remaining six are asserted exactly (non-vacuous).
-      const unpended = {'AC-2', 'AC-3', 'AC-4', 'AC-5'};
+      // strength), AC-5 (DISPLAY-6, grayscale clears an active simulation) and
+      // AC-6 (DISPLAY-7, value-only grayscale greys the whole app).
+      // The remaining five are asserted exactly (non-vacuous).
+      const unpended = {'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',

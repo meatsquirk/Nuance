@@ -1,6 +1,6 @@
 # Module DISPLAY — cross-cutting display pipeline (simulation + grayscale)
 
-**Status:** In progress — DISPLAY-6 done (AC-5 un-pended + green; `setGrayscale(true)` clears an active simulation, D-3, in `display_controller.dart`; graded A); next DISPLAY-7 (AC-6 root grayscale) and DISPLAY-8 (AC-7 reading keeps value+label) both startable in parallel
+**Status:** In progress — DISPLAY-7 done (AC-6 un-pended + green; root value-only grayscale `ColorFiltered` in `grayscale_filter.dart`, keyed so toggling never remounts the app; graded A, fix 1/3); DISPLAY-8 (AC-7 reading keeps value+label) startable (the only remaining DISPLAY behaviour phase)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/display_settings.dart`, `lib/display/display_controller.dart`, `lib/display/display_scope.dart`, `lib/display/display_read_endpoint.dart`, `lib/display/color_simulation.dart` (thin reuse of `projectDichromat`), `lib/display/grayscale_filter.dart`; integration points in `lib/widgets/color_chip.dart` and `lib/app/build_app.dart` (root grayscale wrapper + `DisplayScope` wiring). Unit tests under `test/display/`.
 **Depends on:** — · **Blocks:** SETTINGS (needs `DisplayController`), ITEST (needs the read endpoint + rendering), SPEECH (scaffold only)
@@ -15,7 +15,7 @@
 | DISPLAY-4 | behavior | AC-3 | ✅ Done | 12,709,944 | 23m 20s (23m 20s) |
 | DISPLAY-5 | behavior | AC-4 | ✅ Done | 5,665,722 | 11m 49s (11m 49s) |
 | DISPLAY-6 | behavior | AC-5 | ✅ Done | 4,583,088 | 13m 00s (13m 00s) |
-| DISPLAY-7 | behavior | AC-6 | ⬜ Todo | | |
+| DISPLAY-7 | behavior | AC-6 | ✅ Done | 12,068,315 | — (fork mark timing) |
 | DISPLAY-8 | behavior | AC-7 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -199,6 +199,20 @@
 - **Tasks:** make the root `ColorFiltered` (saturation-0 matrix) active when `grayscale` is set, wrapping the whole app so the camera feed, palette swatches and readings all render achromatic (D-5).
 - **Exit criteria:** unit gate; existing suites green.
 - **Acceptance gate:** un-pend AC-6; `display_test.dart` green (`TestAC06_GrayscaleWholeApp`).
+
+### Result — DISPLAY-7 (2026-10-12)
+
+- **Landed:** `lib/display/grayscale_filter.dart` — `GrayscaleFilter` (now a `StatefulWidget`) reads `DisplayScope.of(context).settings.grayscale` and, when set, wraps the whole app in a single root saturation-0 Rec.709 `ColorFiltered` (D-5); off ⇒ passes the app through with no filter. AC-6 un-pended.
+- **One production file only.** The `buildApp` wiring already placed the (inert) `GrayscaleFilter` above `MaterialApp`, below `DisplayScope`, in DISPLAY-2 — activation lives entirely inside `GrayscaleFilter.build`, so `build_app.dart` needed **no** change (the plan listed it; the wiring pre-existed).
+- **Remount fix (the reason for fix pass 1):** naïvely returning `ColorFiltered(child: app)` vs `app` changed the child slot's widget type on toggle and **remounted the whole app** — closing the open settings panel and disposing the app-wide speech, which failed **AC-5 and AC-6** on the first run (AC-5's own toggle-off control could no longer find E46; AC-6 threw a disposed-speech error). Fix: hold the app under a stable-`GlobalKey` `KeyedSubtree` so the toggle **reparents** the one app element instead of rebuilding it. A unit test asserts the child `State` survives a toggle (no re-`initState`).
+- **Tests:** `test/display/grayscale_filter_test.dart` — replaced the shell's inert pass-through test with four: off ⇒ no `ColorFiltered`; on ⇒ one `ColorFiltered` whose filter equals an independent saturation-0 matrix; reacts to the toggle both directions; and reparents-not-remounts (child `State` + `initState` count preserved). Un-pended AC-6 in `integration_test/bs08/pending.dart`; scaffold-guard `unpended` set → `{AC-2,AC-3,AC-4,AC-5,AC-6}` in `integration_test/display_test.dart`.
+- **Gates:** `flutter analyze` clean · unit **931 pass** · coverage **100%** on all touched lib files (vs `main`) · acceptance (sim `5AB9D06D`, under verify lock) **16 pass / 5 skip** (AC-2..6 execute + pass; AC-1, AC-7..10 pending) · grade **6 A / 0 below A** (AC-2..6 + scaffold guard; grid § *Phase graded: DISPLAY-7*) · **fix passes 1/3**.
+- **Augmentations:** none assigned to DISPLAY-7. AC-7's augmentation remains owned by DISPLAY-8.
+- **Tokens / Time:** see dashboard row (ledger `DISPLAY-7`).
+
+### Checkpoint / Handoff — DISPLAY-7
+
+- **Frozen:** the root value-only grayscale is complete — `GrayscaleFilter` (saturation-0 `ColorFiltered` at the app root, keyed so toggling never remounts the app). It touches only `grayscale_filter.dart`; no other DISPLAY phase depends on it. **DISPLAY-8 (AC-7)** is independent (it augments the AC-7 reading test for the value+label contract in `color_chip.dart`/`readout/*`) and shares no file with this phase — the only overlaps are the two always-touched acceptance files (`integration_test/bs08/pending.dart` un-pend row + `display_test.dart` `unpended` set), which merge cleanly (disjoint rows). No open gap.
 
 ## Phase DISPLAY-8 — AC-7 a reading under simulation keeps its value and label
 
