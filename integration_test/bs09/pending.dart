@@ -55,7 +55,8 @@ const Map<String, String> pendingACs = {
   // AC-2 un-pended by CAPTURE-3 (torch mechanism + litByTorch stamp).
   // AC-3 un-pended by CAPTURE-4 (multi-point sampling: markPoint +
   // sampleMarkedPoints → one reading per point).
-  'AC-4': 'SCREEN-3',
+  // AC-4 un-pended by SCREEN-3 (each reading shown keeps its own position +
+  // value in CaptureReadingsList).
   'AC-5': 'CAPTURE-5',
   // AC-6 and AC-8 un-pended by SOURCE-2 (colour-space selection + narrower
   // fallback + the tag threaded onto Sample.colorSpace).

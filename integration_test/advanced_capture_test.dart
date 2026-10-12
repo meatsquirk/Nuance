@@ -60,13 +60,15 @@ void main() {
     // mechanism + litByTorch stamp); SCREEN-2 un-pended AC-1 (torch control +
     // colour-temperature warning banner); CAPTURE-4 un-pended AC-3 (multi-point
     // sampling); SOURCE-2 un-pended AC-6 and AC-8 (colour-space selection +
-    // narrower fallback + tag). This set grows one behaviour phase at a time as
+    // narrower fallback + tag); SCREEN-3 un-pended AC-4 (each shown reading keeps
+    // its own position + value). This set grows one behaviour phase at a time as
     // each deletes its row in `bs09/pending.dart`; the pending map must stay the
     // exact complement of it across all 10 ACs.
     const unpended = <String>{
       'AC-1',
       'AC-2',
       'AC-3',
+      'AC-4',
       'AC-6',
       'AC-8',
     };

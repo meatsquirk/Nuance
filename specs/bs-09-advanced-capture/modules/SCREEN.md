@@ -1,6 +1,6 @@
 # Module SCREEN — Capture screen: torch control, multi-point readings, send-to-comparison
 
-**Status:** In progress — SCREEN-1 + SCREEN-2 (AC-1) done; SCREEN-3 (AC-4) next (after CAPTURE-4)
+**Status:** Done — SCREEN-1 + SCREEN-2 (AC-1) + SCREEN-3 (AC-4) done; module complete
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_screen.dart`, `lib/capture/capture_controls.dart`,
 `lib/capture/capture_live_view.dart`, and any new Capture-screen widgets (torch control + warning banner,
@@ -17,7 +17,7 @@ multi-point markers + readings list, send-to-comparison control)
 |---|---|---|---|---|---|
 | SCREEN-1 | shell | — | ✅ Done | 5,909,827 | 11m 12s |
 | SCREEN-2 | behavior | AC-1 | ✅ Done | 6,431,798 | 15m 13s |
-| SCREEN-3 | behavior | AC-4 | ⬜ Todo | | |
+| SCREEN-3 | behavior | AC-4 | ✅ Done | 5,045,197 | 10m 17s |
 
 ## Interface reconciliation
 
@@ -151,3 +151,38 @@ None. G-2 (test review) was approved 2026-10-12 (Matt Quirk), opening the behavi
   main` (host); acceptance `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`
   under `coord.sh with-lock` (shared device lane). Flutter: `/Users/matthew.quirk/development/flutter/bin`.
 - **Known gaps:** sampling/send behaviour not yet built (CAPTURE-4/5); AC-4 readings not yet un-pended (SCREEN-3).
+
+### Result — SCREEN-3
+
+- **Landed (AC-4 — each shown reading keeps its own position + value):** no new product logic was needed —
+  `CaptureReadingsList` already renders one `ColorChip` per `MultiPointReading` labelled
+  `Point (x, y): L.. a.. b..` (built state-driven in SCREEN-1), and CAPTURE-4 now fills
+  `state.markedReadings`. SCREEN-3 **un-pends AC-4** and proves it green against three distinct sampled
+  points.
+- **Changes (test-only, 2 files):** deleted the `'AC-4': 'SCREEN-3'` row in
+  `integration_test/bs09/pending.dart`; added `'AC-4'` to the `unpended` set in `advanced_capture_test.dart`'s
+  scaffold guard (complement stays exact: pending now {AC-5,7,9,10}=4, unpended=6, 4==10−6). No lib and no AC
+  test body changed.
+- **Gates:** `flutter analyze` clean; unit **909 green**; coverage gate **100% line coverage on all 12 touched
+  lib files** (`dart run tool/coverage_gate.dart main` PASS — no new lib logic). Acceptance (sim `5AB9D06D…`,
+  under `coord.sh with-lock`): default suite **+17 pass / ~4 skip / 0 fail** — `EachPointKeepsPositionValue`
+  (AC-4) runs live and passes; AC-1/2/3/6/8 green; AC-5/7/9/10 still pending. **Grade (fresh adversarial
+  subagent): AC-4 A; AC-1/2/3/6/8 no drift (A); scaffold guard A → 6 A / 0 below A** (whole-suite 24 A / 0
+  below A, unchanged). **Fix passes: 0/3** — AC-4 passed first run.
+- **Tokens / Time:** 5,045,197 · 10m 17s (1 session).
+
+### Checkpoint / Handoff — SCREEN-3
+
+- **AC-4 ✅** (6/10 behaviour ACs: AC-1, AC-2, AC-3, AC-4, AC-6, AC-8). The multi-point readings list is live
+  and asserted — each reading keeps its distinct position and its own colour value.
+- **Module SCREEN is complete** (SCREEN-1 + SCREEN-2 + SCREEN-3 all done); it no longer owns a startable
+  phase. Remaining bs-09 behaviour phases: **CAPTURE-5** (AC-5, send-pair-to-comparison), **SOURCE-3** (AC-7),
+  **SOURCE-4** (AC-9/10), then **SIGNOFF-1**.
+- **Un-pend protocol (unchanged):** each later behaviour phase deletes its AC's row in `bs09/pending.dart`
+  **and** adds that AC to the `unpended` set in `advanced_capture_test.dart`. `pendingSkipReason` is
+  self-maintaining.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host); acceptance `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`
+  under `coord.sh with-lock` (shared device lane). Flutter: `/Users/matthew.quirk/development/flutter/bin`.
+- **Known gaps:** send-to-comparison still fixed-pair placeholder `(0,1)` (CAPTURE-5 owns the real selection +
+  `AppRouter.toComparisonPair`); RAW/normalization source behaviour not yet built (SOURCE-3/4).
