@@ -18,6 +18,7 @@ import '../display/display_controller.dart';
 import '../display/display_read_endpoint.dart';
 import '../display/display_scope.dart';
 import '../display/grayscale_filter.dart';
+import '../display/settings_screen.dart';
 import '../compare/comparison_controller.dart';
 import '../compare/comparison_read_endpoint.dart';
 import '../compare/comparison_screen.dart';
@@ -387,6 +388,9 @@ Widget buildApp(AppDependencies deps) {
       child: MaterialApp(
         title: 'Paint Color Assistant',
         theme: ThemeData(useMaterial3: true),
+        // The shared app chrome: the open-display-settings entry (E2) on every
+        // screen, opening the settings panel over the current one (SETTINGS-1).
+        builder: (context, child) => DisplayChrome(child: child!),
         home: deps.correctionEntry != null
             ? CorrectionHomeScreen(
                 target: deps.correctionEntry!.target,

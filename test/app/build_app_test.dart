@@ -16,6 +16,7 @@ import 'package:paint_color_assistant/correction/engine/correction_engine.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
 import 'package:paint_color_assistant/display/display_controller.dart';
 import 'package:paint_color_assistant/display/display_read_endpoint.dart';
+import 'package:paint_color_assistant/display/settings_screen.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
@@ -589,6 +590,55 @@ void main() {
       // Not disposed by buildApp: still usable (no throw).
       controller.addListener(() {});
       expect(controller.settings.simulationOn, isFalse);
+    });
+  });
+
+  group('buildApp display chrome (bs-08 SETTINGS-1)', () {
+    testWidgets('surfaces the open-settings entry (E2) on the home screen',
+        (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      // The shared chrome wraps every route, so the entry is present over the
+      // screen (here the Readout home).
+      expect(find.byType(DisplayChrome), findsOneWidget);
+      expect(find.byKey(DisplaySettingsButton.openKey), findsOneWidget);
+      // The panel is not shown until the painter opens it.
+      expect(find.byKey(DisplaySettingsScreen.panelKey), findsNothing);
+    });
+
+    testWidgets('opening the entry shows the settings panel over the current '
+        'screen, closing returns to it', (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      expect(find.byType(ReadoutScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(DisplaySettingsButton.openKey));
+      await tester.pumpAndSettle();
+      // The panel is shown; the feature screen is still mounted underneath.
+      expect(find.byKey(DisplaySettingsScreen.panelKey), findsOneWidget);
+      expect(find.byType(ReadoutScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(DisplaySettingsScreen.closeKey));
+      await tester.pumpAndSettle();
+      expect(find.byKey(DisplaySettingsScreen.panelKey), findsNothing);
+      expect(find.byType(ReadoutScreen), findsOneWidget);
+    });
+
+    testWidgets('the panel reads the app-wide controller — its controls drive '
+        'the live display settings', (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      final controller = tester
+          .widget<DisplayReadEndpoint>(
+            find.byKey(DisplayReadEndpoint.endpointKey),
+          )
+          .controller;
+
+      await tester.tap(find.byKey(DisplaySettingsButton.openKey));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(DisplaySettingsScreen.simulationOptionKey(CvdType.protan)),
+      );
+      await tester.pump();
+
+      expect(controller.settings.simulationType, CvdType.protan);
     });
   });
 
