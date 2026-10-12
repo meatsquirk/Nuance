@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — FLOW-1 (shell) ✅ Done; stage 2 (component shells) complete, next ITEST-1 (acceptance harness)
+**Status:** In progress — ITEST-1 (acceptance harness) ✅ Done; next ITEST-2 (AC tests: flow & result group)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -120,7 +120,7 @@ Pre-seeded augmentations: AC-13's confusion-check behavioural assertion is confi
 | ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1, ENGINE-2 ✅) |
 | PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | 🔄 In progress (PROFILE-1 ✅) |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | 🔄 In progress (FLOW-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1 ✅) |
 
 ## Dependency graph
 
@@ -166,8 +166,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | ENGINE-2 | shell: assessment domain types + `AssessmentEngine` interface | ✅ Done | 3,709,673 | 9m 29s | 4 files in `lib/onboarding/engine/`; analyze clean · 912 unit (849 + 63) · coverage 100% on 4 touched files |
 | 3 | PROFILE-1 | shell: `CvdProfileStore` + `CvdProfileReadEndpoint` + `AppDependencies` wiring | ✅ Done | 7,782,453 | 20m 30s | G-4 resolved |
 | 4 | FLOW-1 | shell: `OnboardingController`/state + `OnboardingReadEndpoint` + screen host & keyed step widgets + route (replace placeholder) | ✅ Done | 13,152,941 | 26m 57s | controller (14 actions throw) + state + read endpoint + host/screen + 7 keyed step widgets; entry screen replaced (anchor preserved); analyze clean · 957 unit · gate 100% on 23 touched · integ 134 |
-| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (14 ACs), smoke test | ⬜ Next | | | |
-| 6 | ITEST-2 | acceptance-tests: AC-1,2,10,11,12,13,14 (pending) + red baseline | ⬜ Todo | | | seq before/after ITEST-3 |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (14 ACs), smoke test | ✅ Done | 12,779,960 | 1h 30m | harness + 9 fixtures + smoke + 6 fixture guards; analyze clean · bs-07 suite 10/10 · unit 957 · coverage N/A (no lib/); grade A (1 B fixed); fix 2/3 |
+| 6 | ITEST-2 | acceptance-tests: AC-1,2,10,11,12,13,14 (pending) + red baseline | ⬜ Next | | | seq before/after ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | FLOW-2 | AC-14 progress indicator | ⬜ Todo | | | G-5 |
@@ -189,10 +189,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-FLOW-1 (shell) ✅ Done — `OnboardingController` (14 action methods throw until their behaviour phase) + `OnboardingState` + `OnboardingReadEndpoint` + onboarding host/screen & 7 keyed step widgets; the entry screen now builds the host behind the preserved `self-assessment-entry-screen` anchor, and the host mounts both `CvdProfileReadEndpoint` and `OnboardingReadEndpoint`. **Stage 2 (component shells) is complete** (ENGINE-2, PROFILE-1, FLOW-1 all ✅). Startable next:
-- **ITEST-1** (acceptance-tests) — the bs-07 harness (`self_assessment_harness.dart`: Given/When/Then vocab + fixtures + the independent references) + a never-pending smoke test proving the shells boot to the onboarding host. Its dep (FLOW-1) is ✅; no gate blocks it. ITEST-2 ∥ ITEST-3 follow (share the runner file → sequential), then the ITEST-4 test review (G-2).
+ITEST-1 (acceptance-tests) ✅ Done — the bs-07 harness (`self_assessment_harness.dart`: Given/When/Then vocab + 9 fixtures + the independent `referenceBand`/`fixedPair` references), a never-pending smoke test (routes to the onboarding host via `toSelfAssessment()`; every keyed region renders; both read endpoints respond) and 6 fixture guards. Startable next:
+- **ITEST-2** (acceptance-tests) — register the 7 *pending* AC tests for the flow & result group (AC-1,2,10,11,12,13,14) on `self_assessment_test.dart`, run the run-pending red baseline, fill the Red-baseline rows, grade. **ITEST-3** (AC-3,4,5,6,7,8,9) shares the runner file → **run sequentially** (not parallel). Then the ITEST-4 test review (G-2). No gate blocks ITEST-2/3 (G-2 is decided at ITEST-4).
 
-Still to decide, before the phases they block: **G-5** (four-step vs five-tier, blocks FLOW-2) and **G-2** (approve acceptance tests, decided at ITEST-4; blocks every behaviour phase, not the ITEST phases).
+Still to decide, before the phases they block: **G-2** (approve acceptance tests, at ITEST-4; blocks every behaviour phase, not the ITEST phases) and **G-5** (four-step vs five-tier, blocks FLOW-2).
 
 ## Token usage
 
@@ -206,7 +206,8 @@ Still to decide, before the phases they block: **G-5** (four-step vs five-tier, 
 | ENGINE-2 | 26735695 | 2026-10-12 05:06 EDT | 05:16 | 9m 29s | 9m 29s | claude-opus-4-8 | 82 | 87,787 | 3,583,371 | 38,433 | 3,709,673 | shell done: 4 engine files (tier types, CvdEstimate, SeverityBand, AssessmentEngine + ShellAssessmentEngine); analyze clean, 912 unit (849+63), coverage 100% on 4 touched files; no lib/ wiring |
 | PROFILE-1 | dd73b464 | 2026-10-12 05:47 EDT | 06:16 | 29m 34s | 20m 30s | claude-opus-4-8 | 136 | 129,456 | 7,602,795 | 50,066 | 7,782,453 | shell done (G-4 resolved as proposed): CvdProfileStore + CvdProfileReadEndpoint + loadCvdProfile wired into assembly; analyze clean, 923 unit, coverage 100% on 8 touched, integ 134 green; no AC |
 | FLOW-1 | b44af27c | 2026-10-12 07:10 EDT | 07:37 | 26m 57s | 26m 57s | claude-opus-4-8 | 170 | 196,438 | 12,874,964 | 81,369 | 13,152,941 | shell done: OnboardingController (14 actions throw) + state + OnboardingReadEndpoint + host/screen + 7 keyed step widgets; entry screen replaced (anchor preserved); analyze clean, 957 unit, coverage 100% on 23 touched, integ 134; no AC |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 07:37** | **1h 48m** | **1h 39m** |  | **626** | **804,107** | **34,395,081** | **311,918** | **35,511,732** |  |
+| ITEST-1 | 129d7bd8 | 2026-10-12 07:55 EDT | 09:25 | 1h 30m | 1h 30m | claude-opus-4-8 | 144 | 299,463 | 12,389,172 | 91,181 | 12,779,960 | harness + 9 fixtures + smoke + 6 fixture guards: analyze clean, bs-07 acceptance suite 10/10 on sim, unit 957, coverage N/A (no lib/ touched), grade A (1 vacuous-guard B fixed in-phase), fix 2/3; no AC un-pended (all 14 pending) |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 09:25** | **3h 18m** | **3h 09m** |  | **770** | **1,103,570** | **46,784,253** | **403,099** | **48,291,692** |  |
 
 ## Sign-off
 
