@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** Not started — next ENGINE-1, now **startable** (G-1 ✅ spec approved, G-3 ✅ bs-05/bs-06 merged to main @ cd1c86b)
+**Status:** In progress — ENGINE-1 (scaffold) ✅ Done; next ENGINE-2 (shell, ∥ PROFILE-1)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -117,7 +117,7 @@ Pre-seeded augmentations: AC-13's confusion-check behavioural assertion is confi
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | ⬜ Todo |
+| ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1 ✅) |
 | PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | ⬜ Todo |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
@@ -162,8 +162,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | ENGINE-1 | scaffold: branch from merged main, baseline, coverage gate confirm, bs07 pending runner (14 ACs) | ⬜ Next | | | G-1 ✅ · G-3 ✅ — startable |
-| 2 | ENGINE-2 | shell: assessment domain types + `AssessmentEngine` interface | ⬜ Todo | | | ∥ PROFILE-1 |
+| 1 | ENGINE-1 | scaffold: branch from merged main, baseline, coverage gate confirm, bs07 pending runner (14 ACs) | ✅ Done | 3,619,703 | 13m 16s | branch `feat/bs-07` @ main `a695e4c`; analyze clean · 849 unit · gate PASS-clean + FAIL-on-gap proven; 14 ACs seeded; runner + 3 scaffold guards green |
+| 2 | ENGINE-2 | shell: assessment domain types + `AssessmentEngine` interface | ⬜ Next | | | ∥ PROFILE-1 |
 | 3 | PROFILE-1 | shell: `CvdProfileStore` + `CvdProfileReadEndpoint` + `AppDependencies` wiring | ⬜ Todo | | | ∥ ENGINE-2 · G-4 |
 | 4 | FLOW-1 | shell: `OnboardingController`/state + `OnboardingReadEndpoint` + screen host & keyed step widgets + route (replace placeholder) | ⬜ Todo | | | |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (14 ACs), smoke test | ⬜ Todo | | | |
@@ -189,9 +189,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ENGINE-1** (scaffold) is **startable** — both blocking gates are closed (G-1 ✅ spec approved; G-3 ✅ bs-05/bs-06 merged to `main` @ cd1c86b). Next session: branch `feat/bs-07-cvd-self-assessment` from `main` @ cd1c86b and run ENGINE-1 (baseline, coverage-gate confirm, bs07 pending runner over the 14 ACs). No `lib/` product code.
+ENGINE-1 (scaffold) ✅ Done — branch `feat/bs-07-cvd-self-assessment` exists (cut from `main` @ `a695e4c`), baseline + coverage-gate proof recorded, 14-AC pending gate + runner landed. Two shells are now startable and **run concurrently** (disjoint files):
+- **ENGINE-2** (shell) — `lib/onboarding/engine/` domain types + `AssessmentEngine` interface + trivial shell impl. No gate blocks it.
+- **PROFILE-1** (shell) — `CvdProfileStore` + `CvdProfileReadEndpoint` + `AppDependencies` wiring. **Needs G-4** decided first (persistence collection/id + severity/band scales).
 
-Still to decide, before the phases they block (not blocking ENGINE-1): **G-4** (persistence + severity/band scales; blocks PROFILE-1 & ENGINE-7) and **G-5** (four-step vs five-tier reconciliation; blocks FLOW-2). G-2 (approve acceptance tests) is decided later at ITEST-4.
+FLOW-1 (shell) follows once ENGINE-2 **and** PROFILE-1 are done. Still to decide before the phases they block: **G-4** (blocks PROFILE-1 & ENGINE-7) and **G-5** (four-step vs five-tier, blocks FLOW-2). G-2 (approve acceptance tests) is decided later at ITEST-4; it blocks every behaviour phase but not the shells.
 
 ## Token usage
 
@@ -201,7 +203,8 @@ Still to decide, before the phases they block (not blocking ENGINE-1): **G-4** (
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 7a934388 | 2026-10-11 21:04 EDT | 21:20 | 15m 39s | 15m 39s | claude-opus-4-8 | 56 | 194,229 | 1,861,476 | 56,221 | 2,111,982 | plan written |
 | GATE-DECISION | 6e88f0bc | 2026-10-11 21:45 EDT | 21:58 | 13m 16s | 13m 16s | claude-opus-4-8 | 104 | 106,275 | 4,977,129 | 51,472 | 5,134,980 | G-1 approved (spec), G-3 resolved (bs-05 merge 9760a4f + bs-06 merge cd1c86b to main; analyze clean, 849 unit tests green) |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-11 21:58** | **28m 55s** | **28m 55s** |  | **160** | **300,504** | **6,838,605** | **107,693** | **7,246,962** |  |
+| ENGINE-1 | 0e802231 | 2026-10-11 22:21 EDT | 22:35 | 13m 16s | 13m 16s | claude-opus-4-8 | 78 | 89,922 | 3,495,346 | 34,357 | 3,619,703 | scaffold done: branch feat/bs-07 @ main a695e4c; analyze clean, 849 unit, coverage gate PASS-clean + FAIL-on-planted-gap proven; 14-AC pending gate + runner (3 scaffold guards) green; no lib/ code |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-11 22:35** | **42m 11s** | **42m 11s** |  | **238** | **390,426** | **10,333,951** | **142,050** | **10,866,665** |  |
 
 ## Sign-off
 

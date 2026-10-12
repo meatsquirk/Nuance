@@ -1,6 +1,6 @@
 # Module ENGINE — assessment domain (+ feature scaffold)
 
-**Status:** Not started
+**Status:** In progress — ENGINE-1 (scaffold) ✅ Done; next ENGINE-2 (shell)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/engine/` (`assessment_engine.dart`, `tier_results.dart`, `cvd_estimate.dart`, `severity_band.dart`); the feature scaffold (branch, baseline, coverage-gate confirmation, `integration_test/bs07/pending.dart`, runner target). Behavior phases also wire a thin controller call in `lib/onboarding/onboarding_controller.dart` (FLOW-owned file — noted per phase; merge-risky with FLOW).
 **Depends on:** — · **Blocks:** PROFILE, FLOW, ITEST
@@ -9,8 +9,8 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | scaffold | — | ⬜ Next | | |
-| 2 | shell | — | ⬜ Todo | | |
+| 1 | scaffold | — | ✅ Done | 3,619,703 | 13m 16s |
+| 2 | shell | — | ⬜ Next | | |
 | 3 | behavior | AC-3 | ⬜ Todo | | |
 | 4 | behavior | AC-4 | ⬜ Todo | | |
 | 5 | behavior | AC-5 | ⬜ Todo | | |
@@ -42,6 +42,27 @@
   4. Seed `integration_test/bs07/pending.dart` with all 14 ACs mapped to their owning behavior phase, and the `ac(t, "AC-n")`-equivalent skip helper keyed to `--dart-define=BS07_RUN_PENDING=true`.
   5. Add the runner target `integration_test/self_assessment_test.dart` (compiles, zero tests yet).
 - **Exit criteria:** gate PASS on clean + FAIL on planted gap, both recorded; pending map seeded with 14 ACs; branch pushed with upstream; no `lib/` product code.
+
+### Result
+
+- **Branch:** `feat/bs-07-cvd-self-assessment` cut from `main` @ `a695e4c` (identical `lib/`+`pubspec` to the planned `cd1c86b` base — the three intervening commits are specs/plan-only: the G-1/G-3 gate decision and the bs-08/bs-09 PLANs; branching from HEAD carries the resolved spec/plan). Work ran in a dedicated worktree `../Nuance-bs07` (the primary checkout holds untracked spec/doc snapshots that collide on checkout — repo-established pattern).
+- **Base confirmed:** `lib/store/persistent_store.dart`, `lib/palette/self_assessment_entry_screen.dart`, `lib/app/router.dart toSelfAssessment()`, `tool/coverage_gate.dart` and the pubspec superset (drift/path_provider/printing) all present on the merged base.
+- **Baseline:** `flutter analyze` clean (no issues); `flutter test` green — **849** unit tests; `flutter test --coverage && dart run tool/coverage_gate.dart main` → **PASS** (`no touched lib/**.dart files vs "main" — nothing to gate`).
+- **Coverage-gate proof:** planted a throwaway `lib/scaffold_coverage_probe.dart` with one never-taken branch + a test covering only the other branch → gate **FAIL** (exit 1): `lib/scaffold_coverage_probe.dart: 2/3 lines covered — uncovered lines: 7`. Removed both throwaway files, re-ran coverage → gate **PASS** (exit 0). No throwaway file committed; no `lib/` product code remains.
+- **Pending gate seeded:** `integration_test/bs07/pending.dart` maps all **14** ACs to their owning behaviour phase (AC-1→FLOW-8, 2→FLOW-3, 3→ENGINE-3, 4→ENGINE-4, 5→ENGINE-5, 6/7/8→FLOW-4, 9→ENGINE-6, 10→FLOW-6, 11→ENGINE-7, 12→FLOW-7, 13→PROFILE-2, 14→FLOW-2), keyed to `--dart-define=BS07_RUN_PENDING=true` / `BS07_RUN_PENDING=1`. Enabler FLOW-5 excluded (owns no AC).
+- **Runner target:** `integration_test/self_assessment_test.dart` compiles and runs on host; 3 scaffold-guard tests green (pending map is exactly the 14 ACs; every owner is a real behaviour phase; each pending AC is skipped by default and runs when forced). No AC tests and no smoke test yet (stage 3).
+- **Gates:** unit ✅ (849) · coverage ✅ (PASS clean + FAIL-on-gap proven) · no acceptance/grade gate (scaffold kind). **Fix passes: 0/3.**
+- **Tokens / Time:** 3,619,703 · 13m 16s.
+
+### Checkpoint / Handoff
+
+- **Frozen for next phases:** pending-gate API in `integration_test/bs07/pending.dart` — `pendingACs` (owner map), `behaviorPhases` (set), `runPending`, `pendingSkipReason(acId, {forceRunPending})`, `acTestWidgets(acId, description, body)`. Behaviour phases un-pend by **deleting their AC row** in `pendingACs`; the scaffold guard's `expected` set in `self_assessment_test.dart` must shrink to match (keep it non-vacuous).
+- **Verification commands** (run from the worktree with `flutter` on PATH — `/Users/matthew.quirk/development/flutter/bin`):
+  - analyze: `flutter analyze`
+  - unit + coverage gate: `flutter test --coverage && dart run tool/coverage_gate.dart main`
+  - acceptance suite (later phases): `flutter test integration_test/self_assessment_test.dart -d <booted-udid>`; add `--dart-define=BS07_RUN_PENDING=true` for the red-baseline / un-pend run.
+- **Known flakes carried:** (1) coverage gate may record a const-folded ctor line as uncovered — re-run `flutter test --coverage` once; green on re-run ⇒ ignore. (2) the acceptance suite needs `-d <booted-udid>`; without it it runs zero tests and still exits 0 (false green). Neither affected this scaffold (the guard group is plain host `test()`).
+- **Next phase ENGINE-2 (shell):** add `lib/onboarding/engine/` domain types + `AssessmentEngine` interface + trivial shell impl, 100% line coverage on the new files, existing suite unchanged, no behaviour. Runs ∥ PROFILE-1. Behaviour stage still blocked by G-2 (acceptance tests, decided at ITEST-4).
 
 ## Phase 2 — shell: assessment domain types + engine interface
 
