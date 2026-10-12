@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | 12,779,960 | 1h 30m |
 | 2 | acceptance-tests | AC-1,2,10,11,12,13,14 | ✅ Done | 6,494,040 | 27m 23s |
 | 3 | acceptance-tests | AC-3,4,5,6,7,8,9 | ✅ Done | 5,169,129 | 18m 56s |
-| 4 | test-review | — (G-2) | ⏸ Awaiting review | 847,758 | 2m 56s |
+| 4 | test-review | — (G-2) | ✅ Done | 847,758 | 2m 56s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-- **G-2** (decision, ITEST-4's packet) *awaiting decision* — blocks every behavior phase. Packet assembled under Phase 4. Recorded via `/feature-next-phase --gate bs-07-cvd-self-assessment G-2 approved | "<changes>"`.
+- **G-2** (decision, ITEST-4's packet) ✅ Resolved 2026-10-12: **approved** — Matt Quirk. Packet (14 pending AC tests, clean red baseline, 7 A / 7 B-pending all deferred-driver limits, 3 judgment calls) accepted as-is; un-blocks every behavior phase.
 
 ## Phase 1 — harness + fixtures + pending gate + smoke
 
@@ -104,7 +104,7 @@
 
 ### Packet  <!-- filled by ITEST-4 -->
 
-**Phase:** ⏸ Awaiting review · **Gate:** G-2 *awaiting decision* (approving this packet un-blocks every behaviour phase).
+**Phase:** ✅ Done · **Gate:** G-2 ✅ Resolved 2026-10-12: **approved** — Matt Quirk (packet accepted as-is; un-blocks every behaviour phase).
 
 **Suite:** `integration_test/self_assessment_test.dart` — 14 *pending* `acTestWidgets` (ITEST-2 group AC-1,2,10,11,12,13,14; ITEST-3 group AC-3,4,5,6,7,8,9) + the never-pending smoke test + fixture guards + scaffold guards. Driven through the real app (`buildApp`), fakes are infrastructure only (`FakeSpeech`, `FakeHaptics`, `InMemoryPersistentStore`); no scoring/colour maths faked — direction and band graded against in-harness independent references.
 
