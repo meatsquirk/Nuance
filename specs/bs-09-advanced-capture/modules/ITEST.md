@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite (bs-09)
 
-**Status:** In progress — ITEST-1 done; next ITEST-2 → ITEST-3 (sequential: shared test file)
+**Status:** In progress — ITEST-1, ITEST-2 done; next ITEST-3 (sequential: shares the one AC-test file)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/advanced_capture_test.dart`,
 `integration_test/advanced_capture_harness.dart`, `integration_test/bs09/pending.dart`,
@@ -12,7 +12,7 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,883,964 | 54m 53s (57m 55s) |
-| ITEST-2 | acceptance-tests | AC-1,2,3,4,5 (pending) | ⬜ Todo | | |
+| ITEST-2 | acceptance-tests | AC-1,2,3,4,5 (pending) | ✅ Done | 8,028,691 | 18m 58s (21m 23s) |
 | ITEST-3 | acceptance-tests | AC-6,7,8,9,10 (pending) | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -109,6 +109,62 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
   catalogue rows; capture the run-pending red baseline below; grade each row (grade-A design).
 - **Exit criteria:** suite green with these pending; red baseline recorded; grade gate passed.
 
+### Result (ITEST-2)
+
+- **Landed:** five *pending* `acTestWidgets` in `advanced_capture_test.dart` — `AC-1: TorchWarnsColourTemp`,
+  `AC-2: ReadingLabelledTorchLit`, `AC-3: MultiPointSamplesAllAtOnce`, `AC-4: EachPointKeepsPositionValue`,
+  `AC-5: TwoPointsToComparison` — all through the real assembled app via the harness: `givenCaptureOf` +
+  `whenTurnTorchOn`/`whenAcknowledgeTorchWarning`/`whenMarkPoints`/`whenSamplePoints`/`whenCommit`/
+  `whenSendPairToComparison`, observing `h.state` (torchOn/torchWarning/markedPoints/markedReadings/
+  `lastCommittedSample.litByTorch`), the rendered `CaptureReadingsList`/`torchWarningKey`, and bs-03's live
+  `comparisonController.state` (slotA/slotB) after the pair handoff. AC-2 carries an in-test **torch-off
+  control** commit (G5); AC-4 checks each point's own value via `labDistance < 3` against
+  `SCENE_THREE_POINTS.colorsAtPoints` and the shown position label; AC-5 asserts both slots filled, slotA=P1,
+  slotB=P3, and the two slots > 3 apart.
+- **Gates:** `flutter analyze` clean; unit `flutter test --coverage` → **892 pass** (unchanged — no `lib/`
+  touched); coverage gate `dart run tool/coverage_gate.dart main` → **100%** on the 10 touched lib files
+  (ITEST-2 touched no `lib/`; cumulative set vs `main` unchanged). Acceptance (device lock, iPhone 17 sim
+  `5AB9D06D-…`): **default run green** — `+11 ~5`, all 11 ITEST-1 tests pass with AC-1..5 skipped, exit 0;
+  **run-pending red baseline** — `+11 -5`, exactly AC-1..5 fail (see the Red baseline table), every one with
+  `UnimplementedError` naming a real bs-09 behaviour phase, so none is green-at-baseline.
+- **Grade gate:** independent adversarial grade in a fresh subagent against G1–G6 →
+  `behavior-test-completeness-bs-09-advanced-capture.md` (in the feature dir). **ITEST-2: 5 A / 0 below A**;
+  it also (re-)graded the ITEST-1 artifacts → **11 A** (whole suite so far **16 A, 0 below A**).
+- **Test change (non-AC):** fixed the ITEST-1 scaffold guard
+  `pendingSkipReason skips a pending AC by default, runs it when forced` to drive both modes through the
+  explicit `forceRunPending` override instead of the ambient `runPending`. **Reason:** the run-pending
+  baseline sets `BS09_RUN_PENDING=true`, under which the ambient-mode form's `expect(…, isNotNull)` flipped to
+  null and failed — a mode-dependent (non-deterministic) guard. This is the same fix bs-08 ITEST-2 applied; it
+  strengthens the guard (both modes now asserted) and does not touch any AC test.
+- **Fix passes:** 1/3 — the first full run surfaced the mode-dependent ITEST-1 guard above under run-pending;
+  fixed it and re-ran to a clean baseline (default green, only AC-1..5 red). The AC tests' red baseline is the
+  designed outcome, not a fix.
+- **Tokens / time:** 8,028,691 · 18m 58s (21m 23s).
+
+### Checkpoint / Handoff (ITEST-2 → ITEST-3)
+
+- **Shared file — ITEST-3 appends, does not rewrite.** The AC tests live in the single
+  `advanced_capture_test.dart`; ITEST-3 adds a **second** `group` for AC-6..10 (`TestAC06_…`..`TestAC10_…`)
+  after the ITEST-2 group — re-read the file first and append. ITEST-2 and ITEST-3 cannot run in parallel
+  (one file); ITEST-3 depends on ITEST-2 being committed.
+- **Imports/helpers available:** `advanced_capture_harness.dart` (sole harness import) plus `capture_screen.dart`
+  (for `find.byType(CaptureScreen)`) and `package:flutter/widgets.dart` (for `tester.widget<Text>(…)`), already
+  imported at the top of the file. AC-6..10 observe the committed sample's `colorSpace`/`captureMode` and the
+  source capability getters (`supportsWideGamut`/`supportsRaw`) on the `SCENE_WIDE`/`SCENE_NARROW`/`SCENE_RAW`/
+  `SCENE_ANDROID`/`SCENE_IOS` fixtures; use `h.source.<getter>` for the Given preconditions and `h.whenCommit`
+  then `h.state.lastCommittedSample` for the Thens (commit needs only a non-null `currentSample`, set at boot —
+  no lock required).
+- **Red-baseline expectation for ITEST-3:** AC-6/7/8 commit on capability scenes; the shell's
+  `SoftwareCaptureSource` returns `srgb`/`processed` defaults today (SOURCE-2/3), so AC-6/AC-7 fail on their
+  `colorSpace == displayP3` / `captureMode == raw` Thens (not a throw), while AC-8 (`srgb` fallback) may be
+  **green at baseline** — strengthen or add a control and, if still green, un-pend + record *green at baseline*.
+  AC-9/AC-10 need SOURCE-4's normalization and are pending until then.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host); acceptance under the device lock — `flutter test integration_test/advanced_capture_test.dart
+  -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (default) and `--dart-define=BS09_RUN_PENDING=true` (red baseline),
+  run through `coord.sh with-lock bs-09-advanced-capture ITEST-3 --wait <n> -- …` (coord repo
+  `/Users/matthew.quirk/Nuance`). Always pass `-d <udid>` — no device ⇒ zero tests, false green.
+
 ## Phase ITEST-3 — AC tests: colour-space / RAW / normalization (AC-6,7,8,9,10)
 
 - **Kind:** acceptance-tests
@@ -129,11 +185,11 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_TorchWarnsColourTemp | — | — | SCREEN-2 | — |
-| AC-2 | TestAC02_ReadingLabelledTorchLit | — | — | CAPTURE-3 | — |
-| AC-3 | TestAC03_MultiPointSamplesAllAtOnce | — | — | CAPTURE-4 | — |
-| AC-4 | TestAC04_EachPointKeepsPositionValue | — | — | SCREEN-3 | — |
-| AC-5 | TestAC05_TwoPointsToComparison | — | — | CAPTURE-5 | — |
+| AC-1 | TestAC01_TorchWarnsColourTemp | `UnimplementedError('CAPTURE-3')` | When — `whenTurnTorchOn` (torch tap); the banner/torchOn Then is unreachable until the torch mechanism (CAPTURE-3) then the banner (SCREEN-2) land | SCREEN-2 | A |
+| AC-2 | TestAC02_ReadingLabelledTorchLit | `UnimplementedError('CAPTURE-3')` | When — `whenTurnTorchOn`, **after** the torch-off control commit asserted `litByTorch == false` | CAPTURE-3 | A |
+| AC-3 | TestAC03_MultiPointSamplesAllAtOnce | `UnimplementedError('CAPTURE-4')` | Given — `whenMarkPoints` (`markPoint`) | CAPTURE-4 | A |
+| AC-4 | TestAC04_EachPointKeepsPositionValue | `UnimplementedError('CAPTURE-4')` | Given — `whenMarkPoints` (`markPoint`); the show-each-reading Then is owned by SCREEN-3 (after CAPTURE-4) | SCREEN-3 | A |
+| AC-5 | TestAC05_TwoPointsToComparison | `UnimplementedError('CAPTURE-4')` | Given — `whenMarkPoints` (`markPoint`); the pair handoff Then is owned by CAPTURE-5 (after CAPTURE-4) | CAPTURE-5 | A |
 | AC-6 | TestAC06_TaggedWithColourSpace | — | — | SOURCE-2 | — |
 | AC-7 | TestAC07_RawWhereSupported | — | — | SOURCE-3 | — |
 | AC-8 | TestAC08_FallbackLabelsNarrower | — | — | SOURCE-2 | — |
