@@ -721,10 +721,9 @@ void main() {
         () {
       // Seeded with AC-1..AC-14 (ENGINE-1); each behaviour phase deletes its
       // AC's row here as it un-pends it, so this set shrinks by one per
-      // delivered AC. Delivered: AC-2 (FLOW-3).
+      // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3).
       const expected = <String>{
         'AC-1',
-        'AC-3',
         'AC-4',
         'AC-5',
         'AC-6',
@@ -761,10 +760,14 @@ void main() {
         expect(pendingSkipReason(ac, forceRunPending: true), isNull,
             reason: '$ac is pending — it must run in the run-pending pass');
       }
-      // An un-pended AC (AC-2, delivered by FLOW-3) always runs, in either mode.
+      // An un-pended AC (AC-2 by FLOW-3, AC-3 by ENGINE-3) always runs, in
+      // either mode.
       expect(pendingACs.containsKey('AC-2'), isFalse);
       expect(pendingSkipReason('AC-2', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
+      expect(pendingACs.containsKey('AC-3'), isFalse);
+      expect(pendingSkipReason('AC-3', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-3', forceRunPending: true), isNull);
       // An id absent from the map always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);

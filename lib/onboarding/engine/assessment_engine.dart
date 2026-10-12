@@ -44,6 +44,14 @@ abstract interface class AssessmentEngine {
   SeverityBand band(double severity);
 }
 
+/// The stable id of the Tier 1 red-green confusion question (AC-3): "do reds,
+/// browns and greens get mixed up?".
+///
+/// The intake step tags its answer with this id so
+/// [TieredAssessmentEngine.recordIntake] can tell the red-green confusion item
+/// apart from any later Tier 1 question and fold it into the prior.
+const String rgConfusionQuestionId = 'rg-confusion';
+
 /// A trivial [AssessmentEngine] for the shell stage: no real scoring.
 ///
 /// Every method returns a default so the pipeline compiles and the existing
@@ -87,4 +95,57 @@ class ShellAssessmentEngine implements AssessmentEngine {
 
   @override
   SeverityBand band(double severity) => SeverityBand.mild;
+}
+
+/// The real [AssessmentEngine] the production self-assessment scores through.
+///
+/// Introduced at ENGINE-3 with real Tier 1 intake scoring ([recordIntake]); the
+/// later tier phases replace one more inherited method each (ENGINE-4
+/// `seedFromDiagnosis`, ENGINE-5 `scoreScreening`, ENGINE-6 `scoreThreshold`,
+/// FLOW-5 `assemble`, ENGINE-7 `band`). Until a tier is built it inherits
+/// [ShellAssessmentEngine]'s trivial default, so the pipeline stays whole and
+/// the un-pended ACs are the only ones asserted.
+class TieredAssessmentEngine extends ShellAssessmentEngine {
+  /// Creates the production engine (const: it holds no state).
+  const TieredAssessmentEngine();
+
+  /// Folds the Tier 1 intake answers into a [StartingPrior] (AC-3).
+  ///
+  /// The red-green confusion question ([rgConfusionQuestionId]) is the only Tier
+  /// 1 item that leans the prior today: the more often the painter reports
+  /// mixing up reds, browns and greens, the stronger the evidence of a red-green
+  /// deficiency. Each such answer contributes a frequency weight; a non-zero
+  /// total leans the prior toward [ScreeningDirection.redGreen] (its weight
+  /// clamped to 1). "Never", an unrecognised answer and an empty intake
+  /// contribute nothing, leaving [StartingPrior.none]. Answers to other
+  /// questions are ignored (none is wired yet). The controller keeps at most one
+  /// answer per question, so re-answering replaces rather than accumulates.
+  @override
+  StartingPrior recordIntake(List<IntakeAnswer> answers) {
+    var weight = 0.0;
+    for (final answer in answers) {
+      if (answer.questionId == rgConfusionQuestionId) {
+        weight += _confusionFrequencyWeight(answer.value);
+      }
+    }
+    if (weight <= 0) return StartingPrior.none;
+    return StartingPrior(
+      direction: ScreeningDirection.redGreen,
+      weight: weight.clamp(0.0, 1.0),
+    );
+  }
+
+  /// The prior-weight contribution of a red-green confusion [frequency] answer:
+  /// a stronger lean the more often colours are confused. Unrecognised answers
+  /// (and "Never") contribute nothing.
+  static double _confusionFrequencyWeight(String frequency) {
+    switch (frequency) {
+      case 'Often':
+        return 1.0;
+      case 'Sometimes':
+        return 0.5;
+      default:
+        return 0.0;
+    }
+  }
 }

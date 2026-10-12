@@ -53,6 +53,11 @@ class OnboardingController extends ChangeNotifier {
   // ignore: prefer_final_fields
   OnboardingState _state = const OnboardingState();
 
+  /// The Tier 1 intake answers recorded so far, at most one per question
+  /// (ENGINE-3). Re-answering a question replaces its earlier answer;
+  /// [answerIntake] folds the whole set through [engine] into the prior.
+  final List<IntakeAnswer> _intakeAnswers = [];
+
   /// The current observable onboarding state.
   OnboardingState get state => _state;
 
@@ -90,10 +95,20 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Records a Tier 1 intake answer toward the starting prior — ENGINE-3 folds
-  /// it through [engine] (AC-3).
-  void answerIntake(IntakeAnswer answer) =>
-      throw UnimplementedError('answerIntake is wired in ENGINE-3 (AC-3)');
+  /// Records a Tier 1 intake [answer] toward the starting prior (AC-3).
+  ///
+  /// Keeps the latest answer per question (re-answering replaces the earlier
+  /// one), folds the whole intake set through [engine] into the new
+  /// [OnboardingState.prior], and notifies listeners. The scoring itself lives
+  /// in [engine] (D-9) — the controller only records the answer and holds the
+  /// result.
+  void answerIntake(IntakeAnswer answer) {
+    _intakeAnswers
+      ..removeWhere((a) => a.questionId == answer.questionId)
+      ..add(answer);
+    _state = _state.copyWith(prior: engine.recordIntake(_intakeAnswers));
+    notifyListeners();
+  }
 
   /// Seeds the prior from a reported prior clinical diagnosis — ENGINE-4 folds
   /// it through [engine] (AC-4).

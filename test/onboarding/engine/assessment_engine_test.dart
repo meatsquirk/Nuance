@@ -72,4 +72,57 @@ void main() {
       expect(engine.band(0.95), SeverityBand.mild);
     });
   });
+
+  group('TieredAssessmentEngine.recordIntake (Tier 1, AC-3)', () {
+    const engine = TieredAssessmentEngine();
+
+    IntakeAnswer confusion(String value) =>
+        IntakeAnswer(questionId: rgConfusionQuestionId, value: value);
+
+    test('"Often" leans the prior red-green with full weight', () {
+      final prior = engine.recordIntake([confusion('Often')]);
+      expect(prior.direction, ScreeningDirection.redGreen);
+      expect(prior.weight, 1.0);
+      expect(prior.type, isNull);
+    });
+
+    test('"Sometimes" leans red-green with partial weight', () {
+      final prior = engine.recordIntake([confusion('Sometimes')]);
+      expect(prior.direction, ScreeningDirection.redGreen);
+      expect(prior.weight, 0.5);
+    });
+
+    test('"Never" contributes nothing — the empty prior', () {
+      expect(engine.recordIntake([confusion('Never')]), StartingPrior.none);
+    });
+
+    test('an unrecognised answer contributes nothing', () {
+      expect(engine.recordIntake([confusion('Dunno')]), StartingPrior.none);
+    });
+
+    test('no intake answers leaves the empty prior', () {
+      expect(engine.recordIntake(const []), StartingPrior.none);
+    });
+
+    test('an answer to another question is ignored', () {
+      expect(
+        engine.recordIntake(
+            const [IntakeAnswer(questionId: 'other', value: 'Often')]),
+        StartingPrior.none,
+      );
+    });
+
+    test('repeated confusion answers accumulate and clamp to 1', () {
+      // Two "Often" answers would sum to 2.0; the weight clamps to 1.0 (the
+      // controller keeps only one per question, but the engine is total-safe).
+      final prior = engine.recordIntake([confusion('Often'), confusion('Often')]);
+      expect(prior.direction, ScreeningDirection.redGreen);
+      expect(prior.weight, 1.0);
+    });
+
+    test('inherits the trivial defaults for the tiers not yet built', () {
+      expect(engine.seedFromDiagnosis(CvdType.deutan), StartingPrior.none);
+      expect(engine.band(0.95), SeverityBand.mild);
+    });
+  });
 }

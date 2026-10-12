@@ -1,6 +1,6 @@
 # Module ENGINE — assessment domain (+ feature scaffold)
 
-**Status:** In progress — ENGINE-2 (shell) ✅ Done; next ENGINE-3 (behavior, AC-3) blocked by G-2 + FLOW-1
+**Status:** In progress — ENGINE-3 (behavior, AC-3) ✅ Done; next ENGINE-4 (AC-4) / ENGINE-5 (AC-5), serial on `assessment_engine.dart`
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/engine/` (`assessment_engine.dart`, `tier_results.dart`, `cvd_estimate.dart`, `severity_band.dart`); the feature scaffold (branch, baseline, coverage-gate confirmation, `integration_test/bs07/pending.dart`, runner target). Behavior phases also wire a thin controller call in `lib/onboarding/onboarding_controller.dart` (FLOW-owned file — noted per phase; merge-risky with FLOW).
 **Depends on:** — · **Blocks:** PROFILE, FLOW, ITEST
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 3,619,703 | 13m 16s |
 | 2 | shell | — | ✅ Done | 3,709,673 | 9m 29s |
-| 3 | behavior | AC-3 | ⬜ Todo | | |
+| 3 | behavior | AC-3 | ✅ Done | 9,029,262 | 16m 39s |
 | 4 | behavior | AC-4 | ⬜ Todo | | |
 | 5 | behavior | AC-5 | ⬜ Todo | | |
 | 6 | behavior | AC-9 | ⬜ Todo | | |
@@ -102,6 +102,25 @@
 - **Tasks:** implement `recordIntake` so "Often" to the reds/browns/greens question moves the prior toward red-green; wire the intake step's answer action to call it; expose the prior via the read endpoint.
 - **Exit criteria + Acceptance gate:** un-pend AC-3; `self_assessment_test.dart` green (`TestAC03_*` + all earlier un-pended ACs), later ACs still pending; unit gate + 100% coverage on touched files; grade gate A.
 - **Augments:** none.
+
+### Result
+
+- **Landed:** real Tier 1 intake scoring behind the engine (D-9). `lib/onboarding/engine/assessment_engine.dart` — new `TieredAssessmentEngine extends ShellAssessmentEngine` overriding `recordIntake` (the later tier phases override one more inherited method each), plus `const String rgConfusionQuestionId = 'rg-confusion'`. `recordIntake` leans the prior toward `redGreen` only when the red-green confusion question carries a non-zero frequency weight (Often 1.0 / Sometimes 0.5 / Never 0, clamped to 1); "Never", an unrecognised answer and an empty intake → `StartingPrior.none`. `lib/onboarding/onboarding_controller.dart` — `answerIntake` keeps one answer per question (`removeWhere`+add) and folds the set through `engine.recordIntake` into `state.prior`, then notifies (the only controller change — the FLOW-owned file; disjoint from FLOW-4's arrangement methods). `lib/onboarding/screens/intake_step.dart` — the Often/Sometimes/Never buttons wired to `answerIntake` (diagnosis entry stays inert → ENGINE-4). `lib/onboarding/screens/onboarding_host.dart` — injects `const TieredAssessmentEngine()` so production scores through the real engine; the controller's own default stays `ShellAssessmentEngine` (bare-construction tests unchanged). The read endpoint already exposed `state.prior` (no change needed).
+- **AC-3 un-pended:** row deleted from `integration_test/bs07/pending.dart`; scaffold guard `expected` set shrunk (AC-3 removed) + an un-pended-AC assertion added for AC-3 (mirrors AC-2).
+- **Gates:** analyze ✅ clean · unit ✅ **980** (967 → 980: +recordIntake engine tests, +intake controller tests, +new `intake_step_test.dart`; replaced the `answerIntake throws` stub test with real behaviour) · coverage ✅ **100%** on all touched files (gate PASS vs `main`, 23 lib files) · acceptance ✅ default suite **12 pass / 12 skip** on sim `5AB9D06D` under the device lock — **AC-3 runs and passes**, AC-2 (FLOW-3) still green, only the 12 later-phase ACs skipped · grade ✅ **A** (fresh independent subagent, G1–G6; confirmed the pending-A now discriminates against both named wrong implementations).
+- **Augmentations:** none (AC-3 had no augmentation row; it was graded A from the start).
+- **Fix passes:** 0/3 (green on the first full run of every gate).
+- **Tokens / Time:** 9,029,262 · 16m 39s active (2h 53m wall).
+
+### Checkpoint / Handoff
+
+- **Frozen for next phases:**
+  - `TieredAssessmentEngine` in `assessment_engine.dart` is the production engine. **ENGINE-4/5/6 and ENGINE-7/FLOW-5 each add one `@override`** (`seedFromDiagnosis`, `scoreScreening`, `scoreThreshold`, `band`, `assemble`) to this class; the un-overridden methods inherit `ShellAssessmentEngine`'s trivial default, so the pipeline stays whole. `rgConfusionQuestionId = 'rg-confusion'` is the intake tag ENGINE-4 reuses for the diagnosis path's question if needed.
+  - `OnboardingController.answerIntake` holds the Tier 1 answers in a private `_intakeAnswers` list, one per question (re-answer replaces). ENGINE-4's `reportDiagnosis` is the sibling controller action — **it edits a different method of the same (FLOW-owned) file**, so ENGINE-3+ENGINE-4 running together is a trivial same-file, different-region merge.
+  - The host injects the real engine; later ENGINE phases need no host change.
+- **Verification commands** (unchanged, from the worktree with `/Users/matthew.quirk/development/flutter/bin` on PATH): `flutter analyze`; `flutter test --coverage && dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/self_assessment_test.dart -d <booted-udid>` (device lane → `coord.sh with-lock`, sim `5AB9D06D`).
+- **Known gaps:** none introduced. The intake "Sometimes" weight (0.5) is covered by unit tests but not exercised by AC-3's scenario (which uses Often/Never) — intentional; the engine is total-safe for it.
+- **Next:** ENGINE-4 (AC-4, `seedFromDiagnosis`) and ENGINE-5 (AC-5, `scoreScreening`) are startable; both edit `assessment_engine.dart`, so **run them serially** (not in parallel with each other). FLOW-4 (AC-6/7/8) remains parallel-safe (disjoint files).
 
 ## Phase 4 — AC-4: a prior clinical diagnosis entered at intake seeds the prior
 

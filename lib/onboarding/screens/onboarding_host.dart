@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/build_app.dart';
 import '../../store/cvd_profile_store.dart';
 import '../../store/persistent_store.dart';
+import '../engine/assessment_engine.dart';
 import '../onboarding_controller.dart';
 import '../cvd_profile_read_endpoint.dart';
 import '../onboarding_read_endpoint.dart';
@@ -48,7 +49,12 @@ class _OnboardingHostState extends State<OnboardingHost> {
       final scope = context.dependOnInheritedWidgetOfExactType<AppScope>();
       final store = scope?.dependencies.store ?? InMemoryPersistentStore();
       _profileStore = CvdProfileStore(store);
-      _controller = OnboardingController(profileStore: _profileStore);
+      // The production flow scores through the real tiered engine (ENGINE-3 on);
+      // the controller's own default stays the shell stand-in for bare tests.
+      _controller = OnboardingController(
+        engine: const TieredAssessmentEngine(),
+        profileStore: _profileStore,
+      );
     }
   }
 

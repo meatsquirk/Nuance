@@ -43,15 +43,6 @@ void main() {
     setUp(() => controller = OnboardingController());
     tearDown(() => controller.dispose());
 
-    test('answerIntake throws (ENGINE-3)', () {
-      expect(
-        () => controller.answerIntake(
-          const IntakeAnswer(questionId: 'q', value: 'Often'),
-        ),
-        throwsUnimplementedError,
-      );
-    });
-
     test('reportDiagnosis throws (ENGINE-4)', () {
       expect(
         () => controller.reportDiagnosis(CvdType.deutan),
@@ -106,6 +97,52 @@ void main() {
 
     test('save throws (PROFILE-2)', () {
       expect(controller.save, throwsUnimplementedError);
+    });
+  });
+
+  group('OnboardingController intake (ENGINE-3, AC-3)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      // The real tiered engine (as the production host injects), so the recorded
+      // answer actually moves the prior.
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('an "Often" answer leans the prior red-green and notifies', () {
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Often'),
+      );
+      expect(controller.state.prior.direction, ScreeningDirection.redGreen);
+      expect(controller.state.prior.weight, greaterThan(0));
+      expect(notifications, 1);
+    });
+
+    test('a "Never" answer leaves the prior empty', () {
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Never'),
+      );
+      expect(controller.state.prior, StartingPrior.none);
+      expect(notifications, 1);
+    });
+
+    test('re-answering the same question replaces the earlier answer', () {
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Often'),
+      );
+      expect(controller.state.prior.direction, ScreeningDirection.redGreen);
+
+      // Change the mind to "Never": the prior reverts to empty rather than
+      // keeping the first answer's lean.
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Never'),
+      );
+      expect(controller.state.prior, StartingPrior.none);
+      expect(notifications, 2);
     });
   });
 
