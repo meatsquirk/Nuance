@@ -1,6 +1,6 @@
 # Module SPEECH — repeatable spoken output
 
-**Status:** In progress — SPEECH-1 (shell) + SPEECH-2 (AC-8) done; G-2 resolved; next SPEECH-3 (AC-9)
+**Status:** In progress — SPEECH-1 (shell) + SPEECH-2 (AC-8) + SPEECH-3 (AC-9) done; G-2 resolved; next SPEECH-4 (AC-10)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/repeatable_speech.dart` (the `RepeatableSpeech` wrapper behind the existing `Speech` seam), `lib/display/spoken_output_panel.dart` (the E50 panel: repeat control + last-spoken display, persistent), wiring in `lib/app/build_app.dart` / `lib/main.dart` (inject `RepeatableSpeech` app-wide). Unit tests under `test/a11y/` and `test/display/`.
 **Depends on:** DISPLAY-1 (scaffold) only — independent of the display state · **Blocks:** ITEST (observes speech), SIGNOFF
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | SPEECH-1 | shell | — | ✅ Done | 7,712,760 | 18m 46s |
 | SPEECH-2 | behavior | AC-8 | ✅ Done | 7,026,082 | 18m 22s |
-| SPEECH-3 | behavior | AC-9 | ⬜ Todo | | |
+| SPEECH-3 | behavior | AC-9 | ✅ Done | 3,647,171 | 13m 54s |
 | SPEECH-4 | behavior | AC-10 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -96,4 +96,20 @@
 - **Frozen / unchanged:** no production code changed; the SPEECH-1 interfaces (`RepeatableSpeech(inner)` with `speak`/`repeat`/`lastUtterance`/`canRepeat`; `SpeechScope.of`/`maybeOf`; `SpokenOutputPanel` keys `panelKey`/`repeatKey`/`lastSpokenKey`) stand as-is.
 - **Next — SPEECH-3 (AC-9, one consistent phrasing):** also green-at-baseline (SPEECH-1 routed every caller through the one injected `RepeatableSpeech`; bs-08 adds no second phrasing path, D-9). Expect another keep-green un-pend: delete the `'AC-9'` row in `bs08/pending.dart` and add `'AC-9'` to the `unpended` set in `display_test.dart`. **Re-read `display_test.dart` first** — SPEECH-3/SPEECH-4 share this file. AC-9's test (`givenComparison` → fill both slots → speak comparison + open readout for A + speak reading → `utterances` `hasLength(2)`, distinct) is already written and passes under run-pending.
 - **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · device acceptance under the shared lock: `bash <coord.sh> with-lock bs-08 SPEECH-3 --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs08 && export PATH=$HOME/development/flutter/bin:$PATH && flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'` (+ a `--dart-define=BS08_RUN_PENDING=true` pass). `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`. macOS has no `timeout` — redirect long device runs to a file.
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
+
+### Result — SPEECH-3 (2026-10-12)
+
+- **Landed (test-only un-pend; no `lib/` change):** AC-9 un-pended — deleted the `'AC-9': 'SPEECH-3'` row in `integration_test/bs08/pending.dart` (replaced by a comment; AC-9 now runs by default) and added `'AC-9'` to the scaffold-guard `unpended` set in `integration_test/display_test.dart` (now `{AC-1..AC-9}` ⇒ guard expects `pendingACs = {AC-10}`). AC-9 was **green at baseline**: SPEECH-1 already routed both speak paths through the one injected `RepeatableSpeech` — the comparison speak (E6 → `comparisonSpeech` → the wrapper passed as `speech:`) and the reading speak reached via E7 (pushed `ReadoutScreen` → `ReadoutController.speak` → `AppScope.of(context).speech`, the *same* wrapper) — and bs-08 adds no second phrasing path (D-9), so both utterances land in the single `FakeSpeech` (`appSpeech.inner == h.speech`). Keep-green un-pend, not new behaviour.
+- **Augmentation:** none required (no SPEECH-3-owned row). The fresh grader confirmed AC-9's test fully discriminates: `hasLength(2)` in the one injected sink is load-bearing (a second sink or a second phrasing route for *either* path would leave only one utterance), the `identical(appSpeech.inner, speech)` Given pins the single shared service, and the `reading != comparison` control rejects a single echoed utterance.
+- **Verification:** `flutter analyze` clean ("No issues found!"). `flutter test --coverage` = **931 unit pass**; coverage gate **100% line coverage on all 14 touched lib files — PASS** (no lib touched this phase, the set is unchanged). On-device acceptance (sim `5AB9D06D…`, under `coord.sh with-lock`): default run **20 pass / 1 skipped** (AC-9 now runs & passes; AC-10 skipped, pending SPEECH-4) — was 19/2; run-pending run (`--dart-define=BS08_RUN_PENDING=true`) **21 pass / 0 skipped** (AC-8/9/10 all pass). Fix passes: **0/3**.
+- **Grade:** fresh independent subagent re-graded all un-pended AC tests (AC-1..AC-9) + the edited scaffold guard → **10 A / 0 below A** (AC-9 A; AC-1..AC-8 re-confirmed A, unchanged). Grid appended at `../behavior-test-completeness-bs-08-display-simulation-and-spoken-output.md` (§ *Phase graded: SPEECH-3*).
+- **Tokens / Time:** see dashboard row (ledger `SPEECH-3`).
+
+### Checkpoint / Handoff — SPEECH-3
+
+- **State:** 9/10 ACs done (AC-1..AC-9). Only AC-10 (SPEECH-4) remains pending, then SIGNOFF-1.
+- **Frozen / unchanged:** no production code changed; the SPEECH-1 interfaces (`RepeatableSpeech(inner)` with `speak`/`repeat`/`lastUtterance`/`canRepeat`; `SpeechScope.of`/`maybeOf`; `SpokenOutputPanel` keys `panelKey`/`repeatKey`/`lastSpokenKey`) stand as-is.
+- **Next — SPEECH-4 (AC-10, panel never auto-dismisses):** also green-at-baseline (the E50 panel is a persistent widget with no timer / no auto-dismiss, D-10 — `panelKey` is present even when inert). Expect another keep-green un-pend: delete the `'AC-10'` row in `bs08/pending.dart` and add `'AC-10'` to the `unpended` set in `display_test.dart` (then the guard expects `pendingACs = {}`). **Re-read `display_test.dart` first** — SPEECH-4 shares this file. AC-10's test (`givenDisplay` → content-free control → `whenSpeakReading` → 60s idle pump + settle → panel + last-spoken text still present and unchanged) is already written and passes under run-pending.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · device acceptance under the shared lock: `bash <coord.sh> with-lock bs-08 SPEECH-4 --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs08 && export PATH=$HOME/development/flutter/bin:$PATH && flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'` (+ a `--dart-define=BS08_RUN_PENDING=true` pass). `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`. macOS has no `timeout` — redirect long device runs to a file.
 - **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
