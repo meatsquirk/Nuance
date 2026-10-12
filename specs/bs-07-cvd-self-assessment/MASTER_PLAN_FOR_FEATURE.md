@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — G-2 approved (2026-10-12); behaviour stage open — next FLOW-3 / ENGINE-3
+**Status:** In progress — behaviour stage open; FLOW-3 (AC-2) ✅ Done. Next: ENGINE-3 (AC-3) ∥ FLOW-4 (AC-6/7/8) startable; then ENGINE-4/5, ENGINE-6 per tier. FLOW-2 blocked on G-5.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -39,7 +39,7 @@
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
 | AC-1 | The estimate is labelled approximate and a clinical test is recommended | ITEST-2 `TestAC01_EstimateLabelledApproximate` | FLOW-8 | ⬜ Todo |
-| AC-2 | The lighting setup must be confirmed before testing begins | ITEST-2 `TestAC02_LightingConfirmedBeforeTesting` | FLOW-3 | ⬜ Todo |
+| AC-2 | The lighting setup must be confirmed before testing begins | ITEST-2 `TestAC02_LightingConfirmedBeforeTesting` | FLOW-3 | ✅ Done |
 | AC-3 | An intake answer contributes to the starting prior | ITEST-3 `TestAC03_IntakeAnswerToPrior` | ENGINE-3 | ⬜ Todo |
 | AC-4 | A prior clinical diagnosis entered at intake seeds the prior | ITEST-3 `TestAC04_DiagnosisSeedsPrior` | ENGINE-4 | ⬜ Todo |
 | AC-5 | Screening yields presence and the red-green versus blue-yellow direction | ITEST-3 `TestAC05_ScreeningPresenceAndDirection` | ENGINE-5 | ⬜ Todo |
@@ -119,7 +119,7 @@ Pre-seeded augmentations: AC-13's confusion-check behavioural assertion is confi
 |---|---|---|---|---|
 | ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1, ENGINE-2 ✅) |
 | PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | 🔄 In progress (PROFILE-1 ✅) |
-| FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | 🔄 In progress (FLOW-1 ✅) |
+| FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | 🔄 In progress (FLOW-1, FLOW-3 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1, ITEST-2, ITEST-3 ✅; ITEST-4 ✅ — G-2 approved 2026-10-12) |
 
 ## Dependency graph
@@ -171,8 +171,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ✅ Done | 5,169,129 | 18m 56s | 7 pending tests; default 10 pass/14 skip, run-pending +10/−14 (all fail cleanly on Then/precondition); grade 2 A (AC-3, AC-9) + 5 B-pending (AC-4→ENGINE-4, AC-5→ENGINE-5, AC-6/7/8→FLOW-4); fix 0/3 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 847,758 | 2m 56s | packet assembled (14-AC catalogue + red-baseline + 8 augmentation rows + 3 look-first calls); **G-2 approved 2026-10-12 — Matt Quirk** (packet accepted as-is); no code |
 | 9 | FLOW-2 | AC-14 progress indicator | ⬜ Todo | | | blocked: G-5 |
-| 10 | FLOW-3 | AC-2 lighting gate (Tier 0) | ⬜ Next | | | startable |
-| 11 | ENGINE-3 | AC-3 intake answer → prior (Tier 1) | ⬜ Todo | | | |
+| 10 | FLOW-3 | AC-2 lighting gate (Tier 0) | ✅ Done | 8,229,212 | 16m 09s (16m 09s) | AC-2 un-pended + green; unit 967; cov 100% (23); accept 11 pass/13 skip; grade A; fix 0/3 |
+| 11 | ENGINE-3 | AC-3 intake answer → prior (Tier 1) | ⬜ Next | | | startable (∥ FLOW-4) |
 | 12 | ENGINE-4 | AC-4 diagnosis seeds prior (Tier 1) | ⬜ Todo | | | |
 | 13 | ENGINE-5 | AC-5 screening presence + direction (Tier 2) | ⬜ Todo | | | |
 | 14 | FLOW-4 | AC-6/7/8 arrangement place/start-over/skip (Tier 3) | ⬜ Todo | | | slice |
@@ -189,9 +189,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**G-2 approved (2026-10-12) — behaviour stage is open.** Each phase is its own session (`/feature-next-phase bs07 <PHASE>`), then stop. Startable now (disjoint-ish: FLOW-* own the controller/screen, ENGINE-* own the engine):
-- **FLOW-3** (AC-2 lighting gate, Tier 0) and **ENGINE-3** (AC-3 intake→prior, Tier 1) — run in parallel sessions.
-- Then by tier: **ENGINE-4** (AC-4), **ENGINE-5** (AC-5), **FLOW-4** (AC-6/7/8), **ENGINE-6** (AC-9).
+**Behaviour stage open (G-2 approved 2026-10-12). FLOW-3 (AC-2) ✅ Done and reconciled into `feat/bs-07` @ `175e1f8`** — `OnboardingState.copyWith` now on `feat/bs-07`, so parallel worktrees can base on HEAD. Each phase is its own session (`/feature-next-phase bs07 <PHASE>`), then stop. Startable now (disjoint files — FLOW-* own the controller/screen, ENGINE-* own the engine):
+- **ENGINE-3** (AC-3 intake→prior, Tier 1) and **FLOW-4** (AC-6/7/8 arrangement, Tier 3) — run in parallel sessions.
+- Then by tier: **ENGINE-4** (AC-4), **ENGINE-5** (AC-5), **ENGINE-6** (AC-9).
 - **FLOW-5** (enabler) is the barrier before every result-step AC — must land before ENGINE-7/FLOW-6/7/8 and PROFILE-2.
 - **FLOW-2** (AC-14) still **blocked on G-5** (four-step vs five-tier, routed to spec author) — not startable until G-5 resolves.
 
@@ -214,7 +214,9 @@ Still open after this: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed
 | ITEST-3 | 6ee00b57 | 2026-10-12 10:16 EDT | 10:35 | 18m 56s | 18m 56s | claude-opus-4-8 | 84 | 221,924 | 4,890,544 | 56,577 | 5,169,129 | 7 pending AC tests (AC-3,4,5,6,7,8,9) landed: analyze clean, default 10 pass/14 skip, run-pending red baseline +10/-14 (all fail cleanly on Then/precondition naming owning phase), grade 2 A (AC-3,AC-9) + 5 B-pending (AC-4->ENGINE-4, AC-5->ENGINE-5, AC-6/7/8->FLOW-4; augmentation rows added), fix 0/3; no lib/ touched (coverage N/A); all 14 ACs now pending, suite 7 A/7 B-pending |
 | ITEST-4 | 25fd326c | 2026-10-12 10:59 EDT | 11:02 | 2m 56s | 2m 56s | claude-opus-4-8 | 22 | 64,372 | 771,555 | 11,809 | 847,758 | test-review: packet assembled (14-AC catalogue, red-baseline summary, 8 augmentation rows, 3 look-first calls); phase awaiting review, G-2 awaiting decision; no code |
 | SIGNOFF-DECISION | e8593bcd | 2026-10-12 11:10 EDT | 11:33 | 22m 40s | 2m 38s | claude-opus-4-8 | 40 | 48,830 | 1,281,327 | 10,682 | 1,340,879 | ITEST-4 approved |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 11:33** | **4h 30m** | **4h 01m** |  | **1,008** | **1,668,164** | **59,923,762** | **550,564** | **62,143,498** |  |
+| FLOW-3 | 5d3cf382 | 2026-10-12 12:02 EDT | 12:19 | 16m 09s | 16m 09s | claude-opus-4-8 | 146 | 191,105 | 7,984,152 | 53,809 | 8,229,212 | AC-2 un-pended + green; grade A; unit 967/cov 100% (23)/accept 11 pass·13 skip; fix 0/3 |
+| RECONCILE | a2103b3f | 2026-10-12 12:21 EDT | 12:26 | 4m 27s | 4m 27s | claude-opus-4-8 | 40 | 55,674 | 1,364,817 | 18,218 | 1,438,749 | FLOW-3 merged into feat/bs-07 @ 175e1f8 (ff); master plan reconciled (AC-2 ✅); FLOW-3 worktree+branch removed; ENGINE-3 ∥ FLOW-4 unblocked on HEAD |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 12:26** | **4h 50m** | **4h 21m** |  | **1,194** | **1,914,943** | **69,272,731** | **622,591** | **71,811,459** |  |
 
 ## Sign-off
 
