@@ -821,15 +821,111 @@ void main() {
     setUp(() => controller = CaptureController(source: _source()));
     tearDown(() => controller.dispose());
 
-    test('multi-point controls are not yet implemented (CAPTURE-4)', () {
-      expect(() => controller.markPoint(1, 2), throwsUnimplementedError);
-      expect(controller.clearMarkedPoints, throwsUnimplementedError);
-      expect(controller.sampleMarkedPoints, throwsUnimplementedError);
-    });
-
     test('send-pair-to-comparison is not yet implemented (CAPTURE-5)', () {
       expect(() => controller.sendPairToComparison(0, 1),
           throwsUnimplementedError);
+    });
+  });
+
+  group('multi-point sampling (CAPTURE-4, AC-3)', () {
+    // A 16×16 frame of a background field with three distinct discs so each
+    // marked point's area-average is its own colour, distinct from the others
+    // and from the field — the unit analogue of the acceptance SCENE_THREE_POINTS.
+    const background = Pixel(128, 128, 128);
+    const teal = Pixel(20, 160, 150);
+    const red = Pixel(210, 40, 50);
+    const yellow = Pixel(230, 210, 30);
+    const p1 = MarkedPoint(4, 4);
+    const p2 = MarkedPoint(12, 4);
+    const p3 = MarkedPoint(8, 12);
+
+    Frame threeDiscFrame() {
+      const discs = <(MarkedPoint, Pixel)>[(p1, teal), (p2, red), (p3, yellow)];
+      final pixels = <Pixel>[];
+      for (var y = 0; y < 16; y++) {
+        for (var x = 0; x < 16; x++) {
+          var px = background;
+          for (final (point, discPx) in discs) {
+            final dx = x - point.x;
+            final dy = y - point.y;
+            if (dx * dx + dy * dy <= 3 * 3) {
+              px = discPx;
+              break;
+            }
+          }
+          pixels.add(px);
+        }
+      }
+      return Frame(width: 16, height: 16, pixels: pixels);
+    }
+
+    SoftwareCaptureSource withFrame(Frame frame) => SoftwareCaptureSource(
+          SceneSpec(
+            groundTruth:
+                const ColorCoordinates(lightness: 40, a: -8, b: 24),
+            frames: [frame],
+          ),
+        );
+
+    test('markPoint appends each point to markedPoints, in order', () {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.markPoint(4, 4);
+      controller.markPoint(12, 4);
+
+      expect(controller.state.markedPoints, const [p1, p2]);
+      expect(notifications, 2, reason: 'each mark emits one change');
+    });
+
+    test('clearMarkedPoints empties the marked points', () {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      controller.markPoint(4, 4);
+      controller.markPoint(12, 4);
+      expect(controller.state.markedPoints, hasLength(2));
+
+      controller.clearMarkedPoints();
+
+      expect(controller.state.markedPoints, isEmpty);
+    });
+
+    test('sampleMarkedPoints returns one reading per point, each its own colour',
+        () async {
+      final controller = CaptureController(source: withFrame(threeDiscFrame()));
+      addTearDown(controller.dispose);
+      await pumpEventQueue(); // the live frame arrives and buffers
+      controller.markPoint(p1.x, p1.y);
+      controller.markPoint(p2.x, p2.y);
+      controller.markPoint(p3.x, p3.y);
+      // Radius 1 so each 3 px disc fully contains the sampling disc.
+      controller.setRadius(1);
+
+      controller.sampleMarkedPoints();
+
+      final readings = controller.state.markedReadings;
+      // One reading per marked point — not one averaged over them all.
+      expect(readings, hasLength(3));
+      expect(readings.map((r) => r.position).toList(), const [p1, p2, p3],
+          reason: 'each reading keeps its own marked position');
+      // Each reading carries that point's own disc colour, not the field or a
+      // neighbour's.
+      expect(_l1(readings[0].coordinates, teal), lessThan(12));
+      expect(_l1(readings[1].coordinates, red), lessThan(12));
+      expect(_l1(readings[2].coordinates, yellow), lessThan(12));
+    });
+
+    test('sampleMarkedPoints is a no-op before any frame has arrived', () {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      controller.markPoint(4, 4);
+
+      controller.sampleMarkedPoints();
+
+      expect(controller.state.markedReadings, isEmpty,
+          reason: 'nothing to sample until a frame has been seen');
     });
   });
 

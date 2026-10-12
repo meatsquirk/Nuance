@@ -262,15 +262,48 @@ class CaptureController extends ChangeNotifier {
       emit(_state.copyWith(clearTorchWarning: true));
 
   /// Marks the point ([x], [y]) on the live frame for multi-point sampling
-  /// (bs-09 AC-3). Behaviour lands in CAPTURE-4; the shell fixes the signature.
-  void markPoint(int x, int y) => throw UnimplementedError('CAPTURE-4');
+  /// (bs-09 AC-3).
+  ///
+  /// Appends a [MarkedPoint] to [CaptureState.markedPoints]; the painter can
+  /// mark several before sampling them together with [sampleMarkedPoints]. The
+  /// mark records only the position — the colour is read later, off the frame
+  /// current when the painter samples.
+  void markPoint(int x, int y) => emit(_state.copyWith(
+        markedPoints: [..._state.markedPoints, MarkedPoint(x, y)],
+      ));
 
-  /// Clears every marked point (bs-09 AC-3). Behaviour lands in CAPTURE-4.
-  void clearMarkedPoints() => throw UnimplementedError('CAPTURE-4');
+  /// Clears every marked point (bs-09 AC-3): empties
+  /// [CaptureState.markedPoints] so the painter can start a fresh set.
+  void clearMarkedPoints() =>
+      emit(_state.copyWith(markedPoints: const <MarkedPoint>[]));
 
-  /// Samples the current frame at each marked point, one
-  /// [MultiPointReading] per point (bs-09 AC-3). Behaviour lands in CAPTURE-4.
-  void sampleMarkedPoints() => throw UnimplementedError('CAPTURE-4');
+  /// Samples the current frame at every marked point at once, producing one
+  /// [MultiPointReading] per point (bs-09 AC-3).
+  ///
+  /// Each marked point is area-averaged on the most recent live frame at the
+  /// current [CaptureState.radiusPx] — the same area-average a single reading
+  /// uses — so every point gets its own colour rather than one reading averaged
+  /// across them all. The readings keep their marked positions so the screen can
+  /// show each point with its own value (AC-4) and any two can be sent to a
+  /// comparison (AC-5). A no-op before any frame has arrived (nothing to sample).
+  void sampleMarkedPoints() {
+    if (_recentFrames.isEmpty) return;
+    final frame = _recentFrames.last;
+    emit(_state.copyWith(
+      markedReadings: [
+        for (final point in _state.markedPoints)
+          MultiPointReading(
+            position: point,
+            coordinates: sampleAreaAverage(
+              frame,
+              point.x,
+              point.y,
+              radiusPx: _state.radiusPx,
+            ),
+          ),
+      ],
+    ));
+  }
 
   /// Sends the readings at marked points [i] and [j] to the comparison, opening
   /// it with both slots filled (bs-09 AC-5). Behaviour lands in CAPTURE-5; the

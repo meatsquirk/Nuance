@@ -1,6 +1,6 @@
 # Module CAPTURE — controller: torch, multi-point, send-to-comparison, colour-space stamp
 
-**Status:** In progress — CAPTURE-1/2 + CAPTURE-3 done (AC-2 un-pended); next CAPTURE-4 (AC-3), or SCREEN-2 (SCREEN module, AC-1) now unblocked
+**Status:** In progress — CAPTURE-1/2/3/4 done (AC-2, AC-3 un-pended); next CAPTURE-5 (AC-5), unblocked by CAPTURE-4 (same controller file — serial)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`,
 `lib/capture/capture_read_endpoint.dart`, `lib/domain/sample.dart` (new fields),
@@ -15,7 +15,7 @@
 | CAPTURE-1 | scaffold | — | ✅ Done | 7,102,221 | 15m 16s (6h 58m) |
 | CAPTURE-2 | shell | — | ✅ Done | 8,882,434 | 17m 46s |
 | CAPTURE-3 | behavior | AC-2 | ✅ Done | 10,436,918 | 15m 55s |
-| CAPTURE-4 | behavior | AC-3 | ⬜ Todo | | |
+| CAPTURE-4 | behavior | AC-3 | ✅ Done | 9,233,826 | 23m 46s |
 | CAPTURE-5 | behavior | AC-5 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -268,3 +268,65 @@ by G-2). **G-1 (spec approval) ✅ Resolved 2026-10-12: approved — Matt Quirk*
   multi-point sampling still stubs (CAPTURE-4); colour-space/RAW/normalization tags still shell defaults
   (SOURCE-2/3/4). CAPTURE-4 (AC-3) and SCREEN-2 (AC-1) are both unblocked by this phase; SOURCE-2 is
   independently startable.
+
+### Result — CAPTURE-4  <!-- 2026-10-12 -->
+
+- **Multi-point sampling implemented (AC-3 full).** `markPoint(x, y)` appends a `MarkedPoint` to
+  `CaptureState.markedPoints`; `clearMarkedPoints()` empties it (via `copyWith(markedPoints: const [])`, which
+  the set-forward merge honours since the empty list is non-null). `sampleMarkedPoints()` area-averages the
+  **most recent live frame** (`_recentFrames.last`) at each marked point at the current `radiusPx` — the same
+  `sampleAreaAverage` a single reading uses — producing one `MultiPointReading{position, coordinates}` per
+  point into `markedReadings`. A no-op before any frame has arrived (empty buffer). Each reading keeps its own
+  position so SCREEN-3 can show each point with its value (AC-4) and CAPTURE-5 can send any two to a comparison
+  (AC-5).
+- **`capture_state.dart` needed no change** — CAPTURE-2 already shipped `markedPoints`/`markedReadings` +
+  `copyWith`/`==`/`hashCode`; only `capture_controller.dart` carried behaviour this phase.
+- **Un-pended AC-3** (deleted its row in `integration_test/bs09/pending.dart`; added `'AC-3'` to the
+  `unpended` scaffold-guard set in `advanced_capture_test.dart`).
+- **Cross-file rendering fix (recorded):** filling `markedReadings` for the first time surfaced a `RenderFlex`
+  overflow (209 px) in `lib/widgets/color_chip.dart` — the readings-list label (position + full CIELAB value)
+  is wider than the region and a bare `Text` in a `mainAxisSize.min` Row cannot wrap. Fixed by wrapping that
+  `Text` in `Flexible` so it wraps instead of overflowing (ColorChip is consumed only by `CaptureReadingsList`;
+  its label format/AC-4 assertions are unaffected — substring match on `Point (x, y)`). Added a long-label wrap
+  test to `color_chip_test.dart`. Also flipped `capture_controls_test.dart`'s "Sample points" test from
+  asserting the deferred `UnimplementedError` to asserting live behaviour (no exception), mirroring the
+  CAPTURE-3 torch-control precedent in the same file.
+- **Gates:** `flutter analyze` clean. Unit `flutter test --coverage` → **900 passed**. Coverage gate
+  `dart run tool/coverage_gate.dart main` → **100%** on all 11 touched lib files (incl. `color_chip.dart`).
+  Acceptance (default mode, booted iPhone 17 sim under the verify lock):
+  `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D…` → **All tests passed** (14 passed /
+  7 pending-skipped) — AC-3 green alongside AC-1/AC-2; AC-4..10 still pending.
+- **Grade gate:** fresh adversarial subagent re-graded every un-pended AC test — **AC-3
+  (`MultiPointSamplesAllAtOnce`) = A**, AC-1/AC-2 = A (no drift). Whole suite **24 A / 0 below A**; nothing to
+  fix. AC-3's Then (length exactly 3 + position set equals the 3 distinct marked points) rejects both
+  "centre-only" and "one averaged reading"; per-point value correctness is AC-4's job (G6). Drift confirmed
+  none: AC-1/AC-2 are torch tests with empty readings lists, so no ColorChip mounts. Section appended to
+  `behavior-test-completeness-bs-09-advanced-capture.md`.
+- Augmentations: none assigned to CAPTURE-4; none newly enabled (multi-point is disjoint from the torch
+  mechanism, so no already-green bs-09 AC test can assert more).
+- Fix passes: 1/3 (first full run: host gates green; the acceptance run then caught the readings-list overflow,
+  fixed in one pass by the `Flexible` wrap + wrap test, then green. The analyze lint on the first host run — an
+  underscore-prefixed local — was a same-pass cleanup, not a gate failure.)
+- Tokens / Time: 9,233,826 · 23m 46s.
+- Closed by: unit + 100% coverage; acceptance AC-3 green; grade A.
+
+### Checkpoint / Handoff — CAPTURE-4
+
+- **Frozen for CAPTURE-5 / SCREEN-3:**
+  - `CaptureController.markPoint(x, y)` / `clearMarkedPoints()` / `sampleMarkedPoints()` are live.
+    `markedReadings` holds one `MultiPointReading{position, coordinates}` per marked point, indexed in
+    mark order (so `sendPairToComparison(i, j)` can resolve `markedReadings[i]`/`[j]`).
+  - `sampleMarkedPoints()` samples `_recentFrames.last` at `radiusPx`; it is a no-op with no buffered frame.
+  - `ColorChip` now wraps long labels (`Flexible(Text)`); `CaptureReadingsList` renders one `ColorChip` per
+    reading. SCREEN-3 (AC-4) owns the shown-rows rendering/labelling; the list already renders real readings.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host). Acceptance under the lock (booted sim, `-d <udid>` mandatory): `coord.sh with-lock
+  bs-09-advanced-capture <PHASE> --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs09 && export
+  PATH=…/flutter/bin:$PATH && flutter test integration_test/advanced_capture_test.dart -d
+  5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'`; run-pending adds `--dart-define=BS09_RUN_PENDING=true`. No `timeout`
+  on this macOS. Each un-pend still (a) deletes its `bs09/pending.dart` row and (b) adds its AC to the
+  `unpended` set in `advanced_capture_test.dart`.
+- **Known gaps:** readings rows not yet position-labelled on screen as AC-4 requires (SCREEN-3);
+  `sendPairToComparison` still a CAPTURE-5 stub; colour-space/RAW/normalization tags still SOURCE-2/3/4 shell
+  defaults. **Next in this module: CAPTURE-5** (AC-5, `sendPairToComparison` — serial on `capture_controller.dart`).
+  SCREEN-3 (AC-4) is independently startable now that real readings exist.

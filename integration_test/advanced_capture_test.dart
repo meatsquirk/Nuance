@@ -64,6 +64,7 @@ void main() {
     const unpended = <String>{
       'AC-1',
       'AC-2',
+      'AC-3',
     };
 
     test('pending map is the exact complement of the un-pended ACs across all '
