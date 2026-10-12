@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 done (harness + fixtures + independent reference + smoke + guards); next ITEST-2 (AC-1..7 pending), which shares `display_test.dart` with ITEST-3 (run them sequentially)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/display_harness.dart`, `integration_test/display_test.dart`, `integration_test/bs08/pending.dart` (seeded in DISPLAY-1), reuse of `integration_test/fakes/fake_speech.dart` + `fake_haptics.dart`.
 **Depends on:** all shell phases (DISPLAY-2, SETTINGS-1, SPEECH-1) · **Blocks:** every behavior phase (via G-2)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| ITEST-1 | acceptance-tests | — (harness + smoke) | ⬜ Todo | | |
+| ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,480,396 | 16m 57s |
 | ITEST-2 | acceptance-tests | AC-1..7 (pending) | ⬜ Todo | | |
 | ITEST-3 | acceptance-tests | AC-8,9,10 (pending) | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
@@ -33,6 +33,19 @@
 - **Files:** `integration_test/display_harness.dart`, `integration_test/display_test.dart`, `integration_test/bs08/pending.dart`
 - **Tasks:** build the Given/When/Then vocabulary over the wired shells; the fixtures (incl. `referenceProjectDichromat`); re-export the pending gate + fakes; a never-pending smoke test proving the shells wire end to end (settings open, controller reachable, speech wrapped), plus guard tests over the pending gate + fixtures.
 - **Exit criteria:** suite green with all 10 ACs pending (skipped) by default; smoke + guards pass; `-d <udid>` documented.
+
+### Result — ITEST-1 (2026-10-12)
+
+- **Landed (test-only — no `lib/` change):** `integration_test/display_harness.dart` — the bs-08 Given/When/Then vocabulary + fixtures + independent reference, re-exporting `bs08/pending.dart` + the fakes so an AC test imports only this file. `givenDisplay(tester, {sample, cvdProfile, initialSettings})` boots the **real** app through the one production `buildApp` on the Readout for the injected sample, injecting a recording `FakeSpeech`/`FakeHaptics`, the real `ColorScienceImpl`, the painter's `cvdProfile` and an app-wide `DisplayController` (so a scenario can start with a simulation set and the Thens read the live controller). `DisplayHarness` exposes `settings` (via `DisplayReadEndpoint`), `appSpeech` (the one `RepeatableSpeech`, `.inner == speech`), finders for the E2 entry / panel / E46·E47·E48 / theme / E50 panel·repeat·last-spoken / readout speak, and `when…` actions (`whenOpenSettings`/`whenCloseSettings`/`whenSelectSimulation`/`whenSetSeverity`/`whenSetGrayscale`/`whenSpeakReading`/`whenRepeatLastSpoken`) that drive the real shipped controls. Fixtures: `displaySample` (`DISPLAY_SAMPLE_LAB` = CIELAB (55, −25, 30), a muted yellow-green, sRGB ≈ (105,142,78) — non-grey and shifts under every type while staying in gamut), `cvdProfileFixture` (deutan). `referenceProjectDichromat(lab, type, {severity})` — an **independent** Viénot transcription (literal published matrices, not run-time-inverted like the shipped file) + `labDistance`.
+- **`display_test.dart`:** kept the 3 scaffold guards; added 6 fixture guards (reference identity at sev 0; grey stays grey; idempotent at full sev; clearly shifts the display sample for every type; near-black sub-knee branch finite; `labDistance` zero/positive) and 2 never-pending smoke tests (default settings via the read endpoint + E2 opens the panel with all three controls; the one app-wide speech wraps the injected sink, the readout speaks through it and the E50 panel reflects it). All 10 ACs remain pending/skipped (ITEST-2/3 register them).
+- **Verification:** `flutter analyze` clean (whole repo); `flutter test --coverage` = **914 unit pass**; coverage gate **PASS** — ITEST-1 touched no `lib/` file, so the gate's cumulative set (11 bs-08 shell files vs `main`) is unchanged at 100%. Integration suite on sim `5AB9D06D…` under the device lock: **11/11 pass** (3 scaffold + 6 guard + 2 smoke), 0 ACs un-pended. Scaffold-test discipline met (no vacuous passes — guards assert real model properties and loop over the fixed `CvdType.values`; honest comments; deterministic — `pumpAndSettle`, no sleeps). No AC tests written ⇒ no red baseline / grade grid this phase (ITEST-2/3). Fix passes: 0/3.
+- **Tokens / Time:** see dashboard row (ledger `ITEST-1`).
+
+### Checkpoint / Handoff — ITEST-1
+
+- **Frozen for ITEST-2 / ITEST-3:** import `display_harness.dart` (it re-exports `bs08/pending.dart` + the fakes). Register each AC with `acTestWidgets('AC-n', '<slug>', (tester) async { … })`. Build the Given with `givenDisplay(tester, …)`; drive the When through `DisplayHarness.when…`; read the Then through `h.settings` (type/severity/grayscale), the rendered swatch colour (ITEST-2 reads the `ColorChip`/`Container` decoration once DISPLAY-3/4 render it) graded vs `referenceProjectDichromat(displaySample.coordinates, type, severity)` → convert to sRGB with the real `colorScience.toSRGB` (the colour-space conversion is shared; only the **projection** is independent), `h.speech.utterances` / `h.appSpeech`, and the E50 finders. `whenSetSeverity(percent)` taps the slider at the fractional position — assert the resulting `simulationSeverity` within a small tolerance, and refine the interaction if the shipped slider needs it. The two AC-test phases **share `display_test.dart` → run sequentially** (not in parallel).
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · device lane under the shared lock: `FNP_COORD_REPO=/Users/matthew.quirk/Nuance ~/.claude/skills/feature-next-phase/scripts/coord.sh with-lock bs-08 <PHASE> --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs08 && flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'` (default; add `--dart-define=BS08_RUN_PENDING=true` for the run-pending / red baseline). Toolchain: `/Users/matthew.quirk/development/flutter/bin` on PATH; booted sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
 
 ## Phase ITEST-2 — AC-1..7 (display) pending + red baseline
 

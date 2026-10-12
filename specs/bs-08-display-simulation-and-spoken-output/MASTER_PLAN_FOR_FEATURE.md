@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** In progress — shells complete (SPEECH-1 done), next ITEST-1 (acceptance stage)
+**Status:** In progress — ITEST-1 done (harness + smoke), next ITEST-2 (AC-1..7 pending)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -107,7 +107,7 @@ Pre-seeded augmentations: none expected — each AC test fails at baseline on it
 | DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | 🔄 In progress (SETTINGS-1 ✅) |
 | SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1 ✅) |
 
 ## Dependency graph
 
@@ -151,8 +151,8 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 2 | DISPLAY-2 | shell: `DisplaySettings` + `DisplayController` + `DisplayScope` + `DisplayReadEndpoint` + buildApp wiring + inert simulation/grayscale rendering seams | ✅ Done | 8,485,201 | 15m 04s (15m 04s) | analyze clean, 885 unit (849+36), gate 100% on 8 touched files, bs08 integration green on sim; all seams inert (behaviour unchanged) |
 | 3 | SETTINGS-1 | shell: open-from-any-screen entry (E2) + settings panel scaffold (E46/E47/E48 + theme control) wired to `DisplayController` stubs + keyed regions | ✅ Done | 7,453,272 | 19m 27s (19m 27s) | analyze clean, 899 unit (885+14), gate 100% on 9 touched files, bs08 integration 3/3 on sim; chrome via MaterialApp.builder, panel binds frozen setters, all effects inert; fix 2/3 |
 | 4 | SPEECH-1 | shell: `RepeatableSpeech` behind the `Speech` seam + app-wide inject + spoken-output panel (E50) + observation | ✅ Done | 7,712,760 | 18m 46s (18m 46s) | analyze clean, 914 unit (899+15), gate 100% on 11 touched files, bs08 integration 3/3 on sim; app-wide speech wrapped + re-provided via AppScope, E50 panel in chrome; fix 0/3 |
-| 5 | ITEST-1 | acceptance-tests: harness, fixtures, independent reference, pending gate (10 ACs), smoke test | ⬜ Next | | | startable; begins the acceptance stage |
-| 6 | ITEST-2 | acceptance-tests: AC-1..7 (display, pending) + red baseline | ⬜ Todo | | | seq w/ ITEST-3 |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures, independent reference, pending gate (10 ACs), smoke test | ✅ Done | 8,480,396 | 16m 57s | analyze clean, 914 unit, gate PASS (no lib touched), integration 11/11 on sim (3 scaffold + 6 guard + 2 smoke), 10 ACs still pending; fix 0/3 |
+| 6 | ITEST-2 | acceptance-tests: AC-1..7 (display, pending) + red baseline | ⬜ Next | | | seq w/ ITEST-3 (shared display_test.dart) |
 | 7 | ITEST-3 | acceptance-tests: AC-8,9,10 (speech, pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | DISPLAY-3 | AC-2 simulation off = trichromat (identity path) | ⬜ Todo | | | foundational transform chokepoint |
@@ -171,9 +171,9 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 ## Next phase
 
-All shells are complete (DISPLAY-1/2, SETTINGS-1, SPEECH-1). **ITEST-1** (acceptance-tests) is next and **startable** — it builds the bs-08 harness (Given/When/Then vocabulary, fixtures, the independent reference projection) in `display_harness.dart` over the wired shells and adds a never-pending smoke test, on branch `feat/bs-08-display-simulation-and-spoken-output` (worktree `/Users/matthew.quirk/Nuance-bs08`).
+ITEST-1 is done — the bs-08 harness (`integration_test/display_harness.dart`: vocabulary + fixtures + independent `referenceProjectDichromat`) and the never-pending smoke + fixture guards are green on the sim; all 10 ACs remain pending.
 
-After ITEST-1: ITEST-2 (AC-1..7 pending) and ITEST-3 (AC-8,9,10 pending) **share `display_test.dart` → run sequentially**, then ITEST-4 is the test review whose gate **G-2** a human approves before any behavior phase (DISPLAY-3..8, SETTINGS-2, SPEECH-2..4). G-2 is the only open gate. The acceptance stage uses the booted sim + the device lane (`coord.sh with-lock`).
+**ITEST-2** (acceptance-tests: one *pending* `acTestWidgets` per AC-1..7 + red baseline + grade) is next and **startable** — it imports the harness and writes the display ACs into `display_test.dart`. **ITEST-3** (AC-8,9,10) **shares that file → run the two sequentially** (ITEST-2 then ITEST-3), not in parallel. Then ITEST-4 is the test review whose gate **G-2** a human approves before any behavior phase (DISPLAY-3..8, SETTINGS-2, SPEECH-2..4). G-2 is the only open gate. The acceptance stage uses the booted sim + the device lane (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`), both the default and `--dart-define=BS08_RUN_PENDING=true` (red baseline) runs.
 
 ## Token usage
 
@@ -187,7 +187,8 @@ After ITEST-1: ITEST-2 (AC-1..7 pending) and ITEST-3 (AC-8,9,10 pending) **share
 | DISPLAY-2 | 5897d58f | 2026-10-12 05:06 EDT | 05:21 | 15m 04s | 15m 04s | claude-opus-4-8 | 128 | 155,894 | 8,274,506 | 54,673 | 8,485,201 | shell green — analyze clean, 885 unit (849+36), coverage gate 100% on 8 touched files, bs08 integration 3/3 on sim; DisplaySettings/Controller/Scope/ReadEndpoint + buildApp _DisplayRoot wiring + inert simulateColor/GrayscaleFilter + ColorChip reads DisplayScope (identity); behaviour unchanged |
 | SETTINGS-1 | 03b0c96d | 2026-10-12 05:47 EDT | 06:06 | 19m 27s | 19m 27s | claude-opus-4-8 | 124 | 132,630 | 7,272,929 | 47,589 | 7,453,272 | shell: E2 entry + settings panel (E46/E47/E48 + theme, D-11) via MaterialApp.builder chrome, bound to frozen DisplayController setters; 899 unit, gate 100% on 9 files, integration 3/3; fix 2/3 |
 | SPEECH-1 | 12232428 | 2026-10-12 07:10 EDT | 07:29 | 18m 46s | 18m 46s | claude-opus-4-8 | 112 | 161,614 | 7,484,024 | 67,010 | 7,712,760 | shell green — analyze clean, 914 unit (899+15), coverage gate 100% on 11 touched files, bs08 integration scaffold guard 3/3 on sim; RepeatableSpeech wraps the app-wide Speech + re-provided via AppScope (readout/comparison/recipes all repeatable), SpeechScope + E50 SpokenOutputPanel surfaced in chrome; fix 0/3 |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 07:29** | **1h 37m** | **1h 34m** |  | **596** | **755,447** | **37,733,600** | **307,606** | **38,797,249** |  |
+| ITEST-1 | 0917e31c | 2026-10-12 07:54 EDT | 08:11 | 16m 57s | 16m 57s | claude-opus-4-8 | 114 | 187,077 | 8,228,434 | 64,771 | 8,480,396 | harness + fixtures + independent reference + smoke/guards; analyze clean, 914 unit, gate PASS (no lib touched), integration 11/11 on sim, 10 ACs still pending; fix 0/3 |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 08:11** | **1h 54m** | **1h 51m** |  | **710** | **942,524** | **45,962,034** | **372,377** | **47,277,645** |  |
 
 ## Sign-off
 
