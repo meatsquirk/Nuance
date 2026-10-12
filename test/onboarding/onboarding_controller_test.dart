@@ -43,13 +43,6 @@ void main() {
     setUp(() => controller = OnboardingController());
     tearDown(() => controller.dispose());
 
-    test('reportDiagnosis throws (ENGINE-4)', () {
-      expect(
-        () => controller.reportDiagnosis(CvdType.deutan),
-        throwsUnimplementedError,
-      );
-    });
-
     test('scoreScreening throws (ENGINE-5)', () {
       expect(
         () => controller.scoreScreening(const []),
@@ -142,6 +135,40 @@ void main() {
         const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Never'),
       );
       expect(controller.state.prior, StartingPrior.none);
+      expect(notifications, 2);
+    });
+  });
+
+  group('OnboardingController prior diagnosis (ENGINE-4, AC-4)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('reportDiagnosis seeds the prior as the reported type and notifies', () {
+      controller.reportDiagnosis(CvdType.deutan);
+      expect(controller.state.prior.type, CvdType.deutan);
+      expect(controller.state.prior.direction, ScreeningDirection.redGreen);
+      expect(controller.state.prior.weight, 1.0);
+      expect(notifications, 1);
+    });
+
+    test('a reported diagnosis overrides a lean the intake had formed', () {
+      // An intake answer first leans the prior red-green with no type...
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Often'),
+      );
+      expect(controller.state.prior.type, isNull);
+
+      // ...then a reported tritan diagnosis replaces the whole prior.
+      controller.reportDiagnosis(CvdType.tritan);
+      expect(controller.state.prior.type, CvdType.tritan);
+      expect(controller.state.prior.direction, ScreeningDirection.blueYellow);
       expect(notifications, 2);
     });
   });

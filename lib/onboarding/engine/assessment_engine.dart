@@ -148,4 +148,25 @@ class TieredAssessmentEngine extends ShellAssessmentEngine {
         return 0.0;
     }
   }
+
+  /// Seeds a [StartingPrior] from a prior clinical diagnosis (AC-4).
+  ///
+  /// A reported diagnosis is authoritative evidence, so the prior leans fully
+  /// (weight 1) toward the diagnosed [type], along the confusion axis that type
+  /// sits on ([_directionForType]: protan/deutan are red-green, tritan is
+  /// blue-yellow). This is the strongest Tier 1 signal — unlike [recordIntake]'s
+  /// graded self-report, the type itself is known, so the prior carries it.
+  @override
+  StartingPrior seedFromDiagnosis(CvdType type) => StartingPrior(
+        type: type,
+        direction: _directionForType(type),
+        weight: 1.0,
+      );
+
+  /// The confusion axis a dichromacy [type] sits on: tritan is the blue-yellow
+  /// (S-cone) line; protan and deutan are the red-green (L/M-cone) line.
+  static ScreeningDirection _directionForType(CvdType type) =>
+      type == CvdType.tritan
+          ? ScreeningDirection.blueYellow
+          : ScreeningDirection.redGreen;
 }

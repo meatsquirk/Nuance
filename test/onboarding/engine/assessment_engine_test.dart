@@ -121,8 +121,33 @@ void main() {
     });
 
     test('inherits the trivial defaults for the tiers not yet built', () {
-      expect(engine.seedFromDiagnosis(CvdType.deutan), StartingPrior.none);
       expect(engine.band(0.95), SeverityBand.mild);
+    });
+  });
+
+  group('TieredAssessmentEngine.seedFromDiagnosis (Tier 1, AC-4)', () {
+    const engine = TieredAssessmentEngine();
+
+    test('a deutan diagnosis seeds the prior as deutan, red-green, full weight',
+        () {
+      final prior = engine.seedFromDiagnosis(CvdType.deutan);
+      expect(prior.type, CvdType.deutan);
+      expect(prior.direction, ScreeningDirection.redGreen);
+      expect(prior.weight, 1.0);
+    });
+
+    test('a protan diagnosis seeds protan on the red-green axis', () {
+      final prior = engine.seedFromDiagnosis(CvdType.protan);
+      expect(prior.type, CvdType.protan);
+      expect(prior.direction, ScreeningDirection.redGreen);
+      expect(prior.weight, 1.0);
+    });
+
+    test('a tritan diagnosis seeds tritan on the blue-yellow axis', () {
+      final prior = engine.seedFromDiagnosis(CvdType.tritan);
+      expect(prior.type, CvdType.tritan);
+      expect(prior.direction, ScreeningDirection.blueYellow);
+      expect(prior.weight, 1.0);
     });
   });
 }

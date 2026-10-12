@@ -542,17 +542,23 @@ void main() {
 
         // When: report a prior clinical diagnosis of deutan (ENGINE-4 seeds the
         // prior through the engine).
-        await h.whenReportDiagnosis();
+        await h.whenReportDiagnosis(type: CvdType.deutan);
 
         // Then: the starting prior is seeded as deutan.
         expect(h.prior.type, CvdType.deutan,
             reason: 'reporting a deutan diagnosis seeds the prior as deutan '
                 '(ENGINE-4)');
-        // Limited — B pending ENGINE-4: the frozen whenReportDiagnosis() only
-        // opens the diagnosis entry and carries no type, so this cannot yet
-        // reject "seeds the WRONG type" (a protan control). ENGINE-4 adds the
-        // type picker + a type argument on the driver and the protan control
-        // (see Test augmentations in modules/ITEST.md).
+
+        // Control (ENGINE-4 augmentation): a fresh flow reporting a *protan*
+        // diagnosis seeds the prior as protan, not deutan — this rejects a
+        // seed that ignores the reported type or always returns deutan (which
+        // the deutan case alone could not tell apart from the right behaviour).
+        final control = await givenSelfAssessment(tester);
+        await control.whenReportDiagnosis(type: CvdType.protan);
+        expect(control.prior.type, CvdType.protan,
+            reason: 'reporting a protan diagnosis seeds the prior as protan');
+        expect(control.prior.type, isNot(CvdType.deutan),
+            reason: 'the seed follows the reported type, not a fixed deutan');
       },
     );
 
@@ -721,10 +727,9 @@ void main() {
         () {
       // Seeded with AC-1..AC-14 (ENGINE-1); each behaviour phase deletes its
       // AC's row here as it un-pends it, so this set shrinks by one per
-      // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3).
+      // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3), AC-4 (ENGINE-4).
       const expected = <String>{
         'AC-1',
-        'AC-4',
         'AC-5',
         'AC-6',
         'AC-7',

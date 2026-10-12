@@ -26,8 +26,8 @@ void main() {
   Finder answer(String label) => find.widgetWithText(TextButton, label);
 
   group('IntakeStep (ENGINE-3, AC-3)', () {
-    testWidgets('renders the confusion question, live answers and an inert '
-        'diagnosis entry', (tester) async {
+    testWidgets('renders the confusion question, live answers and a live '
+        'diagnosis entry (picker closed until opened)', (tester) async {
       await pumpStep(tester);
 
       expect(find.byKey(IntakeStep.regionKey), findsOneWidget);
@@ -40,11 +40,16 @@ void main() {
           reason: '$label records an intake answer',
         );
       }
-      // The prior-diagnosis entry stays inert until ENGINE-4.
+      // The prior-diagnosis entry is live (ENGINE-4) and the type picker is
+      // hidden until it is opened.
       expect(
         tester.widget<TextButton>(answer('I have a diagnosis')).onPressed,
-        isNull,
+        isNotNull,
       );
+      for (final label in IntakeStep.diagnosisTypeLabels.values) {
+        expect(answer(label), findsNothing,
+            reason: '$label stays hidden until the entry is opened');
+      }
     });
 
     testWidgets('tapping "Often" records an answer that leans the prior red-green',
@@ -67,5 +72,35 @@ void main() {
 
       expect(controller.state.prior, StartingPrior.none);
     });
+  });
+
+  group('IntakeStep prior-diagnosis picker (ENGINE-4, AC-4)', () {
+    testWidgets('"I have a diagnosis" reveals a button per diagnosable type',
+        (tester) async {
+      await pumpStep(tester);
+
+      await tester.tap(answer('I have a diagnosis'));
+      await tester.pumpAndSettle();
+
+      for (final label in IntakeStep.diagnosisTypeLabels.values) {
+        expect(answer(label), findsOneWidget,
+            reason: '$label is offered once the entry is opened');
+      }
+    });
+
+    for (final entry in IntakeStep.diagnosisTypeLabels.entries) {
+      testWidgets('picking "${entry.value}" seeds the prior as ${entry.key.name}',
+          (tester) async {
+        final controller = await pumpStep(tester);
+
+        await tester.tap(answer('I have a diagnosis'));
+        await tester.pumpAndSettle();
+        await tester.tap(answer(entry.value));
+        await tester.pump();
+
+        expect(controller.state.prior.type, entry.key);
+        expect(controller.state.prior.weight, 1.0);
+      });
+    }
   });
 }

@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — behaviour stage open; FLOW-3 (AC-2) + ENGINE-3 (AC-3) ✅ Done. Next: FLOW-4 (AC-6/7/8) parallel-safe; ENGINE-4 (AC-4) ∥ ENGINE-5 (AC-5) serial on the engine file; then ENGINE-6 per tier. FLOW-2 blocked on G-5.
+**Status:** In progress — behaviour stage open; FLOW-3 (AC-2) + ENGINE-3 (AC-3) + ENGINE-4 (AC-4) ✅ Done. Next: FLOW-4 (AC-6/7/8) parallel-safe; ENGINE-5 (AC-5) then ENGINE-6 (AC-9) serial on the engine file. FLOW-2 blocked on G-5.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -41,7 +41,7 @@
 | AC-1 | The estimate is labelled approximate and a clinical test is recommended | ITEST-2 `TestAC01_EstimateLabelledApproximate` | FLOW-8 | ⬜ Todo |
 | AC-2 | The lighting setup must be confirmed before testing begins | ITEST-2 `TestAC02_LightingConfirmedBeforeTesting` | FLOW-3 | ✅ Done |
 | AC-3 | An intake answer contributes to the starting prior | ITEST-3 `TestAC03_IntakeAnswerToPrior` | ENGINE-3 | ✅ Done |
-| AC-4 | A prior clinical diagnosis entered at intake seeds the prior | ITEST-3 `TestAC04_DiagnosisSeedsPrior` | ENGINE-4 | ⬜ Todo |
+| AC-4 | A prior clinical diagnosis entered at intake seeds the prior | ITEST-3 `TestAC04_DiagnosisSeedsPrior` | ENGINE-4 | ✅ Done |
 | AC-5 | Screening yields presence and the red-green versus blue-yellow direction | ITEST-3 `TestAC05_ScreeningPresenceAndDirection` | ENGINE-5 | ⬜ Todo |
 | AC-6 | The painter places colour caps in hue order | ITEST-3 `TestAC06_PlaceCapNextPosition` | FLOW-4 | ⬜ Todo |
 | AC-7 | Starting over clears the arrangement | ITEST-3 `TestAC07_StartOverClearsArrangement` | FLOW-4 | ⬜ Todo |
@@ -117,7 +117,7 @@ Pre-seeded augmentations: AC-13's confusion-check behavioural assertion is confi
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1, ENGINE-2, ENGINE-3 ✅) |
+| ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1, ENGINE-2, ENGINE-3, ENGINE-4 ✅) |
 | PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | 🔄 In progress (PROFILE-1 ✅) |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | 🔄 In progress (FLOW-1, FLOW-3 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1, ITEST-2, ITEST-3 ✅; ITEST-4 ✅ — G-2 approved 2026-10-12) |
@@ -173,8 +173,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 9 | FLOW-2 | AC-14 progress indicator | ⬜ Todo | | | blocked: G-5 |
 | 10 | FLOW-3 | AC-2 lighting gate (Tier 0) | ✅ Done | 8,229,212 | 16m 09s (16m 09s) | AC-2 un-pended + green; unit 967; cov 100% (23); accept 11 pass/13 skip; grade A; fix 0/3 |
 | 11 | ENGINE-3 | AC-3 intake answer → prior (Tier 1) | ✅ Done | 9,029,262 | 16m 39s (2h 53m) | AC-3 un-pended + green; real `TieredAssessmentEngine.recordIntake` (host-injected); unit 980; cov 100% (23); accept 12 pass/12 skip; grade A; fix 0/3 |
-| 12 | ENGINE-4 | AC-4 diagnosis seeds prior (Tier 1) | ⬜ Next | | | startable; serial w/ ENGINE-5 on engine file |
-| 13 | ENGINE-5 | AC-5 screening presence + direction (Tier 2) | ⬜ Todo | | | |
+| 12 | ENGINE-4 | AC-4 diagnosis seeds prior (Tier 1) | ✅ Done | 12,538,664 | 16m 43s | AC-4 un-pended + green; `seedFromDiagnosis` override + `reportDiagnosis` + intake type-picker; AC-4 B-pending→A (protan control); unit 988; cov 100% (23); accept 13 pass/11 skip; grade 3×A; fix 0/3 |
+| 13 | ENGINE-5 | AC-5 screening presence + direction (Tier 2) | ⬜ Next | | | startable; serial w/ ENGINE-6 on engine file |
 | 14 | FLOW-4 | AC-6/7/8 arrangement place/start-over/skip (Tier 3) | ⬜ Todo | | | slice |
 | 15 | ENGINE-6 | AC-9 threshold severity (Tier 4) | ⬜ Todo | | | |
 | 16 | FLOW-5 | enabler: assemble estimate + advance to result step | ⬜ Todo | | | barrier before result-step ACs |
@@ -189,10 +189,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**Behaviour stage open (G-2 approved 2026-10-12). FLOW-3 (AC-2) + ENGINE-3 (AC-3) ✅ Done and on `feat/bs-07`.** `TieredAssessmentEngine` is now the production engine (host-injected); each later ENGINE phase adds one `@override`. Each phase is its own session (`/feature-next-phase bs07 <PHASE>`), then stop. Startable now:
+**Behaviour stage open (G-2 approved 2026-10-12). FLOW-3 (AC-2) + ENGINE-3 (AC-3) + ENGINE-4 (AC-4) ✅ Done and on `feat/bs-07`.** `TieredAssessmentEngine` (host-injected) now overrides `recordIntake` + `seedFromDiagnosis`; each later ENGINE phase adds one more `@override`. Each phase is its own session (`/feature-next-phase bs07 <PHASE>`), then stop. Startable now:
 - **FLOW-4** (AC-6/7/8 arrangement, Tier 3) — disjoint files (controller arrangement methods + arrangement_step), **parallel-safe** with the ENGINE phases.
-- **ENGINE-4** (AC-4 `seedFromDiagnosis`) and **ENGINE-5** (AC-5 `scoreScreening`) — both edit `assessment_engine.dart` → **run serially with each other** (either may run ∥ FLOW-4).
-- Then **ENGINE-6** (AC-9 `scoreThreshold`).
+- **ENGINE-5** (AC-5 `scoreScreening`) and **ENGINE-6** (AC-9 `scoreThreshold`) — both edit `assessment_engine.dart` → **run serially with each other** (either may run ∥ FLOW-4). Grade grid now **8 A / 6 B-pending**.
 - **FLOW-5** (enabler) is the barrier before every result-step AC — must land before ENGINE-7/FLOW-6/7/8 and PROFILE-2.
 - **FLOW-2** (AC-14) still **blocked on G-5** (four-step vs five-tier, routed to spec author).
 
@@ -219,7 +218,8 @@ Still open: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed to the spe
 | RECONCILE | a2103b3f | 2026-10-12 12:21 EDT | 12:26 | 4m 27s | 4m 27s | claude-opus-4-8 | 40 | 55,674 | 1,364,817 | 18,218 | 1,438,749 | FLOW-3 merged into feat/bs-07 @ 175e1f8 (ff); master plan reconciled (AC-2 ✅); FLOW-3 worktree+branch removed; ENGINE-3 ∥ FLOW-4 unblocked on HEAD |
 | ENGINE-3 | 19382fb0 | 2026-10-12 12:51 EDT | 15:44 | 2h 53m | 16m 39s | claude-opus-4-8 | 140 | 245,603 | 8,723,452 | 60,067 | 9,029,262 | AC-3 un-pended + green; grade A; unit 980; cov 100%; accept 12/12 skip; fix 0/3 |
 | RECONCILE | a5d483c1 | 2026-10-12 16:02 EDT | 16:04 | 2m 29s | 2m 29s | claude-opus-4-8 | 38 | 46,265 | 1,196,039 | 10,404 | 1,252,746 | ENGINE-3 merged into feat/bs-07 @ 23a6fce (ff); master plan reconciled (AC-3 ✅); rollup deleted; ENGINE-4 now Next |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 16:04** | **7h 46m** | **4h 40m** |  | **1,372** | **2,206,811** | **79,192,222** | **693,062** | **82,093,467** |  |
+| ENGINE-4 | a5d483c1 | 2026-10-12 16:02 EDT | 16:18 | 16m 43s | 16m 43s | claude-opus-4-8 | 204 | 244,704 | 12,235,522 | 58,234 | 12,538,664 | AC-4 un-pended + green; seedFromDiagnosis + reportDiagnosis + intake type-picker; AC-4 B-pending→A; unit 988; cov 100%; accept 13/11 skip; grade 3xA; fix 0/3 |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 16:04** | **8h 02m** | **4h 57m** |  | **1,576** | **2,451,515** | **91,427,744** | **751,296** | **94,632,131** |  |
 
 ## Sign-off
 

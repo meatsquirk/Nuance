@@ -1,6 +1,6 @@
 # Module ENGINE — assessment domain (+ feature scaffold)
 
-**Status:** In progress — ENGINE-3 (behavior, AC-3) ✅ Done; next ENGINE-4 (AC-4) / ENGINE-5 (AC-5), serial on `assessment_engine.dart`
+**Status:** In progress — ENGINE-3 (AC-3), ENGINE-4 (AC-4) ✅ Done; next ENGINE-5 (AC-5), then ENGINE-6 (AC-9) on `assessment_engine.dart`
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/engine/` (`assessment_engine.dart`, `tier_results.dart`, `cvd_estimate.dart`, `severity_band.dart`); the feature scaffold (branch, baseline, coverage-gate confirmation, `integration_test/bs07/pending.dart`, runner target). Behavior phases also wire a thin controller call in `lib/onboarding/onboarding_controller.dart` (FLOW-owned file — noted per phase; merge-risky with FLOW).
 **Depends on:** — · **Blocks:** PROFILE, FLOW, ITEST
@@ -12,7 +12,7 @@
 | 1 | scaffold | — | ✅ Done | 3,619,703 | 13m 16s |
 | 2 | shell | — | ✅ Done | 3,709,673 | 9m 29s |
 | 3 | behavior | AC-3 | ✅ Done | 9,029,262 | 16m 39s |
-| 4 | behavior | AC-4 | ⬜ Todo | | |
+| 4 | behavior | AC-4 | ✅ Done | 12,538,664 | 16m 43s |
 | 5 | behavior | AC-5 | ⬜ Todo | | |
 | 6 | behavior | AC-9 | ⬜ Todo | | |
 | 7 | behavior | AC-11 | ⬜ Todo | | |
@@ -129,7 +129,24 @@
 - **Files:** `lib/onboarding/engine/assessment_engine.dart`; intake diagnosis path in `onboarding_controller.dart`.
 - **Tasks:** implement `seedFromDiagnosis` so a reported deutan diagnosis seeds `prior.type == deutan`; wire the intake diagnosis control; read endpoint exposes the seeded prior.
 - **Exit criteria + Acceptance gate:** un-pend AC-4; suite green; coverage 100% touched; grade A.
-- **Augments:** none.
+- **Augments:** none (ENGINE-4 closes its own AC-4 test's B-pending limit — the type-arg driver + protan control — as part of un-pending it; it augments no other AC).
+
+### Result
+
+- **Landed:** real Tier 1 prior-diagnosis seeding behind the engine (D-9). `lib/onboarding/engine/assessment_engine.dart` — `TieredAssessmentEngine` overrides `seedFromDiagnosis(CvdType)`: a reported diagnosis is authoritative, so it returns `StartingPrior(type: <reported>, direction: _directionForType(type), weight: 1.0)` — protan/deutan on `redGreen`, tritan on `blueYellow` (full-weight, type known). `lib/onboarding/onboarding_controller.dart` — `reportDiagnosis` now folds the type through `engine.seedFromDiagnosis` and replaces `state.prior` with the diagnosis-seeded one (overriding any intake lean), then notifies (the only controller change — different region of the FLOW-owned file from ENGINE-3's `answerIntake`). `lib/onboarding/screens/intake_step.dart` — now a `StatefulWidget`: "I have a diagnosis" reveals a type picker (`diagnosisTypeLabels`: protan/deutan/tritan), each button calling `reportDiagnosis`; the picker is hidden until opened (local `_diagnosisOpen`, preserved across controller rebuilds). Read endpoint already exposed `state.prior` (no change).
+- **Un-pended:** AC-4 (deleted its row in `integration_test/bs07/pending.dart`; removed from the scaffold-guard `expected` set). **Augmentation closed:** AC-4's B-pending ENGINE-4 limit — `whenReportDiagnosis({CvdType type = CvdType.deutan})` now taps through the type picker, and the test adds a fresh-flow **protan control** (`prior.type == protan`, `isNot(deutan)`) that rejects a seed ignoring the reported type / always returning deutan (discriminates against pre-ENGINE-4 code).
+- **Tests:** unit 988 pass (+8: engine `seedFromDiagnosis` ×3 types, controller `reportDiagnosis` seed + override-intake, intake-step picker reveal + ×3 type buttons; the ENGINE-3 "inherits trivial defaults" test dropped `seedFromDiagnosis`; the controller "reportDiagnosis throws" test replaced). `flutter analyze` clean. Coverage **100%** on all 23 touched lib files (gate PASS). Acceptance default run **13 pass / 11 skip** on sim `5AB9D06D` — AC-4 runs + passes, AC-2/AC-3 green, only later phases pending. **Grade A** — a fresh independent subagent re-graded every un-pended AC test (AC-2, AC-3, AC-4) against G1–G6: **3 A, 0 B**; AC-4 flipped **B pending ENGINE-4 → A** (the protan control discriminates — fails pre-ENGINE-4 code). Whole-suite grid now **8 A / 6 B-pending**. Fix passes 0/3.
+- **Tokens/time:** 12,538,664 / 16m 43s.
+
+### Checkpoint / Handoff
+
+- **Frozen for next phases:**
+  - `TieredAssessmentEngine` now overrides `recordIntake` (ENGINE-3) and `seedFromDiagnosis` (ENGINE-4). **ENGINE-5/6 and ENGINE-7/FLOW-5 each still add one `@override`** (`scoreScreening`, `scoreThreshold`, `band`, `assemble`); the un-overridden methods inherit `ShellAssessmentEngine`'s trivial default. `_directionForType` is a private helper (tritan → blueYellow, else redGreen) — ENGINE-5 may reuse the same axis mapping if it keys direction off a type.
+  - `OnboardingController.reportDiagnosis(CvdType)` replaces the whole `state.prior` (a diagnosis is authoritative, overriding `answerIntake`'s lean). `IntakeStep.diagnosisTypeLabels` is the stable `{CvdType: label}` map both the picker and the acceptance driver key off — keep it in sync if a type's label changes.
+  - `whenReportDiagnosis({CvdType type})` is the frozen AC-4 driver (default deutan). ENGINE-5's `whenReadPlate` is the sibling to argument next, on the same pattern.
+- **Verification commands** (unchanged, from the worktree with `/Users/matthew.quirk/development/flutter/bin` on PATH): `flutter analyze`; `flutter test --coverage && dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-…` (device lane → `coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`).
+- **Known gaps:** none introduced. The intake "Sometimes" weight (AC-3) and the tritan/protan diagnosis directions (AC-4) are unit-covered but not exercised by the AC scenarios (which use Often/Never and deutan/protan) — intentional; the engine is total-safe.
+- **Next:** ENGINE-5 (AC-5, `scoreScreening`) and ENGINE-6 (AC-9, `scoreThreshold`) edit `assessment_engine.dart`, so **run them serially**; either may run ∥ FLOW-4 (AC-6/7/8, disjoint files). FLOW-5 (enabler) remains the barrier before the result-step ACs.
 
 ## Phase 5 — AC-5: screening yields presence and direction
 

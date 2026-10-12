@@ -315,12 +315,21 @@ class SelfAssessmentHarness {
     await tester.pumpAndSettle();
   }
 
-  /// Opens the prior-diagnosis entry (AC-4; wired ENGINE-4, which adds the type
-  /// picker this taps into).
-  Future<void> whenReportDiagnosis() async {
+  /// Reports a prior clinical diagnosis of [type] (default deutan; control:
+  /// protan) — opens the prior-diagnosis entry, then picks the type from the
+  /// revealed picker, seeding the prior through `reportDiagnosis` (AC-4; wired
+  /// ENGINE-4). The picker label is keyed off [IntakeStep.diagnosisTypeLabels]
+  /// so the chosen [type] always finds its button.
+  Future<void> whenReportDiagnosis({CvdType type = CvdType.deutan}) async {
     await tester.tap(find.descendant(
       of: find.byKey(IntakeStep.regionKey),
       matching: find.widgetWithText(TextButton, 'I have a diagnosis'),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+      of: find.byKey(IntakeStep.regionKey),
+      matching: find.widgetWithText(
+          TextButton, IntakeStep.diagnosisTypeLabels[type]!),
     ));
     await tester.pumpAndSettle();
   }

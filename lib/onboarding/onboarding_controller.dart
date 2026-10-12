@@ -110,10 +110,17 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Seeds the prior from a reported prior clinical diagnosis — ENGINE-4 folds
-  /// it through [engine] (AC-4).
-  void reportDiagnosis(CvdType type) =>
-      throw UnimplementedError('reportDiagnosis is wired in ENGINE-4 (AC-4)');
+  /// Seeds the prior from a reported prior clinical diagnosis (AC-4).
+  ///
+  /// A reported diagnosis is authoritative, so it folds through [engine]
+  /// ([AssessmentEngine.seedFromDiagnosis]) and replaces the whole
+  /// [OnboardingState.prior] with the diagnosis-seeded one (overriding any lean
+  /// the intake questions had formed), then notifies. The scoring lives in
+  /// [engine] (D-9) — the controller only holds the result.
+  void reportDiagnosis(CvdType type) {
+    _state = _state.copyWith(prior: engine.seedFromDiagnosis(type));
+    notifyListeners();
+  }
 
   /// Scores the Tier 2 screening responses — ENGINE-5 scores them through
   /// [engine] into presence + direction (AC-5).
