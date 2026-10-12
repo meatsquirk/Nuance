@@ -87,19 +87,52 @@ void main() {
     });
 
     test(
-      'the setters preserve the other fields (shell: no cross-field rules)',
+      'the simulation setters preserve each other (type and severity coexist)',
       () {
         final controller = DisplayController()
           ..setSimulationType(CvdType.protan)
-          ..setSimulationSeverity(0.6)
-          ..setGrayscale(true);
-        // DISPLAY-6 (AC-5) will make grayscale clear the simulation; the shell
-        // does not, so all three fields stand together here.
+          ..setSimulationSeverity(0.6);
+        // Type and severity stand together — only grayscale is exclusive with
+        // the simulation (see the D-3 tests below).
         expect(controller.settings.simulationType, CvdType.protan);
         expect(controller.settings.simulationSeverity, 0.6);
-        expect(controller.settings.grayscale, isTrue);
+        expect(controller.settings.grayscale, isFalse);
         controller.dispose();
       },
     );
+
+    // DISPLAY-6 (AC-5, D-3): grayscale and simulation are mutually exclusive.
+    test('setGrayscale(true) clears an active simulation and notifies', () {
+      final controller = DisplayController()
+        ..setSimulationType(CvdType.deutan)
+        ..setSimulationSeverity(0.6);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.setGrayscale(true);
+
+      expect(controller.settings.grayscale, isTrue, reason: 'grayscale is on');
+      expect(controller.settings.simulationType, isNull,
+          reason: 'turning grayscale on clears the active simulation');
+      expect(controller.settings.simulationOn, isFalse);
+      // The severity is left intact — only the active type is cleared.
+      expect(controller.settings.simulationSeverity, 0.6);
+      expect(notifications, 1, reason: 'one notification for the toggle');
+      controller.dispose();
+    });
+
+    test('turning grayscale off does not re-enable the simulation', () {
+      final controller = DisplayController()
+        ..setSimulationType(CvdType.tritan)
+        ..setGrayscale(true); // clears the tritan simulation
+      expect(controller.settings.simulationType, isNull);
+
+      controller.setGrayscale(false);
+
+      expect(controller.settings.grayscale, isFalse);
+      expect(controller.settings.simulationType, isNull,
+          reason: 'grayscale off leaves the simulation off (never re-enabled)');
+      controller.dispose();
+    });
   });
 }

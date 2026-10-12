@@ -64,12 +64,16 @@ class DisplayController extends ChangeNotifier {
   }
 
   /// Turns the value-only grayscale view on or off (AC-6) and notifies
-  /// listeners. A no-op when unchanged. DISPLAY-6 (AC-5, D-3) extends this to
-  /// clear an active simulation when grayscale is turned on.
+  /// listeners. A no-op when unchanged.
+  ///
+  /// Grayscale and simulation are mutually exclusive views (D-3, AC-5):
+  /// turning grayscale **on** clears any active simulation ([simulationType]
+  /// becomes null). Turning grayscale **off** leaves the simulation off — it is
+  /// never re-enabled; the painter must re-select a type to simulate again.
   void setGrayscale(bool grayscale) {
     if (grayscale == _settings.grayscale) return;
     _settings = DisplaySettings(
-      simulationType: _settings.simulationType,
+      simulationType: grayscale ? null : _settings.simulationType,
       simulationSeverity: _settings.simulationSeverity,
       grayscale: grayscale,
     );

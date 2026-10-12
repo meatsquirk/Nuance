@@ -1,6 +1,6 @@
 # Module DISPLAY — cross-cutting display pipeline (simulation + grayscale)
 
-**Status:** In progress — DISPLAY-5 done (AC-4 un-pended + green, severity-slider path graded A; test-only, no lib change); next DISPLAY-6 (AC-5 clear-on-grayscale), DISPLAY-8 (AC-7) unblocked; DISPLAY-7 (AC-6) independent and startable in parallel
+**Status:** In progress — DISPLAY-6 done (AC-5 un-pended + green; `setGrayscale(true)` clears an active simulation, D-3, in `display_controller.dart`; graded A); next DISPLAY-7 (AC-6 root grayscale) and DISPLAY-8 (AC-7 reading keeps value+label) both startable in parallel
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/display_settings.dart`, `lib/display/display_controller.dart`, `lib/display/display_scope.dart`, `lib/display/display_read_endpoint.dart`, `lib/display/color_simulation.dart` (thin reuse of `projectDichromat`), `lib/display/grayscale_filter.dart`; integration points in `lib/widgets/color_chip.dart` and `lib/app/build_app.dart` (root grayscale wrapper + `DisplayScope` wiring). Unit tests under `test/display/`.
 **Depends on:** — · **Blocks:** SETTINGS (needs `DisplayController`), ITEST (needs the read endpoint + rendering), SPEECH (scaffold only)
@@ -14,7 +14,7 @@
 | DISPLAY-3 | behavior | AC-2 | ✅ Done | 10,542,090 | 20m 03s (20m 03s) |
 | DISPLAY-4 | behavior | AC-3 | ✅ Done | 12,709,944 | 23m 20s (23m 20s) |
 | DISPLAY-5 | behavior | AC-4 | ✅ Done | 5,665,722 | 11m 49s (11m 49s) |
-| DISPLAY-6 | behavior | AC-5 | ⬜ Todo | | |
+| DISPLAY-6 | behavior | AC-5 | ✅ Done | 4,583,088 | 13m 00s (13m 00s) |
 | DISPLAY-7 | behavior | AC-6 | ⬜ Todo | | |
 | DISPLAY-8 | behavior | AC-7 | ⬜ Todo | | |
 
@@ -172,6 +172,23 @@
 - **Tasks:** `setGrayscale(true)` sets `grayscale = true` **and** `simulationType = null` (mutually exclusive views, D-3/D-5). Toggling grayscale off does not re-enable the simulation.
 - **Exit criteria:** unit gate (incl. the clear-on-grayscale branch); existing suites green.
 - **Acceptance gate:** un-pend AC-5; `display_test.dart` green (`TestAC05_GrayscaleClearsSimulation` + earlier ACs).
+
+### Result — DISPLAY-6 (2026-10-12)
+
+- **Landed (AC-5, clear-on-grayscale — one production rule):** `DisplayController.setGrayscale` now enforces the D-3 mutual exclusion — turning grayscale **on** also nulls `simulationType` (`simulationType: grayscale ? null : _settings.simulationType`), and turning it **off** leaves the simulation off (never re-enabled; the painter must re-select a type). `simulationSeverity` is preserved across the clear. The no-op guard (unchanged `grayscale`) is untouched. This is the **only** `lib/` change — `simulateColor`/`ColorChip`/the root filter are not touched (so AC-2/3/4 cannot regress; the grader confirmed no regression).
+- **Files:** `lib/display/display_controller.dart` (the ternary clears the type on grayscale-on). Tests: `test/display/display_controller_test.dart` — **replaced** the shell-era `setters preserve the other fields` unit test (it asserted `simulationType` survived `setGrayscale(true)`, which the D-3 rule now intentionally changes; the test even noted "DISPLAY-6 will make grayscale clear the simulation") and **added** two unit tests (clear-on-grayscale-on + no-re-enable-on-off, covering both ternary arms). Un-pended AC-5 in `integration_test/bs08/pending.dart`; scaffold-guard `unpended` set → `{AC-2,AC-3,AC-4,AC-5}` in `integration_test/display_test.dart`.
+- **Test change recorded (per ground rule):** the only AC/test *body* change is the un-pend + guard-set edit; no AC test was weakened. The replaced unit test is a shell-era placeholder whose premise (no cross-field rule) the delivered behaviour reverses — changed for correctness, reason noted here.
+- **Verification:** `flutter analyze` clean; `flutter test --coverage` = **928 unit pass** (926 at DISPLAY-5; one shell-era test replaced in place + two new AC-5 tests → +2 net); coverage gate **100% on all 14 touched lib files** vs `main` (PASS). Acceptance (device `5AB9D06D…`, under `coord.sh with-lock`): default `display_test.dart` **green — AC-2/3/4/5 execute and pass, 15 pass / 6 skip** (AC-1, AC-6..AC-10 still pending). Fix passes: **0/3** (green on first full run).
+- **Grade gate:** fresh independent grader (did not write the tests) re-graded the un-pended **AC-2 + AC-3 + AC-4 + AC-5** and the modified scaffold guard against G1–G6 → **5 A / 0 below A**, no rule failures. AC-5 is A — Given (deutan) set through the real selector and asserted via the live `DisplayReadEndpoint` before the When (G1), the configured setting answers (G2), `whenSetGrayscale` settles before the negative Then `simulationType == null` and the observable demonstrably changes deutan→null (G3), asserts the exact raw state `grayscale == true` + `simulationType == null` (G4), rejects both a toggle that leaves both views active and a re-enable-on-off impl via the control (G5), one AC only (G6). AC-5 fails **cleanly at baseline** (shell's `setGrayscale` set only the flag) and passes only via the real production rule. AC-2/3/4 unchanged → A, not regressed. Grid: `behavior-test-completeness-bs-08-…md` § *Phase graded: DISPLAY-6*.
+- **Augmentations:** none assigned to DISPLAY-6; the behaviour built (clear-on-grayscale) enables no stronger assertion on an already-green neighbour. AC-7's augmentation remains owned by DISPLAY-8 (noted *B pending DISPLAY-8* in ITEST-2, out of scope here).
+- **Tokens / Time:** see dashboard row (ledger `DISPLAY-6`).
+
+### Checkpoint / Handoff — DISPLAY-6
+
+- **Frozen for DISPLAY-7 / DISPLAY-8:** the D-3 mutual-exclusion rule now lives in `DisplayController.setGrayscale` (grayscale-on ⇒ `simulationType = null`; off ⇒ no re-enable). **DISPLAY-7 (AC-6)** is independent of this — it makes the root `GrayscaleFilter`/`ColorFiltered` active when `grayscale` is set (`lib/display/grayscale_filter.dart` + `lib/app/build_app.dart`); it does not touch `display_controller.dart`, so it is safe to run in parallel with any other DISPLAY phase. **DISPLAY-8 (AC-7)** augments the AC-7 integration test to assert the simulated swatch coexists with the reading's value + label (the swatch pair already renders from DISPLAY-4); it touches `color_chip.dart`/`readout/*` guard-only, not the controller.
+- **Interfaces:** `DisplayController` setters unchanged in shape — `setSimulationType(CvdType?)`, `setSimulationSeverity(double)`, `setGrayscale(bool)` (now with the D-3 clear). `DisplaySettings` fields + `simulationOn` unchanged.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (default; pending skipped — AC-5 now runs here) / add `--dart-define=BS08_RUN_PENDING=true` (run-pending). Device lane shared/contended → `coord.sh with-lock` (`FNP_COORD_REPO=/Users/matthew.quirk/Nuance`). `flutter` on PATH via `/Users/matthew.quirk/development/flutter/bin`.
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
 
 ## Phase DISPLAY-7 — AC-6 value-only grayscale greys the whole app
 
