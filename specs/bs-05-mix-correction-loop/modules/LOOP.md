@@ -1,6 +1,6 @@
 # Module LOOP — correction loop controller + wiring
 
-**Status:** ✅ Complete — LOOP-1..LOOP-6 all done; AC-1/AC-7/AC-8/AC-9/AC-10 un-pended + green (the full behaviour stage, all 10 ACs, is complete); next is feature sign-off (SIGNOFF-1)
+**Status:** ✅ Complete — LOOP-1..LOOP-6 all done; AC-1/AC-7/AC-8/AC-9/AC-10 un-pended + green (the full behaviour stage, all 10 ACs, is complete); feature SIGNOFF-1 approved 2026-10-11 by Matt Quirk at `83554a9` — feature Done
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/correction/correction_controller.dart`, `lib/correction/correction_state.dart`, `lib/correction/correction_read_endpoint.dart`, `lib/correction/correction_speech.dart`, the `CorrectionEntry`/`CorrectionHomeScreen` branch in `lib/app/build_app.dart`, `AppRouter.toCorrection` in `lib/app/router.dart`, the provenance promotion (via `Sample.copyWith` + `EvidencePoint`; the confirmed-tier label per G-4(d))
 **Depends on:** bs-02 capture (`CaptureController`/`CaptureSource`), bs-03 `deltaE00`/`SampleSource`, domain `Provenance`/`Sample`/`EvidencePoint`, `Speech`, CORRECT (engine) · **Blocks:** SCREEN-1, SIGNOFF-1
@@ -447,7 +447,7 @@ bs-05 worktree (`Nuance-bs05`); reconciled inline.
   `dart run tool/coverage_gate.dart main`; integration under the verify lock on the iPhone 17 sim
   `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; bs-05 run-pending via
   `flutter test integration_test/correction_test.dart -d <sim> --dart-define=BS05_RUN_PENDING=true`).
-- **Next phase:** SIGNOFF-1 — the feature sign-off packet + summary page; a human records the decision.
+- **Next phase:** none — SIGNOFF-1 approved 2026-10-11 by Matt Quirk at `83554a9`; feature is Done.
 - **Known gaps / notes (for sign-off):** (1) **Persistence** — a confirmed mix is exposed via the controller's
   `savedSamples`, not written to the shared read-only `SampleSource`; bs-06 (palette & projects) owns the
   persistent catalogue and will back `savedSamples` so a confirmed value reaches other screens. (2) The

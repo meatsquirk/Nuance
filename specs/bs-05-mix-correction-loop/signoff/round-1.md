@@ -2,8 +2,7 @@
 
 **Feature:** [bs-05-mix-correction-loop.feature](../../bs-05-mix-correction-loop.feature) — 10 ACs across 7 Rules
 **Code under review:** `feat/bs-05-mix-correction-loop` @ **`5b5260e`** (LOOP-6 tip; SIGNOFF-1 adds no product code)
-**Decision:** ⏸ **Awaiting sign-off.** The agent never approves. Record with
-`/feature-next-phase --signoff bs-05-mix-correction-loop approved | changes "<items>"`.
+**Decision:** ✅ **Approved — 2026-10-11 by Matt Quirk** at `83554a9` (reviewed state; product-code tip `5b5260e`). Recorded via `/feature-next-phase --signoff bs-05-mix-correction-loop approved`.
 
 > **What this is.** Every acceptance criterion of the correction loop is coded, un-pended, and green, graded A
 > by an independent fresh-context grader. This packet is the evidence a human weighs before the feature is
@@ -138,3 +137,11 @@ Full breakdown: **[signoff/cost-per-ac-round-1.md](cost-per-ac-round-1.md)**.
 
 Acceptance-suite summary scorecard (built from this session's machine-readable results):
 **→ https://claude.ai/artifact/43zBHtjcKJ6Lcjc2tmD3Ex** — "Mix-Correction Sign-off" scorecard. Its headline (unit 668 · coverage 17/17 · integration 108 · 22×A) matches this run. Private to the owner; share from the page's Share menu for other reviewers.
+
+## 10. Sign-off decision
+
+**✅ Approved — 2026-10-11 by Matt Quirk** at `83554a9` (reviewed branch state; product-code tip `5b5260e`).
+
+Feature is **Done — signed off**. The two deferred items are accepted as recorded (neither AC-blocking):
+1. A confirmed mix is exposed via the controller's `savedSamples`, not the shared read-only `SampleSource` — **bs-06** owns the persistent catalogue.
+2. `rephotograph` may later unify with `checkMix` behind a shared `_photographAndCheck()` helper (refactor only).

@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** ⏸ Awaiting sign-off — all 10 ACs ✅, every gate green (unit 668, coverage 100%/17, integration 108/0, run-pending 22/0, grade 22×A/0×B); SIGNOFF-1 packet + summary page delivered; a human records the decision. All gates G-1..G-4 resolved
+**Status:** Done — signed off 2026-10-11 by Matt Quirk at `83554a9`. All 10 ACs ✅, every gate green (unit 668, coverage 100%/17, integration 108/0, run-pending 22/0, grade 22×A/0×B); SIGNOFF-1 approved. All gates G-1..G-4 resolved
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -209,27 +209,18 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 13 | LOOP-4 | behavior AC-7: speak the correction (E27) | ✅ Done | 18,028,310 | 1h 02m | sequential (primary worktree); AC-7 ✅; default 106 pass/2 skip, run-pending 20/2 (red baseline intact AC-9/10); grade 8×A/0×B; coverage 100%/16; fix 1/3 |
 | 14 | LOOP-5 | behavior AC-8: re-photograph re-checks (E28) | ✅ Done | 7,036,729 | 28m 15s | parallel worktree; reconciled into feat/bs-05 @ merge 95a403e; after LOOP-3; serial w/ LOOP-6 |
 | 15 | LOOP-6 | behavior AC-9, AC-10: save confirmed → promote provenance; later readout shows it | ✅ Done | 22,315,250 | 1h 30m | sequential (primary worktree); AC-9/AC-10 ✅ (pending map now empty); default 108 pass/0 skip, run-pending 22/0; grade 10×A/0×B; coverage 100%/17; fix 1/3 (AC-10 test-helper `await push` bug); behaviour stage COMPLETE |
-| 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting | 7,655,832 | 14m 42s | packet + summary page delivered; full regression green (unit 668, coverage 100%/17, integration 108/0, run-pending 22/0); fresh grade 22×A/0×B; a human records the decision |
+| 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ✅ Done | 7,655,832 | 14m 42s | packet + summary page delivered; full regression green (unit 668, coverage 100%/17, integration 108/0, run-pending 22/0); fresh grade 22×A/0×B; **Approved 2026-10-11 by Matt Quirk at `83554a9`** |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-1 done — the feature is ⏸ Awaiting sign-off (last phase; no phase remains to start).** The sign-off
-packet ([signoff/round-1.md](signoff/round-1.md)) and the summary scorecard
-(https://claude.ai/artifact/43zBHtjcKJ6Lcjc2tmD3Ex) are delivered. Full verification at `5b5260e` from the
-`Nuance-bs05` checkout: analyze clean; unit 668/0/0; coverage 100% on all 17 touched files; cross-feature
-integration 108/0/0; bs-05 run-pending 22/0/0 (identical to default — red baseline retired). A fresh,
-independent regrade ([signoff/round-1-grade-grid.md](signoff/round-1-grade-grid.md)) graded all 22 rows A
-(10 ACs + 12 scaffold), no downgrades, PASS. Feature cost to date $155.30.
+**Feature complete — signed off 2026-10-11 by Matt Quirk at `83554a9`.** All 16 phases done; all 10 ACs ✅;
+SIGNOFF-1 approved ([packet](signoff/round-1.md) · [scorecard](https://claude.ai/artifact/43zBHtjcKJ6Lcjc2tmD3Ex)).
+No phase remains. Nothing to start.
 
-**A human now records the decision** (the agent never approves):
-`/feature-next-phase --signoff bs-05-mix-correction-loop approved | changes "<items>"`.
-- **Approved** → feature `Status: Done — signed off <date> by <reviewer> at <commit>`; SIGNOFF-1 ✅.
-- **Changes requested** → each item becomes a new phase before a fresh SIGNOFF-2; this round's file stays as history.
-
-**Deferred items carried into the packet** (owners named; none AC-blocking): (1) a confirmed mix is exposed via
+**Deferred items accepted at sign-off** (owners named; neither AC-blocking): (1) a confirmed mix is exposed via
 the controller's `savedSamples`, not the shared read-only `SampleSource` — **bs-06** owns the persistent
 catalogue. (2) `rephotograph` could later unify with `checkMix` behind a shared `_photographAndCheck()` helper
 (refactor only). bs-05 worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`; all gates G-1..G-4 resolved.
@@ -261,10 +252,11 @@ catalogue. (2) `rephotograph` could later unify with `checkMix` behind a shared 
 | LOOP-4 | 0c44f3a4 | 2026-10-11 09:18 EDT | 10:21 | 1h 02m | 1h 02m | claude-opus-4-8 | 266 | 293,127 | 17,678,958 | 55,959 | 18,028,310 | AC-7 ✅ speak the correction; analyze clean, unit 663, coverage 100%/16; default 106 pass/2 skip, run-pending 20/2 (red baseline intact AC-9/10); grade 8×A/0×B; fix 1/3 |
 | LOOP-6 | 4f26b9e6 | 2026-10-11 17:43 EDT | 19:13 | 1h 30m | 1h 30m | claude-opus-4-8 | 256 | 385,147 | 21,832,806 | 97,041 | 22,315,250 | AC-9/AC-10 un-pended (save confirmed → provenance + later readout); behaviour stage COMPLETE (all 10 ACs green); run-pending 22/0, default 108/0; grade 10×A/0×B; coverage 100%/17; fix 1/3 |
 | SIGNOFF-1 | 861fea00 | 2026-10-11 19:39 EDT | 19:54 | 14m 42s | 14m 42s | claude-opus-4-8 | 132 | 291,485 | 7,313,365 | 50,850 | 7,655,832 | sign-off packet + summary page; all gates green (unit 668, coverage 100%, integration 108/0, run-pending 22/0, grade 22×A/0×B); awaiting human decision |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 19:54** | **21h 26m** | **9h 10m** |  | **2,668** | **4,257,684** | **180,915,885** | **1,151,887** | **186,328,124** |  |
+| SIGNOFF-DECISION | 2234c3f3 | 2026-10-11 20:09 EDT | 20:45 | 35m 39s | 6m 18s | claude-opus-4-8 | 42 | 47,925 | 1,314,749 | 10,315 | 1,373,031 | SIGNOFF-1 approved by Matt Quirk; feature Done |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 20:45** | **22h 01m** | **9h 16m** |  | **2,710** | **4,305,609** | **182,230,634** | **1,162,202** | **187,701,155** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `5b5260e` | 22×A / 0×B ([grid](signoff/round-1-grade-grid.md)) | ⏸ Awaiting — [scorecard](https://claude.ai/artifact/43zBHtjcKJ6Lcjc2tmD3Ex) |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `5b5260e` | 22×A / 0×B ([grid](signoff/round-1-grade-grid.md)) | ✅ **Approved 2026-10-11 by Matt Quirk** at `83554a9` — [scorecard](https://claude.ai/artifact/43zBHtjcKJ6Lcjc2tmD3Ex) |
