@@ -1,6 +1,6 @@
 # Module DISPLAY — cross-cutting display pipeline (simulation + grayscale)
 
-**Status:** In progress — DISPLAY-4 done (AC-3 un-pended, simulated-alongside-original pair live); next DISPLAY-5 (AC-4 severity), DISPLAY-6 (AC-5 clear-on-grayscale), DISPLAY-8 (AC-7) all now unblocked; DISPLAY-7 (AC-6) is independent and startable in parallel
+**Status:** In progress — DISPLAY-5 done (AC-4 un-pended + green, severity-slider path graded A; test-only, no lib change); next DISPLAY-6 (AC-5 clear-on-grayscale), DISPLAY-8 (AC-7) unblocked; DISPLAY-7 (AC-6) independent and startable in parallel
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/display_settings.dart`, `lib/display/display_controller.dart`, `lib/display/display_scope.dart`, `lib/display/display_read_endpoint.dart`, `lib/display/color_simulation.dart` (thin reuse of `projectDichromat`), `lib/display/grayscale_filter.dart`; integration points in `lib/widgets/color_chip.dart` and `lib/app/build_app.dart` (root grayscale wrapper + `DisplayScope` wiring). Unit tests under `test/display/`.
 **Depends on:** — · **Blocks:** SETTINGS (needs `DisplayController`), ITEST (needs the read endpoint + rendering), SPEECH (scaffold only)
@@ -13,7 +13,7 @@
 | DISPLAY-2 | shell | — | ✅ Done | 8,485,201 | 15m 04s (15m 04s) |
 | DISPLAY-3 | behavior | AC-2 | ✅ Done | 10,542,090 | 20m 03s (20m 03s) |
 | DISPLAY-4 | behavior | AC-3 | ✅ Done | 12,709,944 | 23m 20s (23m 20s) |
-| DISPLAY-5 | behavior | AC-4 | ⬜ Todo | | |
+| DISPLAY-5 | behavior | AC-4 | ✅ Done | 5,665,722 | 11m 49s (11m 49s) |
 | DISPLAY-6 | behavior | AC-5 | ⬜ Todo | | |
 | DISPLAY-7 | behavior | AC-6 | ⬜ Todo | | |
 | DISPLAY-8 | behavior | AC-7 | ⬜ Todo | | |
@@ -148,6 +148,20 @@
 - **Tasks:** ensure `simulationSeverity` (0..1, from the 0..100 slider, D-6) feeds the projection's severity, so the simulated render varies with it (0 → original; 1 → full dichromat).
 - **Exit criteria:** unit gate; existing suites green.
 - **Acceptance gate:** un-pend AC-4; `display_test.dart` green (`TestAC04_SeveritySlider` + AC-2, AC-3).
+
+### Result — DISPLAY-5 (2026-10-12)
+
+- **Landed (AC-4, severity-slider strength — test-only un-pend, no lib change):** the AC-4 behaviour was already live end-to-end at HEAD — the E48 slider (SETTINGS-1) calls `setSimulationSeverity(value / 100)`, the controller stores `simulationSeverity`, and DISPLAY-4's `simulateColor` already projects through the shipped `projectDichromat` at `CvdProfile(type, severity: simulationSeverity)`. DISPLAY-5 un-pended AC-4 by deleting its `pendingACs` row in `integration_test/bs08/pending.dart` and adding `AC-4` to the scaffold guard's `unpended` set in `integration_test/display_test.dart` (now `{AC-2, AC-3, AC-4}`; guard stays non-vacuous — the expected pending set is exactly the 7 remaining keys). No `lib/` file changed.
+- **Verification:** `flutter analyze` clean · unit **926 pass**, coverage gate **100% on all 14 touched lib files** (vs `main`) · acceptance (device `5AB9D06D`, under `coord.sh with-lock`) **all passed — 14 pass / 7 skip**: AC-4 moved from skip → pass, running in the default suite alongside AC-2/AC-3; only later phases' ACs (AC-1, AC-5..AC-10) remain pending. First full run green — **fix passes: 0/3**.
+- **Grade gate:** fresh independent grader (did not write/un-pend the tests) re-graded the un-pended **AC-2 + AC-3 + AC-4** against G1–G6 → **3 A / 0 below A**. Confirmed AC-4 does not grade the shipped projection against itself (the harness `referenceProjectDichromat` uses literal transcribed inverse matrices; shipped inverts at runtime via `_inv3`; only the CVD-neutral `toSRGB` is shared) and that it discriminates at severity 0.60 (rejects a slider stuck at original / a fixed-1.0 render; the severity-0 control rejects a fixed-non-zero severity). Grid: `behavior-test-completeness-bs-08-…md` § *Phase graded: DISPLAY-5*.
+- **Augmentations:** none assigned to DISPLAY-5; the behaviour built (severity feeding the projection) enables no stronger assertion on an already-green neighbour (AC-2 is sim-off; AC-3's full-severity shift is unchanged). AC-4's own test already asserts the 0.60 render + severity-0 control at grade A, so no augmentation row is owed.
+- **Tokens / Time:** see dashboard row (ledger `DISPLAY-5`).
+
+### Checkpoint / Handoff — DISPLAY-5
+
+- **Frozen for DISPLAY-6:** the simulation-severity path is complete and graded. **DISPLAY-6 (AC-5)** adds the clear-on-grayscale rule in `display_controller.dart` — `setGrayscale(true)` must also null `simulationType` (D-3 mutual exclusion), and toggling grayscale off must **not** re-enable the simulation. It touches only `display_controller.dart` (shares that file with this phase's domain but this phase changed no lib, so there is no conflict) and un-pends AC-5. The AC-5 test (`TestAC05_GrayscaleClearsSimulation`) is already written with the restore-off control.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (default; pending skipped — AC-4 now runs here) / add `--dart-define=BS08_RUN_PENDING=true` for run-pending. Device lane shared/contended → `coord.sh with-lock` (`FNP_COORD_REPO=/Users/matthew.quirk/Nuance`). `flutter` on PATH via `/Users/matthew.quirk/development/flutter/bin`.
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
 
 ## Phase DISPLAY-6 — AC-5 grayscale clears an active simulation
 

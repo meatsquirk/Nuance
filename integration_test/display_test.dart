@@ -41,9 +41,10 @@ void main() {
       // Seeded with AC-1..AC-10 (DISPLAY-1); each behaviour phase deletes its
       // AC's row in `bs08/pending.dart` as it un-pends it, so this set shrinks
       // by one per delivered AC. Un-pended so far: AC-2 (DISPLAY-3, simulation
-      // off = trichromat) and AC-3 (DISPLAY-4, simulate a chosen type alongside
-      // the original). The remaining eight are asserted exactly (non-vacuous).
-      const unpended = {'AC-2', 'AC-3'};
+      // off = trichromat), AC-3 (DISPLAY-4, simulate a chosen type alongside
+      // the original) and AC-4 (DISPLAY-5, severity slider sets simulation
+      // strength). The remaining seven are asserted exactly (non-vacuous).
+      const unpended = {'AC-2', 'AC-3', 'AC-4'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',
