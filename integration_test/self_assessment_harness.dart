@@ -392,13 +392,17 @@ class SelfAssessmentHarness {
   }
 
   /// Answers one Tier 4 threshold probe — [detected] taps "I can see it", else
-  /// "I can't see it" (AC-9; wired ENGINE-6).
+  /// "I can't see it" (AC-9; wired ENGINE-6). Scrolls the probe control into
+  /// view first (the threshold step sits below the earlier steps in the shell's
+  /// single scroll view, like the screening and arrangement drivers).
   Future<void> whenProbe({required bool detected}) async {
-    await tester.tap(find.descendant(
+    final control = find.descendant(
       of: find.byKey(ThresholdStep.regionKey),
       matching: find.widgetWithText(
           TextButton, detected ? 'I can see it' : "I can't see it"),
-    ));
+    );
+    await tester.ensureVisible(control);
+    await tester.tap(control);
     await tester.pumpAndSettle();
   }
 

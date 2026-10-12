@@ -50,7 +50,7 @@ const Map<String, String> pendingACs = {
   // AC-6 (arrangement: place a cap in the next position) un-pended by FLOW-4.
   // AC-7 (arrangement: start over clears the arrangement) un-pended by FLOW-4.
   // AC-8 (arrangement: skip continues without a result) un-pended by FLOW-4.
-  'AC-9': 'ENGINE-6', // Tier 4 threshold severity on the confusion line
+  // AC-9 (Tier 4 threshold severity on the confusion line) un-pended by ENGINE-6.
   'AC-10': 'FLOW-6', // result: adjust estimated type by hand
   'AC-11': 'ENGINE-7', // severity value → plain-language band
   'AC-12': 'FLOW-7', // severity slider doubles as self-calibration

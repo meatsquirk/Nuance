@@ -209,4 +209,69 @@ void main() {
       expect(result.direction, ScreeningDirection.redGreen);
     });
   });
+
+  group('TieredAssessmentEngine.scoreThreshold (Tier 4, AC-9)', () {
+    const engine = TieredAssessmentEngine();
+
+    ThresholdProbe probe(double contrast, {required bool detected}) =>
+        ThresholdProbe(contrast: contrast, detected: detected);
+
+    test('detecting every probe scores zero severity', () {
+      // The painter sees even the lowest contrast — no threshold deficit.
+      expect(
+        engine.scoreThreshold([
+          probe(0.2, detected: true),
+          probe(0.4, detected: true),
+          probe(0.8, detected: true),
+        ]),
+        const ThresholdResult(severity: 0),
+      );
+    });
+
+    test('no probes score zero severity', () {
+      expect(engine.scoreThreshold(const []), const ThresholdResult(severity: 0));
+    });
+
+    test('the highest contrast the painter cannot see is the severity', () {
+      // Misses low contrast, only sees high contrast → the threshold is the
+      // highest failed contrast (0.6), a severity on the confusion line.
+      expect(
+        engine.scoreThreshold([
+          probe(0.2, detected: false),
+          probe(0.4, detected: false),
+          probe(0.6, detected: false),
+          probe(0.8, detected: true),
+        ]),
+        const ThresholdResult(severity: 0.6),
+      );
+    });
+
+    test('a later easier miss does not lower the threshold', () {
+      // A miss at a lower contrast than one already failed must not reduce the
+      // severity — the threshold is the *highest* failed contrast, 0.8.
+      expect(
+        engine.scoreThreshold([
+          probe(0.8, detected: false),
+          probe(0.4, detected: false),
+        ]),
+        const ThresholdResult(severity: 0.8),
+      );
+    });
+
+    test('harder thresholds score higher than easier ones (monotonic)', () {
+      final easy = engine
+          .scoreThreshold([probe(0.2, detected: true), probe(0.4, detected: true)]);
+      final hard = engine.scoreThreshold(
+          [probe(0.2, detected: false), probe(0.4, detected: true)]);
+      expect(hard.severity, greaterThan(easy.severity));
+    });
+
+    test('a severity is clamped to the 0..1 scale', () {
+      // A defensively out-of-range contrast cannot push severity above 1.
+      expect(
+        engine.scoreThreshold([probe(1.5, detected: false)]),
+        const ThresholdResult(severity: 1),
+      );
+    });
+  });
 }

@@ -205,4 +205,28 @@ class TieredAssessmentEngine extends ShellAssessmentEngine {
           : ScreeningDirection.redGreen,
     );
   }
+
+  /// Scores the Tier 4 adaptive threshold probes into a severity on the
+  /// painter's confusion line (AC-9).
+  ///
+  /// Each [ThresholdProbe] presents a stimulus at a contrast *along the
+  /// confusion line* (the direction already fixed by the earlier tiers) and
+  /// records whether the painter detected it. The severity is the painter's
+  /// detection threshold on that line: the **highest contrast they failed to
+  /// detect**, since they need more contrast than that to perceive the
+  /// difference — a fuller deficiency fails higher-contrast probes and so scores
+  /// a higher severity (monotone). A painter who detects every probe (including
+  /// the lowest contrast) has no measurable threshold deficit and scores 0; an
+  /// empty probe set likewise scores 0 (the pipeline stays total-safe). The
+  /// result is clamped to the 0..1 severity scale (`CvdProfile.severity`).
+  @override
+  ThresholdResult scoreThreshold(List<ThresholdProbe> probes) {
+    var threshold = 0.0;
+    for (final probe in probes) {
+      if (!probe.detected && probe.contrast > threshold) {
+        threshold = probe.contrast;
+      }
+    }
+    return ThresholdResult(severity: threshold.clamp(0.0, 1.0).toDouble());
+  }
 }

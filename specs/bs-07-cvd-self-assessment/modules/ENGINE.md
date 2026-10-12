@@ -1,6 +1,6 @@
 # Module ENGINE — assessment domain (+ feature scaffold)
 
-**Status:** In progress — ENGINE-3 (AC-3), ENGINE-4 (AC-4), ENGINE-5 (AC-5) ✅ Done; next ENGINE-6 (AC-9) on `assessment_engine.dart`
+**Status:** In progress — ENGINE-3 (AC-3), ENGINE-4 (AC-4), ENGINE-5 (AC-5), ENGINE-6 (AC-9) ✅ Done; next ENGINE-7 (AC-11) on `severity_band.dart`, blocked on FLOW-5 (result step) + G-4 ✅
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/engine/` (`assessment_engine.dart`, `tier_results.dart`, `cvd_estimate.dart`, `severity_band.dart`); the feature scaffold (branch, baseline, coverage-gate confirmation, `integration_test/bs07/pending.dart`, runner target). Behavior phases also wire a thin controller call in `lib/onboarding/onboarding_controller.dart` (FLOW-owned file — noted per phase; merge-risky with FLOW).
 **Depends on:** — · **Blocks:** PROFILE, FLOW, ITEST
@@ -14,7 +14,7 @@
 | 3 | behavior | AC-3 | ✅ Done | 9,029,262 | 16m 39s |
 | 4 | behavior | AC-4 | ✅ Done | 12,538,664 | 16m 43s |
 | 5 | behavior | AC-5 | ✅ Done | 16,401,020 | 21m 15s |
-| 6 | behavior | AC-9 | ⬜ Todo | | |
+| 6 | behavior | AC-9 | ✅ Done | 8,996,409 | 16m 28s |
 | 7 | behavior | AC-11 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -183,6 +183,25 @@
 - **Tasks:** implement `scoreThreshold` so the adaptive probe yields a `severity` (0..1) **along the confusion line** of the current type/direction; harder-threshold fixture → higher severity (monotonic). Wire the threshold step; expose the severity.
 - **Exit criteria + Acceptance gate:** un-pend AC-9; suite green; coverage 100% touched; grade A (severity tied to the confusion line, monotonic control).
 - **Augments:** none.
+
+### Result
+
+- **Landed:** real Tier 4 threshold scoring behind the engine (D-9). `lib/onboarding/engine/assessment_engine.dart` — `TieredAssessmentEngine` overrides `scoreThreshold(List<ThresholdProbe>)`: the severity is the painter's detection threshold on the confusion line = the **highest contrast among the probes they failed to detect** (clamped to 0..1); detecting every probe (or an empty set) scores 0. Monotone: a fuller deficiency misses higher-contrast probes → higher severity; a later miss at a lower contrast never lowers the threshold. `lib/onboarding/onboarding_controller.dart` — `scoreThreshold` now folds the probes through `engine.scoreThreshold` into `state.threshold` and notifies (replaces the throwing stub; different region of the FLOW-owned file from the other tier actions). `lib/onboarding/screens/threshold_step.dart` — now a `StatefulWidget` presenting a fixed `contrastDeck` (`[0.2, 0.4, 0.6, 0.8]`) **one probe at a time** ("I can see it" / "I can't see it"); each tap records the current probe's detected value and advances, and once every probe is answered it builds the ordered `ThresholdProbe` list (contrast from the deck, detected from the taps) and calls `controller.scoreThreshold`, then shows a completion label. Read endpoint already exposed `state.threshold` (no change).
+- **AC-9 un-pended:** row deleted from `integration_test/bs07/pending.dart`; scaffold-guard `expected` set shrunk (AC-9 removed) + an un-pended-AC assertion added for AC-9 (mirrors AC-2/AC-3/AC-5).
+- **Harness change (recorded, not a weakening):** `whenProbe` now calls `tester.ensureVisible` before tapping the probe control — the threshold step sits below the earlier steps in the shell's single scroll view, exactly like `whenScreenPlates`/`whenPlaceCap`/`whenStartOver`/`whenSkipArrangement` (all of which already ensureVisible). Without it the off-screen tap misses and no probe is recorded. It drives the real control; it strengthens/weakens no assertion.
+- **Gates:** analyze ✅ clean · unit ✅ **1018** (+11 net: engine `scoreThreshold` ×6, controller threshold ×2, new `threshold_step_test.dart` ×4, −1 removed `scoreThreshold throws` stub) · coverage ✅ **100%** on all touched files (gate PASS vs `main`, 23 lib files) · acceptance ✅ default suite **18 pass / 6 skip** on sim `5AB9D06D` under the device lock — **AC-9 runs and passes**, AC-2/3/4/5/6/7/8 green, only the 6 later-phase ACs skipped · grade ✅ **A** (fresh independent subagent re-graded every un-pended AC test AC-2..AC-9 against G1–G6: AC-9 pending-A → A against the implemented code; whole-suite grid **12 A / 2 B-pending** — AC-10→FLOW-6, AC-13→PROFILE-2).
+- **Fix passes:** 0/3 (green on the first full run of every gate).
+- **Tokens / Time:** 8,996,409 · 16m 28s.
+
+### Checkpoint / Handoff
+
+- **Frozen for next phases:**
+  - `TieredAssessmentEngine` now overrides `recordIntake` (ENGINE-3), `seedFromDiagnosis` (ENGINE-4), `scoreScreening` (ENGINE-5) and `scoreThreshold` (ENGINE-6). **ENGINE-7 and FLOW-5 each still add one `@override`** (`band`, `assemble`); the un-overridden methods inherit `ShellAssessmentEngine`'s trivial default. All four measurement/intake tiers are now real — only `band` (ENGINE-7) and `assemble` (FLOW-5) remain trivial.
+  - `ThresholdStep.contrastDeck` is the frozen probe deck (4 increasing contrasts, one probe shown at a time); the AC-9 fixtures (`thresholdProbesMild`/`Strong`) are per-probe *detected* sequences of the **same length** — the step records its own deck contrast, the fixture supplies only `detected`, so the fixtures' own `contrast` fields are used solely by the harness's AC-9 control guard, not by the step. Keep the fixture length in sync with `contrastDeck.length` (both 4).
+  - `OnboardingController.scoreThreshold` sets `state.threshold`; FLOW-5's `assemble` reads `state.threshold` (it may be null if threshold probing was skipped — the pipeline stays total-safe).
+- **Verification commands** (unchanged, from the worktree with `/Users/matthew.quirk/development/flutter/bin` on PATH): `flutter analyze`; `flutter test --coverage && dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-…` (device lane → `coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`).
+- **Known gaps:** none introduced. The engine's "later easier miss does not lower the threshold" and the 0..1 clamp are unit-covered but not exercised by an AC scenario (the fixtures are monotone and in-range) — intentional; the engine is total-safe.
+- **Next:** ENGINE-6 was the last engine measurement tier; **FLOW-5 (enabler) is now unblocked** — all its deps (ENGINE-3/4/5/6 + FLOW-4) are done — and is the barrier before every result-step AC (ENGINE-7/FLOW-6/7/8, PROFILE-2). ENGINE-7 (AC-11, `band`) depends on FLOW-5 (result step reachable) + G-4 (✅ resolved). FLOW-2/AC-14 still blocked on G-5.
 
 ## Phase 7 — AC-11: the severity value sets a plain-language band
 

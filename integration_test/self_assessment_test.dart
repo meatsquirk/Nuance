@@ -795,10 +795,9 @@ void main() {
       // Seeded with AC-1..AC-14 (ENGINE-1); each behaviour phase deletes its
       // AC's row here as it un-pends it, so this set shrinks by one per
       // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3), AC-4 (ENGINE-4),
-      // AC-5 (ENGINE-5), AC-6/7/8 (FLOW-4).
+      // AC-5 (ENGINE-5), AC-6/7/8 (FLOW-4), AC-9 (ENGINE-6).
       const expected = <String>{
         'AC-1',
-        'AC-9',
         'AC-10',
         'AC-11',
         'AC-12',
@@ -841,6 +840,10 @@ void main() {
       expect(pendingACs.containsKey('AC-5'), isFalse);
       expect(pendingSkipReason('AC-5', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-5', forceRunPending: true), isNull);
+      // AC-9 (un-pended by ENGINE-6) always runs, in either mode.
+      expect(pendingACs.containsKey('AC-9'), isFalse);
+      expect(pendingSkipReason('AC-9', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-9', forceRunPending: true), isNull);
       // An id absent from the map always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);

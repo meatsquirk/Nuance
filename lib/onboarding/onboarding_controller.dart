@@ -173,10 +173,17 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Scores the Tier 4 threshold probes — ENGINE-6 scores them through [engine]
-  /// into a severity on the confusion line (AC-9).
-  void scoreThreshold(List<ThresholdProbe> probes) =>
-      throw UnimplementedError('scoreThreshold is wired in ENGINE-6 (AC-9)');
+  /// Scores the Tier 4 threshold probes into a severity on the confusion line
+  /// (AC-9).
+  ///
+  /// Folds the per-probe responses through [engine]
+  /// ([AssessmentEngine.scoreThreshold]) and holds the [ThresholdResult] on
+  /// [OnboardingState.threshold], then notifies. The scoring lives in [engine]
+  /// (D-9) — the controller only passes the probes and holds the result.
+  void scoreThreshold(List<ThresholdProbe> probes) {
+    _state = _state.copyWith(threshold: engine.scoreThreshold(probes));
+    notifyListeners();
+  }
 
   /// Assembles the available tier results into an estimate and advances to the
   /// result step — FLOW-5 (the enabler) folds them through [engine].

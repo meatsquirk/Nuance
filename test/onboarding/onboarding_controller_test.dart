@@ -43,13 +43,6 @@ void main() {
     setUp(() => controller = OnboardingController());
     tearDown(() => controller.dispose());
 
-    test('scoreThreshold throws (ENGINE-6)', () {
-      expect(
-        () => controller.scoreThreshold(const []),
-        throwsUnimplementedError,
-      );
-    });
-
     test('advanceToResult throws (FLOW-5)', () {
       expect(controller.advanceToResult, throwsUnimplementedError);
     });
@@ -185,6 +178,40 @@ void main() {
         PlateResponse(axis: ScreeningDirection.blueYellow, correct: true),
       ]);
       expect(controller.state.screening!.present, isFalse);
+      expect(notifications, 1);
+    });
+  });
+
+  group('OnboardingController threshold (ENGINE-6, AC-9)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      // The real tiered engine (as the production host injects), so the scored
+      // probes actually set a meaningful severity.
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('scores the probes into state.threshold and notifies', () {
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.2, detected: false),
+        ThresholdProbe(contrast: 0.4, detected: false),
+        ThresholdProbe(contrast: 0.6, detected: true),
+      ]);
+      expect(controller.state.threshold, isNotNull);
+      expect(controller.state.threshold!.severity, 0.4);
+      expect(notifications, 1);
+    });
+
+    test('detecting every probe records zero severity', () {
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.2, detected: true),
+        ThresholdProbe(contrast: 0.4, detected: true),
+      ]);
+      expect(controller.state.threshold!.severity, 0);
       expect(notifications, 1);
     });
   });
