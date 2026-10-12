@@ -16,7 +16,9 @@ void main() {
       expect(state.testingStarted, isFalse);
       expect(state.prior, StartingPrior.none);
       expect(state.screening, isNull);
-      expect(state.arrangementPool, isEmpty);
+      // The pool starts as the full cap set (nothing placed yet); FLOW-4 moves
+      // caps out of it as they are placed.
+      expect(state.arrangementPool, arrangementCaps);
       expect(state.arrangedCaps, isEmpty);
       expect(state.arrangementSkipped, isFalse);
       expect(state.threshold, isNull);
@@ -43,6 +45,45 @@ void main() {
           nightLightConfirmed: true,
         ).lightingConfirmed,
         isFalse,
+      );
+    });
+  });
+
+  group('OnboardingState.arrangementResult', () {
+    test('is null while the arrangement is in progress', () {
+      // Nothing placed yet (the full pool, no arranged caps).
+      expect(const OnboardingState().arrangementResult, isNull);
+      // Some placed but the pool is not yet empty.
+      expect(
+        const OnboardingState(arrangementPool: [1], arrangedCaps: [0])
+            .arrangementResult,
+        isNull,
+      );
+    });
+
+    test('is present once every cap is placed (the pool emptied)', () {
+      final result = const OnboardingState(
+        arrangementPool: [],
+        arrangedCaps: [2, 0, 1],
+      ).arrangementResult;
+      expect(result, isNotNull);
+      expect(result!.present, isTrue);
+    });
+
+    test('is null when skipped, taking precedence over a completed pool', () {
+      // A plain skip records no result.
+      expect(
+        const OnboardingState(arrangementSkipped: true).arrangementResult,
+        isNull,
+      );
+      // Skip wins even if every cap happened to be placed.
+      expect(
+        const OnboardingState(
+          arrangementPool: [],
+          arrangedCaps: [0, 1],
+          arrangementSkipped: true,
+        ).arrangementResult,
+        isNull,
       );
     });
   });

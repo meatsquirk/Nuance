@@ -1,6 +1,6 @@
 # Module FLOW — onboarding controller, screens, flow
 
-**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2) ✅ Done; FLOW-2 (AC-14) blocked by G-5; FLOW-4 (AC-6/7/8) startable
+**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8) ✅ Done; FLOW-2 (AC-14) blocked by G-5; FLOW-5 (enabler) is the next result-step barrier
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/onboarding_controller.dart`, `onboarding_state.dart`, `onboarding_read_endpoint.dart`, `onboarding_steps.dart`; `lib/onboarding/screens/` (host + lighting, intake, screening, arrangement, threshold, result step widgets with keyed regions); route wiring in `lib/app/router.dart` + `lib/palette/self_assessment_entry_screen.dart` (replaced). Behavior phases in ENGINE/PROFILE add thin controller calls here (merge-risky — rebase before editing).
 **Depends on:** ENGINE (estimate types + scoring), PROFILE (save seam) · **Blocks:** ITEST, SIGNOFF
@@ -12,7 +12,7 @@
 | 1 | shell | — | ✅ Done | | |
 | 2 | behavior | AC-14 | ⬜ Todo | | |
 | 3 | behavior | AC-2 | ✅ Done | 8,229,212 | 16m 09s |
-| 4 | behavior | AC-6, AC-7, AC-8 | ⬜ Todo | | |
+| 4 | behavior | AC-6, AC-7, AC-8 | ✅ Done | 14,878,591 | 25m 54s |
 | 5 | behavior | — (enabler) | ⬜ Todo | | |
 | 6 | behavior | AC-10 | ⬜ Todo | | |
 | 7 | behavior | AC-12 | ⬜ Todo | | |
@@ -148,3 +148,22 @@
 - **For FLOW-2 (AC-14, blocked on G-5):** generalise `tryContinue`'s advance beyond the Tier 0 gate (later steps have no lighting requirement) and render the "N of 4" progress; it can reuse this `tryContinue` as the Tier 0 case. The 0-based `stepIndex` is smoke-frozen (index 0 → "Step 1 of 4").
 - **Verification commands** (worktree, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 600 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
 - **Known gaps:** FLOW-3 touches only the Tier 0 gate; the step count stays provisional until G-5/FLOW-2.
+
+### Result — Phase 4 (FLOW-4, AC-6/7/8) ✅ Done
+
+- **Landed:**
+  - `onboarding_state.dart` — top-level `const arrangementCaps = [3,0,4,1,5,2]` (the fixed Tier 3 cap set, scrambled order); the `arrangementPool` default now = `arrangementCaps` (the pool *is* the unplaced caps, so it starts full — `const OnboardingState()` carries it, so the smoke test's `state == const OnboardingState()` stays green); new derived getter `arrangementResult` → `ArrangementResult(present: true)` once every cap is placed (pool emptied, ≥1 arranged) and `null` while in progress **or** skipped (skip guard checked first).
+  - `onboarding_controller.dart` — `placeCap(capId)` moves a pooled cap to the end of `arrangedCaps` and out of the pool, notifying; a cap not in the pool (already placed / unknown id) is a no-op (no notify), so no duplicate/corrupt order. `startOver()` restores the pool to `arrangementCaps` and empties `arrangedCaps`. `skipArrangement()` sets `arrangementSkipped` (leaving `arrangementResult` absent). All three replaced their `UnimplementedError` bodies.
+  - `screens/arrangement_step.dart` — the pool renders one keyed `TextButton` per unplaced cap (`ArrangementStep.capKey(id)` = `onboarding-arrangement-cap-$id`) driving `placeCap`; start-over and skip wired to the controller (were inert). Kept the `Arranged: N` readout.
+- **ACs un-pended:** AC-6, AC-7, AC-8 (deleted their rows in `integration_test/bs07/pending.dart`).
+- **Augmentations closed (re-graded A):** TestAC06/07/08 — FLOW-4 added `whenPlaceCap(capId)` + the `arrangementResult` observable, so the place grain (AC-6: `arranged.last==placed`, +1/−1, pool no longer contains it; second cap takes the next position), start-over (AC-7: all caps return, pool==full set), and skip-vs-complete discrimination (AC-8: skip records no result, a completed arrangement does) are all now driven. AC-8 observes the arrangement result via the new `arrangementResult` getter (not the estimate's `arrangementPresent` — FLOW-5 assembles the estimate later; the ITEST observation point is "arrangement-present" directly).
+- **Gate:** `flutter analyze` clean · unit **997 passed** (+30 vs FLOW-3: arrangement controller/state/widget tests + the `arrangementResult` getter branches, −3 removed throw-tests) · coverage gate vs `main` **100% on all 23 touched lib files** · acceptance (sim iPhone 17 `5AB9D06D…`, default run) **16 passed / 8 skipped** — AC-6/7/8 now run and pass, the other 8 ACs still pending · grade **A** for AC-6, AC-7, AC-8 (fresh independent subagent, G1–G6; AC-2/3/4 confirmed still A). **Fix passes: 1/3** (first run: the `whenSkipArrangement` tap landed off-screen at the top of the scroll view — the skip button is below the fold with nothing scrolled; added `ensureVisible` to the skip/start-over drivers, as `whenPlaceCap` already had; green on rerun).
+- **Updated tests (recorded per ground rule — not weakened):** `onboarding_controller_test.dart` (the three `throws` cases for `placeCap`/`startOver`/`skipArrangement` replaced by behaviour tests); `onboarding_state_test.dart` (default `arrangementPool` now asserts `arrangementCaps`; new `arrangementResult` group covering in-progress/completed/skipped); `onboarding_host_test.dart` (the shell "controls inert" test drops the `Pool: 0 caps` text assertion — FLOW-4 renders cap controls — and asserts a cap control + `Arranged: 0` instead); `self_assessment_test.dart` scaffold-guard `expected` set shrinks by AC-6/7/8; harness `self_assessment_harness.dart` gained `whenPlaceCap` + `arrangementResult` and `ensureVisible` on the skip/start-over drivers. New: `test/onboarding/screens/arrangement_step_test.dart`.
+- **Tokens / time:** 14,878,591 · 25m 54s.
+
+### Checkpoint / Handoff (FLOW-4)
+
+- **Frozen for later phases:** `OnboardingController.placeCap/startOver/skipArrangement` are live. The arrangement pool starts as `arrangementCaps` (full); `arrangedCaps` is the placed order; `OnboardingState.arrangementResult` is present only when completed and not skipped. `ArrangementStep.capKey(id)` is the per-cap control key; `whenPlaceCap(capId)` / `whenStartOver` / `whenSkipArrangement` are the drivers (all `ensureVisible` before tapping — the arrangement sits below the fold in the shell's single scroll view).
+- **For FLOW-5 (enabler — the result-step barrier):** assemble `CvdEstimate` from the tier results present (prior + screening + the arrangement result + threshold) via `AssessmentEngine.assemble` and advance to the result step. The arrangement contributes `arrangementResult` (present/absent) — a skip leaves it absent. FLOW-5 is `depends on` ENGINE-3/4/5/6 + FLOW-4 (all but ENGINE-5/6 now done).
+- **Verification commands** (worktree, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
+- **Known gaps:** the four-step count stays provisional until G-5/FLOW-2; a live `estimate`/`band` arrive with FLOW-5/ENGINE-7; `save` writes nothing until PROFILE-2. AC-8's acceptance test chooses skip-instead-of-complete, so the getter's `arrangementSkipped` guard is pinned by a unit test (`onboarding_state_test.dart`) rather than the acceptance test (optional future hardening: a complete-then-skip acceptance case).

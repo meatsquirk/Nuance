@@ -50,18 +50,6 @@ void main() {
       );
     });
 
-    test('placeCap throws (FLOW-4)', () {
-      expect(() => controller.placeCap(0), throwsUnimplementedError);
-    });
-
-    test('startOver throws (FLOW-4)', () {
-      expect(controller.startOver, throwsUnimplementedError);
-    });
-
-    test('skipArrangement throws (FLOW-4)', () {
-      expect(controller.skipArrangement, throwsUnimplementedError);
-    });
-
     test('scoreThreshold throws (ENGINE-6)', () {
       expect(
         () => controller.scoreThreshold(const []),
@@ -246,6 +234,74 @@ void main() {
           reason: 'stepIndex is clamped to the last step');
       expect(single.state.testingStarted, isTrue,
           reason: 'testing still begins even at the last step');
+    });
+  });
+
+  group('OnboardingController arrangement (FLOW-4, AC-6/7/8)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController();
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('starts with the full cap pool and nothing arranged', () {
+      expect(controller.state.arrangementPool, arrangementCaps);
+      expect(controller.state.arrangedCaps, isEmpty);
+    });
+
+    test('placeCap moves a pooled cap to the next arranged position and notifies',
+        () {
+      final first = controller.state.arrangementPool.first;
+      controller.placeCap(first);
+      expect(controller.state.arrangedCaps, [first]);
+      expect(controller.state.arrangementPool, isNot(contains(first)));
+      expect(controller.state.arrangementPool.length,
+          arrangementCaps.length - 1);
+      expect(notifications, 1);
+
+      // A second cap appends after the first (the next position).
+      final second = controller.state.arrangementPool.first;
+      controller.placeCap(second);
+      expect(controller.state.arrangedCaps, [first, second]);
+      expect(notifications, 2);
+    });
+
+    test('placeCap of a cap not in the pool is a no-op without notifying', () {
+      final first = controller.state.arrangementPool.first;
+      controller.placeCap(first);
+      notifications = 0;
+
+      // Already placed — no longer in the pool.
+      controller.placeCap(first);
+      expect(controller.state.arrangedCaps, [first],
+          reason: 'no duplicate is added');
+      // An id that is not one of the caps at all.
+      controller.placeCap(999);
+      expect(controller.state.arrangedCaps, [first]);
+      expect(notifications, 0, reason: 'a no-op place notifies nothing');
+    });
+
+    test('startOver returns every placed cap to the pool and notifies', () {
+      controller.placeCap(controller.state.arrangementPool.first);
+      controller.placeCap(controller.state.arrangementPool.first);
+      expect(controller.state.arrangedCaps.length, 2);
+      notifications = 0;
+
+      controller.startOver();
+      expect(controller.state.arrangedCaps, isEmpty);
+      expect(controller.state.arrangementPool, arrangementCaps);
+      expect(notifications, 1);
+    });
+
+    test('skipArrangement marks skipped, records no result, and notifies', () {
+      controller.skipArrangement();
+      expect(controller.state.arrangementSkipped, isTrue);
+      expect(controller.state.arrangementResult, isNull);
+      expect(notifications, 1);
     });
   });
 }

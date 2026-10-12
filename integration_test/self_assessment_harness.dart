@@ -263,6 +263,10 @@ class SelfAssessmentHarness {
   /// Whether the painter skipped the arrangement (AC-8).
   bool get arrangementSkipped => state.arrangementSkipped;
 
+  /// The Tier 3 arrangement result, or null until the arrangement is completed;
+  /// absent after a skip (AC-8).
+  ArrangementResult? get arrangementResult => state.arrangementResult;
+
   /// The Tier 4 threshold result, or null until scored (AC-9).
   ThresholdResult? get threshold => state.threshold;
 
@@ -343,15 +347,32 @@ class SelfAssessmentHarness {
     await tester.pumpAndSettle();
   }
 
-  /// Returns every placed cap to the pool — E39 (AC-7; wired FLOW-4).
-  Future<void> whenStartOver() async {
-    await tester.tap(find.byKey(ArrangementStep.startOverKey));
+  /// Places the pooled Tier 3 cap [capId] into the next arranged position by
+  /// tapping its control — E38 (AC-6/7; wired FLOW-4). Ensures the control is
+  /// scrolled into view first (the arrangement sits below the earlier steps in
+  /// the shell's single scroll view).
+  Future<void> whenPlaceCap(int capId) async {
+    final cap = find.byKey(ArrangementStep.capKey(capId));
+    await tester.ensureVisible(cap);
+    await tester.tap(cap);
     await tester.pumpAndSettle();
   }
 
-  /// Skips the arrangement — E43 (AC-8; wired FLOW-4).
+  /// Returns every placed cap to the pool — E39 (AC-7; wired FLOW-4). Scrolls
+  /// the control into view first (the arrangement sits below the earlier steps).
+  Future<void> whenStartOver() async {
+    final startOver = find.byKey(ArrangementStep.startOverKey);
+    await tester.ensureVisible(startOver);
+    await tester.tap(startOver);
+    await tester.pumpAndSettle();
+  }
+
+  /// Skips the arrangement — E43 (AC-8; wired FLOW-4). Scrolls the control into
+  /// view first (the arrangement sits below the earlier steps).
   Future<void> whenSkipArrangement() async {
-    await tester.tap(find.byKey(ArrangementStep.skipKey));
+    final skip = find.byKey(ArrangementStep.skipKey);
+    await tester.ensureVisible(skip);
+    await tester.tap(skip);
     await tester.pumpAndSettle();
   }
 

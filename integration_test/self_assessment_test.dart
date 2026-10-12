@@ -605,21 +605,37 @@ void main() {
       'the painter places colour caps in hue order',
       (tester) async {
         final h = await givenSelfAssessment(tester);
-        // Given: the arrangement step shows a pool of unplaced caps and nothing
-        // is arranged yet. The shell leaves the pool empty and exposes no
-        // cap-selection control; FLOW-4 fills the pool and wires placing a cap.
+        // Given: the arrangement step shows the full pool of unplaced caps and
+        // nothing is arranged yet (FLOW-4 fills the pool and wires placeCap).
         expect(find.byKey(ArrangementStep.regionKey), findsOneWidget);
         expect(h.arrangedCaps, isEmpty, reason: 'nothing placed yet');
-        expect(h.arrangementPool, isNotEmpty,
-            reason: 'AC-6 needs a populated cap pool to place from — FLOW-4 fills '
-                'the pool and wires placeCap (no cap-selection control in the '
-                'shell yet)');
-        // Limited — B pending FLOW-4: once FLOW-4 adds the cap-selection control
-        // + a whenPlaceCap(capId) driver, placing pool.first takes the next
-        // arranged position (arranged.last == placed; length +1) and removes it
-        // from the pool (length −1), rejecting a place at a wrong index, a
-        // duplicate, or one that leaves the cap in the pool (see Test
-        // augmentations).
+        expect(h.arrangementPool, arrangementCaps,
+            reason: 'the pool starts as the full set of caps to arrange');
+        final placed = h.arrangementPool.first;
+        final poolSizeBefore = h.arrangementPool.length;
+
+        // When: place the first pooled cap through its control.
+        await h.whenPlaceCap(placed);
+
+        // Then: it takes the next (first) arranged position and leaves the pool.
+        expect(h.arrangedCaps.last, placed,
+            reason: 'the placed cap takes the next arranged position');
+        expect(h.arrangedCaps.length, 1,
+            reason: 'exactly one cap is now arranged (+1)');
+        expect(h.arrangementPool.length, poolSizeBefore - 1,
+            reason: 'the placed cap is removed from the pool (−1)');
+        expect(h.arrangementPool, isNot(contains(placed)),
+            reason: 'a placed cap no longer sits in the pool');
+
+        // Control: a second placed cap takes the NEXT position (appended after
+        // the first), rejecting a place that overwrites, inserts at a wrong
+        // index, or leaves the cap in the pool (which would keep the length).
+        final second = h.arrangementPool.first;
+        await h.whenPlaceCap(second);
+        expect(h.arrangedCaps, [placed, second],
+            reason: 'the second cap takes the next position, after the first');
+        expect(h.arrangementPool, isNot(contains(second)),
+            reason: 'the second placed cap also leaves the pool');
       },
     );
 
@@ -628,18 +644,30 @@ void main() {
       'starting over clears the arrangement',
       (tester) async {
         final h = await givenSelfAssessment(tester);
-        // Given: several caps placed (arranged ≥ 2, pool reduced). Placing caps
-        // needs FLOW-4's cap-selection control, absent from the shell, so the
-        // pool is empty and nothing is arranged yet.
         expect(find.byKey(ArrangementStep.startOverKey), findsOneWidget,
             reason: 'the start-over control (E39) is present');
-        expect(h.arrangedCaps.length, greaterThanOrEqualTo(2),
-            reason: 'AC-7 needs caps placed before starting over — FLOW-4 wires '
-                'placing caps (no cap-selection control in the shell yet)');
-        // Limited — B pending FLOW-4: once FLOW-4 lets caps be placed,
-        // whenStartOver() returns ALL caps to the pool (arranged empty, pool ==
-        // the full set), rejecting a reset that clears only the last placement or
-        // leaves some arranged (see Test augmentations).
+        // Given: two caps placed, so there is a real arrangement to clear (and
+        // both have left the pool).
+        final first = h.arrangementPool.first;
+        await h.whenPlaceCap(first);
+        final second = h.arrangementPool.first;
+        await h.whenPlaceCap(second);
+        expect(h.arrangedCaps, [first, second],
+            reason: 'two caps placed before starting over');
+        expect(h.arrangementPool, isNot(contains(first)),
+            reason: 'the placed caps left the pool');
+        expect(h.arrangementPool, isNot(contains(second)));
+
+        // When: start the arrangement over.
+        await h.whenStartOver();
+
+        // Then: every placed cap returns to the pool and nothing stays arranged
+        // — rejecting a reset that clears only the last placement or leaves some
+        // arranged.
+        expect(h.arrangedCaps, isEmpty,
+            reason: 'starting over empties the arrangement');
+        expect(h.arrangementPool, arrangementCaps,
+            reason: 'all caps return to the pool (the full set)');
       },
     );
 
@@ -648,24 +676,37 @@ void main() {
       'the painter skips the arrangement for now',
       (tester) async {
         final h = await givenSelfAssessment(tester);
-        // Given: on the arrangement step, not skipped yet.
+        // Given: on the arrangement step, not skipped and no result yet.
         expect(find.byKey(ArrangementStep.skipKey), findsOneWidget,
             reason: 'the skip control (E43) is present');
         expect(h.arrangementSkipped, isFalse, reason: 'not skipped yet');
+        expect(h.arrangementResult, isNull, reason: 'no arrangement result yet');
 
-        // When: skip the arrangement through the real control (FLOW-4 continues
-        // the flow without an arrangement result).
+        // When: skip the arrangement through the real control.
         await h.whenSkipArrangement();
 
-        // Then: the flow is marked skipped, so it contributes no arrangement
-        // result.
+        // Then: the flow is marked skipped and records NO arrangement result
+        // (it continues without one).
         expect(h.arrangementSkipped, isTrue,
-            reason: 'skipping continues the flow without an arrangement result '
-                '(FLOW-4)');
-        // Limited — B pending FLOW-4: the catalogue control "completing the
-        // arrangement instead records a result" needs the cap-selection control
-        // FLOW-4 adds; this asserts only the skip path until then (see Test
-        // augmentations).
+            reason: 'skipping continues the flow without an arrangement (FLOW-4)');
+        expect(h.arrangementResult, isNull,
+            reason: 'a skip fabricates no arrangement result');
+
+        // Control: a fresh flow that COMPLETES the arrangement (every cap
+        // placed) instead records a result — distinguishing a skip from a
+        // completion, so this rejects a skip that fabricates a result and a
+        // completion that records none.
+        final control = await givenSelfAssessment(tester);
+        for (final capId in [...control.arrangementPool]) {
+          await control.whenPlaceCap(capId);
+        }
+        expect(control.arrangementPool, isEmpty, reason: 'every cap placed');
+        expect(control.arrangementSkipped, isFalse,
+            reason: 'a completion is not a skip');
+        expect(control.arrangementResult, isNotNull,
+            reason: 'completing the arrangement records a result');
+        expect(control.arrangementResult!.present, isTrue,
+            reason: 'the recorded arrangement result is present');
       },
     );
 
@@ -727,13 +768,11 @@ void main() {
         () {
       // Seeded with AC-1..AC-14 (ENGINE-1); each behaviour phase deletes its
       // AC's row here as it un-pends it, so this set shrinks by one per
-      // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3), AC-4 (ENGINE-4).
+      // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3), AC-4 (ENGINE-4),
+      // AC-6/7/8 (FLOW-4).
       const expected = <String>{
         'AC-1',
         'AC-5',
-        'AC-6',
-        'AC-7',
-        'AC-8',
         'AC-9',
         'AC-10',
         'AC-11',

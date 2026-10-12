@@ -47,9 +47,9 @@ const Map<String, String> pendingACs = {
   // AC-3 (Tier 1 intake answer → starting prior) un-pended by ENGINE-3.
   // AC-4 (Tier 1 prior-diagnosis seeds the prior) un-pended by ENGINE-4.
   'AC-5': 'ENGINE-5', // Tier 2 screening presence + R-G/B-Y direction
-  'AC-6': 'FLOW-4', // arrangement: place a cap in the next position
-  'AC-7': 'FLOW-4', // arrangement: start over clears the arrangement
-  'AC-8': 'FLOW-4', // arrangement: skip continues without a result
+  // AC-6 (arrangement: place a cap in the next position) un-pended by FLOW-4.
+  // AC-7 (arrangement: start over clears the arrangement) un-pended by FLOW-4.
+  // AC-8 (arrangement: skip continues without a result) un-pended by FLOW-4.
   'AC-9': 'ENGINE-6', // Tier 4 threshold severity on the confusion line
   'AC-10': 'FLOW-6', // result: adjust estimated type by hand
   'AC-11': 'ENGINE-7', // severity value → plain-language band

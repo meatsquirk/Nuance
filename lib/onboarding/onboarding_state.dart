@@ -1,6 +1,18 @@
 import 'package:paint_color_assistant/onboarding/engine/cvd_estimate.dart';
 import 'package:paint_color_assistant/onboarding/engine/tier_results.dart';
 
+/// The fixed set of Tier 3 colour caps the painter arranges in hue order
+/// (AC-6/7/8), as cap ids in their scrambled presentation order — so arranging
+/// them in hue order is a real reordering, and placing a cap removes exactly it
+/// from the pool.
+///
+/// This is the full set [startOver] restores the pool to, and the empty state's
+/// [OnboardingState.arrangementPool] default: before any cap is placed the pool
+/// *is* every cap (the pool is the caps not yet placed), so the arrangement is
+/// available as soon as the step is shown (FLOW-4; the shell lays every step out
+/// at once).
+const List<int> arrangementCaps = [3, 0, 4, 1, 5, 2];
+
 /// The observable state of the self-assessment onboarding flow.
 ///
 /// A plain immutable snapshot held by the `OnboardingController` and surfaced to
@@ -27,7 +39,7 @@ class OnboardingState {
     this.testingStarted = false,
     this.prior = StartingPrior.none,
     this.screening,
-    this.arrangementPool = const [],
+    this.arrangementPool = arrangementCaps,
     this.arrangedCaps = const [],
     this.arrangementSkipped = false,
     this.threshold,
@@ -60,7 +72,9 @@ class OnboardingState {
   /// (AC-5).
   final ScreeningResult? screening;
 
-  /// The Tier 3 caps not yet placed (AC-6/AC-7). Cap ids; FLOW-4 gives them hue.
+  /// The Tier 3 caps not yet placed (AC-6/AC-7). Cap ids; defaults to the full
+  /// [arrangementCaps] (nothing placed yet). FLOW-4 moves each placed cap out of
+  /// this pool into [arrangedCaps].
   final List<int> arrangementPool;
 
   /// The Tier 3 caps placed in order so far (AC-6/AC-7).
@@ -93,6 +107,22 @@ class OnboardingState {
   /// FLOW-3 continue gate opens on (AC-2).
   bool get lightingConfirmed =>
       brightnessConfirmed && nightLightConfirmed && daylightConfirmed;
+
+  /// The Tier 3 arrangement outcome, or null until one is available (AC-8).
+  ///
+  /// Absent (null) while the arrangement is still in progress, and absent when
+  /// the painter skipped it — so a skip contributes no arrangement result. It
+  /// becomes present once every cap has been placed (the pool emptied with at
+  /// least one cap arranged), which is how completing the arrangement is
+  /// distinguished from skipping it (FLOW-4). [startOver] empties the
+  /// arrangement, so it returns to null.
+  ArrangementResult? get arrangementResult {
+    if (arrangementSkipped) return null;
+    if (arrangedCaps.isNotEmpty && arrangementPool.isEmpty) {
+      return const ArrangementResult(present: true);
+    }
+    return null;
+  }
 
   /// Returns a copy of this snapshot with the given fields replaced; every
   /// omitted field keeps its current value (FLOW-3 adds this as the forward

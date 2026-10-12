@@ -6,11 +6,11 @@ import '../onboarding_controller.dart';
 /// [button], E39 start the arrangement over [button], E43 skip [button]; AC-6,
 /// AC-7, AC-8).
 ///
-/// Shows the pool of unplaced caps, the arranged order, and the start-over /
-/// skip controls, reading the counts back from [OnboardingController.state]. The
-/// FLOW-1 shell renders the controls **inert** (`onPressed: null`): FLOW-4 wires
-/// `placeCap` (pool → next position), `startOver` (all caps back to the pool)
-/// and `skipArrangement` (continue with no arrangement result).
+/// Shows the pool of unplaced caps as a control per cap, the arranged order, and
+/// the start-over / skip controls, reading them back from
+/// [OnboardingController.state]. FLOW-4 wires `placeCap` (tap a pooled cap to
+/// take the next arranged position), `startOver` (all caps back to the pool) and
+/// `skipArrangement` (continue with no arrangement result).
 class ArrangementStep extends StatelessWidget {
   /// Creates the arrangement step over [controller].
   const ArrangementStep({required this.controller, super.key});
@@ -30,6 +30,9 @@ class ArrangementStep extends StatelessWidget {
   /// Stable anchor for the skip control (E43).
   static const Key skipKey = ValueKey('onboarding-arrangement-skip');
 
+  /// The key the place-cap control for [capId] is found by (FLOW-4).
+  static Key capKey(int capId) => ValueKey('onboarding-arrangement-cap-$capId');
+
   /// The controller the place / start-over / skip actions act on (FLOW-4).
   final OnboardingController controller;
 
@@ -41,17 +44,30 @@ class ArrangementStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Arrange the colour caps in hue order'),
-        Text('Pool: ${state.arrangementPool.length} caps', key: poolKey),
-        Text('Arranged: ${state.arrangedCaps.length}', key: arrangedKey),
-        const TextButton(
-          key: startOverKey,
-          onPressed: null,
-          child: Text('Start over'),
+        // The unplaced caps: tapping one places it in the next arranged
+        // position (AC-6). A Wrap keeps the pool compact as it grows/shrinks.
+        Wrap(
+          key: poolKey,
+          spacing: 8,
+          children: [
+            for (final capId in state.arrangementPool)
+              TextButton(
+                key: capKey(capId),
+                onPressed: () => controller.placeCap(capId),
+                child: Text('Cap $capId'),
+              ),
+          ],
         ),
-        const TextButton(
+        Text('Arranged: ${state.arrangedCaps.length}', key: arrangedKey),
+        TextButton(
+          key: startOverKey,
+          onPressed: controller.startOver,
+          child: const Text('Start over'),
+        ),
+        TextButton(
           key: skipKey,
-          onPressed: null,
-          child: Text('Skip for now'),
+          onPressed: controller.skipArrangement,
+          child: const Text('Skip for now'),
         ),
       ],
     );

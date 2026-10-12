@@ -127,20 +127,45 @@ class OnboardingController extends ChangeNotifier {
   void scoreScreening(List<PlateResponse> responses) =>
       throw UnimplementedError('scoreScreening is wired in ENGINE-5 (AC-5)');
 
-  /// Places the Tier 3 cap [capId] into the next arranged position — FLOW-4
-  /// moves it from the pool to the arrangement (AC-6).
-  void placeCap(int capId) =>
-      throw UnimplementedError('placeCap is wired in FLOW-4 (AC-6)');
+  /// Places the Tier 3 cap [capId] into the next arranged position (AC-6).
+  ///
+  /// Moves [capId] out of [OnboardingState.arrangementPool] and onto the end of
+  /// [OnboardingState.arrangedCaps], then notifies. A cap that is not in the
+  /// pool — already placed, or not one of the caps — is a no-op (no move, no
+  /// notify), so the arrangement never holds a duplicate and a stale tap can't
+  /// corrupt the order.
+  void placeCap(int capId) {
+    if (!_state.arrangementPool.contains(capId)) return;
+    _state = _state.copyWith(
+      arrangementPool: [..._state.arrangementPool]..remove(capId),
+      arrangedCaps: [..._state.arrangedCaps, capId],
+    );
+    notifyListeners();
+  }
 
-  /// Returns every placed cap to the pool — FLOW-4 clears the arrangement
-  /// (AC-7).
-  void startOver() =>
-      throw UnimplementedError('startOver is wired in FLOW-4 (AC-7)');
+  /// Returns every placed cap to the pool and empties the arrangement — the
+  /// painter starts the arrangement over (AC-7).
+  ///
+  /// Resets the pool to the full [arrangementCaps] and clears
+  /// [OnboardingState.arrangedCaps], so no placement survives, then notifies.
+  void startOver() {
+    _state = _state.copyWith(
+      arrangementPool: arrangementCaps,
+      arrangedCaps: const [],
+    );
+    notifyListeners();
+  }
 
-  /// Skips the arrangement so it contributes no result — FLOW-4 continues
-  /// without it (AC-8).
-  void skipArrangement() =>
-      throw UnimplementedError('skipArrangement is wired in FLOW-4 (AC-8)');
+  /// Skips the arrangement so it contributes no result — the flow continues
+  /// without an arrangement result (AC-8).
+  ///
+  /// Marks [OnboardingState.arrangementSkipped], which leaves
+  /// [OnboardingState.arrangementResult] absent (a skip records no result),
+  /// then notifies.
+  void skipArrangement() {
+    _state = _state.copyWith(arrangementSkipped: true);
+    notifyListeners();
+  }
 
   /// Scores the Tier 4 threshold probes — ENGINE-6 scores them through [engine]
   /// into a severity on the confusion line (AC-9).

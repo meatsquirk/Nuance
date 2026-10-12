@@ -6,6 +6,7 @@ import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/onboarding/cvd_profile_read_endpoint.dart';
 import 'package:paint_color_assistant/onboarding/onboarding_read_endpoint.dart';
+import 'package:paint_color_assistant/onboarding/onboarding_state.dart';
 import 'package:paint_color_assistant/onboarding/screens/arrangement_step.dart';
 import 'package:paint_color_assistant/onboarding/screens/intake_step.dart';
 import 'package:paint_color_assistant/onboarding/screens/lighting_step.dart';
@@ -59,7 +60,8 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: OnboardingHost()));
 
       // Controls whose behaviour phase has not run yet carry no handler. (The
-      // lighting continue is now wired by FLOW-3, so it is no longer inert.)
+      // lighting continue is wired by FLOW-3 and the arrangement by FLOW-4, so
+      // they are no longer inert.)
       expect(
         tester.widget<TextButton>(find.byKey(ResultStep.saveKey)).onPressed,
         isNull,
@@ -68,8 +70,11 @@ void main() {
         tester.widget<Slider>(find.byKey(ResultStep.severityKey)).onChanged,
         isNull,
       );
-      // Shell arrangement pool/arranged are empty.
-      expect(find.text('Pool: 0 caps'), findsOneWidget);
+      // The arrangement step is wired (FLOW-4): the pool shows a control per
+      // cap and nothing is arranged yet.
+      expect(find.byKey(ArrangementStep.poolKey), findsOneWidget);
+      expect(find.byKey(ArrangementStep.capKey(arrangementCaps.first)),
+          findsOneWidget);
       expect(find.text('Arranged: 0'), findsOneWidget);
     });
 
