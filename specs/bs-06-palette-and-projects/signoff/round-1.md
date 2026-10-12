@@ -2,7 +2,7 @@
 
 **Feature:** bs-06-palette-and-projects · **Spec:** [bs-06-palette-and-projects.feature](../../bs-06-palette-and-projects.feature)
 **Prepared:** 2026-10-11 (SIGNOFF-1) · **At code:** `feat/bs-06-palette-and-projects` @ `6ab1440` (PROJECT-6; sign-off commit stamped on decision)
-**Decision:** ⬜ **Awaiting owner decision.** The agent never approves.
+**Decision:** ✅ **Approved** — Matt Quirk, 2026-10-11 (recorded via `--signoff`).
 
 All 11 acceptance criteria are coded, un-pended and green by default (nothing pending); the full
 cross-feature regression (bs-01/02/03/04/06) is green; a fresh independent full-suite grade grid is
@@ -203,9 +203,9 @@ test goes red on its own Then, confirming the tests discriminate.
 
 ## 10. Decision
 
-Reviewer: ______________________  Date: ____________  Decision: ☐ Approved  ☐ Changes requested
+Reviewer: **Matt Quirk**  Date: **2026-10-11**  Decision: ☑ **Approved**  ☐ Changes requested
 
 Record via `/feature-next-phase --signoff bs-06-palette-and-projects approved | changes "<items>"`.
 
-- **Approved** → SIGNOFF-1 ✅; feature `Status: Done — signed off <date> by <reviewer> at <commit>`.
-- **Changes requested** → each item becomes a new phase before a fresh SIGNOFF-2; this round's file stays as history.
+- **Approved** → SIGNOFF-1 ✅; feature `Status: Done — signed off 2026-10-11 by Matt Quirk at 6ab1440`. ✅ **Recorded.**
+- **Changes requested** → each item becomes a new phase before a fresh SIGNOFF-2; this round's file stays as history. *(not taken)*
