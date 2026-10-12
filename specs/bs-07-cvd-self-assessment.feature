@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-11 by Matt Quirk (G-1). Derived 2026-10-05 by /wireframe-behavior-specs.
 Feature: CVD self-assessment (onboarding)
   Rather than require a clinical diagnosis, the app estimates the painter's
   colour-vision-deficiency type and severity through a tiered battery, fastest

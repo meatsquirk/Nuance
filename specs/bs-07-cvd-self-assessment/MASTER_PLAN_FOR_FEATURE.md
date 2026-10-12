@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** Not started — next ENGINE-1 (blocked by G-1 spec approval + G-3 bs-05/bs-06 merge)
+**Status:** Not started — next ENGINE-1, now **startable** (G-1 ✅ spec approved, G-3 ✅ bs-05/bs-06 merged to main @ cd1c86b)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -143,9 +143,9 @@ graph LR
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record approval as its first line, replacing the Draft banner) | ENGINE-1 | Open |
+| G-1 | decision | Approve the spec (record approval as its first line, replacing the Draft banner) | ENGINE-1 | ✅ Resolved 2026-10-11 21:46 EDT: spec approved; Draft banner replaced with approval line — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
-| G-3 | dependency | bs-05 **and** bs-06 signed off and merged to `main` (the `PersistentStore`, the `self_assessment` entry seam and the pubspec superset land on main) — closed by the human merging `feat/bs-05` and `feat/bs-06` | ENGINE-1 | Open |
+| G-3 | dependency | bs-05 **and** bs-06 signed off and merged to `main` (the `PersistentStore`, the `self_assessment` entry seam and the pubspec superset land on main) — closed by the human merging `feat/bs-05` and `feat/bs-06` | ENGINE-1 | ✅ Resolved 2026-10-11 21:46 EDT: `feat/bs-05` (990a67a→merge 9760a4f) + `feat/bs-06` (e998bac→merge cd1c86b) merged to `main`; `persistent_store.dart`, `self_assessment_entry_screen.dart`, `router.toSelfAssessment()`, pubspec superset (drift/path_provider/printing) confirmed present; analyze clean + 849 unit tests green post-merge — Matt Quirk |
 | G-4 | decision | Pin the profile persistence + scales: (a) persist via `PersistentStore` collection `cvd_profile`/id `current`, reusing `CvdProfile` unchanged; (b) slider 0..100 → severity 0..1; (c) band boundaries around the 30/60/90 anchors | PROFILE-1, ENGINE-7 | Open |
 | G-5 | decision | Reconcile the four-step progress (AC-14) with the five tiers: which tiers are the four counted steps, and where screening (Tier 2) and threshold (Tier 4) sit (proposed D-4) — routed to the spec author | FLOW-2 | Open |
 
@@ -162,7 +162,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | ENGINE-1 | scaffold: branch from merged main, baseline, coverage gate confirm, bs07 pending runner (14 ACs) | ⬜ Next | | | blocked by G-1 + G-3 |
+| 1 | ENGINE-1 | scaffold: branch from merged main, baseline, coverage gate confirm, bs07 pending runner (14 ACs) | ⬜ Next | | | G-1 ✅ · G-3 ✅ — startable |
 | 2 | ENGINE-2 | shell: assessment domain types + `AssessmentEngine` interface | ⬜ Todo | | | ∥ PROFILE-1 |
 | 3 | PROFILE-1 | shell: `CvdProfileStore` + `CvdProfileReadEndpoint` + `AppDependencies` wiring | ⬜ Todo | | | ∥ ENGINE-2 · G-4 |
 | 4 | FLOW-1 | shell: `OnboardingController`/state + `OnboardingReadEndpoint` + screen host & keyed step widgets + route (replace placeholder) | ⬜ Todo | | | |
@@ -189,11 +189,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ENGINE-1** (scaffold) is next but **blocked** by two gates a human must close first:
-- **G-1** — approve the spec (it still carries the `# Draft: awaiting owner approval` banner). Record approval as its first line.
-- **G-3** — merge `feat/bs-05` and `feat/bs-06` into `main` so the `PersistentStore`, the `self_assessment` entry seam and the pubspec superset exist on the base branch bs-07 branches from.
+**ENGINE-1** (scaffold) is **startable** — both blocking gates are closed (G-1 ✅ spec approved; G-3 ✅ bs-05/bs-06 merged to `main` @ cd1c86b). Next session: branch `feat/bs-07-cvd-self-assessment` from `main` @ cd1c86b and run ENGINE-1 (baseline, coverage-gate confirm, bs07 pending runner over the 14 ACs). No `lib/` product code.
 
-Also decide, before the phases they block: **G-4** (persistence + severity/band scales; blocks PROFILE-1 & ENGINE-7) and **G-5** (four-step vs five-tier reconciliation; blocks FLOW-2). G-2 (approve acceptance tests) is decided later at ITEST-4.
+Still to decide, before the phases they block (not blocking ENGINE-1): **G-4** (persistence + severity/band scales; blocks PROFILE-1 & ENGINE-7) and **G-5** (four-step vs five-tier reconciliation; blocks FLOW-2). G-2 (approve acceptance tests) is decided later at ITEST-4.
 
 ## Token usage
 
@@ -202,7 +200,8 @@ Also decide, before the phases they block: **G-4** (persistence + severity/band 
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 7a934388 | 2026-10-11 21:04 EDT | 21:20 | 15m 39s | 15m 39s | claude-opus-4-8 | 56 | 194,229 | 1,861,476 | 56,221 | 2,111,982 | plan written |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-11 21:20** | **15m 39s** | **15m 39s** |  | **56** | **194,229** | **1,861,476** | **56,221** | **2,111,982** |  |
+| GATE-DECISION | 6e88f0bc | 2026-10-11 21:45 EDT | 21:58 | 13m 16s | 13m 16s | claude-opus-4-8 | 104 | 106,275 | 4,977,129 | 51,472 | 5,134,980 | G-1 approved (spec), G-3 resolved (bs-05 merge 9760a4f + bs-06 merge cd1c86b to main; analyze clean, 849 unit tests green) |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-11 21:58** | **28m 55s** | **28m 55s** |  | **160** | **300,504** | **6,838,605** | **107,693** | **7,246,962** |  |
 
 ## Sign-off
 
