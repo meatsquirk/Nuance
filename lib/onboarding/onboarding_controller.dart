@@ -186,9 +186,30 @@ class OnboardingController extends ChangeNotifier {
   }
 
   /// Assembles the available tier results into an estimate and advances to the
-  /// result step — FLOW-5 (the enabler) folds them through [engine].
-  void advanceToResult() =>
-      throw UnimplementedError('advanceToResult is wired in FLOW-5');
+  /// result step — FLOW-5 (the enabler, D-7).
+  ///
+  /// Folds the current prior and whatever tier results are present (the Tier 2
+  /// [OnboardingState.screening], the completed Tier 3
+  /// [OnboardingState.arrangementResult] — absent after a skip — and the Tier 4
+  /// [OnboardingState.threshold]) through [engine] into a single
+  /// [OnboardingState.estimate], then moves to the last top-level step (the
+  /// result step) and notifies. The scoring lives in [engine] (D-9); the
+  /// controller only gathers the tier state and advances. A result is always
+  /// reachable even when a tier was skipped (AC-8) — `assemble` stands in the
+  /// defaults for a tier never run. The result adjustments (FLOW-6/7/8) refine
+  /// the assembled estimate from here.
+  void advanceToResult() {
+    _state = _state.copyWith(
+      estimate: engine.assemble(
+        prior: _state.prior,
+        screening: _state.screening,
+        arrangement: _state.arrangementResult,
+        threshold: _state.threshold,
+      ),
+      stepIndex: steps.length - 1,
+    );
+    notifyListeners();
+  }
 
   /// Overrides the estimated type by hand on the result step — FLOW-6 (AC-10).
   void setType(CvdType type) =>

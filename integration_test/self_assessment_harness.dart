@@ -43,6 +43,7 @@ import 'package:paint_color_assistant/onboarding/onboarding_state.dart';
 import 'package:paint_color_assistant/onboarding/screens/arrangement_step.dart';
 import 'package:paint_color_assistant/onboarding/screens/intake_step.dart';
 import 'package:paint_color_assistant/onboarding/screens/lighting_step.dart';
+import 'package:paint_color_assistant/onboarding/screens/onboarding_screen.dart';
 import 'package:paint_color_assistant/onboarding/screens/progress_region.dart';
 import 'package:paint_color_assistant/onboarding/screens/result_step.dart';
 import 'package:paint_color_assistant/onboarding/screens/screening_step.dart';
@@ -401,6 +402,18 @@ class SelfAssessmentHarness {
       matching: find.widgetWithText(
           TextButton, detected ? 'I can see it' : "I can't see it"),
     );
+    await tester.ensureVisible(control);
+    await tester.tap(control);
+    await tester.pumpAndSettle();
+  }
+
+  /// Concludes the battery: taps "See my result" to assemble the estimate from
+  /// whatever tiers ran and advance to the result step (FLOW-5 enabler). After
+  /// this the result-step ACs (AC-1/10/11/12/13) observe the assembled
+  /// [estimate]. Scrolls the control into view first (it sits below the earlier
+  /// steps in the shell's single scroll view).
+  Future<void> whenAdvanceToResult() async {
+    final control = find.byKey(OnboardingScreen.seeResultKey);
     await tester.ensureVisible(control);
     await tester.tap(control);
     await tester.pumpAndSettle();

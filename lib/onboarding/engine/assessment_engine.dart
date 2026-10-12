@@ -229,4 +229,84 @@ class TieredAssessmentEngine extends ShellAssessmentEngine {
     }
     return ThresholdResult(severity: threshold.clamp(0.0, 1.0).toDouble());
   }
+
+  /// Folds the [prior] and the available tier results into a single estimate
+  /// (D-7, AC-1/10/11/13).
+  ///
+  /// The tiers are optional and run fastest-first, so the estimate is assembled
+  /// from whatever is present — a skipped tier simply does not contribute, and a
+  /// result is always reachable (the shell default would stand in for a tier
+  /// never run):
+  ///
+  /// - **Direction** (the confusion axis): a *present* Tier 2 [screening] is the
+  ///   measured evidence and wins; failing that the Tier 1 [prior]'s lean is
+  ///   used; failing that the red-green axis (the more common, matching the
+  ///   shell default).
+  /// - **Type**: an authoritative reported diagnosis (the [prior] carries a
+  ///   concrete [CvdType]) is kept as-is; otherwise the direction is narrowed to
+  ///   the representative type on that axis — red-green to deutan (the more
+  ///   common dichromacy), blue-yellow to tritan. The painter refines it by hand
+  ///   on the result step (AC-10, FLOW-6).
+  /// - **Severity** (0..1): the measured Tier 4 [threshold] severity when the
+  ///   probing ran; otherwise the [prior]'s graded self-report weight stands in,
+  ///   clamped to the 0..1 `CvdProfile.severity` scale. The painter can override
+  ///   it with the self-calibration slider (AC-12, FLOW-7).
+  ///
+  /// [arrangement] contributes only its presence (a skip leaves it absent, AC-8);
+  /// the ordering detail is carried but not yet folded into the type/severity.
+  @override
+  CvdEstimate assemble({
+    required StartingPrior prior,
+    ScreeningResult? screening,
+    ArrangementResult? arrangement,
+    ThresholdResult? threshold,
+  }) {
+    final direction = _estimatedDirection(prior, screening);
+    return CvdEstimate(
+      type: _estimatedType(prior, direction),
+      severity: _estimatedSeverity(prior, threshold),
+      prior: prior,
+      screening: screening,
+      threshold: threshold,
+      arrangementPresent: arrangement?.present ?? false,
+    );
+  }
+
+  /// The confusion axis the estimate sits on: a measured, *present* [screening]
+  /// is stronger evidence than the self-reported [prior] and wins; otherwise the
+  /// prior's lean is used, falling back to red-green (the more common axis, the
+  /// shell default).
+  static ScreeningDirection _estimatedDirection(
+    StartingPrior prior,
+    ScreeningResult? screening,
+  ) {
+    if (screening != null && screening.present) return screening.direction;
+    return prior.direction ?? ScreeningDirection.redGreen;
+  }
+
+  /// The estimated dichromacy class: a reported diagnosis ([prior.type]) is
+  /// authoritative and kept; otherwise [direction] is narrowed to the
+  /// representative type on its axis (red-green to deutan, blue-yellow to
+  /// tritan).
+  static CvdType _estimatedType(
+    StartingPrior prior,
+    ScreeningDirection direction,
+  ) {
+    final reported = prior.type;
+    if (reported != null) return reported;
+    return direction == ScreeningDirection.blueYellow
+        ? CvdType.tritan
+        : CvdType.deutan;
+  }
+
+  /// The estimated severity (0..1): the measured [threshold] severity when the
+  /// Tier 4 probing ran, otherwise the [prior]'s graded self-report weight,
+  /// clamped to the `CvdProfile.severity` scale.
+  static double _estimatedSeverity(
+    StartingPrior prior,
+    ThresholdResult? threshold,
+  ) {
+    final severity = threshold?.severity ?? prior.weight;
+    return severity.clamp(0.0, 1.0).toDouble();
+  }
 }

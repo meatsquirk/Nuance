@@ -43,10 +43,6 @@ void main() {
     setUp(() => controller = OnboardingController());
     tearDown(() => controller.dispose());
 
-    test('advanceToResult throws (FLOW-5)', () {
-      expect(controller.advanceToResult, throwsUnimplementedError);
-    });
-
     test('setType throws (FLOW-6)', () {
       expect(
         () => controller.setType(CvdType.protan),
@@ -213,6 +209,68 @@ void main() {
       ]);
       expect(controller.state.threshold!.severity, 0);
       expect(notifications, 1);
+    });
+  });
+
+  group('OnboardingController advanceToResult (FLOW-5 enabler, D-7)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      // The real tiered engine (as the production host injects), so the assembled
+      // estimate reflects the real folding, not the shell default.
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('assembles an estimate from the gathered tiers and advances, notifying',
+        () {
+      // Report a deutan diagnosis (prior) and score a moderate threshold, then
+      // advance — the estimate folds both.
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.2, detected: false),
+        ThresholdProbe(contrast: 0.6, detected: false),
+        ThresholdProbe(contrast: 0.8, detected: true),
+      ]);
+      notifications = 0;
+
+      controller.advanceToResult();
+      final estimate = controller.state.estimate;
+      expect(estimate, isNotNull);
+      expect(estimate!.type, CvdType.deutan,
+          reason: 'the deutan diagnosis seeds the estimated type');
+      expect(estimate.severity, 0.6,
+          reason: 'the measured threshold (highest missed contrast) is the '
+              'severity');
+      expect(estimate.threshold, isNotNull);
+      // Advanced to the last top-level step (the result step).
+      expect(controller.state.stepIndex, controller.stepTotal - 1);
+      expect(notifications, 1);
+    });
+
+    test('reaches a result even with no tiers run (assembles the default)', () {
+      // No diagnosis, no screening, no threshold: a result is still reachable —
+      // the empty prior assembles the red-green deutan default at severity 0.
+      controller.advanceToResult();
+      final estimate = controller.state.estimate;
+      expect(estimate, isNotNull);
+      expect(estimate!.type, CvdType.deutan);
+      expect(estimate.severity, 0);
+      expect(estimate.arrangementPresent, isFalse,
+          reason: 'a skipped/unstarted arrangement contributes no presence');
+      expect(controller.state.stepIndex, controller.stepTotal - 1);
+    });
+
+    test('a completed arrangement is folded in as present', () {
+      // Complete the arrangement (place every cap), then advance.
+      for (final capId in [...controller.state.arrangementPool]) {
+        controller.placeCap(capId);
+      }
+      controller.advanceToResult();
+      expect(controller.state.estimate!.arrangementPresent, isTrue);
     });
   });
 

@@ -37,24 +37,34 @@ class ResultStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // FLOW-5 assembles the estimate onto the controller and advances here; until
+    // then (e.g. the shell / before "See my result") there is no estimate and the
+    // step shows its placeholder. The severity slider reflects the estimated
+    // severity on its 0..100 scale; it stays inert until FLOW-7 wires it.
+    final estimate = controller.state.estimate;
     return Column(
       key: regionKey,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text('Result'),
-        TextButton(
+      children: [
+        if (estimate == null)
+          const Text('Result')
+        else ...[
+          Text('Estimated type: ${estimate.type.name}'),
+          Text('Estimated severity: ${(estimate.severity * 100).round()}'),
+        ],
+        const TextButton(
           key: typeKey,
           onPressed: null,
           child: Text('Adjust type'),
         ),
         Slider(
           key: severityKey,
-          value: 0,
+          value: ((estimate?.severity ?? 0) * 100).clamp(0, 100).toDouble(),
           max: 100,
           onChanged: null,
         ),
-        SizedBox(key: caveatKey),
-        TextButton(
+        const SizedBox(key: caveatKey),
+        const TextButton(
           key: saveKey,
           onPressed: null,
           child: Text('Save profile'),

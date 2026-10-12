@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — behaviour stage open; FLOW-3 (AC-2) + ENGINE-3 (AC-3) + ENGINE-4 (AC-4) + ENGINE-5 (AC-5) + FLOW-4 (AC-6/7/8) + ENGINE-6 (AC-9) ✅ Done (8/14 behaviour ACs). Next: FLOW-5 (enabler) — the result-step barrier, now unblocked. FLOW-2 blocked on G-5.
+**Status:** In progress — behaviour stage open; FLOW-3 + ENGINE-3/4/5/6 + FLOW-4 ✅ Done (8/14 behaviour ACs); FLOW-5 (enabler — result-step barrier) ✅ Done. Next: ENGINE-7 (AC-11 band), then FLOW-6/7/8 + PROFILE-2 (result-step ACs, one/session). FLOW-2 blocked on G-5.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -177,8 +177,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 13 | ENGINE-5 | AC-5 screening presence + direction (Tier 2) | ✅ Done | 16,401,020 | 21m 15s | AC-5 un-pended + green; grade A (B pending→A); unit 1007/cov 100% touched/accept default 17 pass 7 skip; fix 0/3 |
 | 14 | FLOW-4 | AC-6/7/8 arrangement place/start-over/skip (Tier 3) | ✅ Done | 14,878,591 | 25m 54s | AC-6/7/8 un-pended + green; grade A; unit 997/cov 100% touched/accept default 16 pass 8 skip; fix 1/3 |
 | 15 | ENGINE-6 | AC-9 threshold severity (Tier 4) | ✅ Done | 8,996,409 | 16m 28s | AC-9 un-pended + green; `scoreThreshold` (highest failed contrast) + one-probe-at-a-time threshold step + controller wiring; grade A; unit 1018/cov 100% touched (23)/accept default 18 pass 6 skip; grade 12 A/2 B-pending; fix 0/3 |
-| 16 | FLOW-5 | enabler: assemble estimate + advance to result step | ⬜ Next | | | unblocked — all deps (ENGINE-3/4/5/6 + FLOW-4) done; barrier before result-step ACs |
-| 17 | ENGINE-7 | AC-11 severity → band (result) | ⬜ Todo | | | G-4 |
+| 16 | FLOW-5 | enabler: assemble estimate + advance to result step | ✅ Done | 11,668,942 | 18m 21s (18m 21s) | enabler (un-pends no AC): `assemble` fold + `advanceToResult` + "See my result" control + `ResultStep` renders type/severity; unit 1033/cov 100% (23); accept default 18 pass/6 skip, run-pending 19 pass/5 fail — result-step ACs now reach the result step, fail on own downstream Then (no FLOW-5 precondition failure); grade 12 A/2 B-pending; fix 0/3 |
+| 17 | ENGINE-7 | AC-11 severity → band (result) | ⬜ Next | | | unblocked (FLOW-5 done); G-4 cut-offs — override `band` + render label |
 | 18 | FLOW-6 | AC-10 adjust type by hand (result) | ⬜ Todo | | | |
 | 19 | FLOW-7 | AC-12 severity slider self-calibration (result) | ⬜ Todo | | | |
 | 20 | FLOW-8 | AC-1 result caveat (result) | ⬜ Todo | | | |
@@ -189,8 +189,12 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**Behaviour stage open (G-2 approved 2026-10-12). FLOW-3 (AC-2) + ENGINE-3 (AC-3) + ENGINE-4 (AC-4) + ENGINE-5 (AC-5) + FLOW-4 (AC-6/7/8) + ENGINE-6 (AC-9) ✅ Done and on `feat/bs-07` — 8/14 behaviour ACs.** `TieredAssessmentEngine` (host-injected) now overrides `recordIntake` + `seedFromDiagnosis` + `scoreScreening` + `scoreThreshold`; only `band` (ENGINE-7) and `assemble` (FLOW-5) stay trivial. Each phase is its own session (`/feature-next-phase bs07 <PHASE>`), then stop. Startable now:
-- **FLOW-5** (enabler) — **now unblocked** (all deps ENGINE-3/4/5/6 + FLOW-4 done). It is the barrier before every result-step AC: it must land before ENGINE-7/FLOW-6/7/8 and PROFILE-2. Builds `assemble` + `advanceToResult`. Grade grid **12 A / 2 B-pending** (B-pending: AC-10→FLOW-6, AC-13→PROFILE-2).
+**Behaviour stage open. FLOW-3 (AC-2) + ENGINE-3/4/5/6 (AC-3/4/5/9) + FLOW-4 (AC-6/7/8) ✅ Done — 8/14 behaviour ACs. FLOW-5 (enabler — the result-step barrier) ✅ Done 2026-10-12: `assemble` + `advanceToResult` landed, the 5 result-step ACs now reach the result step (fail on their own downstream Then).** `TieredAssessmentEngine` (host-injected) now overrides `recordIntake`/`seedFromDiagnosis`/`scoreScreening`/`scoreThreshold`/`assemble`; only `band` (ENGINE-7) stays trivial. Grade grid **12 A / 2 B-pending** (AC-10→FLOW-6, AC-13→PROFILE-2). Each phase is its own session (`/feature-next-phase bs07 <PHASE>`), then stop. **FLOW-5 unblocked all result-step phases — run one per session (each shares `OnboardingController`/result step + `self_assessment_test.dart`, so NOT parallel):**
+- **ENGINE-7** (AC-11) — override `TieredAssessmentEngine.band` (D-5 cut-offs) + render the band label on the result step. Un-pends AC-11.
+- **FLOW-6** (AC-10) — type-by-hand: add the type choices (make `whenAdjustType` select protan) + wire `setType`; closes AC-10's B-pending.
+- **FLOW-7** (AC-12) — severity slider + simulated/original pair; wire `setSeverity`/`confirmCalibration`.
+- **FLOW-8** (AC-1) — fill the caveat (`approximate estimate` + `anomaloscope`).
+- **PROFILE-2** (AC-13, depends ENGINE-7) — wire `save` + the live-pipeline augmentation; closes AC-13's B-pending. Then SIGNOFF-1.
 - **FLOW-2** (AC-14) still **blocked on G-5** (four-step vs five-tier, routed to spec author).
 
 Still open: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed to the spec author).
@@ -221,7 +225,8 @@ Still open: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed to the spe
 | RECONCILE | 02c60cd2 | 2026-10-12 17:09 EDT | 17:12 | 2m 42s | 2m 42s | claude-opus-4-8 | 42 | 65,311 | 1,484,182 | 11,495 | 1,561,030 | FLOW-4 merged into feat/bs-07 @ c571cdd (ff); master plan reconciled (AC-6/7/8 ✅; grade grid 11 A/3 B-pending); rollup deleted; ENGINE-5 now Next |
 | ENGINE-5 | 02c60cd2 | 2026-10-12 17:09 EDT | 17:30 | 21m 15s | 21m 15s | claude-opus-4-8 | 206 | 306,758 | 16,020,946 | 73,110 | 16,401,020 | AC-5 un-pended + green; scoreScreening (per-plate axis misses) + stateful screening step + controller wiring; AC-5 B pending→A; unit 1007/cov 100% touched (24)/accept default 17 pass 7 skip; grade 12 A/2 B-pending; fix 0/3 |
 | ENGINE-6 | a1c8868a | 2026-10-12 18:01 EDT | 18:18 | 16m 28s | 16m 28s | claude-opus-4-8 | 138 | 228,839 | 8,717,008 | 50,424 | 8,996,409 | AC-9 un-pended + green; scoreThreshold (highest failed contrast) + one-probe-at-a-time threshold step + controller wiring; unit 1018/cov 100% touched (23)/accept default 18 pass 6 skip; grade 12 A/2 B-pending; fix 0/3 |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 18:18** | **9h 09m** | **6h 03m** |  | **2,132** | **3,358,075** | **132,134,504** | **974,470** | **136,469,181** |  |
+| FLOW-5 | be30afa8 | 2026-10-12 19:32 EDT | 19:50 | 18m 21s | 18m 21s | claude-opus-4-8 | 160 | 274,785 | 11,329,601 | 64,396 | 11,668,942 | enabler: assemble + advanceToResult + See-my-result control + ResultStep renders type/severity; un-pends no AC; unit 1033/cov 100% (23); accept default 18 pass/6 skip, run-pending 19 pass/5 fail (result-step ACs reach result step, fail on own downstream Then, no FLOW-5 precondition failure); grade 12 A/2 B-pending; fix 0/3 |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 19:50** | **9h 27m** | **6h 22m** |  | **2,292** | **3,632,860** | **143,464,105** | **1,038,866** | **148,138,123** |  |
 
 ## Sign-off
 

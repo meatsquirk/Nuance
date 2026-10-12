@@ -274,4 +274,114 @@ void main() {
       );
     });
   });
+
+  group('TieredAssessmentEngine.assemble (FLOW-5, D-7)', () {
+    const engine = TieredAssessmentEngine();
+
+    test('a measured present screening sets the direction over the prior', () {
+      // The prior leans red-green, but a present blue-yellow screening is the
+      // measured evidence and wins — narrowing the type to tritan.
+      final estimate = engine.assemble(
+        prior: const StartingPrior(direction: ScreeningDirection.redGreen),
+        screening: const ScreeningResult(
+            present: true, direction: ScreeningDirection.blueYellow),
+      );
+      expect(estimate.type, CvdType.tritan);
+    });
+
+    test('an absent screening falls back to the prior lean for the direction',
+        () {
+      // present == false: the screening carries no direction evidence, so the
+      // prior's blue-yellow lean stands and the type narrows to tritan.
+      final estimate = engine.assemble(
+        prior: const StartingPrior(direction: ScreeningDirection.blueYellow),
+        screening: const ScreeningResult(
+            present: false, direction: ScreeningDirection.redGreen),
+      );
+      expect(estimate.type, CvdType.tritan);
+    });
+
+    test('with no screening the prior direction narrows the type', () {
+      final estimate = engine.assemble(
+        prior: const StartingPrior(direction: ScreeningDirection.redGreen),
+      );
+      expect(estimate.type, CvdType.deutan);
+    });
+
+    test('a directionless prior defaults to a red-green (deutan) estimate', () {
+      // The empty prior leans nowhere and no tier ran: the estimate falls to the
+      // more common red-green deutan default, and severity is 0.
+      final estimate = engine.assemble(prior: StartingPrior.none);
+      expect(estimate.type, CvdType.deutan);
+      expect(estimate.severity, 0);
+      expect(estimate.arrangementPresent, isFalse);
+      expect(estimate.screening, isNull);
+      expect(estimate.threshold, isNull);
+    });
+
+    test('a reported diagnosis type is kept over the narrowed direction', () {
+      // A present red-green screening would narrow to deutan, but the authoritative
+      // protan diagnosis on the prior is kept.
+      final estimate = engine.assemble(
+        prior: const StartingPrior(
+            type: CvdType.protan,
+            direction: ScreeningDirection.redGreen,
+            weight: 1),
+        screening: const ScreeningResult(
+            present: true, direction: ScreeningDirection.redGreen),
+      );
+      expect(estimate.type, CvdType.protan);
+    });
+
+    test('the measured threshold severity is used when probing ran', () {
+      final estimate = engine.assemble(
+        prior: const StartingPrior(
+            direction: ScreeningDirection.redGreen, weight: 1),
+        threshold: const ThresholdResult(severity: 0.6),
+      );
+      // The Tier 4 measurement (0.6) wins over the prior's self-report weight.
+      expect(estimate.severity, 0.6);
+    });
+
+    test('with no threshold the prior weight stands in for the severity', () {
+      final estimate = engine.assemble(
+        prior: const StartingPrior(
+            direction: ScreeningDirection.redGreen, weight: 0.5),
+      );
+      expect(estimate.severity, 0.5);
+    });
+
+    test('a completed arrangement is recorded as present', () {
+      final estimate = engine.assemble(
+        prior: StartingPrior.none,
+        arrangement: const ArrangementResult(present: true),
+      );
+      expect(estimate.arrangementPresent, isTrue);
+    });
+
+    test('carries the prior and tier results through onto the estimate', () {
+      const prior = StartingPrior(
+          type: CvdType.deutan, direction: ScreeningDirection.redGreen, weight: 1);
+      const screening =
+          ScreeningResult(present: true, direction: ScreeningDirection.redGreen);
+      const threshold = ThresholdResult(severity: 0.6);
+      final estimate = engine.assemble(
+        prior: prior,
+        screening: screening,
+        arrangement: const ArrangementResult(present: true),
+        threshold: threshold,
+      );
+      expect(
+        estimate,
+        const CvdEstimate(
+          type: CvdType.deutan,
+          severity: 0.6,
+          prior: prior,
+          screening: screening,
+          threshold: threshold,
+          arrangementPresent: true,
+        ),
+      );
+    });
+  });
 }

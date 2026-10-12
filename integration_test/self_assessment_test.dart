@@ -249,8 +249,10 @@ void main() {
       'AC-1',
       'the estimate is labelled approximate and a clinical test is recommended',
       (tester) async {
-        // Given: the painter completed the flow to the result step.
+        // Given: the painter completed the flow to the result step — "See my
+        // result" assembles the estimate and advances (FLOW-5 enabler).
         final h = await givenSelfAssessment(tester);
+        await h.whenAdvanceToResult();
         // The result step is reached only once FLOW-5 assembles an estimate.
         expect(h.estimate, isNotNull,
             reason: 'AC-1 needs the result step reached — FLOW-5 assembles the '
@@ -318,7 +320,9 @@ void main() {
       (tester) async {
         final h = await givenSelfAssessment(tester);
         // Given: the result step estimating deutan (FLOW-5 + deutan-leaning
-        // inputs).
+        // inputs) — report a deutan diagnosis, then assemble + advance.
+        await h.whenReportDiagnosis(type: CvdType.deutan);
+        await h.whenAdvanceToResult();
         expect(h.estimate, isNotNull,
             reason: 'AC-10 needs the result step reached — FLOW-5 assembles the '
                 'estimate');
@@ -345,6 +349,7 @@ void main() {
       (tester) async {
         final h = await givenSelfAssessment(tester);
         // Given: on the result step (FLOW-5 assembled the estimate).
+        await h.whenAdvanceToResult();
         expect(h.estimate, isNotNull,
             reason: 'AC-11 needs the result step reached — FLOW-5 assembles the '
                 'estimate');
@@ -377,6 +382,7 @@ void main() {
         final h = await givenSelfAssessment(tester);
         // Given: the result step shows the simulated/original pair with the
         // slider, and no calibration has been kept yet (FLOW-5 reached).
+        await h.whenAdvanceToResult();
         expect(h.estimate, isNotNull,
             reason: 'AC-12 needs the result step reached — FLOW-5 assembles the '
                 'estimate');
@@ -419,7 +425,14 @@ void main() {
         expect(await h.profileCount, 0, reason: 'no profile persisted before save');
         expect(check.confusable(fixedPair.a, fixedPair.b, injectedDefault), isTrue,
             reason: 'control: the default profile confuses the fixed pair');
-        // Given (cont.): a deutan, moderate result on the result step.
+        // Given (cont.): reach a deutan, moderate result on the result step —
+        // report a deutan diagnosis and probe a moderate threshold (the "strong"
+        // fixture → severity 0.6, moderate), then assemble + advance (FLOW-5).
+        await h.whenReportDiagnosis(type: CvdType.deutan);
+        for (final probe in thresholdProbesStrong) {
+          await h.whenProbe(detected: probe.detected);
+        }
+        await h.whenAdvanceToResult();
         expect(h.estimate, isNotNull,
             reason: 'AC-13 needs the result step reached — FLOW-5 assembles the '
                 'estimate');

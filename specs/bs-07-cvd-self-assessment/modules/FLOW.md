@@ -1,6 +1,6 @@
 # Module FLOW — onboarding controller, screens, flow
 
-**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8) ✅ Done; FLOW-2 (AC-14) blocked by G-5; FLOW-5 (enabler) is the next result-step barrier
+**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler) ✅ Done; FLOW-2 (AC-14) blocked by G-5; result-step ACs (ENGINE-7/FLOW-6/7/8/PROFILE-2) now unblocked
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/onboarding_controller.dart`, `onboarding_state.dart`, `onboarding_read_endpoint.dart`, `onboarding_steps.dart`; `lib/onboarding/screens/` (host + lighting, intake, screening, arrangement, threshold, result step widgets with keyed regions); route wiring in `lib/app/router.dart` + `lib/palette/self_assessment_entry_screen.dart` (replaced). Behavior phases in ENGINE/PROFILE add thin controller calls here (merge-risky — rebase before editing).
 **Depends on:** ENGINE (estimate types + scoring), PROFILE (save seam) · **Blocks:** ITEST, SIGNOFF
@@ -13,7 +13,7 @@
 | 2 | behavior | AC-14 | ⬜ Todo | | |
 | 3 | behavior | AC-2 | ✅ Done | 8,229,212 | 16m 09s |
 | 4 | behavior | AC-6, AC-7, AC-8 | ✅ Done | 14,878,591 | 25m 54s |
-| 5 | behavior | — (enabler) | ⬜ Todo | | |
+| 5 | behavior | — (enabler) | ✅ Done | 11,668,942 | 18m 21s (18m 21s) |
 | 6 | behavior | AC-10 | ⬜ Todo | | |
 | 7 | behavior | AC-12 | ⬜ Todo | | |
 | 8 | behavior | AC-1 | ⬜ Todo | | |
@@ -167,3 +167,26 @@
 - **For FLOW-5 (enabler — the result-step barrier):** assemble `CvdEstimate` from the tier results present (prior + screening + the arrangement result + threshold) via `AssessmentEngine.assemble` and advance to the result step. The arrangement contributes `arrangementResult` (present/absent) — a skip leaves it absent. FLOW-5 is `depends on` ENGINE-3/4/5/6 + FLOW-4 (all but ENGINE-5/6 now done).
 - **Verification commands** (worktree, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
 - **Known gaps:** the four-step count stays provisional until G-5/FLOW-2; a live `estimate`/`band` arrive with FLOW-5/ENGINE-7; `save` writes nothing until PROFILE-2. AC-8's acceptance test chooses skip-instead-of-complete, so the getter's `arrangementSkipped` guard is pinned by a unit test (`onboarding_state_test.dart`) rather than the acceptance test (optional future hardening: a complete-then-skip acceptance case).
+
+### Result — Phase 5 (FLOW-5, enabler — assemble + advance to result) ✅ Done
+
+- **Landed (enabler — un-pends no AC; makes "on the result step with an estimate" real):**
+  - `lib/onboarding/engine/assessment_engine.dart` — `TieredAssessmentEngine.assemble` (override, replacing the inherited shell stand-in) folds the prior + available tiers into a `CvdEstimate` (D-7): **direction** = a *present* Tier 2 screening (measured, wins) → else the prior's lean → else red-green (shell default); **type** = an authoritative reported-diagnosis `prior.type` kept as-is → else the direction narrowed (red-green→deutan, blue-yellow→tritan); **severity** = the measured Tier 4 threshold when probing ran → else the prior's self-report weight, clamped 0..1. Arrangement contributes presence only (a skip leaves it absent). Three private static helpers (`_estimatedDirection`/`_estimatedType`/`_estimatedSeverity`).
+  - `lib/onboarding/onboarding_controller.dart` — `advanceToResult()` (replaced its `UnimplementedError`): gathers the current tier state (prior, screening, `arrangementResult`, threshold), folds through `engine.assemble`, sets `state.estimate`, advances `stepIndex` to the last top-level step (the result step), notifies. A result is always reachable even with no tier run (assembles the default).
+  - `lib/onboarding/screens/onboarding_screen.dart` — a keyed "See my result" control (`OnboardingScreen.seeResultKey` = `onboarding-see-result`) between the threshold and result steps, wired to `controller.advanceToResult` (always present — the shell lays every step out at once).
+  - `lib/onboarding/screens/result_step.dart` — now renders the assembled estimate when present (`Estimated type: <name>` + `Estimated severity: <0..100>`), the severity slider reflects `severity*100` (still inert until FLOW-7); shows the `Result` placeholder while `estimate` is null (shell/pre-advance).
+- **ACs un-pended:** none (enabler). `integration_test/bs07/pending.dart` unchanged; the pending set stays `{AC-1, AC-10, AC-11, AC-12, AC-13, AC-14}`.
+- **Harness/tests:** `self_assessment_harness.dart` gained `whenAdvanceToResult()` (taps "See my result", `ensureVisible` first — it sits below the fold) + the `OnboardingScreen` import. The 5 result-step AC Givens in `self_assessment_test.dart` now drive the flow to the result step (driving lines only; **no Then changed**): AC-1/11/12 tap `whenAdvanceToResult`; AC-10 reports a deutan diagnosis then advances (estimate.type deutan via the real seam, G2); AC-13 reports deutan + probes `thresholdProbesStrong` (→ severity 0.6 = moderate) then advances ({deutan, moderate}).
+- **Gate:** `flutter analyze` clean · unit **1033 passed** (+~16: engine `assemble` group, controller `advanceToResult` group, new `onboarding_screen_test.dart` + `result_step_test.dart`, −1 removed `advanceToResult throws`) · coverage gate vs `main` **100% on all 23 touched lib files** · acceptance (sim iPhone 17 `5AB9D06D…`): **default 18 pass / 6 skip** (suite green); **run-pending 19 pass / 5 fail** — the 5 result-step ACs now **reach the result step** and fail on their *own* downstream Then (AC-1→FLOW-8 caveat, AC-10→FLOW-6 protan, AC-11→ENGINE-7 band, AC-12→FLOW-7 calibration, AC-13→PROFILE-2 save); **no failure cites the FLOW-5 `estimate isNotNull` precondition** (the enabler gate). AC-14 passes. Grade grid unchanged **12 A / 2 B-pending** (AC-10→FLOW-6, AC-13→PROFILE-2). **Fix passes: 0/3** (first full run met the gate).
+- **Tokens / time:** 11,668,942 · 18m 21s (18m 21s).
+
+### Checkpoint / Handoff (FLOW-5)
+
+- **Frozen for the result-step phases:** `OnboardingController.advanceToResult()` is live — `state.estimate` is a non-null `CvdEstimate` on the result step. `AssessmentEngine.assemble` is the fold (direction/type/severity rules above); only `band` (ENGINE-7) stays the trivial shell default now. The "See my result" control key is `OnboardingScreen.seeResultKey`; the harness driver is `whenAdvanceToResult()`. `ResultStep` renders `Estimated type:`/`Estimated severity:` and reflects severity on the inert slider.
+- **For ENGINE-7 (AC-11 band):** override `TieredAssessmentEngine.band(severity)` with the G-4 cut-offs (D-5: mild `[0,0.45)`, moderate `[0.45,0.75)`, strong `[0.75,1.0]`) and render the band label on the result step (`SeverityBand.label`); AC-11 grades it against the independent `referenceBand`.
+- **For FLOW-6 (AC-10):** add the by-hand type choices (make `whenAdjustType` select protan explicitly — the current driver only *opens* the control) and wire `setType`; un-pend AC-10, its B-pending augmentation closes.
+- **For FLOW-7 (AC-12):** wire the severity slider (`setSeverity`/`confirmCalibration`) + the simulated/original pair; `calibratedSeverity` is the kept value.
+- **For FLOW-8 (AC-1):** fill the caveat area with the `approximate estimate` label + `anomaloscope` clinical-test recommendation.
+- **For PROFILE-2 (AC-13):** wire `save` to project the estimate onto a `CvdProfile` and write through `profileStore`; add the live-pipeline assertion (its B-pending augmentation).
+- **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance via `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… [--dart-define=BS07_RUN_PENDING=true] > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
+- **Known gaps:** the four-step count stays provisional until G-5/FLOW-2; `band` is the trivial default until ENGINE-7; the result controls (type/slider/save) stay inert until FLOW-6/7/8/PROFILE-2. `advanceToResult` sets `stepIndex` to the last step, but presentation is not yet stepwise (FLOW-2) so all regions stay laid out at once.

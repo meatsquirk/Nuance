@@ -31,6 +31,10 @@ class OnboardingScreen extends StatelessWidget {
   /// Creates the onboarding surface over [controller], keyed by [scaffoldKey].
   const OnboardingScreen({required this.controller, this.scaffoldKey, super.key});
 
+  /// Stable anchor for the "See my result" control that assembles the estimate
+  /// and advances to the result step (FLOW-5; `advanceToResult`).
+  static const Key seeResultKey = ValueKey('onboarding-see-result');
+
   /// The key placed on the [Scaffold] — the stable entry anchor (bs-06 D-7).
   final Key? scaffoldKey;
 
@@ -66,6 +70,15 @@ class OnboardingScreen extends StatelessWidget {
                   ArrangementStep(controller: controller),
                   const SizedBox(height: 12),
                   ThresholdStep(controller: controller),
+                  const SizedBox(height: 12),
+                  // Concludes the battery: assembles the estimate from whatever
+                  // tiers ran and advances to the result step (FLOW-5). Always
+                  // present — the shell lays every step out at once.
+                  TextButton(
+                    key: seeResultKey,
+                    onPressed: controller.advanceToResult,
+                    child: const Text('See my result'),
+                  ),
                   const SizedBox(height: 12),
                   ResultStep(controller: controller),
                 ],
