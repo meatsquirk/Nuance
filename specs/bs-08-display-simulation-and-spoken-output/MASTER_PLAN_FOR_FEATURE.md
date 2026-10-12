@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** In progress — acceptance stage complete (G-2 approved 2026-10-12); next the ten behavior phases (simulation chain DISPLAY-3→4→{5,6,8} ∥ SETTINGS-2 ∥ DISPLAY-7 ∥ SPEECH-2→3→4)
+**Status:** In progress — behavior stage, 1/10 ACs done (AC-2 via DISPLAY-3); startable now DISPLAY-4 ∥ SETTINGS-2 ∥ DISPLAY-7 ∥ SPEECH-2
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -35,7 +35,7 @@
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
 | AC-1 | The painter opens the display and simulation settings | ITEST-2 `TestAC01_OpenDisplaySettings` | SETTINGS-2 | ⬜ Todo |
-| AC-2 | With simulation off, displayed colour is shown as a trichromat sees it | ITEST-2 `TestAC02_SimOffTrichromat` | DISPLAY-3 | ⬜ Todo |
+| AC-2 | With simulation off, displayed colour is shown as a trichromat sees it | ITEST-2 `TestAC02_SimOffTrichromat` | DISPLAY-3 | ✅ Done |
 | AC-3 | The painter simulates a chosen deficiency type alongside the original | ITEST-2 `TestAC03_SimulateTypeAlongsideOriginal` | DISPLAY-4 | ⬜ Todo |
 | AC-4 | The painter sets the simulation strength with the severity slider | ITEST-2 `TestAC04_SeveritySlider` | DISPLAY-5 | ⬜ Todo |
 | AC-5 | Turning on grayscale clears an active simulation | ITEST-2 `TestAC05_GrayscaleClearsSimulation` | DISPLAY-6 | ⬜ Todo |
@@ -104,7 +104,7 @@ Augmentations (confirmed by ITEST-2): **AC-7** is green-at-baseline and *limited
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2 ✅) |
+| DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2, DISPLAY-3 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | 🔄 In progress (SETTINGS-1 ✅) |
 | SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1..4 ✅; G-2 approved 2026-10-12) |
@@ -155,7 +155,7 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 6 | ITEST-2 | acceptance-tests: AC-1..7 (display, pending) + red baseline | ✅ Done | 14,829,254 | 1h 06m (1h 10m) | red baseline +13 -5 (AC-2..6 fail on Then; AC-1/AC-7 green-at-baseline); grades 6 A + 1 B-pending-DISPLAY-8 (AC-7); fixed a non-deterministic scaffold guard; fix 1/3 |
 | 7 | ITEST-3 | acceptance-tests: AC-8,9,10 (speech, pending) + red baseline | ✅ Done | 6,704,225 | 18m 11s | AC-8/9/10 all green-at-baseline (SPEECH-1 wired repeat + shared seam); grades 3 A; +16 -5 run-pending; fix 0/3 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,393,384 | 3m 12s | packet assembled in modules/ITEST.md; **G-2 approved 2026-10-12 — Matt Quirk** (10 AC tests, 24 A + 1 B-pending-DISPLAY-8); acceptance stage complete; no code ran |
-| 9 | DISPLAY-3 | AC-2 simulation off = trichromat (identity path) | ⬜ Todo | | | foundational transform chokepoint |
+| 9 | DISPLAY-3 | AC-2 simulation off = trichromat (identity path) | ✅ Done | 10,542,090 | 20m 03s (20m 03s) | AC-2 un-pended + green; true-colour ColorChip wired onto the Readout render path (identity); grade 2 A/0 below; fix 0/3 |
 | 10 | DISPLAY-4 | AC-3 simulate chosen type alongside original (protan/deutan/tritan) | ⬜ Todo | | | barrier for AC-4/5/7 |
 | 11 | DISPLAY-5 | AC-4 severity slider strength | ⬜ Todo | | | after DISPLAY-4 |
 | 12 | DISPLAY-6 | AC-5 grayscale clears simulation (mutual exclusion) | ⬜ Todo | | | after DISPLAY-4 |
@@ -171,17 +171,17 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 ## Next phase
 
-**G-2 approved** (2026-10-12, Matt Quirk) — the acceptance stage is complete and **all ten behaviour phases are now open**. Each must un-pend its AC test, keep the suite green, make its augmentations, and pass the unit + coverage + acceptance + grade gates.
+**Behaviour stage, 1/10 ACs done.** DISPLAY-3 landed AC-2 (simulation-off identity): the Readout now shows the sample's true colour through the one `ColorChip`/`simulateColor` chokepoint. One phase per session; each un-pends its AC test, keeps the suite green, makes its augmentations, passes unit + coverage + acceptance + grade.
 
-**Startable now** (separate sessions; prefer disjoint file ownership):
-- **DISPLAY-3** — AC-2 simulation-off identity path; the foundational transform chokepoint for the simulation chain.
-- **SETTINGS-2** — AC-1 open settings → the three controls (independent of the simulation chain).
-- **DISPLAY-7** — AC-6 root grayscale greys the whole app (independent; the one-root-`ColorFiltered` contract).
-- **SPEECH-2** — AC-8 repeat last spoken output (head of the SPEECH chain).
+**Startable now** (separate sessions; disjoint file ownership — safe to run concurrently):
+- **DISPLAY-4** — AC-3 simulate a chosen type **alongside** the original; extends `simulateColor` (projection via `projectDichromat`) + makes `ColorChip` render the simulated swatch beside the untouched original. Barrier for AC-4/AC-5/AC-7. (Owns `color_simulation.dart` + `color_chip.dart`; also the Readout swatch render.)
+- **SETTINGS-2** — AC-1 open settings → the three controls (SETTINGS files; independent).
+- **DISPLAY-7** — AC-6 root grayscale greys the whole app (`grayscale_filter.dart` + `build_app.dart`; independent).
+- **SPEECH-2** — AC-8 repeat last spoken output (SPEECH files; head of the speech chain).
 
-**Ordered within each chain** (not yet startable): simulation chain DISPLAY-3 → **DISPLAY-4** (barrier for AC-4/AC-5/AC-7) → {DISPLAY-5, DISPLAY-6, DISPLAY-8}; speech chain SPEECH-2 → SPEECH-3 → SPEECH-4. DISPLAY-8 owns the AC-7 augmentation (assert simulated swatch alongside value+label) → re-grade A.
+**Ordered within each chain** (not yet startable): DISPLAY-4 → {DISPLAY-5, DISPLAY-6, DISPLAY-8}; SPEECH-2 → SPEECH-3 → SPEECH-4. DISPLAY-8 owns the AC-7 augmentation (assert simulated swatch alongside value+label) → re-grade A.
 
-Suite state at approval: default **11 pass / 10 skipped**; run-pending **16 pass / 5 fail** (exactly AC-2..6 on their Then); grades **24 A + 1 B-pending-DISPLAY-8** (AC-7). Branch `feat/bs-08` is **in sync with origin** @ `a06eb70`. Device lane stays shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
+Suite state: default **12 pass / 9 skipped** (AC-2 now passing). Device lane shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
 
 ## Token usage
 
@@ -200,7 +200,9 @@ Suite state at approval: default **11 pass / 10 skipped**; run-pending **16 pass
 | ITEST-3 | df46f7bd | 2026-10-12 09:42 EDT | 10:00 | 18m 11s | 18m 11s | claude-opus-4-8 | 106 | 246,018 | 6,403,141 | 54,960 | 6,704,225 | AC-8/9/10 pending speech tests + harness (givenComparison) landed; all 3 green-at-baseline, grades 3 A, no augmentations; run-pending +16 -5; analyze clean, 914 unit, coverage gate PASS (no lib touched); fix 0/3 |
 | ITEST-4 | 8bf4c8d7 | 2026-10-12 10:16 EDT | 10:19 | 3m 12s | 3m 12s | claude-opus-4-8 | 34 | 73,658 | 1,306,800 | 12,892 | 1,393,384 | test-review packet assembled (per-AC catalogue, red-baseline summary, augmentations, grid 24 A + 1 B-pending-DISPLAY-8); G-2 set awaiting decision; no code ran |
 | SIGNOFF-DECISION | feabec25 | 2026-10-12 10:59 EDT | 11:33 | 34m 24s | 3m 00s | claude-opus-4-8 | 40 | 50,293 | 1,335,882 | 11,207 | 1,397,422 | ITEST-4 approved |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 11:33** | **4h 00m** | **3h 21m** |  | **1,056** | **1,647,372** | **69,387,734** | **565,768** | **71,601,930** |  |
+| DISPLAY-3 | 4be223b0 | 2026-10-12 11:42 EDT | 12:02 | 20m 03s | 20m 03s | claude-opus-4-8 | 154 | 261,086 | 10,211,999 | 68,851 | 10,542,090 | AC-2 un-pended + green; identity ColorChip on Readout; coverage 100%; grade 2 A/0 below; fix 0/3 |
+| RECONCILE | 95d457ef | 2026-10-12 12:20 EDT | 12:24 | 3m 58s | 3m 58s | claude-opus-4-8 | 40 | 46,745 | 1,248,595 | 12,943 | 1,308,323 | merged phase/DISPLAY-3 into feat/bs-08 (ff 1112589); applied DISPLAY-3 rollup to master (AC-2 ✅, module+session log+Next); removed phase worktree/branch |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 12:24** | **4h 24m** | **3h 45m** |  | **1,250** | **1,955,203** | **80,848,328** | **647,562** | **83,452,343** |  |
 
 ## Sign-off
 
