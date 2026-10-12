@@ -465,6 +465,251 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // AC tests — tiers & arrangement group (ITEST-3): AC-3, 4, 5, 6, 7, 8, 9.
+  //
+  // One *pending* `acTestWidgets` per AC (its behaviour phase un-pends it by
+  // deleting the row in `bs07/pending.dart`). Givens are built only through the
+  // public UI surface and asserted before the When; scoring ACs are graded
+  // against the harness's INDEPENDENT fixture axes/ordering, never the product
+  // scorer. At baseline every shell control is inert, so each tier test fails on
+  // a Then naming its owning phase (the engine default never reaches state:
+  // prior stays none, screening/threshold stay null). Where the shell exposes no
+  // control to express the AC's specific value — the diagnosis type (AC-4), the
+  // per-plate response (AC-5), a specific cap to place (AC-6/AC-7) — the test
+  // asserts the precondition / skip path that fails cleanly naming the phase
+  // that adds the control + driver argument, and carries a *B pending* grade with
+  // a Test-augmentations row (exactly as AC-10 does for FLOW-6), rather than
+  // tapping a not-yet-built control.
+  // -------------------------------------------------------------------------
+
+  group('bs-07 AC tests — tiers & arrangement group (ITEST-3)', () {
+    acTestWidgets(
+      'AC-3',
+      'an intake answer contributes to the starting prior',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: the intake step asks the red-green confusion question and the
+        // prior carries no bias before any answer.
+        expect(
+          find.descendant(
+              of: find.byKey(IntakeStep.regionKey),
+              matching: find.textContaining(
+                  'Do reds, browns and greens get mixed up?')),
+          findsOneWidget,
+          reason: 'the Tier 1 confusion question is asked',
+        );
+        expect(h.prior, StartingPrior.none,
+            reason: 'no intake answer folded into the prior yet');
+
+        // When: answer "Often" through the real intake control (ENGINE-3 folds
+        // it into the starting prior).
+        await h.whenAnswerIntake(intakeOften.value);
+
+        // Then: the answer is recorded toward the prior — it now leans red-green
+        // with a non-zero weight (the "Often" contribution).
+        expect(h.prior.direction, ScreeningDirection.redGreen,
+            reason: 'an "Often" answer leans the prior toward red-green '
+                '(ENGINE-3)');
+        expect(h.prior.weight, greaterThan(0),
+            reason: 'the recorded answer carries a non-zero bias');
+
+        // Control: a fresh flow answering "Never" does NOT lean red-green. This
+        // rejects both an intake that discards the answer (the Then above fails)
+        // and one that always returns red-green regardless of the answer (fails
+        // here).
+        final control = await givenSelfAssessment(tester);
+        await control.whenAnswerIntake(intakeNever.value);
+        expect(control.prior.direction, isNot(ScreeningDirection.redGreen),
+            reason: 'a "Never" answer must not lean the prior toward red-green');
+      },
+    );
+
+    acTestWidgets(
+      'AC-4',
+      'a prior clinical diagnosis entered at intake seeds the prior',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: the intake step offers the prior-diagnosis entry and the prior
+        // carries no type yet.
+        expect(
+          find.descendant(
+              of: find.byKey(IntakeStep.regionKey),
+              matching: find.widgetWithText(TextButton, 'I have a diagnosis')),
+          findsOneWidget,
+          reason: 'the prior-diagnosis entry is offered at intake',
+        );
+        expect(h.prior.type, isNull, reason: 'no diagnosis seeded yet');
+
+        // When: report a prior clinical diagnosis of deutan (ENGINE-4 seeds the
+        // prior through the engine).
+        await h.whenReportDiagnosis();
+
+        // Then: the starting prior is seeded as deutan.
+        expect(h.prior.type, CvdType.deutan,
+            reason: 'reporting a deutan diagnosis seeds the prior as deutan '
+                '(ENGINE-4)');
+        // Limited — B pending ENGINE-4: the frozen whenReportDiagnosis() only
+        // opens the diagnosis entry and carries no type, so this cannot yet
+        // reject "seeds the WRONG type" (a protan control). ENGINE-4 adds the
+        // type picker + a type argument on the driver and the protan control
+        // (see Test augmentations in modules/ITEST.md).
+      },
+    );
+
+    acTestWidgets(
+      'AC-5',
+      'screening yields presence and the red-green versus blue-yellow direction',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: the screening step is shown and no screening result is scored
+        // yet.
+        expect(
+          find.descendant(
+              of: find.byKey(ScreeningStep.regionKey),
+              matching: find.widgetWithText(TextButton, 'Read the plate')),
+          findsOneWidget,
+          reason: 'the plate screening control is shown',
+        );
+        expect(h.screening, isNull, reason: 'screening not scored yet');
+
+        // When: complete the plate screening (ENGINE-5 scores the responses
+        // into presence + direction).
+        await h.whenReadPlate();
+
+        // Then: the screening reports a deficiency present along the red-green
+        // axis (the red-green–deficient fixture).
+        expect(h.screening, isNotNull, reason: 'the screening is scored (ENGINE-5)');
+        expect(h.screening!.present, isTrue,
+            reason: 'the red-green–deficient fixture reports present');
+        expect(h.screening!.direction, ScreeningDirection.redGreen,
+            reason: 'the direction is red-green, graded against the independent '
+                'fixture axis');
+        // Limited — B pending ENGINE-5: the frozen whenReadPlate() taps a single
+        // plate control and carries no plate-response fixture, so this cannot yet
+        // feed the blue-yellow (→ blueYellow) and no-deficiency (→ present false)
+        // controls that reject a scorer which always returns present+redGreen.
+        // ENGINE-5 wires the per-plate responses + a fixture argument on the
+        // driver; the direction stays graded against the fixture axes, never the
+        // product scorer (see Test augmentations).
+      },
+    );
+
+    acTestWidgets(
+      'AC-6',
+      'the painter places colour caps in hue order',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: the arrangement step shows a pool of unplaced caps and nothing
+        // is arranged yet. The shell leaves the pool empty and exposes no
+        // cap-selection control; FLOW-4 fills the pool and wires placing a cap.
+        expect(find.byKey(ArrangementStep.regionKey), findsOneWidget);
+        expect(h.arrangedCaps, isEmpty, reason: 'nothing placed yet');
+        expect(h.arrangementPool, isNotEmpty,
+            reason: 'AC-6 needs a populated cap pool to place from — FLOW-4 fills '
+                'the pool and wires placeCap (no cap-selection control in the '
+                'shell yet)');
+        // Limited — B pending FLOW-4: once FLOW-4 adds the cap-selection control
+        // + a whenPlaceCap(capId) driver, placing pool.first takes the next
+        // arranged position (arranged.last == placed; length +1) and removes it
+        // from the pool (length −1), rejecting a place at a wrong index, a
+        // duplicate, or one that leaves the cap in the pool (see Test
+        // augmentations).
+      },
+    );
+
+    acTestWidgets(
+      'AC-7',
+      'starting over clears the arrangement',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: several caps placed (arranged ≥ 2, pool reduced). Placing caps
+        // needs FLOW-4's cap-selection control, absent from the shell, so the
+        // pool is empty and nothing is arranged yet.
+        expect(find.byKey(ArrangementStep.startOverKey), findsOneWidget,
+            reason: 'the start-over control (E39) is present');
+        expect(h.arrangedCaps.length, greaterThanOrEqualTo(2),
+            reason: 'AC-7 needs caps placed before starting over — FLOW-4 wires '
+                'placing caps (no cap-selection control in the shell yet)');
+        // Limited — B pending FLOW-4: once FLOW-4 lets caps be placed,
+        // whenStartOver() returns ALL caps to the pool (arranged empty, pool ==
+        // the full set), rejecting a reset that clears only the last placement or
+        // leaves some arranged (see Test augmentations).
+      },
+    );
+
+    acTestWidgets(
+      'AC-8',
+      'the painter skips the arrangement for now',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: on the arrangement step, not skipped yet.
+        expect(find.byKey(ArrangementStep.skipKey), findsOneWidget,
+            reason: 'the skip control (E43) is present');
+        expect(h.arrangementSkipped, isFalse, reason: 'not skipped yet');
+
+        // When: skip the arrangement through the real control (FLOW-4 continues
+        // the flow without an arrangement result).
+        await h.whenSkipArrangement();
+
+        // Then: the flow is marked skipped, so it contributes no arrangement
+        // result.
+        expect(h.arrangementSkipped, isTrue,
+            reason: 'skipping continues the flow without an arrangement result '
+                '(FLOW-4)');
+        // Limited — B pending FLOW-4: the catalogue control "completing the
+        // arrangement instead records a result" needs the cap-selection control
+        // FLOW-4 adds; this asserts only the skip path until then (see Test
+        // augmentations).
+      },
+    );
+
+    acTestWidgets(
+      'AC-9',
+      'threshold probing yields a severity along the confusion line',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: the threshold step is shown and no threshold is scored yet.
+        expect(
+          find.descendant(
+              of: find.byKey(ThresholdStep.regionKey),
+              matching: find.widgetWithText(TextButton, 'I can see it')),
+          findsOneWidget,
+          reason: 'the probe controls are shown',
+        );
+        expect(h.threshold, isNull, reason: 'threshold not scored yet');
+
+        // When: answer the probes as a painter who detects only HIGH contrast
+        // (the "strong" fixture), through the real probe controls (ENGINE-6
+        // scores the severity along the confusion line).
+        for (final probe in thresholdProbesStrong) {
+          await h.whenProbe(detected: probe.detected);
+        }
+
+        // Then: a severity on the confusion line is scored, in (0, 1].
+        expect(h.threshold, isNotNull, reason: 'the threshold is scored (ENGINE-6)');
+        final strongSeverity = h.threshold!.severity;
+        expect(strongSeverity, inInclusiveRange(0, 1),
+            reason: 'severity is a 0..1 value on the confusion line');
+        expect(strongSeverity, greaterThan(0),
+            reason: 'a painter who misses low contrast has a non-zero severity');
+
+        // Control: a fresh flow where the painter detects EVEN low contrast (the
+        // "mild" fixture) scores a LOWER severity — graded against the
+        // independent fixture ordering (strong detects only high contrast),
+        // rejecting a constant scorer or one not tied to the confusion line.
+        final control = await givenSelfAssessment(tester);
+        for (final probe in thresholdProbesMild) {
+          await control.whenProbe(detected: probe.detected);
+        }
+        expect(control.threshold, isNotNull);
+        expect(control.threshold!.severity, lessThan(strongSeverity),
+            reason: 'detecting lower contrast yields a lower severity than the '
+                'strong fixture');
+      },
+    );
+  });
+
+  // -------------------------------------------------------------------------
   // Pending-gate scaffold guards (ENGINE-1) — kept so the gate stays honest as
   // ACs land. While an AC is pending, guard 3 asserts it is skipped by default
   // and runs only when forced; as each behaviour phase deletes its row the

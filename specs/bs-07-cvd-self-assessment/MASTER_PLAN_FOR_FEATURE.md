@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — ITEST-2 (AC tests: flow & result group) ✅ Done; next ITEST-3 (AC tests: tiers & arrangement group)
+**Status:** In progress — ITEST-3 (AC tests: tiers & arrangement group) ✅ Done; next ITEST-4 (test review, G-2)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -120,7 +120,7 @@ Pre-seeded augmentations: AC-13's confusion-check behavioural assertion is confi
 | ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1, ENGINE-2 ✅) |
 | PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | 🔄 In progress (PROFILE-1 ✅) |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | 🔄 In progress (FLOW-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2 ✅) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2, ITEST-3 ✅; next ITEST-4) |
 
 ## Dependency graph
 
@@ -168,8 +168,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | FLOW-1 | shell: `OnboardingController`/state + `OnboardingReadEndpoint` + screen host & keyed step widgets + route (replace placeholder) | ✅ Done | 13,152,941 | 26m 57s | controller (14 actions throw) + state + read endpoint + host/screen + 7 keyed step widgets; entry screen replaced (anchor preserved); analyze clean · 957 unit · gate 100% on 23 touched · integ 134 |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (14 ACs), smoke test | ✅ Done | 12,779,960 | 1h 30m | harness + 9 fixtures + smoke + 6 fixture guards; analyze clean · bs-07 suite 10/10 · unit 957 · coverage N/A (no lib/); grade A (1 B fixed); fix 2/3 |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,10,11,12,13,14 (pending) + red baseline | ✅ Done | 6,494,040 | 27m 23s | 7 pending tests; default 10 pass/7 skip, run-pending +10/−7; grade 5 A + 2 B-pending (AC-10→FLOW-6, AC-13→PROFILE-2); fix 0/3 |
-| 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ⬜ Next | | | shares test file w/ ITEST-2 → sequential |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ✅ Done | 5,169,129 | 18m 56s | 7 pending tests; default 10 pass/14 skip, run-pending +10/−14 (all fail cleanly on Then/precondition); grade 2 A (AC-3, AC-9) + 5 B-pending (AC-4→ENGINE-4, AC-5→ENGINE-5, AC-6/7/8→FLOW-4); fix 0/3 |
+| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | both AC-test phases done; whole suite 7 A/7 B-pending |
 | 9 | FLOW-2 | AC-14 progress indicator | ⬜ Todo | | | G-5 |
 | 10 | FLOW-3 | AC-2 lighting gate (Tier 0) | ⬜ Todo | | | |
 | 11 | ENGINE-3 | AC-3 intake answer → prior (Tier 1) | ⬜ Todo | | | |
@@ -189,11 +189,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-2 (acceptance-tests) ✅ Done — 7 *pending* AC tests (AC-1,2,10,11,12,13,14) in `self_assessment_test.dart` (new ITEST-2 group); default run 10 pass / 7 skip, run-pending red baseline +10 / −7 (every AC test fails cleanly on a Then/precondition naming its owning phase). Grades: 5 A + 2 *B pending* (AC-10→FLOW-6, AC-13→PROFILE-2, each with an augmentation row). Fix 0/3. Startable next:
-- **ITEST-3** (acceptance-tests) — append the second group (AC-3,4,5,6,7,8,9) to the **shared** `self_assessment_test.dart` → **run sequentially** after ITEST-2 (not parallel): re-read the file, append after the ITEST-2 group. Grade the tier ACs against the harness's independent references; AC-6/7/8 likely *B pending FLOW-4*.
-- Then **ITEST-4** test review assembles the whole-suite packet and asks for **G-2**. No gate blocks ITEST-3 (G-2 is decided at ITEST-4).
+ITEST-3 (acceptance-tests) ✅ Done — 7 *pending* AC tests (AC-3,4,5,6,7,8,9) in the new ITEST-3 group of `self_assessment_test.dart`; default 10 pass / 14 skip, run-pending red baseline +10 / −14 (every AC test fails cleanly on a Then/precondition naming its owning phase). Grades 2 A (AC-3, AC-9) + 5 *B pending* (AC-4→ENGINE-4, AC-5→ENGINE-5, AC-6/7/8→FLOW-4, each with an augmentation row). Fix 0/3. All 14 ACs now have a pending test; whole suite **7 A / 7 B-pending**. Startable next:
+- **ITEST-4** (test-review, writes NO code) — assemble the whole-suite packet (per AC: test name, Given checks, When, Then + Rejects; red-baseline summary; augmentations + closing phase; grid path + counts; what to look at first), set the phase `⏸ Awaiting review` and **G-2** *awaiting decision*, record, commit, and stop with `/feature-next-phase --gate bs-07-cvd-self-assessment G-2 approved | "<changes>"`.
 
-Still to decide, before the phases they block: **G-2** (approve acceptance tests, at ITEST-4; blocks every behaviour phase, not the ITEST phases) and **G-5** (four-step vs five-tier, blocks FLOW-2).
+Still to decide, before the phases they block: **G-2** (approve acceptance tests, at ITEST-4; blocks every behaviour phase) and **G-5** (four-step vs five-tier, blocks FLOW-2).
 
 ## Token usage
 
@@ -209,7 +208,8 @@ Still to decide, before the phases they block: **G-2** (approve acceptance tests
 | FLOW-1 | b44af27c | 2026-10-12 07:10 EDT | 07:37 | 26m 57s | 26m 57s | claude-opus-4-8 | 170 | 196,438 | 12,874,964 | 81,369 | 13,152,941 | shell done: OnboardingController (14 actions throw) + state + OnboardingReadEndpoint + host/screen + 7 keyed step widgets; entry screen replaced (anchor preserved); analyze clean, 957 unit, coverage 100% on 23 touched, integ 134; no AC |
 | ITEST-1 | 129d7bd8 | 2026-10-12 07:55 EDT | 09:25 | 1h 30m | 1h 30m | claude-opus-4-8 | 144 | 299,463 | 12,389,172 | 91,181 | 12,779,960 | harness + 9 fixtures + smoke + 6 fixture guards: analyze clean, bs-07 acceptance suite 10/10 on sim, unit 957, coverage N/A (no lib/ touched), grade A (1 vacuous-guard B fixed in-phase), fix 2/3; no AC un-pended (all 14 pending) |
 | ITEST-2 | 3d96a895 | 2026-10-12 09:37 EDT | 10:04 | 27m 23s | 27m 23s | claude-opus-4-8 | 92 | 229,468 | 6,196,083 | 68,397 | 6,494,040 | 7 pending AC tests (AC-1,2,10,11,12,13,14) landed: analyze clean, default 10 pass/7 skip, run-pending red baseline +10/-7 (all fail cleanly on Then/precondition), grade 5 A + 2 B-pending (AC-10->FLOW-6, AC-13->PROFILE-2 augmentation rows), fix 0/3; no lib/ touched (coverage N/A) |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 10:04** | **3h 45m** | **3h 36m** |  | **862** | **1,333,038** | **52,980,336** | **471,496** | **54,785,732** |  |
+| ITEST-3 | 6ee00b57 | 2026-10-12 10:16 EDT | 10:35 | 18m 56s | 18m 56s | claude-opus-4-8 | 84 | 221,924 | 4,890,544 | 56,577 | 5,169,129 | 7 pending AC tests (AC-3,4,5,6,7,8,9) landed: analyze clean, default 10 pass/14 skip, run-pending red baseline +10/-14 (all fail cleanly on Then/precondition naming owning phase), grade 2 A (AC-3,AC-9) + 5 B-pending (AC-4->ENGINE-4, AC-5->ENGINE-5, AC-6/7/8->FLOW-4; augmentation rows added), fix 0/3; no lib/ touched (coverage N/A); all 14 ACs now pending, suite 7 A/7 B-pending |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 10:35** | **4h 04m** | **3h 55m** |  | **946** | **1,554,962** | **57,870,880** | **528,073** | **59,954,861** |  |
 
 ## Sign-off
 
