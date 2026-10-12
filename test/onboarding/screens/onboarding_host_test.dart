@@ -55,15 +55,11 @@ void main() {
       expect(find.byKey(ResultStep.saveKey), findsOneWidget);
     });
 
-    testWidgets('its controls are inert in the shell (absorb no pointer)',
-        (tester) async {
+    testWidgets('its not-yet-wired controls are inert in the shell', (tester) async {
       await tester.pumpWidget(const MaterialApp(home: OnboardingHost()));
 
-      // Representative controls carry no handler yet; tapping is a no-op.
-      expect(
-        tester.widget<TextButton>(find.byKey(LightingStep.continueKey)).onPressed,
-        isNull,
-      );
+      // Controls whose behaviour phase has not run yet carry no handler. (The
+      // lighting continue is now wired by FLOW-3, so it is no longer inert.)
       expect(
         tester.widget<TextButton>(find.byKey(ResultStep.saveKey)).onPressed,
         isNull,

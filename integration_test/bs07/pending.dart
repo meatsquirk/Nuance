@@ -43,7 +43,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// AC-coverage table.
 const Map<String, String> pendingACs = {
   'AC-1': 'FLOW-8', // result caveat: approximate estimate + clinical test
-  'AC-2': 'FLOW-3', // Tier 0 lighting gate before testing begins
+  // AC-2 (Tier 0 lighting gate) un-pended by FLOW-3.
   'AC-3': 'ENGINE-3', // Tier 1 intake answer → starting prior
   'AC-4': 'ENGINE-4', // intake prior-diagnosis seeds the prior
   'AC-5': 'ENGINE-5', // Tier 2 screening presence + R-G/B-Y direction

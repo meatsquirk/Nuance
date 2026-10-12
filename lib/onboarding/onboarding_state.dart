@@ -94,6 +94,50 @@ class OnboardingState {
   bool get lightingConfirmed =>
       brightnessConfirmed && nightLightConfirmed && daylightConfirmed;
 
+  /// Returns a copy of this snapshot with the given fields replaced; every
+  /// omitted field keeps its current value (FLOW-3 adds this as the forward
+  /// primitive the behaviour phases move the state through).
+  ///
+  /// The nullable fields ([screening], [threshold], [estimate],
+  /// [calibratedSeverity]) can be set but not cleared back to null through this
+  /// method — the flow only ever fills them, so no bs-07 phase needs to clear
+  /// one.
+  OnboardingState copyWith({
+    int? stepIndex,
+    bool? brightnessConfirmed,
+    bool? nightLightConfirmed,
+    bool? daylightConfirmed,
+    bool? testingStarted,
+    StartingPrior? prior,
+    ScreeningResult? screening,
+    List<int>? arrangementPool,
+    List<int>? arrangedCaps,
+    bool? arrangementSkipped,
+    ThresholdResult? threshold,
+    CvdEstimate? estimate,
+    double? calibratedSeverity,
+    bool? caveatShown,
+    bool? saved,
+  }) {
+    return OnboardingState(
+      stepIndex: stepIndex ?? this.stepIndex,
+      brightnessConfirmed: brightnessConfirmed ?? this.brightnessConfirmed,
+      nightLightConfirmed: nightLightConfirmed ?? this.nightLightConfirmed,
+      daylightConfirmed: daylightConfirmed ?? this.daylightConfirmed,
+      testingStarted: testingStarted ?? this.testingStarted,
+      prior: prior ?? this.prior,
+      screening: screening ?? this.screening,
+      arrangementPool: arrangementPool ?? this.arrangementPool,
+      arrangedCaps: arrangedCaps ?? this.arrangedCaps,
+      arrangementSkipped: arrangementSkipped ?? this.arrangementSkipped,
+      threshold: threshold ?? this.threshold,
+      estimate: estimate ?? this.estimate,
+      calibratedSeverity: calibratedSeverity ?? this.calibratedSeverity,
+      caveatShown: caveatShown ?? this.caveatShown,
+      saved: saved ?? this.saved,
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       other is OnboardingState &&

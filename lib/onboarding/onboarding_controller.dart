@@ -60,15 +60,35 @@ class OnboardingController extends ChangeNotifier {
   /// against ("… of four"). Provisional until G-5/FLOW-2.
   int get stepTotal => steps.length;
 
-  /// Confirms one of the Tier 0 lighting checks (brightness / night-light off /
-  /// daylight) — FLOW-3 (AC-2) tracks the three and opens the continue gate.
-  void confirmLightingCheck(LightingCheck check, {bool confirmed = true}) =>
-      throw UnimplementedError('confirmLightingCheck is wired in FLOW-3 (AC-2)');
+  /// Confirms (or clears) one of the Tier 0 lighting checks (brightness /
+  /// night-light off / daylight) — FLOW-3 (AC-2) tracks the three; all three
+  /// confirmed opens the continue gate ([OnboardingState.lightingConfirmed]).
+  void confirmLightingCheck(LightingCheck check, {bool confirmed = true}) {
+    switch (check) {
+      case LightingCheck.brightness:
+        _state = _state.copyWith(brightnessConfirmed: confirmed);
+      case LightingCheck.nightLight:
+        _state = _state.copyWith(nightLightConfirmed: confirmed);
+      case LightingCheck.daylight:
+        _state = _state.copyWith(daylightConfirmed: confirmed);
+    }
+    notifyListeners();
+  }
 
-  /// Tries to advance past the current step — FLOW-2 advances the step and
-  /// FLOW-3 gates it on the lighting checks (AC-2/AC-14).
-  void tryContinue() =>
-      throw UnimplementedError('tryContinue is wired in FLOW-2/FLOW-3');
+  /// Tries to advance past the current step — FLOW-3 gates the Tier 0 → testing
+  /// transition on the three lighting checks (AC-2): a Continue with the checks
+  /// unconfirmed is a no-op (testing does not begin); once all three are
+  /// confirmed it advances to the next step and marks testing started. FLOW-2
+  /// generalises the step advance across the later steps (AC-14).
+  void tryContinue() {
+    if (!_state.lightingConfirmed) return;
+    final next = _state.stepIndex + 1;
+    _state = _state.copyWith(
+      stepIndex: next < stepTotal ? next : _state.stepIndex,
+      testingStarted: true,
+    );
+    notifyListeners();
+  }
 
   /// Records a Tier 1 intake answer toward the starting prior — ENGINE-3 folds
   /// it through [engine] (AC-3).

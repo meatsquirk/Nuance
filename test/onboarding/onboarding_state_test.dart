@@ -126,6 +126,66 @@ void main() {
     });
   });
 
+  group('OnboardingState copyWith', () {
+    const base = OnboardingState();
+
+    test('with no arguments returns an equal snapshot', () {
+      expect(base.copyWith(), base);
+    });
+
+    test('replaces each field independently', () {
+      expect(base.copyWith(stepIndex: 2).stepIndex, 2);
+      expect(base.copyWith(brightnessConfirmed: true).brightnessConfirmed, isTrue);
+      expect(base.copyWith(nightLightConfirmed: true).nightLightConfirmed, isTrue);
+      expect(base.copyWith(daylightConfirmed: true).daylightConfirmed, isTrue);
+      expect(base.copyWith(testingStarted: true).testingStarted, isTrue);
+      expect(
+        base.copyWith(prior: const StartingPrior(type: CvdType.deutan)).prior,
+        const StartingPrior(type: CvdType.deutan),
+      );
+      expect(
+        base
+            .copyWith(
+                screening: const ScreeningResult(
+                    present: true, direction: ScreeningDirection.redGreen))
+            .screening,
+        const ScreeningResult(
+            present: true, direction: ScreeningDirection.redGreen),
+      );
+      expect(base.copyWith(arrangementPool: const [1, 2]).arrangementPool, [1, 2]);
+      expect(base.copyWith(arrangedCaps: const [3]).arrangedCaps, [3]);
+      expect(base.copyWith(arrangementSkipped: true).arrangementSkipped, isTrue);
+      expect(
+        base.copyWith(threshold: const ThresholdResult(severity: 0.4)).threshold,
+        const ThresholdResult(severity: 0.4),
+      );
+      expect(
+        base
+            .copyWith(
+                estimate: const CvdEstimate(
+                    type: CvdType.deutan,
+                    severity: 0.5,
+                    prior: StartingPrior.none))
+            .estimate,
+        const CvdEstimate(
+            type: CvdType.deutan, severity: 0.5, prior: StartingPrior.none),
+      );
+      expect(base.copyWith(calibratedSeverity: 0.3).calibratedSeverity, 0.3);
+      expect(base.copyWith(caveatShown: true).caveatShown, isTrue);
+      expect(base.copyWith(saved: true).saved, isTrue);
+    });
+
+    test('keeps the untouched fields when one is replaced', () {
+      final changed = const OnboardingState(
+        stepIndex: 1,
+        brightnessConfirmed: true,
+      ).copyWith(testingStarted: true);
+      expect(changed.stepIndex, 1);
+      expect(changed.brightnessConfirmed, isTrue);
+      expect(changed.testingStarted, isTrue);
+    });
+  });
+
   test('toString names the step and the field summary', () {
     expect(const OnboardingState().toString(), contains('step: 0'));
     expect(const OnboardingState().toString(), contains('saved: false'));

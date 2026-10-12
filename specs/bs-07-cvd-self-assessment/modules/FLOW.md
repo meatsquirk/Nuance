@@ -1,6 +1,6 @@
 # Module FLOW — onboarding controller, screens, flow
 
-**Status:** In progress — FLOW-1 (shell) ✅ Done; next FLOW-2 (AC-14) blocked by G-2 + G-5
+**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2) ✅ Done; FLOW-2 (AC-14) blocked by G-5; FLOW-4 (AC-6/7/8) startable
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/onboarding_controller.dart`, `onboarding_state.dart`, `onboarding_read_endpoint.dart`, `onboarding_steps.dart`; `lib/onboarding/screens/` (host + lighting, intake, screening, arrangement, threshold, result step widgets with keyed regions); route wiring in `lib/app/router.dart` + `lib/palette/self_assessment_entry_screen.dart` (replaced). Behavior phases in ENGINE/PROFILE add thin controller calls here (merge-risky — rebase before editing).
 **Depends on:** ENGINE (estimate types + scoring), PROFILE (save seam) · **Blocks:** ITEST, SIGNOFF
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | | |
 | 2 | behavior | AC-14 | ⬜ Todo | | |
-| 3 | behavior | AC-2 | ⬜ Todo | | |
+| 3 | behavior | AC-2 | ✅ Done | 8,229,212 | 16m 09s |
 | 4 | behavior | AC-6, AC-7, AC-8 | ⬜ Todo | | |
 | 5 | behavior | — (enabler) | ⬜ Todo | | |
 | 6 | behavior | AC-10 | ⬜ Todo | | |
@@ -129,3 +129,22 @@
 - **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$PATH:/Users/matthew.quirk/development/flutter/bin"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · `flutter test integration_test/` (host).
 - **For FLOW-2 (AC-14, next — blocked by G-2 + G-5):** fix the concrete four steps (per G-5), implement the step advance (replace `tryContinue`'s throw / add step navigation), render the progress "N of 4" and expose `stepIndex`/`stepTotal`. The shell lays out all regions at once; FLOW-2 may move to a stepwise presentation.
 - **Known gaps:** every controller action throws and every control is inert (behaviour phases wire them); `band` and a live `estimate` arrive with FLOW-5/ENGINE-7; `save` writes nothing until PROFILE-2; the four-step count is provisional until G-5.
+
+### Result — Phase 3 (FLOW-3, AC-2) ✅ Done
+
+- **Landed:**
+  - `onboarding_state.dart` — added `copyWith` (the forward primitive the behaviour phases move the state through; nullable fields set-only, documented — no bs-07 phase clears one).
+  - `onboarding_controller.dart` — `confirmLightingCheck(check, {confirmed})` sets the matching Tier 0 flag and notifies; `tryContinue()` now gates the Tier 0 → testing transition on `lightingConfirmed` — an unconfirmed Continue is a no-op (no notify), all three confirmed advances `stepIndex` by one (clamped to the last step) and sets `testingStarted` (AC-2). FLOW-2 generalises the advance across later steps.
+  - `screens/lighting_step.dart` — the three `CheckboxListTile`s drive `confirmLightingCheck`; Continue is always tappable and wired to `tryContinue` (the gate lives in the controller — the negative-Then settle point AC-2 relies on).
+- **AC un-pended:** AC-2 (deleted its row in `integration_test/bs07/pending.dart`).
+- **Gate:** `flutter analyze` clean · unit **967 passed** (+10: 5 controller lighting-gate + 4 lighting-step widget + 3 state `copyWith`, −2 removed throw-tests) · coverage gate vs `main` **100% on all 23 touched lib files** · acceptance (sim iPhone 17 `5AB9D06D…`, default run) **11 passed / 13 skipped** — AC-2 now runs and passes, the other 13 ACs still pending · grade **A** for AC-2 (fresh subagent, G1–G6; test body unchanged — the pass comes from production code). **Fix passes: 0/3** (first full run green).
+- **Updated tests (recorded per ground rule — not weakened):** `onboarding_controller_test.dart` (the two `throws` cases for `confirmLightingCheck`/`tryContinue` replaced by behaviour tests); `onboarding_host_test.dart` (the shell "controls inert" test drops the lighting-continue `onPressed==null` assertion — FLOW-3 wires it — keeping save/severity); `self_assessment_test.dart` scaffold guard (`expected` set shrinks by AC-2; the skip-reason loop now iterates `pendingACs.keys` and adds an explicit AC-2-runs assertion). New: `test/onboarding/screens/lighting_step_test.dart`.
+- **Augmentations:** none.
+- **Tokens / time:** 8,229,212 · 16m 09s.
+
+### Checkpoint / Handoff (FLOW-3)
+
+- **Frozen for later phases:** `OnboardingState.copyWith(...)` is the state-forward primitive (all fields optional; nullable fields can be set but not cleared to null). `confirmLightingCheck`/`tryContinue` are live; `tryContinue` advances only while `lightingConfirmed`. The lighting step's controls are wired; `LightingStep.continueKey` / the three checkbox titles (`Screen brightness turned up` / `Night-light turned off` / `In daylight`) are stable.
+- **For FLOW-2 (AC-14, blocked on G-5):** generalise `tryContinue`'s advance beyond the Tier 0 gate (later steps have no lighting requirement) and render the "N of 4" progress; it can reuse this `tryContinue` as the Tier 0 case. The 0-based `stepIndex` is smoke-frozen (index 0 → "Step 1 of 4").
+- **Verification commands** (worktree, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 600 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
+- **Known gaps:** FLOW-3 touches only the Tier 0 gate; the step count stays provisional until G-5/FLOW-2.

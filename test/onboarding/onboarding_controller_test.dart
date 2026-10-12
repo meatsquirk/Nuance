@@ -43,17 +43,6 @@ void main() {
     setUp(() => controller = OnboardingController());
     tearDown(() => controller.dispose());
 
-    test('confirmLightingCheck throws (FLOW-3)', () {
-      expect(
-        () => controller.confirmLightingCheck(LightingCheck.brightness),
-        throwsUnimplementedError,
-      );
-    });
-
-    test('tryContinue throws (FLOW-2/FLOW-3)', () {
-      expect(controller.tryContinue, throwsUnimplementedError);
-    });
-
     test('answerIntake throws (ENGINE-3)', () {
       expect(
         () => controller.answerIntake(
@@ -117,6 +106,82 @@ void main() {
 
     test('save throws (PROFILE-2)', () {
       expect(controller.save, throwsUnimplementedError);
+    });
+  });
+
+  group('OnboardingController lighting gate (FLOW-3, AC-2)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController();
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('confirmLightingCheck sets the matching flag and notifies', () {
+      controller.confirmLightingCheck(LightingCheck.brightness);
+      expect(controller.state.brightnessConfirmed, isTrue);
+      expect(controller.state.nightLightConfirmed, isFalse);
+      expect(controller.state.daylightConfirmed, isFalse);
+
+      controller.confirmLightingCheck(LightingCheck.nightLight);
+      expect(controller.state.nightLightConfirmed, isTrue);
+
+      controller.confirmLightingCheck(LightingCheck.daylight);
+      expect(controller.state.daylightConfirmed, isTrue);
+      expect(controller.state.lightingConfirmed, isTrue);
+      expect(notifications, 3);
+    });
+
+    test('confirmLightingCheck can clear a check with confirmed: false', () {
+      controller.confirmLightingCheck(LightingCheck.daylight);
+      expect(controller.state.daylightConfirmed, isTrue);
+      controller.confirmLightingCheck(LightingCheck.daylight, confirmed: false);
+      expect(controller.state.daylightConfirmed, isFalse);
+      expect(controller.state.lightingConfirmed, isFalse);
+    });
+
+    test('tryContinue does not advance while the checks are unconfirmed', () {
+      // Two of three confirmed — the gate stays shut.
+      controller.confirmLightingCheck(LightingCheck.brightness);
+      controller.confirmLightingCheck(LightingCheck.nightLight);
+      notifications = 0;
+
+      controller.tryContinue();
+      expect(controller.state.stepIndex, 0, reason: 'still on the lighting step');
+      expect(controller.state.testingStarted, isFalse,
+          reason: 'testing must not begin until all three are confirmed');
+      expect(notifications, 0, reason: 'a declined continue notifies nothing');
+    });
+
+    test('tryContinue advances and starts testing once all three confirmed', () {
+      controller.confirmLightingCheck(LightingCheck.brightness);
+      controller.confirmLightingCheck(LightingCheck.nightLight);
+      controller.confirmLightingCheck(LightingCheck.daylight);
+      notifications = 0;
+
+      controller.tryContinue();
+      expect(controller.state.stepIndex, 1, reason: 'advanced past lighting');
+      expect(controller.state.testingStarted, isTrue,
+          reason: 'testing begins once past the gate');
+      expect(notifications, 1);
+    });
+
+    test('tryContinue does not advance past the last step', () {
+      // A single-step onboarding: confirming and continuing cannot overrun.
+      final single = OnboardingController(steps: const [OnboardingStep('Only')]);
+      addTearDown(single.dispose);
+      single.confirmLightingCheck(LightingCheck.brightness);
+      single.confirmLightingCheck(LightingCheck.nightLight);
+      single.confirmLightingCheck(LightingCheck.daylight);
+
+      single.tryContinue();
+      expect(single.state.stepIndex, 0,
+          reason: 'stepIndex is clamped to the last step');
+      expect(single.state.testingStarted, isTrue,
+          reason: 'testing still begins even at the last step');
     });
   });
 }

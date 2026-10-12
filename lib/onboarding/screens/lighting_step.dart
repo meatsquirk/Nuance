@@ -6,9 +6,11 @@ import '../onboarding_controller.dart';
 /// lighting checks [button], E43 continue [button]; AC-2).
 ///
 /// Shows the three checks — screen brightness, night-light off and daylight —
-/// and a continue control. The FLOW-1 shell renders them **inert**
-/// (`onPressed: null`): FLOW-3 wires `confirmLightingCheck` to the three checks
-/// and gates `tryContinue` so testing begins only once all three are confirmed.
+/// and a continue control. FLOW-3 wires each checkbox to
+/// `confirmLightingCheck` and the continue control to the gated `tryContinue`,
+/// so testing begins only once all three are confirmed (AC-2). Continue is
+/// always tappable; the gate lives in `tryContinue` (an unconfirmed tap is a
+/// no-op), which is the negative-Then settle point AC-2's test relies on.
 class LightingStep extends StatelessWidget {
   /// Creates the lighting step over [controller].
   const LightingStep({required this.controller, super.key});
@@ -24,30 +26,37 @@ class LightingStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = controller.state;
     return Column(
       key: regionKey,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text('Display and lighting setup'),
+      children: [
+        const Text('Display and lighting setup'),
         CheckboxListTile(
-          value: false,
-          onChanged: null,
-          title: Text('Screen brightness turned up'),
+          value: state.brightnessConfirmed,
+          onChanged: (value) => controller.confirmLightingCheck(
+              LightingCheck.brightness,
+              confirmed: value ?? false),
+          title: const Text('Screen brightness turned up'),
         ),
         CheckboxListTile(
-          value: false,
-          onChanged: null,
-          title: Text('Night-light turned off'),
+          value: state.nightLightConfirmed,
+          onChanged: (value) => controller.confirmLightingCheck(
+              LightingCheck.nightLight,
+              confirmed: value ?? false),
+          title: const Text('Night-light turned off'),
         ),
         CheckboxListTile(
-          value: false,
-          onChanged: null,
-          title: Text('In daylight'),
+          value: state.daylightConfirmed,
+          onChanged: (value) => controller.confirmLightingCheck(
+              LightingCheck.daylight,
+              confirmed: value ?? false),
+          title: const Text('In daylight'),
         ),
         TextButton(
           key: continueKey,
-          onPressed: null,
-          child: Text('Continue'),
+          onPressed: controller.tryContinue,
+          child: const Text('Continue'),
         ),
       ],
     );
