@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../domain/sample.dart';
 import '../readout/readout_screen.dart';
+import '../recipes/engine/mixing_engine.dart' show Recipe;
 import 'build_app.dart';
 
 /// Which comparison slot a carried-over sample lands in.
@@ -56,6 +57,28 @@ class AppRouter {
   Route<void> toRecipes(Sample target) {
     return MaterialPageRoute<void>(
       builder: (_) => RecipesHomeScreen(target: target),
+    );
+  }
+
+  /// A route to the [CorrectionHomeScreen] correcting [currentMix] toward
+  /// [target].
+  ///
+  /// Carries the mix into the correction loop, so the Recipes → correction
+  /// handoff lands on the real Correction screen with the mix in place. Unlike
+  /// [toRecipes], the loop needs a camera: [CorrectionHomeScreen.captureSource]
+  /// has no const default, so this reads the injected [AppScope]'s capture
+  /// source (the production assembly wraps the navigator in that scope),
+  /// symmetric to how [toReadout]'s screen reads its services from the scope.
+  /// The remaining seams take their defaults (the stub engine, an empty
+  /// palette) — the painter-supplied ones are injected only on the correction
+  /// *entry* assembly path.
+  Route<void> toCorrection(Sample target, Recipe currentMix) {
+    return MaterialPageRoute<void>(
+      builder: (context) => CorrectionHomeScreen(
+        target: target,
+        currentMix: currentMix,
+        captureSource: AppScope.of(context).captureSource!,
+      ),
     );
   }
 }

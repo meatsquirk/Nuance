@@ -60,10 +60,26 @@ void main() {
       expect(ProvenanceRegion.noteFor(provenance), isNull);
     });
 
-    test('a confirmed reading reads its bare tier word with no note', () {
+    test('a confirmed reading with no carried note reads its bare tier word', () {
       const provenance = Provenance(ProvenanceTier.confirmed);
       expect(ProvenanceRegion.labelFor(provenance), 'Confirmed');
       expect(ProvenanceRegion.noteFor(provenance), isNull);
+    });
+
+    test('a confirmed reading surfaces its carried note (bs-05 AC-10)', () {
+      // The mix-correction loop promotes a value to confirmed with the
+      // "you measured this" phrasing on the note (G-4(d)); the region renders
+      // the bare tier label plus that carried note.
+      const provenance = Provenance(
+        ProvenanceTier.confirmed,
+        note: 'Confirmed — you measured this, after photographing your '
+            'own swatch.',
+      );
+      expect(ProvenanceRegion.labelFor(provenance), 'Confirmed');
+      expect(
+        ProvenanceRegion.noteFor(provenance),
+        'Confirmed — you measured this, after photographing your own swatch.',
+      );
     });
   });
 
@@ -97,6 +113,30 @@ void main() {
       find.text('Seeded by a model. Treat as a starting point.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('renders the Confirmed label and the carried note (AC-10)',
+      (tester) async {
+    await _pumpRegion(
+      tester,
+      const Provenance(
+        ProvenanceTier.confirmed,
+        note: 'Confirmed — you measured this, after photographing your '
+            'own swatch.',
+      ),
+    );
+
+    final text = tester
+        .widgetList<Text>(
+          find.descendant(
+            of: find.byKey(ProvenanceRegion.regionKey),
+            matching: find.byType(Text),
+          ),
+        )
+        .map((t) => t.data ?? '')
+        .join(' ');
+    expect(text, contains('Confirmed'));
+    expect(text, contains('you measured this'));
   });
 
   testWidgets('announces the tier alone when there is no note (AC-6)',

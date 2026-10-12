@@ -26,9 +26,36 @@ class FakeCaptureSource extends SoftwareCaptureSource {
   /// single-frame read leaves it at 1. Zero before the feed is read.
   int get framesRead => _framesRead;
 
-  /// The scene's known true colour, in canonical CIELAB — the ΔE anchor the
+  /// A scene swapped in for a *subsequent* capture, or null to read the scene the
+  /// source was built over.
+  ///
+  /// The re-photograph loop (bs-05 AC-8) models the painter adjusting the
+  /// physical mix and photographing again: after [rephotographAs] the next
+  /// capture reads the new swatch, so the re-check sees a different measured
+  /// colour than the first check. Left null, the fake behaves exactly as before —
+  /// every read (the frame feed, the ground truth, the card-normalised result)
+  /// follows the constructor scene, so the existing bs-02..bs-04 suites are
+  /// unaffected.
+  SceneSpec? _rephotographed;
+
+  /// Swaps the live scene so the *next* capture reads [scene] (AC-8): the painter
+  /// corrected the mix, so the camera now sees a closer swatch.
+  void rephotographAs(SceneSpec scene) => _rephotographed = scene;
+
+  /// The scene the next capture reads — the swapped-in scene once a re-photograph
+  /// has been staged, otherwise the constructor [scene].
+  SceneSpec get _liveScene => _rephotographed ?? scene;
+
+  /// The live scene's known true colour, in canonical CIELAB — the ΔE anchor the
   /// accuracy Thens measure a committed sample against (D-4).
-  ColorCoordinates get groundTruth => scene.groundTruth;
+  ColorCoordinates get groundTruth => _liveScene.groundTruth;
+
+  /// The deterministic card-normalised reading: the live scene's ground truth
+  /// (base behaviour), tracking a staged re-photograph (AC-8) so the re-measured
+  /// swatch is the new scene's colour, not the first's.
+  @override
+  ColorCoordinates normaliseAgainstCard(ColorCoordinates raw) =>
+      _liveScene.groundTruth;
 
   /// A photo staged for the next import (AC-9), or null when none is staged.
   ///
@@ -51,11 +78,18 @@ class FakeCaptureSource extends SoftwareCaptureSource {
         );
 
   @override
-  Stream<Frame> get frames =>
-      super.frames.map((frame) {
-        _framesRead++;
-        return frame;
-      });
+  Stream<Frame> get frames {
+    // The constructor scene's feed by default; the swapped-in scene's feed once a
+    // re-photograph is staged (AC-8), so the re-check pulls frames of the new
+    // swatch. Either way every frame read is counted (AC-11).
+    final feed = _rephotographed == null
+        ? super.frames
+        : SoftwareCaptureSource(_rephotographed!).frames;
+    return feed.map((frame) {
+      _framesRead++;
+      return frame;
+    });
+  }
 }
 
 /// A gallery photo the painter can import and sample a point from (AC-9).

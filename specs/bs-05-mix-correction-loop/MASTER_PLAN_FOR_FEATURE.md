@@ -1,7 +1,7 @@
 # Master Plan — Mix-correction loop (bs-05)
 
 **Spec:** [bs-05-mix-correction-loop.feature](../bs-05-mix-correction-loop.feature)
-**Status:** Not started — next LOOP-1 (startable: G-1 + G-3 resolved 2026-10-10; G-2/G-4 still open but gate later phases, not LOOP-1)
+**Status:** Done — signed off 2026-10-11 by Matt Quirk at `83554a9`. All 10 ACs ✅, every gate green (unit 668, coverage 100%/17, integration 108/0, run-pending 22/0, grade 22×A/0×B); SIGNOFF-1 approved. All gates G-1..G-4 resolved
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) (*Mix-correction loop* capability = **Capture + Mixing Engine**, line 208; the private loop is the single-user replacement for community refinement, D8; provenance promotion rule — only the painter's own photographic evidence graduates a value to **Confirmed (you measured this)**, lines 257–268, D9) · [custom mixing engine design](../../docs/custom-mixing-engine-design.md) (the forward model the correction search rides) · [scope](../../docs/paint-color-app-scope.md) (Phase-2 feature) · [wireframe derivation](../wireframe-spec-derivation.md) (bs-05 §4.3/§6.5; fact **F8** — single-user "Confirmed · you" from the painter's own swatch; community "Confirmed by N" stays Phase 2) · wireframe `Paint Color Assistant.dc.html` **Correction screen** (S1.R1, E26–E29), in `docs/Color blindness artist tool.zip`
 **Code home:** `/Users/matthew.quirk/Nuance` · remote `https://github.com/meatsquirk/Nuance` · base `main` **@ the bs-04 merge (G-3)** · **extends** the bs-01/02/03/04 foundation (confirmed by Matt 2026-10-10: bs-05 branches from `main` after bs-04 is merged, not from the bs-04 feature branch)
 
@@ -55,16 +55,16 @@ route (`toCorrection`), controller, `CorrectionEngine`, or `bs05/` suite exist �
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | Checking the mix photographs the swatch and compares it to the target | ITEST-2 `TestAC01_CheckPhotographsAndCompares` | LOOP-3 | ⬜ Todo |
-| AC-2 | The difference from the target is stated as a delta-E with a plain verdict | ITEST-3 `TestAC02_DeltaEAndVerdict` | CORRECT-2 | ⬜ Todo |
-| AC-3 | The difference is decomposed and leads with value for a CVD painter | ITEST-3 `TestAC03_ValueLeadingDecomposition` | CORRECT-2 | ⬜ Todo |
-| AC-4 | A concrete correction names the paint and the amount to add | ITEST-3 `TestAC04_ConcreteCorrection` | CORRECT-3 | ⬜ Todo |
-| AC-5 | A small correction is expressed as a touch of | ITEST-3 `TestAC05_TouchOf` | CORRECT-3 | ⬜ Todo |
-| AC-6 | A mix already within tolerance needs no correction | ITEST-3 `TestAC06_WithinTolerance` | CORRECT-4 | ⬜ Todo |
-| AC-7 | The painter hears the correction spoken | ITEST-2 `TestAC07_SpeakCorrection` | LOOP-4 | ⬜ Todo |
-| AC-8 | Re-photographing the swatch re-checks it against the target | ITEST-2 `TestAC08_RephotographRechecks` | LOOP-5 | ⬜ Todo |
-| AC-9 | Saving a satisfactory mix promotes it to Confirmed by the painter | ITEST-2 `TestAC09_SaveConfirmed` | LOOP-6 | ⬜ Todo |
-| AC-10 | A value confirmed by the painter shows its Confirmed provenance in later readouts | ITEST-2 `TestAC10_ConfirmedInReadout` | LOOP-6 | ⬜ Todo |
+| AC-1 | Checking the mix photographs the swatch and compares it to the target | ITEST-2 `TestAC01_CheckPhotographsAndCompares` | LOOP-3 | ✅ Done |
+| AC-2 | The difference from the target is stated as a delta-E with a plain verdict | ITEST-3 `TestAC02_DeltaEAndVerdict` | CORRECT-2 | ✅ |
+| AC-3 | The difference is decomposed and leads with value for a CVD painter | ITEST-3 `TestAC03_ValueLeadingDecomposition` | CORRECT-2 | ✅ Done |
+| AC-4 | A concrete correction names the paint and the amount to add | ITEST-3 `TestAC04_ConcreteCorrection` | CORRECT-3 | ✅ Done |
+| AC-5 | A small correction is expressed as a touch of | ITEST-3 `TestAC05_TouchOf` | CORRECT-3 | ✅ Done |
+| AC-6 | A mix already within tolerance needs no correction | ITEST-3 `TestAC06_WithinTolerance` | CORRECT-4 | ✅ |
+| AC-7 | The painter hears the correction spoken | ITEST-2 `TestAC07_SpeakCorrection` | LOOP-4 | ✅ Done |
+| AC-8 | Re-photographing the swatch re-checks it against the target | ITEST-2 `TestAC08_RephotographRechecks` | LOOP-5 | ✅ Done |
+| AC-9 | Saving a satisfactory mix promotes it to Confirmed by the painter | ITEST-2 `TestAC09_SaveConfirmed` | LOOP-6 | ✅ Done |
+| AC-10 | A value confirmed by the painter shows its Confirmed provenance in later readouts | ITEST-2 `TestAC10_ConfirmedInReadout` | LOOP-6 | ✅ Done |
 
 ## Design decisions
 
@@ -141,10 +141,10 @@ discriminator is an in-test forward-model control (the suggested addition must r
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| CORRECT | [modules/CORRECT.md](modules/CORRECT.md) | The `CorrectionEngine` interface + impl: `Difference` (ΔE00 + verdict band + value-leading decomposition) and `Correction` (paint(s) to add via forward-model perturbation; trace "a touch of"; tolerance → no-correction) | bs-04 `MixingEngine`/`Paint`/palette, bs-03 `deltaE00`, color-science | ⬜ Todo |
-| LOOP | [modules/LOOP.md](modules/LOOP.md) | Scaffold; `CorrectionController`/state; capture wiring (check → measured `Sample` → compare); re-photograph re-check; save-confirmed → provenance promotion + persist; `CorrectionReadEndpoint`; `CorrectionEntry`/route in `buildApp`; spoken correction | bs-02 capture, bs-03 compare/`SampleSource`, domain `Provenance`, `Speech`, CORRECT | ⬜ Todo |
-| SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | The Correction screen UI: E26 Check my mix, the difference body (ΔE00 + verdict + decomposition), the correction body (paint + amount / "a touch of"), E27 Speak, E28 Re-photograph, E29 Save confirmed, the within-tolerance no-correction state, and the later-readout provenance | LOOP, CORRECT | ⬜ Todo |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| CORRECT | [modules/CORRECT.md](modules/CORRECT.md) | The `CorrectionEngine` interface + impl: `Difference` (ΔE00 + verdict band + value-leading decomposition) and `Correction` (paint(s) to add via forward-model perturbation; trace "a touch of"; tolerance → no-correction) | bs-04 `MixingEngine`/`Paint`/palette, bs-03 `deltaE00`, color-science | ✅ Done |
+| LOOP | [modules/LOOP.md](modules/LOOP.md) | Scaffold; `CorrectionController`/state; capture wiring (check → measured `Sample` → compare); re-photograph re-check; save-confirmed → provenance promotion + persist; `CorrectionReadEndpoint`; `CorrectionEntry`/route in `buildApp`; spoken correction | bs-02 capture, bs-03 compare/`SampleSource`, domain `Provenance`, `Speech`, CORRECT | ✅ Complete |
+| SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | The Correction screen UI: E26 Check my mix, the difference body (ΔE00 + verdict + decomposition), the correction body (paint + amount / "a touch of"), E27 Speak, E28 Re-photograph, E29 Save confirmed, the within-tolerance no-correction state, and the later-readout provenance | LOOP, CORRECT | 🏗 Shell done |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
 
 ## Dependency graph
 
@@ -177,9 +177,9 @@ re-photograph), keeping the screen side file-disjoint across the windows above.
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (the `.feature` is "Draft: awaiting owner approval"; record approval as its first line, as bs-01..bs-04 did) | LOOP-1 | ✅ Resolved 2026-10-10 09:20 EDT: spec approved as-is; `.feature` first line stamped "Approved 2026-10-10 by Matt Quirk" — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase (LOOP-3, CORRECT-2/3/4, LOOP-4/5/6) | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase (LOOP-3, CORRECT-2/3/4, LOOP-4/5/6) | ✅ Resolved 2026-10-10 21:51 EDT: acceptance tests approved as-is (ITEST-4 packet, 10 pending AC tests, grid 23×A + 1×B pending CORRECT-4); behavior stage opens — Matt Quirk |
 | G-3 | dependency | **bs-04 (with its bs-01/02/03 foundation) merged to `main`.** bs-04 is signed off at `ca877e4` but lives only on `feat/bs-04-mixing-recipes`; `main` lacks its `lib/` code. bs-05 branches from `main` at that merge (Matt 2026-10-10). Closed by: a human merges bs-04 → `main` | LOOP-1, all shells | ✅ Resolved 2026-10-10 09:20 EDT: bs-04 (signed off at `28cbf04`) merged into local `main` at merge commit `2684ac6` (`--no-ff`), by Matt Quirk's direction — **not yet pushed**; bs-05 branches from this `main` — Matt Quirk |
-| G-4 | decision | **Spec-data / engine / domain reconciliation (spec author).** Confirm: **(a)** the pinned correction amounts ("about one part more Titanium White", "a touch of Yellow Ochre") are **illustrative** and the ACs assert behavioural properties (names the right paint; direction reduces ΔE00; sub-trace → "a touch of") — or a literal is binding and its authoritative value; **(b)** the verdict words "noticeably off" / "very close" (D-4) and the **tolerance ΔE00 ≤ 2** (D-6); **(c)** the **trace threshold** for "a touch of" (D-7); **(d)** the confirmed-tier label string **"Confirmed — you measured this"** — change the shared `Provenance.label` for `ProvenanceTier.confirmed`, or carry the phrase via `note` (D-8), and whether changing the shared label is acceptable given bs-04's existing `confirmed` usage | ITEST-3, CORRECT-2, CORRECT-3, CORRECT-4, LOOP-6 | Open |
+| G-4 | decision | **Spec-data / engine / domain reconciliation (spec author).** Confirm: **(a)** the pinned correction amounts ("about one part more Titanium White", "a touch of Yellow Ochre") are **illustrative** and the ACs assert behavioural properties (names the right paint; direction reduces ΔE00; sub-trace → "a touch of") — or a literal is binding and its authoritative value; **(b)** the verdict words "noticeably off" / "very close" (D-4) and the **tolerance ΔE00 ≤ 2** (D-6); **(c)** the **trace threshold** for "a touch of" (D-7); **(d)** the confirmed-tier label string **"Confirmed — you measured this"** — change the shared `Provenance.label` for `ProvenanceTier.confirmed`, or carry the phrase via `note` (D-8), and whether changing the shared label is acceptable given bs-04's existing `confirmed` usage | ITEST-3, CORRECT-2, CORRECT-3, CORRECT-4, LOOP-6 | ✅ Resolved 2026-10-10 17:35 EDT — Matt Quirk: **(a)** amounts **illustrative** — ACs assert behavioural properties (right paint; adding it reduces forward-predicted ΔE00; sub-trace → "a touch of"); engine returns real ratios, no binding literal. **(b)** verdict words **"noticeably off"** (beyond) / **"very close"** (within) binding; tolerance **ΔE00 ≤ 2** as a named constant. **(c)** trace threshold **0.02** (2% by volume) — reuse bs-04's single "a touch of" idiom (D-7), no second scale. **(d)** keep the shared `Provenance.label` for `confirmed` = "Confirmed" (unchanged for bs-04); bs-05's confirmed `Provenance` carries **"Confirmed — you measured this" via `note`** (D-8), rendered by the readout's provenance region (LOOP-6). |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -194,34 +194,36 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | LOOP-1 | scaffold: branch from main @ bs-04 merge, baseline, confirm coverage gate, BS05 pending runner | ⬜ Next | | | G-1 + G-3 resolved 2026-10-10; startable |
-| 2 | CORRECT-1 | shell: `CorrectionEngine` interface + `Difference`/`Correction` types + stub engine wired into deps | ⬜ Todo | | | |
-| 3 | LOOP-2 | shell: `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` + `CorrectionEntry`/`toCorrection` route wired into buildApp | ⬜ Todo | | | needs CORRECT-1 types |
-| 4 | SCREEN-1 | shell: Correction screen scaffold (E26–E29 + difference/correction/provenance regions) bound to controller | ⬜ Todo | | | needs LOOP-2 |
-| 5 | ITEST-1 | acceptance-tests: harness, fixtures + scenes, pending gate (10 ACs), smoke | ⬜ Todo | | | |
-| 6 | ITEST-2 | acceptance-tests: AC-1,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
-| 7 | ITEST-3 | acceptance-tests: AC-2,3,4,5,6 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
-| 9 | LOOP-3 | behavior AC-1 (*enabler*): check photographs the swatch + compares to target | ⬜ Todo | | | first after G-2; enables every other Given |
-| 10 | CORRECT-2 | behavior AC-2, AC-3: ΔE00 + verdict; value-leading decomposition | ⬜ Todo | | | ∥ LOOP-4/5/6 |
-| 11 | CORRECT-3 | behavior AC-4, AC-5: concrete correction (paint + amount); "a touch of" | ⬜ Todo | | | after CORRECT-2 |
-| 12 | CORRECT-4 | behavior AC-6: within tolerance → "very close" + no correction | ⬜ Todo | | | after CORRECT-3 |
-| 13 | LOOP-4 | behavior AC-7: speak the correction (E27) | ⬜ Todo | | | after CORRECT-3; ∥ CORRECT, LOOP-5/6 |
-| 14 | LOOP-5 | behavior AC-8: re-photograph re-checks (E28) | ⬜ Todo | | | after LOOP-3; serial w/ LOOP-6 |
-| 15 | LOOP-6 | behavior AC-9, AC-10: save confirmed → promote provenance; later readout shows it | ⬜ Todo | | | after LOOP-3; serial w/ LOOP-5 |
-| 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+| 1 | LOOP-1 | scaffold: branch from main @ bs-04 merge, baseline, confirm coverage gate, BS05 pending runner | ✅ Done | 2,465,803 | 11m 57s | analyze clean; unit 579 + integ 86 green; gate PASS clean / FAIL planted; bs05/pending.dart seeded (10 ACs); no `lib/` |
+| 2 | CORRECT-1 | shell: `CorrectionEngine` interface + `Difference`/`Correction` types + stub engine wired into deps | ✅ Done | 5,968,811 | 11m 31s | analyze clean; unit 598 + integ 86 green; gate 100% on 3 touched files; types + stub + `AppDependencies.correctionEngine` |
+| 3 | LOOP-2 | shell: `CorrectionController`/`CorrectionState` + `CorrectionReadEndpoint` + `CorrectionEntry`/`toCorrection` route wired into buildApp | ✅ Done | 11,995,702 | 19m 40s (52m 25s) | analyze clean; unit 623 + integ 86 green; gate 100% on 7 touched files; inert actions throw; correctionEntry wins over captureSource; fix passes 0/3 |
+| 4 | SCREEN-1 | shell: Correction screen scaffold (E26–E29 + difference/correction/provenance regions) bound to controller | ✅ Done | 5,078,443 | 9m 25s | analyze clean; unit 632 green; gate 100% on 14 touched files; 6 keyed regions + `CorrectionScreen` replace the placeholder body; controls disabled until behaviour phases; fix passes 1/3 (test-finder only) |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures + scenes, pending gate (10 ACs), smoke | ✅ Done | 8,454,576 | 20m 21s | analyze clean; unit 632 + integ 98 green (correction_test 12: smoke + 11 guards); grade 12×A/0×B; no lib/ touched |
+| 6 | ITEST-2 | acceptance-tests: AC-1,7,8,9,10 (pending) + red baseline | ✅ Done | 4,978,132 | 18m 00s | 5 pending ACs; default 98 green/5 skipped; run-pending 5 fail cleanly (AC-1 Then; AC-7/8/9/10 Given precond → LOOP-4/5/6); grade 5×A/0×B; no lib/ touched |
+| 7 | ITEST-3 | acceptance-tests: AC-2,3,4,5,6 (pending) + red baseline | ✅ Done | 6,375,988 | 20m 29s | 5 pending ACs; default 12 green/10 skip; run-pending 12/10, 5 ITEST-3 fail cleanly (Given precond → CORRECT-2/2/3/3/4); grade 4×A + AC-2 B pending CORRECT-4; no lib/ |
+| 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 3,442,451 | 16m 03s | packet assembled; full regression green (analyze clean; unit 632; coverage 100%/14 files; integration 98 pass/10 skip default; run-pending 12/10 clean red baseline); G-2 approved 2026-10-10 21:51 EDT — Matt Quirk |
+| 9 | LOOP-3 | behavior AC-1 (*enabler*): check photographs the swatch + compares to target | ✅ Done | 15,659,660 | 29m 27s | analyze clean; unit 633 green; gate 100% touched; AC-1 un-pended, TestAC01 green (run-pending 13/9, default 99 pass/9 skip); engine `difference()` ΔE00 filled (verdict → CORRECT-2); fix passes 1/3 |
+| 10 | CORRECT-2 | behavior AC-2, AC-3: ΔE00 + verdict; value-leading decomposition | ✅ Done | 13,621,264 | 32m 47s | AC-3 ✅; AC-2 green but B pending CORRECT-4 (aug). default 101 pass/7 skip; grade AC-1/AC-3 A, AC-2 B-pending; fix 1/3 |
+| 11 | CORRECT-3 | behavior AC-4, AC-5: concrete correction (paint + amount); "a touch of" | ✅ Done | 26,610,719 | 1h 03m | value-leading single addition; amount = closing step × distance-beyond-tolerance ramp; AC-4/AC-5 ✅; also reconciled LOOP-5 |
+| 12 | CORRECT-4 | behavior AC-6: within tolerance → "very close" + no correction | ✅ Done | 10,423,853 | 1h 06m | AC-6 ✅ + AC-2 ✅ (TestAC02 aug closed); default 105 pass/3 skip; run-pending 19/3 (red baseline intact: AC-7/9/10); grade 7×A/0×B; coverage 100%/15; fix 0/3; parallel worktree |
+| 13 | LOOP-4 | behavior AC-7: speak the correction (E27) | ✅ Done | 18,028,310 | 1h 02m | sequential (primary worktree); AC-7 ✅; default 106 pass/2 skip, run-pending 20/2 (red baseline intact AC-9/10); grade 8×A/0×B; coverage 100%/16; fix 1/3 |
+| 14 | LOOP-5 | behavior AC-8: re-photograph re-checks (E28) | ✅ Done | 7,036,729 | 28m 15s | parallel worktree; reconciled into feat/bs-05 @ merge 95a403e; after LOOP-3; serial w/ LOOP-6 |
+| 15 | LOOP-6 | behavior AC-9, AC-10: save confirmed → promote provenance; later readout shows it | ✅ Done | 22,315,250 | 1h 30m | sequential (primary worktree); AC-9/AC-10 ✅ (pending map now empty); default 108 pass/0 skip, run-pending 22/0; grade 10×A/0×B; coverage 100%/17; fix 1/3 (AC-10 test-helper `await push` bug); behaviour stage COMPLETE |
+| 16 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ✅ Done | 7,655,832 | 14m 42s | packet + summary page delivered; full regression green (unit 668, coverage 100%/17, integration 108/0, run-pending 22/0); fresh grade 22×A/0×B; **Approved 2026-10-11 by Matt Quirk at `83554a9`** |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**LOOP-1 (scaffold)** — now **startable**: G-1 (spec approved) and G-3 (bs-04 merged to local `main` @ `2684ac6`)
-both resolved 2026-10-10. A worktree is prepared on branch `feat/bs-05-mix-correction-loop` based at that `main`
-(see the Session log / claim). LOOP-1's remaining work: record the baseline test run, confirm the coverage gate
-passes clean + fails on a planted gap, and seed `integration_test/bs05/pending.dart` (BS05_RUN_PENDING, 10 ACs).
-No product code. Nothing else is startable until LOOP-1 is done (shells serialize behind it). G-2 gates the
-behavior stage; G-4 gates ITEST-3/CORRECT-2/3/4/LOOP-6.
+**Feature complete — signed off 2026-10-11 by Matt Quirk at `83554a9`.** All 16 phases done; all 10 ACs ✅;
+SIGNOFF-1 approved ([packet](signoff/round-1.md) · [scorecard](https://claude.ai/artifact/43zBHtjcKJ6Lcjc2tmD3Ex)).
+No phase remains. Nothing to start.
+
+**Deferred items accepted at sign-off** (owners named; neither AC-blocking): (1) a confirmed mix is exposed via
+the controller's `savedSamples`, not the shared read-only `SampleSource` — **bs-06** owns the persistent
+catalogue. (2) `rephotograph` could later unify with `checkMix` behind a shared `_photographAndCheck()` helper
+(refactor only). bs-05 worktree `Nuance-bs05` on `feat/bs-05-mix-correction-loop`; all gates G-1..G-4 resolved.
 
 ## Token usage
 
@@ -231,10 +233,30 @@ behavior stage; G-4 gates ITEST-3/CORRECT-2/3/4/LOOP-6.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | eeb3127a | 2026-10-10 04:37 EDT | 05:20 | 43m 21s | 13m 49s | claude-opus-4-8 | 106 | 256,812 | 5,917,039 | 64,934 | 6,238,891 | plan written: 17 phases (16 session-log rows + the enabler), 4 modules, 10 ACs; G-1/G-3/G-4 open, G-2 open |
 | GATE-DECISION | 58107723 | 2026-10-10 06:47 EDT | 09:22 | 2h 34m | 12m 22s | claude-opus-4-8 | 68 | 178,708 | 3,062,238 | 50,088 | 3,291,102 | G-1 approved (spec stamped) + G-3 closed: bs-04 merged to local main @ 2684ac6 (not pushed); LOOP-1 now startable |
-| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-10 09:22** | **3h 17m** | **26m 11s** |  | **174** | **435,520** | **8,979,277** | **115,022** | **9,529,993** |  |
+| LOOP-1 | 844dae14 | 2026-10-10 09:30 EDT | 09:42 | 11m 57s | 11m 57s | claude-opus-4-8 | 56 | 82,799 | 2,356,905 | 26,043 | 2,465,803 | scaffold complete; analyze clean, unit 579 + integ 86 green, coverage gate PASS clean / FAIL planted, bs05/pending.dart seeded (10 ACs); no lib/ touched; fix passes 0/3 |
+| CORRECT-1 | 5dfe5431 | 2026-10-10 13:57 EDT | 14:08 | 11m 31s | 11m 31s | claude-opus-4-8 | 120 | 101,590 | 5,834,232 | 32,869 | 5,968,811 | shell done: CorrectionEngine interface + Difference/Correction/CorrectionAddition types + stub wired into AppDependencies; analyze clean, unit 598 + integ 86 green, gate 100% on 3 touched files |
+| LOOP-2 | 48315c68 | 2026-10-10 14:13 EDT | 15:05 | 52m 25s | 19m 40s | claude-opus-4-8 | 166 | 164,541 | 11,759,634 | 71,361 | 11,995,702 | shell done: CorrectionController/State + read endpoint + CorrectionEntry/toCorrection wired into buildApp (correctionEntry wins over captureSource); inert actions throw; analyze clean, unit 623 + integ 86 green, gate 100% on 7 touched files; fix passes 0/3 |
+| SCREEN-1 | daccf904 | 2026-10-10 15:21 EDT | 15:30 | 9m 25s | 9m 25s | claude-opus-4-8 | 106 | 98,673 | 4,944,021 | 35,643 | 5,078,443 | shell: Correction screen + 6 keyed regions; analyze clean, 632 unit green, coverage 100% on 14 files; fix passes 1/3 |
+| ITEST-1 | 406ee85e | 2026-10-10 15:41 EDT | 16:02 | 20m 21s | 20m 21s | claude-opus-4-8 | 116 | 313,243 | 8,083,579 | 57,638 | 8,454,576 | harness + fixtures/scenes + smoke/guards; analyze clean, unit 632 + integ 98 green (correction_test 12), coverage gate 100% (14 branch files, no lib touched), grade 12A/0B |
+| GATE-DECISION | bf84bc26 | 2026-10-10 16:29 EDT | 17:36 | 1h 07m | 4m 54s | claude-opus-4-8 | 32 | 32,074 | 2,956,759 | 17,317 | 3,006,182 | G-4 resolved (Matt Quirk): (a) amounts illustrative—assert properties; (b) verdict words 'noticeably off'/'very close' binding + tolerance ΔE00≤2; (c) trace threshold 0.02 (2% vol, reuse bs-04); (d) confirmed phrase 'Confirmed — you measured this' carried via note, shared Provenance.label unchanged. ITEST-3 + CORRECT-2/3/4 + LOOP-6 unblocked |
+| ITEST-2 | b38c13b1 | 2026-10-10 17:35 EDT | 17:53 | 18m 00s | 18m 00s | claude-opus-4-8 | 88 | 218,609 | 4,727,655 | 31,780 | 4,978,132 | 5 pending AC tests (AC-1,7,8,9,10) + red baseline; grade 5xA/0B; default 98 green/5 skip; run-pending 5 fail cleanly |
+| ITEST-3 | 418a5b00 | 2026-10-10 18:19 EDT | 18:39 | 20m 29s | 20m 29s | claude-opus-4-8 | 104 | 248,083 | 6,084,444 | 43,357 | 6,375,988 | 5 pending AC tests (AC-2,3,4,5,6) + red baseline; default 12 green/10 skip; run-pending 12/10, 5 ITEST-3 fail cleanly (Given precond → CORRECT-2/2/3/3/4); grade 4×A + AC-2 B pending CORRECT-4; no lib/ touched; fix passes 0/3 |
+| ITEST-4 | 22542feb | 2026-10-10 20:48 EDT | 21:04 | 16m 04s | 16m 03s | claude-opus-4-8 | 68 | 109,780 | 3,311,498 | 21,105 | 3,442,451 | packet assembled; full regression green (analyze clean; unit 632; coverage 100%/14; integration 98 pass/10 skip default; run-pending 12/10 clean red baseline); ⏸ awaiting G-2 decision |
+| SIGNOFF-DECISION | 57545616 | 2026-10-10 21:50 EDT | 21:52 | 1m 36s | 1m 36s | claude-opus-4-8 | 32 | 20,940 | 2,078,840 | 6,427 | 2,106,239 | ITEST-4 approved |
+| LOOP-3 | a0ab0bd7 | 2026-10-10 21:51 EDT | 22:20 | 29m 27s | 29m 27s | claude-opus-4-8 | 178 | 210,829 | 15,355,146 | 93,507 | 15,659,660 | AC-1 un-pended; TestAC01 green (run-pending 13/9, default 99 pass/9 skip); unit 633 + coverage 100% on touched; engine difference() ΔE00 filled; fix passes 1/3 |
+| CORRECT-2 | f021beeb | 2026-10-10 21:55 EDT | 2026-10-11 06:18 | 8h 23m | 32m 47s | claude-opus-4-8 | 168 | 348,838 | 13,172,558 | 99,700 | 13,621,264 | AC-2,AC-3 un-pended; AC-3 green/A, AC-2 green/B pending CORRECT-4; default 101 pass/7 skip; coverage 100% touched; fix passes 1/3 |
+| LOOP-5 | c3f6e055 | 2026-10-11 05:54 EDT | 06:22 | 28m 15s | 28m 15s | claude-opus-4-8 | 126 | 139,257 | 6,842,428 | 54,918 | 7,036,729 | AC-8 un-pended + green; unit 634 + coverage 100% on touched; acceptance run-pending 14/8, default 100/8; grade A |
+| CORRECT-3 | ece9cbfd | 2026-10-11 06:24 EDT | 07:27 | 1h 03m | 1h 03m | claude-opus-4-8 | 258 | 454,191 | 25,976,493 | 179,777 | 26,610,719 | AC-4,AC-5 un-pended + green; value-leading single-addition engine (ramped amount); analyze clean, unit 652, coverage 100%/15 touched; run-pending 18/4 (red baseline intact), default 104/4; grade 5×A + AC-2 B pending CORRECT-4; fix passes 0/3; session also reconciled LOOP-5 (merge 95a403e + rollup 07563c9) |
+| CORRECT-4 | 1daec8e7 | 2026-10-11 07:40 EDT | 08:46 | 1h 06m | 1h 06m | claude-opus-4-8 | 180 | 246,760 | 10,128,461 | 48,452 | 10,423,853 | AC-6 ✅ + AC-2 ✅ (TestAC02 aug closed); analyze clean, unit 655, coverage 100%/15; default 105 pass/3 skip, run-pending 19/3 (red baseline intact AC-7/9/10); grade 7×A/0×B; fix 0/3; CORRECT module complete |
+| RECONCILE | 3ca4b0fb | 2026-10-11 09:12 EDT | 09:15 | 3m 44s | 3m 44s | claude-opus-4-8 | 42 | 62,198 | 1,498,826 | 13,121 | 1,574,187 | merged phase/CORRECT-4 (d8df478) into feat/bs-05 @ merge 316a7f1; applied CORRECT-4 rollup (AC-2 ✅, AC-6 ✅, CORRECT module complete); CORRECT-4 ledger row added; worktree + phase branch removed, claim released |
+| LOOP-4 | 0c44f3a4 | 2026-10-11 09:18 EDT | 10:21 | 1h 02m | 1h 02m | claude-opus-4-8 | 266 | 293,127 | 17,678,958 | 55,959 | 18,028,310 | AC-7 ✅ speak the correction; analyze clean, unit 663, coverage 100%/16; default 106 pass/2 skip, run-pending 20/2 (red baseline intact AC-9/10); grade 8×A/0×B; fix 1/3 |
+| LOOP-6 | 4f26b9e6 | 2026-10-11 17:43 EDT | 19:13 | 1h 30m | 1h 30m | claude-opus-4-8 | 256 | 385,147 | 21,832,806 | 97,041 | 22,315,250 | AC-9/AC-10 un-pended (save confirmed → provenance + later readout); behaviour stage COMPLETE (all 10 ACs green); run-pending 22/0, default 108/0; grade 10×A/0×B; coverage 100%/17; fix 1/3 |
+| SIGNOFF-1 | 861fea00 | 2026-10-11 19:39 EDT | 19:54 | 14m 42s | 14m 42s | claude-opus-4-8 | 132 | 291,485 | 7,313,365 | 50,850 | 7,655,832 | sign-off packet + summary page; all gates green (unit 668, coverage 100%, integration 108/0, run-pending 22/0, grade 22×A/0×B); awaiting human decision |
+| SIGNOFF-DECISION | 2234c3f3 | 2026-10-11 20:09 EDT | 20:45 | 35m 39s | 6m 18s | claude-opus-4-8 | 42 | 47,925 | 1,314,749 | 10,315 | 1,373,031 | SIGNOFF-1 approved by Matt Quirk; feature Done |
+| **Feature total** |  | **2026-10-10 04:37 EDT** | **2026-10-11 20:45** | **22h 01m** | **9h 16m** |  | **2,710** | **4,305,609** | **182,230,634** | **1,162,202** | **187,701,155** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `5b5260e` | 22×A / 0×B ([grid](signoff/round-1-grade-grid.md)) | ✅ **Approved 2026-10-11 by Matt Quirk** at `83554a9` — [scorecard](https://claude.ai/artifact/43zBHtjcKJ6Lcjc2tmD3Ex) |

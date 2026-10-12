@@ -46,11 +46,24 @@ class ProvenanceRegion extends StatelessWidget {
 
   /// The caveat note shown beneath [provenance], or null when it needs none.
   ///
-  /// Only an estimated reading carries the seeded-value caveat (AC-7); a
-  /// measured reading shows no note (AC-6, and the AC-7 control).
+  /// An estimated reading carries the seeded-value caveat (AC-7); a confirmed
+  /// reading carries its own [Provenance.note] — the "Confirmed — you measured
+  /// this" phrasing the mix-correction loop promotes it with (bs-05 AC-10, G-4(d)
+  /// / D-8), which rides the note so the shared tier label stays "Confirmed". A
+  /// measured reading shows no note (AC-6, and the AC-7 control); a confirmed
+  /// reading with no carried note shows none either.
   @visibleForTesting
-  static String? noteFor(Provenance provenance) =>
-      provenance.tier == ProvenanceTier.estimated ? estimatedNote : null;
+  static String? noteFor(Provenance provenance) {
+    switch (provenance.tier) {
+      case ProvenanceTier.estimated:
+        return estimatedNote;
+      case ProvenanceTier.confirmed:
+        return provenance.note;
+      case ProvenanceTier.measured:
+      case ProvenanceTier.calculated:
+        return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
