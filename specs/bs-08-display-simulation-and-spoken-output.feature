@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-11 by Matt Quirk (G-1) — derived 2026-10-05 by /wireframe-behavior-specs
 Feature: Display, simulation and spoken output
   Cross-cutting accessibility controls reached from any screen: a CVD simulation of
   displayed colour for the painter's own type and severity, a value-only grayscale

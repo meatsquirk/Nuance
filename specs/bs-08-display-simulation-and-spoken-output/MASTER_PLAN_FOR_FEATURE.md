@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** Not started — next DISPLAY-1 (blocked by G-1 spec approval)
+**Status:** In progress — DISPLAY-1 done (scaffold), next DISPLAY-2
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -67,7 +67,7 @@
 
 Module plan: [modules/ITEST.md](modules/ITEST.md).
 
-**Where it lives and how it runs:** `integration_test/display_harness.dart` (vocabulary + fixtures + independent reference + wiring) and `integration_test/display_test.dart` (runner). Default target (pending skipped): `flutter test integration_test/display_test.dart -d <booted-udid>`. Run-pending / red baseline: `--dart-define=BS08_RUN_PENDING=true`. **A booted sim udid (`-d`) is mandatory** — without it the run executes zero tests and exits 0 (false green; see Known flakes). The pending gate lives in `integration_test/bs08/pending.dart` (seeded in ITEST-1 with the 10 ACs → owning phase). Single exclusive lane via `coord.sh with-lock` in parallel sessions.
+**Where it lives and how it runs:** `integration_test/display_harness.dart` (vocabulary + fixtures + independent reference + wiring) and `integration_test/display_test.dart` (runner). Default target (pending skipped): `flutter test integration_test/display_test.dart -d <booted-udid>`. Run-pending / red baseline: `--dart-define=BS08_RUN_PENDING=true`. **A booted sim udid (`-d`) is mandatory** — without it the run executes zero tests and exits 0 (false green; see Known flakes). The pending gate lives in `integration_test/bs08/pending.dart` (seeded in **DISPLAY-1** with the 10 ACs → owning phase; the module plan + session log are authoritative — earlier prose here said ITEST-1). Single exclusive lane via `coord.sh with-lock` in parallel sessions.
 **Where assertions look:** the rendered widget tree (keyed finders for the settings entry E2, the panel controls E46/E47/E48, the spoken-output panel E50, the original + simulated swatches, the root grayscale filter); `DisplayReadEndpoint` (live `DisplaySettings`: `simulationType`, `simulationSeverity`, `grayscale`); the displayed swatch colours (read off the rendered `ColorChip`/`Container` decoration); `FakeSpeech` log (utterances + repeat).
 **What is real and what is faked:** the whole app assembled through `buildApp(deps)`; real `DisplayController`, real `projectDichromat`, real `ColorChip`/root grayscale rendering, real readout/comparison speech paths. Faked infrastructure only: `FakeSpeech`, `FakeHaptics`. The simulated colour (AC-3/AC-4) is graded against `referenceProjectDichromat`, an **independent** in-harness Viénot projection, so the shipped projection is never graded against itself (same discipline as bs-03 AC-7).
 
@@ -104,7 +104,7 @@ Pre-seeded augmentations: none expected — each AC test fails at baseline on it
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | ⬜ Todo |
+| DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | ⬜ Todo |
 | SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
@@ -129,7 +129,7 @@ graph LR
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record the approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | DISPLAY-1 | Open |
+| G-1 | decision | Approve the spec (record the approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | DISPLAY-1 | ✅ Resolved 2026-10-11: spec approved; Draft banner replaced with approval line — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -147,8 +147,8 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | DISPLAY-1 | scaffold: branch from `main` @ 4d4aedd, baseline, coverage gate confirm, bs08 pending runner (10 ACs) | ⬜ Next | | | blocked by G-1 |
-| 2 | DISPLAY-2 | shell: `DisplaySettings` + `DisplayController` + `DisplayScope` + `DisplayReadEndpoint` + buildApp wiring + inert simulation/grayscale rendering seams | ⬜ Todo | | | seq (build_app.dart) |
+| 1 | DISPLAY-1 | scaffold: branch from `main` @ a695e4c (=4d4aedd tree), baseline, coverage gate confirm, bs08 pending runner (10 ACs) | ✅ Done | 4,979,118 | 14m 13s (15m 17s) | G-1 approved inside; analyze clean, 849 unit pass, gate PASS clean / FAIL planted, smoke 3/3 on sim |
+| 2 | DISPLAY-2 | shell: `DisplaySettings` + `DisplayController` + `DisplayScope` + `DisplayReadEndpoint` + buildApp wiring + inert simulation/grayscale rendering seams | ⬜ Next | | | seq (build_app.dart) |
 | 3 | SETTINGS-1 | shell: open-from-any-screen entry (E2) + settings panel scaffold (E46/E47/E48 + theme control) wired to `DisplayController` stubs + keyed regions | ⬜ Todo | | | seq (build_app.dart) |
 | 4 | SPEECH-1 | shell: `RepeatableSpeech` behind the `Speech` seam + app-wide inject + spoken-output panel (E50) + observation | ⬜ Todo | | | seq (build_app.dart) |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, independent reference, pending gate (10 ACs), smoke test | ⬜ Todo | | | |
@@ -171,7 +171,9 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 ## Next phase
 
-**DISPLAY-1** (scaffold) is next but **blocked** by **G-1** — the spec still carries the `# Draft: awaiting owner approval` banner. A human approves it (record the approval as the spec's first line), then DISPLAY-1 can run: branch `feat/bs-08-display-simulation-and-spoken-output` from `main` @ `4d4aedd`, record the baseline, confirm the coverage gate, and seed the bs08 pending runner (10 ACs). G-2 (approve the acceptance tests) is decided later at ITEST-4, before any behavior phase. No other gates.
+**DISPLAY-2** (shell) is next and **startable** — DISPLAY-1 (scaffold) is done and G-1 is resolved. It defines `DisplaySettings` / `DisplayController` / `DisplayScope` / `DisplayReadEndpoint`, wires them into `AppDependencies`/`buildApp` (new optional dep + inert root grayscale wrapper), and makes `ColorChip` read `DisplayScope` as identity — behaviour unchanged. Work on branch `feat/bs-08-display-simulation-and-spoken-output` (worktree `/Users/matthew.quirk/Nuance-bs08`).
+
+Not yet startable: SETTINGS-1 and SPEECH-1 depend on DISPLAY-2 and all three touch `lib/app/build_app.dart` → merge-risky, run the shells sequentially (DISPLAY-2 → SETTINGS-1 → SPEECH-1). G-2 (approve the acceptance tests) is decided later at ITEST-4, before any behavior phase. No other open gates.
 
 ## Token usage
 
@@ -181,7 +183,8 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 89fb9344 | 2026-10-11 | — | — | — | claude-opus-4-8 | — | — | — | — | — | plan written (+ verified bs-06→main merge already landed) |
 | PLAN | 2f2410ba | 2026-10-11 21:46 EDT | 22:14 | 28m 43s | 26m 46s | claude-opus-4-8 | 136 | 200,492 | 9,872,401 | 93,869 | 10,166,898 | plan written (bs-06->main merge verified already landed) |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-11 22:14** | **28m 43s** | **26m 46s** |  | **136** | **200,492** | **9,872,401** | **93,869** | **10,166,898** |  |
+| DISPLAY-1 | 96db72c8 | 2026-10-11 22:21 EDT | 22:36 | 15m 17s | 14m 13s | claude-opus-4-8 | 96 | 104,817 | 4,829,740 | 44,465 | 4,979,118 | scaffold green — analyze clean, 849 unit baseline, coverage gate PASS clean / FAIL planted, integration smoke 3/3 on sim, bs08 pending gate seeded (10 ACs); G-1 (spec) approved inside |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-11 22:36** | **44m 00s** | **40m 59s** |  | **232** | **305,309** | **14,702,141** | **138,334** | **15,146,016** |  |
 
 ## Sign-off
 

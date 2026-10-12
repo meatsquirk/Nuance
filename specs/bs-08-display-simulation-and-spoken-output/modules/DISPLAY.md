@@ -1,6 +1,6 @@
 # Module DISPLAY — cross-cutting display pipeline (simulation + grayscale)
 
-**Status:** Not started
+**Status:** In progress — DISPLAY-1 done, next DISPLAY-2
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/display_settings.dart`, `lib/display/display_controller.dart`, `lib/display/display_scope.dart`, `lib/display/display_read_endpoint.dart`, `lib/display/color_simulation.dart` (thin reuse of `projectDichromat`), `lib/display/grayscale_filter.dart`; integration points in `lib/widgets/color_chip.dart` and `lib/app/build_app.dart` (root grayscale wrapper + `DisplayScope` wiring). Unit tests under `test/display/`.
 **Depends on:** — · **Blocks:** SETTINGS (needs `DisplayController`), ITEST (needs the read endpoint + rendering), SPEECH (scaffold only)
@@ -9,8 +9,8 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| DISPLAY-1 | scaffold | — | ⬜ Next | | |
-| DISPLAY-2 | shell | — | ⬜ Todo | | |
+| DISPLAY-1 | scaffold | — | ✅ Done | 4,979,118 | 14m 13s (15m 17s) |
+| DISPLAY-2 | shell | — | ⬜ Next | | |
 | DISPLAY-3 | behavior | AC-2 | ⬜ Todo | | |
 | DISPLAY-4 | behavior | AC-3 | ⬜ Todo | | |
 | DISPLAY-5 | behavior | AC-4 | ⬜ Todo | | |
@@ -27,8 +27,8 @@
 
 ## Open gates
 
-- **G-1** (spec approval) blocks DISPLAY-1 (the whole feature's scaffold).
-- **G-2** (acceptance tests approved) blocks DISPLAY-3..8 (all behavior).
+- **G-1** (spec approval) — ✅ Resolved 2026-10-11: spec approved; Draft banner replaced with approval line — Matt Quirk. Unblocked DISPLAY-1.
+- **G-2** (acceptance tests approved) blocks DISPLAY-3..8 (all behavior). Open.
 
 ## Phase DISPLAY-1 — scaffold
 
@@ -42,6 +42,24 @@
   3. Confirm the integration runner over an empty bs08 suite (a smoke run with `-d <udid>`).
   4. Seed `integration_test/bs08/pending.dart` with the 10 ACs → owning phases and the `BS08_RUN_PENDING` flag mechanics (mirroring `bs02/pending.dart`).
 - **Exit criteria:** gate passes on clean tree + fails on planted gap; baseline recorded; pending gate lists all 10 ACs; no product code.
+
+### Result — DISPLAY-1 (2026-10-11)
+
+- **Branch:** `feat/bs-08-display-simulation-and-spoken-output` from `main` @ `a695e4c` (current HEAD; code tree identical to the planned `4d4aedd` base — the two commits between are plan-only, `git diff 4d4aedd a695e4c -- . ':(exclude)specs/'` empty — but `a695e4c` is where the bs-08 plan + spec landed, so the branch must start here to carry them). Worktree `/Users/matthew.quirk/Nuance-bs08`.
+- **Gate decision G-1 (folded into this session):** spec approved — `specs/bs-08-…feature` line 1 Draft banner → `# Approved 2026-10-11 by Matt Quirk (G-1) …`.
+- **Baseline:** `flutter analyze` clean (No issues found); `flutter test --coverage` = **849 unit tests pass**; `coverage/lcov.info` produced.
+- **Coverage gate confirmed both ways:** clean tree → `no touched lib/**.dart files vs "main" — nothing to gate. PASS` (exit 0); planted gap (a never-called `lib/_gate_probe.dart` function with a test covering only one function) → `FAIL — … uncovered lines: 5, 7, 8` (exit 1). Probe removed; tree clean.
+- **Integration runner smoke:** `flutter test integration_test/display_test.dart -d 5AB9D06D-…` (iPhone 17 sim) → Xcode build + **3 scaffold-guard tests pass** (pending map covers exactly AC-1..AC-10; every owner a real behaviour phase; skip/force semantics).
+- **Seeded:** `integration_test/bs08/pending.dart` with all **10 ACs** → owners (AC-1 SETTINGS-2, AC-2..7 DISPLAY-3..8, AC-8 SPEECH-2, AC-9 SPEECH-3, AC-10 SPEECH-4) + `BS08_RUN_PENDING` flag mechanics (mirrors `bs06/pending.dart`); `integration_test/display_test.dart` smoke runner + scaffold guard.
+- **No product code** (only `integration_test/` + plan/spec edits). Fix passes: 0/3 (coverage-gate planted-gap probe needed a second form — a simple folded `if/return` records no 0-hit line; a never-called function does — not a gate failure).
+- **Drift noted & corrected:** master plan ITEST prose said the pending gate is "seeded in ITEST-1"; the module plan + session log put it in DISPLAY-1 (where it was in fact seeded). Trusted the module plan; corrected the master prose.
+
+### Checkpoint / Handoff — DISPLAY-1
+
+- **Frozen for DISPLAY-2:** the pending gate API in `integration_test/bs08/pending.dart` — `pendingACs` (10 ACs), `behaviorPhases`, `pendingSkipReason(acId, {forceRunPending})`, `acTestWidgets(acId, description, body)`, `BS08_RUN_PENDING`. The runner `integration_test/display_test.dart` holds only the scaffold guard group; ITEST-1 adds the harness + a never-pending smoke test; ITEST-2/3 register the per-AC `acTestWidgets`.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d <booted-udid>` (default, pending skipped) / add `--dart-define=BS08_RUN_PENDING=true` (run-pending / red baseline). Toolchain: `/Users/matthew.quirk/development/flutter/bin` on PATH; booted sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Next (DISPLAY-2):** the shell — `DisplaySettings` / `DisplayController` / `DisplayScope` / `DisplayReadEndpoint` + `buildApp` wiring + inert `color_simulation`/`grayscale_filter` seams + `ColorChip` reading `DisplayScope` (identity). Touches `lib/app/build_app.dart` → merge-risky with SETTINGS-1/SPEECH-1 (run shells in order).
+- **Known gap:** none beyond the standing carried flakes (coverage const-folded line; integration needs `-d`).
 
 ## Phase DISPLAY-2 — shell: display settings state + controller + scope + endpoint
 
