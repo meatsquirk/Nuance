@@ -15,6 +15,12 @@ import 'capture_controller.dart';
 /// driving [CaptureController.setRadius] and marking the selected radius (AC-3);
 /// E19 (import a gallery photo) is wired to [CaptureController.importPhoto] in
 /// SOURCE-3.
+///
+/// bs-09 adds three more controls as findable placeholders bound to the
+/// controller's deferred stubs: a torch toggle (AC-1/AC-2), a "sample points"
+/// action (AC-3) and a "send to comparison" action (AC-5). Each throws
+/// [UnimplementedError] until its behaviour phase (CAPTURE-3/4/5) un-defers it;
+/// SCREEN-1 only fixes the keys and the wiring.
 class CaptureControls extends StatelessWidget {
   const CaptureControls({required this.controller, super.key});
 
@@ -48,6 +54,19 @@ class CaptureControls extends StatelessWidget {
 
   /// Stable anchor for E21 — the value-only grayscale preview toggle.
   static const Key valueOnlyKey = ValueKey('capture-e21-value-only');
+
+  /// Stable anchor for the torch toggle (bs-09 AC-1, AC-2). Wired to
+  /// [CaptureController.turnTorchOn] / [CaptureController.turnTorchOff]
+  /// (behaviour deferred to CAPTURE-3).
+  static const Key torchKey = ValueKey('capture-torch');
+
+  /// Stable anchor for the "sample marked points" action (bs-09 AC-3). Wired to
+  /// [CaptureController.sampleMarkedPoints] (behaviour deferred to CAPTURE-4).
+  static const Key samplePointsKey = ValueKey('capture-sample-points');
+
+  /// Stable anchor for the "send to comparison" action (bs-09 AC-5). Wired to
+  /// [CaptureController.sendPairToComparison] (behaviour deferred to CAPTURE-5).
+  static const Key sendToComparisonKey = ValueKey('capture-send-to-comparison');
 
   /// The controller whose actions the wired controls drive.
   final CaptureController controller;
@@ -111,6 +130,31 @@ class CaptureControls extends StatelessWidget {
           key: importKey,
           onPressed: controller.importPhoto,
           child: const Text('Import photo'),
+        ),
+        // bs-09 torch toggle (AC-1, AC-2): reflects state.torchOn and drives the
+        // torch on / off. The mechanism and the colour-temperature warning land
+        // in CAPTURE-3 — the stub throws until then.
+        TextButton(
+          key: torchKey,
+          onPressed: controller.state.torchOn
+              ? controller.turnTorchOff
+              : controller.turnTorchOn,
+          child: Text(controller.state.torchOn ? '✓ Torch' : 'Torch'),
+        ),
+        // bs-09 multi-point sampling (AC-3): samples the current frame at every
+        // marked point. Behaviour lands in CAPTURE-4; the stub throws until then.
+        TextButton(
+          key: samplePointsKey,
+          onPressed: controller.sampleMarkedPoints,
+          child: const Text('Sample points'),
+        ),
+        // bs-09 send-to-comparison (AC-5): hands a pair of readings to the
+        // comparison. Reading selection and the behaviour land in CAPTURE-5; the
+        // index pair here is a shell placeholder and the stub throws until then.
+        TextButton(
+          key: sendToComparisonKey,
+          onPressed: () => controller.sendPairToComparison(0, 1),
+          child: const Text('Send to comparison'),
         ),
       ],
     );

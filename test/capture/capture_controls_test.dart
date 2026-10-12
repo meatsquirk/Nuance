@@ -14,6 +14,22 @@ CaptureController _controller() => CaptureController(
       ),
     );
 
+/// A controller that can push a state through the protected [emit] seam, so the
+/// controls' state-driven labels (the torch toggle) can be rendered against a
+/// chosen state without the deferred actions.
+class _DrivableController extends CaptureController {
+  _DrivableController()
+      : super(
+          source: SoftwareCaptureSource(
+            const SceneSpec(
+              groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
+            ),
+          ),
+        );
+
+  void push(CaptureState next) => emit(next);
+}
+
 Future<void> _pump(WidgetTester tester, CaptureController controller) =>
     tester.pumpWidget(
       MaterialApp(home: Scaffold(body: CaptureControls(controller: controller))),
@@ -210,5 +226,102 @@ void main() {
     expect(CaptureControls.captureKey, const ValueKey('capture-e20-capture'));
     expect(CaptureControls.valueOnlyKey,
         const ValueKey('capture-e21-value-only'));
+  });
+
+  // ---- bs-09 controls (SCREEN-1 shell: findable, wired to deferred stubs) ----
+
+  testWidgets('renders the bs-09 torch, sample-points and send-to-comparison '
+      'controls as findable buttons', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    for (final key in [
+      CaptureControls.torchKey,
+      CaptureControls.samplePointsKey,
+      CaptureControls.sendToComparisonKey,
+    ]) {
+      expect(find.byKey(key), findsOneWidget, reason: '$key missing');
+    }
+  });
+
+  testWidgets('the torch toggle reads "Torch" while off and drives '
+      'turnTorchOn (AC-1/AC-2, deferred to CAPTURE-3)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    // Off by default: the toggle reads "Torch".
+    expect(controller.state.torchOn, isFalse);
+    final button =
+        tester.widget<TextButton>(find.byKey(CaptureControls.torchKey));
+    expect(button.onPressed, isNotNull, reason: 'the torch toggle is wired');
+    final label = tester.widget<Text>(find.descendant(
+        of: find.byKey(CaptureControls.torchKey), matching: find.byType(Text)));
+    expect(label.data, 'Torch');
+
+    // Tapping reaches the deferred torch mechanism (CAPTURE-3) — a stub throw.
+    await tester.tap(find.byKey(CaptureControls.torchKey));
+    await tester.pump();
+    expect(tester.takeException(), isA<UnimplementedError>(),
+        reason: 'torch mechanism lands in CAPTURE-3');
+  });
+
+  testWidgets('the torch toggle reads "✓ Torch" while lit and drives '
+      'turnTorchOff (AC-1/AC-2, deferred to CAPTURE-3)', (tester) async {
+    final controller = _DrivableController();
+    addTearDown(controller.dispose);
+    // Render the torch-lit branch: both the label and the onPressed target flip.
+    controller.push(const CaptureState(torchOn: true));
+    await _pumpListening(tester, controller);
+
+    final label = tester.widget<Text>(find.descendant(
+        of: find.byKey(CaptureControls.torchKey), matching: find.byType(Text)));
+    expect(label.data, '✓ Torch');
+
+    await tester.tap(find.byKey(CaptureControls.torchKey));
+    await tester.pump();
+    expect(tester.takeException(), isA<UnimplementedError>(),
+        reason: 'turnTorchOff lands in CAPTURE-3');
+  });
+
+  testWidgets('"Sample points" drives the deferred sampleMarkedPoints '
+      '(AC-3, CAPTURE-4)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    final button =
+        tester.widget<TextButton>(find.byKey(CaptureControls.samplePointsKey));
+    expect(button.onPressed, isNotNull);
+
+    await tester.tap(find.byKey(CaptureControls.samplePointsKey));
+    await tester.pump();
+    expect(tester.takeException(), isA<UnimplementedError>(),
+        reason: 'multi-point sampling lands in CAPTURE-4');
+  });
+
+  testWidgets('"Send to comparison" drives the deferred sendPairToComparison '
+      '(AC-5, CAPTURE-5)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    final button = tester
+        .widget<TextButton>(find.byKey(CaptureControls.sendToComparisonKey));
+    expect(button.onPressed, isNotNull);
+
+    await tester.tap(find.byKey(CaptureControls.sendToComparisonKey));
+    await tester.pump();
+    expect(tester.takeException(), isA<UnimplementedError>(),
+        reason: 'send-to-comparison lands in CAPTURE-5');
+  });
+
+  test('exposes stable keys for the bs-09 controls', () {
+    expect(CaptureControls.torchKey, const ValueKey('capture-torch'));
+    expect(CaptureControls.samplePointsKey,
+        const ValueKey('capture-sample-points'));
+    expect(CaptureControls.sendToComparisonKey,
+        const ValueKey('capture-send-to-comparison'));
   });
 }

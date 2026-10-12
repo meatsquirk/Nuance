@@ -13,6 +13,12 @@ import 'capture_state.dart';
 /// bs-01 label contract): the stability indicator, the accuracy tier and the
 /// low-light warning are words, not bare colour. It reads a plain [CaptureState]
 /// so it renders any state without driving the controller.
+///
+/// bs-09 adds two observable regions over the same feed: the torch
+/// colour-temperature warning banner (AC-1), a sibling to the low-light warning
+/// shown only while [CaptureState.torchWarning] is set (CAPTURE-3), and the
+/// marked points (AC-3) drawn at their frame positions (CAPTURE-4). Both are
+/// empty in this shell.
 class CaptureLiveView extends StatelessWidget {
   const CaptureLiveView({required this.state, super.key});
 
@@ -30,6 +36,14 @@ class CaptureLiveView extends StatelessWidget {
 
   /// Stable anchor for the low-light warning (E15's subject).
   static const Key warningKey = ValueKey('capture-low-light-warning');
+
+  /// Stable anchor for the torch colour-temperature warning banner (bs-09 AC-1).
+  static const Key torchWarningKey = ValueKey('capture-torch-warning');
+
+  /// Stable anchor for the marked point drawn on the feed at ([MarkedPoint.x],
+  /// [MarkedPoint.y]) for multi-point sampling (bs-09 AC-3).
+  static Key markedPointKey(MarkedPoint point) =>
+      ValueKey('capture-marked-point-${point.x}-${point.y}');
 
   /// The capture state this viewport reflects.
   final CaptureState state;
@@ -111,6 +125,37 @@ class CaptureLiveView extends StatelessWidget {
             ),
           ),
         ),
+        // bs-09 torch colour-temperature warning (AC-1): a sibling banner above
+        // the low-light warning, shown only while the controller has set the
+        // warning string (CAPTURE-3). Empty in this shell.
+        Positioned(
+          left: 8,
+          bottom: 32,
+          child: Visibility(
+            visible: state.torchWarning != null,
+            child: Text(
+              state.torchWarning ?? '',
+              key: torchWarningKey,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+        // bs-09 marked points (AC-3): each point the painter has marked draws on
+        // the feed at its frame position. Empty until markPoint runs (CAPTURE-4).
+        for (final point in state.markedPoints)
+          Positioned(
+            left: point.x.toDouble(),
+            top: point.y.toDouble(),
+            child: Container(
+              key: markedPointKey(point),
+              width: 12,
+              height: 12,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
       ],
     );
   }
