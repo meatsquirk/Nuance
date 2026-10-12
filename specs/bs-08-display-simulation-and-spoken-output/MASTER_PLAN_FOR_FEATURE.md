@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** ⏸ Awaiting review — ITEST-4 packet assembled; **G-2** *awaiting decision* (a human approves the acceptance tests before any behavior phase)
+**Status:** In progress — acceptance stage complete (G-2 approved 2026-10-12); next the ten behavior phases (simulation chain DISPLAY-3→4→{5,6,8} ∥ SETTINGS-2 ∥ DISPLAY-7 ∥ SPEECH-2→3→4)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -107,7 +107,7 @@ Augmentations (confirmed by ITEST-2): **AC-7** is green-at-baseline and *limited
 | DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | 🔄 In progress (SETTINGS-1 ✅) |
 | SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1..3 ✅; ITEST-4 ⏸ awaiting review → G-2) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1..4 ✅; G-2 approved 2026-10-12) |
 
 ## Dependency graph
 
@@ -130,7 +130,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record the approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | DISPLAY-1 | ✅ Resolved 2026-10-11: spec approved; Draft banner replaced with approval line — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision (ITEST-4 packet in [modules/ITEST.md](modules/ITEST.md) § *Review packet*; decide via `/feature-next-phase --gate bs-08-display-simulation-and-spoken-output G-2 approved \| "<changes>"`) |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-12 11:32 EDT: approved — Matt Quirk. The ten pending AC tests (24 A + 1 B-pending-DISPLAY-8) are approved as the acceptance contract; ITEST-4 done; all ten behavior phases open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -154,7 +154,7 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, independent reference, pending gate (10 ACs), smoke test | ✅ Done | 8,480,396 | 16m 57s | analyze clean, 914 unit, gate PASS (no lib touched), integration 11/11 on sim (3 scaffold + 6 guard + 2 smoke), 10 ACs still pending; fix 0/3 |
 | 6 | ITEST-2 | acceptance-tests: AC-1..7 (display, pending) + red baseline | ✅ Done | 14,829,254 | 1h 06m (1h 10m) | red baseline +13 -5 (AC-2..6 fail on Then; AC-1/AC-7 green-at-baseline); grades 6 A + 1 B-pending-DISPLAY-8 (AC-7); fixed a non-deterministic scaffold guard; fix 1/3 |
 | 7 | ITEST-3 | acceptance-tests: AC-8,9,10 (speech, pending) + red baseline | ✅ Done | 6,704,225 | 18m 11s | AC-8/9/10 all green-at-baseline (SPEECH-1 wired repeat + shared seam); grades 3 A; +16 -5 run-pending; fix 0/3 |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,393,384 | 3m 12s | packet assembled in modules/ITEST.md; **G-2 awaiting decision** — human approves before any behavior phase; no code ran |
+| 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,393,384 | 3m 12s | packet assembled in modules/ITEST.md; **G-2 approved 2026-10-12 — Matt Quirk** (10 AC tests, 24 A + 1 B-pending-DISPLAY-8); acceptance stage complete; no code ran |
 | 9 | DISPLAY-3 | AC-2 simulation off = trichromat (identity path) | ⬜ Todo | | | foundational transform chokepoint |
 | 10 | DISPLAY-4 | AC-3 simulate chosen type alongside original (protan/deutan/tritan) | ⬜ Todo | | | barrier for AC-4/5/7 |
 | 11 | DISPLAY-5 | AC-4 severity slider strength | ⬜ Todo | | | after DISPLAY-4 |
@@ -171,13 +171,17 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 ## Next phase
 
-ITEST-4 (test review) is done bar the human gate — the **review packet** is assembled in [modules/ITEST.md](modules/ITEST.md) § *Review packet* (per-AC catalogue, red-baseline summary, augmentations, grid path + counts, the three judgment calls to read first) and **G-2 is now *awaiting decision***. No code ran. **Everything downstream is blocked on G-2.**
+**G-2 approved** (2026-10-12, Matt Quirk) — the acceptance stage is complete and **all ten behaviour phases are now open**. Each must un-pend its AC test, keep the suite green, make its augmentations, and pass the unit + coverage + acceptance + grade gates.
 
-**A human decides G-2 next:** `/feature-next-phase --gate bs-08-display-simulation-and-spoken-output G-2 approved | "<changes>"`.
-- On **approved**: G-2 resolves, ITEST-4 → done, and the ten behaviour phases open. SETTINGS-2, DISPLAY-7 and the SPEECH chain (SPEECH-2→3→4) are independent of the simulation chain (DISPLAY-3→4→{5,6,8}) and may run concurrently (separate sessions); within each chain run in order. DISPLAY-4 is the barrier for AC-4/AC-5/AC-7.
-- On **changes requested**: each item becomes an ITEST change phase before behaviour, then a fresh review.
+**Startable now** (separate sessions; prefer disjoint file ownership):
+- **DISPLAY-3** — AC-2 simulation-off identity path; the foundational transform chokepoint for the simulation chain.
+- **SETTINGS-2** — AC-1 open settings → the three controls (independent of the simulation chain).
+- **DISPLAY-7** — AC-6 root grayscale greys the whole app (independent; the one-root-`ColorFiltered` contract).
+- **SPEECH-2** — AC-8 repeat last spoken output (head of the SPEECH chain).
 
-Suite state at review: default **11 pass / 10 skipped**; run-pending **16 pass / 5 fail** (exactly AC-2..6 on their Then); grades **24 A + 1 B-pending-DISPLAY-8** (AC-7). Device lane stays shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`). Branch `feat/bs-08` is **ahead of origin** (ITEST-2/3 commits unpushed — a prior auto-mode push was denied; needs a manual `git push`).
+**Ordered within each chain** (not yet startable): simulation chain DISPLAY-3 → **DISPLAY-4** (barrier for AC-4/AC-5/AC-7) → {DISPLAY-5, DISPLAY-6, DISPLAY-8}; speech chain SPEECH-2 → SPEECH-3 → SPEECH-4. DISPLAY-8 owns the AC-7 augmentation (assert simulated swatch alongside value+label) → re-grade A.
+
+Suite state at approval: default **11 pass / 10 skipped**; run-pending **16 pass / 5 fail** (exactly AC-2..6 on their Then); grades **24 A + 1 B-pending-DISPLAY-8** (AC-7). Branch `feat/bs-08` is **in sync with origin** @ `a06eb70`. Device lane stays shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
 
 ## Token usage
 
@@ -195,7 +199,8 @@ Suite state at review: default **11 pass / 10 skipped**; run-pending **16 pass /
 | ITEST-2 | dfd026ba | 2026-10-12 08:19 EDT | 09:30 | 1h 10m | 1h 06m | claude-opus-4-8 | 166 | 334,879 | 14,379,877 | 114,332 | 14,829,254 | AC-1..7 pending tests landed; red baseline +13 -5 (AC-2..6 fail on Then, AC-1/AC-7 green-at-baseline); grades 6 A + 1 B-pending-DISPLAY-8; fixed non-deterministic scaffold guard; fix 1/3 |
 | ITEST-3 | df46f7bd | 2026-10-12 09:42 EDT | 10:00 | 18m 11s | 18m 11s | claude-opus-4-8 | 106 | 246,018 | 6,403,141 | 54,960 | 6,704,225 | AC-8/9/10 pending speech tests + harness (givenComparison) landed; all 3 green-at-baseline, grades 3 A, no augmentations; run-pending +16 -5; analyze clean, 914 unit, coverage gate PASS (no lib touched); fix 0/3 |
 | ITEST-4 | 8bf4c8d7 | 2026-10-12 10:16 EDT | 10:19 | 3m 12s | 3m 12s | claude-opus-4-8 | 34 | 73,658 | 1,306,800 | 12,892 | 1,393,384 | test-review packet assembled (per-AC catalogue, red-baseline summary, augmentations, grid 24 A + 1 B-pending-DISPLAY-8); G-2 set awaiting decision; no code ran |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 10:19** | **3h 25m** | **3h 18m** |  | **1,016** | **1,597,079** | **68,051,852** | **554,561** | **70,204,508** |  |
+| SIGNOFF-DECISION | feabec25 | 2026-10-12 10:59 EDT | 11:33 | 34m 24s | 3m 00s | claude-opus-4-8 | 40 | 50,293 | 1,335,882 | 11,207 | 1,397,422 | ITEST-4 approved |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 11:33** | **4h 00m** | **3h 21m** |  | **1,056** | **1,647,372** | **69,387,734** | **565,768** | **71,601,930** |  |
 
 ## Sign-off
 

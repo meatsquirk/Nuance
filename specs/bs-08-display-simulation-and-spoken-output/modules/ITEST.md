@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ⏸ Awaiting review — ITEST-4 packet assembled; **G-2** *awaiting decision* (a human approves the acceptance tests before any behavior phase)
+**Status:** ✅ Done — acceptance stage complete; G-2 approved 2026-10-12 (Matt Quirk); all ten behavior phases open
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/display_harness.dart`, `integration_test/display_test.dart`, `integration_test/bs08/pending.dart` (seeded in DISPLAY-1), reuse of `integration_test/fakes/fake_speech.dart` + `fake_haptics.dart`.
 **Depends on:** all shell phases (DISPLAY-2, SETTINGS-1, SPEECH-1) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,480,396 | 16m 57s |
 | ITEST-2 | acceptance-tests | AC-1..7 (pending) | ✅ Done | 14,829,254 | 1h 06m (1h 10m) |
 | ITEST-3 | acceptance-tests | AC-8,9,10 (pending) | ✅ Done | 6,704,225 | 18m 11s |
-| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1,393,384 | 3m 12s |
+| ITEST-4 | test-review | — (G-2) | ✅ Done (G-2 approved 2026-10-12) | 1,393,384 | 3m 12s |
 
 ## Interface reconciliation
 
@@ -101,7 +101,7 @@
 - **Target AC:** — · **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
 - **Tasks:** assemble the review packet (catalogue, red baseline, grades, fixtures, real-vs-faked) for a human. On **approved**, G-2 resolves and this phase is done; **changes requested** turns each item into an ITEST change phase before behavior, then a fresh review.
 - **Exit criteria:** a human records the G-2 decision.
-- **Status:** ⏸ Awaiting review (packet below; **G-2** *awaiting decision*). No code ran in this phase.
+- **Status:** ✅ Done — **G-2 approved 2026-10-12 11:32 EDT by Matt Quirk** (packet below; the ten AC tests accepted as the contract, 24 A + 1 B-pending-DISPLAY-8). All ten behavior phases open. No code ran in this phase.
 
 ### Review packet — ITEST-4 (2026-10-12)
 
