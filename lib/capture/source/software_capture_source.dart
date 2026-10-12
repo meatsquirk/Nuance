@@ -5,6 +5,7 @@ import 'package:color_models/color_models.dart';
 import '../../domain/color_coordinates.dart';
 import 'capture_source.dart';
 import 'frame.dart';
+import 'sampling.dart';
 
 /// Number of frames the generated live feed emits before it terminates.
 ///
@@ -126,6 +127,14 @@ class SoftwareCaptureSource implements CaptureSource {
   /// The scene this source renders.
   final SceneSpec scene;
 
+  /// The colour space this device captures in, after selecting the widest it
+  /// offers with a fallback to the standard space (AC-6, AC-8): a wide-gamut
+  /// device captures in — and tags — Display P3; every other device falls back
+  /// to sRGB. The generated feed is rendered in this space and [colorSpace]
+  /// reports it, so a committed `Sample` records the gamut it was measured in.
+  FrameColorSpace get _captureFrameSpace =>
+      scene.supportsWideGamut ? FrameColorSpace.displayP3 : FrameColorSpace.srgb;
+
   CaptureLocks _locks = const CaptureLocks();
 
   @override
@@ -146,19 +155,23 @@ class SoftwareCaptureSource implements CaptureSource {
       scene.groundTruth.a,
       scene.groundTruth.b,
     ).toRgbColor();
-    final baseR = truth.red;
-    final baseG = truth.green;
-    final baseB = truth.blue;
+    // Render the ground truth in the device's capture space: encode it as sRGB
+    // (color_models), then rotate it into the capture space (identity for sRGB,
+    // Display P3 on a wide-gamut device) so the feed is a genuine buffer in that
+    // space — sampling then converts it back honestly (SOURCE-2).
+    final space = _captureFrameSpace;
+    final base =
+        encodeFromSrgb(Pixel(truth.red, truth.green, truth.blue), space);
     const n = _kGeneratedFrameCount;
     return List<Frame>.generate(n, (i) {
       // Antisymmetric offset in [-noise, +noise]: offsets for frame i and
       // (n-1-i) are exact negatives, so the per-pixel mean over the feed is the
-      // ground-truth colour.
+      // ground-truth colour. Applied in the capture space, where sampling reads.
       final offset = (scene.noise * (2 * i - (n - 1)) / (n - 1)).round();
       final pixel = Pixel(
-        (baseR + offset).clamp(0, 255),
-        (baseG + offset).clamp(0, 255),
-        (baseB + offset).clamp(0, 255),
+        (base.r + offset).clamp(0, 255),
+        (base.g + offset).clamp(0, 255),
+        (base.b + offset).clamp(0, 255),
       );
       return Frame(
         width: _kGeneratedFrameSize,
@@ -167,6 +180,7 @@ class SoftwareCaptureSource implements CaptureSource {
           _kGeneratedFrameSize * _kGeneratedFrameSize,
           pixel,
         ),
+        colorSpace: space,
       );
     });
   }
@@ -229,12 +243,13 @@ class SoftwareCaptureSource implements CaptureSource {
   @override
   bool get supportsRaw => scene.supportsRaw;
 
-  // Shell defaults (SOURCE-1): the source reports the processed sRGB pipeline
-  // regardless of capability. SOURCE-2 derives [colorSpace] from
-  // [supportsWideGamut] (with the narrower fallback) and SOURCE-3 switches
-  // [captureMode] to raw on RAW-capable devices.
+  // SOURCE-2: [colorSpace] reports the space the feed is actually captured in —
+  // Display P3 on a wide-gamut device, the sRGB fallback otherwise (AC-6, AC-8)
+  // — mapped from the frame space via [CaptureColorSpace.ofFrame]. SOURCE-3
+  // still switches [captureMode] to raw on RAW-capable devices.
   @override
-  CaptureColorSpace get colorSpace => CaptureColorSpace.srgb;
+  CaptureColorSpace get colorSpace =>
+      CaptureColorSpace.ofFrame(_captureFrameSpace);
 
   @override
   CaptureMode get captureMode => CaptureMode.processed;

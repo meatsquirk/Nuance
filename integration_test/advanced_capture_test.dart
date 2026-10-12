@@ -58,13 +58,17 @@ void main() {
   group('bs-09 pending gate (scaffold guard)', () {
     // Un-pended by the behaviour phases so far: CAPTURE-3 un-pended AC-2 (torch
     // mechanism + litByTorch stamp); SCREEN-2 un-pended AC-1 (torch control +
-    // colour-temperature warning banner). This set grows one behaviour phase at
-    // a time as each deletes its row in `bs09/pending.dart`; the pending map
-    // must stay the exact complement of it across all 10 ACs.
+    // colour-temperature warning banner); CAPTURE-4 un-pended AC-3 (multi-point
+    // sampling); SOURCE-2 un-pended AC-6 and AC-8 (colour-space selection +
+    // narrower fallback + tag). This set grows one behaviour phase at a time as
+    // each deletes its row in `bs09/pending.dart`; the pending map must stay the
+    // exact complement of it across all 10 ACs.
     const unpended = <String>{
       'AC-1',
       'AC-2',
       'AC-3',
+      'AC-6',
+      'AC-8',
     };
 
     test('pending map is the exact complement of the un-pended ACs across all '
