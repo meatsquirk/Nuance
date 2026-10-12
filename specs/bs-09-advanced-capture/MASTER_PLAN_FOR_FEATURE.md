@@ -233,7 +233,8 @@ Behaviour stage, one phase/session, each in its own `--parallel` worktree where 
 | SOURCE-2 | be87cadd | 2026-10-12 12:50 EDT | 15:34 | 2h 43m | 2h 43m | claude-opus-4-8 | 196 | 454,928 | 13,469,697 | 83,670 | 14,008,491 | AC-6+AC-8 green (un-pended); colour-space selection + space-aware sampling; unit 905/cov 100%; acceptance 15 pass/6 pending-skip; grade 5 A/0; 1 fix pass |
 | RECONCILE | 2a6a4925 | 2026-10-12 16:01 EDT | 16:13 | 11m 34s | 11m 34s | claude-opus-4-8 | 90 | 84,233 | 3,797,629 | 28,518 | 3,910,470 | merged CAPTURE-4 (AC-3) + SOURCE-2 (AC-6/8) into feat/bs-09; resolved guard + grade-grid conflicts; merged acceptance 16 pass/5 pending (AC-1/2/3/6/8 green); unit 909; analyze clean; master plan + ledger reconciled |
 | SCREEN-3 | 3ecfec34 | 2026-10-12 16:24 EDT | 16:34 | 10m 17s | 10m 17s | claude-opus-4-8 | 108 | 209,499 | 4,807,717 | 27,873 | 5,045,197 | AC-4 un-pended + green; +17/~4/0-fail; 6 A/0 below A; 0 fix passes |
-| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 16:34** | **13h 51m** | **7h 03m** |  | **1,902** | **2,936,025** | **104,378,020** | **763,156** | **108,079,103** |  |
+| RECONCILE | eb9fd616 | 2026-10-12 17:09 EDT | 17:12 | 2m 50s | 2m 50s | claude-opus-4-8 | 42 | 46,984 | 1,342,034 | 11,597 | 1,400,657 | applied SCREEN-3 rollup (AC-4 ✅, module SCREEN complete); merged phase branch ff → 978f883; master plan + ledger updated |
+| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 17:12** | **13h 54m** | **7h 05m** |  | **1,944** | **2,983,009** | **105,720,054** | **774,753** | **109,479,760** |  |
 
 ## Sign-off
 
