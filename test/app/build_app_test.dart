@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
+import 'package:paint_color_assistant/a11y/repeatable_speech.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
@@ -17,6 +18,7 @@ import 'package:paint_color_assistant/correction/engine/correction_engine_impl.d
 import 'package:paint_color_assistant/display/display_controller.dart';
 import 'package:paint_color_assistant/display/display_read_endpoint.dart';
 import 'package:paint_color_assistant/display/settings_screen.dart';
+import 'package:paint_color_assistant/display/spoken_output_panel.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
@@ -85,6 +87,16 @@ class _RecordingHaptics implements Haptics {
 
   @override
   Future<void> confirm() async => confirmations++;
+}
+
+/// A [Speech] that records each utterance, so a test can observe that the
+/// app-wide [RepeatableSpeech] delegates (and a repeat re-delegates) to the one
+/// injected inner sink (bs-08 SPEECH-1).
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
 }
 
 AppDependencies _captureDepsWith(
@@ -354,7 +366,8 @@ void main() {
       expect(find.text('Deep Olive Green'), findsOneWidget);
     });
 
-    testWidgets('injects the dependencies via AppScope', (tester) async {
+    testWidgets('injects the dependencies via AppScope, with the app-wide '
+        'speech wrapped in a RepeatableSpeech (bs-08 SPEECH-1)', (tester) async {
       final deps = _deps();
       late AppDependencies seen;
       await tester.pumpWidget(
@@ -363,7 +376,39 @@ void main() {
       // Reach the scope from a descendant context below the MaterialApp.
       final context = tester.element(find.byType(ReadoutScreen));
       seen = AppScope.of(context);
-      expect(identical(seen, deps), isTrue);
+      // The injected speech is wrapped so the readout speaks through the
+      // repeatable seam, while every other service is the same injected one.
+      expect(seen.speech, isA<RepeatableSpeech>());
+      expect(identical((seen.speech as RepeatableSpeech).inner, deps.speech),
+          isTrue);
+      expect(identical(seen.colorScience, deps.colorScience), isTrue);
+      expect(identical(seen.haptics, deps.haptics), isTrue);
+      expect(identical(seen.router, deps.router), isTrue);
+      expect(identical(seen.initialSample, deps.initialSample), isTrue);
+    });
+
+    testWidgets('reuses an already-repeatable injected speech as-is, and leaves '
+        'its injector to own it (bs-08 SPEECH-1)', (tester) async {
+      final repeatable = RepeatableSpeech(const NoopSpeech());
+      addTearDown(repeatable.dispose);
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: repeatable,
+            haptics: const NoopHaptics(),
+          ),
+        ),
+      );
+      final context = tester.element(find.byType(ReadoutScreen));
+      // The same instance is provided (not double-wrapped).
+      expect(identical(AppScope.of(context).speech, repeatable), isTrue);
+
+      // buildApp does not dispose an injected speech — it is still usable after
+      // the tree is torn down.
+      await tester.pumpWidget(const SizedBox());
+      repeatable.addListener(() {});
+      expect(repeatable.canRepeat, isFalse);
     });
 
     testWidgets('opens on the Capture screen when a capture source is wired',
@@ -639,6 +684,59 @@ void main() {
       await tester.pump();
 
       expect(controller.settings.simulationType, CvdType.protan);
+    });
+  });
+
+  group('buildApp spoken-output chrome (bs-08 SPEECH-1)', () {
+    testWidgets('surfaces the spoken-output panel (E50) on every screen, inert '
+        'until something is spoken', (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      // The persistent panel is present over the screen from the start.
+      expect(find.byKey(SpokenOutputPanel.panelKey), findsOneWidget);
+      // Nothing spoken yet: no repeat control and no last-spoken text.
+      expect(find.byKey(SpokenOutputPanel.repeatKey), findsNothing);
+      expect(find.byKey(SpokenOutputPanel.lastSpokenKey), findsNothing);
+    });
+
+    testWidgets('speaking through the app-wide seam shows the panel, and the '
+        'repeat control replays the exact utterance (AC-8)', (tester) async {
+      final recorder = _RecordingSpeech();
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: recorder,
+            haptics: const NoopHaptics(),
+          ),
+        ),
+      );
+      final context = tester.element(find.byType(ReadoutScreen));
+      final speech = AppScope.of(context).speech as RepeatableSpeech;
+
+      // A reading is spoken through the one injected seam (the readout's path).
+      await speech.speak('Warm Terracotta, lightness 58');
+      await tester.pump();
+      expect(find.byKey(SpokenOutputPanel.repeatKey), findsOneWidget);
+      expect(find.text('Warm Terracotta, lightness 58'), findsOneWidget);
+      expect(recorder.utterances, ['Warm Terracotta, lightness 58']);
+
+      // Repeating replays the same utterance through the same inner sink.
+      await tester.tap(find.byKey(SpokenOutputPanel.repeatKey));
+      await tester.pump();
+      expect(recorder.utterances, [
+        'Warm Terracotta, lightness 58',
+        'Warm Terracotta, lightness 58',
+      ]);
+    });
+
+    testWidgets('disposes the speech wrapper it owns when torn down',
+        (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      final context = tester.element(find.byType(ReadoutScreen));
+      final speech = AppScope.of(context).speech as RepeatableSpeech;
+      await tester.pumpWidget(const SizedBox());
+      // A disposed ChangeNotifier throws if listened to again.
+      expect(() => speech.addListener(() {}), throwsFlutterError);
     });
   });
 

@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** In progress — SETTINGS-1 done (shell), next SPEECH-1
+**Status:** In progress — shells complete (SPEECH-1 done), next ITEST-1 (acceptance stage)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -106,7 +106,7 @@ Pre-seeded augmentations: none expected — each AC test fails at baseline on it
 |---|---|---|---|---|
 | DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | 🔄 In progress (SETTINGS-1 ✅) |
-| SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | ⬜ Todo |
+| SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
 ## Dependency graph
@@ -150,8 +150,8 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 1 | DISPLAY-1 | scaffold: branch from `main` @ a695e4c (=4d4aedd tree), baseline, coverage gate confirm, bs08 pending runner (10 ACs) | ✅ Done | 4,979,118 | 14m 13s (15m 17s) | G-1 approved inside; analyze clean, 849 unit pass, gate PASS clean / FAIL planted, smoke 3/3 on sim |
 | 2 | DISPLAY-2 | shell: `DisplaySettings` + `DisplayController` + `DisplayScope` + `DisplayReadEndpoint` + buildApp wiring + inert simulation/grayscale rendering seams | ✅ Done | 8,485,201 | 15m 04s (15m 04s) | analyze clean, 885 unit (849+36), gate 100% on 8 touched files, bs08 integration green on sim; all seams inert (behaviour unchanged) |
 | 3 | SETTINGS-1 | shell: open-from-any-screen entry (E2) + settings panel scaffold (E46/E47/E48 + theme control) wired to `DisplayController` stubs + keyed regions | ✅ Done | 7,453,272 | 19m 27s (19m 27s) | analyze clean, 899 unit (885+14), gate 100% on 9 touched files, bs08 integration 3/3 on sim; chrome via MaterialApp.builder, panel binds frozen setters, all effects inert; fix 2/3 |
-| 4 | SPEECH-1 | shell: `RepeatableSpeech` behind the `Speech` seam + app-wide inject + spoken-output panel (E50) + observation | ⬜ Next | | | seq (build_app.dart) |
-| 5 | ITEST-1 | acceptance-tests: harness, fixtures, independent reference, pending gate (10 ACs), smoke test | ⬜ Todo | | | |
+| 4 | SPEECH-1 | shell: `RepeatableSpeech` behind the `Speech` seam + app-wide inject + spoken-output panel (E50) + observation | ✅ Done | 7,712,760 | 18m 46s (18m 46s) | analyze clean, 914 unit (899+15), gate 100% on 11 touched files, bs08 integration 3/3 on sim; app-wide speech wrapped + re-provided via AppScope, E50 panel in chrome; fix 0/3 |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures, independent reference, pending gate (10 ACs), smoke test | ⬜ Next | | | startable; begins the acceptance stage |
 | 6 | ITEST-2 | acceptance-tests: AC-1..7 (display, pending) + red baseline | ⬜ Todo | | | seq w/ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-8,9,10 (speech, pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
@@ -171,9 +171,9 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 ## Next phase
 
-**SPEECH-1** (shell, the last shell) is next and **startable** — the display scaffold/shell (DISPLAY-1/2) and SETTINGS-1 are done. It adds `RepeatableSpeech` behind the `Speech` seam, injects it app-wide, and builds the spoken-output panel (E50) with an observation seam. Work on branch `feat/bs-08-display-simulation-and-spoken-output` (worktree `/Users/matthew.quirk/Nuance-bs08`).
+All shells are complete (DISPLAY-1/2, SETTINGS-1, SPEECH-1). **ITEST-1** (acceptance-tests) is next and **startable** — it builds the bs-08 harness (Given/When/Then vocabulary, fixtures, the independent reference projection) in `display_harness.dart` over the wired shells and adds a never-pending smoke test, on branch `feat/bs-08-display-simulation-and-spoken-output` (worktree `/Users/matthew.quirk/Nuance-bs08`).
 
-SPEECH-1 touches `lib/app/build_app.dart` (the app-wide speech inject) — the same file SETTINGS-1's `builder:` line is in; re-read the `buildApp` assembly before editing. After SPEECH-1 the shells are complete and the acceptance stage (ITEST-1..4) begins; G-2 (approve the acceptance tests) is decided at ITEST-4, before any behavior phase (DISPLAY-3..8, SETTINGS-2, SPEECH-2..4). No other open gates.
+After ITEST-1: ITEST-2 (AC-1..7 pending) and ITEST-3 (AC-8,9,10 pending) **share `display_test.dart` → run sequentially**, then ITEST-4 is the test review whose gate **G-2** a human approves before any behavior phase (DISPLAY-3..8, SETTINGS-2, SPEECH-2..4). G-2 is the only open gate. The acceptance stage uses the booted sim + the device lane (`coord.sh with-lock`).
 
 ## Token usage
 
@@ -186,7 +186,8 @@ SPEECH-1 touches `lib/app/build_app.dart` (the app-wide speech inject) — the s
 | DISPLAY-1 | 96db72c8 | 2026-10-11 22:21 EDT | 22:36 | 15m 17s | 14m 13s | claude-opus-4-8 | 96 | 104,817 | 4,829,740 | 44,465 | 4,979,118 | scaffold green — analyze clean, 849 unit baseline, coverage gate PASS clean / FAIL planted, integration smoke 3/3 on sim, bs08 pending gate seeded (10 ACs); G-1 (spec) approved inside |
 | DISPLAY-2 | 5897d58f | 2026-10-12 05:06 EDT | 05:21 | 15m 04s | 15m 04s | claude-opus-4-8 | 128 | 155,894 | 8,274,506 | 54,673 | 8,485,201 | shell green — analyze clean, 885 unit (849+36), coverage gate 100% on 8 touched files, bs08 integration 3/3 on sim; DisplaySettings/Controller/Scope/ReadEndpoint + buildApp _DisplayRoot wiring + inert simulateColor/GrayscaleFilter + ColorChip reads DisplayScope (identity); behaviour unchanged |
 | SETTINGS-1 | 03b0c96d | 2026-10-12 05:47 EDT | 06:06 | 19m 27s | 19m 27s | claude-opus-4-8 | 124 | 132,630 | 7,272,929 | 47,589 | 7,453,272 | shell: E2 entry + settings panel (E46/E47/E48 + theme, D-11) via MaterialApp.builder chrome, bound to frozen DisplayController setters; 899 unit, gate 100% on 9 files, integration 3/3; fix 2/3 |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 06:06** | **1h 18m** | **1h 15m** |  | **484** | **593,833** | **30,249,576** | **240,596** | **31,084,489** |  |
+| SPEECH-1 | 12232428 | 2026-10-12 07:10 EDT | 07:29 | 18m 46s | 18m 46s | claude-opus-4-8 | 112 | 161,614 | 7,484,024 | 67,010 | 7,712,760 | shell green — analyze clean, 914 unit (899+15), coverage gate 100% on 11 touched files, bs08 integration scaffold guard 3/3 on sim; RepeatableSpeech wraps the app-wide Speech + re-provided via AppScope (readout/comparison/recipes all repeatable), SpeechScope + E50 SpokenOutputPanel surfaced in chrome; fix 0/3 |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 07:29** | **1h 37m** | **1h 34m** |  | **596** | **755,447** | **37,733,600** | **307,606** | **38,797,249** |  |
 
 ## Sign-off
 
