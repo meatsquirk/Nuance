@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — ITEST-3 (AC tests: tiers & arrangement group) ✅ Done; next ITEST-4 (test review, G-2)
+**Status:** In progress — ITEST-4 packet assembled; ⏸ G-2 awaiting human decision (approve un-blocks every behaviour phase)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -120,7 +120,7 @@ Pre-seeded augmentations: AC-13's confusion-check behavioural assertion is confi
 | ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1, ENGINE-2 ✅) |
 | PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | 🔄 In progress (PROFILE-1 ✅) |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | 🔄 In progress (FLOW-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2, ITEST-3 ✅; next ITEST-4) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2, ITEST-3 ✅; ITEST-4 ⏸ awaiting review — G-2) |
 
 ## Dependency graph
 
@@ -144,7 +144,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the Draft banner) | ENGINE-1 | ✅ Resolved 2026-10-11 21:46 EDT: spec approved; Draft banner replaced with approval line — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision — packet assembled in [modules/ITEST.md](modules/ITEST.md) § Phase 4; record via `--gate bs-07-cvd-self-assessment G-2 approved \| "<changes>"` |
 | G-3 | dependency | bs-05 **and** bs-06 signed off and merged to `main` (the `PersistentStore`, the `self_assessment` entry seam and the pubspec superset land on main) — closed by the human merging `feat/bs-05` and `feat/bs-06` | ENGINE-1 | ✅ Resolved 2026-10-11 21:46 EDT: `feat/bs-05` (990a67a→merge 9760a4f) + `feat/bs-06` (e998bac→merge cd1c86b) merged to `main`; `persistent_store.dart`, `self_assessment_entry_screen.dart`, `router.toSelfAssessment()`, pubspec superset (drift/path_provider/printing) confirmed present; analyze clean + 849 unit tests green post-merge — Matt Quirk |
 | G-4 | decision | Pin the profile persistence + scales: (a) persist via `PersistentStore` collection `cvd_profile`/id `current`, reusing `CvdProfile` unchanged; (b) slider 0..100 → severity 0..1; (c) band boundaries around the 30/60/90 anchors | PROFILE-1, ENGINE-7 | ✅ Resolved 2026-10-12 — approved as proposed (Matt Quirk): (a) collection `cvd_profile`/id `current`, body `{type, severity}`, `CvdProfile` reused unchanged; (b) `severity = slider/100`; (c) midpoint cutoffs mild `[0,0.45)` / moderate `[0.45,0.75)` / strong `[0.75,1.0]` |
 | G-5 | decision | Reconcile the four-step progress (AC-14) with the five tiers: which tiers are the four counted steps, and where screening (Tier 2) and threshold (Tier 4) sit (proposed D-4) — routed to the spec author | FLOW-2 | Open |
@@ -169,7 +169,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (14 ACs), smoke test | ✅ Done | 12,779,960 | 1h 30m | harness + 9 fixtures + smoke + 6 fixture guards; analyze clean · bs-07 suite 10/10 · unit 957 · coverage N/A (no lib/); grade A (1 B fixed); fix 2/3 |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,10,11,12,13,14 (pending) + red baseline | ✅ Done | 6,494,040 | 27m 23s | 7 pending tests; default 10 pass/7 skip, run-pending +10/−7; grade 5 A + 2 B-pending (AC-10→FLOW-6, AC-13→PROFILE-2); fix 0/3 |
 | 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ✅ Done | 5,169,129 | 18m 56s | 7 pending tests; default 10 pass/14 skip, run-pending +10/−14 (all fail cleanly on Then/precondition); grade 2 A (AC-3, AC-9) + 5 B-pending (AC-4→ENGINE-4, AC-5→ENGINE-5, AC-6/7/8→FLOW-4); fix 0/3 |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | both AC-test phases done; whole suite 7 A/7 B-pending |
+| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 847,758 | 2m 56s | packet assembled (14-AC catalogue + red-baseline + 8 augmentation rows + 3 look-first calls); G-2 awaiting decision; no code |
 | 9 | FLOW-2 | AC-14 progress indicator | ⬜ Todo | | | G-5 |
 | 10 | FLOW-3 | AC-2 lighting gate (Tier 0) | ⬜ Todo | | | |
 | 11 | ENGINE-3 | AC-3 intake answer → prior (Tier 1) | ⬜ Todo | | | |
@@ -189,10 +189,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-3 (acceptance-tests) ✅ Done — 7 *pending* AC tests (AC-3,4,5,6,7,8,9) in the new ITEST-3 group of `self_assessment_test.dart`; default 10 pass / 14 skip, run-pending red baseline +10 / −14 (every AC test fails cleanly on a Then/precondition naming its owning phase). Grades 2 A (AC-3, AC-9) + 5 *B pending* (AC-4→ENGINE-4, AC-5→ENGINE-5, AC-6/7/8→FLOW-4, each with an augmentation row). Fix 0/3. All 14 ACs now have a pending test; whole suite **7 A / 7 B-pending**. Startable next:
-- **ITEST-4** (test-review, writes NO code) — assemble the whole-suite packet (per AC: test name, Given checks, When, Then + Rejects; red-baseline summary; augmentations + closing phase; grid path + counts; what to look at first), set the phase `⏸ Awaiting review` and **G-2** *awaiting decision*, record, commit, and stop with `/feature-next-phase --gate bs-07-cvd-self-assessment G-2 approved | "<changes>"`.
+ITEST-4 (test-review) ⏸ **Awaiting review** — packet assembled in [modules/ITEST.md](modules/ITEST.md) § Phase 4: 14-AC catalogue (Given checks · When · Then + Rejects), red-baseline summary (default 10/14 skip; run-pending +10/−14 all fail cleanly), 8 augmentation rows (owning phases named), grid path + counts (**7 A / 7 B-pending**), and 3 look-first judgment calls (AC-14 0-based `stepIndex`; AC-13 saved-value vs live-dep seam; the 5 driver-argument B-pendings). No code written.
 
-Still to decide, before the phases they block: **G-2** (approve acceptance tests, at ITEST-4; blocks every behaviour phase) and **G-5** (four-step vs five-tier, blocks FLOW-2).
+**Next action — human decides G-2:** `/feature-next-phase --gate bs-07-cvd-self-assessment G-2 approved | "<changes>"`.
+- **Approve** → G-2 un-blocks every behaviour phase. First startable: FLOW-3 (AC-2), ENGINE-3 (AC-3); ENGINE-4/5, FLOW-4, ENGINE-6 follow their tiers; FLOW-5 is the barrier before result-step ACs. FLOW-2 (AC-14) also needs **G-5** resolved first.
+- **Changes** → each item becomes an ITEST change phase before behaviour, then a fresh review.
+
+Still open after this: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed to the spec author).
 
 ## Token usage
 
@@ -209,7 +212,8 @@ Still to decide, before the phases they block: **G-2** (approve acceptance tests
 | ITEST-1 | 129d7bd8 | 2026-10-12 07:55 EDT | 09:25 | 1h 30m | 1h 30m | claude-opus-4-8 | 144 | 299,463 | 12,389,172 | 91,181 | 12,779,960 | harness + 9 fixtures + smoke + 6 fixture guards: analyze clean, bs-07 acceptance suite 10/10 on sim, unit 957, coverage N/A (no lib/ touched), grade A (1 vacuous-guard B fixed in-phase), fix 2/3; no AC un-pended (all 14 pending) |
 | ITEST-2 | 3d96a895 | 2026-10-12 09:37 EDT | 10:04 | 27m 23s | 27m 23s | claude-opus-4-8 | 92 | 229,468 | 6,196,083 | 68,397 | 6,494,040 | 7 pending AC tests (AC-1,2,10,11,12,13,14) landed: analyze clean, default 10 pass/7 skip, run-pending red baseline +10/-7 (all fail cleanly on Then/precondition), grade 5 A + 2 B-pending (AC-10->FLOW-6, AC-13->PROFILE-2 augmentation rows), fix 0/3; no lib/ touched (coverage N/A) |
 | ITEST-3 | 6ee00b57 | 2026-10-12 10:16 EDT | 10:35 | 18m 56s | 18m 56s | claude-opus-4-8 | 84 | 221,924 | 4,890,544 | 56,577 | 5,169,129 | 7 pending AC tests (AC-3,4,5,6,7,8,9) landed: analyze clean, default 10 pass/14 skip, run-pending red baseline +10/-14 (all fail cleanly on Then/precondition naming owning phase), grade 2 A (AC-3,AC-9) + 5 B-pending (AC-4->ENGINE-4, AC-5->ENGINE-5, AC-6/7/8->FLOW-4; augmentation rows added), fix 0/3; no lib/ touched (coverage N/A); all 14 ACs now pending, suite 7 A/7 B-pending |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 10:35** | **4h 04m** | **3h 55m** |  | **946** | **1,554,962** | **57,870,880** | **528,073** | **59,954,861** |  |
+| ITEST-4 | 25fd326c | 2026-10-12 10:59 EDT | 11:02 | 2m 56s | 2m 56s | claude-opus-4-8 | 22 | 64,372 | 771,555 | 11,809 | 847,758 | test-review: packet assembled (14-AC catalogue, red-baseline summary, 8 augmentation rows, 3 look-first calls); phase awaiting review, G-2 awaiting decision; no code |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 11:02** | **4h 07m** | **3h 58m** |  | **968** | **1,619,334** | **58,642,435** | **539,882** | **60,802,619** |  |
 
 ## Sign-off
 

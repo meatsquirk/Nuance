@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-3 (AC tests: tiers & arrangement group) ✅ Done; next ITEST-4 (test review, G-2)
+**Status:** ⏸ Awaiting review — ITEST-4 packet assembled; G-2 awaiting human decision (approve un-blocks every behaviour phase)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/self_assessment_harness.dart`, `integration_test/self_assessment_test.dart`, `integration_test/bs07/pending.dart`; the grade grid `behavior-test-completeness-bs-07-cvd-self-assessment.md`.
 **Depends on:** every shell phase (ENGINE-2, PROFILE-1, FLOW-1) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | 12,779,960 | 1h 30m |
 | 2 | acceptance-tests | AC-1,2,10,11,12,13,14 | ✅ Done | 6,494,040 | 27m 23s |
 | 3 | acceptance-tests | AC-3,4,5,6,7,8,9 | ✅ Done | 5,169,129 | 18m 56s |
-| 4 | test-review | — (G-2) | ⬜ Todo | | |
+| 4 | test-review | — (G-2) | ⏸ Awaiting review | 847,758 | 2m 56s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-- **G-2** (decision, ITEST-4's packet) blocks every behavior phase. Recorded via `/feature-next-phase --gate bs-07-cvd-self-assessment G-2 approved | "<changes>"`.
+- **G-2** (decision, ITEST-4's packet) *awaiting decision* — blocks every behavior phase. Packet assembled under Phase 4. Recorded via `/feature-next-phase --gate bs-07-cvd-self-assessment G-2 approved | "<changes>"`.
 
 ## Phase 1 — harness + fixtures + pending gate + smoke
 
@@ -103,6 +103,53 @@
 - **Tasks:** assemble the packet below (per AC: test name, Given checks, When, Then + Rejects, one–two lines each; red-baseline summary; augmentations scheduled + closing phase; grid path + counts; what to look at first). Set this phase `⏸ Awaiting review`, G-2 *awaiting decision*, record the ledger row, commit, and stop with: `/feature-next-phase --gate bs-07-cvd-self-assessment G-2 approved | "<changes>"`.
 
 ### Packet  <!-- filled by ITEST-4 -->
+
+**Phase:** ⏸ Awaiting review · **Gate:** G-2 *awaiting decision* (approving this packet un-blocks every behaviour phase).
+
+**Suite:** `integration_test/self_assessment_test.dart` — 14 *pending* `acTestWidgets` (ITEST-2 group AC-1,2,10,11,12,13,14; ITEST-3 group AC-3,4,5,6,7,8,9) + the never-pending smoke test + fixture guards + scaffold guards. Driven through the real app (`buildApp`), fakes are infrastructure only (`FakeSpeech`, `FakeHaptics`, `InMemoryPersistentStore`); no scoring/colour maths faked — direction and band graded against in-harness independent references.
+
+**What to look at first (3 judgment calls the reviewer should confirm):**
+1. **AC-14 step numbering (`stepIndex`).** The catalogue prose is 1-based ("step 2"); the shell/smoke-frozen `stepIndex` is **0-based** (index 0 → "Step 1 of 4"). The test reconciles to `stepIndex==1` + `progressText=='Step 2 of 4'`. Confirm the 0-based convention is the one behaviour will keep. (Also: **G-5**, four-step vs five-tier, is still open and blocks FLOW-2 — orthogonal to this gate but adjacent.)
+2. **AC-13 reconfiguration seam.** The save is asserted at the **saved-profile value** seam (`confusable(fixedPair, saved)` flips vs the injected default), *not* yet against the live `AppDependencies.cvdProfile`. That live assertion is the PROFILE-2 augmentation. Confirm that's the right split (and that behavioural sim/dalt checks are rightly out of scope → bs-08/bs-10).
+3. **The 5 "B pending" driver-argument limits (AC-4,5,6,7,8,10).** Each is limited only because the frozen harness driver carries no selection argument (e.g. `whenAdjustType`/`whenReportDiagnosis` only *open* the control; `whenReadPlate` carries no plate fixture; no `whenPlaceCap`). Confirm the plan to add the typed driver + control + discriminating control in the owning behaviour phase is acceptable, rather than building those controls now.
+
+**Per-AC catalogue** (Given checks · When · Then + Rejects):
+
+| AC | Test | Given checks | When | Then + Rejects | Grade |
+|---|---|---|---|---|---|
+| AC-1 | `TestAC01_EstimateLabelledApproximate` | result step reached (`estimate != null`, fails at baseline naming FLOW-5) | advance to result | `caveatShown` + exact phrases `approximate estimate` and `anomaloscope`, scoped to the result region. Rejects a result with no approximate label / no clinical-test recommendation. | A |
+| AC-2 | `TestAC02_LightingConfirmedBeforeTesting` | `stepIndex==0`, `lightingConfirmed==false`, `testingStarted==false` (all checked) | Continue without confirming (settled pump); control confirms all three then Continue | does not advance; control shows `lightingConfirmed`, then advances (`stepIndex==1`, `testingStarted`). Rejects a Continue that advances regardless, and a gate that never opens. | A |
+| AC-3 | `TestAC03_IntakeAnswerToPrior` | confusion question asked (`textContaining`); `prior==none` | answer the real labelled button via `whenAnswerIntake(intakeOften)` (the setting answers, G2) | `prior.direction==redGreen`, `prior.weight>0`; fresh-flow "Never" control `direction isNot redGreen`. Rejects discarding the answer and always-redGreen. | A |
+| AC-4 | `TestAC04_DiagnosisSeedsPrior` | "I have a diagnosis" offered; `prior.type==null` | `whenReportDiagnosis()` (opens entry; **no type arg yet**) | `prior.type==deutan`. Rejects ignoring the diagnosis — but **not** seeding the wrong type (no protan control until ENGINE-4). | **B pending ENGINE-4** |
+| AC-5 | `TestAC05_ScreeningPresenceAndDirection` | "Read the plate" shown; `screening==null` | `whenReadPlate()` (**no plate-response fixture yet**) | `screening {present, direction}`; direction graded vs independent fixture axes. Rejects nothing until B-Y + no-deficiency controls can be fed (ENGINE-5). | **B pending ENGINE-5** |
+| AC-6 | `TestAC06_PlaceCapNextPosition` | region present; `arrangedCaps` empty; `arrangementPool` non-empty (precondition fails at baseline naming FLOW-4) | — (no `whenPlaceCap` driver yet) | place grain (next position; −1 pool/+1 arranged) deferred to FLOW-4 augmentation. | **B pending FLOW-4** |
+| AC-7 | `TestAC07_StartOverClearsArrangement` | `startOverKey` present; "≥2 caps placed" (`arrangedCaps.length>=2`) not buildable → precondition naming FLOW-4 | `whenStartOver()` (nothing to clear yet) | all caps return / none placed, deferred to FLOW-4 augmentation. | **B pending FLOW-4** |
+| AC-8 | `TestAC08_SkipArrangement` | `skipKey` present; `arrangementSkipped==false` (both checked) | `whenSkipArrangement()` (real, settled) | `arrangementSkipped==true`; rejects a skip that no-ops/blocks. Limited: "skip fabricates a result" reject needs FLOW-4's completing-control. | **B pending FLOW-4** |
+| AC-9 | `TestAC09_ThresholdSeverity` | "I can see it" shown; `threshold==null` | loop real probe controls via `whenProbe(detected:)` feeding `thresholdProbesStrong` | `severity` in (0,1]; fresh-flow `thresholdProbesMild` control `< strongSeverity`, vs independent fixture contrast-ordering. Rejects constant/zero/inverted scorer. | A |
+| AC-10 | `TestAC10_AdjustTypeByHand` | `estimate.type==deutan` (precondition fails at baseline naming FLOW-5) | `whenAdjustType()` (opens control; **no type arg yet**) | `estimate.type==protan` deferred — bare tap can't pick protan among 3 types until FLOW-6 gives a typed driver. | **B pending FLOW-6** |
+| AC-11 | `TestAC11_SeverityBand` | `estimate != null` | drive real slider over 30/60/90 outline rows | product band == independent `referenceBand`; three distinct bands are the control. Rejects constant/inverted/off-by-one mapping. | A |
+| AC-12 | `TestAC12_SelfCalibration` | `estimate != null`; `calibratedSeverity==null` | set slider, read its **actual** value | `calibratedSeverity closeTo(kept/100, 1e-9)`; control sets a different value and tracks it. Rejects discarding the value / keeping a default. | A |
+| AC-13 | `TestAC13_SaveConfiguresPipeline` | store empty; default confuses `fixedPair`; deutan/moderate estimate | `whenSave()` | exactly 1 profile written, shape `{deutan, moderate}`; `confusable(fixedPair, saved)` flips vs default. Reject "leaves pipeline on default" (live dep) deferred to PROFILE-2; sim/dalt out of scope. | **B pending PROFILE-2** |
+| AC-14 | `TestAC14_ProgressStepOfTotal` | `stepTotal==4`, `progressText=='Step 1 of 4'`; advanced through real controls | confirm three lighting checks, then Continue | `stepIndex==1` + `'Step 2 of 4'`; control advances to `stepIndex==2`/"Step 3 of 4". Rejects an indicator hard-coded to a step or wrong total. | A |
+
+**Red baseline summary** (run-pending, `--dart-define=BS07_RUN_PENDING=true`): default run **10 passed / 14 skipped**; run-pending **+10 / −14** — every one of the 14 AC tests fails **cleanly** (no compile error, panic, or `UnimplementedError`; inert-control taps are no-op `warnIfMissed` only, so execution reaches the assertion). Each fails on its **Then** (AC-3 null prior, AC-4 null type, AC-5 null screening, AC-8 `arrangementSkipped` false, AC-9 null threshold, AC-14 `stepIndex` 0) or on a **Given precondition naming its owning phase** (AC-1/10/11/12/13 → `estimate != null` / FLOW-5; AC-2 control → FLOW-3; AC-6 → `arrangementPool` non-empty / FLOW-4; AC-7 → `arrangedCaps.length>=2` / FLOW-4). No AC test is green-at-baseline. Full table above.
+
+**Augmentations scheduled** (8 rows; each closed by the named behaviour phase):
+
+| AC test | Limited because | Closed by |
+|---|---|---|
+| TestAC10 | `whenAdjustType` carries no type arg (can't pick protan among 3) | FLOW-6 |
+| TestAC13 | reconfiguration asserted only at saved-value seam, not the live `cvdProfile` | PROFILE-2 |
+| TestAC13 | behavioural sim/dalt not built | **out of scope** (bs-08 / bs-10 — known gap, no bs-07 phase) |
+| TestAC04 | `whenReportDiagnosis` carries no type arg (no protan control) | ENGINE-4 |
+| TestAC05 | `whenReadPlate` carries no plate-response fixture (B-Y / no-deficiency controls can't be fed) | ENGINE-5 |
+| TestAC06 | pool empty, no cap-selection control / `whenPlaceCap` | FLOW-4 |
+| TestAC07 | can't place ≥2 caps (no `whenPlaceCap`) | FLOW-4 |
+| TestAC08 | no arrangement-result observable / completing-control | FLOW-4 |
+
+**Grade grid:** [behavior-test-completeness-bs-07-cvd-self-assessment.md](../behavior-test-completeness-bs-07-cvd-self-assessment.md) — whole suite **7 A, 7 B pending** (every B is a behaviour/driver-not-built limit with an augmentation row above; no fixable test defect, no green-at-baseline).
+
+**Decision:** record via `/feature-next-phase --gate bs-07-cvd-self-assessment G-2 approved | "<changes>"`.
 
 ## Red baseline  <!-- filled by ITEST-2 / ITEST-3 -->
 
