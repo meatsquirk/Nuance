@@ -122,10 +122,16 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Scores the Tier 2 screening responses — ENGINE-5 scores them through
-  /// [engine] into presence + direction (AC-5).
-  void scoreScreening(List<PlateResponse> responses) =>
-      throw UnimplementedError('scoreScreening is wired in ENGINE-5 (AC-5)');
+  /// Scores the Tier 2 screening [responses] into presence + direction (AC-5).
+  ///
+  /// Folds the per-plate responses through [engine]
+  /// ([AssessmentEngine.scoreScreening]) and holds the [ScreeningResult] on
+  /// [OnboardingState.screening], then notifies. The scoring lives in [engine]
+  /// (D-9) — the controller only passes the responses and holds the result.
+  void scoreScreening(List<PlateResponse> responses) {
+    _state = _state.copyWith(screening: engine.scoreScreening(responses));
+    notifyListeners();
+  }
 
   /// Places the Tier 3 cap [capId] into the next arranged position (AC-6).
   ///

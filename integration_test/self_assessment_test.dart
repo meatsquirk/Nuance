@@ -137,11 +137,28 @@ void main() {
 
       // The no-deficiency set has plates and reads every one correctly (the
       // presence control).
-      expect(screeningPlatesNone.length, 4);
+      expect(screeningPlatesNone.length, 5);
       expect(screeningPlatesNone.every((p) => p.correct), isTrue);
 
       // The main fixture is the red-green set.
       expect(screeningPlates, same(screeningPlatesRedGreen));
+
+      // The screening deck the UI presents matches the fixture axes, so driving
+      // a fixture's per-plate responses feeds the engine the axes the fixture
+      // declares (direction stays graded against the independent fixture axes,
+      // not the product scorer).
+      expect(
+        screeningPlatesRedGreen.map((p) => p.axis).toList(),
+        ScreeningStep.plateDeck,
+      );
+      expect(
+        screeningPlatesBlueYellow.map((p) => p.axis).toList(),
+        ScreeningStep.plateDeck,
+      );
+      expect(
+        screeningPlatesNone.map((p) => p.axis).toList(),
+        ScreeningStep.plateDeck,
+      );
     });
 
     test('cap pool is a real reordering of distinct caps (AC-6/7/8)', () {
@@ -567,36 +584,45 @@ void main() {
       'screening yields presence and the red-green versus blue-yellow direction',
       (tester) async {
         final h = await givenSelfAssessment(tester);
-        // Given: the screening step is shown and no screening result is scored
-        // yet.
-        expect(
-          find.descendant(
-              of: find.byKey(ScreeningStep.regionKey),
-              matching: find.widgetWithText(TextButton, 'Read the plate')),
-          findsOneWidget,
-          reason: 'the plate screening control is shown',
-        );
+        // Given: the screening step is shown with a response control per plate
+        // and no screening result is scored yet.
+        expect(find.byKey(ScreeningStep.regionKey), findsOneWidget);
+        expect(find.byKey(ScreeningStep.readKey(0)), findsOneWidget,
+            reason: 'the plate screening controls are shown');
         expect(h.screening, isNull, reason: 'screening not scored yet');
 
-        // When: complete the plate screening (ENGINE-5 scores the responses
-        // into presence + direction).
-        await h.whenReadPlate();
+        // When: complete the red-green–deficient plate screening (ENGINE-5
+        // scores the per-plate responses into presence + direction).
+        await h.whenScreenPlates(screeningPlatesRedGreen);
 
-        // Then: the screening reports a deficiency present along the red-green
-        // axis (the red-green–deficient fixture).
-        expect(h.screening, isNotNull, reason: 'the screening is scored (ENGINE-5)');
+        // Then: a deficiency is present along the red-green axis — the direction
+        // the fixture's misread plates fall on (graded against the independent
+        // fixture axes, not the product scorer).
+        expect(h.screening, isNotNull,
+            reason: 'the screening is scored (ENGINE-5)');
         expect(h.screening!.present, isTrue,
             reason: 'the red-green–deficient fixture reports present');
         expect(h.screening!.direction, ScreeningDirection.redGreen,
-            reason: 'the direction is red-green, graded against the independent '
-                'fixture axis');
-        // Limited — B pending ENGINE-5: the frozen whenReadPlate() taps a single
-        // plate control and carries no plate-response fixture, so this cannot yet
-        // feed the blue-yellow (→ blueYellow) and no-deficiency (→ present false)
-        // controls that reject a scorer which always returns present+redGreen.
-        // ENGINE-5 wires the per-plate responses + a fixture argument on the
-        // driver; the direction stays graded against the fixture axes, never the
-        // product scorer (see Test augmentations).
+            reason: 'misreading the red-green plates points at the red-green '
+                'axis');
+
+        // Control (direction): a blue-yellow–deficient fixture reports present
+        // along blue-yellow — rejects a scorer that always returns red-green.
+        final blueYellow = await givenSelfAssessment(tester);
+        await blueYellow.whenScreenPlates(screeningPlatesBlueYellow);
+        expect(blueYellow.screening!.present, isTrue,
+            reason: 'the blue-yellow–deficient fixture reports present');
+        expect(blueYellow.screening!.direction, ScreeningDirection.blueYellow,
+            reason: 'misreading the blue-yellow plates points at blue-yellow');
+        expect(blueYellow.screening!.direction,
+            isNot(ScreeningDirection.redGreen));
+
+        // Control (presence): reading every plate correctly reports no
+        // deficiency — rejects a scorer that always returns present.
+        final none = await givenSelfAssessment(tester);
+        await none.whenScreenPlates(screeningPlatesNone);
+        expect(none.screening!.present, isFalse,
+            reason: 'reading every plate correctly reports no deficiency');
       },
     );
 
@@ -769,10 +795,9 @@ void main() {
       // Seeded with AC-1..AC-14 (ENGINE-1); each behaviour phase deletes its
       // AC's row here as it un-pends it, so this set shrinks by one per
       // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3), AC-4 (ENGINE-4),
-      // AC-6/7/8 (FLOW-4).
+      // AC-5 (ENGINE-5), AC-6/7/8 (FLOW-4).
       const expected = <String>{
         'AC-1',
-        'AC-5',
         'AC-9',
         'AC-10',
         'AC-11',
@@ -812,6 +837,10 @@ void main() {
       expect(pendingACs.containsKey('AC-3'), isFalse);
       expect(pendingSkipReason('AC-3', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-3', forceRunPending: true), isNull);
+      // AC-5 (un-pended by ENGINE-5) always runs, in either mode.
+      expect(pendingACs.containsKey('AC-5'), isFalse);
+      expect(pendingSkipReason('AC-5', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-5', forceRunPending: true), isNull);
       // An id absent from the map always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);

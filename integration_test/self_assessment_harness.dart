@@ -115,8 +115,10 @@ const List<PlateResponse> screeningPlatesBlueYellow = [
 ];
 
 /// A no-deficiency plate set — the AC-5 presence control (every plate read
-/// correctly, so a correct scorer reports present == false).
+/// correctly, so a correct scorer reports present == false). A full response
+/// set over the screening deck (3 red-green + 2 blue-yellow, all correct).
 const List<PlateResponse> screeningPlatesNone = [
+  PlateResponse(axis: ScreeningDirection.redGreen, correct: true),
   PlateResponse(axis: ScreeningDirection.redGreen, correct: true),
   PlateResponse(axis: ScreeningDirection.redGreen, correct: true),
   PlateResponse(axis: ScreeningDirection.blueYellow, correct: true),
@@ -338,13 +340,26 @@ class SelfAssessmentHarness {
     await tester.pumpAndSettle();
   }
 
-  /// Reads a screening plate (AC-5; wired ENGINE-5).
-  Future<void> whenReadPlate() async {
-    await tester.tap(find.descendant(
-      of: find.byKey(ScreeningStep.regionKey),
-      matching: find.widgetWithText(TextButton, 'Read the plate'),
-    ));
-    await tester.pumpAndSettle();
+  /// Completes the Tier 2 plate screening by reporting each plate in
+  /// [responses] in order (AC-5; wired ENGINE-5).
+  ///
+  /// For each plate it taps the "I can read it" (correct) or "I can't read it"
+  /// (incorrect) control, scrolling it into view first (the screening sits below
+  /// the earlier steps in the shell's single scroll view). Once every plate in
+  /// the deck is answered the controller scores the whole set. The plate at each
+  /// index probes [ScreeningStep.plateDeck]'s axis there; [responses] are
+  /// response sets over that deck (the harness fixtures), so the painter's
+  /// read/can't-read choices drive the scoring while the axes stay the
+  /// independent fixture axes.
+  Future<void> whenScreenPlates(List<PlateResponse> responses) async {
+    for (var i = 0; i < responses.length; i++) {
+      final control = find.byKey(responses[i].correct
+          ? ScreeningStep.readKey(i)
+          : ScreeningStep.cantReadKey(i));
+      await tester.ensureVisible(control);
+      await tester.tap(control);
+      await tester.pumpAndSettle();
+    }
   }
 
   /// Places the pooled Tier 3 cap [capId] into the next arranged position by

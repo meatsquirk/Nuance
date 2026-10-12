@@ -1,6 +1,6 @@
 # Module ENGINE — assessment domain (+ feature scaffold)
 
-**Status:** In progress — ENGINE-3 (AC-3), ENGINE-4 (AC-4) ✅ Done; next ENGINE-5 (AC-5), then ENGINE-6 (AC-9) on `assessment_engine.dart`
+**Status:** In progress — ENGINE-3 (AC-3), ENGINE-4 (AC-4), ENGINE-5 (AC-5) ✅ Done; next ENGINE-6 (AC-9) on `assessment_engine.dart`
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/engine/` (`assessment_engine.dart`, `tier_results.dart`, `cvd_estimate.dart`, `severity_band.dart`); the feature scaffold (branch, baseline, coverage-gate confirmation, `integration_test/bs07/pending.dart`, runner target). Behavior phases also wire a thin controller call in `lib/onboarding/onboarding_controller.dart` (FLOW-owned file — noted per phase; merge-risky with FLOW).
 **Depends on:** — · **Blocks:** PROFILE, FLOW, ITEST
@@ -13,7 +13,7 @@
 | 2 | shell | — | ✅ Done | 3,709,673 | 9m 29s |
 | 3 | behavior | AC-3 | ✅ Done | 9,029,262 | 16m 39s |
 | 4 | behavior | AC-4 | ✅ Done | 12,538,664 | 16m 43s |
-| 5 | behavior | AC-5 | ⬜ Todo | | |
+| 5 | behavior | AC-5 | ✅ Done | 16,401,020 | 21m 15s |
 | 6 | behavior | AC-9 | ⬜ Todo | | |
 | 7 | behavior | AC-11 | ⬜ Todo | | |
 
@@ -156,6 +156,24 @@
 - **Tasks:** implement `scoreScreening` over the `screeningPlates` fixture → `present` + `direction` (redGreen | blueYellow); wire the screening step; expose the result. Graded against the harness direction reference.
 - **Exit criteria + Acceptance gate:** un-pend AC-5; suite green; coverage 100% touched; grade A (distinguishes R-G/B-Y and present/absent — see catalogue controls).
 - **Augments:** none.
+
+### Result
+
+- **Landed:** real Tier 2 screening scoring behind the engine (D-9). `lib/onboarding/engine/assessment_engine.dart` — `TieredAssessmentEngine` overrides `scoreScreening(List<PlateResponse>)`: counts misreads per confusion axis; a deficiency is `present` on any miss, `direction` is the axis with the more misses (blue-yellow only when strictly greater, else red-green — ties fall to red-green), and reading every plate correctly reports `present: false` (direction defaults red-green, immaterial). `lib/onboarding/onboarding_controller.dart` — `scoreScreening` now folds the responses through `engine.scoreScreening` into `state.screening` and notifies (replaces the throwing stub; different region of the FLOW-owned file). `lib/onboarding/screens/screening_step.dart` — now a `StatefulWidget`: presents a fixed `plateDeck` (3 red-green + 2 blue-yellow); each plate offers "I can read it"/"I can't read it" (keyed `readKey(i)`/`cantReadKey(i)`), going inert once answered; when every plate is answered it builds the ordered `PlateResponse` list (axis from the deck, correct from the taps) and calls `controller.scoreScreening`. Read endpoint already exposed `state.screening` (no change).
+- **Un-pended:** AC-5 (deleted its row in `integration_test/bs07/pending.dart`; removed from the scaffold-guard `expected` set; added the un-pended-AC assertions mirroring AC-2/AC-3). **Augmentation closed:** AC-5's B-pending ENGINE-5 limit — `whenReadPlate()` (single inert tap, no fixture) replaced by `whenScreenPlates(List<PlateResponse>)` which drives the per-plate controls; the AC-5 test now feeds the red-green main case plus a **blue-yellow direction control** (`direction == blueYellow`, `isNot(redGreen)`) and a **no-deficiency presence control** (`present == false`), rejecting a scorer that always returns present+redGreen. Direction stays graded against the independent fixture axes, pinned by a never-pending guard asserting `screeningPlates*.map(axis) == ScreeningStep.plateDeck`. Harness fixture `screeningPlatesNone` extended 4→5 plates to be a full response set over the deck (scaffold assertion updated).
+- **Gates:** analyze ✅ clean · unit ✅ **1007** (+10 net: engine `scoreScreening` ×5, controller screening ×2, new `screening_step_test.dart` ×4, −1 removed `scoreScreening throws` stub) · coverage ✅ **100%** on all touched files (gate PASS vs `main`, 24 lib files) · acceptance ✅ default suite **17 pass / 7 skip** on sim `5AB9D06D` under the device lock — **AC-5 runs and passes**, AC-2/3/4/6/7/8 green, only the 7 later-phase ACs skipped · grade ✅ **A** (fresh independent subagent re-graded every un-pended AC test AC-2..AC-8 against G1–G6: AC-5 flipped **B pending ENGINE-5 → A**; whole-suite grid now **12 A / 2 B-pending** — AC-10→FLOW-6, AC-13→PROFILE-2).
+- **Fix passes:** 0/3 (green on the first full run of every gate).
+- **Tokens / Time:** 16,401,020 · 21m 15s (this session also applied the FLOW-4 reconcile, which carries its own RECONCILE ledger row — the measured span overlaps it).
+
+### Checkpoint / Handoff
+
+- **Frozen for next phases:**
+  - `TieredAssessmentEngine` now overrides `recordIntake` (ENGINE-3), `seedFromDiagnosis` (ENGINE-4) and `scoreScreening` (ENGINE-5). **ENGINE-6 and ENGINE-7/FLOW-5 each still add one `@override`** (`scoreThreshold`, `band`, `assemble`); the un-overridden methods inherit `ShellAssessmentEngine`'s trivial default. ENGINE-6 edits the **same file** (`assessment_engine.dart`) — rebase on this HEAD.
+  - `ScreeningStep.plateDeck` is the frozen screening deck (3 red-green then 2 blue-yellow); the acceptance fixtures (`screeningPlatesRedGreen`/`BlueYellow`/`None`) are per-plate response sets over it, pinned equal by the never-pending fixture guard — keep the deck and those fixtures in sync. `ScreeningStep.readKey(i)`/`cantReadKey(i)` are the stable per-plate controls the driver taps.
+  - `OnboardingController.scoreScreening` sets `state.screening`; FLOW-5's `assemble` reads `state.screening` (it may be null if screening was skipped — the pipeline stays total-safe).
+- **Verification commands** (unchanged, from the worktree with `/Users/matthew.quirk/development/flutter/bin` on PATH): `flutter analyze`; `flutter test --coverage && dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-…` (device lane → `coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`).
+- **Known gaps:** none introduced. The engine's tie-break direction (equal misses on both axes → red-green) is unit-covered but not exercised by an AC scenario (the fixtures isolate one axis) — intentional; the engine is total-safe.
+- **Next:** ENGINE-6 (AC-9, `scoreThreshold`) edits `assessment_engine.dart` (now free — ENGINE-5 done). FLOW-5 (enabler) remains the barrier before the result-step ACs; among its deps only ENGINE-6 remains (ENGINE-3/4/5 + FLOW-4 done).
 
 ## Phase 6 — AC-9: threshold probing yields a severity
 

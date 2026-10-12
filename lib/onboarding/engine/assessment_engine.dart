@@ -169,4 +169,40 @@ class TieredAssessmentEngine extends ShellAssessmentEngine {
       type == CvdType.tritan
           ? ScreeningDirection.blueYellow
           : ScreeningDirection.redGreen;
+
+  /// Scores the Tier 2 pseudoisochromatic screening into presence + direction
+  /// (AC-5).
+  ///
+  /// A deficiency is [ScreeningResult.present] when the painter misreads any
+  /// plate; its [ScreeningResult.direction] is the confusion axis the misread
+  /// plates fall on — red-green or blue-yellow — taken from the axis with the
+  /// more misses (a screening points at whichever axis the painter failed more
+  /// of). Reading every plate correctly reports no deficiency. The direction of
+  /// an absent result is immaterial and defaults to red-green (the more common
+  /// axis), matching the shell default.
+  @override
+  ScreeningResult scoreScreening(List<PlateResponse> responses) {
+    var redGreenMissed = 0;
+    var blueYellowMissed = 0;
+    for (final response in responses) {
+      if (response.correct) continue;
+      if (response.axis == ScreeningDirection.redGreen) {
+        redGreenMissed++;
+      } else {
+        blueYellowMissed++;
+      }
+    }
+    if (redGreenMissed == 0 && blueYellowMissed == 0) {
+      return const ScreeningResult(
+        present: false,
+        direction: ScreeningDirection.redGreen,
+      );
+    }
+    return ScreeningResult(
+      present: true,
+      direction: blueYellowMissed > redGreenMissed
+          ? ScreeningDirection.blueYellow
+          : ScreeningDirection.redGreen,
+    );
+  }
 }

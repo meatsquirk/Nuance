@@ -150,4 +150,63 @@ void main() {
       expect(prior.weight, 1.0);
     });
   });
+
+  group('TieredAssessmentEngine.scoreScreening (Tier 2, AC-5)', () {
+    const engine = TieredAssessmentEngine();
+
+    PlateResponse plate(ScreeningDirection axis, {required bool correct}) =>
+        PlateResponse(axis: axis, correct: correct);
+
+    test('misreading the red-green plates reports present along red-green', () {
+      final result = engine.scoreScreening([
+        plate(ScreeningDirection.redGreen, correct: false),
+        plate(ScreeningDirection.redGreen, correct: false),
+        plate(ScreeningDirection.blueYellow, correct: true),
+      ]);
+      expect(result.present, isTrue);
+      expect(result.direction, ScreeningDirection.redGreen);
+    });
+
+    test('misreading the blue-yellow plates reports present along blue-yellow',
+        () {
+      final result = engine.scoreScreening([
+        plate(ScreeningDirection.redGreen, correct: true),
+        plate(ScreeningDirection.blueYellow, correct: false),
+        plate(ScreeningDirection.blueYellow, correct: false),
+      ]);
+      expect(result.present, isTrue);
+      expect(result.direction, ScreeningDirection.blueYellow);
+    });
+
+    test('reading every plate correctly reports no deficiency', () {
+      final result = engine.scoreScreening([
+        plate(ScreeningDirection.redGreen, correct: true),
+        plate(ScreeningDirection.blueYellow, correct: true),
+      ]);
+      expect(
+        result,
+        const ScreeningResult(
+            present: false, direction: ScreeningDirection.redGreen),
+      );
+    });
+
+    test('no responses report no deficiency', () {
+      expect(
+        engine.scoreScreening(const []),
+        const ScreeningResult(
+            present: false, direction: ScreeningDirection.redGreen),
+      );
+    });
+
+    test('an equal miss on both axes points at red-green (the tie default)', () {
+      // One miss on each axis: present, and the direction falls to red-green
+      // (blue-yellow only wins when it has strictly more misses).
+      final result = engine.scoreScreening([
+        plate(ScreeningDirection.redGreen, correct: false),
+        plate(ScreeningDirection.blueYellow, correct: false),
+      ]);
+      expect(result.present, isTrue);
+      expect(result.direction, ScreeningDirection.redGreen);
+    });
+  });
 }

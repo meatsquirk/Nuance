@@ -46,7 +46,7 @@ const Map<String, String> pendingACs = {
   // AC-2 (Tier 0 lighting gate) un-pended by FLOW-3.
   // AC-3 (Tier 1 intake answer → starting prior) un-pended by ENGINE-3.
   // AC-4 (Tier 1 prior-diagnosis seeds the prior) un-pended by ENGINE-4.
-  'AC-5': 'ENGINE-5', // Tier 2 screening presence + R-G/B-Y direction
+  // AC-5 (Tier 2 screening presence + R-G/B-Y direction) un-pended by ENGINE-5.
   // AC-6 (arrangement: place a cap in the next position) un-pended by FLOW-4.
   // AC-7 (arrangement: start over clears the arrangement) un-pended by FLOW-4.
   // AC-8 (arrangement: skip continues without a result) un-pended by FLOW-4.

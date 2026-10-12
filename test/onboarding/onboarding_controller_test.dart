@@ -43,13 +43,6 @@ void main() {
     setUp(() => controller = OnboardingController());
     tearDown(() => controller.dispose());
 
-    test('scoreScreening throws (ENGINE-5)', () {
-      expect(
-        () => controller.scoreScreening(const []),
-        throwsUnimplementedError,
-      );
-    });
-
     test('scoreThreshold throws (ENGINE-6)', () {
       expect(
         () => controller.scoreThreshold(const []),
@@ -158,6 +151,41 @@ void main() {
       expect(controller.state.prior.type, CvdType.tritan);
       expect(controller.state.prior.direction, ScreeningDirection.blueYellow);
       expect(notifications, 2);
+    });
+  });
+
+  group('OnboardingController screening (ENGINE-5, AC-5)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      // The real tiered engine (as the production host injects), so the scored
+      // responses actually set a meaningful result.
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('scores the responses into state.screening and notifies', () {
+      controller.scoreScreening(const [
+        PlateResponse(axis: ScreeningDirection.redGreen, correct: false),
+        PlateResponse(axis: ScreeningDirection.blueYellow, correct: true),
+      ]);
+      expect(controller.state.screening, isNotNull);
+      expect(controller.state.screening!.present, isTrue);
+      expect(
+          controller.state.screening!.direction, ScreeningDirection.redGreen);
+      expect(notifications, 1);
+    });
+
+    test('a clean screening records no deficiency', () {
+      controller.scoreScreening(const [
+        PlateResponse(axis: ScreeningDirection.redGreen, correct: true),
+        PlateResponse(axis: ScreeningDirection.blueYellow, correct: true),
+      ]);
+      expect(controller.state.screening!.present, isFalse);
+      expect(notifications, 1);
     });
   });
 
