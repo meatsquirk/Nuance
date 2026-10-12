@@ -14,6 +14,8 @@ import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/correction/correction_read_endpoint.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
+import 'package:paint_color_assistant/display/display_controller.dart';
+import 'package:paint_color_assistant/display/display_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
@@ -284,6 +286,23 @@ void main() {
       expect(_deps().projectSource.projects(), isEmpty);
     });
 
+    test('defaults the display controller to null (buildApp owns one — bs-08)',
+        () {
+      expect(_deps().displayController, isNull);
+    });
+
+    test('keeps an explicitly injected display controller', () {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        displayController: controller,
+      );
+      expect(identical(deps.displayController, controller), isTrue);
+    });
+
     test('defaults the palette entry to null (opens on Readout — bs-06)', () {
       expect(_deps().paletteEntry, isNull);
     });
@@ -483,6 +502,93 @@ void main() {
       expect(find.byType(ReadoutScreen), findsNothing);
       expect(find.widgetWithText(AppBar, 'Correction'), findsOneWidget);
       expect(find.text('Correction target: Deep Olive Green'), findsOneWidget);
+    });
+  });
+
+  group('buildApp display layer (bs-08)', () {
+    testWidgets('mounts a DisplayReadEndpoint over a controller whose default '
+        'simulation type is the painter\'s CVD type (D-2)', (tester) async {
+      // _deps() carries the default deutan profile.
+      await tester.pumpWidget(buildApp(_deps()));
+      final endpoint = tester.widget<DisplayReadEndpoint>(
+        find.byKey(DisplayReadEndpoint.endpointKey),
+      );
+      expect(endpoint.controller.defaultSimulationType, CvdType.deutan);
+      // The shipped view: no simulation, no grayscale.
+      expect(endpoint.settings.simulationOn, isFalse);
+      expect(endpoint.settings.grayscale, isFalse);
+    });
+
+    testWidgets('derives the default simulation type from an injected profile',
+        (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: const NoopSpeech(),
+            haptics: const NoopHaptics(),
+            cvdProfile: const CvdProfile(type: CvdType.tritan, severity: 0.5),
+          ),
+        ),
+      );
+      final endpoint = tester.widget<DisplayReadEndpoint>(
+        find.byKey(DisplayReadEndpoint.endpointKey),
+      );
+      expect(endpoint.controller.defaultSimulationType, CvdType.tritan);
+    });
+
+    testWidgets('uses an injected display controller as-is', (tester) async {
+      final controller = DisplayController(
+        defaultSimulationType: CvdType.protan,
+      );
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: const NoopSpeech(),
+            haptics: const NoopHaptics(),
+            displayController: controller,
+          ),
+        ),
+      );
+      final endpoint = tester.widget<DisplayReadEndpoint>(
+        find.byKey(DisplayReadEndpoint.endpointKey),
+      );
+      expect(identical(endpoint.controller, controller), isTrue);
+    });
+
+    testWidgets('disposes the default controller it owns when torn down',
+        (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      final controller = tester
+          .widget<DisplayReadEndpoint>(
+            find.byKey(DisplayReadEndpoint.endpointKey),
+          )
+          .controller;
+      await tester.pumpWidget(const SizedBox());
+      // A disposed ChangeNotifier throws if listened to again.
+      expect(() => controller.addListener(() {}), throwsFlutterError);
+    });
+
+    testWidgets('leaves an injected controller alive when torn down (its '
+        'injector owns it)', (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: const NoopSpeech(),
+            haptics: const NoopHaptics(),
+            displayController: controller,
+          ),
+        ),
+      );
+      await tester.pumpWidget(const SizedBox());
+      // Not disposed by buildApp: still usable (no throw).
+      controller.addListener(() {});
+      expect(controller.settings.simulationOn, isFalse);
     });
   });
 

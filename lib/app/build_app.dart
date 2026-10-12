@@ -14,6 +14,10 @@ import '../correction/correction_read_endpoint.dart';
 import '../correction/correction_screen.dart';
 import '../correction/engine/correction_engine.dart';
 import '../correction/engine/correction_engine_impl.dart';
+import '../display/display_controller.dart';
+import '../display/display_read_endpoint.dart';
+import '../display/display_scope.dart';
+import '../display/grayscale_filter.dart';
 import '../compare/comparison_controller.dart';
 import '../compare/comparison_read_endpoint.dart';
 import '../compare/comparison_screen.dart';
@@ -154,6 +158,7 @@ class AppDependencies {
     this.store,
     this.sourcePhotoStore,
     this.pdfShareSink,
+    this.displayController,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -314,6 +319,17 @@ class AppDependencies {
   /// export only produces `ProjectController.lastExport` bytes (plan D-6, no
   /// disk file, no device popup during a test).
   final PdfShareSink? pdfShareSink;
+
+  /// The app-wide display-settings controller (bs-08 DISPLAY-2), or null to let
+  /// [buildApp] create and own a default one.
+  ///
+  /// null (the default) keeps today's assembly: [buildApp] builds a fresh
+  /// [DisplayController] whose [DisplayController.defaultSimulationType] is the
+  /// painter's [cvdProfile] type (D-2), owns it, and disposes it with the tree.
+  /// The bs-08 acceptance harness injects its own so it can both drive the
+  /// setters and observe the resulting view; an injected controller is owned by
+  /// its injector, not by [buildApp].
+  final DisplayController? displayController;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -365,45 +381,114 @@ class AppScope extends InheritedWidget {
 Widget buildApp(AppDependencies deps) {
   return AppScope(
     dependencies: deps,
-    child: MaterialApp(
-      title: 'Paint Color Assistant',
-      theme: ThemeData(useMaterial3: true),
-      home: deps.correctionEntry != null
-          ? CorrectionHomeScreen(
-              target: deps.correctionEntry!.target,
-              currentMix: deps.correctionEntry!.currentMix,
-              captureSource: deps.captureSource!,
-              paletteSource: deps.paletteSource,
-              correctionEngine: deps.correctionEngine,
-              mixingEngine: deps.mixingEngine,
-              sampleSource: deps.sampleSource,
-              speech: deps.speech,
-              router: deps.router,
-            )
-          : deps.captureSource != null
-          ? const CaptureHomeScreen()
-          : deps.comparisonEntry != null
-              ? ComparisonHomeScreen(
-                  sampleSource: deps.sampleSource,
-                  cvdProfile: deps.cvdProfile,
-                  confusionCheck: deps.confusionCheck,
-                  speech: deps.speech,
-                  router: deps.router,
-                )
-              : deps.recipesEntry != null
-                  ? RecipesHomeScreen(
-                      target: deps.recipesEntry!.target,
-                      sampleSource: deps.sampleSource,
-                      paletteSource: deps.paletteSource,
-                      mixingEngine: deps.mixingEngine,
-                      speech: deps.speech,
-                      router: deps.router,
-                    )
-                  : deps.paletteEntry != null
-                      ? const PaletteHomeScreen()
-                      : ReadoutScreen(sample: deps.initialSample),
+    child: _DisplayRoot(
+      injectedController: deps.displayController,
+      defaultSimulationType: deps.cvdProfile.type,
+      child: MaterialApp(
+        title: 'Paint Color Assistant',
+        theme: ThemeData(useMaterial3: true),
+        home: deps.correctionEntry != null
+            ? CorrectionHomeScreen(
+                target: deps.correctionEntry!.target,
+                currentMix: deps.correctionEntry!.currentMix,
+                captureSource: deps.captureSource!,
+                paletteSource: deps.paletteSource,
+                correctionEngine: deps.correctionEngine,
+                mixingEngine: deps.mixingEngine,
+                sampleSource: deps.sampleSource,
+                speech: deps.speech,
+                router: deps.router,
+              )
+            : deps.captureSource != null
+            ? const CaptureHomeScreen()
+            : deps.comparisonEntry != null
+                ? ComparisonHomeScreen(
+                    sampleSource: deps.sampleSource,
+                    cvdProfile: deps.cvdProfile,
+                    confusionCheck: deps.confusionCheck,
+                    speech: deps.speech,
+                    router: deps.router,
+                  )
+                : deps.recipesEntry != null
+                    ? RecipesHomeScreen(
+                        target: deps.recipesEntry!.target,
+                        sampleSource: deps.sampleSource,
+                        paletteSource: deps.paletteSource,
+                        mixingEngine: deps.mixingEngine,
+                        speech: deps.speech,
+                        router: deps.router,
+                      )
+                    : deps.paletteEntry != null
+                        ? const PaletteHomeScreen()
+                        : ReadoutScreen(sample: deps.initialSample),
+      ),
     ),
   );
+}
+
+/// Owns the app-wide [DisplayController] and exposes it to the whole tree
+/// (bs-08 DISPLAY-2).
+///
+/// A small stateful root so the default controller [buildApp] creates has a
+/// lifecycle to be disposed with the app, while an [injectedController] (the
+/// acceptance harness's, or `main.dart`'s) is left for its injector to own. It
+/// wraps [child] (the `MaterialApp`) in the [DisplayScope] every colour surface
+/// reads and the [DisplayReadEndpoint] the acceptance suite observes, with the
+/// inert root [GrayscaleFilter] directly around the app (DISPLAY-7 makes it
+/// active). Placed above the `MaterialApp` so pushed routes read the scope too.
+class _DisplayRoot extends StatefulWidget {
+  const _DisplayRoot({
+    required this.injectedController,
+    required this.defaultSimulationType,
+    required this.child,
+  });
+
+  /// The controller to use, or null to create and own a default one.
+  final DisplayController? injectedController;
+
+  /// The type a created default controller pre-selects for simulation (D-2).
+  final CvdType defaultSimulationType;
+
+  /// The app subtree (the `MaterialApp`) wrapped in the display layer.
+  final Widget child;
+
+  @override
+  State<_DisplayRoot> createState() => _DisplayRootState();
+}
+
+class _DisplayRootState extends State<_DisplayRoot> {
+  late final DisplayController _controller;
+
+  /// Whether this state created [_controller] and must dispose it (an injected
+  /// controller is owned by its injector).
+  late final bool _owned;
+
+  @override
+  void initState() {
+    super.initState();
+    final injected = widget.injectedController;
+    _owned = injected == null;
+    _controller = injected ??
+        DisplayController(defaultSimulationType: widget.defaultSimulationType);
+  }
+
+  @override
+  void dispose() {
+    if (_owned) _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DisplayScope(
+      controller: _controller,
+      child: DisplayReadEndpoint(
+        key: DisplayReadEndpoint.endpointKey,
+        controller: _controller,
+        child: GrayscaleFilter(child: widget.child),
+      ),
+    );
+  }
 }
 
 /// The Capture screen the app opens on when a capture source is wired (bs-02).

@@ -1,6 +1,6 @@
 # Module DISPLAY — cross-cutting display pipeline (simulation + grayscale)
 
-**Status:** In progress — DISPLAY-1 done, next DISPLAY-2
+**Status:** In progress — DISPLAY-2 done, next SETTINGS-1 (shell; the simulation/grayscale behaviour phases DISPLAY-3..8 wait on G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/display_settings.dart`, `lib/display/display_controller.dart`, `lib/display/display_scope.dart`, `lib/display/display_read_endpoint.dart`, `lib/display/color_simulation.dart` (thin reuse of `projectDichromat`), `lib/display/grayscale_filter.dart`; integration points in `lib/widgets/color_chip.dart` and `lib/app/build_app.dart` (root grayscale wrapper + `DisplayScope` wiring). Unit tests under `test/display/`.
 **Depends on:** — · **Blocks:** SETTINGS (needs `DisplayController`), ITEST (needs the read endpoint + rendering), SPEECH (scaffold only)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | DISPLAY-1 | scaffold | — | ✅ Done | 4,979,118 | 14m 13s (15m 17s) |
-| DISPLAY-2 | shell | — | ⬜ Next | | |
+| DISPLAY-2 | shell | — | ✅ Done | 8,485,201 | 15m 04s (15m 04s) |
 | DISPLAY-3 | behavior | AC-2 | ⬜ Todo | | |
 | DISPLAY-4 | behavior | AC-3 | ⬜ Todo | | |
 | DISPLAY-5 | behavior | AC-4 | ⬜ Todo | | |
@@ -72,6 +72,20 @@
   2. Wire `DisplayController` into `AppDependencies`/`buildApp` (new optional dep, defaulting to a fresh controller) and wrap the app in `DisplayScope` and an inert root grayscale wrapper.
   3. `ColorChip` reads `DisplayScope.of(context)` but the transform is identity (behaviour unchanged).
 - **Exit criteria:** unit gate passes (100% on the new files); the existing unit + integration suites stay green; no visible behaviour change (sim/grayscale still no-ops). Read endpoint reports the default settings.
+
+### Result — DISPLAY-2 (2026-10-12)
+
+- **Landed (all inert / behaviour unchanged):** `lib/display/display_settings.dart` (`DisplaySettings` value type — `CvdType? simulationType`, `double simulationSeverity` 0..1, `bool grayscale`, `simulationOn` getter, value equality); `display_controller.dart` (`DisplayController extends ChangeNotifier` with `setSimulationType/Severity/Grayscale` — pure setters, no-op guards, notify; `defaultSimulationType` seeded from the profile per D-2; **no** cross-field rules yet — DISPLAY-6 adds the D-3 clear-on-grayscale); `display_scope.dart` (`DisplayScope extends InheritedNotifier<DisplayController>` with `of`/`maybeOf`); `display_read_endpoint.dart` (keyed `DisplayReadEndpoint`, `of`, `settings` convenience); `color_simulation.dart` (`simulateColor(Color, DisplaySettings)` — inert identity, D-4 chokepoint); `grayscale_filter.dart` (`GrayscaleFilter` — inert root pass-through, D-5).
+- **Wiring:** `AppDependencies` gains optional `displayController`; `buildApp` wraps the tree in a stateful `_DisplayRoot` → `DisplayScope` → `DisplayReadEndpoint` (keyed) → inert `GrayscaleFilter` → `MaterialApp` (scope above `MaterialApp`, so pushed routes read it). A null `displayController` → `buildApp` creates+owns a default whose `defaultSimulationType = deps.cvdProfile.type` and disposes it with the tree; an injected one is left for its injector. `ColorChip` now reads `DisplayScope.maybeOf` and maps its swatch through `simulateColor` (identity) — one Container still, true colour; falls back to defaults with no scope (its standalone tests unchanged).
+- **Verification:** `flutter analyze` clean (No issues found); `flutter test --coverage` = **885 unit pass** (849 baseline + 36 new); coverage gate **100% on all 8 touched lib files** (PASS); bs08 integration suite green on sim (see Checkpoint). Fix passes: 0/3 (green on first full run).
+- **Tokens / Time:** see dashboard row (ledger `DISPLAY-2`).
+
+### Checkpoint / Handoff — DISPLAY-2
+
+- **Frozen for SETTINGS-1 / SPEECH-1 / ITEST-1 / DISPLAY-3:** `DisplayController` (`settings`, `defaultSimulationType`, the three setters), `DisplaySettings` (fields + `simulationOn`), `DisplayScope.of` / `DisplayScope.maybeOf`, `DisplayReadEndpoint` (`endpointKey = Key('display-read-endpoint')`, `of`, `settings`), `simulateColor(Color, DisplaySettings)` and `GrayscaleFilter({required child})`. SETTINGS-1 binds the panel controls to the `DisplayController` setters (and reads `defaultSimulationType` for the pre-selected type, D-2); DISPLAY-3/4 fill `simulateColor` (projection via `projectDichromat`) and the alongside-original render in `ColorChip`; DISPLAY-7 makes `GrayscaleFilter` read the scope and wrap in a saturation-0 `ColorFiltered`.
+- **Merge-risk:** DISPLAY-2 edited `lib/app/build_app.dart` (the `_DisplayRoot` wrapper + the `displayController` dep) — SETTINGS-1 and SPEECH-1 touch the same file; run the shells in order.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (default; pending skipped) / add `--dart-define=BS08_RUN_PENDING=true` (run-pending). Toolchain: `/Users/matthew.quirk/development/flutter/bin` on PATH; booted sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
 
 ## Phase DISPLAY-3 — AC-2 simulation off = trichromat (identity)
 
