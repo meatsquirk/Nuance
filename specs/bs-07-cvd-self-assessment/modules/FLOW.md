@@ -1,6 +1,6 @@
 # Module FLOW — onboarding controller, screens, flow
 
-**Status:** Not started
+**Status:** In progress — FLOW-1 (shell) ✅ Done; next FLOW-2 (AC-14) blocked by G-2 + G-5
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/onboarding_controller.dart`, `onboarding_state.dart`, `onboarding_read_endpoint.dart`, `onboarding_steps.dart`; `lib/onboarding/screens/` (host + lighting, intake, screening, arrangement, threshold, result step widgets with keyed regions); route wiring in `lib/app/router.dart` + `lib/palette/self_assessment_entry_screen.dart` (replaced). Behavior phases in ENGINE/PROFILE add thin controller calls here (merge-risky — rebase before editing).
 **Depends on:** ENGINE (estimate types + scoring), PROFILE (save seam) · **Blocks:** ITEST, SIGNOFF
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | | |
 | 2 | behavior | AC-14 | ⬜ Todo | | |
 | 3 | behavior | AC-2 | ⬜ Todo | | |
 | 4 | behavior | AC-6, AC-7, AC-8 | ⬜ Todo | | |
@@ -107,6 +107,25 @@
 - **Acceptance gate:** un-pend AC-1; suite green; coverage 100% touched; grade A (both the approximate label and the clinical-test recommendation asserted — G4).
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result — ✅ Done (shell)
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed (FLOW-1 shell):**
+  - `lib/onboarding/onboarding_steps.dart` — `OnboardingStep` (value type) + `defaultOnboardingSteps` (the provisional four: Setup / Intake / Vision tests / Result — D-4 proposal, **pinned at FLOW-2 once G-5 resolves**).
+  - `lib/onboarding/onboarding_state.dart` — `OnboardingState` immutable snapshot (stepIndex; the three lighting flags + `testingStarted`; `prior`; `screening`; `arrangementPool`/`arrangedCaps`/`arrangementSkipped`; `threshold`; `estimate`; `calibratedSeverity`; `caveatShown`; `saved`) with value equality (lists compared element-wise) and `lightingConfirmed`.
+  - `lib/onboarding/onboarding_controller.dart` — `OnboardingController extends ChangeNotifier` over an injected `AssessmentEngine` (default `ShellAssessmentEngine`) + optional `CvdProfileStore`; `state`/`steps`/`stepTotal` getters. The 14 action methods (`confirmLightingCheck`, `tryContinue`, `answerIntake`, `reportDiagnosis`, `scoreScreening`, `placeCap`, `startOver`, `skipArrangement`, `scoreThreshold`, `advanceToResult`, `setType`, `setSeverity`, `confirmCalibration`, `save`) **throw `UnimplementedError`** until their behaviour phase fills them (the bs-02/bs-03 shell convention). `LightingCheck` enum added.
+  - `lib/onboarding/onboarding_read_endpoint.dart` — `OnboardingReadEndpoint` InheritedWidget over the controller (`of`/`endpointKey`/`updateShouldNotify`), the assessment-state observation seam.
+  - `lib/onboarding/screens/` — `OnboardingHost` (stateful; owns the controller, resolves `CvdProfileStore` from the enclosing `AppScope` or an in-memory fallback, mounts **both** `CvdProfileReadEndpoint` and `OnboardingReadEndpoint`), `OnboardingScreen` (pure view; `SingleChildScrollView`+`Column` so every keyed region is an eager anchor; AppBar "CVD self-assessment"; carries the entry `scaffoldKey`), and keyed step widgets `progress_region.dart` ("Step N of M"), `lighting_step.dart` (E36 + E43), `intake_step.dart` (E37), `screening_step.dart`, `arrangement_step.dart` (E38 pool/arranged + E39 + E43), `threshold_step.dart`, `result_step.dart` (E40 + E41 slider + E43 save + caveat area). All controls inert (`onPressed`/`onChanged: null`).
+  - `lib/palette/self_assessment_entry_screen.dart` (replaced) — now builds `OnboardingHost(scaffoldKey: screenKey)`; the stable `ValueKey('self-assessment-entry-screen')` anchor is preserved (now on the host's scaffold). `lib/app/router.dart` doc updated (route unchanged).
+- **Gate (shell):** `flutter analyze` clean · unit **957 passed** (+34: steps/state/controller/endpoint/host + updated entry-screen test) · coverage gate vs `main` **100% on all 23 touched lib files** · integration host suite **134 passed** (bs-06 palette suite incl.) — existing cross-feature suite green. No acceptance/grade gate (shell). **Fix passes: 1/3** (first full run: 2 host-test failures from the lazy `ListView` not building below-the-fold step regions → switched to `SingleChildScrollView`+`Column`; green on rerun).
+- **Updated test:** `test/palette/self_assessment_entry_screen_test.dart` rewritten (the bs-06 placeholder it asserted is replaced) to assert the onboarding host renders behind the preserved anchor. `test/app/router_test.dart` and `test/palette/vision_profile_card_test.dart` unchanged and green (the entry screen boots without an `AppScope`).
+- **Tokens / time:** 13,152,941 · 26m 57s.
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces** (behaviour phases implement against these; the step widgets' `onPressed`/`onChanged` and the controller method bodies are what they fill):
+  - `OnboardingController({AssessmentEngine engine = const ShellAssessmentEngine(), CvdProfileStore? profileStore, List<OnboardingStep> steps = defaultOnboardingSteps})`; `state`/`steps`/`stepTotal`; the 14 action methods above (signatures frozen — bodies throw). `LightingCheck {brightness, nightLight, daylight}`.
+  - `OnboardingState` fields + `lightingConfirmed`; severity 0..1. `OnboardingReadEndpoint` (`endpointKey` `onboarding-read-endpoint`, `of`). `CvdProfileReadEndpoint` is mounted by the host (store = `CvdProfileStore(deps.store)`), satisfying PROFILE-1's handoff.
+  - Region/control keys (behaviour phases drive these): progress `onboarding-progress-region`; lighting `onboarding-lighting-step` + continue `onboarding-lighting-continue`; intake `onboarding-intake-step`; screening `onboarding-screening-step`; arrangement `onboarding-arrangement-step` + `-pool`/`-arranged`/`-start-over`/`-skip`; threshold `onboarding-threshold-step`; result `onboarding-result-step` + `-type`/`-severity`/`-caveat`/`-save`.
+- **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$PATH:/Users/matthew.quirk/development/flutter/bin"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · `flutter test integration_test/` (host).
+- **For FLOW-2 (AC-14, next — blocked by G-2 + G-5):** fix the concrete four steps (per G-5), implement the step advance (replace `tryContinue`'s throw / add step navigation), render the progress "N of 4" and expose `stepIndex`/`stepTotal`. The shell lays out all regions at once; FLOW-2 may move to a stepwise presentation.
+- **Known gaps:** every controller action throws and every control is inert (behaviour phases wire them); `band` and a live `estimate` arrive with FLOW-5/ENGINE-7; `save` writes nothing until PROFILE-2; the four-step count is provisional until G-5.
