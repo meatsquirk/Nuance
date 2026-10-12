@@ -1,6 +1,6 @@
 # Module ENGINE — assessment domain (+ feature scaffold)
 
-**Status:** In progress — ENGINE-1 (scaffold) ✅ Done; next ENGINE-2 (shell)
+**Status:** In progress — ENGINE-2 (shell) ✅ Done; next ENGINE-3 (behavior, AC-3) blocked by G-2 + FLOW-1
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/engine/` (`assessment_engine.dart`, `tier_results.dart`, `cvd_estimate.dart`, `severity_band.dart`); the feature scaffold (branch, baseline, coverage-gate confirmation, `integration_test/bs07/pending.dart`, runner target). Behavior phases also wire a thin controller call in `lib/onboarding/onboarding_controller.dart` (FLOW-owned file — noted per phase; merge-risky with FLOW).
 **Depends on:** — · **Blocks:** PROFILE, FLOW, ITEST
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 3,619,703 | 13m 16s |
-| 2 | shell | — | ⬜ Next | | |
+| 2 | shell | — | ✅ Done | 3,709,673 | 9m 29s |
 | 3 | behavior | AC-3 | ⬜ Todo | | |
 | 4 | behavior | AC-4 | ⬜ Todo | | |
 | 5 | behavior | AC-5 | ⬜ Todo | | |
@@ -75,6 +75,24 @@
   2. `abstract interface class AssessmentEngine` with methods: `recordIntake(...)→StartingPrior`, `seedFromDiagnosis(CvdType)→StartingPrior`, `scoreScreening(...)→ScreeningResult`, `scoreThreshold(...)→ThresholdResult`, `assemble({prior, screening, arrangement, threshold})→CvdEstimate`, `band(double severity)→SeverityBand`.
   3. A shell implementation whose methods return trivial/default values (keep the existing suite green; **no** real scoring). Value equality + 100% line coverage on the new files (every ctor/branch exercised by unit tests).
 - **Exit criteria:** unit gate green; 100% line coverage on the new files; existing suite unchanged; no behavior.
+
+### Result
+
+- **Landed:** `lib/onboarding/engine/` with the four shell files. `tier_results.dart` — `enum ScreeningDirection {redGreen, blueYellow}`, `IntakeAnswer {questionId, value}`, `StartingPrior {CvdType? type, ScreeningDirection? direction, double weight=0}` (+ `const none`), `PlateResponse {axis, correct}`, `ScreeningResult {present, direction}`, `ArrangementResult {present}`, `ThresholdProbe {contrast, detected}`, `ThresholdResult {severity}`. `cvd_estimate.dart` — `CvdEstimate {type, severity, prior, screening?, threshold?, arrangementPresent=false}`. `severity_band.dart` — `enum SeverityBand {mild, moderate, strong}` + `label` getter (AC-11 vocabulary only; boundaries deferred to ENGINE-7/G-4). `assessment_engine.dart` — `abstract interface class AssessmentEngine` + `ShellAssessmentEngine` (trivial defaults, no scoring). All value types carry `==`/`hashCode`/`toString`.
+- **Interface decisions (frozen):** screening input is `List<PlateResponse>` (per-plate axis+correctness), threshold input is `List<ThresholdProbe>` (contrast+detected) — `PlateResponse`/`ThresholdProbe` are new input types not in the original type list (the method inputs were `...`), chosen so ENGINE-5/6 score without changing the interface. `StartingPrior` carries an optional type **and** direction + a 0..1 weight (D — direction vs type). Severity 0..1 throughout.
+- **Gates:** unit ✅ **912** (849 baseline unchanged + 63 new); coverage ✅ **100%** on all 4 touched files (gate PASS). No acceptance/grade gate (shell kind). No `lib/` wiring (AppDependencies left to PROFILE-1, controller to FLOW-1).
+- **Coverage note:** an enum-only `severity_band.dart` emits no executable lines → absent from `lcov.info` → gate FAIL ("NO COVERAGE DATA"). Fixed by the `label` getter (the repo's established enum-file pattern, cf. `lib/capture/capture_accuracy.dart`), which is tested vocabulary, not the gated band logic.
+- **Fix passes:** 1/3 (the `severity_band` coverage fix above).
+- **Tokens / Time:** 3,709,673 · 9m 29s.
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces** (behavior phases implement against these, don't reshape them):
+  - `AssessmentEngine` in `lib/onboarding/engine/assessment_engine.dart`: `recordIntake(List<IntakeAnswer>)→StartingPrior` (ENGINE-3, AC-3), `seedFromDiagnosis(CvdType)→StartingPrior` (ENGINE-4, AC-4), `scoreScreening(List<PlateResponse>)→ScreeningResult` (ENGINE-5, AC-5), `scoreThreshold(List<ThresholdProbe>)→ThresholdResult` (ENGINE-6, AC-9), `assemble({required StartingPrior prior, ScreeningResult? screening, ArrangementResult? arrangement, ThresholdResult? threshold})→CvdEstimate` (FLOW-5), `band(double severity)→SeverityBand` (ENGINE-7, AC-11, pending G-4).
+  - `ShellAssessmentEngine` is the trivial stand-in: `recordIntake`/`seedFromDiagnosis`→`StartingPrior.none`, `scoreScreening`→absent/red-green, `scoreThreshold`→severity 0, `assemble`→`CvdType.deutan`/severity 0 (passes prior + tier results through; `arrangementPresent = arrangement?.present ?? false`), `band`→`SeverityBand.mild`. Each behavior phase replaces one method with real scoring and keeps the rest trivial.
+  - `SeverityBand.label` returns the band name; the severity→band mapping is `band()`, pinned at ENGINE-7 once G-4 fixes the 30/60/90 boundaries.
+- **Verification commands** (unchanged from ENGINE-1, run from the worktree with `/Users/matthew.quirk/development/flutter/bin` on PATH): `flutter analyze`; `flutter test --coverage && dart run tool/coverage_gate.dart main`.
+- **Next:** ENGINE-2's files unblock **FLOW-1** (shell) and **ITEST-1** once PROFILE-1 is also done; **PROFILE-1** (shell) is startable in parallel but needs **G-4** decided first. Behavior ENGINE-3..7 remain blocked by G-2 (acceptance tests, ITEST-4) and the shells.
 
 ## Phase 3 — AC-3: an intake answer contributes to the starting prior
 
