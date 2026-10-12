@@ -56,9 +56,27 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('bs-09 pending gate (scaffold guard)', () {
-    test('pending map covers exactly AC-1..AC-10', () {
-      final expected = {for (var i = 1; i <= 10; i++) 'AC-$i'};
-      expect(pendingACs.keys.toSet(), expected);
+    // Un-pended by the behaviour phases so far: CAPTURE-3 un-pended AC-2 (torch
+    // mechanism + litByTorch stamp). This set grows one behaviour phase at a
+    // time as each deletes its row in `bs09/pending.dart`; the pending map must
+    // stay the exact complement of it across all 10 ACs.
+    const unpended = <String>{
+      'AC-2',
+    };
+
+    test('pending map is the exact complement of the un-pended ACs across all '
+        'AC-1..AC-10', () {
+      for (var i = 1; i <= 10; i++) {
+        final ac = 'AC-$i';
+        expect(
+          pendingACs.containsKey(ac),
+          !unpended.contains(ac),
+          reason: unpended.contains(ac)
+              ? '$ac is un-pended and must not be in the pending map'
+              : '$ac must still have a pending entry',
+        );
+      }
+      expect(pendingACs.length, 10 - unpended.length);
     });
 
     test('every pending AC is owned by a real behaviour phase', () {

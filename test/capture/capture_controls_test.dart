@@ -14,21 +14,13 @@ CaptureController _controller() => CaptureController(
       ),
     );
 
-/// A controller that can push a state through the protected [emit] seam, so the
-/// controls' state-driven labels (the torch toggle) can be rendered against a
-/// chosen state without the deferred actions.
-class _DrivableController extends CaptureController {
-  _DrivableController()
-      : super(
-          source: SoftwareCaptureSource(
-            const SceneSpec(
-              groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
-            ),
-          ),
-        );
-
-  void push(CaptureState next) => emit(next);
-}
+/// The text shown inside the torch toggle (its state-driven label).
+String? _torchLabel(WidgetTester tester) => tester
+    .widget<Text>(find.descendant(
+      of: find.byKey(CaptureControls.torchKey),
+      matching: find.byType(Text),
+    ))
+    .data;
 
 Future<void> _pump(WidgetTester tester, CaptureController controller) =>
     tester.pumpWidget(
@@ -245,44 +237,48 @@ void main() {
     }
   });
 
-  testWidgets('the torch toggle reads "Torch" while off and drives '
-      'turnTorchOn (AC-1/AC-2, deferred to CAPTURE-3)', (tester) async {
+  testWidgets('the torch toggle reads "Torch" while off and lights it on a tap '
+      '(CAPTURE-3)', (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
-    await _pump(tester, controller);
+    await _pumpListening(tester, controller);
 
     // Off by default: the toggle reads "Torch".
     expect(controller.state.torchOn, isFalse);
     final button =
         tester.widget<TextButton>(find.byKey(CaptureControls.torchKey));
     expect(button.onPressed, isNotNull, reason: 'the torch toggle is wired');
-    final label = tester.widget<Text>(find.descendant(
-        of: find.byKey(CaptureControls.torchKey), matching: find.byType(Text)));
-    expect(label.data, 'Torch');
+    expect(_torchLabel(tester), 'Torch');
 
-    // Tapping reaches the deferred torch mechanism (CAPTURE-3) — a stub throw.
+    // Tapping lights the torch (CAPTURE-3): the state flips, the warning is
+    // raised, and the label re-renders to the lit branch.
     await tester.tap(find.byKey(CaptureControls.torchKey));
     await tester.pump();
-    expect(tester.takeException(), isA<UnimplementedError>(),
-        reason: 'torch mechanism lands in CAPTURE-3');
+    expect(tester.takeException(), isNull);
+    expect(controller.state.torchOn, isTrue);
+    expect(controller.state.torchWarning, isNotNull,
+        reason: 'lighting the torch raises the colour-temperature warning');
+    expect(_torchLabel(tester), '✓ Torch');
   });
 
-  testWidgets('the torch toggle reads "✓ Torch" while lit and drives '
-      'turnTorchOff (AC-1/AC-2, deferred to CAPTURE-3)', (tester) async {
-    final controller = _DrivableController();
+  testWidgets('the torch toggle reads "✓ Torch" while lit and extinguishes it '
+      'on a tap (CAPTURE-3)', (tester) async {
+    final controller = _controller();
     addTearDown(controller.dispose);
-    // Render the torch-lit branch: both the label and the onPressed target flip.
-    controller.push(const CaptureState(torchOn: true));
     await _pumpListening(tester, controller);
+    // Light the torch so the lit branch renders (both label and onPressed flip).
+    controller.turnTorchOn();
+    await tester.pump();
+    expect(_torchLabel(tester), '✓ Torch');
 
-    final label = tester.widget<Text>(find.descendant(
-        of: find.byKey(CaptureControls.torchKey), matching: find.byType(Text)));
-    expect(label.data, '✓ Torch');
-
+    // Tapping turns it off (CAPTURE-3): torch off, warning cleared, label back.
     await tester.tap(find.byKey(CaptureControls.torchKey));
     await tester.pump();
-    expect(tester.takeException(), isA<UnimplementedError>(),
-        reason: 'turnTorchOff lands in CAPTURE-3');
+    expect(tester.takeException(), isNull);
+    expect(controller.state.torchOn, isFalse);
+    expect(controller.state.torchWarning, isNull,
+        reason: 'extinguishing clears the colour-temperature warning');
+    expect(_torchLabel(tester), 'Torch');
   });
 
   testWidgets('"Sample points" drives the deferred sampleMarkedPoints '

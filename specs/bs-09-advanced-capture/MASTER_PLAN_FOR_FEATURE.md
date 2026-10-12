@@ -1,7 +1,7 @@
 # Master Plan — Advanced capture (bs-09)
 
 **Spec:** [bs-09-advanced-capture.feature](../bs-09-advanced-capture.feature)
-**Status:** In progress — acceptance stage complete; **G-2 approved 2026-10-12**, ITEST-4 done; all 10 behavior phases open across two concurrent tracks (CAPTURE/SCREEN + SOURCE); 10 AC tests pending, suite 24 A
+**Status:** In progress — behavior stage; CAPTURE-3 done (AC-2 ✅, 1/10 behavior ACs); next SCREEN-2 (AC-1) ∥ CAPTURE-4 (AC-3) ∥ SOURCE-2 (AC-6/8); no open gate
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) §"Cross-platform strategy" (CaptureSource / wide colour space / RAW fallback; D2), §"Capture & sampling" (torch, multi-point) · [scope](../../docs/paint-color-app-scope.md) §4.1 (flash/torch *Should*, multi-point *Should*, RAW/DNG *Could*) · **no wireframe yet** (the spec is proposed ahead of any mock; a future revision adds its UX)
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-02's capture surface and bs-03's comparison, both already merged to `main` (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -41,7 +41,7 @@
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
 | AC-1 | Turning on the torch warns that its colour temperature biases the reading | ITEST-2 `TestAC01_TorchWarnsColourTemp` | SCREEN-2 | ⬜ Todo |
-| AC-2 | A reading taken under the torch is labelled as lit by the torch | ITEST-2 `TestAC02_ReadingLabelledTorchLit` | CAPTURE-3 | ⬜ Todo |
+| AC-2 | A reading taken under the torch is labelled as lit by the torch | ITEST-2 `TestAC02_ReadingLabelledTorchLit` | CAPTURE-3 | ✅ Done |
 | AC-3 | The painter samples several points together and gets all of them at once | ITEST-2 `TestAC03_MultiPointSamplesAllAtOnce` | CAPTURE-4 | ⬜ Todo |
 | AC-4 | Each multi-point reading keeps its own position and value | ITEST-2 `TestAC04_EachPointKeepsPositionValue` | SCREEN-3 | ⬜ Todo |
 | AC-5 | Any two sampled points can be sent to a comparison | ITEST-2 `TestAC05_TwoPointsToComparison` | CAPTURE-5 | ⬜ Todo |
@@ -123,7 +123,7 @@ SOURCE-4; it is *pending* until then, not a limited test.
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` torch control + colour-space/RAW capability, selection + fallback, normalization contract, two-platform modelling; extended `SceneSpec`/`FakeCaptureSource` | bs-02 source | 🔄 In progress (SOURCE-1 done) |
-| CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | 🔄 In progress (CAPTURE-1, CAPTURE-2 done) |
+| CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | 🔄 In progress (CAPTURE-1/2 + CAPTURE-3 done; next CAPTURE-4) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Capture screen: torch control + colour-temperature warning banner; multi-point markers + per-point readings display; send-to-comparison control | CAPTURE | 🔄 In progress (SCREEN-1 done) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 + ITEST-4 review; all 10 AC tests pending + red baseline; G-2 approved 2026-10-12) |
 
@@ -177,9 +177,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 8,511,371 | 23m 24s | default green (+11 ~10); run-pending red all 10 ACs (AC-6..10 on Thens, AC-1..5 on UnimplementedError); grade 5 A (suite 24 A); fake applies rawColorShift + rebootCaptureOf helper (non-AC infra); 1 fix pass |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,911,381 | 7m 15s | packet assembled (per-AC catalogue + red baseline + 24 A grid + fixtures + 3 read-first judgment calls); regression reconfirmed green (analyze clean, unit 892, cov 100%, default accept +11 ~10); no code; **G-2 approved 2026-10-12 — Matt Quirk** |
 | 8a | SIGNOFF-DECISION | ITEST-4 approved (G-2 test review) | ✅ Done | 1,643,744 | 3m 07s | Matt Quirk approved the acceptance-test packet 2026-10-12 11:34 EDT; ITEST-4 closed; all 10 behavior phases opened |
-| 9 | CAPTURE-3 | behavior: AC-2 — torch mechanism (turn on/off, CT warning, acknowledge) + commit stamps litByTorch | ⬜ Next | | | startable now; ∥ SOURCE-2 track |
-| 10 | SCREEN-2 | behavior: AC-1 — torch control + colour-temperature warning banner | ⬜ Todo | | | after CAPTURE-3 |
-| 11 | CAPTURE-4 | behavior: AC-3 — markPoint + sampleMarkedPoints → one reading per point | ⬜ Todo | | | after CAPTURE-3 (controller) |
+| 9 | CAPTURE-3 | behavior: AC-2 — torch mechanism (turn on/off, CT warning, acknowledge) + commit stamps litByTorch | ✅ Done | 10,436,918 | 15m 55s | AC-2 un-pended + green; unit 896; cov 100% (10 files); accept default all-pass; grade AC-2 A; 1 fix pass |
+| 10 | SCREEN-2 | behavior: AC-1 — torch control + colour-temperature warning banner | ⬜ Next | | | unblocked (CAPTURE-3 done); ∥ CAPTURE-4 ∥ SOURCE-2 |
+| 11 | CAPTURE-4 | behavior: AC-3 — markPoint + sampleMarkedPoints → one reading per point | ⬜ Todo | | | unblocked (CAPTURE-3 controller done); serial w/ CAPTURE-5 on controller |
 | 12 | SCREEN-3 | behavior: AC-4 — readings shown, each keeping position + its own value | ⬜ Todo | | | after CAPTURE-4; ∥-risk SCREEN-2 |
 | 13 | CAPTURE-5 | behavior: AC-5 — send two readings to the comparison (router pair handoff) | ⬜ Todo | | | after CAPTURE-4 |
 | 14 | SOURCE-2 | behavior: AC-6, AC-8 — colour-space selection + narrower fallback + tag threaded to Sample | ⬜ Todo | | | ∥ CAPTURE track |
@@ -192,18 +192,19 @@ when the row is marked done.
 
 ## Next phase
 
-**G-2 is approved (2026-10-12 — Matt Quirk); the acceptance stage is complete and ITEST-4 is done.** All ten
-behaviour phases are now open, with **no open gate left**. Two tracks run **concurrently** (disjoint files) —
-start either, one phase per session, each in its own `--parallel` worktree where they overlap:
+**CAPTURE-3 done (AC-2 ✅).** No open gate. Behaviour stage, one phase/session, each in its own `--parallel`
+worktree where files overlap:
 
-- **CAPTURE/SCREEN track** — **CAPTURE-3** (torch, AC-2) → **SCREEN-2** (banner, AC-1) ∥ **CAPTURE-4**
-  (multi-point, AC-3) → {**SCREEN-3** (readings, AC-4), **CAPTURE-5** (comparison handoff, AC-5)}.
-- **SOURCE track** — **SOURCE-2** (colour-space + fallback, AC-6/8) → {**SOURCE-3** (RAW, AC-7),
-  **SOURCE-4** (normalization, AC-9/10)}. SOURCE-4 must normalize the committed sample as part of the capture
-  **contract** (AC-9/AC-10 do **not** call `whenCalibrate`).
-- **Startable now (no deps):** CAPTURE-3 and SOURCE-2 (disjoint files — safe to run in parallel sessions).
-  SCREEN-2 waits on CAPTURE-3; CAPTURE-4 waits on CAPTURE-3's controller; SCREEN-3/CAPTURE-5 wait on
-  CAPTURE-4; SOURCE-3/SOURCE-4 wait on SOURCE-2.
+- **Startable now (disjoint files — safe in parallel sessions): SCREEN-2, CAPTURE-4, SOURCE-2.**
+  - **SCREEN-2** (AC-1) — render the torch warning banner. CAPTURE-3 froze the string
+    (`CaptureController.torchColorTemperatureWarning`, already passes AC-1's text asserts) + the dismiss action
+    (`acknowledgeTorchWarning`); SCREEN-2 is wiring/rendering `CaptureLiveView.torchWarningKey` only.
+  - **CAPTURE-4** (AC-3) — `markPoint`/`sampleMarkedPoints` on `capture_controller.dart` (serial with CAPTURE-5).
+  - **SOURCE-2** (AC-6/8) — colour-space selection + narrower fallback + tag threaded to `Sample`.
+- **Then:** SCREEN-3 (AC-4) + CAPTURE-5 (AC-5) after CAPTURE-4; SOURCE-3 (AC-7) + SOURCE-4 (AC-9/10, normalizes
+  as capture **contract** — no `whenCalibrate`) after SOURCE-2. SIGNOFF-1 after all eight.
+- **Each un-pend must add its AC to the `unpended` set in `advanced_capture_test.dart`'s scaffold guard**
+  (CAPTURE-3 added AC-2).
 - **Acceptance runs need a booted sim under `coord.sh with-lock`** (host gates don't):
   `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-…`; run-pending adds
   `--dart-define=BS09_RUN_PENDING=true`. Always pass `-d <udid>` (no device ⇒ zero tests, false green). The
@@ -226,7 +227,8 @@ start either, one phase per session, each in its own `--parallel` worktree where
 | ITEST-3 | 23365e01 | 2026-10-12 10:16 EDT | 10:40 | 23m 24s | 23m 24s | claude-opus-4-8 | 126 | 248,370 | 8,190,882 | 71,993 | 8,511,371 | default green (+11 ~10); run-pending red baseline all 10 ACs (AC-6..10 on Thens: displayP3/raw/wide-control/normalize/platform-agnostic; AC-1..5 unchanged UnimplementedError); unit 892/cov 100% (no lib); grade 5 A / 0 below (suite 24 A); 1 fix pass (rebootCaptureOf for Navigator reuse); fake applies rawColorShift + rebootCaptureOf helper (non-AC test infra) |
 | ITEST-4 | f940c427 | 2026-10-12 10:59 EDT | 11:06 | 7m 15s | 7m 15s | claude-opus-4-8 | 48 | 72,320 | 1,820,247 | 18,766 | 1,911,381 | test-review: packet assembled; regression reconfirmed green (analyze clean, unit 892, cov 100% on 10 files, default accept +11 ~10); suite 24 A / 0 below; no augmentations; no code; G-2 awaiting human decision |
 | SIGNOFF-DECISION | f1b02778 | 2026-10-12 11:32 EDT | 11:35 | 3m 38s | 3m 07s | claude-opus-4-8 | 46 | 52,522 | 1,578,811 | 12,365 | 1,643,744 | ITEST-4 approved |
-| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 11:35** | **9h 52m** | **3h 03m** |  | **1,044** | **1,543,405** | **56,984,841** | **483,113** | **59,012,403** |  |
+| CAPTURE-3 | 2911f38f | 2026-10-12 11:38 EDT | 11:54 | 15m 55s | 15m 55s | claude-opus-4-8 | 172 | 235,223 | 10,150,715 | 50,808 | 10,436,918 | AC-2 un-pended + green; unit 896; cov 100% (10 files); accept default all-pass; grade AC-2 A; 1 fix pass |
+| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 11:54** | **10h 07m** | **3h 19m** |  | **1,216** | **1,778,628** | **67,135,556** | **533,921** | **69,449,321** |  |
 
 ## Sign-off
 

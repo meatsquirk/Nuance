@@ -1,6 +1,6 @@
 # Module CAPTURE — controller: torch, multi-point, send-to-comparison, colour-space stamp
 
-**Status:** In progress — CAPTURE-1 + CAPTURE-2 done; next SCREEN-1 (SCREEN module)
+**Status:** In progress — CAPTURE-1/2 + CAPTURE-3 done (AC-2 un-pended); next CAPTURE-4 (AC-3), or SCREEN-2 (SCREEN module, AC-1) now unblocked
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`,
 `lib/capture/capture_read_endpoint.dart`, `lib/domain/sample.dart` (new fields),
@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|
 | CAPTURE-1 | scaffold | — | ✅ Done | 7,102,221 | 15m 16s (6h 58m) |
 | CAPTURE-2 | shell | — | ✅ Done | 8,882,434 | 17m 46s |
-| CAPTURE-3 | behavior | AC-2 | ⬜ Todo | | |
+| CAPTURE-3 | behavior | AC-2 | ✅ Done | 10,436,918 | 15m 55s |
 | CAPTURE-4 | behavior | AC-3 | ⬜ Todo | | |
 | CAPTURE-5 | behavior | AC-5 | ⬜ Todo | | |
 
@@ -210,3 +210,61 @@ by G-2). **G-1 (spec approval) ✅ Resolved 2026-10-12: approved — Matt Quirk*
   defaults (srgb/processed/torch-off) until SOURCE-2/3 + CAPTURE-3; no Capture-screen wiring yet (SCREEN-1); no
   bs-09 AC tests yet (ITEST-1). **Next shell: SCREEN-1** (Capture screen placeholders — torch control + warning,
   multi-point markers + readings list, send-to-comparison).
+
+### Result — CAPTURE-3  <!-- 2026-10-12 -->
+
+- **Torch mechanism implemented (AC-2 full; AC-1's Given made real).** `turnTorchOn()` lights
+  `source.turnTorchOn()`, sets `CaptureState.torchOn`, and raises
+  `CaptureController.torchColorTemperatureWarning` ("Torch on — its colour temperature biases the measured
+  colour.") into `state.torchWarning`. `turnTorchOff()` extinguishes the source, clears `torchOn`, and drops
+  the warning. `acknowledgeTorchWarning()` drops the warning while leaving `torchOn` true. `commit()` already
+  stamped `litByTorch = state.torchOn` (CAPTURE-2 plumbing) — verified, no change needed.
+- **Clear-capable seam:** `CaptureState.copyWith` gained `bool clearTorchWarning = false`; when true it forces
+  `torchWarning` to null past the repo's set-forward `x ?? this.x` merge (the GOTCHA from CAPTURE-2's handoff).
+  Existing callers are unaffected (flag defaults false → identical to before).
+- **Un-pended AC-2** (deleted its row in `integration_test/bs09/pending.dart`). AC-2 now runs green.
+- **Test-artifact change (recorded):** the ITEST-1 scaffold guard `pending map covers exactly AC-1..AC-10`
+  would fail the moment any AC is un-pended, so it was converted to the established bs-06 complement pattern —
+  an `unpended = {AC-2}` set, asserting the pending map is the exact complement across AC-1..AC-10 plus a
+  length check. This strengthens (not weakens) the guard; it still rejects a stray/typo'd/missing entry and
+  now also enforces that exactly the un-pended set is absent. The grows-one-per-phase set mirrors bs-06.
+- **Gates:** `flutter analyze` clean. Unit `flutter test --coverage` → **896 passed** (877 baseline + 19 new:
+  4 controller torch tests, 1 state clear-seam test, 2 rewritten control tests replacing the 2 stub-throw
+  tests + existing). Coverage gate `dart run tool/coverage_gate.dart main` → **100%** line on all 10 touched
+  lib files. Acceptance (default, on booted iPhone 17 sim under the verify lock):
+  `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D…` → **All tests passed** (+12 passed /
+  9 skipped — AC-2 runs green, the other 9 ACs still pending/skipped).
+- **Grade gate:** fresh independent subagent re-graded the only un-pended AC test, **AC-2
+  (`ReadingLabelledTorchLit`) = A** (no downgrade; the in-test torch-off control still rejects "stamp-all", the
+  positive Then rejects "never-stamp"). No neighbour drift (AC-2 is the only un-pended bs-09 AC; its test file
+  + harnesses unmodified). Section appended to `behavior-test-completeness-bs-09-advanced-capture.md`.
+- Augmentations: none assigned to CAPTURE-3; none newly enabled (AC-2's own test already carries its G5
+  control, and no already-green bs-09 AC test can assert more from the torch mechanism).
+- Fix passes: 1/3 (first full run: the scaffold guard failed as designed once AC-2 was un-pended; fixed by the
+  complement-pattern conversion above, then green).
+- Tokens / Time: 10,436,918 · 15m 55s (active = wall, single session).
+- Closed by: unit + 100% coverage; acceptance AC-2 green; grade A.
+
+### Checkpoint / Handoff — CAPTURE-3
+
+- **Frozen for SCREEN-2 / CAPTURE-4:**
+  - `CaptureController.turnTorchOn()/turnTorchOff()/acknowledgeTorchWarning()` are live. `turnTorchOn` sets
+    `state.torchWarning` to `CaptureController.torchColorTemperatureWarning` (contains "temperature" and
+    "biases") — **SCREEN-2 displays this string in the `CaptureLiveView.torchWarningKey` banner** (AC-1); the
+    string already satisfies AC-1's text assertions, so SCREEN-2 is wiring/rendering only.
+  - `acknowledgeTorchWarning()` is the banner's dismiss action (torch stays lit). SCREEN-2 wires a dismiss
+    affordance to it; the harness already drives it via the controller.
+  - `CaptureState.copyWith(clearTorchWarning: true)` is the seam to null-out `torchWarning`; use it rather than
+    constructing a fresh state.
+  - `commit()` stamps `litByTorch` from `state.torchOn` — unchanged; CAPTURE-4 must not disturb it.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host). Acceptance under the lock (booted sim, `-d <udid>` mandatory): `coord.sh with-lock
+  bs-09-advanced-capture <PHASE> --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs09 && export
+  PATH=…/flutter/bin:$PATH && flutter test integration_test/advanced_capture_test.dart -d
+  5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'`; run-pending adds `--dart-define=BS09_RUN_PENDING=true`. No `timeout`
+  on this macOS. **The scaffold guard's `unpended` set (in `advanced_capture_test.dart`) must gain each AC a
+  behaviour phase un-pends** — SCREEN-2 adds AC-1, CAPTURE-4 adds AC-3, etc.
+- **Known gaps:** torch warning banner not yet rendered on screen (SCREEN-2 owns `CaptureLiveView` wiring);
+  multi-point sampling still stubs (CAPTURE-4); colour-space/RAW/normalization tags still shell defaults
+  (SOURCE-2/3/4). CAPTURE-4 (AC-3) and SCREEN-2 (AC-1) are both unblocked by this phase; SOURCE-2 is
+  independently startable.

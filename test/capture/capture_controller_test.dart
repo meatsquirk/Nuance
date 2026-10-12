@@ -745,16 +745,81 @@ void main() {
     });
   });
 
+  group('torch mechanism (CAPTURE-3, AC-1/AC-2)', () {
+    test('turnTorchOn lights the source, sets torchOn and raises the '
+        'colour-temperature warning', () {
+      final source = _source();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.turnTorchOn();
+
+      expect(source.torchOn, isTrue, reason: 'the source torch is lit');
+      expect(controller.state.torchOn, isTrue);
+      expect(controller.state.torchWarning, isNotNull);
+      expect(notifications, 1, reason: 'lighting the torch emits one change');
+    });
+
+    test('the colour-temperature warning names the temperature bias (makes '
+        "AC-1's Given real)", () {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+
+      controller.turnTorchOn();
+
+      expect(controller.state.torchWarning,
+          CaptureController.torchColorTemperatureWarning);
+      final warning = controller.state.torchWarning!.toLowerCase();
+      expect(warning, contains('temperature'),
+          reason: 'the banner must name the torch colour temperature (AC-1)');
+      expect(
+          warning,
+          anyOf(contains('bias'), contains('skew'), contains('shift')),
+          reason: 'the banner must say the temperature biases the reading');
+    });
+
+    test('turnTorchOff extinguishes the source, clears torchOn and drops the '
+        'warning', () {
+      final source = _source();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      controller.turnTorchOn();
+      expect(controller.state.torchWarning, isNotNull);
+
+      controller.turnTorchOff();
+
+      expect(source.torchOn, isFalse,
+          reason: 'the source torch is extinguished');
+      expect(controller.state.torchOn, isFalse);
+      expect(controller.state.torchWarning, isNull,
+          reason: 'the set-forward merge is overridden so the banner clears');
+    });
+
+    test('acknowledgeTorchWarning drops the banner but leaves the torch lit',
+        () {
+      final source = _source();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      controller.turnTorchOn();
+
+      controller.acknowledgeTorchWarning();
+
+      expect(controller.state.torchWarning, isNull,
+          reason: 'acknowledging hides the banner');
+      expect(controller.state.torchOn, isTrue,
+          reason: 'the torch stays lit after acknowledgement (AC-2)');
+      expect(source.torchOn, isTrue,
+          reason: 'acknowledging is visual only — the source torch is '
+              'untouched');
+    });
+  });
+
   group('bs-09 command stubs throw until their behaviour phase (CAPTURE-2)', () {
     late CaptureController controller;
     setUp(() => controller = CaptureController(source: _source()));
     tearDown(() => controller.dispose());
-
-    test('torch controls are not yet implemented (CAPTURE-3)', () {
-      expect(controller.turnTorchOn, throwsUnimplementedError);
-      expect(controller.turnTorchOff, throwsUnimplementedError);
-      expect(controller.acknowledgeTorchWarning, throwsUnimplementedError);
-    });
 
     test('multi-point controls are not yet implemented (CAPTURE-4)', () {
       expect(() => controller.markPoint(1, 2), throwsUnimplementedError);

@@ -174,6 +174,12 @@ class CaptureState {
   /// Follows the repo's `x ?? this.x` merge, so the nullable sample fields are
   /// set-forward only (a commit fills [lastCommittedSample]); clearing them back
   /// to null is not a transition the capture flow needs.
+  ///
+  /// [torchWarning] is the one nullable the flow *does* clear: the torch is
+  /// turned off and the banner acknowledged (CAPTURE-3), so [clearTorchWarning]
+  /// forces it back to null past the set-forward merge. Passing both
+  /// [clearTorchWarning] and a non-null [torchWarning] is a contradiction the
+  /// flow never makes — clearing wins.
   CaptureState copyWith({
     LockState? lockState,
     int? stabilityCount,
@@ -186,6 +192,7 @@ class CaptureState {
     int? framesAveraged,
     bool? torchOn,
     String? torchWarning,
+    bool clearTorchWarning = false,
     List<MarkedPoint>? markedPoints,
     List<MultiPointReading>? markedReadings,
   }) {
@@ -200,7 +207,8 @@ class CaptureState {
       lastCommittedSample: lastCommittedSample ?? this.lastCommittedSample,
       framesAveraged: framesAveraged ?? this.framesAveraged,
       torchOn: torchOn ?? this.torchOn,
-      torchWarning: torchWarning ?? this.torchWarning,
+      torchWarning:
+          clearTorchWarning ? null : (torchWarning ?? this.torchWarning),
       markedPoints: markedPoints ?? this.markedPoints,
       markedReadings: markedReadings ?? this.markedReadings,
     );

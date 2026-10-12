@@ -109,6 +109,19 @@ void main() {
       expect(copy.markedPoints, const [point]);
       expect(copy.markedReadings, const [reading]);
     });
+
+    test('clearTorchWarning forces torchWarning back to null past the '
+        'set-forward merge (CAPTURE-3)', () {
+      const lit = CaptureState(torchOn: true, torchWarning: 'warn');
+
+      // Without the flag the set-forward merge keeps the existing warning.
+      expect(lit.copyWith().torchWarning, 'warn');
+
+      // With the flag it clears, leaving the other fields (torchOn) intact.
+      final cleared = lit.copyWith(clearTorchWarning: true);
+      expect(cleared.torchWarning, isNull);
+      expect(cleared.torchOn, isTrue);
+    });
   });
 
   group('equality', () {

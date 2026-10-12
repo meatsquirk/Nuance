@@ -218,17 +218,48 @@ class CaptureController extends ChangeNotifier {
   void toggleValueOnly() =>
       emit(_state.copyWith(valueOnly: !_state.valueOnly));
 
+  /// The colour-temperature warning raised while the torch lights the scene
+  /// (AC-1): the LED's light has its own colour temperature, so a reading taken
+  /// under it is biased away from how the colour looks in ambient light. Shown
+  /// as the banner (SCREEN-2) until the painter acknowledges it, and the reason
+  /// the committed reading is flagged [Sample.litByTorch] (AC-2).
+  static const String torchColorTemperatureWarning =
+      'Torch on — its colour temperature biases the measured colour.';
+
   /// Lights the camera torch and raises the colour-temperature warning (bs-09
-  /// AC-1, AC-2). Behaviour lands in CAPTURE-3; the shell fixes the signature.
-  void turnTorchOn() => throw UnimplementedError('CAPTURE-3');
+  /// AC-1, AC-2).
+  ///
+  /// Turns the torch on at the [source] (the LED floods the scene so a reading
+  /// can be taken in the dark), records [CaptureState.torchOn], and raises the
+  /// [torchColorTemperatureWarning] so the painter is told the torch biases the
+  /// reading. From here a [commit] stamps [Sample.litByTorch] true.
+  void turnTorchOn() {
+    source.turnTorchOn();
+    emit(_state.copyWith(
+      torchOn: true,
+      torchWarning: torchColorTemperatureWarning,
+    ));
+  }
 
   /// Extinguishes the torch and clears the warning (bs-09 AC-1, AC-2).
-  /// Behaviour lands in CAPTURE-3.
-  void turnTorchOff() => throw UnimplementedError('CAPTURE-3');
+  ///
+  /// Turns the torch off at the [source], clears [CaptureState.torchOn] and
+  /// drops the warning banner — the reading is back under ambient light, so a
+  /// later [commit] is not torch-lit. [clearTorchWarning] is needed because the
+  /// state's set-forward merge cannot otherwise return the warning to null.
+  void turnTorchOff() {
+    source.turnTorchOff();
+    emit(_state.copyWith(torchOn: false, clearTorchWarning: true));
+  }
 
   /// Dismisses the torch colour-temperature warning while leaving the torch lit
-  /// (bs-09 AC-1). Behaviour lands in CAPTURE-3.
-  void acknowledgeTorchWarning() => throw UnimplementedError('CAPTURE-3');
+  /// (bs-09 AC-1).
+  ///
+  /// A purely visual acknowledgement: it hides the banner but keeps
+  /// [CaptureState.torchOn] true, so a reading committed afterward is still
+  /// flagged [Sample.litByTorch] (AC-2).
+  void acknowledgeTorchWarning() =>
+      emit(_state.copyWith(clearTorchWarning: true));
 
   /// Marks the point ([x], [y]) on the live frame for multi-point sampling
   /// (bs-09 AC-3). Behaviour lands in CAPTURE-4; the shell fixes the signature.

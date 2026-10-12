@@ -51,7 +51,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-9/AC-10 → SOURCE-4 (normalized+tagged contract + platform-agnostic)
 const Map<String, String> pendingACs = {
   'AC-1': 'SCREEN-2',
-  'AC-2': 'CAPTURE-3',
+  // AC-2 un-pended by CAPTURE-3 (torch mechanism + litByTorch stamp).
   'AC-3': 'CAPTURE-4',
   'AC-4': 'SCREEN-3',
   'AC-5': 'CAPTURE-5',
