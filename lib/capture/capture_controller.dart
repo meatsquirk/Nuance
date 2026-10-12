@@ -218,6 +218,35 @@ class CaptureController extends ChangeNotifier {
   void toggleValueOnly() =>
       emit(_state.copyWith(valueOnly: !_state.valueOnly));
 
+  /// Lights the camera torch and raises the colour-temperature warning (bs-09
+  /// AC-1, AC-2). Behaviour lands in CAPTURE-3; the shell fixes the signature.
+  void turnTorchOn() => throw UnimplementedError('CAPTURE-3');
+
+  /// Extinguishes the torch and clears the warning (bs-09 AC-1, AC-2).
+  /// Behaviour lands in CAPTURE-3.
+  void turnTorchOff() => throw UnimplementedError('CAPTURE-3');
+
+  /// Dismisses the torch colour-temperature warning while leaving the torch lit
+  /// (bs-09 AC-1). Behaviour lands in CAPTURE-3.
+  void acknowledgeTorchWarning() => throw UnimplementedError('CAPTURE-3');
+
+  /// Marks the point ([x], [y]) on the live frame for multi-point sampling
+  /// (bs-09 AC-3). Behaviour lands in CAPTURE-4; the shell fixes the signature.
+  void markPoint(int x, int y) => throw UnimplementedError('CAPTURE-4');
+
+  /// Clears every marked point (bs-09 AC-3). Behaviour lands in CAPTURE-4.
+  void clearMarkedPoints() => throw UnimplementedError('CAPTURE-4');
+
+  /// Samples the current frame at each marked point, one
+  /// [MultiPointReading] per point (bs-09 AC-3). Behaviour lands in CAPTURE-4.
+  void sampleMarkedPoints() => throw UnimplementedError('CAPTURE-4');
+
+  /// Sends the readings at marked points [i] and [j] to the comparison, opening
+  /// it with both slots filled (bs-09 AC-5). Behaviour lands in CAPTURE-5; the
+  /// shell fixes the signature.
+  void sendPairToComparison(int i, int j) =>
+      throw UnimplementedError('CAPTURE-5');
+
   /// Commits the reading as [CaptureState.lastCommittedSample], stamped with the
   /// stated [CaptureState.accuracy] tier and marked [Sample.justCaptured] so the
   /// Readout confirms with a haptic as it lands (bs-01 AC-12).
@@ -264,6 +293,13 @@ class CaptureController extends ChangeNotifier {
         provenance: const Provenance(ProvenanceTier.measured),
         accuracy: _state.accuracy,
         justCaptured: true,
+        // bs-09 (CAPTURE-2): tag the committed reading with the gamut the source
+        // captured in, whether the torch lit it, and processed-vs-RAW. Until
+        // SOURCE-2/3 and CAPTURE-3 give these meaning they are the sRGB /
+        // processed / torch-off defaults, so bs-02 behaviour is unchanged.
+        colorSpace: source.colorSpace,
+        captureMode: source.captureMode,
+        litByTorch: _state.torchOn,
       ),
       framesAveraged: framesAveraged,
       lowLightWarning: source.lighting == Lighting.low,

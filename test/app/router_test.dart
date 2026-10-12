@@ -56,6 +56,20 @@ void main() {
     expect(find.text('Slot A: (empty)'), findsOneWidget);
   });
 
+  testWidgets('toComparisonPair fills both slots at once (bs-09 AC-5)',
+      (tester) async {
+    await _pushRoute(
+      tester,
+      router.toComparisonPair(
+        _sample('Warm Terracotta'),
+        _sample('Deep Olive Green'),
+      ),
+    );
+    expect(find.byType(ComparisonHomeScreen), findsOneWidget);
+    expect(find.text('Slot A: Warm Terracotta'), findsOneWidget);
+    expect(find.text('Slot B: Deep Olive Green'), findsOneWidget);
+  });
+
   testWidgets('toRecipes carries the sample as the mixing target',
       (tester) async {
     await _pushRoute(tester, router.toRecipes(_sample('Deep Olive Green')));

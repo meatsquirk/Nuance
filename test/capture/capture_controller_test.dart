@@ -710,6 +710,64 @@ void main() {
     });
   });
 
+  group('commit tags the sample with capture provenance (CAPTURE-2)', () {
+    test('stamps the source colour space + capture mode, torch off by default',
+        () async {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+
+      controller.commit();
+
+      final committed = controller.state.lastCommittedSample!;
+      expect(committed.colorSpace, CaptureColorSpace.srgb,
+          reason: 'the shell source captures in the sRGB default (SOURCE-2 '
+              'makes it reflect the gamut)');
+      expect(committed.captureMode, CaptureMode.processed,
+          reason: 'the shell source is on the processed pipeline (SOURCE-3 '
+              'switches RAW-capable devices)');
+      expect(committed.litByTorch, isFalse,
+          reason: 'the torch is off, so the reading is not torch-lit');
+    });
+
+    test('stamps litByTorch from the controller torch state', () async {
+      final controller = _TestController(source: _source());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      // The torch control is a CAPTURE-3 stub; set the state directly so the
+      // commit's `litByTorch = state.torchOn` threading can be observed now.
+      controller.pump(controller.state.copyWith(torchOn: true));
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.litByTorch, isTrue,
+          reason: 'commit stamps the reading as torch-lit when the torch is on');
+    });
+  });
+
+  group('bs-09 command stubs throw until their behaviour phase (CAPTURE-2)', () {
+    late CaptureController controller;
+    setUp(() => controller = CaptureController(source: _source()));
+    tearDown(() => controller.dispose());
+
+    test('torch controls are not yet implemented (CAPTURE-3)', () {
+      expect(controller.turnTorchOn, throwsUnimplementedError);
+      expect(controller.turnTorchOff, throwsUnimplementedError);
+      expect(controller.acknowledgeTorchWarning, throwsUnimplementedError);
+    });
+
+    test('multi-point controls are not yet implemented (CAPTURE-4)', () {
+      expect(() => controller.markPoint(1, 2), throwsUnimplementedError);
+      expect(controller.clearMarkedPoints, throwsUnimplementedError);
+      expect(controller.sampleMarkedPoints, throwsUnimplementedError);
+    });
+
+    test('send-pair-to-comparison is not yet implemented (CAPTURE-5)', () {
+      expect(() => controller.sendPairToComparison(0, 1),
+          throwsUnimplementedError);
+    });
+  });
+
   group('emit', () {
     test('replaces the state and notifies when it changes', () {
       final controller = _TestController(source: _source());

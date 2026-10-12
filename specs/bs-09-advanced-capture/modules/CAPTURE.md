@@ -1,6 +1,6 @@
 # Module CAPTURE — controller: torch, multi-point, send-to-comparison, colour-space stamp
 
-**Status:** In progress — CAPTURE-1 done; SOURCE-1 done (SOURCE module); next CAPTURE-2 (shell)
+**Status:** In progress — CAPTURE-1 + CAPTURE-2 done; next SCREEN-1 (SCREEN module)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`,
 `lib/capture/capture_read_endpoint.dart`, `lib/domain/sample.dart` (new fields),
@@ -13,7 +13,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | CAPTURE-1 | scaffold | — | ✅ Done | 7,102,221 | 15m 16s (6h 58m) |
-| CAPTURE-2 | shell | — | ⬜ Todo | | |
+| CAPTURE-2 | shell | — | ✅ Done | 8,882,434 | 17m 46s |
 | CAPTURE-3 | behavior | AC-2 | ⬜ Todo | | |
 | CAPTURE-4 | behavior | AC-3 | ⬜ Todo | | |
 | CAPTURE-5 | behavior | AC-5 | ⬜ Todo | | |
@@ -153,6 +153,60 @@ by G-2). **G-1 (spec approval) ✅ Resolved 2026-10-12: approved — Matt Quirk*
 - **Exit criteria:** unit + 100% coverage on touched files; `flutter analyze` clean.
 - **Acceptance gate:** un-pend AC-5; `TestAC05_TwoPointsToComparison` green (and all earlier un-pended ACs).
 
-### Result  <!-- filled on completion -->
+### Result — CAPTURE-2  <!-- 2026-10-12 -->
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Shell signatures + commit plumbing only — behaviour unchanged.** Added `Sample.colorSpace`
+  (`CaptureColorSpace?`), `Sample.litByTorch` (`bool`, default false), `Sample.captureMode` (`CaptureMode?`) —
+  all nullable/off, wired into `copyWith` and `toString` (`sample.dart`).
+- **`CaptureState` fields** (`capture_state.dart`): `torchOn` (false), `torchWarning` (`String?`), `markedPoints`
+  (`List<MarkedPoint>`, const []), `markedReadings` (`List<MultiPointReading>`, const []), wired into
+  `copyWith`/`==`/`hashCode` (lists via `listEquals`/`Object.hashAll`). Added supporting value types
+  `MarkedPoint{x,y}` and `MultiPointReading{position, coordinates}` (both with `==`/`hashCode`/`toString`).
+- **Controller command stubs** (`capture_controller.dart`): `turnTorchOn/Off`, `acknowledgeTorchWarning`
+  (CAPTURE-3), `markPoint(x,y)`, `clearMarkedPoints`, `sampleMarkedPoints` (CAPTURE-4), `sendPairToComparison(i,j)`
+  (CAPTURE-5) — each `throw UnimplementedError('<phase>')`, matching the file's stated deferral convention.
+- **Commit threading (D-2/D-3 plumbing):** `commit()` now stamps `Sample.colorSpace = source.colorSpace`,
+  `captureMode = source.captureMode`, `litByTorch = state.torchOn`. With SOURCE-1's shell defaults these are
+  `srgb`/`processed`/`false`, so bs-02 commit behaviour is unchanged until SOURCE-2/3 + CAPTURE-3 give them meaning.
+- **Router:** added `AppRouter.toComparisonPair(a, b)` → `ComparisonHomeScreen(initialA: a, initialB: b)` (D-5);
+  `toComparison`/others untouched.
+- **Deviations (both deliberate, consistent with surrounding code):** (1) the plan said `Sample` fields wired into
+  `==`, but `Sample` has **no** value `==` in the existing code (identity equality, relied on by
+  `CaptureState.==`/`emit` dedup) — added the fields to `copyWith`/`toString` only, not a new `==`, to avoid
+  changing equality semantics. (2) `capture_read_endpoint.dart` was **not** edited: it already exposes the
+  `CaptureController`, so the new `CaptureState`/`Sample` getters are observable through it unchanged (module
+  Interface reconciliation says the new getters ride on it).
+- **Gates:** `flutter analyze` clean. Unit `flutter test --coverage` → **877 passed** (858 baseline + 19 new).
+  Coverage gate `dart run tool/coverage_gate.dart main` → **100%** on all 6 touched lib files (`sample.dart`,
+  `capture_state.dart`, `capture_controller.dart`, `router.dart`, plus SOURCE-1's `capture_source.dart` /
+  `software_capture_source.dart`, still 100%). Existing integration `flutter test integration_test/ -d <iPhone 17>`
+  under the verify lock → **131 passed**, exit 0 (no regression). Acceptance/grades: n/a (shell — no bs-09 AC tests
+  until ITEST-1).
+- Fix passes: 0/3 (coverage gate flagged the two `const` constructor lines on first run — fixed by a non-const
+  construction in each type's test, per the repo's existing precedent; counted as finishing the first pass, not a
+  gate failure).
+
+### Checkpoint / Handoff — CAPTURE-2
+
+- **Frozen for SCREEN-1 / ITEST / behaviour phases:**
+  - `Sample.colorSpace` / `litByTorch` / `captureMode` carry the capture tags; `commit()` stamps them.
+  - `CaptureState.torchOn` / `torchWarning` / `markedPoints` / `markedReadings` are the observable torch +
+    multi-point state (all default off/empty). `MarkedPoint{x,y}` and `MultiPointReading{position, coordinates}`
+    are the element types.
+  - Controller stubs exist with their final signatures: `turnTorchOn()`, `turnTorchOff()`,
+    `acknowledgeTorchWarning()` (CAPTURE-3); `markPoint(int x, int y)`, `clearMarkedPoints()`,
+    `sampleMarkedPoints()` (CAPTURE-4); `sendPairToComparison(int i, int j)` (CAPTURE-5) — all throw
+    `UnimplementedError` until their phase.
+  - `AppRouter.toComparisonPair(Sample a, Sample b)` opens the comparison with both slots filled.
+- **GOTCHA for CAPTURE-3:** `CaptureState.copyWith` keeps the repo's set-forward-only `x ?? this.x` merge, so it
+  **cannot clear `torchWarning` back to null**. `turnTorchOff()`/`acknowledgeTorchWarning()` must clear it by
+  constructing a fresh `CaptureState` (CAPTURE-3 owns `capture_state.dart` and may add a clear-capable seam if it
+  prefers). The torch control also needs to call `source.turnTorchOn()/Off()` (SOURCE-1 froze those).
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main`
+  (host, no sim). Integration under the lock: `coord.sh with-lock bs-09-advanced-capture <PHASE> --wait 900 -- bash
+  -c 'cd /Users/matthew.quirk/Nuance-bs09 && export PATH=…/flutter/bin:$PATH && flutter test integration_test/ -d
+  5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'`. (No `timeout` on this macOS — plain `git push`.)
+- **Known gaps:** every new control is an inert `UnimplementedError` stub; commit tags are the SOURCE-1 shell
+  defaults (srgb/processed/torch-off) until SOURCE-2/3 + CAPTURE-3; no Capture-screen wiring yet (SCREEN-1); no
+  bs-09 AC tests yet (ITEST-1). **Next shell: SCREEN-1** (Capture screen placeholders — torch control + warning,
+  multi-point markers + readings list, send-to-comparison).

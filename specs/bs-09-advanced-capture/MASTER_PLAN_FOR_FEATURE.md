@@ -1,7 +1,7 @@
 # Master Plan — Advanced capture (bs-09)
 
 **Spec:** [bs-09-advanced-capture.feature](../bs-09-advanced-capture.feature)
-**Status:** In progress — next CAPTURE-2 (SOURCE-1 shell done)
+**Status:** In progress — next SCREEN-1 (CAPTURE-2 shell done)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) §"Cross-platform strategy" (CaptureSource / wide colour space / RAW fallback; D2), §"Capture & sampling" (torch, multi-point) · [scope](../../docs/paint-color-app-scope.md) §4.1 (flash/torch *Should*, multi-point *Should*, RAW/DNG *Could*) · **no wireframe yet** (the spec is proposed ahead of any mock; a future revision adds its UX)
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-02's capture surface and bs-03's comparison, both already merged to `main` (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -123,7 +123,7 @@ SOURCE-4; it is *pending* until then, not a limited test.
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` torch control + colour-space/RAW capability, selection + fallback, normalization contract, two-platform modelling; extended `SceneSpec`/`FakeCaptureSource` | bs-02 source | 🔄 In progress (SOURCE-1 done) |
-| CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | 🔄 In progress (CAPTURE-1 done) |
+| CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | 🔄 In progress (CAPTURE-1, CAPTURE-2 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Capture screen: torch control + colour-temperature warning banner; multi-point markers + per-point readings display; send-to-comparison control | CAPTURE | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
@@ -170,8 +170,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | CAPTURE-1 | scaffold: branch from main, baseline run, coverage gate proof, bs09 pending runner | ✅ Done | 7,102,221 | 15m 16s (6h 58m) | G-1 approved; unit 849 + integ 131 green; gate proven both ways; 10 ACs seeded pending |
 | 2 | SOURCE-1 | shell: `CaptureSource` torch + colour-space/RAW capability signatures; `SceneSpec`/`FakeCaptureSource` knobs | ✅ Done | 5,166,894 | 15m 59s (15m 59s) | unit 858 + integ 131 green; cov 100% (2 files); D-2 decided (added `CaptureColorSpace`) |
-| 3 | CAPTURE-2 | shell: `Sample.colorSpace`/`litByTorch`/`captureMode`; controller command stubs; read-endpoint + router pair-handoff signatures | ⬜ Next | | | after SOURCE-1 ✅ |
-| 4 | SCREEN-1 | shell: Capture screen placeholders (torch control + warning, multi-point markers + readings list, send-to-comparison) | ⬜ Todo | | | after CAPTURE-2 |
+| 3 | CAPTURE-2 | shell: `Sample.colorSpace`/`litByTorch`/`captureMode`; controller command stubs; router pair-handoff signature | ✅ Done | 8,882,434 | 17m 46s | unit 877 + integ 131 green; cov 100% (6 files); 0 fix passes; `Sample.==` + read-endpoint untouched (deviations in Result) |
+| 4 | SCREEN-1 | shell: Capture screen placeholders (torch control + warning, multi-point markers + readings list, send-to-comparison) | ⬜ Next | | | after CAPTURE-2 ✅ |
 | 5 | ITEST-1 | acceptance-tests: harness over bs-02's, fixtures, pending gate (10 ACs), smoke | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
@@ -191,19 +191,19 @@ when the row is marked done.
 
 ## Next phase
 
-**CAPTURE-2 (shell) is next — startable now.** On branch `feat/bs-09-advanced-capture`, add `Sample` fields
-(`colorSpace: CaptureColorSpace?`, `litByTorch`, `captureMode: CaptureMode?` — all nullable/off, wired into
-`copyWith`/`==`), controller command stubs (`turnTorchOn/Off`, `acknowledgeTorchWarning`, `markPoint`,
-`clearMarkedPoints`, `sampleMarkedPoints`, `sendPairToComparison`), new `CaptureState` fields, the read-endpoint
-getters, and the router `toComparisonPair` signature. Thread `source.colorSpace`/`captureMode` + `state.torchOn`
-into the `Sample` on commit (default sRGB/processed/off until SOURCE-2/3). Signatures/stubs only.
+**SCREEN-1 (shell) is next — startable now, last shell.** On branch `feat/bs-09-advanced-capture`, add the
+Capture screen placeholders over the now-frozen controller/state surface: a torch control + colour-temperature
+warning banner slot, multi-point markers + a per-point readings list, and a send-to-comparison control — all
+inert (wired to the controller's `UnimplementedError` stubs; no behaviour). Signatures/placeholders only.
 
-- **SOURCE-1 shell done:** the `CaptureSource` capability/torch signatures CAPTURE-2 consumes are frozen
-  (`torchOn`, `turnTorchOn/Off`, `supportsWideGamut`, `supportsRaw`, `colorSpace`, `captureMode`;
-  `CaptureColorSpace`/`CaptureMode`/`CapturePlatform` enums; `SceneSpec` knobs).
-- **No gate blocks CAPTURE-2** (shell, not gated by G-2). **Then SCREEN-1** (shells are layered-serial), then
-  the ITEST stage. **G-2 (test review) still open** — blocks all behavior phases (CAPTURE-3/4/5, SCREEN-2/3,
-  SOURCE-2/3/4).
+- **CAPTURE-2 shell done:** frozen for SCREEN-1 — `CaptureState.torchOn/torchWarning/markedPoints/markedReadings`
+  (+ `MarkedPoint`/`MultiPointReading` types), the controller command stubs (`turnTorchOn/Off`,
+  `acknowledgeTorchWarning`, `markPoint`, `clearMarkedPoints`, `sampleMarkedPoints`, `sendPairToComparison`), the
+  `Sample.colorSpace/litByTorch/captureMode` tags (commit threads them at the SOURCE-1 defaults), and
+  `AppRouter.toComparisonPair(a,b)`.
+- **No gate blocks SCREEN-1** (shell). **Then the ITEST stage** (ITEST-1 harness → ITEST-2/3 pending AC tests →
+  ITEST-4 test review, G-2). **G-2 (test review) still open** — blocks all behavior phases (CAPTURE-3/4/5,
+  SCREEN-2/3, SOURCE-2/3/4).
 - **Scaffold left in place:** `integration_test/bs09/pending.dart` (10 ACs seeded pending), coverage gate
   proven both ways, baseline recorded.
 
@@ -216,7 +216,8 @@ into the `Sample` on commit (default sRGB/processed/off until SOURCE-2/3). Signa
 | PLAN | f7184106 | 2026-10-11 21:51 EDT | 22:07 | 15m 30s | 15m 30s | claude-opus-4-8 | 64 | 237,675 | 2,662,148 | 71,989 | 2,971,876 | plan written: 17 phases, 4 modules, 10 ACs; G-1 (spec approval) + G-2 (test review) open |
 | CAPTURE-1 | 5df75034 | 2026-10-11 22:22 EDT | 2026-10-12 05:21 | 6h 58m | 15m 16s | claude-opus-4-8 | 134 | 146,744 | 6,913,544 | 41,799 | 7,102,221 | G-1 approved; scaffold green: unit 849, integ 131 (default), coverage gate proven both ways, 10 ACs seeded pending; no product code |
 | SOURCE-1 | a100daa5 | 2026-10-12 05:46 EDT | 06:02 | 15m 59s | 15m 59s | claude-opus-4-8 | 106 | 93,948 | 5,037,451 | 35,389 | 5,166,894 | shell done; unit 858 + integ 131 green; coverage 100% (2 files); 0 fix passes |
-| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 06:02** | **7h 29m** | **46m 45s** |  | **304** | **478,367** | **14,613,143** | **149,177** | **15,240,991** |  |
+| CAPTURE-2 | 6a869c74 | 2026-10-12 07:10 EDT | 07:28 | 17m 46s | 17m 46s | claude-opus-4-8 | 152 | 138,661 | 8,694,956 | 48,665 | 8,882,434 | shell done; unit 877 + integ 131 green; coverage 100% (6 files); 0 fix passes; Sample.== + read-endpoint untouched (deviations recorded) |
+| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 07:28** | **7h 47m** | **1h 04m** |  | **456** | **617,028** | **23,308,099** | **197,842** | **24,123,425** |  |
 
 ## Sign-off
 

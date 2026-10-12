@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+
+import '../domain/color_coordinates.dart';
 import '../domain/sample.dart';
 import 'capture_accuracy.dart';
 import 'source/capture_source.dart';
@@ -12,6 +15,60 @@ enum LockState {
 
   /// AE, AWB and AF are locked together; the reading can reach "STABLE 12/12".
   locked,
+}
+
+/// A point the painter has marked on the live frame for multi-point sampling
+/// (bs-09 AC-3).
+///
+/// Holds the frame-pixel position ([x], [y]) the painter tapped; the controller
+/// samples the current frame at each marked point to produce a
+/// [MultiPointReading]. Behaviour lands in CAPTURE-4; this shell fixes the shape.
+class MarkedPoint {
+  const MarkedPoint(this.x, this.y);
+
+  /// The marked point's column (0-based) on the frame.
+  final int x;
+
+  /// The marked point's row (0-based) on the frame.
+  final int y;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MarkedPoint && other.x == x && other.y == y;
+
+  @override
+  int get hashCode => Object.hash(x, y);
+
+  @override
+  String toString() => 'MarkedPoint($x, $y)';
+}
+
+/// One reading taken at a [MarkedPoint] (bs-09 AC-3, AC-4): the point's frame
+/// [position] kept alongside the colour [coordinates] sampled there.
+///
+/// Each reading keeps its own position so the Capture screen can show every
+/// marked point with its own value (AC-4). Behaviour lands in CAPTURE-4; this
+/// shell fixes the shape.
+class MultiPointReading {
+  const MultiPointReading({required this.position, required this.coordinates});
+
+  /// The frame position this reading was sampled at.
+  final MarkedPoint position;
+
+  /// The colour sampled at [position], in canonical CIELAB.
+  final ColorCoordinates coordinates;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MultiPointReading &&
+      other.position == position &&
+      other.coordinates == coordinates;
+
+  @override
+  int get hashCode => Object.hash(position, coordinates);
+
+  @override
+  String toString() => 'MultiPointReading($position → $coordinates)';
 }
 
 /// The observable state of a capture in progress, held by the
@@ -33,6 +90,10 @@ class CaptureState {
     this.currentSample,
     this.lastCommittedSample,
     this.framesAveraged = 0,
+    this.torchOn = false,
+    this.torchWarning,
+    this.markedPoints = const [],
+    this.markedReadings = const [],
   });
 
   /// Whether AE/AWB/AF are auto or locked (AC-4, AC-5).
@@ -70,6 +131,25 @@ class CaptureState {
   /// first commit.
   final int framesAveraged;
 
+  /// Whether the camera torch is currently lit (bs-09 AC-1, AC-2). Default
+  /// false; moved by [CaptureController.turnTorchOn]/[turnTorchOff] (CAPTURE-3).
+  final bool torchOn;
+
+  /// The colour-temperature warning shown while the torch biases the reading
+  /// (bs-09 AC-1), or null when none is shown. Set when the torch is lit and
+  /// cleared on acknowledgement (CAPTURE-3).
+  final String? torchWarning;
+
+  /// The points the painter has marked for multi-point sampling (bs-09 AC-3),
+  /// empty until any is marked. Moved by [CaptureController.markPoint] /
+  /// [clearMarkedPoints] (CAPTURE-4).
+  final List<MarkedPoint> markedPoints;
+
+  /// One reading per marked point, each keeping its own frame position and value
+  /// (bs-09 AC-3, AC-4), empty until [CaptureController.sampleMarkedPoints] runs
+  /// (CAPTURE-4).
+  final List<MultiPointReading> markedReadings;
+
   /// True once [stabilityCount] has reached [kStabilityFrameTarget].
   bool get isStable => stabilityCount >= kStabilityFrameTarget;
 
@@ -104,6 +184,10 @@ class CaptureState {
     Sample? currentSample,
     Sample? lastCommittedSample,
     int? framesAveraged,
+    bool? torchOn,
+    String? torchWarning,
+    List<MarkedPoint>? markedPoints,
+    List<MultiPointReading>? markedReadings,
   }) {
     return CaptureState(
       lockState: lockState ?? this.lockState,
@@ -115,6 +199,10 @@ class CaptureState {
       currentSample: currentSample ?? this.currentSample,
       lastCommittedSample: lastCommittedSample ?? this.lastCommittedSample,
       framesAveraged: framesAveraged ?? this.framesAveraged,
+      torchOn: torchOn ?? this.torchOn,
+      torchWarning: torchWarning ?? this.torchWarning,
+      markedPoints: markedPoints ?? this.markedPoints,
+      markedReadings: markedReadings ?? this.markedReadings,
     );
   }
 
@@ -129,7 +217,11 @@ class CaptureState {
       other.lowLightWarning == lowLightWarning &&
       other.currentSample == currentSample &&
       other.lastCommittedSample == lastCommittedSample &&
-      other.framesAveraged == framesAveraged;
+      other.framesAveraged == framesAveraged &&
+      other.torchOn == torchOn &&
+      other.torchWarning == torchWarning &&
+      listEquals(other.markedPoints, markedPoints) &&
+      listEquals(other.markedReadings, markedReadings);
 
   @override
   int get hashCode => Object.hash(
@@ -142,6 +234,10 @@ class CaptureState {
         currentSample,
         lastCommittedSample,
         framesAveraged,
+        torchOn,
+        torchWarning,
+        Object.hashAll(markedPoints),
+        Object.hashAll(markedReadings),
       );
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/capture_accuracy.dart';
+import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -60,6 +61,13 @@ void main() {
       const sample = Sample(coordinates: coords, provenance: measured);
       expect(sample.accuracy, isNull);
     });
+
+    test('capture tags null/off by default (bs-09)', () {
+      const sample = Sample(coordinates: coords, provenance: measured);
+      expect(sample.colorSpace, isNull);
+      expect(sample.litByTorch, isFalse);
+      expect(sample.captureMode, isNull);
+    });
   });
 
   group('Sample.copyWith', () {
@@ -69,6 +77,9 @@ void main() {
       name: 'Warm Terracotta',
       justCaptured: true,
       evidence: [EvidencePoint(coordinates: coords, source: 'spectro')],
+      colorSpace: CaptureColorSpace.srgb,
+      litByTorch: true,
+      captureMode: CaptureMode.processed,
     );
 
     test('with no arguments returns an equal-valued copy', () {
@@ -78,6 +89,9 @@ void main() {
       expect(copy.name, 'Warm Terracotta');
       expect(copy.justCaptured, isTrue);
       expect(copy.evidence, sample.evidence);
+      expect(copy.colorSpace, CaptureColorSpace.srgb);
+      expect(copy.litByTorch, isTrue);
+      expect(copy.captureMode, CaptureMode.processed);
     });
 
     test('replaces every field when given', () {
@@ -89,6 +103,9 @@ void main() {
         justCaptured: false,
         accuracy: CaptureAccuracy.calibrated,
         evidence: const [],
+        colorSpace: CaptureColorSpace.displayP3,
+        litByTorch: false,
+        captureMode: CaptureMode.raw,
       );
       expect(copy.coordinates, other);
       expect(copy.provenance, newProv);
@@ -96,6 +113,9 @@ void main() {
       expect(copy.justCaptured, isFalse);
       expect(copy.accuracy, CaptureAccuracy.calibrated);
       expect(copy.evidence, isEmpty);
+      expect(copy.colorSpace, CaptureColorSpace.displayP3);
+      expect(copy.litByTorch, isFalse);
+      expect(copy.captureMode, CaptureMode.raw);
     });
   });
 
@@ -133,6 +153,23 @@ void main() {
         sample.toString(),
         'Sample(Deep Olive Green, ColorCoordinates(L 58.0, a 24.0, b 30.0), '
         'Measured, Approximate)',
+      );
+    });
+
+    test('appends the bs-09 capture tags when set', () {
+      const sample = Sample(
+        coordinates: coords,
+        provenance: measured,
+        name: 'Deep Olive Green',
+        accuracy: CaptureAccuracy.approximate,
+        colorSpace: CaptureColorSpace.displayP3,
+        litByTorch: true,
+        captureMode: CaptureMode.raw,
+      );
+      expect(
+        sample.toString(),
+        'Sample(Deep Olive Green, ColorCoordinates(L 58.0, a 24.0, b 30.0), '
+        'Measured, Approximate, displayP3, torch-lit, raw)',
       );
     });
   });
