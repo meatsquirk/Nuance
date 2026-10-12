@@ -1,6 +1,6 @@
 # Module PROFILE — persist the one CVD profile + pipeline wiring
 
-**Status:** Not started
+**Status:** In progress — PROFILE-1 (shell) ✅ Done; next PROFILE-2 (AC-13, blocked by ITEST-4/FLOW-5/ENGINE-7)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/store/cvd_profile_store.dart` (profile source over `PersistentStore`), `lib/onboarding/cvd_profile_read_endpoint.dart`; wiring in `lib/app/build_app.dart` (`AppDependencies.cvdProfile` loaded from the store). Reuses `lib/a11y/cvd/cvd_profile.dart` unchanged.
 **Depends on:** ENGINE (estimate → profile projection) · **Blocks:** FLOW-1 (save seam), SIGNOFF
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 7,782,453 | 20m 30s |
 | 2 | behavior | AC-13 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -21,7 +21,7 @@
 
 ## Open gates
 
-- **G-4** (decision) blocks **PROFILE-1**: confirm collection/id/body shape and that `CvdProfile` is reused unchanged.
+- **G-4** (decision) ✅ Resolved 2026-10-12 (Matt Quirk) — approved as proposed: collection `cvd_profile`/id `current`, body `{type, severity}`, `CvdProfile` reused unchanged; `severity = slider/100`; bands mild `[0,0.45)` / moderate `[0.45,0.75)` / strong `[0.75,1.0]`.
 
 ## Phase 1 — shell: profile store + read endpoint + startup wiring
 
@@ -35,6 +35,26 @@
   3. In `build_app.dart`, load the stored profile at assembly and use it for `AppDependencies.cvdProfile`, defaulting to the const when absent — **behaviour unchanged** when no profile is stored (existing suite stays green).
   4. Unit tests: round-trip save/load, absent→null, count; 100% line coverage (the generated drift `.g.dart` is exempt).
 - **Exit criteria:** unit gate green; 100% coverage on touched files; existing suite green (default profile path unchanged); no save UI.
+
+### Result — ✅ Done (shell)
+
+- **Landed (G-4 resolved as proposed, 2026-10-12):**
+  - `lib/store/cvd_profile_store.dart` — `CvdProfileStore` over `PersistentStore`: `save(CvdProfile)` / `load()→CvdProfile?` / `count()→int`, collection `cvd_profile` id `current`, body `{type: <CvdType.name>, severity: <double>}`. `CvdProfile` reused unchanged (bs-03). `load` casts severity via `num.toDouble()` (JSON round-trip may hand back an int-valued num).
+  - `lib/onboarding/cvd_profile_read_endpoint.dart` — `CvdProfileReadEndpoint` InheritedWidget exposing the `CvdProfileStore` (`of`, `endpointKey`, `updateShouldNotify`), mirroring bs-06's read endpoints. Defined, not yet mounted — FLOW-1 wraps the onboarding host in it.
+  - `lib/app/build_app.dart` — added top-level `loadCvdProfile(CvdProfileStore)` → saved profile or `const CvdProfile(type: CvdType.deutan)` default (D-3). `buildApp`/`AppDependencies` behaviour unchanged.
+  - `lib/main.dart` (**beyond the listed files — the only place async store I/O happens**) — `productionDependencies` loads the profile via `loadCvdProfile(CvdProfileStore(store))` and threads it into `assembleDependencies`, which gained an optional `cvdProfile` param (defaulting to the deutan const). Empty store → default, so shipped behaviour is unchanged until a profile is saved.
+  - `test/smoke_test.dart` extended to assert the default `cvdProfile` wiring (keeps `main.dart` at 100%).
+- **Gate (shell):** `flutter analyze` clean · unit **923 passed** (+11: 6 store, 3 endpoint, 2 loadCvdProfile) · coverage gate vs `main` **100% on all 8 touched lib files** (incl. the 4 touched here) · integration suite (host, default) **134 passed** — existing cross-feature suite green. No acceptance/grade gate (shell). Fix passes: 0/3 (green on first full run).
+- **No save UI** (AC-13 behaviour is PROFILE-2). `CvdProfileReadEndpoint` is not mounted yet (FLOW-1).
+- **Tokens / time:** 7,782,453 · 20m 30s.
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces:** `CvdProfileStore(PersistentStore)` with `save`/`load`/`count` + `collection`/`documentId` consts; `CvdProfileReadEndpoint({required store})` with `endpointKey` / `of` / `updateShouldNotify`; `loadCvdProfile(CvdProfileStore)` in `build_app.dart`; `assembleDependencies(..., CvdProfile cvdProfile = const CvdProfile(type: CvdType.deutan))`.
+- **For FLOW-1 (next startable):** mount `CvdProfileReadEndpoint` (store = `CvdProfileStore(deps.store!)`) over the onboarding host so the acceptance suite can read the persisted profile + count; the `OnboardingController` owns assessment state. The read endpoint and store are ready to wire.
+- **For PROFILE-2 (AC-13):** project the final `CvdEstimate` → `CvdProfile {type, severity}`, `save` it (exactly one doc), and update the live `AppDependencies.cvdProfile` so bs-03's `ConfusionCheck` uses it immediately.
+- **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$PATH:/Users/matthew.quirk/development/flutter/bin"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · `flutter test integration_test/` (host). `severity` persists 0..1; slider→severity normalization and the band function are ENGINE-7/FLOW-7 (G-4 bands: mild `[0,0.45)` / moderate `[0.45,0.75)` / strong `[0.75,1.0]`).
+- **Known gaps:** endpoint unmounted until FLOW-1; no save path until PROFILE-2.
 
 ## Phase 2 — AC-13: saving the profile configures the pipeline
 

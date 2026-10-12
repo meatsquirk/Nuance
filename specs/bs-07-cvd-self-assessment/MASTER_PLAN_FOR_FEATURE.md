@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — ENGINE-2 (shell) ✅ Done; next PROFILE-1 (shell, needs G-4)
+**Status:** In progress — PROFILE-1 (shell) ✅ Done (G-4 resolved); next FLOW-1 (shell)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -63,7 +63,7 @@
 | D-2 | Persist the one profile as a single document — collection `cvd_profile`, id `current` — over `PersistentStore`, matching `source_photo_store.dart`; body `{type: <name>, severity: <double>}` | One stored profile (spec); reuses the bs-06 generic document store; no new persistence engine |
 | D-3 | Load `AppDependencies.cvdProfile` from the store at app assembly, defaulting to the const default when absent; saving updates both the store and the live dependency | So the measured profile flows to bs-03's `ConfusionCheck` and the `projectDichromat` seam bs-08/bs-10 reuse |
 | D-4 | The onboarding presents **four** top-level steps (progress = N of 4); tiers 2 (screening) and 4 (threshold) nest inside a step rather than adding to the count — **proposed, pending G-5** | AC-14 says "four steps"; the wireframe draws four (lighting, intake, arrangement, result); screening+threshold are in-scope-but-undrawn tiers |
-| D-5 | UI severity slider is 0..100; stored `severity = value/100`. Band anchors 30→mild, 60→moderate, 90→strong; boundaries monotonic (proposed <40 mild / 40–75 moderate / >75 strong) — **confirm boundaries at G-4** | AC-11 examples fix three anchors; the profile stores 0..1 |
+| D-5 | UI severity slider is 0..100; stored `severity = value/100`. Band anchors 30→mild, 60→moderate, 90→strong; boundaries at the anchor midpoints — **confirmed G-4 2026-10-12**: mild `[0,0.45)`, moderate `[0.45,0.75)`, strong `[0.75,1.0]` | AC-11 examples fix three anchors; the profile stores 0..1 |
 | D-6 | Self-calibration (AC-12) is kept **as** the profile severity — the painter-tuned slider value is the subjective calibration; no separate field | AC-12's "kept as the subjective self-calibration" with a profile that has only type+severity |
 | D-7 | The engine assembles the estimate from whatever tier results are present (prior + screening direction + arrangement + threshold); the result step shows type+severity even when a tier was skipped (AC-8) | Tiers are optional/fastest-first; the flow must reach a result without every tier |
 | D-8 | AC-13 "configures simulation and daltonization" is verified at the **shared profile seam** (the single source all three consumers read), since bs-08/bs-10 are not built; confusion-warning configuration is asserted behaviourally via bs-03's `ConfusionCheck`. Behavioural sim/dalt assertions are a known gap owned by bs-08/bs-10 | Those features do not exist yet; the profile is the one thing they all read |
@@ -118,7 +118,7 @@ Pre-seeded augmentations: AC-13's confusion-check behavioural assertion is confi
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1, ENGINE-2 ✅) |
-| PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | ⬜ Todo |
+| PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | 🔄 In progress (PROFILE-1 ✅) |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
@@ -146,7 +146,7 @@ graph LR
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the Draft banner) | ENGINE-1 | ✅ Resolved 2026-10-11 21:46 EDT: spec approved; Draft banner replaced with approval line — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-3 | dependency | bs-05 **and** bs-06 signed off and merged to `main` (the `PersistentStore`, the `self_assessment` entry seam and the pubspec superset land on main) — closed by the human merging `feat/bs-05` and `feat/bs-06` | ENGINE-1 | ✅ Resolved 2026-10-11 21:46 EDT: `feat/bs-05` (990a67a→merge 9760a4f) + `feat/bs-06` (e998bac→merge cd1c86b) merged to `main`; `persistent_store.dart`, `self_assessment_entry_screen.dart`, `router.toSelfAssessment()`, pubspec superset (drift/path_provider/printing) confirmed present; analyze clean + 849 unit tests green post-merge — Matt Quirk |
-| G-4 | decision | Pin the profile persistence + scales: (a) persist via `PersistentStore` collection `cvd_profile`/id `current`, reusing `CvdProfile` unchanged; (b) slider 0..100 → severity 0..1; (c) band boundaries around the 30/60/90 anchors | PROFILE-1, ENGINE-7 | Open |
+| G-4 | decision | Pin the profile persistence + scales: (a) persist via `PersistentStore` collection `cvd_profile`/id `current`, reusing `CvdProfile` unchanged; (b) slider 0..100 → severity 0..1; (c) band boundaries around the 30/60/90 anchors | PROFILE-1, ENGINE-7 | ✅ Resolved 2026-10-12 — approved as proposed (Matt Quirk): (a) collection `cvd_profile`/id `current`, body `{type, severity}`, `CvdProfile` reused unchanged; (b) `severity = slider/100`; (c) midpoint cutoffs mild `[0,0.45)` / moderate `[0.45,0.75)` / strong `[0.75,1.0]` |
 | G-5 | decision | Reconcile the four-step progress (AC-14) with the five tiers: which tiers are the four counted steps, and where screening (Tier 2) and threshold (Tier 4) sit (proposed D-4) — routed to the spec author | FLOW-2 | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -164,8 +164,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | ENGINE-1 | scaffold: branch from merged main, baseline, coverage gate confirm, bs07 pending runner (14 ACs) | ✅ Done | 3,619,703 | 13m 16s | branch `feat/bs-07` @ main `a695e4c`; analyze clean · 849 unit · gate PASS-clean + FAIL-on-gap proven; 14 ACs seeded; runner + 3 scaffold guards green |
 | 2 | ENGINE-2 | shell: assessment domain types + `AssessmentEngine` interface | ✅ Done | 3,709,673 | 9m 29s | 4 files in `lib/onboarding/engine/`; analyze clean · 912 unit (849 + 63) · coverage 100% on 4 touched files |
-| 3 | PROFILE-1 | shell: `CvdProfileStore` + `CvdProfileReadEndpoint` + `AppDependencies` wiring | ⬜ Next | | | G-4 blocks |
-| 4 | FLOW-1 | shell: `OnboardingController`/state + `OnboardingReadEndpoint` + screen host & keyed step widgets + route (replace placeholder) | ⬜ Todo | | | |
+| 3 | PROFILE-1 | shell: `CvdProfileStore` + `CvdProfileReadEndpoint` + `AppDependencies` wiring | ✅ Done | 7,782,453 | 20m 30s | G-4 resolved |
+| 4 | FLOW-1 | shell: `OnboardingController`/state + `OnboardingReadEndpoint` + screen host & keyed step widgets + route (replace placeholder) | ⬜ Next | | | |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (14 ACs), smoke test | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,10,11,12,13,14 (pending) + red baseline | ⬜ Todo | | | seq before/after ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
@@ -189,10 +189,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ENGINE-2 (shell) ✅ Done — `lib/onboarding/engine/` holds the four shell files (`tier_results.dart`, `cvd_estimate.dart`, `severity_band.dart`, `assessment_engine.dart`): the tier value types, `CvdEstimate`, `SeverityBand`, the `AssessmentEngine` interface and a trivial `ShellAssessmentEngine`. No `lib/` wiring yet (AppDependencies → PROFILE-1, controller → FLOW-1). Startable next:
-- **PROFILE-1** (shell) — `CvdProfileStore` + `CvdProfileReadEndpoint` + `AppDependencies` wiring. **Blocked by G-4** (persistence collection/id + severity/band scales) — a human must decide G-4 before it runs.
+PROFILE-1 (shell) ✅ Done — `CvdProfileStore` over `PersistentStore` (`cvd_profile`/`current`, `{type, severity}`), `CvdProfileReadEndpoint` (defined, mounted by FLOW-1), and `loadCvdProfile` wired into production assembly (`main.dart` → `assembleDependencies(cvdProfile:)`), default deutan when none stored. G-4 resolved as proposed. Startable next:
+- **FLOW-1** (shell) — `OnboardingController`/state + `OnboardingReadEndpoint` + onboarding screen host & keyed step widgets + route (replaces the placeholder); mounts `CvdProfileReadEndpoint` over the host. Both its deps (ENGINE-2, PROFILE-1) are ✅. No gate blocks it.
 
-FLOW-1 (shell) follows once **PROFILE-1** is done (ENGINE-2 already is); ITEST-1 then follows FLOW-1. Still to decide: **G-4** (blocks PROFILE-1 & ENGINE-7) and **G-5** (four-step vs five-tier, blocks FLOW-2). G-2 (approve acceptance tests) is decided later at ITEST-4; it blocks every behaviour phase but not the shells. No startable phase remains until G-4 is decided.
+ITEST-1 (acceptance harness) follows FLOW-1. Still to decide, before the phases they block: **G-5** (four-step vs five-tier, blocks FLOW-2) and **G-2** (approve acceptance tests, decided at ITEST-4; blocks every behaviour phase but not the shells). G-4 is now resolved.
 
 ## Token usage
 
@@ -204,7 +204,8 @@ FLOW-1 (shell) follows once **PROFILE-1** is done (ENGINE-2 already is); ITEST-1
 | GATE-DECISION | 6e88f0bc | 2026-10-11 21:45 EDT | 21:58 | 13m 16s | 13m 16s | claude-opus-4-8 | 104 | 106,275 | 4,977,129 | 51,472 | 5,134,980 | G-1 approved (spec), G-3 resolved (bs-05 merge 9760a4f + bs-06 merge cd1c86b to main; analyze clean, 849 unit tests green) |
 | ENGINE-1 | 0e802231 | 2026-10-11 22:21 EDT | 22:35 | 13m 16s | 13m 16s | claude-opus-4-8 | 78 | 89,922 | 3,495,346 | 34,357 | 3,619,703 | scaffold done: branch feat/bs-07 @ main a695e4c; analyze clean, 849 unit, coverage gate PASS-clean + FAIL-on-planted-gap proven; 14-AC pending gate + runner (3 scaffold guards) green; no lib/ code |
 | ENGINE-2 | 26735695 | 2026-10-12 05:06 EDT | 05:16 | 9m 29s | 9m 29s | claude-opus-4-8 | 82 | 87,787 | 3,583,371 | 38,433 | 3,709,673 | shell done: 4 engine files (tier types, CvdEstimate, SeverityBand, AssessmentEngine + ShellAssessmentEngine); analyze clean, 912 unit (849+63), coverage 100% on 4 touched files; no lib/ wiring |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 05:16** | **51m 40s** | **51m 40s** |  | **320** | **478,213** | **13,917,322** | **180,483** | **14,576,338** |  |
+| PROFILE-1 | dd73b464 | 2026-10-12 05:47 EDT | 06:16 | 29m 34s | 20m 30s | claude-opus-4-8 | 136 | 129,456 | 7,602,795 | 50,066 | 7,782,453 | shell done (G-4 resolved as proposed): CvdProfileStore + CvdProfileReadEndpoint + loadCvdProfile wired into assembly; analyze clean, 923 unit, coverage 100% on 8 touched, integ 134 green; no AC |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 06:16** | **1h 21m** | **1h 12m** |  | **456** | **607,669** | **21,520,117** | **230,549** | **22,358,791** |  |
 
 ## Sign-off
 

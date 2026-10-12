@@ -22,12 +22,12 @@
 - **The CVD profile is fixed, not redesigned.** `CvdProfile {CvdType type; double severity 0..1}` (bs-03) is reused unchanged (D-1). The engine's output feeds, but is not, the profile.
 - **Estimate vs profile.** `CvdEstimate` (engine/flow-internal) carries the work-in-progress: a prior, a screening direction, an arrangement signal, a threshold severity, and the assembled `type`/`severity`. Saving (PROFILE-2) projects the final estimate onto `CvdProfile`.
 - **Direction vs type.** Screening (AC-5) yields a **direction** (red-green | blue-yellow); type (protan/deutan within R-G; tritan within B-Y) is refined by prior + arrangement. The engine keeps direction and type distinct; `projectDichromat`'s confusion line (bs-03) is keyed by `CvdType`.
-- **Severity scale.** Engine severity is 0..1 to match `CvdProfile.severity`; the UI's 0..100 slider normalizes at the boundary (D-5, FLOW). Band thresholds live here (ENGINE-7) around the 30/60/90 anchors — **pending G-4**.
+- **Severity scale.** Engine severity is 0..1 to match `CvdProfile.severity`; the UI's 0..100 slider normalizes at the boundary (D-5, FLOW). Band thresholds live here (ENGINE-7) at the anchor midpoints — **confirmed G-4 2026-10-12**: mild `[0,0.45)` / moderate `[0.45,0.75)` / strong `[0.75,1.0]`.
 - **Scoring is pure.** No widget or controller computes a score; the controller calls `AssessmentEngine` (D-9).
 
 ## Open gates
 
-- **G-4** (decision) blocks **ENGINE-7**: band boundaries around 30/60/90 (and the slider→0..1 normalization). Build the band function parameterized on the chosen thresholds.
+- **G-4** (decision) ✅ Resolved 2026-10-12 (Matt Quirk): band boundaries at the anchor midpoints — mild `[0,0.45)` / moderate `[0.45,0.75)` / strong `[0.75,1.0]`; `severity = slider/100`. ENGINE-7 builds `band()` parameterized on these thresholds.
 
 ## Phase 1 — scaffold
 

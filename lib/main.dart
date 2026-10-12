@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 
+import 'a11y/cvd/cvd_profile.dart';
 import 'a11y/haptics.dart';
 import 'a11y/speech.dart';
 import 'app/build_app.dart';
@@ -14,6 +15,7 @@ import 'color_science/color_science_impl.dart';
 import 'domain/color_coordinates.dart';
 import 'projects/project_source.dart';
 import 'recipes/palette_source.dart';
+import 'store/cvd_profile_store.dart';
 import 'store/drift_persistent_store.dart';
 import 'store/persistent_store.dart';
 import 'store/source_photo_store.dart';
@@ -65,11 +67,16 @@ Future<AppDependencies> productionDependencies() async {
   final projectSource = PersistentProjectSource(store);
   await paletteSource.load();
   await projectSource.load();
+  // bs-07 D-3/G-4: load the painter's saved colour-vision profile at assembly
+  // so it configures bs-03's confusion check / the shared projection seam;
+  // absent → the deutan default (behaviour unchanged until a profile is saved).
+  final cvdProfile = await loadCvdProfile(CvdProfileStore(store));
   return assembleDependencies(
     store: store,
     sourcePhotoStore: sourcePhotoStore,
     paletteSource: paletteSource,
     projectSource: projectSource,
+    cvdProfile: cvdProfile,
   );
 }
 
@@ -100,12 +107,14 @@ AppDependencies assembleDependencies({
   required SourcePhotoStore sourcePhotoStore,
   required PaletteSource paletteSource,
   required ProjectSource projectSource,
+  CvdProfile cvdProfile = const CvdProfile(type: CvdType.deutan),
 }) {
   return AppDependencies(
     colorScience: const ColorScienceImpl(),
     speech: const NoopSpeech(),
     haptics: const NoopHaptics(),
     captureSource: demoCaptureSource(),
+    cvdProfile: cvdProfile,
     store: store,
     sourcePhotoStore: sourcePhotoStore,
     paletteSource: paletteSource,

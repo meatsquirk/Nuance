@@ -31,6 +31,7 @@ import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
+import 'package:paint_color_assistant/store/cvd_profile_store.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
 import 'package:paint_color_assistant/store/source_photo_store.dart';
 
@@ -822,6 +823,22 @@ void main() {
       // flutter_test dispose-guard.
       await tester.pumpWidget(const MaterialApp(home: SizedBox()));
       expect(find.byType(PaletteHomeScreen), findsNothing);
+    });
+  });
+
+  group('loadCvdProfile (bs-07 D-3/G-4)', () {
+    test('returns the saved profile when one is stored', () async {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      const saved = CvdProfile(type: CvdType.protan, severity: 0.6);
+      await store.save(saved);
+
+      expect(await loadCvdProfile(store), saved);
+    });
+
+    test('falls back to the deutan default when none is stored', () async {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+
+      expect(await loadCvdProfile(store), const CvdProfile(type: CvdType.deutan));
     });
   });
 }

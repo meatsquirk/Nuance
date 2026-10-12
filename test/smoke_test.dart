@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
@@ -61,6 +62,9 @@ void main() {
     // bs-06 PROJECT-6: the PDF export is delivered through the production
     // `printing` share wrapper (AC-10).
     expect(deps.pdfShareSink, same(app.sharePdfToDevice));
+    // bs-07 PROFILE-1 (D-3): with no cvdProfile passed, assembly defaults to the
+    // deutan profile — behaviour unchanged until the painter saves an assessment.
+    expect(deps.cvdProfile, const CvdProfile(type: CvdType.deutan));
   });
 
   test('sharePdfToDevice hands the exported bytes to the printing share sheet',
@@ -101,6 +105,9 @@ void main() {
     expect(deps.paletteSource.palettes(), isEmpty);
     expect(deps.projectSource.projects(), isEmpty);
     expect(deps.captureSource, isA<SoftwareCaptureSource>());
+    // bs-07 PROFILE-1 (D-3): the saved profile is loaded at assembly; a fresh
+    // store has none, so it falls back to the deutan default.
+    expect(deps.cvdProfile, const CvdProfile(type: CvdType.deutan));
   });
 
   testWidgets('main() boots the app to the Capture route', (tester) async {

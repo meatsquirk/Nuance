@@ -34,6 +34,7 @@ import '../recipes/palette_source.dart';
 import '../recipes/recipe_controller.dart';
 import '../recipes/recipe_read_endpoint.dart';
 import '../recipes/recipes_screen.dart';
+import '../store/cvd_profile_store.dart';
 import '../store/persistent_store.dart';
 import '../store/source_photo_store.dart';
 import 'router.dart';
@@ -125,6 +126,18 @@ class PaletteEntry {
   /// Creates the palette-entry marker.
   const PaletteEntry();
 }
+
+/// Loads the painter's saved colour-vision profile at app assembly, or the
+/// const default when none is stored (bs-07 D-3, G-4).
+///
+/// Production assembly (`main.dart`'s `productionDependencies`) calls this with
+/// a [CvdProfileStore] over the file-backed store and passes the result as
+/// [AppDependencies.cvdProfile], so a measured profile configures bs-03's
+/// `ConfusionCheck` and the shared `projectDichromat` seam bs-08/bs-10 reuse.
+/// Absent (nothing saved yet) → the deutan default, so behaviour is unchanged
+/// until the painter saves an assessment (PROFILE-2, AC-13).
+Future<CvdProfile> loadCvdProfile(CvdProfileStore store) async =>
+    await store.load() ?? const CvdProfile(type: CvdType.deutan);
 
 /// The app-wide services assembled once at startup and injected down the tree.
 ///
