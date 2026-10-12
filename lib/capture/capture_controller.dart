@@ -305,11 +305,33 @@ class CaptureController extends ChangeNotifier {
     ));
   }
 
-  /// Sends the readings at marked points [i] and [j] to the comparison, opening
-  /// it with both slots filled (bs-09 AC-5). Behaviour lands in CAPTURE-5; the
-  /// shell fixes the signature.
-  void sendPairToComparison(int i, int j) =>
-      throw UnimplementedError('CAPTURE-5');
+  /// Sends the readings at marked points [i] and [j] to a side-by-side
+  /// comparison, opening it with both slots filled at once (bs-09 AC-5).
+  ///
+  /// Builds a measured [Sample] from each chosen [MultiPointReading] — carrying
+  /// its sampled colour and the reading's stated [CaptureState.accuracy] — and
+  /// publishes the pair as [CaptureState.pairToCompare] with [i] in slot A and
+  /// [j] in slot B. The Capture screen watches that field and opens the
+  /// comparison for it (the mirror of the commit → Readout handoff), so the two
+  /// marked readings arrive in the comparison together rather than being added
+  /// one at a time through the picker.
+  void sendPairToComparison(int i, int j) {
+    final readings = _state.markedReadings;
+    emit(_state.copyWith(
+      pairToCompare: ComparisonPair(
+        _sampleOf(readings[i]),
+        _sampleOf(readings[j]),
+      ),
+    ));
+  }
+
+  /// A measured [Sample] carrying [reading]'s sampled colour at the reading's
+  /// stated accuracy — the shape the comparison takes each slot in.
+  Sample _sampleOf(MultiPointReading reading) => Sample(
+        coordinates: reading.coordinates,
+        provenance: const Provenance(ProvenanceTier.measured),
+        accuracy: _state.accuracy,
+      );
 
   /// Commits the reading as [CaptureState.lastCommittedSample], stamped with the
   /// stated [CaptureState.accuracy] tier and marked [Sample.justCaptured] so the

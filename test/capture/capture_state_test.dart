@@ -13,6 +13,14 @@ const _sample = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
+const _sampleB = Sample(
+  name: 'Warm Red',
+  coordinates: ColorCoordinates(lightness: 55, a: 60, b: 40),
+  provenance: Provenance(ProvenanceTier.measured),
+);
+
+const _pair = ComparisonPair(_sample, _sampleB);
+
 void main() {
   group('defaults', () {
     const state = CaptureState();
@@ -31,6 +39,7 @@ void main() {
       expect(state.torchWarning, isNull);
       expect(state.markedPoints, isEmpty);
       expect(state.markedReadings, isEmpty);
+      expect(state.pairToCompare, isNull);
     });
   });
 
@@ -94,6 +103,7 @@ void main() {
         torchWarning: 'Torch ~5500K biases the reading',
         markedPoints: const [point],
         markedReadings: const [reading],
+        pairToCompare: _pair,
       );
       expect(copy.lockState, LockState.locked);
       expect(copy.stabilityCount, 12);
@@ -108,6 +118,7 @@ void main() {
       expect(copy.torchWarning, 'Torch ~5500K biases the reading');
       expect(copy.markedPoints, const [point]);
       expect(copy.markedReadings, const [reading]);
+      expect(copy.pairToCompare, same(_pair));
     });
 
     test('clearTorchWarning forces torchWarning back to null past the '
@@ -138,6 +149,7 @@ void main() {
               coordinates: ColorCoordinates(lightness: 50, a: 1, b: 2),
             ),
           ],
+          pairToCompare: _pair,
         );
 
     test('equal when every field matches', () {
@@ -188,6 +200,13 @@ void main() {
         ),
       ]);
       expect(a, isNot(equals(const CaptureState())));
+    });
+
+    test('unequal when pairToCompare differs', () {
+      expect(
+        const CaptureState(pairToCompare: _pair),
+        isNot(equals(const CaptureState())),
+      );
     });
 
     test('unequal to a non-CaptureState object', () {
@@ -273,6 +292,32 @@ void main() {
         reading.toString(),
         'MultiPointReading(MarkedPoint(3, 4) → $coordinates)',
       );
+    });
+  });
+
+  group('ComparisonPair (AC-5)', () {
+    test('holds the two readings — slot A = a, slot B = b', () {
+      // Built at runtime (non-const) so the const constructor line is covered.
+      // ignore: prefer_const_constructors
+      final pair = ComparisonPair(_sample, _sampleB);
+      expect(pair.a, same(_sample));
+      expect(pair.b, same(_sampleB));
+    });
+
+    test('equal by its two readings, unequal when either differs', () {
+      expect(const ComparisonPair(_sample, _sampleB), equals(_pair));
+      expect(
+        const ComparisonPair(_sample, _sampleB).hashCode,
+        equals(_pair.hashCode),
+      );
+      // A swapped pair is a different pair (slot A/B order matters).
+      expect(_pair, isNot(equals(const ComparisonPair(_sampleB, _sample))));
+      // ignore: unrelated_type_equality_checks
+      expect(_pair == 'x', isFalse);
+    });
+
+    test('toString names both readings', () {
+      expect(_pair.toString(), 'ComparisonPair($_sample, $_sampleB)');
     });
   });
 

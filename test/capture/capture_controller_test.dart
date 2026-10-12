@@ -816,14 +816,101 @@ void main() {
     });
   });
 
-  group('bs-09 command stubs throw until their behaviour phase (CAPTURE-2)', () {
-    late CaptureController controller;
-    setUp(() => controller = CaptureController(source: _source()));
-    tearDown(() => controller.dispose());
+  group('send pair to comparison (CAPTURE-5, AC-5)', () {
+    // A 16×16 frame with three distinct discs so each marked point samples its
+    // own colour — the unit analogue of the acceptance SCENE_THREE_POINTS, so a
+    // sent pair can be told apart by colour.
+    const background = Pixel(128, 128, 128);
+    const teal = Pixel(20, 160, 150);
+    const red = Pixel(210, 40, 50);
+    const yellow = Pixel(230, 210, 30);
+    const p1 = MarkedPoint(4, 4);
+    const p2 = MarkedPoint(12, 4);
+    const p3 = MarkedPoint(8, 12);
 
-    test('send-pair-to-comparison is not yet implemented (CAPTURE-5)', () {
-      expect(() => controller.sendPairToComparison(0, 1),
-          throwsUnimplementedError);
+    Frame threeDiscFrame() {
+      const discs = <(MarkedPoint, Pixel)>[(p1, teal), (p2, red), (p3, yellow)];
+      final pixels = <Pixel>[];
+      for (var y = 0; y < 16; y++) {
+        for (var x = 0; x < 16; x++) {
+          var px = background;
+          for (final (point, discPx) in discs) {
+            final dx = x - point.x;
+            final dy = y - point.y;
+            if (dx * dx + dy * dy <= 3 * 3) {
+              px = discPx;
+              break;
+            }
+          }
+          pixels.add(px);
+        }
+      }
+      return Frame(width: 16, height: 16, pixels: pixels);
+    }
+
+    /// A controller with three sampled marked readings (P1/P2/P3), each its own
+    /// colour, ready for a pair to be sent to a comparison.
+    Future<CaptureController> threeReadings() async {
+      final controller = CaptureController(
+        source: SoftwareCaptureSource(SceneSpec(
+          groundTruth: const ColorCoordinates(lightness: 40, a: -8, b: 24),
+          frames: [threeDiscFrame()],
+        )),
+      );
+      addTearDown(controller.dispose);
+      await pumpEventQueue(); // the live frame arrives and buffers
+      controller
+        ..markPoint(p1.x, p1.y)
+        ..markPoint(p2.x, p2.y)
+        ..markPoint(p3.x, p3.y)
+        // Radius 1 so each 3 px disc fully contains the sampling disc.
+        ..setRadius(1)
+        ..sampleMarkedPoints();
+      return controller;
+    }
+
+    test('publishes the chosen two readings as a pair — slot A = i, slot B = j',
+        () async {
+      final controller = await threeReadings();
+      final readings = controller.state.markedReadings;
+
+      // Send the first and third readings (non-adjacent, so the indices must
+      // select — not just take the first two).
+      controller.sendPairToComparison(0, 2);
+
+      final pair = controller.state.pairToCompare;
+      expect(pair, isNotNull, reason: 'the send publishes a pair');
+      expect(pair!.a.coordinates, readings[0].coordinates,
+          reason: 'slot A carries the reading at index 0 (P1)');
+      expect(pair.b.coordinates, readings[2].coordinates,
+          reason: 'slot B carries the reading at index 2 (P3)');
+      // The two slots carry genuinely different colours, not a duplicate.
+      expect(pair.a.coordinates, isNot(readings[2].coordinates),
+          reason: 'the pair is not a duplicate of one reading');
+    });
+
+    test('each sent reading is measured at the capture\'s stated accuracy',
+        () async {
+      final controller = await threeReadings();
+
+      controller.sendPairToComparison(0, 1);
+
+      final pair = controller.state.pairToCompare!;
+      expect(pair.a.provenance.tier, ProvenanceTier.measured);
+      expect(pair.b.provenance.tier, ProvenanceTier.measured);
+      expect(pair.a.accuracy, controller.state.accuracy);
+      expect(pair.b.accuracy, controller.state.accuracy);
+    });
+
+    test('a send emits one change so the screen can open the comparison',
+        () async {
+      final controller = await threeReadings();
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.sendPairToComparison(0, 1);
+
+      expect(notifications, 1, reason: 'the send publishes the pair once');
     });
   });
 

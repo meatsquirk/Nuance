@@ -71,6 +71,33 @@ class MultiPointReading {
   String toString() => 'MultiPointReading($position → $coordinates)';
 }
 
+/// A pair of readings the painter has sent to a side-by-side comparison
+/// (bs-09 AC-5): [a] fills comparison slot A, [b] fills slot B.
+///
+/// Held transiently on [CaptureState.pairToCompare] so the Capture screen opens
+/// the comparison once per send — the mirror of how a commit's
+/// [CaptureState.lastCommittedSample] drives the Readout handoff. Each send
+/// builds a fresh instance, so the screen gates the push on object identity.
+class ComparisonPair {
+  const ComparisonPair(this.a, this.b);
+
+  /// The reading carried into comparison slot A.
+  final Sample a;
+
+  /// The reading carried into comparison slot B.
+  final Sample b;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ComparisonPair && other.a == a && other.b == b;
+
+  @override
+  int get hashCode => Object.hash(a, b);
+
+  @override
+  String toString() => 'ComparisonPair($a, $b)';
+}
+
 /// The observable state of a capture in progress, held by the
 /// [CaptureController] and surfaced to the Capture screen and the acceptance
 /// read endpoint.
@@ -94,6 +121,7 @@ class CaptureState {
     this.torchWarning,
     this.markedPoints = const [],
     this.markedReadings = const [],
+    this.pairToCompare,
   });
 
   /// Whether AE/AWB/AF are auto or locked (AC-4, AC-5).
@@ -150,6 +178,13 @@ class CaptureState {
   /// (CAPTURE-4).
   final List<MultiPointReading> markedReadings;
 
+  /// The pair of marked readings the painter has sent to a side-by-side
+  /// comparison (bs-09 AC-5), or null before any send. Set by
+  /// [CaptureController.sendPairToComparison] (CAPTURE-5); the Capture screen
+  /// opens the comparison for it, the mirror of the [lastCommittedSample]
+  /// Readout handoff.
+  final ComparisonPair? pairToCompare;
+
   /// True once [stabilityCount] has reached [kStabilityFrameTarget].
   bool get isStable => stabilityCount >= kStabilityFrameTarget;
 
@@ -195,6 +230,7 @@ class CaptureState {
     bool clearTorchWarning = false,
     List<MarkedPoint>? markedPoints,
     List<MultiPointReading>? markedReadings,
+    ComparisonPair? pairToCompare,
   }) {
     return CaptureState(
       lockState: lockState ?? this.lockState,
@@ -211,6 +247,7 @@ class CaptureState {
           clearTorchWarning ? null : (torchWarning ?? this.torchWarning),
       markedPoints: markedPoints ?? this.markedPoints,
       markedReadings: markedReadings ?? this.markedReadings,
+      pairToCompare: pairToCompare ?? this.pairToCompare,
     );
   }
 
@@ -229,7 +266,8 @@ class CaptureState {
       other.torchOn == torchOn &&
       other.torchWarning == torchWarning &&
       listEquals(other.markedPoints, markedPoints) &&
-      listEquals(other.markedReadings, markedReadings);
+      listEquals(other.markedReadings, markedReadings) &&
+      other.pairToCompare == pairToCompare;
 
   @override
   int get hashCode => Object.hash(
@@ -246,6 +284,7 @@ class CaptureState {
         torchWarning,
         Object.hashAll(markedPoints),
         Object.hashAll(markedReadings),
+        pairToCompare,
       );
 
   @override

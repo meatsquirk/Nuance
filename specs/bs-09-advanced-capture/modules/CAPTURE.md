@@ -1,6 +1,6 @@
 # Module CAPTURE — controller: torch, multi-point, send-to-comparison, colour-space stamp
 
-**Status:** In progress — CAPTURE-1/2/3/4 done (AC-2, AC-3 un-pended); next CAPTURE-5 (AC-5), unblocked by CAPTURE-4 (same controller file — serial)
+**Status:** ✅ Module complete — CAPTURE-1..5 done (AC-2, AC-3, AC-5 un-pended; CAPTURE-1/2 no AC)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`,
 `lib/capture/capture_read_endpoint.dart`, `lib/domain/sample.dart` (new fields),
@@ -16,7 +16,7 @@
 | CAPTURE-2 | shell | — | ✅ Done | 8,882,434 | 17m 46s |
 | CAPTURE-3 | behavior | AC-2 | ✅ Done | 10,436,918 | 15m 55s |
 | CAPTURE-4 | behavior | AC-3 | ✅ Done | 9,233,826 | 23m 46s |
-| CAPTURE-5 | behavior | AC-5 | ⬜ Todo | | |
+| CAPTURE-5 | behavior | AC-5 | ✅ Done | 14,461,630 | 21m 37s |
 
 ## Interface reconciliation
 
@@ -330,3 +330,44 @@ by G-2). **G-1 (spec approval) ✅ Resolved 2026-10-12: approved — Matt Quirk*
   `sendPairToComparison` still a CAPTURE-5 stub; colour-space/RAW/normalization tags still SOURCE-2/3/4 shell
   defaults. **Next in this module: CAPTURE-5** (AC-5, `sendPairToComparison` — serial on `capture_controller.dart`).
   SCREEN-3 (AC-4) is independently startable now that real readings exist.
+
+### Result — CAPTURE-5  <!-- 2026-10-12 -->
+
+- Landed the AC-5 pair handoff. `CaptureController.sendPairToComparison(i, j)` builds a measured `Sample`
+  (reading colour + current `state.accuracy`) from `markedReadings[i]`/`[j]` and publishes a fresh
+  `ComparisonPair` on the new `CaptureState.pairToCompare`. `_CaptureHomeScreenState` (build_app.dart) adds a
+  second listener `_openComparisonOnPair` that, identity-gated like the commit→Readout handoff, pushes
+  `router.toComparisonPair(pair.a, pair.b)` → both comparison slots filled on arrival.
+- `router.dart` needed no change — `toComparisonPair(a, b)` already existed as a complete shell (CAPTURE-2/
+  SCREEN-1). Files touched: `capture_controller.dart`, `capture_state.dart` (new `ComparisonPair` class +
+  `pairToCompare` field), `build_app.dart` (listener), their unit tests, `bs09/pending.dart` (AC-5 row deleted),
+  `advanced_capture_test.dart` (`unpended` += AC-5).
+- Un-pended AC-5. Gates: `flutter analyze` clean; **916 unit tests pass**; coverage gate **100% on all 13
+  touched lib files** (base `main`, now incl. `build_app.dart`); acceptance default **18 pass / 3 skip** (AC-5
+  `TwoPointsToComparison` now runs and passes; AC-7/9/10 still pending → SOURCE-3/4). Run-pending: AC-5 passes
+  in both modes; AC-7/9/10 fail only on their own Then assertions (clean baseline — AC-5 is no vacuous pass).
+- Grade gate (fresh independent subagent, re-grade of all un-pended AC tests AC-1..6/8): **7 A / 0 below A**,
+  no drift; AC-5 verified to reject one-slot-filled, swap, duplicate and wrong-two-carried. Grid updated.
+- Augmentations: none assigned to CAPTURE-5; none newly enabled (the pair handoff adds no assertion any other
+  already-green AC test could make — G6).
+- Fix passes: 0/3 (first full run green on every gate).
+- Tokens / Time: 14,461,630 · 21m 37s (incl. 1 grading subagent).
+- Closed by: unit + 100% coverage; acceptance AC-5 green; grade A. **CAPTURE module complete.**
+
+### Checkpoint / Handoff — CAPTURE-5
+
+- **Frozen for the comparison handoff:**
+  - `CaptureController.sendPairToComparison(int i, int j)` is live: it sets `state.pairToCompare =
+    ComparisonPair(_sampleOf(markedReadings[i]), _sampleOf(markedReadings[j]))` (measured provenance, current
+    accuracy). A fresh `ComparisonPair` per call → the screen's identity gate opens the comparison once per send.
+  - `CaptureState.pairToCompare` is set-forward (never cleared); the screen gates the push on object identity,
+    so settling ticks / warning dismisses do not re-open the comparison.
+  - The SCREEN-1 "Send to comparison" button still carries the placeholder index pair `(0, 1)`; a real
+    pair-selection UI is out of scope for bs-09 (AC-5 only requires the handoff opens both slots).
+- **Verification commands:** unchanged from CAPTURE-4 (host: `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main`; acceptance under `coord.sh with-lock`, booted sim `-d <udid>`
+  mandatory, run-pending adds `--dart-define=BS09_RUN_PENDING=true`; no `timeout` on this macOS — redirect long
+  runs to a file). In a `--parallel` worktree, `cd` into that worktree inside the `bash -c`, not `Nuance-bs09`.
+- **Known gaps:** colour-space / RAW / normalization tags still SOURCE-2/3/4 defaults (AC-7/9/10 pending). The
+  CAPTURE module owns no remaining phase. **Next for the feature: SOURCE-3 (AC-7) and SOURCE-4 (AC-9/10) —
+  merge-serial on the SOURCE files — then SIGNOFF-1.**

@@ -433,6 +433,39 @@ void main() {
       expect(haptics.confirmations, 0);
     });
 
+    testWidgets(
+        'sending a pair of marked readings opens the Comparison with both '
+        'slots filled (AC-5)', (tester) async {
+      await tester.pumpWidget(buildApp(_captureDeps(_captureSource())));
+      await tester.pumpAndSettle(); // let the live feed buffer a frame
+
+      final controller = tester
+          .widget<CaptureReadEndpoint>(
+            find.byKey(CaptureReadEndpoint.endpointKey),
+          )
+          .controller;
+
+      // Mark and sample two points, then send them straight to a comparison.
+      controller
+        ..markPoint(2, 2)
+        ..markPoint(6, 6)
+        ..sampleMarkedPoints();
+      controller.sendPairToComparison(0, 1);
+      await tester.pumpAndSettle();
+
+      // The pair handoff opens the real Comparison — not the Readout — with
+      // both slots filled from the sent readings (bs-09 AC-5, D-9).
+      expect(find.byType(ReadoutScreen), findsNothing,
+          reason: 'the pair handoff opens the Comparison, not the Readout');
+      final comparison = tester
+          .widget<ComparisonReadEndpoint>(
+            find.byKey(ComparisonReadEndpoint.endpointKey, skipOffstage: false),
+          )
+          .controller;
+      expect(comparison.state.slotA, isNotNull, reason: 'slot A is filled');
+      expect(comparison.state.slotB, isNotNull, reason: 'slot B is filled');
+    });
+
     testWidgets('opens on the Comparison screen when a comparison entry is set '
         '(D-8)', (tester) async {
       await tester.pumpWidget(

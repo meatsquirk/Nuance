@@ -57,7 +57,8 @@ const Map<String, String> pendingACs = {
   // sampleMarkedPoints → one reading per point).
   // AC-4 un-pended by SCREEN-3 (each reading shown keeps its own position +
   // value in CaptureReadingsList).
-  'AC-5': 'CAPTURE-5',
+  // AC-5 un-pended by CAPTURE-5 (sendPairToComparison → the pair handoff opens
+  // both comparison slots at once).
   // AC-6 and AC-8 un-pended by SOURCE-2 (colour-space selection + narrower
   // fallback + the tag threaded onto Sample.colorSpace).
   'AC-7': 'SOURCE-3',

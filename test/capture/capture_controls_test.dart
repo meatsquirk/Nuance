@@ -299,20 +299,32 @@ void main() {
         reason: 'multi-point sampling is live — not a deferred throw');
   });
 
-  testWidgets('"Send to comparison" drives the deferred sendPairToComparison '
+  testWidgets('"Send to comparison" drives the live sendPairToComparison '
       '(AC-5, CAPTURE-5)', (tester) async {
     final controller = _controller();
     addTearDown(controller.dispose);
     await _pump(tester, controller);
+    await tester.pumpAndSettle(); // the live feed buffers a frame to sample
+
+    // Two marked, sampled readings exist for the placeholder (0, 1) index pair
+    // the SCREEN-1 button carries.
+    controller
+      ..markPoint(2, 2)
+      ..markPoint(6, 6)
+      ..sampleMarkedPoints();
 
     final button = tester
         .widget<TextButton>(find.byKey(CaptureControls.sendToComparisonKey));
     expect(button.onPressed, isNotNull);
 
+    // The send is live as of CAPTURE-5: a tap reaches real behaviour (no
+    // deferred throw) and publishes the pair for the screen to open.
     await tester.tap(find.byKey(CaptureControls.sendToComparisonKey));
     await tester.pump();
-    expect(tester.takeException(), isA<UnimplementedError>(),
-        reason: 'send-to-comparison lands in CAPTURE-5');
+    expect(tester.takeException(), isNull,
+        reason: 'send-to-comparison is live — not a deferred throw');
+    expect(controller.state.pairToCompare, isNotNull,
+        reason: 'the tap publishes the pair for the comparison handoff');
   });
 
   test('exposes stable keys for the bs-09 controls', () {
