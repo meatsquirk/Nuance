@@ -50,7 +50,8 @@ const Map<String, String> pendingACs = {
   // AC-4 un-pended by DISPLAY-5 (severity slider sets simulation strength).
   // AC-5 un-pended by DISPLAY-6 (grayscale clears an active simulation, D-3).
   'AC-6': 'DISPLAY-7', // value-only grayscale greys the whole app
-  'AC-7': 'DISPLAY-8', // reading keeps numeric value + label under simulation
+  // AC-7 un-pended by DISPLAY-8 (reading keeps numeric value + label, and the
+  // simulated swatch coexists with them — "not colour alone", D-7).
   'AC-8': 'SPEECH-2', // repeat the last spoken output
   'AC-9': 'SPEECH-3', // reading + comparison one consistent phrasing
   'AC-10': 'SPEECH-4', // spoken-output panel never auto-dismisses
