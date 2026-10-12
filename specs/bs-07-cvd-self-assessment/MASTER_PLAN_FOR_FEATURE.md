@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — ITEST-1 (acceptance harness) ✅ Done; next ITEST-2 (AC tests: flow & result group)
+**Status:** In progress — ITEST-2 (AC tests: flow & result group) ✅ Done; next ITEST-3 (AC tests: tiers & arrangement group)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -120,7 +120,7 @@ Pre-seeded augmentations: AC-13's confusion-check behavioural assertion is confi
 | ENGINE | [modules/ENGINE.md](modules/ENGINE.md) | Scaffold + pure assessment domain: tier scoring (intake prior, screening presence/direction, threshold severity), estimate assembly inputs, severity→band | — | 🔄 In progress (ENGINE-1, ENGINE-2 ✅) |
 | PROFILE | [modules/PROFILE.md](modules/PROFILE.md) | Persist the one CVD profile over `PersistentStore`; wire `AppDependencies.cvdProfile` to the store; the save path | ENGINE | 🔄 In progress (PROFILE-1 ✅) |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Onboarding controller + state + four-step flow + screens (lighting/intake/screening/arrangement/threshold/result) + read endpoint + route; estimate assembly; result-step behaviours | ENGINE, PROFILE | 🔄 In progress (FLOW-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1 ✅) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2 ✅) |
 
 ## Dependency graph
 
@@ -167,8 +167,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | PROFILE-1 | shell: `CvdProfileStore` + `CvdProfileReadEndpoint` + `AppDependencies` wiring | ✅ Done | 7,782,453 | 20m 30s | G-4 resolved |
 | 4 | FLOW-1 | shell: `OnboardingController`/state + `OnboardingReadEndpoint` + screen host & keyed step widgets + route (replace placeholder) | ✅ Done | 13,152,941 | 26m 57s | controller (14 actions throw) + state + read endpoint + host/screen + 7 keyed step widgets; entry screen replaced (anchor preserved); analyze clean · 957 unit · gate 100% on 23 touched · integ 134 |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (14 ACs), smoke test | ✅ Done | 12,779,960 | 1h 30m | harness + 9 fixtures + smoke + 6 fixture guards; analyze clean · bs-07 suite 10/10 · unit 957 · coverage N/A (no lib/); grade A (1 B fixed); fix 2/3 |
-| 6 | ITEST-2 | acceptance-tests: AC-1,2,10,11,12,13,14 (pending) + red baseline | ⬜ Next | | | seq before/after ITEST-3 |
-| 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
+| 6 | ITEST-2 | acceptance-tests: AC-1,2,10,11,12,13,14 (pending) + red baseline | ✅ Done | 6,494,040 | 27m 23s | 7 pending tests; default 10 pass/7 skip, run-pending +10/−7; grade 5 A + 2 B-pending (AC-10→FLOW-6, AC-13→PROFILE-2); fix 0/3 |
+| 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ⬜ Next | | | shares test file w/ ITEST-2 → sequential |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | FLOW-2 | AC-14 progress indicator | ⬜ Todo | | | G-5 |
 | 10 | FLOW-3 | AC-2 lighting gate (Tier 0) | ⬜ Todo | | | |
@@ -189,8 +189,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-1 (acceptance-tests) ✅ Done — the bs-07 harness (`self_assessment_harness.dart`: Given/When/Then vocab + 9 fixtures + the independent `referenceBand`/`fixedPair` references), a never-pending smoke test (routes to the onboarding host via `toSelfAssessment()`; every keyed region renders; both read endpoints respond) and 6 fixture guards. Startable next:
-- **ITEST-2** (acceptance-tests) — register the 7 *pending* AC tests for the flow & result group (AC-1,2,10,11,12,13,14) on `self_assessment_test.dart`, run the run-pending red baseline, fill the Red-baseline rows, grade. **ITEST-3** (AC-3,4,5,6,7,8,9) shares the runner file → **run sequentially** (not parallel). Then the ITEST-4 test review (G-2). No gate blocks ITEST-2/3 (G-2 is decided at ITEST-4).
+ITEST-2 (acceptance-tests) ✅ Done — 7 *pending* AC tests (AC-1,2,10,11,12,13,14) in `self_assessment_test.dart` (new ITEST-2 group); default run 10 pass / 7 skip, run-pending red baseline +10 / −7 (every AC test fails cleanly on a Then/precondition naming its owning phase). Grades: 5 A + 2 *B pending* (AC-10→FLOW-6, AC-13→PROFILE-2, each with an augmentation row). Fix 0/3. Startable next:
+- **ITEST-3** (acceptance-tests) — append the second group (AC-3,4,5,6,7,8,9) to the **shared** `self_assessment_test.dart` → **run sequentially** after ITEST-2 (not parallel): re-read the file, append after the ITEST-2 group. Grade the tier ACs against the harness's independent references; AC-6/7/8 likely *B pending FLOW-4*.
+- Then **ITEST-4** test review assembles the whole-suite packet and asks for **G-2**. No gate blocks ITEST-3 (G-2 is decided at ITEST-4).
 
 Still to decide, before the phases they block: **G-2** (approve acceptance tests, at ITEST-4; blocks every behaviour phase, not the ITEST phases) and **G-5** (four-step vs five-tier, blocks FLOW-2).
 
@@ -207,7 +208,8 @@ Still to decide, before the phases they block: **G-2** (approve acceptance tests
 | PROFILE-1 | dd73b464 | 2026-10-12 05:47 EDT | 06:16 | 29m 34s | 20m 30s | claude-opus-4-8 | 136 | 129,456 | 7,602,795 | 50,066 | 7,782,453 | shell done (G-4 resolved as proposed): CvdProfileStore + CvdProfileReadEndpoint + loadCvdProfile wired into assembly; analyze clean, 923 unit, coverage 100% on 8 touched, integ 134 green; no AC |
 | FLOW-1 | b44af27c | 2026-10-12 07:10 EDT | 07:37 | 26m 57s | 26m 57s | claude-opus-4-8 | 170 | 196,438 | 12,874,964 | 81,369 | 13,152,941 | shell done: OnboardingController (14 actions throw) + state + OnboardingReadEndpoint + host/screen + 7 keyed step widgets; entry screen replaced (anchor preserved); analyze clean, 957 unit, coverage 100% on 23 touched, integ 134; no AC |
 | ITEST-1 | 129d7bd8 | 2026-10-12 07:55 EDT | 09:25 | 1h 30m | 1h 30m | claude-opus-4-8 | 144 | 299,463 | 12,389,172 | 91,181 | 12,779,960 | harness + 9 fixtures + smoke + 6 fixture guards: analyze clean, bs-07 acceptance suite 10/10 on sim, unit 957, coverage N/A (no lib/ touched), grade A (1 vacuous-guard B fixed in-phase), fix 2/3; no AC un-pended (all 14 pending) |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 09:25** | **3h 18m** | **3h 09m** |  | **770** | **1,103,570** | **46,784,253** | **403,099** | **48,291,692** |  |
+| ITEST-2 | 3d96a895 | 2026-10-12 09:37 EDT | 10:04 | 27m 23s | 27m 23s | claude-opus-4-8 | 92 | 229,468 | 6,196,083 | 68,397 | 6,494,040 | 7 pending AC tests (AC-1,2,10,11,12,13,14) landed: analyze clean, default 10 pass/7 skip, run-pending red baseline +10/-7 (all fail cleanly on Then/precondition), grade 5 A + 2 B-pending (AC-10->FLOW-6, AC-13->PROFILE-2 augmentation rows), fix 0/3; no lib/ touched (coverage N/A) |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 10:04** | **3h 45m** | **3h 36m** |  | **862** | **1,333,038** | **52,980,336** | **471,496** | **54,785,732** |  |
 
 ## Sign-off
 

@@ -29,6 +29,7 @@ import 'package:paint_color_assistant/compare/difference.dart';
 import 'package:paint_color_assistant/onboarding/cvd_profile_read_endpoint.dart';
 import 'package:paint_color_assistant/onboarding/engine/severity_band.dart';
 import 'package:paint_color_assistant/onboarding/engine/tier_results.dart';
+import 'package:paint_color_assistant/onboarding/onboarding_controller.dart';
 import 'package:paint_color_assistant/onboarding/onboarding_read_endpoint.dart';
 import 'package:paint_color_assistant/onboarding/onboarding_state.dart';
 import 'package:paint_color_assistant/onboarding/screens/arrangement_step.dart';
@@ -210,6 +211,257 @@ void main() {
         isFalse,
       );
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // AC tests — flow & result group (ITEST-2): AC-1, 2, 10, 11, 12, 13, 14.
+  //
+  // One *pending* `acTestWidgets` per AC (its behaviour phase un-pends it by
+  // deleting the row in `bs07/pending.dart`). Givens are built only through the
+  // public UI surface and asserted before the When. The result-step ACs (AC-1,
+  // 10, 11, 12, 13) reach the result step only once FLOW-5 assembles the
+  // estimate, and the shell exposes no advance-to-result control, so each
+  // asserts that precondition explicitly (it fails at baseline naming FLOW-5)
+  // rather than tapping an inert, not-yet-built control. The lighting (AC-2) and
+  // progress (AC-14) tests build the Given through the real controls and fail at
+  // baseline on a Then naming FLOW-3 / FLOW-2.
+  // -------------------------------------------------------------------------
+
+  group('bs-07 AC tests — flow & result group (ITEST-2)', () {
+    acTestWidgets(
+      'AC-1',
+      'the estimate is labelled approximate and a clinical test is recommended',
+      (tester) async {
+        // Given: the painter completed the flow to the result step.
+        final h = await givenSelfAssessment(tester);
+        // The result step is reached only once FLOW-5 assembles an estimate.
+        expect(h.estimate, isNotNull,
+            reason: 'AC-1 needs the result step reached — FLOW-5 assembles the '
+                'estimate');
+
+        // Then: the result labels the estimate approximate AND recommends a
+        // clinical anomaloscope test (both present; FLOW-8 fills the caveat).
+        expect(h.caveatShown, isTrue,
+            reason: 'the approximate-estimate caveat must be shown (FLOW-8)');
+        final result = find.byKey(ResultStep.regionKey);
+        expect(
+          find.descendant(
+              of: result, matching: find.textContaining('approximate estimate')),
+          findsOneWidget,
+          reason: 'the result must label the estimate an approximate estimate',
+        );
+        expect(
+          find.descendant(
+              of: result, matching: find.textContaining('anomaloscope')),
+          findsOneWidget,
+          reason: 'the result must recommend a clinical anomaloscope test',
+        );
+      },
+    );
+
+    acTestWidgets(
+      'AC-2',
+      'the lighting setup must be confirmed before testing begins',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: on the lighting step with the three checks not all confirmed,
+        // and testing not started.
+        expect(h.stepIndex, 0, reason: 'starts on the lighting step');
+        expect(h.lightingConfirmed, isFalse,
+            reason: 'no lighting check confirmed yet');
+        expect(h.testingStarted, isFalse, reason: 'testing has not begun');
+
+        // When: Continue (E43) is tapped with the checks unconfirmed.
+        await h.whenContinue();
+
+        // Then: testing does not begin — still on the lighting step.
+        expect(h.stepIndex, 0, reason: 'an unconfirmed Continue must not advance');
+        expect(h.testingStarted, isFalse,
+            reason: 'testing must not begin until the checks are confirmed');
+
+        // Control: confirm all three, then Continue advances past the gate — a
+        // Continue that advances regardless of the checks fails the Then above,
+        // and a gate that never opens fails here.
+        await h.whenConfirmLightingCheck(LightingCheck.brightness);
+        await h.whenConfirmLightingCheck(LightingCheck.nightLight);
+        await h.whenConfirmLightingCheck(LightingCheck.daylight);
+        expect(h.lightingConfirmed, isTrue,
+            reason: 'confirming all three opens the continue gate (FLOW-3)');
+        await h.whenContinue();
+        expect(h.stepIndex, 1,
+            reason: 'a confirmed Continue advances past lighting (FLOW-2/FLOW-3)');
+        expect(h.testingStarted, isTrue,
+            reason: 'testing begins once past the lighting gate');
+      },
+    );
+
+    acTestWidgets(
+      'AC-10',
+      'the painter adjusts the estimated type by hand',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: the result step estimating deutan (FLOW-5 + deutan-leaning
+        // inputs).
+        expect(h.estimate, isNotNull,
+            reason: 'AC-10 needs the result step reached — FLOW-5 assembles the '
+                'estimate');
+        expect(h.estimate!.type, CvdType.deutan,
+            reason: 'the scenario reaches a deutan estimate before the override');
+
+        // When: set the type to protan by hand (E40). FLOW-6 adds the type
+        // choices this taps into.
+        await h.whenAdjustType();
+        // Then: the estimate type is protan.
+        expect(h.estimate!.type, CvdType.protan,
+            reason: 'the by-hand override must set the type to protan');
+        // Control: setting it back reads the other type (the override is not
+        // ignored — a control that keeps deutan fails the Then above).
+        await h.whenAdjustType();
+        expect(h.estimate!.type, CvdType.deutan,
+            reason: 'the by-hand override is honoured both ways');
+      },
+    );
+
+    acTestWidgets(
+      'AC-11',
+      'the severity value sets a plain-language band',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: on the result step (FLOW-5 assembled the estimate).
+        expect(h.estimate, isNotNull,
+            reason: 'AC-11 needs the result step reached — FLOW-5 assembles the '
+                'estimate');
+
+        final result = find.byKey(ResultStep.regionKey);
+        // The three Scenario-Outline example rows: slider 30/60/90. The product
+        // band is graded against the INDEPENDENT [referenceBand] on the slider's
+        // actual value (robust to the tap-along-track approximation). A mapping
+        // that returns one band for all values fails on the row that should read
+        // a different band.
+        for (final sliderValue in <double>[30, 60, 90]) {
+          await h.whenSetSeverity(sliderValue);
+          final actual =
+              tester.widget<Slider>(find.byKey(ResultStep.severityKey)).value;
+          final expectedBand = referenceBand(actual / 100);
+          expect(
+            find.descendant(
+                of: result, matching: find.textContaining(expectedBand.label)),
+            findsOneWidget,
+            reason: 'severity ${actual.round()} must read "${expectedBand.label}"',
+          );
+        }
+      },
+    );
+
+    acTestWidgets(
+      'AC-12',
+      'the severity slider doubles as subjective self-calibration',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: the result step shows the simulated/original pair with the
+        // slider, and no calibration has been kept yet (FLOW-5 reached).
+        expect(h.estimate, isNotNull,
+            reason: 'AC-12 needs the result step reached — FLOW-5 assembles the '
+                'estimate');
+        expect(h.calibratedSeverity, isNull,
+            reason: 'no self-calibration kept before the painter sets the slider');
+
+        // When: set the slider until the pair stops looking different, keeping
+        // that severity.
+        await h.whenSetSeverity(70);
+        final kept =
+            tester.widget<Slider>(find.byKey(ResultStep.severityKey)).value;
+        // Then: the chosen severity is kept as the subjective self-calibration
+        // (0..1), read from the slider's actual value — not discarded or left at
+        // a default.
+        expect(h.calibratedSeverity, closeTo(kept / 100, 1e-9),
+            reason: 'the kept calibration is exactly the slider value (0..1)');
+
+        // Control: a different slider value is kept instead.
+        await h.whenSetSeverity(40);
+        final kept2 =
+            tester.widget<Slider>(find.byKey(ResultStep.severityKey)).value;
+        expect(kept2, isNot(kept), reason: 'the control sets a different value');
+        expect(h.calibratedSeverity, closeTo(kept2 / 100, 1e-9),
+            reason: 'the kept calibration tracks the new slider value');
+      },
+    );
+
+    acTestWidgets(
+      'AC-13',
+      'saving the profile configures the pipeline',
+      (tester) async {
+        // The injected default profile is the shipped deutan@1.0, which confuses
+        // the fixed pair; saving the measured deutan-moderate profile flips it.
+        final h = await givenSelfAssessment(tester);
+        const check = DichromatConfusionCheck();
+        const injectedDefault = CvdProfile(type: CvdType.deutan); // severity 1.0
+
+        // Given: the store is empty and the pipeline uses the default profile
+        // (the fixed pair is confusable under it) — the control for "before save".
+        expect(await h.profileCount, 0, reason: 'no profile persisted before save');
+        expect(check.confusable(fixedPair.a, fixedPair.b, injectedDefault), isTrue,
+            reason: 'control: the default profile confuses the fixed pair');
+        // Given (cont.): a deutan, moderate result on the result step.
+        expect(h.estimate, isNotNull,
+            reason: 'AC-13 needs the result step reached — FLOW-5 assembles the '
+                'estimate');
+        expect(h.estimate!.type, CvdType.deutan,
+            reason: 'the scenario assembles a deutan estimate');
+        expect(referenceBand(h.estimate!.severity), SeverityBand.moderate,
+            reason: 'the scenario assembles a moderate severity (ENGINE-7 band)');
+
+        // When: save the profile (E43).
+        await h.whenSave();
+
+        // Then: exactly one profile is written {deutan, moderate}, and the
+        // pipeline is reconfigured off the default — bs-03's confusion check on
+        // the fixed pair now reflects the saved profile (the default confused the
+        // pair; the measured one does not). Sim/daltonization are verified at the
+        // shared seam only (D-8, known gap).
+        expect(await h.profileCount, 1, reason: 'exactly one profile is written');
+        final saved = await h.savedProfile;
+        expect(saved, isNotNull);
+        expect(saved!.type, CvdType.deutan);
+        expect(referenceBand(saved.severity), SeverityBand.moderate);
+        expect(check.confusable(fixedPair.a, fixedPair.b, saved), isFalse,
+            reason: 'the saved deutan-moderate profile reconfigures the confusion '
+                'check off the default');
+      },
+    );
+
+    acTestWidgets(
+      'AC-14',
+      'the current step is shown against the total',
+      (tester) async {
+        final h = await givenSelfAssessment(tester);
+        // Given: a self-assessment of four steps; advance to the second step.
+        // Advancing is built through the real controls (confirm the lighting
+        // checks, then Continue) so the Given keeps holding once FLOW-3 adds the
+        // lighting gate.
+        expect(h.stepTotal, 4, reason: 'the onboarding has four top-level steps');
+        expect(h.progressText, 'Step 1 of 4', reason: 'starts on the first step');
+        await h.whenConfirmLightingCheck(LightingCheck.brightness);
+        await h.whenConfirmLightingCheck(LightingCheck.nightLight);
+        await h.whenConfirmLightingCheck(LightingCheck.daylight);
+        await h.whenContinue();
+        expect(h.stepIndex, 1,
+            reason: 'the painter advanced to the second step — 0-based index 1 '
+                '(FLOW-2; the rendered indicator is 1-based)');
+
+        // Then: the indicator reads the second of four steps (the raw observable
+        // the AC names).
+        expect(h.progressText, 'Step 2 of 4',
+            reason: 'the rendered indicator shows the second of four steps');
+
+        // Control: advancing again reads the third of four — an indicator
+        // hard-coded to a step, or showing the wrong total, fails here.
+        await h.whenContinue();
+        expect(h.stepIndex, 2, reason: 'advanced to the third step');
+        expect(h.progressText, 'Step 3 of 4',
+            reason: 'the indicator tracks the current step, not a hard-coded one');
+      },
+    );
   });
 
   // -------------------------------------------------------------------------

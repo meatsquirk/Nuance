@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 (harness) ✅ Done; next ITEST-2 (AC tests: flow & result group)
+**Status:** In progress — ITEST-2 (AC tests: flow & result group) ✅ Done; next ITEST-3 (AC tests: tiers & arrangement group)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/self_assessment_harness.dart`, `integration_test/self_assessment_test.dart`, `integration_test/bs07/pending.dart`; the grade grid `behavior-test-completeness-bs-07-cvd-self-assessment.md`.
 **Depends on:** every shell phase (ENGINE-2, PROFILE-1, FLOW-1) · **Blocks:** every behavior phase (via G-2)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness + smoke) | ✅ Done | 12,779,960 | 1h 30m |
-| 2 | acceptance-tests | AC-1,2,10,11,12,13,14 | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1,2,10,11,12,13,14 | ✅ Done | 6,494,040 | 27m 23s |
 | 3 | acceptance-tests | AC-3,4,5,6,7,8,9 | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -59,6 +59,21 @@
 - **Tasks:** write the 7 tests per the master-plan catalogue (`TestAC01/02/10/11/12/13/14`), all pending; Givens built only through public flows and asserted before the When; Thens at the step's grain with the catalogue's Rejects/controls. Run the run-pending mode and fill the Red baseline rows. Grade the tests (fresh subagent); fix any below A here.
 - **Exit criteria:** suite green (pending skipped); run-pending red baseline recorded; all 7 rows graded A (or *B pending <phase>* with an augmentation row).
 
+### Result — ✅ Done (ITEST-2, AC tests: flow & result group)
+
+- **Landed:** 7 *pending* `acTestWidgets` in `self_assessment_test.dart` (new `group('bs-07 AC tests — flow & result group (ITEST-2)')`) for AC-1, 2, 10, 11, 12, 13, 14, each registered through the pending gate (`acTestWidgets('AC-n', …)`) so default runs skip them. Givens built only through the public UI surface and asserted before the When. The result-step ACs (AC-1/10/11/12/13) assert the `estimate != null` precondition (naming FLOW-5) rather than tap a not-yet-built advance-to-result control (per the ITEST-1 handoff). AC-11/AC-12 read the Slider's **actual** value as source of truth (robust to the tap-along-track approximation): AC-11 grades the product band against the independent `referenceBand`; AC-12 asserts `calibratedSeverity == slider/100` with a different-value control. AC-13 asserts the save at the store seam (`profileCount==1`, `savedProfile {deutan, moderate}`) and the confusion reconfiguration at the saved-profile value seam (`DichromatConfusionCheck().confusable(fixedPair, saved)` flips vs the injected deutan@1.0 default). AC-14 reconciles the catalogue's 1-based "step 2" with the shell/smoke-frozen **0-based** `stepIndex` (index 0 → "Step 1 of 4"): asserts `stepIndex==1` + `progressText=='Step 2 of 4'` with a control advancing to index 2 / "Step 3 of 4".
+- **Gate:** `flutter analyze integration_test/` clean · default run (pending skipped) **10 passed / 7 skipped** on the booted sim (iPhone 17) · run-pending red baseline **+10 / −7** — every AC test fails cleanly (no panic/compile/hit-test error; the inert-control taps in AC-2/AC-14 are no-ops, confirmed). Unit suite unchanged (no `lib/` touched). Coverage gate **N/A** (test-only phase, no `lib/` source). **Fix passes: 0/3** (first full run produced the clean red baseline).
+- **Grades (fresh independent subagent, G1–G6):** 5 A (AC-1, 2, 11, 12, 14) + 2 *B pending* (AC-10 → FLOW-6, AC-13 → PROFILE-2); both are limited only by behaviour not yet built (see *Test augmentations*), not by a fixable test defect. Grid: [behavior-test-completeness-bs-07-cvd-self-assessment.md](../behavior-test-completeness-bs-07-cvd-self-assessment.md).
+- **Red baseline / augmentations:** tables below.
+- **Tokens / time:** 6,494,040 · 27m 23s.
+
+### Checkpoint / Handoff
+
+- **Frozen for ITEST-3:** `self_assessment_test.dart` now holds the smoke test, the `bs-07 fixtures` group, the ITEST-2 AC group, and the pending-gate scaffold group. ITEST-3 **shares this file** (→ sequential, not parallel): re-read it, then append a **second** `group('bs-07 AC tests — tiers & arrangement group (ITEST-3)')` for AC-3,4,5,6,7,8,9 before the pending-gate scaffold group. Import only `self_assessment_harness.dart` (re-exports the pending gate + fakes). Do not touch the ITEST-2 group.
+- **Patterns to reuse:** build Givens through the public `when…` drivers; assert the Given before the When; grade scoring ACs (AC-5 direction, AC-9 severity) against the harness's **independent** fixture axes/references, never the product function; the arrangement ACs (AC-6/7/8) assert per-item (G4) and only their own AC (G6). For a Given that needs unbuilt behaviour, assert an explicit precondition naming the owning phase (as AC-1/10/11/12/13 do with FLOW-5) rather than tapping an inert control. The tier ACs (AC-3/4/5/9) fail at baseline on their Then (the shell engine returns trivial defaults — `recordIntake`→none, `scoreScreening`→present:false, `scoreThreshold`→severity 0); AC-6/7/8 need FLOW-4 sub-controls (`placeCap` has no public cap-selection control in the shell yet) → likely *B pending FLOW-4* with an augmentation row, like AC-10 here.
+- **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$PATH:/Users/matthew.quirk/development/flutter/bin"`): `flutter analyze integration_test/`; default `flutter test integration_test/self_assessment_test.dart -d <booted-udid>` (pending skipped — **`-d` mandatory**, no device ⇒ 0 tests exit 0); run-pending red baseline add `--dart-define=BS07_RUN_PENDING=true`. Shared device lane → run through `coord.sh with-lock bs-07 ITEST-3 --wait 600 -- bash -c "cd ../Nuance-bs07 && …"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance). The run-pending pass can exceed a 120s foreground timeout on first build — redirect to a file (`> log 2>&1`) rather than piping through `tail`.
+- **Known gaps:** AC-10 and AC-13 carry open augmentation rows (FLOW-6 / PROFILE-2). The TestAC13 sim/dalt gap (bs-08/bs-10) stays out of scope.
+
 ## Phase 3 — AC tests: tiers & arrangement group
 
 - **Kind:** acceptance-tests · **Target AC:** AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9
@@ -79,8 +94,8 @@
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_EstimateLabelledApproximate | | Given precondition (FLOW-5) → Then caveat strings | FLOW-8 | |
-| AC-2 | TestAC02_LightingConfirmedBeforeTesting | | Then: still on lighting step after Continue | FLOW-3 | |
+| AC-1 | TestAC01_EstimateLabelledApproximate (`AC-1`) | FAIL | Given precondition `estimate != null` (FLOW-5) | FLOW-8 | A |
+| AC-2 | TestAC02_LightingConfirmedBeforeTesting (`AC-2`) | FAIL | Control Then `lightingConfirmed` after confirming all three (FLOW-3); primary "unconfirmed Continue stays" passes at baseline (inert) | FLOW-3 | A |
 | AC-3 | TestAC03_IntakeAnswerToPrior | | Then: prior reflects "Often" | ENGINE-3 | |
 | AC-4 | TestAC04_DiagnosisSeedsPrior | | Then: prior.type == deutan | ENGINE-4 | |
 | AC-5 | TestAC05_ScreeningPresenceAndDirection | | Then: present + direction | ENGINE-5 | |
@@ -88,16 +103,18 @@
 | AC-7 | TestAC07_StartOverClearsArrangement | | Then: arranged empty, pool full | FLOW-4 | |
 | AC-8 | TestAC08_SkipArrangement | | Then: advanced, arrangementResult absent | FLOW-4 | |
 | AC-9 | TestAC09_ThresholdSeverity | | Then: severity on confusion line | ENGINE-6 | |
-| AC-10 | TestAC10_AdjustTypeByHand | | Given precondition (FLOW-5) → Then type == protan | FLOW-6 | |
-| AC-11 | TestAC11_SeverityBand | | Given precondition (FLOW-5) → Then band per example | ENGINE-7 | |
-| AC-12 | TestAC12_SelfCalibration | | Given precondition (FLOW-5) → Then calibratedSeverity | FLOW-7 | |
-| AC-13 | TestAC13_SaveConfiguresPipeline | | Given precondition (FLOW-5/ENGINE-7) → Then one profile + pipeline moved | PROFILE-2 | |
-| AC-14 | TestAC14_ProgressStepOfTotal | | Then: 2 of 4 | FLOW-2 | |
+| AC-10 | TestAC10_AdjustTypeByHand (`AC-10`) | FAIL | Given precondition `estimate != null` (FLOW-5) | FLOW-6 | **B pending FLOW-6** |
+| AC-11 | TestAC11_SeverityBand (`AC-11`) | FAIL | Given precondition `estimate != null` (FLOW-5) | ENGINE-7 | A |
+| AC-12 | TestAC12_SelfCalibration (`AC-12`) | FAIL | Given precondition `estimate != null` (FLOW-5) | FLOW-7 | A |
+| AC-13 | TestAC13_SaveConfiguresPipeline (`AC-13`) | FAIL | Given precondition `estimate != null` (FLOW-5) | PROFILE-2 | **B pending PROFILE-2** |
+| AC-14 | TestAC14_ProgressStepOfTotal (`AC-14`) | FAIL | Then `stepIndex == 1` (Actual 0) — second step not reached | FLOW-2 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC13 | bs-08 (simulation) and bs-10 (daltonization) are not built, so "configures the simulation/daltonization" can only be asserted at the shared profile seam, not behaviourally | **out of scope** — bs-08 / bs-10 (known gap, no bs-07 phase closes it) | behavioural sim/dalt assertions once those features exist | ⬜ Open (known gap) |
+| TestAC10 (`AC-10`) | the harness `whenAdjustType()` only *opens* the type control — it carries no type argument, so the test can't select protan specifically among protan/deutan/tritan; a bare tap only discriminates against a 2-way toggle, not a 3-way picker (G4/G5) | **FLOW-6** | FLOW-6 wires the by-hand type picker and gives the driver a type argument (tap the protan choice) so `estimate!.type == protan` rejects selecting the wrong type, not merely "stays deutan" | ⬜ Open (added ITEST-2) |
+| TestAC13 (`AC-13`) | the save reconfiguration is asserted only at the saved-profile **value** seam (`confusable(fixedPair, savedProfile)` flips vs the injected default); a save that persists the profile but never rewires the **live** `AppDependencies.cvdProfile` still passes, so the Reject "leaves the pipeline on the default" is uncovered (G4/G5) | **PROFILE-2** | PROFILE-2 asserts the **live** `AppDependencies.cvdProfile` (or the live confusion pipeline on `fixedPair`) reflects the saved profile after save | ⬜ Open (added ITEST-2) |
+| TestAC13 (`AC-13`) | bs-08 (simulation) and bs-10 (daltonization) are not built, so "configures the simulation/daltonization" can only be asserted at the shared profile seam, not behaviourally | **out of scope** — bs-08 / bs-10 (known gap, no bs-07 phase closes it) | behavioural sim/dalt assertions once those features exist | ⬜ Open (known gap) |
 
-No intra-feature test is green-at-baseline (each fails on its Then or on a precondition naming its behavior phase), so no pre-seeded intra-feature augmentation rows are expected; AC-test phases confirm or add rows from the real red baseline.
+AC-10 and AC-13 are *B pending* (limited by behaviour not yet built, per the rows above); the other five ITEST-2 tests graded A. No ITEST-2 test is green-at-baseline (each fails on its Then or on a precondition naming its behaviour/enabler phase).
