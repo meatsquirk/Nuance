@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** In progress — ITEST-2 done (AC-1..7 pending + red baseline + grades), next ITEST-3 (AC-8,9,10 pending)
+**Status:** In progress — all AC-test phases done (ITEST-1..3: AC-1..10 pending + red baseline + grades), next ITEST-4 (test review → G-2)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -107,7 +107,7 @@ Augmentations (confirmed by ITEST-2): **AC-7** is green-at-baseline and *limited
 | DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | 🔄 In progress (SETTINGS-1 ✅) |
 | SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2 ✅) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1, ITEST-2, ITEST-3 ✅; next ITEST-4 review) |
 
 ## Dependency graph
 
@@ -153,8 +153,8 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 4 | SPEECH-1 | shell: `RepeatableSpeech` behind the `Speech` seam + app-wide inject + spoken-output panel (E50) + observation | ✅ Done | 7,712,760 | 18m 46s (18m 46s) | analyze clean, 914 unit (899+15), gate 100% on 11 touched files, bs08 integration 3/3 on sim; app-wide speech wrapped + re-provided via AppScope, E50 panel in chrome; fix 0/3 |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, independent reference, pending gate (10 ACs), smoke test | ✅ Done | 8,480,396 | 16m 57s | analyze clean, 914 unit, gate PASS (no lib touched), integration 11/11 on sim (3 scaffold + 6 guard + 2 smoke), 10 ACs still pending; fix 0/3 |
 | 6 | ITEST-2 | acceptance-tests: AC-1..7 (display, pending) + red baseline | ✅ Done | 14,829,254 | 1h 06m (1h 10m) | red baseline +13 -5 (AC-2..6 fail on Then; AC-1/AC-7 green-at-baseline); grades 6 A + 1 B-pending-DISPLAY-8 (AC-7); fixed a non-deterministic scaffold guard; fix 1/3 |
-| 7 | ITEST-3 | acceptance-tests: AC-8,9,10 (speech, pending) + red baseline | ⬜ Next | | | shares display_test.dart w/ ITEST-2 — re-read before editing |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 7 | ITEST-3 | acceptance-tests: AC-8,9,10 (speech, pending) + red baseline | ✅ Done | 6,704,225 | 18m 11s | AC-8/9/10 all green-at-baseline (SPEECH-1 wired repeat + shared seam); grades 3 A; +16 -5 run-pending; fix 0/3 |
+| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | assemble review packet; human approves G-2 before any behavior phase |
 | 9 | DISPLAY-3 | AC-2 simulation off = trichromat (identity path) | ⬜ Todo | | | foundational transform chokepoint |
 | 10 | DISPLAY-4 | AC-3 simulate chosen type alongside original (protan/deutan/tritan) | ⬜ Todo | | | barrier for AC-4/5/7 |
 | 11 | DISPLAY-5 | AC-4 severity slider strength | ⬜ Todo | | | after DISPLAY-4 |
@@ -171,9 +171,9 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 ## Next phase
 
-ITEST-2 is done — AC-1..7 landed as pending `acTestWidgets` in `display_test.dart`. Red baseline on the sim: `+13 -5` — AC-2..AC-6 fail on their Then naming the owning DISPLAY phase; AC-1 (SETTINGS-2) and AC-7 (DISPLAY-8) are **green at baseline** (recorded as such; their behaviour phases un-pend them). AC-7 is *limited* → one augmentation owned by DISPLAY-8. Grades: suite 15 A (ITEST-1) + 6 A + 1 B-pending-DISPLAY-8 (ITEST-2). Default run green (11 pass / 7 skipped).
+ITEST-3 is done — AC-8/9/10 landed as pending `acTestWidgets` in `display_test.dart` (ITEST-2 group untouched). All three are **green at baseline** (SPEECH-1 already wired `RepeatableSpeech.repeat()`, the E50 panel and the one shared speech seam both the comparison and the carried reading resolve); they stay pending until SPEECH-2/3/4 un-pend them. Grades 3 A (no augmentations). Run-pending `+16 -5` (the 5 fails are the unchanged ITEST-2 display ACs AC-2..6); default `+11 ~10: All tests passed!`. The acceptance stage is **test-complete** (AC-1..10 all have a pending test; suite all A bar AC-7 *B pending DISPLAY-8*).
 
-**ITEST-3** (acceptance-tests: one *pending* `acTestWidgets` per AC-8,9,10 + red baseline + grade) is next and **startable** — it **shares `display_test.dart` with the now-landed ITEST-2, so re-read that file and append a second group** (do not touch the ITEST-2 group). Then **ITEST-4** is the test review whose gate **G-2** a human approves before any behaviour phase (DISPLAY-3..8, SETTINGS-2, SPEECH-2..4). **G-2 is the only open gate.** The acceptance stage uses the booted sim `5AB9D06D…` + the shared device lane (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`), both the default and `--dart-define=BS08_RUN_PENDING=true` (red baseline) runs; the lane is contended across sessions, so queue (and a hung sibling run may need clearing).
+**ITEST-4** (test-review) is next and **startable** — assemble the review packet (catalogue, red baseline, grades, fixtures, real-vs-faked) and set **G-2** *awaiting decision*; a human approves G-2 before any behaviour phase (DISPLAY-3..8, SETTINGS-2, SPEECH-2..4). **G-2 is the only open gate.** No code runs in ITEST-4 (packet + stop). After G-2 approval the behaviour phases open: SETTINGS-2, DISPLAY-7 and the SPEECH chain (SPEECH-2→3→4) are independent of the simulation chain (DISPLAY-3→4→{5,6,8}) and may run concurrently (separate sessions). Device lane stays shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
 
 ## Token usage
 
@@ -189,7 +189,8 @@ ITEST-2 is done — AC-1..7 landed as pending `acTestWidgets` in `display_test.d
 | SPEECH-1 | 12232428 | 2026-10-12 07:10 EDT | 07:29 | 18m 46s | 18m 46s | claude-opus-4-8 | 112 | 161,614 | 7,484,024 | 67,010 | 7,712,760 | shell green — analyze clean, 914 unit (899+15), coverage gate 100% on 11 touched files, bs08 integration scaffold guard 3/3 on sim; RepeatableSpeech wraps the app-wide Speech + re-provided via AppScope (readout/comparison/recipes all repeatable), SpeechScope + E50 SpokenOutputPanel surfaced in chrome; fix 0/3 |
 | ITEST-1 | 0917e31c | 2026-10-12 07:54 EDT | 08:11 | 16m 57s | 16m 57s | claude-opus-4-8 | 114 | 187,077 | 8,228,434 | 64,771 | 8,480,396 | harness + fixtures + independent reference + smoke/guards; analyze clean, 914 unit, gate PASS (no lib touched), integration 11/11 on sim, 10 ACs still pending; fix 0/3 |
 | ITEST-2 | dfd026ba | 2026-10-12 08:19 EDT | 09:30 | 1h 10m | 1h 06m | claude-opus-4-8 | 166 | 334,879 | 14,379,877 | 114,332 | 14,829,254 | AC-1..7 pending tests landed; red baseline +13 -5 (AC-2..6 fail on Then, AC-1/AC-7 green-at-baseline); grades 6 A + 1 B-pending-DISPLAY-8; fixed non-deterministic scaffold guard; fix 1/3 |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 09:30** | **3h 04m** | **2h 57m** |  | **876** | **1,277,403** | **60,341,911** | **486,709** | **62,106,899** |  |
+| ITEST-3 | df46f7bd | 2026-10-12 09:42 EDT | 10:00 | 18m 11s | 18m 11s | claude-opus-4-8 | 106 | 246,018 | 6,403,141 | 54,960 | 6,704,225 | AC-8/9/10 pending speech tests + harness (givenComparison) landed; all 3 green-at-baseline, grades 3 A, no augmentations; run-pending +16 -5; analyze clean, 914 unit, coverage gate PASS (no lib touched); fix 0/3 |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 10:00** | **3h 22m** | **3h 15m** |  | **982** | **1,523,421** | **66,745,052** | **541,669** | **68,811,124** |  |
 
 ## Sign-off
 

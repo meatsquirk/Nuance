@@ -32,7 +32,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/repeatable_speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
+import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/display/display_controller.dart';
 import 'package:paint_color_assistant/display/display_read_endpoint.dart';
 import 'package:paint_color_assistant/display/display_settings.dart';
@@ -51,6 +53,9 @@ import 'fakes/fake_speech.dart';
 export 'bs08/pending.dart';
 export 'fakes/fake_haptics.dart';
 export 'fakes/fake_speech.dart';
+// AC-9 drives the two comparison slots through the picker; re-export the slot
+// enum so an AC test imports only this harness.
+export 'package:paint_color_assistant/app/router.dart' show ComparisonSlot;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -93,6 +98,19 @@ const Sample displaySample = Sample(
 /// The settings panel pre-selects this type when simulation is first turned on
 /// (the AC-3/AC-4 default path), and the painter may still choose any type.
 const CvdProfile cvdProfileFixture = CvdProfile(type: CvdType.deutan);
+
+/// A second known saved sample the AC-9 comparison fills its **B** slot from
+/// (slot A takes [displaySample]).
+///
+/// A distinct colour (a cool blue-violet, clearly apart from [displaySample]'s
+/// olive) so the pair yields a real comparison and its spoken phrasing differs
+/// from the single reading's — the AC-9 Then asserts the two spoken utterances
+/// are distinct, both recorded by the one injected sink.
+const Sample compareSampleB = Sample(
+  name: 'Compare Swatch',
+  coordinates: ColorCoordinates(lightness: 45, a: 20, b: -35),
+  provenance: Provenance(ProvenanceTier.measured),
+);
 
 // ---------------------------------------------------------------------------
 // Independent reference dichromat projection
@@ -401,6 +419,34 @@ class DisplayHarness {
     await tester.tap(repeatControl, warnIfMissed: false);
     await tester.pumpAndSettle();
   }
+
+  /// Fills comparison [slot] with [sample] through the saved-sample picker
+  /// (E3/E5 open the E49 dialog; the painter chooses a sample) — the public flow
+  /// that builds a comparison on the [givenComparison] screen (AC-9). [sample]
+  /// must be one of the booted `sampleSource`'s saved samples.
+  Future<void> whenChooseSample(ComparisonSlot slot, Sample sample) async {
+    await tester.tap(find.text(
+        slot == ComparisonSlot.a ? 'Choose sample A' : 'Choose sample B'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(SimpleDialogOption, sample.name!));
+    await tester.pumpAndSettle();
+  }
+
+  /// Speaks the whole comparison through the one app-wide speech (E6 — AC-9).
+  ///
+  /// The "Speak whole comparison" control is enabled only when both slots are
+  /// filled, so a scenario fills them with [whenChooseSample] first.
+  Future<void> whenSpeakComparison() async {
+    await tester.tap(find.text('Speak whole comparison'));
+    await tester.pumpAndSettle();
+  }
+
+  /// Opens the full Readout for the sample in comparison slot A (E7), so the
+  /// carried reading can then be spoken through the same shared speech (AC-9).
+  Future<void> whenOpenReadoutForA() async {
+    await tester.tap(find.text('Open readout for A'));
+    await tester.pumpAndSettle();
+  }
 }
 
 /// Opens the fully assembled app on the Readout for [sample], ready for a bs-08
@@ -437,6 +483,48 @@ Future<DisplayHarness> givenDisplay(
     haptics: haptics,
     cvdProfile: cvdProfile,
     initialSample: sample,
+    displayController: controller,
+  );
+  await tester.pumpWidget(buildApp(deps));
+  await tester.pumpAndSettle();
+  return DisplayHarness(
+    tester,
+    speech: speech,
+    haptics: haptics,
+    controller: controller,
+  );
+}
+
+/// Opens the assembled app on the **Comparison** screen (AC-9) with
+/// [savedSamples] available to the picker, through the one production
+/// `buildApp` entry (the `comparisonEntry` + a seeded `sampleSource`, exactly
+/// as bs-03 enters comparison).
+///
+/// A scenario fills both slots through the picker ([DisplayHarness.whenChooseSample]),
+/// speaks the whole comparison ([DisplayHarness.whenSpeakComparison]), then opens
+/// a slot's Readout ([DisplayHarness.whenOpenReadoutForA]) and speaks the reading
+/// ([DisplayHarness.whenSpeakReading]) — both paths flowing through the one
+/// injected [FakeSpeech], which is the single shared service AC-9 verifies.
+/// Returns a [DisplayHarness] over the booted app (the same speech/panel seams
+/// as [givenDisplay], since the chrome is app-wide).
+Future<DisplayHarness> givenComparison(
+  WidgetTester tester, {
+  List<Sample> savedSamples = const [displaySample, compareSampleB],
+  CvdProfile cvdProfile = cvdProfileFixture,
+}) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump();
+
+  final speech = FakeSpeech();
+  final haptics = FakeHaptics();
+  final controller = DisplayController(defaultSimulationType: cvdProfile.type);
+  final deps = AppDependencies(
+    colorScience: const ColorScienceImpl(),
+    speech: speech,
+    haptics: haptics,
+    cvdProfile: cvdProfile,
+    sampleSource: InMemorySampleSource(samples: savedSamples),
+    comparisonEntry: const ComparisonEntry(),
     displayController: controller,
   );
   await tester.pumpWidget(buildApp(deps));

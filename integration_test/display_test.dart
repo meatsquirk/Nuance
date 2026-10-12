@@ -403,6 +403,119 @@ void main() {
           reason: 'the numeric value is shown as text');
     });
   });
+
+  // The spoken-output ACs (AC-8, AC-9, AC-10) — one pending `acTestWidgets`
+  // each (ITEST-3). Appended below the ITEST-2 display group, sharing this file
+  // but leaving that group untouched. Each drives the *public* speech surface —
+  // the readout / comparison speak controls and the E50 spoken-output panel
+  // (through the harness `when…`) — and reads the one injected `FakeSpeech`
+  // (`h.speech`) + the panel finders, never a second sink.
+  //
+  // All three are expected *green at baseline*: SPEECH-1 already wired the
+  // repeatable speech (`RepeatableSpeech.repeat()`), the E50 panel's repeat
+  // control, and the one shared speech seam every caller resolves (readout via
+  // `AppScope`, comparison via its injected `speech`). So each stays pending
+  // here and its owning behaviour phase (SPEECH-2/3/4) un-pends it, keeping it
+  // green and meeting coverage — the same discipline AC-1/AC-7 followed. Each
+  // test is nonetheless written to discriminate: AC-8 rejects a repeat that
+  // replays a different/empty utterance (control: inert before any speak); AC-9
+  // rejects either path bypassing the single sink (two sinks would leave only
+  // one utterance recorded); AC-10 rejects a panel that auto-dismisses on a
+  // timer (control: inert, content-free, before any speak).
+  group('bs-08 speech ACs (ITEST-3)', () {
+    acTestWidgets('AC-8', 'the painter repeats the last spoken output',
+        (tester) async {
+      final h = await givenDisplay(tester);
+      // Control: with nothing spoken yet the repeat is inert (no control, no
+      // utterance) — so the Then below is a real replay, not an always-on pass.
+      expect(h.repeatControl, findsNothing,
+          reason: 'repeat is inert until something has been spoken');
+      expect(h.speech.utterances, isEmpty);
+      // Given: the painter has just heard a reading spoken.
+      await h.whenSpeakReading();
+      expect(h.speech.utterances, hasLength(1),
+          reason: 'Given: exactly the one reading has been spoken');
+      final spoken = h.speech.utterances.single;
+      expect(spoken, isNotEmpty);
+      expect(h.repeatControl, findsOneWidget,
+          reason: 'the repeat control appears once something is spoken');
+      // When: the painter asks to repeat it (E50).
+      await h.whenRepeatLastSpoken();
+      // Then: the *same* spoken output is played again — one more entry in the
+      // sink, identical to the first (not a different or empty utterance).
+      expect(h.speech.utterances, hasLength(2),
+          reason: 'repeat speaks exactly one more utterance — SPEECH-2');
+      expect(h.speech.utterances.last, spoken,
+          reason: 'the repeated utterance is identical to the first');
+    });
+
+    acTestWidgets('AC-9',
+        'readings and comparisons are spoken through one consistent phrasing',
+        (tester) async {
+      final h = await givenComparison(tester);
+      // Given: spoken output is produced for a reading and for a comparison —
+      // build a comparison by filling both slots through the picker (public
+      // flow), so there is a comparison to speak and a reading (slot A) to open.
+      await h.whenChooseSample(ComparisonSlot.a, displaySample);
+      await h.whenChooseSample(ComparisonSlot.b, compareSampleB);
+      expect(find.text('Slot A: ${displaySample.name}'), findsOneWidget,
+          reason: 'Given: slot A holds the reading');
+      expect(find.text('Slot B: ${compareSampleB.name}'), findsOneWidget,
+          reason: 'Given: slot B holds the second sample (a comparison exists)');
+      // The one app-wide speech wraps the single injected sink (the shared
+      // service both paths must use).
+      expect(identical(h.appSpeech.inner, h.speech), isTrue,
+          reason: 'one shared RepeatableSpeech over the injected sink');
+
+      // When: the comparison is spoken (E6) → recorded by the one sink.
+      await h.whenSpeakComparison();
+      expect(h.speech.utterances, hasLength(1),
+          reason: 'the comparison was spoken through the one injected sink');
+      final comparison = h.speech.utterances.single;
+      expect(comparison, isNotEmpty);
+
+      // ...and the reading is spoken: open the Readout for slot A and speak it.
+      await h.whenOpenReadoutForA();
+      await h.whenSpeakReading();
+      // Then: both went through the ONE shared speech service — a second
+      // phrasing path or a second sink would leave only one utterance here.
+      // Each is a non-empty, distinct phrasing (reading vs comparison).
+      expect(h.speech.utterances, hasLength(2),
+          reason: 'both speak paths flow through the single shared service — SPEECH-3');
+      final reading = h.speech.utterances.last;
+      expect(reading, isNotEmpty);
+      expect(reading, isNot(comparison),
+          reason: 'the reading and the comparison are distinct spoken phrasings');
+    });
+
+    acTestWidgets('AC-10',
+        'the spoken-output panel stays until the painter leaves it',
+        (tester) async {
+      final h = await givenDisplay(tester);
+      // Control: before anything is spoken the panel is present but content-free
+      // (inert), so the content asserted below is a real signal — not always-on.
+      expect(h.spokenOutputPanel, findsOneWidget);
+      expect(h.lastSpokenText, findsNothing);
+      // Given: the painter has opened spoken output for a reading.
+      await h.whenSpeakReading();
+      expect(h.spokenOutputPanel, findsOneWidget);
+      expect(h.lastSpokenText, findsOneWidget,
+          reason: 'Given: the panel shows the spoken reading');
+      final shown = tester.widget<Text>(h.lastSpokenText).data;
+      // When: the painter does not act for a while (a long idle), then settle —
+      // the settle point past which a timer-based dismiss would have fired.
+      await tester.pump(const Duration(seconds: 60));
+      await tester.pumpAndSettle();
+      // Then: the panel is still present and still shows the same output —
+      // nothing dismissed it on a timer (SPEECH-4).
+      expect(h.spokenOutputPanel, findsOneWidget,
+          reason: 'the panel is not auto-dismissed after a long idle');
+      expect(h.lastSpokenText, findsOneWidget,
+          reason: 'the spoken output stays available');
+      expect(tester.widget<Text>(h.lastSpokenText).data, shown,
+          reason: 'the same spoken output remains, unchanged by the idle');
+    });
+  });
 }
 
 /// The shared colour-space conversion (`toSRGB`) — the *same* conversion the
