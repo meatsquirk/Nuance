@@ -44,7 +44,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// of [behaviorPhases]. (The enabler PROJECT-2 owns no AC and is intentionally
 /// absent — it makes the Givens of the PROJECT ACs real, but un-pends nothing.)
 const Map<String, String> pendingACs = {
-  'AC-10': 'PROJECT-6', // export PDF studio sheet
+  // All 11 bs-06 ACs delivered: AC-10 (export PDF studio sheet) was un-pended by
+  // PROJECT-6, the last behaviour phase. The map is intentionally empty — the
+  // scaffold guard in palette_test asserts it is exactly {}.
 };
 
 /// The behaviour phases allowed to own a pending AC.

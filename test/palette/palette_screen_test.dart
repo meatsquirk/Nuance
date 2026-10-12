@@ -168,14 +168,15 @@ void main() {
     });
 
     testWidgets(
-        'E30/E31/E32/E33 controls are wired while the still-inert E34 '
-        'control has no action', (tester) async {
+        'E30/E31/E32/E33 controls are wired; E34 export activates once a '
+        'project is open and produces the sheet', (tester) async {
+      final project = _projectController(
+        catalogue: const [Project(id: 'p1', name: 'Harbor at Dusk')],
+      );
       await _pump(
         tester,
         palette: _paletteController(),
-        project: _projectController(
-          catalogue: const [Project(id: 'p1', name: 'Harbor at Dusk')],
-        ),
+        project: project,
       );
 
       // E32 Add paint is now active (PALETTE-2, AC-4).
@@ -200,8 +201,9 @@ void main() {
       expect(segments.every((b) => b.onPressed != null), isTrue,
           reason: 'SCREEN-2 wires the E31 view selector (AC-1)');
 
-      // E33 Open is now wired (PROJECT-4, AC-7/AC-8) while E34 Export stays
-      // inert (PROJECT-6, AC-10); reach them by the E31 toggle.
+      // E33 Open is now wired (PROJECT-4, AC-7/AC-8); reach it by the E31
+      // toggle. E34 Export is inert until a project is open — the open project
+      // is what is exported (PROJECT-6, AC-10).
       await tester.tap(
         find.descendant(
           of: find.byKey(PaletteScreen.viewSelectorKey),
@@ -214,10 +216,28 @@ void main() {
       expect(open.onPressed, isNotNull,
           reason: 'PROJECT-4 wires the open-project control (AC-7/AC-8), active '
               'when a project exists');
+      expect(
+          tester
+              .widget<TextButton>(find.byKey(ProjectsRegion.exportKey))
+              .onPressed,
+          isNull,
+          reason: 'E34 export is inert while no project is open');
+
+      // Open the project, then E34 Export activates and produces the sheet.
+      await tester.tap(find.byKey(ProjectsRegion.openProjectKey));
+      await tester.pumpAndSettle();
       final export =
           tester.widget<TextButton>(find.byKey(ProjectsRegion.exportKey));
-      expect(export.onPressed, isNull,
-          reason: 'E34 export stays inert until PROJECT-6 (AC-10)');
+      expect(export.onPressed, isNotNull,
+          reason: 'PROJECT-6 wires E34 export once a project is open (AC-10)');
+      expect(project.lastExport, isNull, reason: 'nothing exported yet');
+
+      await tester.tap(find.byKey(ProjectsRegion.exportKey));
+      await tester.pumpAndSettle();
+      final pdf = project.lastExport;
+      expect(pdf, isNotNull,
+          reason: 'tapping E34 exports the opened project as a PDF (AC-10)');
+      expect(String.fromCharCodes(pdf!.take(5)), '%PDF-');
     });
 
     testWidgets(

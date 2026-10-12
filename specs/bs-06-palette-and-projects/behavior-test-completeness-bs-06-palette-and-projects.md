@@ -343,3 +343,53 @@ exactly one of 15 harbor pairs flags under full deutan. AC-10 remains pending
 (PROJECT-6). AC-1/2/3/4/5/6/7/8/11 verified unaffected by the `build_app` /
 `projects_region` / `project_controller` / pending-gate changes. **No
 augmentation remains owed by PROJECT-5.**
+
+---
+
+## PROJECT-6 grade (AC-10 un-pended; full re-grade of all 11 un-pended ACs)
+
+Fresh, independent, adversarial re-grade (I did not write these tests), given the
+full prior grid and the G1–G6 rubric, judging what the code does now. **AC-10**
+(just un-pended by PROJECT-6, graded hardest with its new sample/recipe content
+assertion) plus **AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11**
+as regression checks that PROJECT-6 did not weaken them. All 11 bs-06 ACs are now
+delivered — `integration_test/bs06/pending.dart` → `pendingACs` is empty and the
+scaffold guard pins it to exactly `{}`. PROJECT-6 touched `bs06/pending.dart`
+(drained AC-10), `palette_test.dart` (AC-10 content augmentation), the new
+`lib/projects/project_export.dart`, `project_controller.dart`
+(`exportOpenedProject` + `PdfShareSink`/`lastExport`), `projects_region.dart`
+(E34 wired), `build_app.dart` and `main.dart` (share-sink threading). I verified
+every Given/When/Then against the production code the test exercises, confirmed
+the `pdf`-package `/Info` keywords carry the sample names and recipe paint-lists
+as contiguous ASCII literals, and independently confirmed each `harborRecipes`
+recipe has a component paint unique to it. I ran nothing in-repo and edited
+nothing but this grid.
+
+| AC | Test | Grade | Justification |
+|---|---|---|---|
+| AC-10 | `the painter exports a project as a PDF studio sheet` | A (clears prior *B pending PROJECT-6*) | **G1** every Given checked through the public surface before the When: `harness.projects.single` pinned `name=='Harbor at Dusk'`, `samples` `hasLength(6)`, `recipes` `hasLength(3)` (read endpoint); the `lastExport==null` before-control; and — the spec's "has opened the project" Given — `whenOpenProject('Harbor at Dusk')` (real per-project row tap, PROJECT-4) then `openedProject?.name=='Harbor at Dusk'` asserted *before* the export. **G2** the configured Given answers: `whenExportProject()` taps the real E34 `exportKey`, which `projects_region` wires `onPressed: opened==null ? null : controller.exportOpenedProject()` — enabled only because a project is open — driving `ProjectController.exportOpenedProject` → `buildProjectStudioSheet(openedProject)` → `_lastExport`; no script/override, the produced bytes are the raw observable (`lastExport`, D-6, no disk file). **G3** n/a (no negative/"never" Then). **G4 at grain/value:** asserts the raw observable `lastExport` — `isNotNull`, `%PDF-` magic bytes (a real PDF, rejects null/empty/placeholder), and then **"every/each" at item grain**: a loop over `project.samples` asserting `document.contains(sample.name)` for all 6, and a loop over `project.recipes` asserting `document.contains(paints)` where `paints = components.map((c)=>c.paint.name).join(' + ')` for all 3. Expectations are re-derived from the fixture independently of the production `recipePaintList`/`sampleStudioLabel` builders. **G5 discriminates — verified:** against pre-PROJECT-6 code (export inert, `lastExport==null`) `expect(pdf, isNotNull)` fails; against a sheet omitting any sample, that sample's `contains` fails; against one omitting any recipe, that recipe's joined paint-list fails — and I confirmed each recipe carries a unique paint (R1 `Yellow Ochre + Ivory Black`, R2 `Titanium White + Raw Umber`, R3 `Ultramarine Blue + Ivory Black`; the three joined strings are distinct and none is a substring of another), so an omitted recipe is genuinely caught and the shared `Ivory Black` does not mask it. Production writes exactly `[...sampleLabels, ...recipePaints].join(' | ')` to the `/Info` `keywords` with `compress: false`, all ASCII, so the substrings are present contiguously in `String.fromCharCodes(pdf)`. **G6** asserts AC-10 only (the opened-project check is the When's precondition/Given, not a second AC). **Documented caveat (non-blocking, stays A):** the content assertion matches the sample/recipe strings in the `/Info` metadata rather than parsing the visible content stream (which the `pdf` package lays out word-by-word, so the literals are not contiguous there); production *also* renders every sample and recipe visibly on the page via `pw.Bullet`, so the sheet genuinely carries the content, and the metadata match is a sound, deliberately-documented proxy for "references each sample and each recipe." It does not distinguish a hypothetical metadata-present-but-blank-page impl — a theoretical wrong impl only, not a G-rule violation — so per the rubric this is a recorded caveat, not a downgrade. Clean A. |
+| AC-1 | `switch between the My paints and Projects views` | A | Not regressed. PROJECT-6 touched only the export surface; the E31 view toggle, `ProjectsRegion.regionKey` and the mutually-exclusive `if/else` + both-ways control are untouched. |
+| AC-2 | `each paint lists its identity and provenance badge` | A | Not regressed. `paint_list_region`/`paint_row`/`provenance_badge` + keyed badge/medium widgets and the differently-tiered control are outside PROJECT-6's touched files. |
+| AC-3 | `the provenance legend explains the four confidence tiers` | A | Not regressed. Static legend copy, independent of the export changes. |
+| AC-4 | `add a paint by choosing from the shipped dataset` | A (with caveat) | Not regressed. `addPaintFromDataset`/E32 picker untouched. Same long-standing, non-blocking uniform-measured-dataset caveat (a data limit, not a G-rule violation). |
+| AC-5 | `selecting a palette re-points recipe search at it` | A | Not regressed. The recipe-controller/selector/`onPaletteSelected` wiring is in different files; PROJECT-6's `exportOpenedProject`/`lastExport`/`PdfShareSink` additions do not touch the palette/recipe surface the TestAC05 augmentation exercises. |
+| AC-6 | `the projects list shows each project size, counts and last edit` | A | Not regressed. The E34 button is enabled only when a project is open; AC-6 never opens a project, so the summary rows under `projectRowKey` still render name/size/counts/derived last-edit with the Old-Study not-today control intact. |
+| AC-7 | `opening a project shows its note and source photo` | A | Not regressed. `openProject`/`_OpenProjectView`/`_SourcePhoto` are unchanged; the new export control sits in the same `Row` but is independent of the note + scoped-photo (`MemoryImage` bytes tied to `harborPhotoBytes`) assertions. |
+| AC-8 | `a note kept with a project is retained when it is reopened` | A | Not regressed. `openedProject?.note==harborNote` at model grain + verbatim rendered note, with the `isNotEmpty` vacuity guard, all hold; G6-distinct from AC-7. |
+| AC-9 | `a confusable pair of saved samples is flagged within a project` | A | Not regressed. `confusionPairs`/`flagConfusionPairs` and the shipped `DichromatConfusionCheck` + injected `deutanDichromat` are untouched by PROJECT-6; the TestAC09 non-flag control + `hasLength(1)` still discriminate. The export path does not read or alter the confusion surface. |
+| AC-11 | `the vision-profile card shows the estimate and opens the self-assessment` | A | Not regressed. `VisionProfileCard` + the second-profile (protan/mild) control are independent of the export changes. |
+
+**Verdict: 11×A, 0×B — PASS (all A, no unsanctioned B).** AC-10 clears from *B
+pending PROJECT-6* to a clean **A**: the PROJECT-6 augmentation adds a
+real-content assertion over the produced PDF bytes — every saved sample by name
+and every saved recipe by its " + "-joined component paint-list — that
+discriminates against pre-PROJECT-6 code (`lastExport==null`) and against a sheet
+omitting any sample or any recipe (each recipe carries a paint unique to it,
+independently confirmed), driving the real E34 export control enabled by the
+opened project (G1/G2/G4/G5/G6 all met). The only noted limit — the content is
+matched in the `/Info` metadata rather than the visible content stream — is a
+deliberately documented, non-blocking caveat (production also renders the content
+visibly), not a G-rule violation, so it stays A. AC-1/2/3/4/5/6/7/8/9/11 verified
+unaffected by the `project_export` / `project_controller` / `projects_region` /
+`build_app` / `main` / pending-gate changes. All 11 bs-06 ACs are delivered and
+the pending map is empty. **No augmentation remains owed by PROJECT-6.**

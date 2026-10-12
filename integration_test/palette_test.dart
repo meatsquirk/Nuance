@@ -828,13 +828,15 @@ void main() {
 
     // AC-10 — the painter exports a project as a PDF studio sheet (owner
     // PROJECT-6). D-6 keeps the produced sheet as `lastExport` bytes (no disk
-    // write).
+    // write), so the Then asserts the produced bytes.
     //
-    // Limited at this phase: the sheet's *content* ("references each sample and
-    // each recipe") cannot be asserted until PROJECT-6 produces a real PDF —
-    // that is the PROJECT-6 augmentation. Here the Then asserts a PDF is
-    // produced. (PROJECT-4 wires opening and lands before PROJECT-6, so the
-    // open driven here is real by the un-pend run.)
+    // PROJECT-6 augmentation (closed): the sheet's content — "a PDF studio sheet
+    // of the project's samples and recipes" — is now asserted on the produced
+    // PDF. Each saved sample's name and each recipe's component paint-list are
+    // referenced in the document (the `pdf` package keeps them as contiguous
+    // literals in the `/Info` metadata it builds from the project), so a sheet
+    // omitting any sample or any recipe fails. This discriminates against the
+    // code before PROJECT-6 (export inert → `lastExport == null`).
     acTestWidgets(
         'AC-10', 'the painter exports a project as a PDF studio sheet',
         (tester) async {
@@ -862,13 +864,30 @@ void main() {
       // When the painter exports the project to the device.
       await harness.whenExportProject();
 
-      // Then a PDF studio sheet is produced (its samples/recipes content is the
-      // PROJECT-6 augmentation).
+      // Then a PDF studio sheet of the project's samples and recipes is
+      // produced.
       final pdf = harness.lastExport;
       expect(pdf, isNotNull,
           reason: 'exporting produces a PDF studio sheet (PROJECT-6, D-6)');
       expect(String.fromCharCodes(pdf!.take(5)), '%PDF-',
           reason: 'the produced bytes are a real PDF document');
+
+      // ...and it references every saved sample and every saved recipe
+      // (PROJECT-6 augmentation). Expectations are derived from the fixture
+      // independently of the production label builder: each sample by its name,
+      // each recipe by its component paints joined with " + " (each recipe has a
+      // paint no other recipe does, so an omitted recipe is caught).
+      final document = String.fromCharCodes(pdf);
+      for (final sample in project.samples) {
+        expect(document, contains(sample.name),
+            reason: 'the sheet must reference sample "${sample.name}"');
+      }
+      for (final recipe in project.recipes) {
+        final paints =
+            recipe.components.map((component) => component.paint.name).join(' + ');
+        expect(document, contains(paints),
+            reason: 'the sheet must reference the recipe "$paints"');
+      }
     });
   });
 
@@ -883,11 +902,9 @@ void main() {
       // row here as it un-pends it, so this set shrinks by one per delivered AC.
       // Un-pended so far: AC-4 (PALETTE-2), AC-2 + AC-3 (PALETTE-3),
       // AC-1 (SCREEN-2), AC-11 (SCREEN-3), AC-5 (PALETTE-4), AC-6 (PROJECT-3),
-      // AC-7 + AC-8 (PROJECT-4), AC-9 (PROJECT-5). Asserts exact contents
-      // (non-vacuous) and that every pending key is a real AC in AC-1..AC-11.
-      const expected = {
-        'AC-10',
-      };
+      // AC-7 + AC-8 (PROJECT-4), AC-9 (PROJECT-5), AC-10 (PROJECT-6). All 11
+      // delivered, so the map is now empty — asserted exactly (non-vacuous).
+      const expected = <String>{};
       expect(pendingACs.keys.toSet(), expected);
     });
 
@@ -902,18 +919,22 @@ void main() {
       }
     });
 
-    test('pendingSkipReason skips a pending AC by default, runs it when forced',
-        () {
-      // Assert both modes deterministically via `forceRunPending`, not the
-      // ambient `runPending`: this guard runs in *both* the default and the
-      // run-pending passes, and a pending AC's default-skip is null-reason only
-      // when not forced. (Reading the ambient mode made this fail under
-      // --dart-define=BS06_RUN_PENDING=true; ITEST-2 records the fix.)
-      // AC-10 is the last still-pending example (AC-1/2/3/5/6/7/8/9/11 were
-      // un-pended by SCREEN-2 / PALETTE-3 / PALETTE-4 / PROJECT-3/4/5 / SCREEN-3).
-      expect(pendingSkipReason('AC-10', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-10', forceRunPending: true), isNull);
-      // An AC absent from the map (un-pended) always runs, in either mode.
+    test('pendingSkipReason runs every un-pended AC in both modes', () {
+      // All 11 bs-06 ACs are now delivered, so `pendingACs` is empty and no AC
+      // is skipped in either mode: every real AC (and any absent id) runs
+      // whether or not run-pending is forced. Asserted deterministically via
+      // `forceRunPending`, since this guard runs in both the default and the
+      // run-pending passes. (While an AC was still pending, this guard asserted
+      // the skip branch — `isNotNull` by default, `isNull` when forced; with the
+      // map drained that branch no longer fires, which is the point.)
+      for (var i = 1; i <= 11; i++) {
+        final ac = 'AC-$i';
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is delivered — it must run in the default pass');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac is delivered — it must run in the run-pending pass');
+      }
+      // An id absent from the map always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
     });

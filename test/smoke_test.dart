@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
@@ -57,6 +58,37 @@ void main() {
     expect(deps.sourcePhotoStore, isA<InMemorySourcePhotoStore>());
     expect(deps.paletteSource, isA<InMemoryPaletteSource>());
     expect(deps.projectSource, isA<InMemoryProjectSource>());
+    // bs-06 PROJECT-6: the PDF export is delivered through the production
+    // `printing` share wrapper (AC-10).
+    expect(deps.pdfShareSink, same(app.sharePdfToDevice));
+  });
+
+  test('sharePdfToDevice hands the exported bytes to the printing share sheet',
+      () async {
+    // bs-06 PROJECT-6 (AC-10): the single platform call for PDF export. The
+    // `printing` plugin's `net.nfet.printing` method channel is mocked so the
+    // real share path runs under host `flutter test` without a device popup,
+    // mirroring the path_provider fake above.
+    TestWidgetsFlutterBinding.ensureInitialized();
+    const channel = MethodChannel('net.nfet.printing');
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return 1; // non-zero → shared
+    });
+    addTearDown(() => TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+    final bytes = Uint8List.fromList(const [1, 2, 3, 4]);
+
+    await app.sharePdfToDevice(bytes, 'Harbor at Dusk.pdf');
+
+    expect(calls, hasLength(1));
+    expect(calls.single.method, 'sharePdf');
+    final args = calls.single.arguments as Map;
+    expect(args['doc'], bytes);
+    expect(args['name'], 'Harbor at Dusk.pdf');
   });
 
   test('productionDependencies opens the file-backed store and loads it',

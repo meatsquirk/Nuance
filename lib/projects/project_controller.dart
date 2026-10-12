@@ -7,8 +7,18 @@ import '../recipes/engine/mixing_engine.dart';
 import '../store/source_photo_store.dart';
 import 'confusion_pairs.dart';
 import 'project.dart';
+import 'project_export.dart';
 import 'project_source.dart';
 import 'project_summary.dart';
+
+/// Delivers an exported studio sheet's [bytes] to the device (bs-06 AC-10),
+/// under [filename].
+///
+/// Production backs it with `printing`'s share/print sheet (wired in
+/// `main.dart`); the acceptance suite leaves it unset, since the produced bytes
+/// read off [ProjectController.lastExport] are the observable (plan D-6, no disk
+/// file), or injects a recording fake.
+typedef PdfShareSink = Future<void> Function(Uint8List bytes, String filename);
 
 /// A pair of a project's saved samples flagged as confusable for the painter's
 /// colour-vision profile (bs-06 AC-9).
@@ -49,10 +59,16 @@ class ProjectController extends ChangeNotifier {
     required ProjectSource source,
     this._confusionCheck = const DichromatConfusionCheck(),
     this._cvdProfile = const CvdProfile(type: CvdType.deutan),
+    this._shareSink,
   })  : _source = source,
         _projects = [...source.projects()];
 
   final ProjectSource _source;
+
+  /// The sink the exported studio sheet is handed to for device delivery
+  /// (AC-10), or null when none is wired — then the export only produces
+  /// [lastExport] (the acceptance suite's case, plan D-6).
+  final PdfShareSink? _shareSink;
 
   /// The injected bs-03 detector + profile used to flag an opened project's
   /// confusable sample pairs (AC-9); defaults match `AppDependencies` (the
@@ -95,10 +111,32 @@ class ProjectController extends ChangeNotifier {
     return flagConfusionPairs(opened, _confusionCheck, _cvdProfile);
   }
 
+  Uint8List? _lastExport;
+
   /// The bytes of the most recent PDF studio sheet exported from a project
-  /// (AC-10), or null when nothing has been exported (the shell's state).
-  /// PROJECT-6 produces it through a faked file sink in tests.
-  Uint8List? get lastExport => null;
+  /// (AC-10), or null when nothing has been exported yet.
+  ///
+  /// [exportOpenedProject] produces the sheet and keeps its bytes here (plan
+  /// D-6: no disk file — the bytes are the observable); the open-project view's
+  /// export control drives that flow and the acceptance suite reads it here.
+  Uint8List? get lastExport => _lastExport;
+
+  /// Exports the [openedProject] as a PDF studio sheet (AC-10).
+  ///
+  /// Generates the sheet of the opened project's samples and recipes
+  /// ([buildProjectStudioSheet]), keeps its bytes as [lastExport] and notifies
+  /// listeners, then hands them to the injected device share sink when one is
+  /// wired (plan D-6: the bytes are kept, never written to disk here; the
+  /// device delivery is the faked/absent infrastructure in tests). A no-op when
+  /// no project is open.
+  Future<void> exportOpenedProject() async {
+    final project = _openedProject;
+    if (project == null) return;
+    final bytes = await buildProjectStudioSheet(project);
+    _lastExport = bytes;
+    notifyListeners();
+    await _shareSink?.call(bytes, '${project.name}.pdf');
+  }
 
   /// Opens the project identified by [projectId] into the open-project view
   /// (AC-7/AC-8), making it the [openedProject] and notifying listeners.

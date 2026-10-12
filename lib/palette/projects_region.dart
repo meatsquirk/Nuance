@@ -17,8 +17,9 @@ import '../store/source_photo_store.dart';
 /// last-edited label (AC-6, PROJECT-3). Tapping a project row — or the E33 Open
 /// control, which opens the first project — opens it into the open-project view
 /// (AC-7/AC-8, PROJECT-4): the opened project's note and source photo are shown
-/// below the list. The E34 export control stays inert until PDF export lands
-/// (AC-10, PROJECT-6). The region keeps its [regionKey], each row its
+/// below the list. The E34 export control exports the opened project as a PDF
+/// studio sheet (AC-10, PROJECT-6), enabled once a project is open. The region
+/// keeps its [regionKey], each row its
 /// [projectRowKey], the open-project view its [openProjectViewKey], and the
 /// controls their [openProjectKey] / [exportKey] so the acceptance finders and
 /// those behaviour phases have stable anchors.
@@ -77,10 +78,13 @@ class ProjectsRegion extends StatelessWidget {
                   : () => controller.openProject(summaries.first.id),
               child: const Text('Open project'),
             ),
-            // E34 Export to device — wired by PROJECT-6 (AC-10). Inert here.
+            // E34 Export to device — exports the opened project as a PDF studio
+            // sheet (AC-10, PROJECT-6). Enabled only once a project is open,
+            // since the open project is what is exported.
             TextButton(
               key: exportKey,
-              onPressed: null,
+              onPressed:
+                  opened == null ? null : () => controller.exportOpenedProject(),
               child: const Text('Export'),
             ),
           ],

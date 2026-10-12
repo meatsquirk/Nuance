@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 
 import 'a11y/haptics.dart';
 import 'a11y/speech.dart';
@@ -71,6 +73,17 @@ Future<AppDependencies> productionDependencies() async {
   );
 }
 
+/// Hands an exported studio sheet's [bytes] to the device's share/print sheet
+/// (bs-06 AC-10, PROJECT-6) under [filename], via `printing`.
+///
+/// The one platform call for PDF export; it lives here with `main.dart`'s other
+/// device wiring (the store, the source-photo files). The acceptance suite
+/// leaves the share sink unset and asserts the produced `lastExport` bytes
+/// instead (plan D-6), so this popup never fires during an in-app test.
+Future<void> sharePdfToDevice(Uint8List bytes, String filename) async {
+  await Printing.sharePdf(bytes: bytes, filename: filename);
+}
+
 /// Assembles the production [AppDependencies] over the given persistence.
 ///
 /// The pure, synchronous half of [productionDependencies], split out so the
@@ -97,5 +110,6 @@ AppDependencies assembleDependencies({
     sourcePhotoStore: sourcePhotoStore,
     paletteSource: paletteSource,
     projectSource: projectSource,
+    pdfShareSink: sharePdfToDevice,
   );
 }

@@ -368,6 +368,71 @@ void main() {
       expect(controller.confusionPairs, isEmpty);
     });
   });
+
+  group('exportOpenedProject (PROJECT-6)', () {
+    final harbor = Project(
+      id: 'p-harbor',
+      name: 'Harbor at Dusk',
+      samples: const [_sample],
+      recipes: [_recipe],
+    );
+
+    test('is a no-op with no sink when no project is opened', () async {
+      var notified = 0;
+      final shared = <({Uint8List bytes, String filename})>[];
+      final controller = ProjectController(
+        source: const InMemoryProjectSource(),
+        shareSink: (bytes, filename) async =>
+            shared.add((bytes: bytes, filename: filename)),
+      )..addListener(() => notified++);
+
+      await controller.exportOpenedProject();
+
+      expect(controller.lastExport, isNull,
+          reason: 'nothing is exported while no project is open');
+      expect(notified, 0);
+      expect(shared, isEmpty, reason: 'the share sink is not reached');
+    });
+
+    test('produces the opened project PDF, keeps it as lastExport and notifies',
+        () async {
+      var notified = 0;
+      final controller = ProjectController(
+        source: InMemoryProjectSource(catalogue: [harbor]),
+      )..addListener(() => notified++);
+      controller.openProject('p-harbor');
+      notified = 0; // discount the open's notification
+
+      await controller.exportOpenedProject();
+
+      final pdf = controller.lastExport;
+      expect(pdf, isNotNull);
+      expect(String.fromCharCodes(pdf!.take(5)), '%PDF-');
+      expect(notified, 1, reason: 'listeners see the produced export');
+      // The sheet references the opened project's sample and recipe.
+      final document = String.fromCharCodes(pdf);
+      expect(document, contains('Mid Raw Umber'));
+      expect(document, contains('Yellow Ochre'));
+    });
+
+    test('hands the produced bytes to the device share sink under <name>.pdf',
+        () async {
+      final shared = <({Uint8List bytes, String filename})>[];
+      final controller = ProjectController(
+        source: InMemoryProjectSource(catalogue: [harbor]),
+        shareSink: (bytes, filename) async =>
+            shared.add((bytes: bytes, filename: filename)),
+      );
+      controller.openProject('p-harbor');
+
+      await controller.exportOpenedProject();
+
+      expect(shared, hasLength(1));
+      expect(shared.single.bytes, same(controller.lastExport),
+          reason: 'the shared bytes are exactly the produced export');
+      expect(shared.single.filename, 'Harbor at Dusk.pdf');
+    });
+  });
 }
 
 /// A sample at [lightness] on the neutral axis, named [name].

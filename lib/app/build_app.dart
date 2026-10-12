@@ -121,6 +121,7 @@ class AppDependencies {
     this.paletteEntry,
     this.store,
     this.sourcePhotoStore,
+    this.pdfShareSink,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -252,6 +253,15 @@ class AppDependencies {
   /// application-documents directory, and the acceptance harness injects an
   /// [InMemorySourcePhotoStore].
   final SourcePhotoStore? sourcePhotoStore;
+
+  /// The sink an exported project PDF is handed to for device delivery (bs-06
+  /// AC-10, PROJECT-6), or null when none is wired.
+  ///
+  /// Threaded into the [ProjectController]: production injects the `printing`
+  /// share sheet (`main.dart`), and the acceptance harness leaves it null so the
+  /// export only produces `ProjectController.lastExport` bytes (plan D-6, no
+  /// disk file, no device popup during a test).
+  final PdfShareSink? pdfShareSink;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -617,6 +627,7 @@ class _PaletteHomeScreenState extends State<PaletteHomeScreen> {
         source: deps.projectSource,
         confusionCheck: deps.confusionCheck,
         cvdProfile: deps.cvdProfile,
+        shareSink: deps.pdfShareSink,
       );
     }
   }

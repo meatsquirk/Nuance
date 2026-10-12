@@ -1,6 +1,6 @@
 # Module PROJECT — projects
 
-**Status:** In progress — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler), PROJECT-3 ✅ (AC-6), PROJECT-4 ✅ (AC-7+AC-8), PROJECT-5 ✅ (AC-9); PROJECT-6 (AC-10) startable (last PROJECT phase)
+**Status:** ✅ Complete — PROJECT-1 ✅ (shell), PROJECT-2 ✅ (enabler), PROJECT-3 ✅ (AC-6), PROJECT-4 ✅ (AC-7+AC-8), PROJECT-5 ✅ (AC-9), PROJECT-6 ✅ (AC-10). All PROJECT ACs delivered.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/projects/` (Project model, ProjectSource, ProjectController, read endpoint, confusion-pair flagging, PDF export), `lib/compare/sample_source.dart` (persistent write-side on the existing seam — bs-03/04-owned, coordinate), `pubspec.yaml` (pdf package)
 **Depends on:** DATA (store), reuses bs-03 `lib/a11y/cvd/confusion_check.dart` + injected `CvdProfile` · **Blocks:** SCREEN (renders project state)
@@ -14,7 +14,7 @@
 | 3 | behavior | AC-6 | ✅ Done | 9,896,853 | 23m 58s |
 | 4 | behavior | AC-7, AC-8 | ✅ Done | 17,986,707 | 35m 50s |
 | 5 | behavior | AC-9 | ✅ Done | 10,633,359 | 17m 26s |
-| 6 | behavior | AC-10 | ⬜ Todo | | |
+| 6 | behavior | AC-10 | ✅ Done | 19,430,558 | 26m 59s |
 
 ## Interface reconciliation
 
@@ -26,7 +26,7 @@
 ## Open gates
 
 - **G-4** ✅ resolved 2026-10-10 by Matt Quirk (pdf = pdf+printing, added by PROJECT-6; project "size" = free text). Phase 1 ✅ Done.
-- **G-2** blocks Phases 2–6 (behavior; the enabler is behavior).
+- **G-2** ✅ resolved 2026-10-11 by Matt Quirk (acceptance suite approved — ITEST-4). All PROJECT behavior phases (2–6) done.
 
 ## Phase 1 — Shell: model, source, controller
 
@@ -185,5 +185,27 @@
 - **Acceptance gate:** un-pend AC-10; suite green; `lastExport` is a PDF whose content references each sample + each recipe.
 - **Augments:** `TestAC10`: strengthen the content assertion to the real PDF model (closes the pre-seeded limit).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+- **Landed (AC-10):** New `lib/projects/project_export.dart` — pure `buildProjectStudioSheet(Project) → Future<Uint8List>` generates a PDF studio sheet (title + size header, then every saved sample and every saved recipe) via the `pdf` package; helpers `sampleStudioLabel` (name, or a CIELAB fallback for an unnamed sample), `recipePaintList` (component paints joined with ` + `), `recipeStudioLabel` (paint list + verdict). It writes the sample names + recipe paint-lists to the PDF `/Info` `keywords` (ASCII, `compress: false`) so they are contiguous searchable literals, and also renders them visibly via `pw.Bullet`. `ProjectController` now holds a mutable `_lastExport` (getter was `=> null`), an injected `PdfShareSink? _shareSink`, and `exportOpenedProject()` (builds the sheet, keeps bytes as `lastExport`, notifies, then hands them to the share sink if wired; no-op when no project open — plan D-6: bytes are the observable, no disk file). `ProjectsRegion` E34 Export is wired (`onPressed` enabled once a project is open → `exportOpenedProject`).
+- **Device delivery (G-4):** added `pdf` + `printing` (project-local). `AppDependencies.pdfShareSink` is threaded into the controller by `buildApp`; production (`main.dart` `sharePdfToDevice`) backs it with `printing`'s `Printing.sharePdf`, wired in `assembleDependencies`. The acceptance harness leaves the sink null, so the in-app test produces bytes only (no device share-sheet popup, no hang). The one platform call is covered in `test/smoke_test.dart` by mocking the `net.nfet.printing` method channel (mirroring the path_provider fake).
+- **Cross-module touches (recorded):** besides the plan's `project_export.dart` + `project_controller.dart` + `pubspec.yaml`, this phase edited `lib/palette/projects_region.dart` (SCREEN-owned — wires the E34 button), `lib/app/build_app.dart` (the `pdfShareSink` field + one wiring line) and `lib/main.dart` (the production share wrapper + wiring). Sequential single-session run in the bs-06 worktree, so no claim conflict.
+- **Augmentation (TestAC10 → PROJECT-6, closed):** the AC-10 test now asserts, beyond `%PDF-` magic bytes, that the produced PDF references every saved sample (by name) and every saved recipe (by its ` + `-joined component paint-list), with expectations derived independently from the `harborProject` fixture. The three recipe paint-lists are distinct and none is a substring of another (shared "Ivory Black" does not mask an omission), so an omitted sample or recipe fails. Discriminates against pre-PROJECT-6 code (`lastExport == null`). Row marked ✅.
+- **Acceptance (sim iPhone 17, under the verify lock):** AC-10 un-pended (`bs06/pending.dart` map now empty; scaffold-guard `expected` → `{}`; the `pendingSkipReason` guard rewritten to assert every delivered AC runs in both modes). **Default run 23 passed / 0 skipped** — all 11 ACs now run by default (AC-10 included). No pending ACs remain, so run-pending ≡ default.
+- **Unit + coverage:** `flutter analyze lib test` clean. `flutter test --coverage` → **760 passing** (+11: `project_export_test.dart` — sample label name/CIELAB-fallback, recipe paint-list, recipe label verdict present/absent, PDF produced + references samples/recipes, empty-project branch; `project_controller_test.dart` — export no-op-when-closed, produces+keeps+notifies, hands bytes to the share sink as `<name>.pdf`; `palette_screen_test.dart` — E34 inert until open then taps-and-exports; `smoke_test.dart` — `pdfShareSink` wired + `sharePdfToDevice` via a mocked method channel). Coverage gate vs `main`: **100%** line on all **29** touched `lib/` files (incl. new `project_export.dart`, and `main.dart` kept at 100%).
+- **Grade gate:** independent fresh-subagent adversarial re-grade (full prior grid + G1–G6) of all **11** un-pended ACs — **11×A, 0×B — PASS**. **AC-10 cleared B pending PROJECT-6 → clean A** (G2: the real E34 control drives `exportOpenedProject`; G4/G5: `%PDF-` + per-sample/per-recipe content, rejecting omissions and pre-PROJECT-6 code). AC-1/2/3/4/5/6/7/8/9/11 verified unregressed by the export-only changes. AC-4 keeps its standing uniform-measured-dataset data caveat. No augmentation owed (TestAC10 closed). Documented non-blocking caveat: content is matched in the PDF `/Info` metadata (the page content stream is laid out word-by-word by `pdf`); the sheet also renders every sample/recipe visibly via `pw.Bullet`, so the metadata match is a sound documented proxy, not a downgrade.
+- **Fix passes:** 0/3 — analyze, unit, coverage and the acceptance run passed on the first full run. (One `prefer_initializing_formals` analyze info on the new share-sink param, and a wrong `PrintingPlatform`-mock approach, were corrected before the first gate run — not code fix passes.)
+- **Closed by:** unit + coverage gate; acceptance suite fully green (all 11 ACs run by default); grade gate all-A.
+- Tokens: see master ledger (PROJECT-6 row). **Phase total: 19,430,558 tokens, 26m 59s active (26m 59s wall).**
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces (new this phase):**
+  - `buildProjectStudioSheet(Project project) → Future<Uint8List>` (`lib/projects/project_export.dart`): pure PDF generation; bytes begin `%PDF-`; references each sample name + each recipe's ` + `-joined paint-list (visibly + in `/Info` keywords). Helpers `sampleStudioLabel` / `recipePaintList` / `recipeStudioLabel` are public.
+  - `typedef PdfShareSink = Future<void> Function(Uint8List bytes, String filename)` (`project_controller.dart`).
+  - `ProjectController({..., PdfShareSink? shareSink})` — `lastExport` is now live (was `=> null`); `exportOpenedProject()` builds the sheet, sets `lastExport`, notifies, then calls the sink if wired; no-op when nothing is open.
+  - `AppDependencies.pdfShareSink` (nullable), threaded into the controller by `buildApp`. Production `main.dart` `sharePdfToDevice` wraps `Printing.sharePdf`; harness leaves it null.
+  - `ProjectsRegion` E34 Export (`exportKey`) enabled once a project is open → `exportOpenedProject`.
+- **Verification commands:** `flutter analyze lib test` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/palette_test.dart -d <udid>` via `coord.sh with-lock BS-06 <phase>` — **set `FNP_COORD_REPO` to the worktree (`/Users/matthew.quirk/Nuance-bs06`)**. Flutter SDK `/Users/matthew.quirk/development/flutter/bin`; sim udid `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (iPhone 17). First integration build after this phase runs `pod install` for the new `printing` pod.
+- **Known gaps / deferred:** none for the behaviour stage — **all 11 ACs delivered** and green by default; the pending map is empty. Minor benign `pdf` warning "Helvetica has no Unicode support" from the `×` in the visible "24×30 in" size text (the searched `/Info` keywords are ASCII; renders fine). PROJECT module is complete.
+- **Next phase should:** run **SIGNOFF-1** — the last phase. Run the full cross-feature regression, assemble the sign-off packet + summary page, and present for a human decision (the agent never approves).
