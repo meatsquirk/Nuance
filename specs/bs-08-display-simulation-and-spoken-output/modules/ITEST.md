@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 done (harness + fixtures + independent reference + smoke + guards); next ITEST-2 (AC-1..7 pending), which shares `display_test.dart` with ITEST-3 (run them sequentially)
+**Status:** In progress — ITEST-2 done (AC-1..7 pending tests + red baseline + grades: 6 A + 1 B-pending-DISPLAY-8); next ITEST-3 (AC-8,9,10 pending), which shares `display_test.dart` with the now-landed ITEST-2 (so ITEST-3 re-reads it before editing)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/display_harness.dart`, `integration_test/display_test.dart`, `integration_test/bs08/pending.dart` (seeded in DISPLAY-1), reuse of `integration_test/fakes/fake_speech.dart` + `fake_haptics.dart`.
 **Depends on:** all shell phases (DISPLAY-2, SETTINGS-1, SPEECH-1) · **Blocks:** every behavior phase (via G-2)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,480,396 | 16m 57s |
-| ITEST-2 | acceptance-tests | AC-1..7 (pending) | ⬜ Todo | | |
+| ITEST-2 | acceptance-tests | AC-1..7 (pending) | ✅ Done | 14,829,254 | 1h 06m (1h 10m) |
 | ITEST-3 | acceptance-tests | AC-8,9,10 (pending) | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -55,6 +55,22 @@
 - **Tasks:** one *pending* `acTestWidgets` per AC-1..7 per the catalogue; record each one's run-pending red baseline (where it fails) in **Red baseline** below; grade each against grade-A design.
 - **Exit criteria:** suite green with the new tests pending; run-pending shows each failing on its Then / named Given precondition; grade gate passed. **Runs sequentially with ITEST-3** (shared test file).
 
+### Result — ITEST-2 (2026-10-12)
+
+- **Landed (test-only — no `lib/` change):** 7 pending `acTestWidgets` (AC-1..AC-7) in a new `group('bs-08 display ACs (ITEST-2)')` in `integration_test/display_test.dart`, each driven through the public surface — the harness `when…` over the shipped E2 panel / selector / slider / grayscale toggle, `h.settings` over the live `DisplayReadEndpoint`, and the rendered swatches. Added three test-only helpers: `_displayColor` (CIELAB → sRGB via the **shared** `ColorScienceImpl.toSRGB`), `_displaySwatches` (the circular-`BoxDecoration` `ColorChip` swatch colours — the only circular swatches on the Readout, so the simulation chokepoint is read without a not-yet-defined key; empty until DISPLAY-3/4 render one), and `_colorNear` (sum-of-channel tolerance, 0..1). AC-3/AC-4 grade the simulated swatch against the **independent** `referenceProjectDichromat`, never the shipped projection. AC-6 asserts a root `ColorFiltered` ancestor of the `MaterialApp` (the single D-5 root filter that greys camera + palettes + readings together — the harness opens on the Readout; the other surfaces are covered by that one filter).
+- **Also fixed (scaffold guard, 1 fix pass):** the `pendingSkipReason` guard asserted the ambient-mode skip (`pendingSkipReason('AC-1')` isNotNull), which is **false under `--dart-define=BS08_RUN_PENDING=true`** — so the first run-pending run failed it. Rewrote it to drive both directions with explicit `forceRunPending` over `pendingACs.keys.first` (deterministic in either mode, robust to which AC is still pending), matching ITEST-1's stated discipline. Also corrected two cosmetic comments the grader flagged (an inaccurate "un-pended here" group header — bs-08 un-pends from the behaviour phase, not here; a stale `AC-12` reference in the reused `FakeHaptics`).
+- **Red baseline (run-pending):** `+13 -5` — AC-2/AC-3/AC-4/AC-5/AC-6 FAIL on their Then naming the owning phase (see the Red baseline table); **AC-1 and AC-7 PASS — green at baseline** (SETTINGS-1's panel already shows the three controls; bs-01's label contract already shows value + label). All 11 ITEST-1 tests green in both modes after the guard fix. Default run (pending skipped): `+11 ~7: All tests passed!`.
+- **Grades (fresh adversarial subagent, grid `behavior-test-completeness-bs-08-display-simulation-and-spoken-output.md`):** ITEST-1 artifacts **15 A / 0 below A**; ITEST-2 AC tests **6 A + 1 B-pending-DISPLAY-8** (AC-7, limited per G5 — no swatch to reject "colour alone" until DISPLAY-4; augmentation row added, owner DISPLAY-8). This is the allowed test-review exception (B pending <phase> + augmentation).
+- **Verification:** `flutter analyze` clean; `flutter test --coverage` **914 unit pass**; coverage gate **PASS** (ITEST-2 touched no `lib/`, so the cumulative set — the 11 bs-08 shell files — is unchanged at 100%). Integration on sim `5AB9D06D…` under the shared lock: default **11 pass / 7 skipped**; run-pending **13 pass / 5 fail** (the red baseline). Fix passes: **1/3** (the scaffold guard).
+- **Tokens / Time:** see dashboard row (ledger `ITEST-2`).
+
+### Checkpoint / Handoff — ITEST-2
+
+- **For ITEST-3 (AC-8,9,10 — speech):** it **shares `display_test.dart`** → re-read the file before editing and append a second `group('bs-08 speech ACs (ITEST-3)')`; do not touch the ITEST-2 group. Reuse the harness speech seams (`h.speech.utterances`, `h.appSpeech`, `h.spokenOutputPanel`/`repeatControl`/`lastSpokenText`, `h.whenSpeakReading`/`whenRepeatLastSpoken`). Note `RepeatableSpeech.repeat()` is already wired (SPEECH-1), so AC-8's **render/replay** Then is what should discriminate SPEECH-2 — confirm the real red baseline, as AC-8 may be green-at-baseline like AC-1/AC-7. Fill the AC-8/9/10 rows in the Red baseline table and add the ITEST-3 section to the grade grid (keep the ITEST-1/ITEST-2 sections).
+- **Pattern to copy:** `acTestWidgets('AC-n', '<scenario>', (tester) async {…})`; build the Given through `when…`, check it via `h.settings`/`h.speech`, assert the Then on the live endpoint / `FakeSpeech` log / E50 finders. Green-at-baseline → leave pending, record *green at baseline*, the behaviour phase un-pends; limited → add an augmentation row.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · device lane under the shared lock: `FNP_COORD_REPO=/Users/matthew.quirk/Nuance ~/.claude/skills/feature-next-phase/scripts/coord.sh with-lock bs-08-display-simulation-and-spoken-output <PHASE> --wait 2400 -- bash -c 'export PATH=/Users/matthew.quirk/development/flutter/bin:$PATH; cd /Users/matthew.quirk/Nuance-bs08 && flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685 [--dart-define=BS08_RUN_PENDING=true]'`. Booted sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`.
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`). The shared device lane was contended this session (a hung sibling run had to be cleared); expect to queue behind other sessions' `with-lock`.
+
 ## Phase ITEST-3 — AC-8,9,10 (speech) pending + red baseline
 
 - **Kind:** acceptance-tests
@@ -74,13 +90,13 @@
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_OpenDisplaySettings | FAIL (expected) | Then: three controls shown / Given: no settings surface (SETTINGS-2) | SETTINGS-2 | — |
-| AC-2 | TestAC02_SimOffTrichromat | FAIL (expected) | Then: displayed == original identity path | DISPLAY-3 | — |
-| AC-3 | TestAC03_SimulateTypeAlongsideOriginal | FAIL (expected) | Then: projected swatch + original alongside | DISPLAY-4 | — |
-| AC-4 | TestAC04_SeveritySlider | FAIL (expected) | Then: render at severity 0.60 | DISPLAY-5 | — |
-| AC-5 | TestAC05_GrayscaleClearsSimulation | FAIL (expected) | Then: grayscale on ⇒ sim off | DISPLAY-6 | — |
-| AC-6 | TestAC06_GrayscaleWholeApp | FAIL (expected) | Then: camera + palettes + readings achromatic | DISPLAY-7 | — |
-| AC-7 | TestAC07_ReadingKeepsValueAndLabel | FAIL (expected) | Then: value + label present under sim | DISPLAY-8 | — |
+| AC-1 | `AC-1: opens display & simulation settings` | **PASS — green at baseline** | SETTINGS-1 already shows the panel + E47/E46/theme; SETTINGS-2 un-pends + keeps green | SETTINGS-2 | A |
+| AC-2 | `AC-2: sim off = original (trichromat)` | FAIL (expected) | Then: exactly one displayed swatch == original — **0** circular `ColorChip` swatches rendered yet (`length 0`, expected 1) | DISPLAY-3 | A |
+| AC-3 | `AC-3: simulate type alongside original` | FAIL (expected) | Then: ≥2 swatches (simulated + original alongside) — **0** rendered (protan iteration; `0 >= 2` false) | DISPLAY-4 | A |
+| AC-4 | `AC-4: severity slider strength` | FAIL (expected) | Then: swatch matches `referenceProjectDichromat(deutan, 0.60)` — no swatch (the `simulationSeverity == 0.60` setter check **passed**; only the render failed) | DISPLAY-5 | A |
+| AC-5 | `AC-5: grayscale clears an active sim` | FAIL (expected) | Then: `simulationType == null` after grayscale on — still `CvdType.deutan` (no mutual exclusion yet) | DISPLAY-6 | A |
+| AC-6 | `AC-6: value-only greys the whole app` | FAIL (expected) | Then: a root `ColorFiltered` ancestor of `MaterialApp` — **0 found** (the root `GrayscaleFilter` is inert) | DISPLAY-7 | A |
+| AC-7 | `AC-7: reading keeps value + label under sim` | **PASS — green at baseline (limited)** | value + label present under deutan sim; cannot yet reject "swatch, no text" (no swatch until DISPLAY-4) → augmented by DISPLAY-8 | DISPLAY-8 | B pending DISPLAY-8 |
 | AC-8 | TestAC08_RepeatSpokenOutput | FAIL (expected) | Then: identical utterance replayed | SPEECH-2 | — |
 | AC-9 | TestAC09_OneConsistentPhrasing | FAIL (expected) | Then: both via the one sink | SPEECH-3 | — |
 | AC-10 | TestAC10_PanelNeverAutoDismisses | FAIL (expected) | Then: panel present after long pump | SPEECH-4 | — |
@@ -89,4 +105,4 @@
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| — | none pre-seeded: each AC test discriminates at baseline on its own Then or a Given precondition naming its single owning behavior phase | — | — | — |
+| `AC-7: reading keeps value + label under sim` | green at baseline + limited (G5): `ValueReading` renders the value + word regardless of simulation, and no simulated swatch exists until DISPLAY-4, so the test cannot yet reject AC-7's real wrong impl — a simulated reading showing a colour swatch with **no** accompanying value/label | DISPLAY-8 | assert a simulated display swatch is shown **alongside** the value + label ("not colour alone"), then re-grade A | ⬜ Open (owner DISPLAY-8) |

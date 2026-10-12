@@ -26,7 +26,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/repeatable_speech.dart';
+import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/widgets/value_reading.dart';
 
 import 'display_harness.dart';
 
@@ -50,10 +52,18 @@ void main() {
       }
     });
 
-    test('pendingSkipReason skips a pending AC by default, runs it when forced',
+    test('pendingSkipReason skips a pending AC unless run-pending is forced',
         () {
-      expect(pendingSkipReason('AC-1'), isNotNull);
-      expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
+      // A still-pending AC (the map is non-empty through the acceptance stage).
+      // Both directions are driven by the explicit [forceRunPending] so the
+      // guard is deterministic in either ambient mode — in particular it holds
+      // under `--dart-define=BS08_RUN_PENDING=true` (the red-baseline run), where
+      // the ambient `runPending` is true.
+      final pendingAc = pendingACs.keys.first;
+      expect(pendingSkipReason(pendingAc, forceRunPending: false), isNotNull,
+          reason: '$pendingAc is skipped when run-pending is not forced');
+      expect(pendingSkipReason(pendingAc, forceRunPending: true), isNull,
+          reason: '$pendingAc runs when run-pending is forced');
       // An AC absent from the map (un-pended) always runs.
       expect(pendingSkipReason('AC-999'), isNull);
     });
@@ -194,4 +204,242 @@ void main() {
       );
     });
   });
+
+  // The display ACs (AC-1..AC-7) — one pending `acTestWidgets` each (ITEST-2).
+  //
+  // Skipped by default; run under `--dart-define=BS08_RUN_PENDING=true` (the
+  // red-baseline run). Each is written against the *public* surface — the E2
+  // panel, the shipped controls (driven through the harness `when…`), the live
+  // `DisplayReadEndpoint` (`h.settings`), and the rendered display swatches
+  // (`_displaySwatches` — the circular `ColorChip` swatches, graded against the
+  // **independent** `referenceProjectDichromat` → the shared `toSRGB`). The
+  // simulated colour is never graded against the shipped projection.
+  //
+  // AC-1 (open panel + three controls, SETTINGS-1 built the surface) and AC-7
+  // (the reading already shows value + label, bs-01's label contract) pass at
+  // baseline — recorded *green at baseline* in `modules/ITEST.md`. They stay
+  // pending here: bs-08 un-pends each AC from its owning behaviour phase (per
+  // the plan), so SETTINGS-2 un-pends AC-1 and DISPLAY-8 un-pends AC-7, each
+  // then keeping it green + meeting coverage. AC-7 is also *limited* until a
+  // swatch is rendered — DISPLAY-8 augments it to assert the simulated swatch
+  // coexists with the value + label ("not colour alone"), the B-pending-DISPLAY-8
+  // row in the augmentations table. AC-2..AC-6 fail at baseline on their Then (no
+  // chromatic swatch is displayed yet; the grayscale filter is inert; grayscale
+  // does not clear the simulation).
+  group('bs-08 display ACs (ITEST-2)', () {
+    acTestWidgets('AC-1', 'the painter opens the display and simulation settings',
+        (tester) async {
+      final h = await givenDisplay(tester);
+      // Given: the painter is on a screen (a reading) with no settings shown.
+      expect(h.settingsPanel, findsNothing, reason: 'Given: settings not open');
+      // When: the painter opens the display and simulation settings (E2).
+      await h.whenOpenSettings();
+      // Then: the surface is shown with all three controls — the simulation
+      // selector (E47), the value-only grayscale toggle (E46) and a theme
+      // control (D-11). (Rejects a surface missing any of the three.)
+      expect(h.settingsPanel, findsOneWidget);
+      expect(h.simulationSelector, findsOneWidget, reason: 'E47 simulation selector');
+      expect(h.grayscaleToggle, findsOneWidget, reason: 'E46 grayscale toggle');
+      expect(h.themeControl, findsOneWidget, reason: 'theme control (D-11)');
+    });
+
+    acTestWidgets('AC-2',
+        'with simulation off the displayed colour is the original (trichromat)',
+        (tester) async {
+      // Given: on a reading with the simulation off.
+      final h = await givenDisplay(tester);
+      expect(h.settings.simulationOn, isFalse, reason: 'Given: simulation off');
+      // When: a colour is displayed (the reading renders its swatch).
+      // Then: exactly one displayed swatch, equal to the original — no
+      // projection, and no simulated-alongside pair while simulation is off.
+      final swatches = _displaySwatches(tester);
+      expect(swatches, hasLength(1),
+          reason: 'sim off = one un-projected swatch (no alongside pair) — DISPLAY-3');
+      expect(_colorNear(swatches.single, _displayColor(displaySample.coordinates)),
+          isTrue,
+          reason: 'the displayed swatch equals the original (identity path)');
+    });
+
+    acTestWidgets('AC-3',
+        'the painter simulates a chosen type alongside the original',
+        (tester) async {
+      // Scenario Outline over its three examples (protan/deutan/tritan).
+      final original = _displayColor(displaySample.coordinates);
+      for (final type in const [CvdType.protan, CvdType.deutan, CvdType.tritan]) {
+        final h = await givenDisplay(tester);
+        // Given: the settings are open with simulation off.
+        await h.whenOpenSettings();
+        expect(h.settings.simulationOn, isFalse,
+            reason: 'Given: sim off before selecting $type');
+        // When: the painter sets the simulation to <type>.
+        await h.whenSelectSimulation(type);
+        expect(h.settings.simulationType, type, reason: 'selector set $type');
+        await h.whenCloseSettings();
+        // Then: the displayed swatch is projected for <type> AND the original is
+        // shown alongside it (two distinct swatches). The three types' distinct
+        // reference outputs are the control against "selector changes nothing".
+        final swatches = _displaySwatches(tester);
+        final simulated =
+            _displayColor(referenceProjectDichromat(displaySample.coordinates, type));
+        expect(swatches.length, greaterThanOrEqualTo(2),
+            reason: '$type: a simulated swatch alongside the original — DISPLAY-4');
+        expect(swatches.any((c) => _colorNear(c, original)), isTrue,
+            reason: '$type: the original colour is shown alongside');
+        expect(swatches.any((c) => _colorNear(c, simulated)), isTrue,
+            reason: '$type: the simulated swatch matches referenceProjectDichromat');
+      }
+    });
+
+    acTestWidgets('AC-4', 'the painter sets the simulation strength with the slider',
+        (tester) async {
+      final h = await givenDisplay(tester);
+      // Given: the simulation is set to deutan (via the selector).
+      await h.whenOpenSettings();
+      await h.whenSelectSimulation(CvdType.deutan);
+      expect(h.settings.simulationType, CvdType.deutan,
+          reason: 'Given: deutan simulation');
+      // When: the painter sets the severity to 60.
+      await h.whenSetSeverity(60);
+      expect(h.settings.simulationSeverity, closeTo(0.60, 0.03),
+          reason: 'the 0..100 slider maps to 0..1 (D-6)');
+      await h.whenCloseSettings();
+      // Then: the simulated swatch is rendered at that severity (matches the
+      // reference projection at 0.60) — DISPLAY-5.
+      final atSixty = _displaySwatches(tester);
+      final expected60 = _displayColor(referenceProjectDichromat(
+          displaySample.coordinates, CvdType.deutan,
+          severity: 0.60));
+      expect(atSixty.any((c) => _colorNear(c, expected60)), isTrue,
+          reason: 'the simulated swatch renders at severity 0.60');
+      // Control: severity 0 renders the unaffected original.
+      await h.whenOpenSettings();
+      await h.whenSetSeverity(0);
+      await h.whenCloseSettings();
+      expect(
+        _displaySwatches(tester).any(
+            (c) => _colorNear(c, _displayColor(displaySample.coordinates))),
+        isTrue,
+        reason: 'severity 0 is the unaffected original',
+      );
+    });
+
+    acTestWidgets('AC-5', 'turning on grayscale clears an active simulation',
+        (tester) async {
+      final h = await givenDisplay(tester);
+      // Given: the simulation is set to deutan.
+      await h.whenOpenSettings();
+      await h.whenSelectSimulation(CvdType.deutan);
+      expect(h.settings.simulationType, CvdType.deutan,
+          reason: 'Given: deutan simulation active');
+      // When: the painter turns on the value-only grayscale view.
+      await h.whenSetGrayscale(on: true);
+      // Then: grayscale is on AND the simulation is cleared (mutually
+      // exclusive views, D-3) — DISPLAY-6.
+      expect(h.settings.grayscale, isTrue, reason: 'grayscale is on');
+      expect(h.settings.simulationType, isNull,
+          reason: 'turning grayscale on clears the simulation');
+      // Control: turning grayscale off again does not re-enable the simulation.
+      await h.whenSetGrayscale(on: false);
+      expect(h.settings.simulationType, isNull,
+          reason: 'grayscale off leaves the simulation off (not re-enabled)');
+      await h.whenCloseSettings();
+    });
+
+    acTestWidgets('AC-6', 'the value-only view greys the whole app (one root filter)',
+        (tester) async {
+      final h = await givenDisplay(tester);
+      await h.whenOpenSettings();
+      // Given: the value-only grayscale view is on.
+      await h.whenSetGrayscale(on: true);
+      expect(h.settings.grayscale, isTrue, reason: 'Given: grayscale on');
+      await h.whenCloseSettings();
+      // Then: a single root saturation-0 filter wraps the whole app (an ancestor
+      // of the MaterialApp), so the camera feed, palette swatches and readings
+      // are all greyed together (D-5) — not a per-reading filter. The harness
+      // opens on the Readout; the camera/palette surfaces live on other screens
+      // but are covered by this one root filter.
+      expect(
+        find.ancestor(
+            of: find.byType(MaterialApp), matching: find.byType(ColorFiltered)),
+        findsOneWidget,
+        reason: 'the whole app is greyed by one root filter — DISPLAY-7',
+      );
+      // Control: with grayscale off, no app-wide filter wraps the app.
+      await h.whenOpenSettings();
+      await h.whenSetGrayscale(on: false);
+      await h.whenCloseSettings();
+      expect(
+        find.ancestor(
+            of: find.byType(MaterialApp), matching: find.byType(ColorFiltered)),
+        findsNothing,
+        reason: 'no app-wide desaturation when grayscale is off',
+      );
+    });
+
+    acTestWidgets('AC-7',
+        'a reading under simulation keeps its numeric value and label',
+        (tester) async {
+      final h = await givenDisplay(tester);
+      // Given: the simulation is set to deutan.
+      await h.whenOpenSettings();
+      await h.whenSelectSimulation(CvdType.deutan);
+      expect(h.settings.simulationType, CvdType.deutan,
+          reason: 'Given: deutan simulation');
+      await h.whenCloseSettings();
+      // Then: the reading still shows its numeric value paired with a
+      // plain-language word (not colour alone) while simulated. (DISPLAY-8
+      // augments this to also assert the simulated swatch coexists with the
+      // value + label, once DISPLAY-4 renders it — see the augmentations table.)
+      final lightness =
+          _science.lightness(displaySample.coordinates).round().toString();
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is ValueReading && w.number == lightness && w.word.isNotEmpty,
+        ),
+        findsOneWidget,
+        reason: 'numeric value + plain-language word present under simulation',
+      );
+      expect(find.text(lightness), findsWidgets,
+          reason: 'the numeric value is shown as text');
+    });
+  });
 }
+
+/// The shared colour-space conversion (`toSRGB`) — the *same* conversion the
+/// render path uses; only the dichromat **projection** (`referenceProjectDichromat`)
+/// is independent, so AC-3/AC-4 never grade the shipped projection against itself.
+const ColorScienceImpl _science = ColorScienceImpl();
+
+/// The displayed sRGB [Color] of a CIELAB colour, via the shared conversion.
+Color _displayColor(ColorCoordinates lab) {
+  final s = _science.toSRGB(lab);
+  return Color.fromARGB(255, s.red, s.green, s.blue);
+}
+
+/// The colours of every circular-decoration display swatch currently rendered.
+///
+/// On the Readout the only circular `BoxDecoration` swatches are `ColorChip`'s
+/// (the simulation render chokepoint — the neutral grayscale-preview swatch is a
+/// rectangle, and the Capture eyedropper lives on another screen), so this reads
+/// the displayed / simulated swatch colours without a key the behaviour phase
+/// has not defined yet. Empty until DISPLAY-3/4 render a colour swatch.
+List<Color> _displaySwatches(WidgetTester tester) {
+  final colors = <Color>[];
+  for (final container in tester.widgetList<Container>(find.byType(Container))) {
+    final decoration = container.decoration;
+    if (decoration is BoxDecoration &&
+        decoration.shape == BoxShape.circle &&
+        decoration.color != null) {
+      colors.add(decoration.color!);
+    }
+  }
+  return colors;
+}
+
+/// Whether two sRGB colours match within [tol] summed across the three channels
+/// (each 0..1; ≈ 0.094 ≈ 24/255, so ~8 per channel) — loose enough for two
+/// independent colour pipelines, tight enough that the original and a dichromat
+/// projection of [displaySample] are told apart. DISPLAY-4/DISPLAY-5 may tighten
+/// it against the shipped render.
+bool _colorNear(Color a, Color b, {double tol = 0.094}) =>
+    (a.r - b.r).abs() + (a.g - b.g).abs() + (a.b - b.b).abs() <= tol;
