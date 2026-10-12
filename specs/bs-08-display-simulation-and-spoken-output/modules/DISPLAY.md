@@ -1,6 +1,6 @@
 # Module DISPLAY — cross-cutting display pipeline (simulation + grayscale)
 
-**Status:** In progress — DISPLAY-7 done (AC-6 un-pended + green; root value-only grayscale `ColorFiltered` in `grayscale_filter.dart`, keyed so toggling never remounts the app; graded A, fix 1/3); DISPLAY-8 (AC-7 reading keeps value+label) startable (the only remaining DISPLAY behaviour phase)
+**Status:** DISPLAY behaviour complete — DISPLAY-7 done (AC-6 un-pended + green; root value-only grayscale `ColorFiltered` in `grayscale_filter.dart`, keyed so toggling never remounts the app; graded A, fix 1/3) and DISPLAY-8 done (AC-7 un-pended + green; test-only augmentation — the simulated swatch coexists with the reading's value + label, "not colour alone", D-7; AC-7 re-graded B-pending-DISPLAY-8 → A, no `lib/` change). All six DISPLAY behaviour ACs (AC-2..7) delivered; next startable outside DISPLAY: SETTINGS-2, SPEECH-2
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/display_settings.dart`, `lib/display/display_controller.dart`, `lib/display/display_scope.dart`, `lib/display/display_read_endpoint.dart`, `lib/display/color_simulation.dart` (thin reuse of `projectDichromat`), `lib/display/grayscale_filter.dart`; integration points in `lib/widgets/color_chip.dart` and `lib/app/build_app.dart` (root grayscale wrapper + `DisplayScope` wiring). Unit tests under `test/display/`.
 **Depends on:** — · **Blocks:** SETTINGS (needs `DisplayController`), ITEST (needs the read endpoint + rendering), SPEECH (scaffold only)
@@ -16,7 +16,7 @@
 | DISPLAY-5 | behavior | AC-4 | ✅ Done | 5,665,722 | 11m 49s (11m 49s) |
 | DISPLAY-6 | behavior | AC-5 | ✅ Done | 4,583,088 | 13m 00s (13m 00s) |
 | DISPLAY-7 | behavior | AC-6 | ✅ Done | 12,068,315 | — (fork mark timing) |
-| DISPLAY-8 | behavior | AC-7 | ⬜ Todo | | |
+| DISPLAY-8 | behavior | AC-7 | ✅ Done | 7,504,305 | 0m 00s |
 
 ## Interface reconciliation
 
@@ -224,8 +224,16 @@
 - **Exit criteria:** unit gate; existing suites green.
 - **Acceptance gate:** un-pend AC-7; `display_test.dart` green (`TestAC07_ReadingKeepsValueAndLabel` + earlier ACs).
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed (test-only — no `lib/` change):** AC-7 un-pended (row deleted from `integration_test/bs08/pending.dart`) and its scheduled **augmentation** made in `integration_test/display_test.dart`: under deutan simulation the test now asserts the simulated swatch coexists with the reading's value + label — `_displaySwatches` contains a swatch `_colorNear` `referenceProjectDichromat(sample, deutan)` (independent reference) **and** the original, *while* a `ValueReading` with the numeric value + non-empty word is present ("not colour alone", D-7). This closes the *B pending DISPLAY-8* limitation (at ITEST-2 no swatch existed to reject "a colour swatch with no text"). No production code needed — the label contract (bs-01) and the alongside-swatch render (DISPLAY-4) already hold.
+- **Also updated (scaffold guard, 1 fix pass):** added `AC-7` to the `unpended` set in `display_test.dart`'s pending-gate guard (`{AC-2,AC-3,AC-4,AC-5,AC-7}`) — the first acceptance run failed only on that guard (expected pending set no longer matched after the un-pend); the re-run is all green.
+- **Gates:** `flutter analyze` clean; **unit 928 pass**; coverage gate **PASS** — no `lib/` file touched, so the cumulative touched-set (14 bs-08 files vs `main`) stays at 100%. Acceptance on sim `5AB9D06D` under the verify lock: **16 pass / 5 skipped** (AC-2/3/4/5/7 execute + pass; AC-1/6/8/9/10 pending for SETTINGS-2/DISPLAY-7/SPEECH-2/3/4). Grade (self-graded by the parallel worker against G1–G6; independent full-suite re-grade deferred to SIGNOFF-1): **5 A / 0 below A**, **AC-7 B-pending-DISPLAY-8 → A**. Fix passes: **1/3**.
+- **Tokens / Time:** 7,504,305 / 0m 00s.
 
+### Checkpoint / Handoff
+
+- **AC-7 is closed (A).** The suite has **no open B-pending grade**; every un-pended AC (AC-2/3/4/5/7) is A. Remaining display AC: **AC-6 (DISPLAY-7)**.
+- **Frozen:** the AC-7 augmentation reads the simulation chokepoint through `_displaySwatches` + the independent `referenceProjectDichromat`; don't grade the simulated swatch against the shipped projection.
+- **Parallel note:** DISPLAY-8 is test-only and touched no production file, so it cannot regress AC-6/DISPLAY-7. Both DISPLAY-7 and DISPLAY-8 edit `display_test.dart` (the AC group + the scaffold guard `unpended` set) and `bs08/pending.dart` (their AC rows) and this module plan (Status + dashboard) — expected overlap; reconcile unions the two `unpended` entries (`{…,AC-6,AC-7}`) and both appended grid sections.
 - **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d <udid>` (default) / `--dart-define=BS08_RUN_PENDING=true` (run-pending)

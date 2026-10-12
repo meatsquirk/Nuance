@@ -44,9 +44,10 @@ void main() {
       // off = trichromat), AC-3 (DISPLAY-4, simulate a chosen type alongside
       // the original), AC-4 (DISPLAY-5, severity slider sets simulation
       // strength), AC-5 (DISPLAY-6, grayscale clears an active simulation) and
-      // AC-6 (DISPLAY-7, value-only grayscale greys the whole app).
-      // The remaining five are asserted exactly (non-vacuous).
-      const unpended = {'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6'};
+      // AC-6 (DISPLAY-7, value-only grayscale greys the whole app) and AC-7
+      // (DISPLAY-8, reading keeps value + label with the simulated swatch).
+      // The remaining four are asserted exactly (non-vacuous).
+      const unpended = {'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',
@@ -400,9 +401,7 @@ void main() {
           reason: 'Given: deutan simulation');
       await h.whenCloseSettings();
       // Then: the reading still shows its numeric value paired with a
-      // plain-language word (not colour alone) while simulated. (DISPLAY-8
-      // augments this to also assert the simulated swatch coexists with the
-      // value + label, once DISPLAY-4 renders it — see the augmentations table.)
+      // plain-language word (not colour alone) while simulated.
       final lightness =
           _science.lightness(displaySample.coordinates).round().toString();
       expect(
@@ -414,6 +413,28 @@ void main() {
       );
       expect(find.text(lightness), findsWidgets,
           reason: 'the numeric value is shown as text');
+      // Augmentation (DISPLAY-8, owns the AC-7 augmentation row): now that
+      // DISPLAY-4 renders a simulated swatch, assert the swatch COEXISTS with
+      // the value + label — the simulated view is additive, "not colour alone".
+      // This rejects the real wrong impl the baseline could not: a simulated
+      // reading that shows a colour swatch and drops the value/label text.
+      final swatches = _displaySwatches(tester);
+      final simulated = _displayColor(
+          referenceProjectDichromat(displaySample.coordinates, CvdType.deutan));
+      expect(swatches.any((c) => _colorNear(c, simulated)), isTrue,
+          reason: 'the simulated swatch is rendered under simulation (DISPLAY-4)');
+      expect(swatches.any((c) => _colorNear(c, _displayColor(displaySample.coordinates))),
+          isTrue,
+          reason: 'the original swatch is shown alongside the simulated one');
+      // The value + label text and the simulated swatch are shown together — the
+      // reading never becomes colour alone.
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is ValueReading && w.number == lightness && w.word.isNotEmpty,
+        ),
+        findsOneWidget,
+        reason: 'value + label coexist with the simulated swatch (not colour alone)',
+      );
     });
   });
 
