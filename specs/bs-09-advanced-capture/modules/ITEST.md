@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite (bs-09)
 
-**Status:** In progress — ITEST-1, ITEST-2 done; next ITEST-3 (sequential: shares the one AC-test file)
+**Status:** In progress — ITEST-1/2/3 done (all 10 AC tests pending, red baseline recorded, suite 24 A); next ITEST-4 (test review → G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/advanced_capture_test.dart`,
 `integration_test/advanced_capture_harness.dart`, `integration_test/bs09/pending.dart`,
@@ -13,7 +13,7 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,883,964 | 54m 53s (57m 55s) |
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 (pending) | ✅ Done | 8,028,691 | 18m 58s (21m 23s) |
-| ITEST-3 | acceptance-tests | AC-6,7,8,9,10 (pending) | ⬜ Todo | | |
+| ITEST-3 | acceptance-tests | AC-6,7,8,9,10 (pending) | ✅ Done | 8,511,371 | 23m 24s |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -173,6 +173,76 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
   baseline; grade.
 - **Exit criteria:** suite green with these pending; red baseline recorded; grade gate passed.
 
+### Result (ITEST-3)
+
+- **Landed:** five *pending* `acTestWidgets` appended as a **second** group
+  (`bs-09 acceptance — colour-space / RAW / normalization (ITEST-3)`) after the ITEST-2 group in
+  `advanced_capture_test.dart` (ITEST-2 group untouched) — `AC-6: TaggedWithColourSpace`,
+  `AC-7: RawWhereSupported`, `AC-8: FallbackLabelsNarrower`, `AC-9: NormalizedTaggedSample`,
+  `AC-10: PlatformAgnosticSample` — all through the real assembled app: `givenCaptureOf` on the
+  capability/platform scenes, `h.source.supportsWideGamut`/`supportsRaw` for the Givens, `h.whenCommit`
+  (real capture UI) for the When, and `h.state.lastCommittedSample.colorSpace`/`.captureMode`/`.coordinates`
+  for the Thens. AC-6 carries a `SCENE_NARROW→srgb` in-test control; AC-7 a non-RAW→`processed` control;
+  AC-8 a `SCENE_WIDE→displayP3` control (the control that makes AC-8 red at baseline, since its
+  `SCENE_NARROW→srgb` primary passes against the hard-coded shell); AC-9/AC-10 assert canonical-CIELAB
+  normalization against `h.source.groundTruth` / across the two platforms.
+- **Test-infra changes (non-AC), recorded per the suite rule:**
+  1. `fakes/fake_capture_source.dart` — the fake now applies the live scene's `SceneSpec.rawColorShift`
+     to every generated frame (`_shiftRaw`). **Reason:** `SCENE_ANDROID`/`SCENE_IOS` carry a non-zero
+     platform offset (10 / −8) that nothing consumed, so AC-9/AC-10 would have been **vacuously green** at
+     baseline (both platforms read ground truth). Modelling the platform's *pre-normalization* raw is
+     fixture infrastructure — it is **not** faking the behaviour under test (the normalization that cancels
+     the offset, owned by SOURCE-4); the offset is a property of the modelled platform. Zero for every
+     bs-02..bs-08 scene, so those suites are unaffected.
+  2. `advanced_capture_test.dart` — a top-level `rebootCaptureOf(tester, scene)` helper used by the
+     AC-6/7/8/10 controls. **Reason:** an adequate-light commit navigates to the Readout (D-5), so a plain
+     second `pumpWidget(buildApp(…))` reuses the first app's `MaterialApp`/`Navigator` element in place with
+     the Readout still pushed (no Capture controls on the second scene). The helper unmounts the first app
+     (disposing its feed/timers) before re-opening Capture fresh, so each primary/control pair runs the real
+     app end to end. No AC assertion changed.
+- **Gates:** `flutter analyze` clean; unit `flutter test --coverage` → **892 pass** (unchanged — no `lib/`
+  touched); coverage gate `dart run tool/coverage_gate.dart main` → **100%** on the 10 touched lib files
+  (ITEST-3 touched no `lib/`; the cumulative set vs `main` is unchanged). Acceptance (device lock, iPhone 17
+  sim `5AB9D06D-…`): **default run green** — `+11 ~10` (11 non-AC tests pass, all 10 ACs skipped), exit 0;
+  **run-pending red baseline** — `+11 -10`, all 10 ACs fail. AC-1..5 unchanged (`UnimplementedError` naming
+  their phase); AC-6..10 each fail on a **Then** (no throws, no compile errors): AC-6 `displayP3` vs `srgb`,
+  AC-7 `raw` vs `processed`, AC-8 its `SCENE_WIDE` control `displayP3` vs `srgb`, AC-9 `labDistance 4.07 > 3.0`,
+  AC-10 `labDistance 7.42 > 0.5`. See the Red baseline table.
+- **Grade gate:** independent adversarial grade in a fresh subagent against G1–G6 →
+  appended to `behavior-test-completeness-bs-09-advanced-capture.md`. **ITEST-3: 5 A / 0 below A**; whole
+  suite now **24 A / 0 below A** (ITEST-1 14 + ITEST-2 5 + ITEST-3 5). No augmentation rows: AC-8 is sound
+  now via its own-AC control (not *limited* — the control works as soon as AC-8's own owner SOURCE-2 lands);
+  AC-9/AC-10 discriminate now via the fixture raw offset. No blocking findings for the test review.
+- **Fix passes:** 1/3 — the first run-pending baseline surfaced AC-8/AC-10 failing on a `whenCommit` tap
+  (button missing on the second boot, the Navigator-reuse issue above) instead of on their colour Then; added
+  `rebootCaptureOf` and re-ran to the designed baseline (AC-8 fails on its wide control, AC-10 on the platform
+  divergence). The AC tests' red baseline is the designed outcome, not a fix.
+- **Tokens / time:** 8,511,371 · 23m 24s (23m 24s).
+
+### Checkpoint / Handoff (ITEST-3 → ITEST-4)
+
+- **Acceptance stage test-complete.** All 10 AC tests exist, pending, in the single
+  `advanced_capture_test.dart` (ITEST-2 group AC-1..5, ITEST-3 group AC-6..10); default suite green with all
+  10 skipped; run-pending red baseline is all 10 red, each on a Then or an `UnimplementedError` naming its
+  owning phase; whole-suite grade **24 A / 0 below A**. **Next is ITEST-4 (test-review) — NO code**: assemble
+  the review packet (per-AC catalogue + red baseline + grade grid + fixtures), confirm full regression green
+  with the 10 pending, set **G-2** awaiting decision, and stop. A human approves G-2 before ANY behaviour
+  phase (CAPTURE-3/4/5, SCREEN-2/3, SOURCE-2/3/4).
+- **For the behaviour phases that un-pend AC-6..10:** SOURCE-2 (AC-6, AC-8) makes the source select the wide
+  space / narrower fallback and thread it onto `Sample.colorSpace`; SOURCE-3 (AC-7) sets `captureMode == raw`
+  and the widest space on RAW devices; SOURCE-4 (AC-9, AC-10) makes the capture contract return a **normalized**
+  sample (canonical CIELAB regardless of the platform raw offset the fake now feeds) — note the AC-9/AC-10
+  tests do **not** call `whenCalibrate`, so SOURCE-4 must normalize as part of the contract, not via an
+  explicit calibrate step. The fake's `normaliseAgainstCard` already returns ground truth, so routing the
+  platform capture through normalization lands both platforms on canonical.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host); acceptance under the device lock — `flutter test integration_test/advanced_capture_test.dart
+  -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (default) and `--dart-define=BS09_RUN_PENDING=true` (red baseline),
+  run through `coord.sh with-lock bs-09-advanced-capture <PHASE> --wait <n> -- bash -c "cd
+  /Users/matthew.quirk/Nuance-bs09; …"` (coord repo `/Users/matthew.quirk/Nuance`; the lock wrapper runs from
+  the coord repo, so `cd` into the worktree inside the command). Always pass `-d <udid>` — no device ⇒ zero
+  tests, false green.
+
 ## Phase ITEST-4 — test review (G-2)
 
 - **Kind:** test-review
@@ -190,11 +260,11 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 | AC-3 | TestAC03_MultiPointSamplesAllAtOnce | `UnimplementedError('CAPTURE-4')` | Given — `whenMarkPoints` (`markPoint`) | CAPTURE-4 | A |
 | AC-4 | TestAC04_EachPointKeepsPositionValue | `UnimplementedError('CAPTURE-4')` | Given — `whenMarkPoints` (`markPoint`); the show-each-reading Then is owned by SCREEN-3 (after CAPTURE-4) | SCREEN-3 | A |
 | AC-5 | TestAC05_TwoPointsToComparison | `UnimplementedError('CAPTURE-4')` | Given — `whenMarkPoints` (`markPoint`); the pair handoff Then is owned by CAPTURE-5 (after CAPTURE-4) | CAPTURE-5 | A |
-| AC-6 | TestAC06_TaggedWithColourSpace | — | — | SOURCE-2 | — |
-| AC-7 | TestAC07_RawWhereSupported | — | — | SOURCE-3 | — |
-| AC-8 | TestAC08_FallbackLabelsNarrower | — | — | SOURCE-2 | — |
-| AC-9 | TestAC09_NormalizedTaggedSample | — | — | SOURCE-4 | — |
-| AC-10 | TestAC10_PlatformAgnosticSample | — | — | SOURCE-4 | — |
+| AC-6 | TestAC06_TaggedWithColourSpace | Then fails: `colorSpace == srgb`, expected `displayP3` | Then — the committed sample's `colorSpace` on `SCENE_WIDE` (shell returns `srgb` until SOURCE-2) | SOURCE-2 | A |
+| AC-7 | TestAC07_RawWhereSupported | Then fails: `captureMode == processed`, expected `raw` | Then — the committed `captureMode` on `SCENE_RAW` (shell returns `processed` until SOURCE-3) | SOURCE-3 | A |
+| AC-8 | TestAC08_FallbackLabelsNarrower | Then fails on the `SCENE_WIDE` **control**: `colorSpace == srgb`, expected `displayP3` (the `SCENE_NARROW` primary already passes — srgb is hard-coded) | Then — control: `SCENE_WIDE` tagged `srgb` until SOURCE-2 labels the wide space, so `srgb` is not yet a capability-conditional fallback | SOURCE-2 | A |
+| AC-9 | TestAC09_NormalizedTaggedSample | Then fails: `labDistance(coords, groundTruth) == 4.07 > 3.0` (coords are the raw platform-shifted value) | Then — committed `coordinates` on `SCENE_ANDROID` not normalized until SOURCE-4 (tag is already non-null) | SOURCE-4 | A |
+| AC-10 | TestAC10_PlatformAgnosticSample | Then fails: `labDistance(android, ios) == 7.42 > 0.5` (platforms diverge) | Then — `SCENE_ANDROID` vs `SCENE_IOS` committed coords differ until SOURCE-4 normalizes both to canonical | SOURCE-4 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 

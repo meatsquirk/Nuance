@@ -32,6 +32,26 @@ import 'package:paint_color_assistant/capture/capture_screen.dart';
 
 import 'advanced_capture_harness.dart';
 
+/// Re-opens the assembled app on [scene] in the same tester after an earlier
+/// capture has already committed.
+///
+/// An adequate-light commit navigates to the Readout (D-5), so the first app's
+/// Navigator has the Readout pushed. A plain second `pumpWidget(buildApp(…))`
+/// would update that same MaterialApp / Navigator element in place — reusing it
+/// with the Readout still on top, so the Capture controls are gone. Unmounting
+/// with a throwaway root first disposes the first app (cancelling its feed and
+/// timers) so the next `buildApp` mounts a fresh Navigator on Capture. Used by
+/// the AC-6/AC-7/AC-8/AC-10 capability- and platform-controls, which commit on a
+/// second scene in the same test.
+Future<CaptureHarness> rebootCaptureOf(
+  WidgetTester tester,
+  CaptureScene scene,
+) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump();
+  return givenCaptureOf(tester, scene);
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -364,6 +384,174 @@ void main() {
         greaterThan(3.0),
         reason: 'the two slots carry different readings (not a duplicate)',
       );
+    });
+  });
+
+  // One *pending* acceptance test per AC-6..AC-10 (ITEST-3), appended as a second
+  // group after the ITEST-2 group (shared file — append, never rewrite). Each is
+  // registered through the same bs-09 pending gate, so the default suite skips it
+  // until its behaviour phase deletes its row in `bs09/pending.dart`. The colour
+  // space / RAW / normalization behaviour these assert lands in SOURCE-2/3/4, so
+  // each fails its Then at the red baseline (see the ITEST-3 red-baseline table in
+  // `modules/ITEST.md`) rather than throwing.
+  group('bs-09 acceptance — colour-space / RAW / normalization (ITEST-3)', () {
+    acTestWidgets('AC-6', 'TaggedWithColourSpace', (tester) async {
+      // Given: Capture open on a wide-gamut device; the source reports it.
+      final h = await givenCaptureOf(tester, SCENE_WIDE);
+      expect(find.byType(CaptureScreen), findsOneWidget,
+          reason: 'the Capture screen is shown');
+      expect(h.source.supportsWideGamut, isTrue,
+          reason: 'SCENE_WIDE is a wide-gamut device');
+
+      // When: commit a reading (owner SOURCE-2 — the source selects the wide
+      // space and the commit threads it onto Sample.colorSpace).
+      await h.whenCommit();
+
+      // Then: the committed sample is tagged with the wide space it was taken in,
+      // and its colour converts honestly (stays near ground truth). Rejects
+      // `colorSpace` null/untagged and a sample tagged `srgb` on a wide device.
+      final sample = h.state.lastCommittedSample;
+      expect(sample, isNotNull, reason: 'a sample is committed');
+      expect(sample!.colorSpace, CaptureColorSpace.displayP3);
+      expect(
+        labDistance(sample.coordinates, h.source.groundTruth),
+        lessThan(3.0),
+        reason: 'the wide-gamut capture still converts to ground truth',
+      );
+
+      // Control (same AC, G5): a narrower device tags `srgb`, so the tag tracks
+      // the capability actually used — it is not a constant `displayP3`.
+      final narrow = await rebootCaptureOf(tester, SCENE_NARROW);
+      expect(narrow.source.supportsWideGamut, isFalse);
+      await narrow.whenCommit();
+      expect(narrow.state.lastCommittedSample!.colorSpace,
+          CaptureColorSpace.srgb,
+          reason: 'control: a non-wide device is tagged srgb, not displayP3');
+    });
+
+    acTestWidgets('AC-7', 'RawWhereSupported', (tester) async {
+      // Given: Capture open on a RAW-capable device; the source reports it.
+      final h = await givenCaptureOf(tester, SCENE_RAW);
+      expect(h.source.supportsRaw, isTrue,
+          reason: 'SCENE_RAW is a RAW-capable device');
+
+      // When: commit a reading (owner SOURCE-3 — RAW capture in the widest space).
+      await h.whenCommit();
+
+      // Then: the sample records RAW capture in the widest space the device
+      // offers (SCENE_RAW is also wide-gamut), not the processed sRGB pipeline.
+      // Rejects `captureMode == processed` on a RAW device and RAW set but the
+      // space still narrow.
+      final sample = h.state.lastCommittedSample;
+      expect(sample, isNotNull, reason: 'a sample is committed');
+      expect(sample!.captureMode, CaptureMode.raw);
+      expect(sample.colorSpace, CaptureColorSpace.displayP3,
+          reason: 'RAW uses the widest space the device offers, not sRGB');
+
+      // Control (same AC, G5): a non-RAW device commits `processed`, so the mode
+      // tracks the capability — it is not a constant `raw`.
+      final processed = await rebootCaptureOf(tester, SCENE_NARROW);
+      expect(processed.source.supportsRaw, isFalse);
+      await processed.whenCommit();
+      expect(processed.state.lastCommittedSample!.captureMode,
+          CaptureMode.processed,
+          reason: 'control: a non-RAW device captures processed, not raw');
+    });
+
+    acTestWidgets('AC-8', 'FallbackLabelsNarrower', (tester) async {
+      // Given: Capture open on a device WITHOUT wide-gamut capture.
+      final h = await givenCaptureOf(tester, SCENE_NARROW);
+      expect(h.source.supportsWideGamut, isFalse,
+          reason: 'SCENE_NARROW has no wide-gamut capture');
+
+      // When: commit a reading (owner SOURCE-2 — the narrower space is selected
+      // and labelled).
+      await h.whenCommit();
+
+      // Then: the capture falls back to the device's standard space and the
+      // narrower space is *labelled* (not left null). Rejects `colorSpace` null
+      // (fallback unlabelled).
+      final sample = h.state.lastCommittedSample;
+      expect(sample, isNotNull, reason: 'a sample is committed');
+      expect(sample!.colorSpace, isNotNull,
+          reason: 'the fallback space is labelled, not dropped');
+      expect(sample.colorSpace, CaptureColorSpace.srgb);
+
+      // Control (same AC, G5): a wide-gamut device is labelled `displayP3`, so
+      // `srgb` here is the *fallback actually used*, not a constant srgb tag.
+      // This control discriminates only once SOURCE-2 lands, which is why AC-8 is
+      // red at baseline (SCENE_WIDE is tagged srgb until then).
+      final wide = await rebootCaptureOf(tester, SCENE_WIDE);
+      expect(wide.source.supportsWideGamut, isTrue);
+      await wide.whenCommit();
+      expect(wide.state.lastCommittedSample!.colorSpace,
+          CaptureColorSpace.displayP3,
+          reason: 'control: a wide device is tagged displayP3, so srgb is a '
+              'genuine fallback');
+    });
+
+    acTestWidgets('AC-9', 'NormalizedTaggedSample', (tester) async {
+      // Given: Capture open on a platform scene (Android) whose raw carries a
+      // platform offset; a capture is committable.
+      final h = await givenCaptureOf(tester, SCENE_ANDROID);
+      expect(find.byType(CaptureScreen), findsOneWidget,
+          reason: 'the Capture screen is shown');
+      expect(SCENE_ANDROID.spec.rawColorShift, isNot(0),
+          reason: 'the platform feeds offset raw, so "normalized" is a real '
+              'check — not raw already at ground truth');
+
+      // When: commit and hand the sample to the rest of the app (owner SOURCE-4 —
+      // the capture contract returns a normalized, tagged sample).
+      await h.whenCommit();
+
+      // Then: the sample is normalized — its coordinates are canonical CIELAB at
+      // ground truth, NOT the raw device values the platform fed — and it is
+      // colour-space tagged. Rejects coordinates left as raw (the platform offset
+      // not removed) and a null tag.
+      final sample = h.state.lastCommittedSample;
+      expect(sample, isNotNull, reason: 'a sample is committed');
+      expect(sample!.colorSpace, isNotNull,
+          reason: 'the contract guarantees a colour-space tag');
+      expect(
+        labDistance(sample.coordinates, h.source.groundTruth),
+        lessThan(3.0),
+        reason: 'coordinates are normalized to canonical CIELAB, not the raw '
+            'platform values',
+      );
+    });
+
+    acTestWidgets('AC-10', 'PlatformAgnosticSample', (tester) async {
+      // Given: the same scene captured through two platforms whose raw differs
+      // pre-normalization (enforced by the fixtures), each committing a sample.
+      expect(
+        SCENE_ANDROID.spec.rawColorShift,
+        isNot(SCENE_IOS.spec.rawColorShift),
+        reason: 'the two platforms feed different raw, so matching after '
+            'normalization is a genuine result, not identical fixtures',
+      );
+      final android = await givenCaptureOf(tester, SCENE_ANDROID);
+      await android.whenCommit();
+      final androidSample = android.state.lastCommittedSample;
+      expect(androidSample, isNotNull, reason: 'Android commits a sample');
+
+      final ios = await rebootCaptureOf(tester, SCENE_IOS);
+      await ios.whenCommit();
+      final iosSample = ios.state.lastCommittedSample;
+      expect(iosSample, isNotNull, reason: 'iOS commits a sample');
+
+      // When: hand each committed sample to the colour-science layer (read its
+      // normalized coordinates + tag).
+      // Then: the rest of the app sees no platform difference — the two samples
+      // are equal-normalized (coordinates coincide) with an identical tag.
+      // Rejects coordinates that diverge (platform leaks through) and differing
+      // tags (owner SOURCE-4).
+      expect(
+        labDistance(androidSample!.coordinates, iosSample!.coordinates),
+        lessThan(0.5),
+        reason: 'both platforms normalize to the identical canonical colour',
+      );
+      expect(androidSample.colorSpace, iosSample.colorSpace,
+          reason: 'both platforms carry the identical colour-space tag');
     });
   });
 }

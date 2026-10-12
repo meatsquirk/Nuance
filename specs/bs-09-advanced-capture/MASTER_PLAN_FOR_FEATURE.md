@@ -1,7 +1,7 @@
 # Master Plan — Advanced capture (bs-09)
 
 **Spec:** [bs-09-advanced-capture.feature](../bs-09-advanced-capture.feature)
-**Status:** In progress — next ITEST-3 (ITEST-1, ITEST-2 done; AC-6..10 appended to the shared file → sequential)
+**Status:** In progress — next ITEST-4 (test review → G-2; ITEST-1/2/3 done, all 10 AC tests pending + red baseline, suite 24 A)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) §"Cross-platform strategy" (CaptureSource / wide colour space / RAW fallback; D2), §"Capture & sampling" (torch, multi-point) · [scope](../../docs/paint-color-app-scope.md) §4.1 (flash/torch *Should*, multi-point *Should*, RAW/DNG *Could*) · **no wireframe yet** (the spec is proposed ahead of any mock; a future revision adds its UX)
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-02's capture surface and bs-03's comparison, both already merged to `main` (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -125,7 +125,7 @@ SOURCE-4; it is *pending* until then, not a limited test.
 | SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` torch control + colour-space/RAW capability, selection + fallback, normalization contract, two-platform modelling; extended `SceneSpec`/`FakeCaptureSource` | bs-02 source | 🔄 In progress (SOURCE-1 done) |
 | CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | 🔄 In progress (CAPTURE-1, CAPTURE-2 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Capture screen: torch control + colour-temperature warning banner; multi-point markers + per-point readings display; send-to-comparison control | CAPTURE | 🔄 In progress (SCREEN-1 done) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1 done) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress (ITEST-1/2/3 done — all 10 AC tests pending + red baseline; ITEST-4 review next) |
 
 ## Dependency graph
 
@@ -174,8 +174,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | SCREEN-1 | shell: Capture screen placeholders (torch control + warning, multi-point markers + readings list, send-to-comparison) | ✅ Done | 5,909,827 | 11m 12s | unit 892 green (+15); cov 100% (10 files); 0 fix passes; analyze clean; all shells done |
 | 5 | ITEST-1 | acceptance-tests: harness over bs-02's, fixtures, pending gate (10 ACs), smoke | ✅ Done | 8,883,964 | 54m 53s (57m 55s) | unit 892 + integ 142 green; cov 100%; 0 fix passes; harness+7 fixtures+10 guard/smoke; no AC tests yet |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ✅ Done | 8,028,691 | 18m 58s (21m 23s) | default green, run-pending red (AC-1..5); grade 5 A; guard fix (bs-08 parity) |
-| 7 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Next | | | after ITEST-2 (shares the one AC-test file → append 2nd group) |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 7 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 8,511,371 | 23m 24s | default green (+11 ~10); run-pending red all 10 ACs (AC-6..10 on Thens, AC-1..5 on UnimplementedError); grade 5 A (suite 24 A); fake applies rawColorShift + rebootCaptureOf helper (non-AC infra); 1 fix pass |
+| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | after ITEST-3 (all 10 AC tests complete); raises G-2 |
 | 9 | CAPTURE-3 | behavior: AC-2 — torch mechanism (turn on/off, CT warning, acknowledge) + commit stamps litByTorch | ⬜ Todo | | | ∥ SOURCE track |
 | 10 | SCREEN-2 | behavior: AC-1 — torch control + colour-temperature warning banner | ⬜ Todo | | | after CAPTURE-3 |
 | 11 | CAPTURE-4 | behavior: AC-3 — markPoint + sampleMarkedPoints → one reading per point | ⬜ Todo | | | after CAPTURE-3 (controller) |
@@ -191,28 +191,25 @@ when the row is marked done.
 
 ## Next phase
 
-**ITEST-2 is done — ITEST-3 (acceptance-tests, AC-6..10) is next, startable now (no gate blocks the ITEST
-stage).** On branch `feat/bs-09-advanced-capture`: register one *pending* `acTestWidgets` per AC (AC-6..10),
-record each one's run-pending red baseline, and grade each row. Then ITEST-4 (test review → **G-2**), then the
-behaviour stage.
+**Acceptance stage is test-complete — ITEST-4 (test review) is next, startable now (no gate blocks the ITEST
+stage).** All 10 AC tests exist and are pending in `advanced_capture_test.dart`; default suite green with all
+10 skipped; run-pending red baseline is all 10 red (AC-1..5 on `UnimplementedError`, AC-6..10 on their Thens);
+whole-suite grade **24 A / 0 below A**.
 
-- **⚠ ITEST-3 shares the single AC-test file `advanced_capture_test.dart` with ITEST-2** → it cannot run in
-  parallel with ITEST-2 (now done) and depends on ITEST-2 being committed. **Re-read the file and append a
-  second `group`** for AC-6..10 after the ITEST-2 group — do not rewrite.
-- **Harness ready:** import `advanced_capture_harness.dart` only (plus `capture_screen.dart` and
-  `package:flutter/widgets.dart`, already imported). AC-6..10 Givens read the source capability getters
-  (`h.source.supportsWideGamut`/`supportsRaw`) on `SCENE_WIDE`/`SCENE_NARROW`/`SCENE_RAW`/`SCENE_ANDROID`/
-  `SCENE_IOS`; Thens read `h.whenCommit` then `h.state.lastCommittedSample.colorSpace`/`.captureMode`/
-  `.coordinates` (commit needs only the boot-time `currentSample`, no lock). Likely baseline: AC-6/AC-7 fail on
-  their Then (`displayP3`/`raw`); **AC-8 may be green-at-baseline** (shell already tags `srgb`) → add a control
-  and, if still green, un-pend + record *green at baseline*; AC-9/AC-10 pending until SOURCE-4.
-- **G-2 (test review) still open** — blocks every behaviour phase (CAPTURE-3/4/5, SCREEN-2/3, SOURCE-2/3/4);
-  it does **not** block the ITEST stage. ITEST-4 raises G-2 after ITEST-3.
+- **ITEST-4 is a `test-review` phase — NO code.** Assemble the review packet in `modules/ITEST.md` (per-AC
+  catalogue + the Red baseline table + grade grid path/counts + fixtures), confirm full regression green with
+  the 10 pending, set the phase `⏸ Awaiting review`, set **G-2** to *awaiting decision*, record the ledger
+  row, commit, and stop with: `/feature-next-phase --gate bs-09-advanced-capture G-2 approved | "<changes>"`.
+- **G-2 is the only open gate** and blocks **every** behaviour phase (CAPTURE-3/4/5, SCREEN-2/3, SOURCE-2/3/4).
+  A human approves it before any behaviour is coded; the agent never approves.
+- **After G-2** the CAPTURE/SCREEN track (torch/multi-point/comparison) and the SOURCE track
+  (colour-space/RAW/normalization) run concurrently (disjoint files). SOURCE-4 (AC-9/AC-10) must normalize the
+  committed sample as part of the capture **contract** — the AC-9/AC-10 tests do not call `whenCalibrate`.
 - **Acceptance runs need a booted sim under `coord.sh with-lock`** (host gates don't):
-  `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-… `; run-pending adds
+  `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-…`; run-pending adds
   `--dart-define=BS09_RUN_PENDING=true`. Always pass `-d <udid>` (no device ⇒ zero tests, false green). The
-  device lane is shared and contended across bs-07/08/09 — use `coord.sh with-lock … --wait <n>` (coord repo
-  `/Users/matthew.quirk/Nuance`).
+  lock wrapper runs from the coord repo `/Users/matthew.quirk/Nuance`, so `cd` into the worktree inside the
+  command; the device lane is shared/contended across bs-07/08/09 — use `coord.sh with-lock … --wait <n>`.
 
 ## Token usage
 
@@ -227,7 +224,8 @@ behaviour stage.
 | SCREEN-1 | 53a1658d | 2026-10-12 07:54 EDT | 08:05 | 11m 12s | 11m 12s | claude-opus-4-8 | 112 | 110,831 | 5,754,688 | 44,196 | 5,909,827 | shell done; unit 892 green (+15); coverage 100% (10 files); 0 fix passes; analyze clean; all shells done |
 | ITEST-1 | feb9ca4e | 2026-10-12 08:19 EDT | 09:17 | 57m 55s | 54m 53s | claude-opus-4-8 | 120 | 181,992 | 8,626,689 | 75,163 | 8,883,964 | harness+7 fixtures+pending gate; 10 guard/smoke tests green; unit 892, integ 142, coverage 100%, analyze clean; 0 ACs un-pended (no AC tests yet); 0 fix passes |
 | ITEST-2 | c410d754 | 2026-10-12 09:38 EDT | 09:59 | 21m 23s | 18m 58s | claude-opus-4-8 | 136 | 260,342 | 7,705,425 | 62,788 | 8,028,691 | default green (+11 ~5); run-pending red baseline AC-1..5 (all UnimplementedError naming a bs-09 phase); unit 892/cov 100% (no lib touched); grade 5 A / 0 below A (suite 16 A); 1 fix pass (deterministic ITEST-1 guard, bs-08 parity) |
-| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 09:59** | **9h 17m** | **2h 29m** |  | **824** | **1,170,193** | **45,394,901** | **379,989** | **46,945,907** |  |
+| ITEST-3 | 23365e01 | 2026-10-12 10:16 EDT | 10:40 | 23m 24s | 23m 24s | claude-opus-4-8 | 126 | 248,370 | 8,190,882 | 71,993 | 8,511,371 | default green (+11 ~10); run-pending red baseline all 10 ACs (AC-6..10 on Thens: displayP3/raw/wide-control/normalize/platform-agnostic; AC-1..5 unchanged UnimplementedError); unit 892/cov 100% (no lib); grade 5 A / 0 below (suite 24 A); 1 fix pass (rebootCaptureOf for Navigator reuse); fake applies rawColorShift + rebootCaptureOf helper (non-AC test infra) |
+| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 10:40** | **9h 41m** | **2h 52m** |  | **950** | **1,418,563** | **53,585,783** | **451,982** | **55,457,278** |  |
 
 ## Sign-off
 
