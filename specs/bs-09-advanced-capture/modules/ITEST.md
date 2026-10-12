@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite (bs-09)
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 done; next ITEST-2 → ITEST-3 (sequential: shared test file)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/advanced_capture_test.dart`,
 `integration_test/advanced_capture_harness.dart`, `integration_test/bs09/pending.dart`,
@@ -11,7 +11,7 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| ITEST-1 | acceptance-tests | — (harness + smoke) | ⬜ Todo | | |
+| ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,883,964 | 54m 53s (57m 55s) |
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 (pending) | ⬜ Todo | | |
 | ITEST-3 | acceptance-tests | AC-6,7,8,9,10 (pending) | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
@@ -51,6 +51,55 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
      plus guard tests over the pending gate and fixtures.
 - **Exit criteria:** smoke + guard tests green; full regression green with all 10 pending; coverage gate
   passes; grade A.
+
+### Result (ITEST-1)
+
+- **Landed:** `advanced_capture_harness.dart` — re-exports bs-02's `capture_harness.dart`
+  (`CaptureHarness` / `givenCaptureOf`, the bs-02 scenes, `Photo`, the fakes) **with bs-02's own pending gate
+  hidden** so bs-09's `bs09/pending.dart` gate is the one in scope; also re-exports capture-state / source /
+  sampling / frame / color-coordinates and bs-03's comparison endpoint+state. Adds the 7 fixtures
+  (`SCENE_DIM_TORCH`, `SCENE_THREE_POINTS` as a `MultiPointScene` with its points + per-point colours,
+  `SCENE_WIDE`, `SCENE_NARROW`, `SCENE_RAW`, `SCENE_ANDROID`, `SCENE_IOS`), the `AdvancedCaptureActions`
+  extension (`whenTurnTorchOn/Off`, `whenAcknowledgeTorchWarning`, `whenMarkPoint(s)`, `whenSamplePoints`,
+  `whenSendToComparison`, `whenSendPairToComparison`, `comparisonController`), and `sampleSceneAt` /
+  `labDistance`. `advanced_capture_test.dart`: 3 pending-gate guards + 6 fixture guards + 1 never-pending smoke.
+- **Gates:** `flutter analyze` clean; unit `flutter test --coverage` → **892 pass**; coverage gate
+  `dart run tool/coverage_gate.dart main` → **100%** on the 10 touched lib files (ITEST-1 touched no `lib/`, so
+  the cumulative set vs `main` is unchanged). Integration `flutter test integration_test/ -d <iPhone 17>` under
+  the device lock → **142 pass**, exit 0 (the 10 bs-09 tests all green; **0 ACs un-pended** — no AC tests yet).
+- **No red baseline / grade grid** this phase: no AC tests written (they land in ITEST-2/3). Scaffold-test
+  discipline met — no vacuous passes (exact-set / `hasLength` assertions guard the loops; the fixtures are
+  checked through the **real** `sampleAreaAverage` and the real `SoftwareCaptureSource` capability getters, not
+  faked), honest comments, deterministic (no sleeps).
+- **Fix passes:** 0/3. (Two `flutter analyze` fixes *before* the first gate run — an unused import and
+  `SCENE_DIM_TORCH.scene` → the plain `CaptureScene` — so they don't count as fix passes.)
+- **Tokens / time:** 8,883,964 · 54m 53s (57m 55s).
+
+### Checkpoint / Handoff (ITEST-1 → ITEST-2, ITEST-3)
+
+- **Frozen for the AC-test phases:** import `advanced_capture_harness.dart` only. Register each AC with
+  `acTestWidgets('AC-n', '<slug>', (tester) async {…})`. Given via `givenCaptureOf(tester, <scene>)` (multi-point:
+  `SCENE_THREE_POINTS.scene`, then `h.whenMarkPoints(SCENE_THREE_POINTS.points)`). Whens: `h.whenTurnTorchOn`,
+  `h.whenAcknowledgeTorchWarning`, `h.whenSamplePoints`, `h.whenSendPairToComparison(i, j)`, bs-02's `h.whenCommit`.
+  Thens: `h.state` (`torchOn` / `torchWarning` / `markedPoints` / `markedReadings` / `lastCommittedSample` →
+  `litByTorch` / `colorSpace` / `captureMode`), the rendered readings list / torch-warning banner / marked-point
+  markers, and `h.comparisonController.state` (`slotA` / `slotB`) after the AC-5 handoff. Grade each per-point
+  value against `SCENE_THREE_POINTS.colorsAtPoints` / `sampleSceneAt` (the real sampling maths).
+- **⚠ ITEST-2 and ITEST-3 share the one AC-test file `advanced_capture_test.dart`** (the module's sole AC-test
+  file), so they **must run sequentially**, not in parallel (mirror bs-08's ITEST-2/3), unless a future re-plan
+  splits them into two files. The master's `{ITEST-2, ITEST-3}` "concurrent" window does not hold with a shared
+  file — flagged here as drift.
+- **Known gaps:** every `when`-action over a deferred control (`turnTorchOn/Off`, `acknowledgeTorchWarning`,
+  `markPoint`, `sampleMarkedPoints`, `sendPairToComparison`) throws `UnimplementedError` until its behaviour
+  phase — which is exactly why each AC that uses one stays pending until then. SCREEN-1's send-to-comparison
+  button carries a placeholder index pair (0, 1); a chosen pair goes through `whenSendPairToComparison` until
+  CAPTURE-5 wires the selection.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host, no sim). Acceptance (needs a booted sim — always pass `-d <udid>`, no device ⇒ zero tests, false
+  green): `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`;
+  run-pending adds `--dart-define=BS09_RUN_PENDING=true`. Run sim commands under `coord.sh with-lock
+  bs-09-advanced-capture <PHASE> --wait <n> -- …` (coord repo `/Users/matthew.quirk/Nuance`). No `timeout` on this
+  macOS. Flutter SDK: `/Users/matthew.quirk/development/flutter/bin`.
 
 ## Phase ITEST-2 — AC tests: torch + multi-point (AC-1,2,3,4,5)
 
