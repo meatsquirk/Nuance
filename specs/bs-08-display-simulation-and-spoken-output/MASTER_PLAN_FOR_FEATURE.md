@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** In progress — behavior stage, 7/10 ACs done (AC-1 via SETTINGS-2; AC-2..7 via DISPLAY-3..8); DISPLAY + SETTINGS modules complete; next the speech chain — SPEECH-2 startable
+**Status:** In progress — behavior stage, 8/10 ACs done (AC-8 via SPEECH-2; AC-1 via SETTINGS-2; AC-2..7 via DISPLAY-3..8); DISPLAY + SETTINGS modules complete; next SPEECH-3 (AC-9)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -41,7 +41,7 @@
 | AC-5 | Turning on grayscale clears an active simulation | ITEST-2 `TestAC05_GrayscaleClearsSimulation` | DISPLAY-6 | ✅ Done |
 | AC-6 | The value-only view greys the camera and the palettes as well as the readings | ITEST-2 `TestAC06_GrayscaleWholeApp` | DISPLAY-7 | ✅ Done |
 | AC-7 | A reading under simulation keeps its numeric value and label | ITEST-2 `TestAC07_ReadingKeepsValueAndLabel` | DISPLAY-8 | ✅ Done |
-| AC-8 | The painter repeats the last spoken output | ITEST-3 `TestAC08_RepeatSpokenOutput` | SPEECH-2 | ⬜ Todo |
+| AC-8 | The painter repeats the last spoken output | ITEST-3 `TestAC08_RepeatSpokenOutput` | SPEECH-2 | ✅ Done |
 | AC-9 | Readings and comparisons are spoken through one consistent phrasing | ITEST-3 `TestAC09_OneConsistentPhrasing` | SPEECH-3 | ⬜ Todo |
 | AC-10 | The spoken-output panel stays until the painter leaves it | ITEST-3 `TestAC10_PanelNeverAutoDismisses` | SPEECH-4 | ⬜ Todo |
 
@@ -106,7 +106,7 @@ Augmentations (confirmed by ITEST-2): **AC-7** is green-at-baseline and *limited
 |---|---|---|---|---|
 | DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2, DISPLAY-3, DISPLAY-4, DISPLAY-5, DISPLAY-6, DISPLAY-7, DISPLAY-8 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | ✅ Done (SETTINGS-1, SETTINGS-2 ✅; AC-1) |
-| SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1 ✅) |
+| SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1, SPEECH-2 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1..4 ✅; G-2 approved 2026-10-12) |
 
 ## Dependency graph
@@ -162,8 +162,8 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 13 | DISPLAY-7 | AC-6 grayscale greys whole app (camera + palettes + readings) | ✅ Done | 12,068,315 | — (fork mark timing) | AC-6 un-pended + green; root saturation-0 `ColorFiltered` in grayscale_filter.dart, keyed so a toggle reparents (not remounts) the app; unit 931/cov 100%/acceptance 16 pass 5 skip/grade 6 A 0 below; fix 1/3 |
 | 14 | DISPLAY-8 | AC-7 reading keeps numeric value + label under simulation | ✅ Done | 7,504,305 | 0m 00s | AC-7 un-pended + green; test-only augmentation (simulated swatch coexists with value+label, D-7) — no lib change; AC-7 re-graded B-pending-DISPLAY-8 → A; unit 928/cov PASS/acceptance 16 pass 5 skip/grade 5 A 0 below; fix 1/3 |
 | 15 | SETTINGS-2 | AC-1 open settings from any screen → the three controls shown | ✅ Done | 3,579,655 | 12m 31s (12m 31s) | pure un-pend (no lib change); AC-1 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 18 pass 3 skip, run-pending 21 pass/grade 8 A 0 below; fix 0/3 |
-| 16 | SPEECH-2 | AC-8 repeat last spoken output | ⬜ Next | | | head of speech chain |
-| 17 | SPEECH-3 | AC-9 reading + comparison one consistent phrasing | ⬜ Todo | | | after SPEECH-2 |
+| 16 | SPEECH-2 | AC-8 repeat last spoken output | ✅ Done | 7,026,082 | 18m 22s (49m 22s) | pure un-pend (no lib change); AC-8 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 19 pass 2 skip, run-pending 21 pass/grade 9 A 0 below; fix 0/3 |
+| 17 | SPEECH-3 | AC-9 reading + comparison one consistent phrasing | ⬜ Next | | | after SPEECH-2 |
 | 18 | SPEECH-4 | AC-10 spoken-output panel never auto-dismisses | ⬜ Todo | | | after SPEECH-3 |
 | 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -171,16 +171,15 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 ## Next phase
 
-**Behaviour stage, 7/10 ACs done — the DISPLAY and SETTINGS modules are complete.** SETTINGS-2 un-pended AC-1 (open display & simulation settings from any screen → the three controls shown): a **pure test-only un-pend** — SETTINGS-1 had already built the whole surface, so AC-1 was green at baseline — deleting its `pending.dart` row and adding it to the scaffold-guard set; no lib change, no augmentation; grade 8 A / 0 below. One phase per session; each un-pends its AC test, keeps the suite green, makes its augmentations, passes unit + coverage + acceptance + grade.
+**Behaviour stage, 8/10 ACs done — the DISPLAY and SETTINGS modules are complete; SPEECH-2 landed.** SPEECH-2 un-pended AC-8 (repeat the last spoken output): a **pure test-only un-pend** — SPEECH-1 had already wired `RepeatableSpeech.repeat()` + the E50 control + the one shared seam, so AC-8 was green at baseline — deleting its `pending.dart` row and adding it to the scaffold-guard set; no lib change, no augmentation (fresh grader: AC-8 fully discriminates; optional last-vs-first strengthening deferred, non-blocking); grade 9 A / 0 below.
 
-**Only the speech chain remains before sign-off** (run in order, one phase per session — SPEECH-2 → SPEECH-3 → SPEECH-4 share `display_test.dart` and the SPEECH files):
-- **SPEECH-2** — AC-8 repeat last spoken output (startable now; head of the chain).
-- **SPEECH-3** — AC-9 one consistent phrasing (after SPEECH-2).
+**Only SPEECH-3 → SPEECH-4 remain before sign-off** (run in order, one phase per session — they share `display_test.dart` and the SPEECH files):
+- **SPEECH-3** — AC-9 one consistent phrasing (startable now; head of the remaining chain).
 - **SPEECH-4** — AC-10 panel never auto-dismisses (after SPEECH-3).
 
-After the speech chain, only **SIGNOFF-1** remains. AC-8/9/10 are all green-at-baseline (SPEECH-1 wired `repeat()` + the one shared seam), so each is a keep-green un-pend; re-read `display_test.dart` before editing (shared file).
+After the speech chain, only **SIGNOFF-1** remains. AC-9/AC-10 are both green-at-baseline (SPEECH-1 routed every caller through the one shared `RepeatableSpeech`; the panel has no timer), so each is a keep-green un-pend; re-read `display_test.dart` before editing (shared file).
 
-Suite state: default **18 pass / 3 skipped** (AC-1..7 passing; AC-8/9/10 pending). Device lane shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
+Suite state: default **19 pass / 2 skipped** (AC-1..8 passing; AC-9/AC-10 pending), run-pending **21 pass**. Device lane shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
 
 ## Token usage
 
@@ -208,7 +207,8 @@ Suite state: default **18 pass / 3 skipped** (AC-1..7 passing; AC-8/9/10 pending
 | DISPLAY-8 | agent-ad | — | 16:26 | — | 0m 00s | claude-opus-4-8 | 102 | 86,239 | 7,410,141 | 7,823 | 7,504,305 | AC-7 un-pended + green; test-only augmentation (simulated swatch coexists with value+label, D-7); AC-7 re-graded B-pending-DISPLAY-8 → A; unit 928/cov PASS/acceptance 16 pass 5 skip/grade 5 A; fix 1/3 |
 | RECONCILE | e9d77016 | 2026-10-12 16:02 EDT | 16:43 | 40m 29s | 39m 55s | claude-opus-4-8 | 382 | 358,095 | 27,862,885 | 55,597 | 28,276,959 | reconciled DISPLAY-6 (ff 177e384), then DISPLAY-7 (ff ded630f) + DISPLAY-8 (merge fc3af2e) into feat/bs-08; unioned scaffold-guard set {AC-2..7}; verified merged tree: analyze clean, unit 931, acceptance 17 pass/4 skip; applied 3 rollups; removed phase worktrees/branches |
 | SETTINGS-2 | 10900289 | 2026-10-12 17:09 EDT | 17:22 | 12m 31s | 12m 31s | claude-opus-4-8 | 80 | 180,400 | 3,375,094 | 24,081 | 3,579,655 | AC-1 un-pended + green (pure un-pend, no lib change); unit 931/cov 100% (14 files)/acceptance default 18 pass 3 skip, run-pending 21 pass/grade 8 A 0 below; fix 0/3 |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 17:22** | **6h 05m** | **5h 26m** |  | **2,376** | **3,355,403** | **153,605,874** | **876,678** | **157,840,331** |  |
+| SPEECH-2 | 2a4813a4 | 2026-10-12 17:29 EDT | 18:19 | 49m 22s | 18m 22s | claude-opus-4-8 | 134 | 231,874 | 6,759,754 | 34,320 | 7,026,082 | AC-8 un-pended + green (test-only); unit 931/cov 100%/accept 19 pass 2 skip + run-pending 21; grade 9 A/0 below; fix 0/3 |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 18:19** | **6h 54m** | **5h 44m** |  | **2,510** | **3,587,277** | **160,365,628** | **910,998** | **164,866,413** |  |
 
 ## Sign-off
 

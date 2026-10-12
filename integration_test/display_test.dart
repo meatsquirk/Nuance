@@ -47,9 +47,12 @@ void main() {
       // AC-6 (DISPLAY-7, value-only grayscale greys the whole app) and AC-7
       // (DISPLAY-8, reading keeps value + label with the simulated swatch) and
       // AC-1 (SETTINGS-2, open display & simulation settings from any screen →
-      // the three controls shown).
-      // The remaining three (AC-8/AC-9/AC-10) are asserted exactly (non-vacuous).
-      const unpended = {'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7'};
+      // the three controls shown) and AC-8 (SPEECH-2, the painter repeats the
+      // last spoken output).
+      // The remaining two (AC-9/AC-10) are asserted exactly (non-vacuous).
+      const unpended = {
+        'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8',
+      };
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',

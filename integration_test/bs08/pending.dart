@@ -53,7 +53,7 @@ const Map<String, String> pendingACs = {
   // AC-6 un-pended by DISPLAY-7 (value-only grayscale greys the whole app).
   // AC-7 un-pended by DISPLAY-8 (reading keeps numeric value + label, and the
   // simulated swatch coexists with them — "not colour alone", D-7).
-  'AC-8': 'SPEECH-2', // repeat the last spoken output
+  // AC-8 un-pended by SPEECH-2 (repeat the last spoken output).
   'AC-9': 'SPEECH-3', // reading + comparison one consistent phrasing
   'AC-10': 'SPEECH-4', // spoken-output panel never auto-dismisses
 };
