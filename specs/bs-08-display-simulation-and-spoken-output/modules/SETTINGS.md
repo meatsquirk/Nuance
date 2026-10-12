@@ -1,6 +1,6 @@
 # Module SETTINGS — display & simulation settings surface
 
-**Status:** In progress — SETTINGS-1 done (shell)
+**Status:** ✅ Done — SETTINGS-1 (shell) + SETTINGS-2 (AC-1 behaviour) done
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/settings_screen.dart` (the panel: E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), the open-from-any-screen entry affordance (E2) — a shared control surfaced app-wide (e.g. in the common app scaffold / a `DisplaySettingsButton` wired into every screen's chrome). Unit tests under `test/display/settings_*`.
 **Depends on:** DISPLAY (`DisplayController` + `DisplayScope`) · **Blocks:** ITEST (observes the panel), SIGNOFF
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | SETTINGS-1 | shell | — | ✅ Done | 7,453,272 | 19m 27s (19m 27s) |
-| SETTINGS-2 | behavior | AC-1 | ⬜ Todo | | |
+| SETTINGS-2 | behavior | AC-1 | ✅ Done | 3,579,655 | 12m 31s (12m 31s) |
 
 ## Interface reconciliation
 
@@ -58,8 +58,16 @@
 - **Exit criteria:** unit gate; existing suites green.
 - **Acceptance gate:** un-pend AC-1; `display_test.dart` green (`TestAC01_OpenDisplaySettings`).
 
-### Result  <!-- filled on completion -->
+### Result — SETTINGS-2 (2026-10-12)
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Pure un-pend — no `lib/` change.** SETTINGS-1 already built the whole AC-1 surface (the E2 entry via `DisplayChrome`/`MaterialApp.builder`, and the panel's simulation selector E47, grayscale toggle E46 and theme control D-11), so AC-1 was recorded *green at baseline*. This phase only un-pended it: deleted the `'AC-1': 'SETTINGS-2'` row from `integration_test/bs08/pending.dart`, and added `'AC-1'` to the scaffold-guard `unpended` set in `integration_test/display_test.dart` (so the guard now expects `pendingACs = {AC-8, AC-9, AC-10}`). No production code, no other AC test body touched; no augmentation (this phase builds no new behaviour, so no already-green test can assert more).
+- **Verification:** `flutter analyze` clean; `flutter test --coverage` = **931 unit pass**; coverage gate **100% on all 14 touched lib files** (PASS — no lib touched this phase, feature-wide coverage intact). Acceptance (`display_test.dart` on sim `5AB9D06D…`): default **+18 pass / ~3 skipped** (was 17/4 — AC-1 now runs and passes; only AC-8/9/10 remain pending); run-pending **+21 all pass** (AC-1 un-pended and green). Fix passes: 0/3.
+- **Grade gate:** fresh adversarial subagent re-graded every un-pended AC test + the edited scaffold guard → **8 A / 0 below A** (AC-1..AC-7 + the `pending map is exactly the still-pending ACs` guard). AC-1 fully discriminates its own Then (rejects a surface missing any of the three spec-named controls / an entry that does not open the panel), asserts at the step's grain (does not over-assert the severity slider AC-1's Then omits). AC-2..AC-7 unchanged (unreachable by a test-only AC-1 un-pend). Grid: `behavior-test-completeness-bs-08-display-simulation-and-spoken-output.md` § *Phase graded: SETTINGS-2*.
+- **Tokens / Time:** see dashboard row (ledger `SETTINGS-2`).
 
-- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d <udid>`
+### Checkpoint / Handoff — SETTINGS-2
+
+- **SETTINGS module complete.** AC-1 ✅ (un-pended + green + grade A). No SETTINGS phase remains. The frozen anchors from SETTINGS-1 (`DisplaySettingsButton.openKey`, the panel keys, `DisplayChrome` as app chrome) are unchanged.
+- **Remaining for the feature:** the speech chain SPEECH-2 → SPEECH-3 → SPEECH-4 (AC-8/9/10), then SIGNOFF-1. SETTINGS owns no file the speech chain touches, so they are independent.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (default; add `--dart-define=BS08_RUN_PENDING=true` for run-pending). Toolchain: `/Users/matthew.quirk/development/flutter/bin` on PATH; booted sim `5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`; device lane shared → `coord.sh with-lock` (`FNP_COORD_REPO=/Users/matthew.quirk/Nuance`).
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).

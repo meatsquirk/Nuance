@@ -44,7 +44,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// member of [behaviorPhases]. (bs-08 has no enabler phase — every behaviour
 /// phase owns exactly one AC.)
 const Map<String, String> pendingACs = {
-  'AC-1': 'SETTINGS-2', // open display & simulation settings from any screen
+  // AC-1 un-pended by SETTINGS-2 (open display & simulation settings from any
+  // screen → the three controls shown).
   // AC-2 un-pended by DISPLAY-3 (simulation off = trichromat, identity path).
   // AC-3 un-pended by DISPLAY-4 (simulate chosen type alongside the original).
   // AC-4 un-pended by DISPLAY-5 (severity slider sets simulation strength).
