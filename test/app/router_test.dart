@@ -12,6 +12,7 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/palette/self_assessment_entry_screen.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
 import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
 
@@ -130,5 +131,12 @@ void main() {
     expect(find.byType(CorrectionHomeScreen), findsOneWidget);
     expect(find.widgetWithText(AppBar, 'Correction'), findsOneWidget);
     expect(find.text('Correction target: Deep Olive Green'), findsOneWidget);
+  });
+
+  testWidgets('toSelfAssessment opens the CVD self-assessment entry (bs-06 D-7)',
+      (tester) async {
+    await _pushRoute(tester, router.toSelfAssessment());
+    expect(find.byType(SelfAssessmentEntryScreen), findsOneWidget);
+    expect(find.text('CVD self-assessment'), findsOneWidget);
   });
 }

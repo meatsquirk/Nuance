@@ -36,6 +36,34 @@ dependencies:
   cupertino_icons: ^1.0.8
   color_models: ^2.0.0
 
+  # On-device persistent store (bs-06 DATA-2, plan D-1 / G-4). SQLite-backed,
+  # type-safe. The store sits behind the `PersistentStore` interface so the
+  # recipes/compare/project sources persist through it without depending on
+  # drift directly; tests substitute an in-memory-backed double. The file-backed
+  # native binding (path_provider + sqlite3_flutter_libs) is the platform wiring
+  # SCREEN-1 adds, since it is the first phase whose screen reads the store.
+  drift: ^2.35.2
+
+  # File-backed native binding for the drift store (bs-06 SCREEN-1). path_provider
+  # resolves the application-documents directory the SQLite file and source-photo
+  # files live under; sqlite3_flutter_libs bundles the native SQLite library for
+  # the iOS/Android app builds (host `flutter test` uses the system libsqlite3).
+  # Only `main.dart` depends on them; the store stays a pure-Dart component over
+  # an injected executor, so the unit suite runs without a device.
+  path_provider: ^2.1.4
+  sqlite3_flutter_libs: ^0.5.24
+
+  # PDF studio-sheet export (bs-06 PROJECT-6, AC-10 / plan D-6, G-4). `pdf`
+  # generates the studio sheet as document bytes — kept as
+  # `ProjectController.lastExport`, never written to disk (D-6) — and `printing`
+  # hands those bytes to the device's share/print sheet (the "export to the
+  # device" step). Generation is pure Dart and unit-tested; the device delivery
+  # sits behind an injected sink the acceptance suite fakes, and its production
+  # wrapper (`main.dart`) is covered via a `PrintingPlatform` mock in the smoke
+  # test, mirroring the path_provider pattern.
+  pdf: ^3.11.1
+  printing: ^5.13.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -50,6 +78,18 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  # drift schema code generation (`dart run build_runner build`). Generates the
+  # `*.g.dart` beside `lib/store/app_database.dart`; generated files are exempt
+  # from the coverage gate (tool/coverage_gate.dart).
+  drift_dev: ^2.35.1
+  build_runner: ^2.16.2
+
+  # Substitute a fake application-documents directory so main.dart's production
+  # store wiring (path_provider) is exercised under host `flutter test`
+  # (bs-06 SCREEN-1 smoke test).
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -68,6 +108,10 @@ flutter:
     # iscc_nbs.csv is the named-colour catalogue mirrored by kNamedColors in
     # naming.dart (COLOR-3). The whole directory is bundled.
     - assets/color/
+    # Reviewed paint dataset (bs-06 PALETTE-1). reviewed_paints.csv is the
+    # paints the painter may add, mirrored by kReviewedPaints in
+    # lib/palette/paint_dataset.dart. The whole directory is bundled.
+    - assets/paints/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

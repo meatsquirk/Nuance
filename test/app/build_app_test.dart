@@ -20,11 +20,19 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/palette/palette_read_endpoint.dart';
+import 'package:paint_color_assistant/palette/palette_screen.dart';
+import 'package:paint_color_assistant/projects/project.dart';
+import 'package:paint_color_assistant/projects/project_read_endpoint.dart';
+import 'package:paint_color_assistant/projects/project_source.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
 import 'package:paint_color_assistant/recipes/engine/mixing_engine.dart';
 import 'package:paint_color_assistant/recipes/engine/subtractive_engine.dart';
+import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
+import 'package:paint_color_assistant/store/persistent_store.dart';
+import 'package:paint_color_assistant/store/source_photo_store.dart';
 
 const _olive = Sample(
   name: 'Deep Olive Green',
@@ -268,6 +276,30 @@ void main() {
       expect(identical(deps.correctionEntry, entry), isTrue);
       expect(deps.correctionEntry!.target, _olive);
       expect(deps.correctionEntry!.currentMix, _mix);
+    });
+
+    test('defaults the project source to an empty in-memory catalogue (bs-06)',
+        () {
+      expect(_deps().projectSource, isA<InMemoryProjectSource>());
+      expect(_deps().projectSource.projects(), isEmpty);
+    });
+
+    test('defaults the palette entry to null (opens on Readout — bs-06)', () {
+      expect(_deps().paletteEntry, isNull);
+    });
+
+    test('keeps an explicitly injected project source and palette entry', () {
+      const source = InMemoryProjectSource();
+      const entry = PaletteEntry();
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        projectSource: source,
+        paletteEntry: entry,
+      );
+      expect(identical(deps.projectSource, source), isTrue);
+      expect(identical(deps.paletteEntry, entry), isTrue);
     });
   });
 
@@ -663,6 +695,133 @@ void main() {
       final a = AppScope(dependencies: deps, child: const SizedBox());
       final b = AppScope(dependencies: deps, child: const SizedBox());
       expect(a.updateShouldNotify(b), isFalse);
+    });
+
+    test('defaults the persistence seams to null (no store wired, bs-06)', () {
+      final deps = _deps();
+      expect(deps.store, isNull);
+      expect(deps.sourcePhotoStore, isNull);
+    });
+
+    test('carries an injected persistent store and source-photo sink', () {
+      final store = InMemoryPersistentStore();
+      final photos = InMemorySourcePhotoStore();
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        store: store,
+        sourcePhotoStore: photos,
+      );
+      expect(deps.store, same(store));
+      expect(deps.sourcePhotoStore, same(photos));
+    });
+  });
+
+  group('PaletteEntry', () {
+    test('is a plain opt-in marker', () {
+      // Non-const so the const constructor line is covered.
+      // ignore: prefer_const_constructors
+      expect(PaletteEntry(), isA<PaletteEntry>());
+    });
+  });
+
+  group('PaletteHomeScreen', () {
+    AppDependencies paletteDeps({
+      PaletteSource paletteSource = const InMemoryPaletteSource(),
+      ProjectSource projectSource = const InMemoryProjectSource(),
+    }) =>
+        AppDependencies(
+          colorScience: const ColorScienceImpl(),
+          speech: const NoopSpeech(),
+          haptics: const NoopHaptics(),
+          paletteEntry: const PaletteEntry(),
+          paletteSource: paletteSource,
+          projectSource: projectSource,
+        );
+
+    testWidgets('buildApp opens on the Palette screen when an entry is set',
+        (tester) async {
+      await tester.pumpWidget(buildApp(paletteDeps()));
+      expect(find.byType(PaletteHomeScreen), findsOneWidget);
+      expect(find.byType(PaletteScreen), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Palette'), findsOneWidget);
+    });
+
+    testWidgets('wraps its subtree in both read endpoints for the suite',
+        (tester) async {
+      await tester.pumpWidget(buildApp(paletteDeps()));
+      expect(find.byKey(PaletteReadEndpoint.endpointKey), findsOneWidget);
+      expect(find.byKey(ProjectReadEndpoint.endpointKey), findsOneWidget);
+    });
+
+    testWidgets('builds its controllers over the injected sources',
+        (tester) async {
+      final palettes = InMemoryPaletteSource(
+        catalogue: const [PaintPalette(name: 'My paints')],
+      );
+      final projects = InMemoryProjectSource(
+        catalogue: const [Project(id: 'p1', name: 'Harbor at Dusk')],
+      );
+      await tester.pumpWidget(
+        buildApp(paletteDeps(paletteSource: palettes, projectSource: projects)),
+      );
+      final context = tester.element(find.byType(PaletteScreen));
+      expect(PaletteReadEndpoint.of(context).palettes, hasLength(1));
+      expect(ProjectReadEndpoint.of(context).projects, hasLength(1));
+    });
+
+    testWidgets('mounts a RecipeReadEndpoint sharing the selected palette (AC-5)',
+        (tester) async {
+      final palettes = InMemoryPaletteSource(
+        catalogue: const [
+          PaintPalette(name: 'My paints'),
+          PaintPalette(name: 'Travel set'),
+        ],
+      );
+      await tester.pumpWidget(buildApp(paletteDeps(paletteSource: palettes)));
+      final context = tester.element(find.byType(PaletteScreen));
+      expect(find.byKey(RecipeReadEndpoint.endpointKey), findsOneWidget);
+      // Recipe search opens constrained to the first listed palette (D-5) — the
+      // same one the PaletteController makes active.
+      expect(
+        RecipeReadEndpoint.of(context).state.selectedPalette?.name,
+        'My paints',
+      );
+    });
+
+    testWidgets('selecting a palette re-points the shared RecipeController (AC-5)',
+        (tester) async {
+      final palettes = InMemoryPaletteSource(
+        catalogue: const [
+          PaintPalette(name: 'My paints'),
+          PaintPalette(name: 'Travel set'),
+        ],
+      );
+      await tester.pumpWidget(buildApp(paletteDeps(paletteSource: palettes)));
+      final context = tester.element(find.byType(PaletteScreen));
+      final paletteController = PaletteReadEndpoint.of(context);
+
+      // Selecting the second palette on the Palette screen must re-solve recipes
+      // against it — the bs-06 → bs-04 wiring (onPaletteSelected → selectPalette).
+      paletteController.selectPalette(paletteController.palettes[1]);
+      await tester.pump();
+
+      expect(
+        RecipeReadEndpoint.of(context).state.selectedPalette?.name,
+        'Travel set',
+      );
+    });
+
+    testWidgets('disposes its controllers when removed from the tree',
+        (tester) async {
+      await tester.pumpWidget(buildApp(paletteDeps()));
+      expect(find.byType(PaletteHomeScreen), findsOneWidget);
+      // Replacing the tree tears the home screen down; a leaked ChangeNotifier
+      // (palette, project or the shared recipe controller) would trip the
+      // flutter_test dispose-guard.
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      expect(find.byType(PaletteHomeScreen), findsNothing);
     });
   });
 }

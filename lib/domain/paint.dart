@@ -1,4 +1,5 @@
 import 'color_coordinates.dart';
+import 'provenance.dart';
 
 /// The binder a [Paint] is ground in (bs-04 D-3).
 ///
@@ -24,9 +25,19 @@ enum PaintMedium {
 ///
 /// Value-equal and `const`-constructible so palettes and recipes compare by
 /// content, not identity.
+///
+/// bs-06 (PALETTE-1, plan D-2) extends it **additively** with the painter-facing
+/// identity the Palette screen lists — [brand], [line] and the paint's
+/// [provenance] tier — all with safe defaults so bs-04's call sites, value
+/// equality, solver maps and the AC-12 "names the paint" speech stay unchanged.
+/// The provenance here is the trust tier the paint's colour carries (AC-2's
+/// badge, AC-3's legend); the reviewed shipped dataset defaults each entry to
+/// [ProvenanceTier.measured] (G-4), preserved on add (AC-4).
 class Paint {
   /// Creates a paint. [id], [name], [medium] and [masstone] are required; the
-  /// pigment index and opacity are optional (deferred-engine metadata).
+  /// pigment index and opacity are optional (deferred-engine metadata), as are
+  /// the [brand] / [line] identity and the [provenance] tier (bs-06 D-2, which
+  /// defaults to [ProvenanceTier.measured]).
   const Paint({
     required this.id,
     required this.name,
@@ -34,6 +45,9 @@ class Paint {
     required this.masstone,
     this.pigmentIndex,
     this.opacity,
+    this.brand,
+    this.line,
+    this.provenance = ProvenanceTier.measured,
   });
 
   /// Stable identity of the paint within a palette (keys the solver's maps).
@@ -59,6 +73,26 @@ class Paint {
   /// Carried for the deferred measured-pigment engine; the v1 solve ignores it.
   final double? opacity;
 
+  /// The manufacturer (e.g. "Winsor & Newton"), or null when unknown (bs-06).
+  ///
+  /// Shown as paint identity on the Palette screen (AC-2); defaults to null so
+  /// bs-04's paints are unaffected.
+  final String? brand;
+
+  /// The product line (e.g. "Artists' Oil"), or null when unknown (bs-06).
+  ///
+  /// Shown as paint identity on the Palette screen (AC-2); defaults to null so
+  /// bs-04's paints are unaffected.
+  final String? line;
+
+  /// The trust tier of this paint's colour (bs-06 D-2).
+  ///
+  /// Rendered as the provenance badge the Palette screen shows instead of colour
+  /// alone (AC-2) and explained by the legend (AC-3). Defaults to
+  /// [ProvenanceTier.measured] — the reviewed dataset's default (G-4) and a safe
+  /// value for bs-04's paints, which carry no provenance of their own.
+  final ProvenanceTier provenance;
+
   @override
   bool operator ==(Object other) =>
       other is Paint &&
@@ -67,11 +101,23 @@ class Paint {
       other.medium == medium &&
       other.masstone == masstone &&
       other.pigmentIndex == pigmentIndex &&
-      other.opacity == opacity;
+      other.opacity == opacity &&
+      other.brand == brand &&
+      other.line == line &&
+      other.provenance == provenance;
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, medium, masstone, pigmentIndex, opacity);
+  int get hashCode => Object.hash(
+        id,
+        name,
+        medium,
+        masstone,
+        pigmentIndex,
+        opacity,
+        brand,
+        line,
+        provenance,
+      );
 
   @override
   String toString() => 'Paint($id "$name", ${medium.name}, $masstone)';

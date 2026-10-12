@@ -1,0 +1,14 @@
+-- The generic document table backing the on-device store (bs-06 DATA-2).
+--
+-- Defined as a drift (SQL) schema input rather than a Dart `Table` subclass so
+-- the store holds no compile-time-only column getters: drift generates the
+-- table, row and companion into `app_database.g.dart` (exempt from the coverage
+-- gate) from this file. Each row is one document — a `(collection, id)` key and
+-- its JSON-encoded body — onto which the persistent sources (PALETTE-1 /
+-- PROJECT-1) map their entities through the `PersistentStore` interface.
+CREATE TABLE documents (
+  collection TEXT NOT NULL,
+  id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  PRIMARY KEY (collection, id)
+);

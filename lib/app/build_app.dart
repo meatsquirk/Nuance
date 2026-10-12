@@ -21,6 +21,12 @@ import '../compare/sample_source.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
+import '../palette/palette_controller.dart';
+import '../palette/palette_read_endpoint.dart';
+import '../palette/palette_screen.dart';
+import '../projects/project_controller.dart';
+import '../projects/project_read_endpoint.dart';
+import '../projects/project_source.dart';
 import '../readout/readout_screen.dart';
 import '../recipes/engine/mixing_engine.dart';
 import '../recipes/engine/subtractive_engine.dart';
@@ -28,6 +34,8 @@ import '../recipes/palette_source.dart';
 import '../recipes/recipe_controller.dart';
 import '../recipes/recipe_read_endpoint.dart';
 import '../recipes/recipes_screen.dart';
+import '../store/persistent_store.dart';
+import '../store/source_photo_store.dart';
 import 'router.dart';
 
 /// The sample the shipped bs-01 app opens the Readout screen on.
@@ -101,6 +109,23 @@ class CorrectionEntry {
   final Recipe currentMix;
 }
 
+/// Opt-in that opens the app on the Palette screen (bs-06 SCREEN-1), symmetric
+/// to the capture / comparison / recipes entries.
+///
+/// When [AppDependencies.paletteEntry] carries one, [buildApp] launches to the
+/// [PaletteHomeScreen] — a `PaletteController` over [AppDependencies.paletteSource]
+/// and a `ProjectController` over [AppDependencies.projectSource], both wrapped
+/// in the read endpoints the acceptance suite observes — so the bs-06 harness
+/// enters the Palette feature through the one assembly entry. null (the default)
+/// preserves the app's capture entry; the shipped app does not set it (the
+/// Palette screen is reached by later navigation), but the persistent paint and
+/// project sources are still wired in production so the screen reads real data
+/// when it is shown.
+class PaletteEntry {
+  /// Creates the palette-entry marker.
+  const PaletteEntry();
+}
+
 /// The app-wide services assembled once at startup and injected down the tree.
 ///
 /// A single immutable holder so production (`main.dart`) and the acceptance
@@ -124,6 +149,11 @@ class AppDependencies {
     this.paletteSource = const InMemoryPaletteSource(),
     this.recipesEntry,
     this.correctionEntry,
+    this.projectSource = const InMemoryProjectSource(),
+    this.paletteEntry,
+    this.store,
+    this.sourcePhotoStore,
+    this.pdfShareSink,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -233,6 +263,57 @@ class AppDependencies {
   /// bs-05 acceptance harness injects a correction entry **and** a fake capture
   /// source to drive each correction scenario through this one assembly entry.
   final CorrectionEntry? correctionEntry;
+
+  /// The painter's projects the Palette screen's Projects view lists (bs-06
+  /// PROJECT-1).
+  ///
+  /// Defaults to an empty [InMemoryProjectSource]; **PROJECT-1** builds the
+  /// persistent `ProjectSource` over [store], the production wiring injects a
+  /// store-backed one here (loaded before assembly), and the acceptance harness
+  /// injects an in-memory-backed one. Read by the [PaletteHomeScreen]'s
+  /// `ProjectController`.
+  final ProjectSource projectSource;
+
+  /// Opens the app on the Palette screen when present (bs-06 SCREEN-1).
+  ///
+  /// null (the default) keeps the app's capture entry; a [PaletteEntry] makes
+  /// [buildApp] launch to the [PaletteHomeScreen] over [paletteSource] /
+  /// [projectSource] / [cvdProfile]. The bs-06 acceptance harness injects one to
+  /// drive each palette/project scenario through this same assembly entry; the
+  /// shipped app leaves it null.
+  final PaletteEntry? paletteEntry;
+
+  /// The on-device persistent store the bs-06 palette/project sources write
+  /// through (DATA-2, plan D-1), or null when no persistence is wired.
+  ///
+  /// null (the default) preserves today's in-memory-only assembly: no screen
+  /// reads the store yet, so [buildApp] does not branch on it. **PALETTE-1** and
+  /// **PROJECT-1** build the persistent `PaletteSource` / `ProjectSource` /
+  /// write-side `SampleSource` over this seam, and the production wiring injects
+  /// a file-backed [DriftPersistentStore] here (the platform-wiring step that
+  /// also adds path_provider + the sqlite native libs, deferred like bs-02's
+  /// native capture). The acceptance harness injects an
+  /// [InMemoryPersistentStore] so the suite runs without a real database.
+  final PersistentStore? store;
+
+  /// The on-device source-photo sink a project's photo is stored through
+  /// (DATA-2, plan D-10), or null when no persistence is wired.
+  ///
+  /// Paired with [store]: the project keeps only the reference this sink
+  /// returns, never the pixels. null (the default) keeps today's assembly;
+  /// PROJECT-1 consumes it, production injects a [FileSourcePhotoStore] over the
+  /// application-documents directory, and the acceptance harness injects an
+  /// [InMemorySourcePhotoStore].
+  final SourcePhotoStore? sourcePhotoStore;
+
+  /// The sink an exported project PDF is handed to for device delivery (bs-06
+  /// AC-10, PROJECT-6), or null when none is wired.
+  ///
+  /// Threaded into the [ProjectController]: production injects the `printing`
+  /// share sheet (`main.dart`), and the acceptance harness leaves it null so the
+  /// export only produces `ProjectController.lastExport` bytes (plan D-6, no
+  /// disk file, no device popup during a test).
+  final PdfShareSink? pdfShareSink;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -275,7 +356,8 @@ class AppScope extends InheritedWidget {
 /// injected (bs-02), on the [ComparisonHomeScreen] when a
 /// [AppDependencies.comparisonEntry] is injected (bs-03 D-8), on the
 /// [RecipesHomeScreen] when a [AppDependencies.recipesEntry] is injected (bs-04
-/// D-6), and otherwise on the [ReadoutScreen] for
+/// D-6), on the [PaletteHomeScreen] when a [AppDependencies.paletteEntry] is
+/// injected (bs-06 SCREEN-1), and otherwise on the [ReadoutScreen] for
 /// [AppDependencies.initialSample] (bs-01's entry). `main.dart` and the
 /// acceptance harnesses construct the app through this one entry, differing only
 /// in the injected services, the initial sample, the capture source and the
@@ -317,7 +399,9 @@ Widget buildApp(AppDependencies deps) {
                       speech: deps.speech,
                       router: deps.router,
                     )
-                  : ReadoutScreen(sample: deps.initialSample),
+                  : deps.paletteEntry != null
+                      ? const PaletteHomeScreen()
+                      : ReadoutScreen(sample: deps.initialSample),
     ),
   );
 }
@@ -643,6 +727,95 @@ class _CorrectionHomeScreenState extends State<CorrectionHomeScreen> {
       key: CorrectionReadEndpoint.endpointKey,
       controller: _controller,
       child: CorrectionScreen(controller: _controller),
+    );
+  }
+}
+
+/// The Palette screen the app opens on when a palette entry is wired (bs-06
+/// SCREEN-1).
+///
+/// It owns a [PaletteController] over [AppDependencies.paletteSource], a
+/// [ProjectController] over [AppDependencies.projectSource], and — since
+/// PALETTE-4 — a shared [RecipeController] the palette selection re-points
+/// (AC-5, D-5) — all read from the enclosing [AppScope] (the sources are loaded
+/// before assembly, so the controllers read them synchronously). It wraps its
+/// subtree in the [RecipeReadEndpoint], [PaletteReadEndpoint] and
+/// [ProjectReadEndpoint] the acceptance suite observes, symmetric to the
+/// capture / comparison / recipes homes. The body is the [PaletteScreen],
+/// composed over the paint/project controllers (SCREEN-1); the view toggle, the
+/// paint/legend rendering, the palette selection and the vision-profile estimate
+/// land in their behaviour phases.
+class PaletteHomeScreen extends StatefulWidget {
+  const PaletteHomeScreen({super.key});
+
+  @override
+  State<PaletteHomeScreen> createState() => _PaletteHomeScreenState();
+}
+
+class _PaletteHomeScreenState extends State<PaletteHomeScreen> {
+  PaletteController? _paletteController;
+  ProjectController? _projectController;
+  RecipeController? _recipeController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Build the controllers once, over the sources injected above.
+    if (_paletteController == null) {
+      final deps = AppScope.of(context);
+      // The shared recipe-solving state the Palette screen's palette selection
+      // re-points (bs-06 AC-5, D-5). It reuses the frozen bs-04 [RecipeController]
+      // over the same owned palettes / engine / catalogue the Recipes screen
+      // solves through, mixing toward the current reading ([initialSample]) so
+      // there is a solve to constrain; selecting a palette calls its frozen
+      // [RecipeController.selectPalette], which re-solves against only that
+      // palette. Observed by the acceptance suite through the [RecipeReadEndpoint].
+      _recipeController = RecipeController(
+        sampleSource: deps.sampleSource,
+        paletteSource: deps.paletteSource,
+        mixingEngine: deps.mixingEngine,
+        target: deps.initialSample,
+        speech: deps.speech,
+        router: deps.router,
+      );
+      _paletteController = PaletteController(
+        source: deps.paletteSource,
+        onPaletteSelected: _recipeController!.selectPalette,
+      );
+      _projectController = ProjectController(
+        source: deps.projectSource,
+        confusionCheck: deps.confusionCheck,
+        cvdProfile: deps.cvdProfile,
+        shareSink: deps.pdfShareSink,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _paletteController?.dispose();
+    _projectController?.dispose();
+    _recipeController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RecipeReadEndpoint(
+      key: RecipeReadEndpoint.endpointKey,
+      controller: _recipeController!,
+      child: PaletteReadEndpoint(
+        key: PaletteReadEndpoint.endpointKey,
+        controller: _paletteController!,
+        child: ProjectReadEndpoint(
+          key: ProjectReadEndpoint.endpointKey,
+          controller: _projectController!,
+          child: PaletteScreen(
+            paletteController: _paletteController!,
+            projectController: _projectController!,
+          ),
+        ),
+      ),
     );
   }
 }

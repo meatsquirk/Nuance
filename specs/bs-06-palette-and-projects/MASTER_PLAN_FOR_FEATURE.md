@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** Not started — DATA-1 startable (G-1 ✅ + G-3 ✅ both resolved 2026-10-10). G-4 (data contracts + new deps) blocks stage 2 (DATA-2/PALETTE-1)
+**Status:** Done — signed off 2026-10-11 by Matt Quirk at `6ab1440` ([signoff/round-1.md](signoff/round-1.md)); all 11 ACs ✅, all gates green (analyze clean · unit 760 · coverage 29/29 · acceptance 109 default + 23 bs-06 run-pending · grade 26×A).
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -39,17 +39,17 @@
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | The painter switches between the My paints and Projects views | ITEST-2 `TestAC01_SwitchViews` | SCREEN-2 | ⬜ Todo |
-| AC-2 | Each paint is listed with its identity and provenance badge | ITEST-2 `TestAC02_PaintIdentityProvenance` | PALETTE-3 | ⬜ Todo |
-| AC-3 | The provenance legend explains the four confidence tiers | ITEST-2 `TestAC03_ProvenanceLegend` | PALETTE-3 | ⬜ Todo |
-| AC-4 | The painter adds a paint by choosing from the shipped dataset | ITEST-2 `TestAC04_AddPaintFromDataset` | PALETTE-2 | ⬜ Todo |
-| AC-5 | Selecting a palette makes recipes solve against it | ITEST-2 `TestAC05_SelectedPaletteDrivesRecipes` | PALETTE-4 | ⬜ Todo |
-| AC-6 | The projects list shows each project's size, counts and last edit | ITEST-3 `TestAC06_ProjectsListSummary` | PROJECT-3 | ⬜ Todo |
-| AC-7 | Opening a project shows its notes and source photo | ITEST-3 `TestAC07_OpenProjectNotePhoto` | PROJECT-4 | ⬜ Todo |
-| AC-8 | A note kept with a project is retained when it is reopened | ITEST-3 `TestAC08_NoteRetainedOnReopen` | PROJECT-4 | ⬜ Todo |
-| AC-9 | A confusable pair of saved samples is flagged within a project | ITEST-3 `TestAC09_ConfusionPairFlagged` | PROJECT-5 | ⬜ Todo |
-| AC-10 | The painter exports a project as a PDF studio sheet | ITEST-3 `TestAC10_ExportPdfStudioSheet` | PROJECT-6 | ⬜ Todo |
-| AC-11 | The vision-profile card shows the current estimate and opens the self-assessment | ITEST-2 `TestAC11_VisionCardEstimateAndOpen` | SCREEN-3 | ⬜ Todo |
+| AC-1 | The painter switches between the My paints and Projects views | ITEST-2 `TestAC01_SwitchViews` | SCREEN-2 | ✅ Done |
+| AC-2 | Each paint is listed with its identity and provenance badge | ITEST-2 `TestAC02_PaintIdentityProvenance` | PALETTE-3 | ✅ Done |
+| AC-3 | The provenance legend explains the four confidence tiers | ITEST-2 `TestAC03_ProvenanceLegend` | PALETTE-3 | ✅ Done |
+| AC-4 | The painter adds a paint by choosing from the shipped dataset | ITEST-2 `TestAC04_AddPaintFromDataset` | PALETTE-2 | ✅ Done |
+| AC-5 | Selecting a palette makes recipes solve against it | ITEST-2 `TestAC05_SelectedPaletteDrivesRecipes` | PALETTE-4 | ✅ Done |
+| AC-6 | The projects list shows each project's size, counts and last edit | ITEST-3 `TestAC06_ProjectsListSummary` | PROJECT-3 | ✅ Done |
+| AC-7 | Opening a project shows its notes and source photo | ITEST-3 `TestAC07_OpenProjectNotePhoto` | PROJECT-4 | ✅ Done |
+| AC-8 | A note kept with a project is retained when it is reopened | ITEST-3 `TestAC08_NoteRetainedOnReopen` | PROJECT-4 | ✅ Done |
+| AC-9 | A confusable pair of saved samples is flagged within a project | ITEST-3 `TestAC09_ConfusionPairFlagged` | PROJECT-5 | ✅ Done |
+| AC-10 | The painter exports a project as a PDF studio sheet | ITEST-3 `TestAC10_ExportPdfStudioSheet` | PROJECT-6 | ✅ Done |
+| AC-11 | The vision-profile card shows the current estimate and opens the self-assessment | ITEST-2 `TestAC11_VisionCardEstimateAndOpen` | SCREEN-3 | ✅ Done |
 
 *(PROJECT-2 is an enabler — no AC of its own; it makes the Givens of AC-6/7/8/9/10 real: create a project and attach samples, recipes, a note and a source photo through public flows.)*
 
@@ -85,7 +85,7 @@ Module plan: [modules/ITEST.md](modules/ITEST.md).
 | `reviewedDataset` | ≥3 reviewed paints incl. "Titanium White" (Winsor & Newton, Artists' Oil, PW6, Measured) and "Ultramarine Blue"; each with brand/line/medium/pigment index + masstone + provenance tier. Used by AC-2, AC-4 |
 | `twoPalettes` | "My paints" and "Travel set" with **disjoint** paint sets so a solve reveals which palette was used. Used by AC-5 |
 | `harborProject` | Project "Harbor at Dusk": size 24×30 in, 6 saved samples (incl. "Mid Raw Umber" + "Ultramarine Shadow" on the painter's confusion line), 3 recipes, note "Keep the hull and wall values 2 steps apart.", a source photo. Built via PROJECT-2 flows. Used by AC-6/7/8/9/10 |
-| `deutanModerate` | `CvdProfile(type: deutan, severity: moderate)` injected app-wide. Used by AC-9, AC-11 |
+| `deutanModerate` / `deutanDichromat` | **Two** profiles (ITEST-1 amendment): `deutanModerate` = `CvdProfile(deutan, severity 0.6)` for AC-11's "deutan-type, moderate" estimate (also the suite default); `deutanDichromat` = full deutan for AC-9. One moderate profile cannot serve both — the shipped `DichromatConfusionCheck` fires only near full dichromacy (post-projection ΔE00 < 3.0, D-5), and AC-9's spec names only "the painter's confusion line" (no severity). Confirm at the G-2 review |
 
 **Test catalogue:**
 
@@ -110,11 +110,11 @@ Pre-seeded augmentations: AC-2's badge assertion is limited until PALETTE-3 rend
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ⬜ Todo |
-| PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | ⬜ Todo |
-| PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | ⬜ Todo |
-| SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | ⬜ Todo |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| DATA | [modules/DATA.md](modules/DATA.md) | Scaffold + first on-device persistent store, wiring, source-photo storage | — | ✅ Done |
+| PALETTE | [modules/PALETTE.md](modules/PALETTE.md) | Paints/palettes: schema, reviewed dataset, controller, add-from-dataset, selection → recipes | DATA | ✅ Complete (PALETTE-1, PALETTE-2, PALETTE-3, PALETTE-4 ✅) |
+| PROJECT | [modules/PROJECT.md](modules/PROJECT.md) | Projects: model, controller, list/open/note/photo, confusion flag, PDF export | DATA | ✅ Complete (PROJECT-1, PROJECT-2, PROJECT-3, PROJECT-4, PROJECT-5, PROJECT-6 ✅) |
+| SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Palette screen & regions, nav, read endpoints, view toggle, vision-profile card | PALETTE, PROJECT | ✅ Done (SCREEN-1, SCREEN-2, SCREEN-3 ✅) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 ✅; ITEST-4 ✅ G-2 approved) |
 
 ## Dependency graph
 
@@ -138,9 +138,9 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" banner) | DATA-1 | ✅ Resolved 2026-10-10: spec approved as-is; `.feature` first line stamped "Approved 2026-10-10 by Matt Quirk" — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-11: acceptance suite approved as-is — the two-profile fixture split (`deutanModerate`/`deutanDichromat`) confirmed acceptable, AC-8's persistent seed→load round-trip "reopen" accepted, and the 5 sanctioned B-pending grades accepted with their scheduled augmentations owed by the owning behavior phases — Matt Quirk |
 | G-3 | dependency | bs-04 merged to `main` (bs-06 branches from `main` and needs bs-04 code) — closed by merging `feat/bs-04-mixing-recipes` → `main` | DATA-1 | ✅ Resolved 2026-10-10: `feat/bs-04-mixing-recipes` (@ `28cbf04`, signed off) merged to `main` @ `2684ac6`; bs-04 foundation now present on `main`. DATA-1 can branch from `main` |
-| G-4 | decision | Pin bs-06 data contracts + confirm new project-local deps: (a) on-device DB package (D-1), (b) pdf package (D-6), (c) reviewed paint-dataset shape & provenance defaults (D-3), (d) project "size" field semantics (free text "24×30 in" vs structured units) | DATA-2, PALETTE-1 | Open |
+| G-4 | decision | Pin bs-06 data contracts + confirm new project-local deps: (a) on-device DB package (D-1), (b) pdf package (D-6), (c) reviewed paint-dataset shape & provenance defaults (D-3), (d) project "size" field semantics (free text "24×30 in" vs structured units) | DATA-2, PALETTE-1 | ✅ Resolved 2026-10-10: (a) **drift** (SQLite, typed); (b) **pdf + printing** (added by PROJECT-6 for AC-10); (c) reviewed dataset = CSV asset (`assets/color/*.csv` convention) with default provenance tier **measured**; (d) project size = **free text** (e.g. `24×30 in`) — Matt Quirk |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -155,32 +155,34 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | DATA-1 | scaffold: branch from main, baseline, gate sanity, BS06_RUN_PENDING + bs06/pending.dart + runner target | ⬜ Next | | | blocked by G-1, G-3 |
-| 2 | DATA-2 | shell: on-device persistent store + wiring into AppDependencies/buildApp + source-photo storage seam | ⬜ Todo | | | blocked by G-4 |
-| 3 | PALETTE-1 | shell: extend Paint (brand/line/provenance); PaletteController + persistent PaletteSource; reviewed dataset + loader; PaletteReadEndpoint | ⬜ Todo | | | ∥ PROJECT-1; blocked by G-4; edits bs-04 files |
-| 4 | PROJECT-1 | shell: Project model + ProjectSource (persistent) + ProjectController + persistent SampleSource write-side + ProjectReadEndpoint | ⬜ Todo | | | ∥ PALETTE-1 |
-| 5 | SCREEN-1 | shell: Palette screen + keyed regions + E30–E34 controls + nav + mount read endpoints | ⬜ Todo | | | |
-| 6 | ITEST-1 | acceptance-tests: harness over wired shells, fixtures, pending gate (all ACs pending), smoke test | ⬜ Todo | | | |
-| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,11 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
-| 8 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
-| 9 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
-| 10 | PALETTE-2 | AC-4 add paint from reviewed dataset | ⬜ Todo | | | |
-| 11 | PALETTE-3 | AC-2 + AC-3 paint identity/provenance badge + legend | ⬜ Todo | | | after PALETTE-2 |
-| 12 | PALETTE-4 | AC-5 selected palette drives recipes | ⬜ Todo | | | |
-| 13 | PROJECT-2 | enabler: create project + attach samples/recipes/note/photo | ⬜ Todo | | | |
-| 14 | PROJECT-3 | AC-6 projects list size/counts/last-edit | ⬜ Todo | | | after PROJECT-2 |
-| 15 | PROJECT-4 | AC-7 + AC-8 open note+photo; note retained on reopen | ⬜ Todo | | | after PROJECT-2 |
-| 16 | PROJECT-5 | AC-9 confusion pair flagged within project | ⬜ Todo | | | after PROJECT-2 |
-| 17 | PROJECT-6 | AC-10 export PDF studio sheet | ⬜ Todo | | | after PROJECT-2 |
-| 18 | SCREEN-2 | AC-1 switch My paints / Projects views | ⬜ Todo | | | |
-| 19 | SCREEN-3 | AC-11 vision-profile card estimate + opens self-assessment | ⬜ Todo | | | |
-| 20 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+| 1 | DATA-1 | scaffold: branch from main, baseline, gate sanity, BS06_RUN_PENDING + bs06/pending.dart + runner target | ✅ Done | 4,537,759 | 11m 44s | branch @ `bfd4289`; unit 579 green; gate proven both ways; 11 ACs pending |
+| 2 | DATA-2 | shell: on-device persistent store + wiring into AppDependencies/buildApp + source-photo storage seam | ✅ Done | 7,998,582 | 17m 03s (18m 14s) | drift store behind `PersistentStore`; `SourcePhotoStore`; seams on AppDependencies; unit 617 green; coverage 100% on 5 touched files; G-4 resolved |
+| 3 | PALETTE-1 | shell: extend Paint (brand/line/provenance); PaletteController + persistent PaletteSource; reviewed dataset + loader; PaletteReadEndpoint | ✅ Done | 8,841,030 | 14m 46s | Paint +brand/line/provenance (default measured); PersistentPaletteSource; kReviewedPaints + loader; unit 647 green; coverage 100% on 10 touched; bs-04 suite green on-sim; prod wiring deferred to SCREEN-1 |
+| 4 | PROJECT-1 | shell: Project model + ProjectSource (persistent) + ProjectController + persistent SampleSource write-side + ProjectReadEndpoint | ✅ Done | 6,635,157 | 11m 41s | both shells done; SCREEN-1 now startable |
+| 5 | SCREEN-1 | shell: Palette screen + keyed regions + E30–E34 controls + nav + mount read endpoints | ✅ Done | 12,251,452 | 17m 44s | carried deferred prod store wiring (async main + path_provider + sqlite3_flutter_libs); unit 688 green (+15); coverage 100% on 24 touched; both read endpoints mounted; opens on Capture (paletteEntry null) |
+| 6 | ITEST-1 | acceptance-tests: harness over wired shells, fixtures, pending gate (all ACs pending), smoke test | ✅ Done | 11,716,367 | 29m 01s | harness + 2 smoke + 6 fixture guards; 12/12 green on sim; graded 15×A |
+| 7 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,11 (pending) + red baseline | ✅ Done | 10,977,843 | 25m 32s | 6 pending AC tests; default 12/12 green, run-pending 6 red (clean); graded 4×A 2×B-pending PASS; fixed a run-pending scaffold-guard bug |
+| 8 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 6,732,201 | 27m 32s | 5 pending AC tests; default 12/12 green, run-pending 5 red (4 Then, AC-10 Given-precond naming PROJECT-4), clean; graded 2×A 3×B-pending PASS (added TestAC07→PROJECT-4 row + AC-10 G1 check); no lib/ touched |
+| 9 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,760,963 | 3m 34s | packet assembled across ITEST-2+3; **G-2 approved 2026-10-11** (Matt Quirk) — behavior stage unblocked |
+| 10 | PALETTE-2 | AC-4 add paint from reviewed dataset | ✅ Done | 8,539,454 | 17m 29s | add-from-dataset: `addPaintFromDataset` (preserves dataset provenance, persists via `PersistentPaletteSource`) + E32 picker in `paint_list_region`; AC-4 un-pended + green; unit 694 (+6); coverage 100% on 24 touched; grade AC-4 A(caveat); fix passes 0/3 |
+| 11 | PALETTE-3 | AC-2 + AC-3 paint identity/provenance badge + legend | ✅ Done | 7,967,376 | 26m 47s | PaintRow (identity + provenance badge) + ProvenanceLegend (4 exact tiers); AC-2+AC-3 un-pended + green; TestAC02 augmentation (exact tier + dedicated medium label + differently-tiered control); unit 699 (+5); coverage 100% on 26 touched; grade 3×A PASS; fix passes 1/3 |
+| 12 | PALETTE-4 | AC-5 selected palette drives recipes | ✅ Done | 21,939,959 | 45m 27s | shared RecipeController on PaletteHomeScreen under RecipeReadEndpoint; PaletteController.onPaletteSelected → bs-04 RecipeController.selectPalette (frozen API reused); selector options tappable; AC-5 un-pended + green; TestAC05 closed (recipes ⊆ selected palette + disjoint control); unit 721, coverage 100% on 26 touched; grade 6×A PASS; fix passes 1/3 (harness scroll) |
+| 13 | PROJECT-2 | enabler: create project + attach samples/recipes/note/photo | ✅ Done | 4,357,106 | 18m 54s | enabler (no AC): ProjectController create/attach (samples+recipes+size+note+photo), persists via saveProject; unit 100% on touched file; acceptance default green; AC-6..10 red on own Thens (baseline unchanged) |
+| 14 | PROJECT-3 | AC-6 projects list size/counts/last-edit | ✅ Done | 9,896,853 | 23m 58s | ProjectSummary row read-model (size · counts · relative last-edit) + `projectSummaries` getter + keyed ProjectsRegion rows; AC-6 un-pended + green (default 19/4, run-pending AC-6 green / AC-7-10 red baseline); TestAC06 older-project control closes the hardcoded-`today` follow-on; unit 734, coverage 100% on 27 touched; grade 7×A PASS; fix passes 0/3 |
+| 15 | PROJECT-4 | AC-7 + AC-8 open note+photo; note retained on reopen | ✅ Done | 17,986,707 | 35m 50s | `openProject` + open-project view (note + source photo from the store, scoped/keyed); tappable rows open by id, E33 opens first; AC-7+AC-8 un-pended + green (default 21/2, run-pending AC-7/8 green, AC-9/10 red on own Thens — AC-10 now on PROJECT-6's Then as open is real); TestAC07 augmentation closed (AC-7 B→A); unit 741, coverage 100% on 27 touched; grade 9×A PASS; fix passes 0/3 |
+| 16 | PROJECT-5 | AC-9 confusion pair flagged within project | ✅ Done | 10,633,359 | 17m 26s | `confusion_pairs.dart` glue over bs-03 detector; AC-9 un-pended + green (default 22/1, run-pending AC-9 green / AC-10 red baseline); TestAC09 closed (non-flag control + hasLength(1)); unit 749, coverage 100% on 28 touched; grade 10×A PASS (AC-9 clean A); fix passes 0/3 |
+| 17 | PROJECT-6 | AC-10 export PDF studio sheet | ✅ Done | 19,430,558 | 26m 59s | `project_export.dart` (pdf studio sheet) + `exportOpenedProject` keeps bytes as `lastExport` (D-6) + E34 wired; `printing` share seam (G-4) wired in main, faked/null in tests; AC-10 un-pended + green, **all 11 ACs now run by default (23/0)**; TestAC10 closed; unit 760, coverage 100% on 29 touched; grade 11×A PASS; fix passes 0/3 |
+| 18 | SCREEN-2 | AC-1 switch My paints / Projects views | ✅ Done | 5,271,492 | 30m 22s | toggle: PaletteScreen→StatefulWidget, E31 wired, My-paints view ⇄ Projects view (one at a time); AC-1 un-pended, 14/9/0 acceptance, graded A; smoke+scaffold-guard+widget tests updated for the toggle |
+| 19 | SCREEN-3 | AC-11 vision-profile card estimate + opens self-assessment | ✅ Done | 10,052,083 | 43m 03s | AC-11 un-pended + green; coverage 100% on touched (vision_profile_card.dart, palette_screen.dart); grade AC-11 A; added 2nd-profile control; fix passes 0/3 |
+| 20 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ✅ Done | 8,421,970 | 11m 53s (11m 53s) | packet [signoff/round-1.md](signoff/round-1.md); **✅ Approved 2026-10-11 by Matt Quirk at `6ab1440`**; analyze clean · unit 760 · coverage 29/29 · acceptance 109 default + 23 bs-06 run-pending (0 pending) · grade 26×A/0; [summary scorecard](https://claude.ai/artifact/EWvLAX4Lef1kz5hyiniS47) |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**DATA-1** (scaffold) is first and **now startable**: **G-1** (approve the draft spec) ✅ resolved 2026-10-10 by Matt Quirk, and **G-3** (bs-04 → `main`) ✅ resolved 2026-10-10 (merged @ `2684ac6`). DATA-1 branches `feat/bs-06-palette-and-projects` from `main`. **G-4** (data contracts + new deps) then blocks DATA-2/PALETTE-1 and should be answered before stage 2.
+Feature **Done** — SIGNOFF-1 ✅ **Approved 2026-10-11 by Matt Quirk** at code `6ab1440`
+([signoff/round-1.md](signoff/round-1.md)). All 11 ACs delivered, all gates green, all 20 phases ✅ Done.
+- No phase remains. The feature branch `feat/bs-06-palette-and-projects` is ready to merge to `main`.
 
 ## Token usage
 
@@ -191,10 +193,33 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PLAN | — | — | — | — | — | claude-opus-4-8 | — | — | — | — | — | plan written |
 | PLAN | 6be62965 | 2026-10-10 06:10 EDT | 06:55 | 45m 09s | 15m 59s | claude-opus-4-8 | 68 | 204,942 | 2,521,965 | 60,117 | 2,787,092 | plan written |
 | GATE-DECISION | 5f1f02a8 | 2026-10-10 07:28 EDT | 13:58 | 6h 29m | 10m 45s | claude-opus-4-8 | 78 | 183,442 | 2,815,515 | 31,337 | 3,030,372 | G-1 approved (spec approved as-is by Matt Quirk; .feature stamped) + G-3 resolved (bs-04 merged to main @ 2684ac6; DATA-1 startable) |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-10 13:58** | **7h 14m** | **26m 44s** |  | **146** | **388,384** | **5,337,480** | **91,454** | **5,817,464** |  |
+| DATA-1 | 3816a462 | 2026-10-10 14:13 EDT | 14:25 | 11m 44s | 11m 44s | claude-opus-4-8 | 78 | 122,747 | 4,374,719 | 40,215 | 4,537,759 | scaffold: branch @ bfd4289; baseline analyze clean / unit 579 / coverage gate PASS; bs06/pending.dart seeded 11 ACs + palette_test.dart runner (3 guards green on sim); gate proven fail-on-gap + pass-on-clean; no product code |
+| DATA-2 | ad757ac6 | 2026-10-10 14:47 EDT | 15:05 | 18m 14s | 17m 03s | claude-opus-4-8 | 128 | 132,804 | 7,802,103 | 63,547 | 7,998,582 | shell: on-device persistent store (drift) + source-photo store behind AppDependencies seams; G-4 resolved; unit+coverage gate PASS (617 tests, 100% on 5 touched files) |
+| PALETTE-1 | 7fe936a4 | 2026-10-10 15:21 EDT | 15:36 | 14m 46s | 14m 46s | claude-opus-4-8 | 142 | 144,495 | 8,637,439 | 58,954 | 8,841,030 | shell: Paint +brand/line/provenance (default measured, additive); PaletteController + PaletteReadEndpoint; PersistentPaletteSource over DATA store; reviewed CSV dataset + parseReviewedPaints loader + kReviewedPaints; unit 647 green (+30); coverage 100% on 10 touched lib files; bs-04 acceptance suite 24/24 green on-sim; prod store wiring deferred to SCREEN-1 |
+| PROJECT-1 | 0ac74fa0 | 2026-10-10 15:41 EDT | 15:52 | 11m 41s | 11m 41s | claude-opus-4-8 | 98 | 149,926 | 6,432,815 | 52,318 | 6,635,157 | shell: Project model + ProjectSource/PersistentProjectSource + ProjectController + ProjectReadEndpoint (lib/projects/); PersistentSampleSource write-side + public sample JSON mapping (lib/compare/sample_source.dart); unit 673 green (+26); coverage 100% on all touched files; no buildApp/main/pubspec change |
+| SCREEN-1 | 71851d57 | 2026-10-10 16:20 EDT | 16:37 | 17m 44s | 17m 44s | claude-opus-4-8 | 166 | 175,618 | 12,002,233 | 73,435 | 12,251,452 | shell: PaletteScreen + keyed region widgets (E30-E34 inert) + PaletteHomeScreen mounting PaletteReadEndpoint/ProjectReadEndpoint; PaletteEntry marker + projectSource on AppDependencies + buildApp branch; toSelfAssessment() route + bs-07 placeholder; deferred prod store wiring in main.dart (async main + path_provider + sqlite3_flutter_libs, file-backed DriftPersistentStore + FileSourcePhotoStore, loaded persistent sources); unit 688 green (+15); coverage 100% on 24 touched; app still opens on Capture |
+| ITEST-1 | caea7679 | 2026-10-10 17:34 EDT | 18:03 | 29m 01s | 29m 01s | claude-opus-4-8 | 150 | 328,281 | 11,292,734 | 95,202 | 11,716,367 | harness over wired shells: palette_harness.dart (G/W/T vocabulary + 4 fixtures + independent deutan reference + givenPalette) + fakes/fake_file_sink.dart + 2 smoke + 6 fixture guards; analyze clean, unit 688 green, acceptance 12/12 on sim via verify lock; graded 15xA 0xB PASS; fixture amendment: two profiles (deutanModerate 0.6 AC-11, deutanDichromat full AC-9) |
+| ITEST-2 | c39c9bf6 | 2026-10-10 18:20 EDT | 18:46 | 25m 32s | 25m 32s | claude-opus-4-8 | 160 | 262,709 | 10,644,906 | 70,068 | 10,977,843 | acceptance-tests AC-1,2,3,4,5,11: 6 pending acTestWidgets; default 12/12 green, run-pending 6 red (5 Then, AC-4 Given-precond naming PALETTE-2), clean; graded 4xA 2xB-pending (AC-2->PALETTE-3, AC-5->PALETTE-4) PASS; fixed run-pending scaffold-guard bug; no lib/ touched |
+| ITEST-3 | 5caf0d6d | 2026-10-10 20:49 EDT | 21:16 | 27m 32s | 27m 32s | claude-opus-4-8 | 104 | 261,353 | 6,404,241 | 66,503 | 6,732,201 | acceptance-tests AC-6,7,8,9,10: 5 pending tests; default 12/12 green, run-pending 5 red clean (4 Then, AC-10 Given-precond PROJECT-4); graded 2xA 3xB-pending PASS; no lib/ touched |
+| ITEST-4 | 7ac52e81 | 2026-10-10 21:50 EDT | 21:54 | 3m 34s | 3m 34s | claude-opus-4-8 | 44 | 76,121 | 1,670,163 | 14,635 | 1,760,963 | test-review packet assembled; G-2 awaiting decision |
+| SIGNOFF-DECISION | fa344040 | 2026-10-10 22:01 EDT | 2026-10-11 05:53 | 7h 52m | 2m 33s | claude-opus-4-8 | 42 | 110,218 | 1,481,567 | 11,289 | 1,603,116 | ITEST-4 approved: G-2 acceptance suite approved as-is (two-profile split, AC-8 round-trip reopen, 5 sanctioned B-pending w/ augmentations) — Matt Quirk; behavior stage unblocked |
+| PALETTE-2 | 9bf4d006 | 2026-10-11 05:54 EDT | 06:11 | 17m 29s | 17m 29s | claude-opus-4-8 | 120 | 247,609 | 8,235,150 | 56,575 | 8,539,454 | behavior: AC-4 add-paint-from-dataset un-pended + green (addPaintFromDataset preserves dataset provenance, persists via PersistentPaletteSource; E32 picker wired); unit 694 (+6), coverage 100% on 24 touched, acceptance 13 pass/10 pending, grade AC-4 A(caveat); fix passes 0/3 |
+| PROJECT-2 | agent-a1 | 2026-10-11 06:41 EDT | 07:00 | 18m 54s | 18m 54s | claude-opus-4-8 | 78 | 164,098 | 4,191,573 | 1,357 | 4,357,106 | enabler (no AC): ProjectController create/attach (create+samples+recipes+size+note+photo), persists via saveProject; unit 100% on touched file; acceptance default green (13/13), run-pending AC-6..10 red on own Thens (baseline unchanged); grade AC-4 A (fresh regrade); no AC un-pended |
+| PALETTE-3 | agent-a1 | 2026-10-11 06:41 EDT | 07:08 | 26m 47s | 26m 47s | claude-opus-4-8 | 118 | 197,328 | 7,769,574 | 356 | 7,967,376 | behavior: AC-2 + AC-3 un-pended + green (PaintRow identity+provenance badge; ProvenanceLegend four tiers); TestAC02 augmentation made (exact tier + dedicated medium label + differently-tiered control); unit 699 (+5), coverage 100% on 26 touched, acceptance 15 pass/8 pending, grade 3xA PASS; fix passes 1/3 |
+| SCREEN-2 | agent-af | 2026-10-11 06:41 EDT | 07:11 | 30m 22s | 30m 22s | claude-opus-4-8 | 98 | 164,998 | 5,105,690 | 706 | 5,271,492 | AC-1 un-pended + green (toggle); unit 695 pass + 100% coverage on 24 touched files; acceptance 14 pass/9 pending/0 fail; graded 2xA PASS; fix 1/3 |
+| SCREEN-3 | agent-a9 | 2026-10-11 06:41 EDT | 07:24 | 43m 03s | 43m 03s | claude-opus-4-8 | 142 | 368,627 | 9,682,213 | 1,101 | 10,052,083 | AC-11 un-pended + green; coverage 100% touched; grade AC-11 A; fix passes 0/3 |
+| RECONCILE | f879fef0 | 2026-10-11 07:36 EDT | 07:57 | 20m 57s | 20m 57s | claude-opus-4-8 | 152 | 135,793 | 7,338,670 | 49,006 | 7,523,621 | applied 4 deferred rollups (PROJECT-2, PALETTE-3, SCREEN-2, SCREEN-3) to master plan after merging their phase branches into feat/bs-06; AC-1/2/3/11 ✅, SCREEN module complete, 5/10 behavior phases done; next PALETTE-4 |
+| PALETTE-4 | 6c5f4007 | 2026-10-11 09:20 EDT | 10:06 | 45m 29s | 45m 27s | claude-opus-4-8 | 274 | 334,784 | 21,521,788 | 83,113 | 21,939,959 | behavior: AC-5 un-pended + green; shared RecipeController on PaletteHomeScreen (RecipeReadEndpoint) re-pointed by PaletteController.onPaletteSelected -> frozen bs-04 RecipeController.selectPalette; selector options tappable; TestAC05 closed (recipes subset of selected palette + disjoint control); unit 721, coverage 100% on 26 touched, acceptance 18 pass/5 pending, grade 6xA PASS; fix passes 1/3 (harness scroll) |
+| PROJECT-3 | 6cbad558 | 2026-10-11 17:43 EDT | 18:07 | 23m 58s | 23m 58s | claude-opus-4-8 | 174 | 243,410 | 9,602,235 | 51,034 | 9,896,853 | AC-6 un-pended + green; 7xA grade PASS; coverage 100% on 27 touched; fix passes 0/3 |
+| PROJECT-4 | 09698782 | 2026-10-11 18:15 EDT | 18:51 | 35m 50s | 35m 50s | claude-opus-4-8 | 208 | 335,752 | 17,568,875 | 81,872 | 17,986,707 | AC-7+AC-8 un-pended + green; grade 9xA PASS (AC-7 B->A); coverage 100% on 27 touched; fix passes 0/3 |
+| PROJECT-5 | cc220bea | 2026-10-11 18:56 EDT | 19:14 | 17m 26s | 17m 26s | claude-opus-4-8 | 170 | 286,826 | 10,293,396 | 52,967 | 10,633,359 | AC-9 un-pended + green (default 22/1, run-pending AC-9 green / AC-10 red baseline); confusion_pairs.dart glue over bs-03 detector; TestAC09 closed (non-flag control + hasLength(1)); unit 749, coverage 100% on 28 touched; grade 10xA PASS (AC-9 clean A); fix passes 0/3 |
+| PROJECT-6 | 757cefc4 | 2026-10-11 19:39 EDT | 20:06 | 26m 59s | 26m 59s | claude-opus-4-8 | 246 | 343,087 | 18,994,147 | 93,078 | 19,430,558 | AC-10 PDF studio-sheet export un-pended + green (all 11 ACs default 23/0); printing share seam wired; unit 760, coverage 100% on 29 touched; grade 11xA PASS; fix passes 0/3 |
+| SIGNOFF-1 | ff50757f | 2026-10-11 20:09 EDT | 20:21 | 11m 53s | 11m 53s | claude-opus-4-8 | 138 | 316,457 | 8,056,035 | 49,340 | 8,421,970 | sign-off packet + summary page assembled; full verification green (analyze clean · unit 760 · coverage 29/29 · acceptance 109 default + 23 bs-06 run-pending, 0 pending) · fresh full-suite grade 26×A/0; awaiting human decision |
+| SIGNOFF-DECISION | 4ef8b175 | 2026-10-11 21:03 EDT | 21:05 | 1m 50s | 1m 50s | claude-opus-4-8 | 32 | 18,971 | 1,098,467 | 6,308 | 1,123,778 | SIGNOFF-1 approved: bs-06 feature signed off by Matt Quirk at code 6ab1440; all 11 ACs green, all gates green, feature Done |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 21:05** | **23h 06m** | **8h 28m** |  | **3,208** | **5,310,396** | **205,538,213** | **1,164,433** | **212,016,250** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | — | ⬜ Not yet reached |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `6ab1440` | 26×A / 0 below A | ✅ Approved 2026-10-11 by Matt Quirk |
