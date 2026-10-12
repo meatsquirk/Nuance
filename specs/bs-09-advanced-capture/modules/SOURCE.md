@@ -1,6 +1,6 @@
 # Module SOURCE — CaptureSource extensions (torch, colour space, RAW, normalization)
 
-**Status:** In progress — SOURCE-1 done; next SOURCE-2 (behavior, blocked by CAPTURE-2 + G-2)
+**Status:** In progress — SOURCE-1, SOURCE-2 done (AC-6 ✅, AC-8 ✅); next SOURCE-3 (AC-7) ∥ SOURCE-4 (AC-9/10) — both edit the SOURCE source files, so run merge-serial
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/capture_source.dart`, `lib/capture/source/frame.dart`,
 `lib/capture/source/software_capture_source.dart`, `lib/capture/source/sampling.dart`,
@@ -12,7 +12,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | SOURCE-1 | shell | — | ✅ Done | 5,166,894 | 15m 59s |
-| SOURCE-2 | behavior | AC-6, AC-8 | ⬜ Todo | | |
+| SOURCE-2 | behavior | AC-6, AC-8 | ✅ Done | 14,008,491 | 2h 43m |
 | SOURCE-3 | behavior | AC-7 | ⬜ Todo | | |
 | SOURCE-4 | behavior | AC-9, AC-10 | ⬜ Todo | | |
 
@@ -154,3 +154,57 @@ None specific to SOURCE. G-2 (test review) blocks SOURCE-2/3/4 as behavior phase
 - **Known gaps:** `colorSpace`/`captureMode`/capabilities are inert constants/pass-throughs (SOURCE-2/3/4 give
   them meaning); torch warning string + `litByTorch` stamp are the controller's (CAPTURE-3); `sampling.dart`
   still assumes sRGB (SOURCE-2 makes it space-aware). No `Sample` fields yet (CAPTURE-2).
+
+### Result — SOURCE-2  <!-- 2026-10-12 -->
+
+- **Colour-space selection + honest wide-gamut sampling (AC-6, AC-8).** The source now captures in the widest
+  space it offers: `SoftwareCaptureSource._captureFrameSpace` → `displayP3` when `scene.supportsWideGamut`, else
+  the `srgb` fallback; `colorSpace` reports it via `CaptureColorSpace.ofFrame(_captureFrameSpace)`, and the
+  generated feed renders ground truth **in** that space (frames tagged accordingly). The CAPTURE-2 commit path
+  already threads `source.colorSpace` onto `Sample.colorSpace`, so a committed reading is now tagged `displayP3`
+  on `SCENE_WIDE` and `srgb` on `SCENE_NARROW`.
+- **`sampling.dart` made space-aware (D-2/D-7):** `_pixelToLab(pixel, FrameColorSpace)` converts from the frame's
+  actual space — sRGB unchanged; Display P3 rotates P3→sRGB primaries (one linear matrix, shared sRGB transfer
+  curve + D65 white) before the existing `color_models` sRGB→CIELAB leg, so a wide-gamut capture converts
+  honestly instead of being read as sRGB. New public `encodeFromSrgb(pixel, space)` renders the feed in the
+  capture space (identity for sRGB). Olive round-trips at ΔE ≈ 0.2; reading a P3 buffer as sRGB passes the raw
+  channels through unconverted (the SOURCE-1 assumption this replaces).
+- **No new enums/signatures:** reused SOURCE-1's `CaptureColorSpace`/`ofFrame`; the abstract `CaptureSource`
+  interface is unchanged, so every `implements CaptureSource` test double and `FakeCaptureSource` (which inherits
+  and preserves `frame.colorSpace`) needs no edit. `captureMode` stays `processed` (SOURCE-3 owns RAW).
+- **Gates:** `flutter analyze` clean. Unit `flutter test --coverage` → **905 passed** (+9 new over the 896
+  baseline). Coverage gate `dart run tool/coverage_gate.dart main` → **100%** on both touched lib files
+  (`sampling.dart`, `software_capture_source.dart`) and all 11 branch-vs-main files. Acceptance (default, under the
+  device lock on iPhone 17 sim): **15 passed / 6 pending-skipped**, with `AC-6 TaggedWithColourSpace` and
+  `AC-8 FallbackLabelsNarrower` now green (un-pended). Grades: fresh adversarial subagent re-graded every
+  un-pended AC test + the modified scaffold guard — **AC-6 A, AC-8 A, AC-1 A (no drift), AC-2 A (no drift),
+  scaffold guard A → 5 A / 0 below A**; whole suite still all A, no row needs fixing.
+- **Augmentations:** none (the ITEST packet scheduled none; AC-6/AC-8 carry their own in-fixture/in-test controls,
+  and AC-8's `SCENE_WIDE` control discriminates now that SOURCE-2 landed). SOURCE-2 strengthens no already-green
+  AC test (AC-1/AC-2 are torch-only).
+- Fix passes: 1/3 (first acceptance run failed to build for ios_sim — offline native-asset download; seeded the
+  worktree's `.dart_tool/hooks_runner/shared` sqlite3 download cache from the primary checkout, then green. One
+  unit assertion tuned: the mislabelled-read discrimination asserts the P3 channels pass through, not a ΔE
+  threshold — olive's sRGB↔P3 gap is ~5/255).
+
+### Checkpoint / Handoff — SOURCE-2
+
+- **Frozen for SOURCE-3 / SOURCE-4 (same source files — base a worktree on this phase's branch or merge it in):**
+  `SoftwareCaptureSource._captureFrameSpace` selects `displayP3`/`srgb` from `supportsWideGamut`; `colorSpace`
+  = `ofFrame(_captureFrameSpace)`. `sampling.dart` is now space-aware: `encodeFromSrgb(Pixel, FrameColorSpace)`
+  (encode, identity for sRGB) and the private `_pixelToLab(Pixel, FrameColorSpace)` (decode); `_p3ToSrgbLinear`
+  / `_srgbToP3Linear` matrices + `_linearize`/`_encodeGamma`/`_toChannel8` are the P3 seam.
+  - **SOURCE-3 (AC-7, RAW):** set `captureMode == raw` where `supportsRaw`, with `colorSpace == displayP3` (RAW
+    uses the widest space — `SCENE_RAW` is also wide-gamut). The space selection + feed are already P3 for a
+    wide device; SOURCE-3 only flips the mode (and must keep `SCENE_NARROW` → `processed`).
+  - **SOURCE-4 (AC-9/10, platform-agnostic):** normalization must remove `SceneSpec.rawColorShift` so Android/iOS
+    land on identical CIELAB + identical `colorSpace` tag. `sampling.dart` is the place for any platform seam.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host). Acceptance under the lock: `coord.sh with-lock bs-09-advanced-capture <PHASE> --wait 900 -- bash
+  -c 'cd <worktree> && export PATH=/Users/matthew.quirk/development/flutter/bin:$PATH && flutter test
+  integration_test/advanced_capture_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'` (add
+  `--dart-define=BS09_RUN_PENDING=true` for run-pending). **A fresh worktree must seed
+  `.dart_tool/hooks_runner/shared` from the primary checkout** (offline can't download the sqlite3 ios_sim
+  dylib), else the ios build fails. macOS has no `timeout`; redirect long runs to a file.
+- **Known gaps:** `captureMode` is still the `processed` constant (SOURCE-3); platform raw offset is not yet
+  removed by normalization (SOURCE-4). Imported photos default to sRGB frames (unaffected).

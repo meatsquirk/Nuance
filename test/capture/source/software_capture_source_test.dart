@@ -207,16 +207,66 @@ void main() {
       expect(capable.supportsRaw, isTrue);
     });
 
-    test('reports the processed sRGB pipeline by default (SOURCE-1 shell)', () {
-      // Even a wide-gamut / RAW-capable device reports the shell defaults;
-      // SOURCE-2/3 make these reflect the capability.
+    test('captures in Display P3 on a wide-gamut device (AC-6)', () {
       final source = SoftwareCaptureSource(const SceneSpec(
         groundTruth: groundTruth,
         supportsWideGamut: true,
-        supportsRaw: true,
       ));
-      expect(source.colorSpace, CaptureColorSpace.srgb);
+      expect(source.colorSpace, CaptureColorSpace.displayP3,
+          reason: 'a wide-gamut device captures in the widest space it offers');
+      // captureMode is still the processed pipeline — SOURCE-3 switches RAW.
       expect(source.captureMode, CaptureMode.processed);
+    });
+
+    test('falls back to the sRGB space on a device without wide gamut (AC-8)',
+        () {
+      final source =
+          SoftwareCaptureSource(const SceneSpec(groundTruth: groundTruth));
+      expect(source.colorSpace, CaptureColorSpace.srgb,
+          reason: 'the narrower standard space is selected and labelled');
+      expect(source.captureMode, CaptureMode.processed);
+    });
+
+    test('tags the generated feed with its capture space, encoding wide-gamut '
+        'frames in Display P3 that still sample to the ground truth (AC-6)',
+        () async {
+      final wide = SoftwareCaptureSource(const SceneSpec(
+        groundTruth: groundTruth,
+        supportsWideGamut: true,
+      ));
+      final feed = await wide.frames.toList();
+      // Every frame is a genuine Display P3 buffer — not sRGB bits relabelled —
+      // so its pixels differ from the sRGB rendering of the same colour.
+      for (final frame in feed) {
+        expect(frame.colorSpace, FrameColorSpace.displayP3);
+      }
+      expect(feed.first.pixels.first, isNot(truthPixel),
+          reason: 'a P3 buffer is re-encoded, not the sRGB pixel');
+      // Sampling the P3 feed (space-aware) recovers the ground-truth colour,
+      // which the committed Sample.colorSpace then tags displayP3.
+      final sampled = LabColor(
+        groundTruth.lightness,
+        groundTruth.a,
+        groundTruth.b,
+      ).toRgbColor();
+      final read = sampleAreaAverage(
+          averageFrames(feed), feed.first.width ~/ 2, feed.first.height ~/ 2);
+      final readRgb = LabColor(read.lightness, read.a, read.b).toRgbColor();
+      final l1 = (readRgb.red - sampled.red).abs() +
+          (readRgb.green - sampled.green).abs() +
+          (readRgb.blue - sampled.blue).abs();
+      expect(l1, lessThan(9),
+          reason: 'the wide-gamut capture converts honestly to ground truth');
+    });
+
+    test('a non-wide feed stays tagged sRGB (unchanged bs-02 behaviour)',
+        () async {
+      final source =
+          SoftwareCaptureSource(const SceneSpec(groundTruth: groundTruth));
+      final feed = await source.frames.toList();
+      for (final frame in feed) {
+        expect(frame.colorSpace, FrameColorSpace.srgb);
+      }
     });
 
     test('records exposure, white-balance and focus locks', () {

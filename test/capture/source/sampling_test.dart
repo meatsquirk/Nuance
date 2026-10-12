@@ -12,9 +12,18 @@ RgbColor _toRgb(ColorCoordinates lab) =>
 int _l1(RgbColor c, int r, int g, int b) =>
     (c.red - r).abs() + (c.green - g).abs() + (c.blue - b).abs();
 
-/// A uniform [w]×[h] frame of one [pixel].
-Frame _uniform(Pixel pixel, {int w = 16, int h = 16}) =>
-    Frame(width: w, height: h, pixels: List<Pixel>.filled(w * h, pixel));
+/// A uniform [w]×[h] frame of one [pixel], tagged [space].
+Frame _uniform(
+  Pixel pixel, {
+  int w = 16,
+  int h = 16,
+  FrameColorSpace space = FrameColorSpace.srgb,
+}) =>
+    Frame(
+        width: w,
+        height: h,
+        pixels: List<Pixel>.filled(w * h, pixel),
+        colorSpace: space);
 
 void main() {
   // The 8-bit CIELAB round-trip (sRGB → Lab → sRGB) is near-exact; this bound
@@ -139,5 +148,78 @@ void main() {
     final image = _uniform(const Pixel(70, 150, 220));
     final sampled = _toRgb(sampleFromPhoto(image, 8, 8));
     expect(_l1(sampled, 70, 150, 220), lessThan(tol));
+  });
+
+  // --- Colour-space-aware sampling (SOURCE-2, AC-6 / AC-8) ------------------
+
+  group('colour-space conversion', () {
+    // A dull mid-tone well inside both gamuts: its sRGB and Display P3 8-bit
+    // encodings differ, so reading a P3 buffer as sRGB visibly drifts.
+    const srgbMid = Pixel(95, 97, 54);
+
+    test('encodeFromSrgb leaves an sRGB pixel unchanged (identity)', () {
+      expect(encodeFromSrgb(srgbMid, FrameColorSpace.srgb), srgbMid);
+    });
+
+    test('encodeFromSrgb rotates the pixel into genuine Display P3 channels',
+        () {
+      final p3 = encodeFromSrgb(srgbMid, FrameColorSpace.displayP3);
+      expect(p3, isNot(srgbMid),
+          reason: 'a wide-gamut buffer is re-encoded, not sRGB bits relabelled');
+    });
+
+    test('a Display P3 frame samples to the same CIELAB as its sRGB original',
+        () {
+      // The source encodes ground truth as sRGB then rotates it into P3; honest
+      // (space-aware) sampling of that P3 buffer must recover the sRGB colour.
+      final p3 = encodeFromSrgb(srgbMid, FrameColorSpace.displayP3);
+      final honest = _toRgb(
+          samplePoint(_uniform(p3, space: FrameColorSpace.displayP3), 8, 8));
+      expect(_l1(honest, srgbMid.r, srgbMid.g, srgbMid.b), lessThan(tol),
+          reason: 'P3 sampled as P3 round-trips to the original colour');
+
+      // Rejects the SOURCE-1 assumption: reading the same buffer as if it were
+      // sRGB skips the primary rotation, so it reports the raw P3 channels
+      // (which are *not* the original colour) rather than converting honestly.
+      final mislabelled =
+          _toRgb(samplePoint(_uniform(p3, space: FrameColorSpace.srgb), 8, 8));
+      expect(_l1(mislabelled, p3.r, p3.g, p3.b), lessThan(tol),
+          reason: 'read as sRGB, the P3 channels pass through unconverted');
+      expect(_l1(mislabelled, srgbMid.r, srgbMid.g, srgbMid.b),
+          greaterThan(_l1(honest, srgbMid.r, srgbMid.g, srgbMid.b)),
+          reason: 'so it lands farther from ground truth than the honest read');
+    });
+
+    test('sampleAreaAverage honours the frame colour space', () {
+      final p3 = encodeFromSrgb(srgbMid, FrameColorSpace.displayP3);
+      final avg = _toRgb(sampleAreaAverage(
+          _uniform(p3, space: FrameColorSpace.displayP3), 8, 8,
+          radiusPx: 5));
+      expect(_l1(avg, srgbMid.r, srgbMid.g, srgbMid.b), lessThan(tol));
+    });
+
+    test('a near-black Display P3 pixel converts through the low-signal '
+        'transfer branch', () {
+      // Channels this small exercise the linear (`v <= threshold`) arm of both
+      // the decode and encode transfer curves, which a mid-tone never reaches.
+      const nearBlack = Pixel(3, 3, 3);
+      final lab =
+          samplePoint(_uniform(nearBlack, space: FrameColorSpace.displayP3), 8,
+              8);
+      expect(lab.lightness, lessThan(5.0),
+          reason: 'a near-black capture stays near-black');
+    });
+
+    test('a saturated Display P3 primary outside sRGB is clamped, not thrown',
+        () {
+      // Pure-ish P3 green maps outside the sRGB cube — the red channel goes
+      // negative and green over 1.0 — so both ends of the channel clamp fire.
+      final lab = samplePoint(
+          _uniform(const Pixel(0, 255, 0), space: FrameColorSpace.displayP3), 8,
+          8);
+      final rgb = _toRgb(lab);
+      expect(rgb.green, greaterThan(rgb.red),
+          reason: 'a green capture stays green after clamping');
+    });
   });
 }

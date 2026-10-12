@@ -56,9 +56,9 @@ const Map<String, String> pendingACs = {
   'AC-3': 'CAPTURE-4',
   'AC-4': 'SCREEN-3',
   'AC-5': 'CAPTURE-5',
-  'AC-6': 'SOURCE-2',
+  // AC-6 and AC-8 un-pended by SOURCE-2 (colour-space selection + narrower
+  // fallback + the tag threaded onto Sample.colorSpace).
   'AC-7': 'SOURCE-3',
-  'AC-8': 'SOURCE-2',
   'AC-9': 'SOURCE-4',
   'AC-10': 'SOURCE-4',
 };
