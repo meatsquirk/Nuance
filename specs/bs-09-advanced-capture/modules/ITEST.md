@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite (bs-09)
 
-**Status:** In progress — ITEST-1/2/3 done (all 10 AC tests pending, red baseline recorded, suite 24 A); next ITEST-4 (test review → G-2)
+**Status:** In progress — ITEST-1/2/3/4 done-or-awaiting; ITEST-4 packet assembled, phase ⏸ Awaiting review, **G-2** awaiting a human decision (blocks every behavior phase)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/advanced_capture_test.dart`,
 `integration_test/advanced_capture_harness.dart`, `integration_test/bs09/pending.dart`,
@@ -14,7 +14,7 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,883,964 | 54m 53s (57m 55s) |
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 (pending) | ✅ Done | 8,028,691 | 18m 58s (21m 23s) |
 | ITEST-3 | acceptance-tests | AC-6,7,8,9,10 (pending) | ✅ Done | 8,511,371 | 23m 24s |
-| ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1,911,381 | 7m 15s |
 
 ## Interface reconciliation
 
@@ -246,10 +246,102 @@ torch/colour-space/RAW/platform/multi-point fixtures and the extended `FakeCaptu
 ## Phase ITEST-4 — test review (G-2)
 
 - **Kind:** test-review
-- **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
+- **Target AC:** — · **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
 - **Tasks:** assemble the review packet (per-AC catalogue + red baseline + grade grid + fixtures); full
   regression green with the 10 pending; raise **G-2** for a human decision.
 - **Exit criteria:** packet complete; G-2 recorded by a human (the agent never approves).
+- **Status:** ⏸ Awaiting review (packet below; **G-2** *awaiting decision*). No code ran in this phase.
+
+### Review packet — ITEST-4 (2026-10-12)
+
+**What this is.** Ten pending acceptance tests (one per AC) over the fully wired bs-09 shells — advanced
+capture: torch, multi-point sampling, the two-reading comparison handoff, colour-space tagging, RAW capture,
+and platform-agnostic normalization — to be approved before any behaviour is coded. The suite is
+test-complete and grades **all A (24 A / 0 below A)** with **no augmentations**. **Approving G-2 opens all ten
+behaviour phases** (CAPTURE-3/4/5, SCREEN-2/3, SOURCE-2/3/4).
+
+**Read first (the three judgment calls a reviewer should confirm):**
+1. **The platform raw offset is fixture infrastructure, not faked behaviour.** `FakeCaptureSource` now
+   applies each scene's `SceneSpec.rawColorShift` to every generated frame (`_shiftRaw`). `SCENE_ANDROID`
+   (+10) and `SCENE_IOS` (−8) carry *different* non-zero offsets; every bs-02..bs-08 scene is 0, so those
+   suites are untouched. This models each platform's **pre-normalization raw** — a property of the modelled
+   device — and is **not** faking the normalization under test (which SOURCE-4 owns). Without it, AC-9/AC-10
+   would read ground truth on both platforms and be **vacuously green** at baseline. Confirm this models the
+   platform, not the behaviour being graded.
+2. **SOURCE-4 must normalize as part of the capture *contract*, not via a calibrate step.** The AC-9/AC-10
+   tests deliberately **do not** call `whenCalibrate` — they commit through the real capture UI and expect
+   the committed sample already normalized to canonical CIELAB. So routing the platform capture through
+   normalization is the contract SOURCE-4 must satisfy (the fake's `normaliseAgainstCard` already returns
+   ground truth, so wiring the commit path through it lands both platforms on canonical). Confirm this
+   contract — not an explicit calibrate call — is the intended design before SOURCE-4 is coded.
+3. **AC-8's in-test control is what makes it sound and red at baseline.** AC-8's `SCENE_NARROW→srgb` primary
+   is **green against the hard-coded shell** (srgb is today's default), so on its own it would be *limited*.
+   Its in-test **control** — a rebooted `SCENE_WIDE` device that must tag `displayP3` — is the discriminator
+   that makes `srgb` a genuine *capability-conditional* fallback and drives AC-8 red at baseline. Confirm (a)
+   the control legitimately belongs to AC-8 (it tests AC-8's own fallback claim, not AC-6's tagging leaking
+   in — G6), and (b) it closes as soon as AC-8's own owner **SOURCE-2** lands (so AC-8 is **not** limited and
+   needs no augmentation).
+
+**Per-AC catalogue** (Given checked via the public surface → When through a real shipped control → Then +
+what it Rejects; all through the one production `buildApp` via `advanced_capture_harness.dart`):
+
+| AC | Test (`advanced_capture_test.dart`) | Given (checked) | When (real control) | Then + Rejects | Baseline | Grade |
+|---|---|---|---|---|---|---|
+| AC-1 | `AC-1: TorchWarnsColourTemp` | `CaptureScreen` shown, `lighting==low` (source), `torchOn==false`, `torchWarningKey` absent (rejects warning-before-torch) | `whenTurnTorchOn` (real `torchKey` tap) | `torchOn==true` **and** banner present **and** its text (off `torchWarningKey`) names `temperature` + bias/skew/shift. **Rejects** silent toggle (no banner), banner omitting the colour-temp bias | FAIL → `UnimplementedError('CAPTURE-3')` | A |
+| AC-2 | `AC-2: ReadingLabelledTorchLit` | torch-off **control** commit first asserts `lastCommittedSample.litByTorch==false` | `whenTurnTorchOn` + `whenAcknowledgeTorchWarning` (torch stays lit, banner dismissed) + `whenCommit` | `litByTorch==true` at the exact bool grain. **Rejects** stamp-all-samples and never-stamp | FAIL → `UnimplementedError('CAPTURE-3')` | A |
+| AC-3 | `AC-3: MultiPointSamplesAllAtOnce` | `whenMarkPoints` → `markedPoints` length 3 (state) | `whenSamplePoints` (real `samplePointsKey`) | `markedReadings` length **exactly 3** and the set of reading positions equals the three marked points. **Rejects** centre-only and one-averaged-reading (either collapses the count) | FAIL → `UnimplementedError('CAPTURE-4')` | A |
+| AC-4 | `AC-4: EachPointKeepsPositionValue` | three readings exist | readings render | a `position→coordinates` map whose keys equal the three points, each value CIE76 `<3.0` of **that point's own** colour, each row labelled `Point (x, y)` under the real `CaptureReadingsList`. **Rejects** collapsed positions, "all one colour", "value is the frame centre" | FAIL → `UnimplementedError('CAPTURE-4')` | A |
+| AC-5 | `AC-5: TwoPointsToComparison` | three readings; P1 and P3 resolved by position | `whenSendPairToComparison` (real `sendPairToComparison`) | via the live `ComparisonReadEndpoint`: **both** slots filled, `slotA`≈P1, `slotB`≈P3 (Δ<3), slots `>3` apart. **Rejects** one-slot-filled, a swap/duplicate, wrong two carried | FAIL → `UnimplementedError('CAPTURE-4')` | A |
+| AC-6 | `AC-6: TaggedWithColourSpace` | `supportsWideGamut==true` (real getter) on `SCENE_WIDE` | `whenCommit` (real `captureKey`) | `colorSpace == displayP3` (exact enum). **Control (G5):** rebooted narrow device commits `srgb`. **Rejects** null/untagged and constant-`displayP3` | FAIL → `colorSpace==srgb`, expected `displayP3` | A |
+| AC-7 | `AC-7: RawWhereSupported` | `supportsRaw==true` (real getter) on `SCENE_RAW` | `whenCommit` | `captureMode == raw` **and** `colorSpace == displayP3` (RAW uses the widest space). **Control (G5):** rebooted non-RAW device commits `processed`. **Rejects** "RAW set but space still narrow" | FAIL → `captureMode==processed`, expected `raw` | A |
+| AC-8 | `AC-8: FallbackLabelsNarrower` | `supportsWideGamut==false` (real getter) on `SCENE_NARROW` | `whenCommit` | primary `colorSpace==srgb` (green-at-baseline alone) made sound by the **control (G5):** rebooted wide device **must** tag `displayP3`, proving `srgb` is a *capability-conditional* fallback. **Rejects** unlabelled-null fallback, constant-srgb | FAIL → control `SCENE_WIDE` `colorSpace==srgb`, expected `displayP3` | A |
+| AC-9 | `AC-9: NormalizedTaggedSample` | `CaptureScreen` shown, `SCENE_ANDROID.rawColorShift != 0` (so "normalized" is a real check) | `whenCommit` | `colorSpace != null` **and** `labDistance(coordinates, groundTruth) < 3.0` on the raw committed coords. **Rejects** raw-passed-through (baseline 4.07), untagged | FAIL → `labDistance==4.07 > 3.0` | A |
+| AC-10 | `AC-10: PlatformAgnosticSample` | `SCENE_ANDROID.rawColorShift != SCENE_IOS.rawColorShift` enforced in-test (agreement is a real result) | `whenCommit` on Android, then rebooted iOS | `labDistance(android, ios) < 0.5` (tight) **and** identical `colorSpace` tags. **Rejects** divergent platforms (baseline 7.42) | FAIL → `labDistance==7.42 > 0.5` | A |
+
+**Red baseline summary** (run-pending `--dart-define=BS09_RUN_PENDING=true`, iPhone 17 sim `5AB9D06D…`,
+recorded at ITEST-2/3, HEAD unchanged since): default run **11 pass / 10 skipped — all passed**; run-pending
+**11 pass / 10 fail — every AC red**. AC-1..5 fail with an `UnimplementedError` naming their blocking
+behaviour (CAPTURE-3 / CAPTURE-4); AC-6..10 each fail on their own **Then** (no throws, no compile errors) —
+AC-6 `displayP3` vs `srgb`, AC-7 `raw` vs `processed`, AC-8 its `SCENE_WIDE` control, AC-9 `4.07>3.0`, AC-10
+`7.42>0.5`. **None is green at baseline** — each one discriminates the wrong impl today. Full per-test rows in
+the **Red baseline** table below.
+
+**Augmentations scheduled:** **none.** Every AC test carries its discriminating control in-fixture or in-test
+(AC-2 torch-off control, AC-6/7/8 rebooted-capability controls, AC-9/10 the enforced differing platform raw),
+so no AC is *limited* by a missing precondition that a later phase must backfill. The *Test augmentations*
+table below is empty by design.
+
+One optional, **non-blocking** grader note (not a rule failure, stays A): AC-5 assumes `sendPairToComparison`
+maps marked-reading indices 0 and 2 to the P1/P3 readings, while AC-3 pins only the *set* of positions, not
+their order. The Then still rejects a swap (it matches `slotA` against the P1 reading looked up by position,
+not by index), so it does not over-accept; the coupling is a reasonable ordering expectation of the
+forthcoming CAPTURE-4/CAPTURE-5 contract. Not required for the grade.
+
+**Fixtures & real-vs-faked.** The whole app is assembled through the one production `buildApp(deps)` on the
+Capture route, driven through the real UI with `WidgetTester` (reusing bs-02's `CaptureHarness`/
+`givenCaptureOf`). **Real:** sampling (`sampleAreaAverage`), the capture controller, the Capture screen,
+routing, bs-03's comparison. **Faked infrastructure only:** the extended `FakeCaptureSource` (adds the
+capability getters and the `_shiftRaw` platform offset) and bs-01's `FakeHaptics`/`FakeSpeech`. Fixtures:
+`SCENE_DIM_TORCH` (low light + biasing torch, guard-proven `torchColorShift>0`), `SCENE_THREE_POINTS` (three
+mutually-distinct, off-field points with per-point colours), `SCENE_WIDE`/`SCENE_NARROW` (wide-gamut
+capability pair), `SCENE_RAW` (RAW capability), `SCENE_ANDROID`/`SCENE_IOS` (shared ground truth, differing
+non-zero raw). Every bias/offset/capability an AC leans on is pinned by an ITEST-1 fixture guard.
+
+**Regression confirmed (ITEST-4, 2026-10-12):** `flutter analyze` clean; unit `flutter test --coverage`
+**892 pass**; coverage gate `dart run tool/coverage_gate.dart main` **100%** on the 10 touched lib files;
+default acceptance run (device lock, sim `5AB9D06D…`) **+11 ~10 — all passed, exit 0** (11 non-AC tests green,
+all 10 ACs skipped). No code changed this phase.
+
+**Grade grid:** [`behavior-test-completeness-bs-09-advanced-capture.md`](../behavior-test-completeness-bs-09-advanced-capture.md)
+— graded by a fresh adversarial subagent that did not write the tests. **Counts: 24 A / 0 below A** (14
+ITEST-1 artifacts + 5 ITEST-2 (AC-1..5) + 5 ITEST-3 (AC-6..10)).
+
+**Decision.** A human approves or requests changes:
+`/feature-next-phase --gate bs-09-advanced-capture G-2 approved | "<changes>"`.
+On **approved**, G-2 resolves, ITEST-4 is done, and the behaviour phases open — the CAPTURE/SCREEN track
+(torch → multi-point → comparison handoff) and the SOURCE track (colour-space / RAW / normalization) run
+concurrently (disjoint files). On **changes requested**, each item becomes an ITEST change phase before
+behaviour, followed by a fresh review.
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
