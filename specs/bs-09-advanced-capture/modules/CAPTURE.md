@@ -1,6 +1,6 @@
 # Module CAPTURE — controller: torch, multi-point, send-to-comparison, colour-space stamp
 
-**Status:** Not started
+**Status:** In progress — CAPTURE-1 done; next SOURCE-1 (SOURCE module) then CAPTURE-2
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`,
 `lib/capture/capture_read_endpoint.dart`, `lib/domain/sample.dart` (new fields),
@@ -12,7 +12,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| CAPTURE-1 | scaffold | — | ⬜ Todo | | |
+| CAPTURE-1 | scaffold | — | ✅ Done | 7,102,221 | 15m 16s (6h 58m) |
 | CAPTURE-2 | shell | — | ⬜ Todo | | |
 | CAPTURE-3 | behavior | AC-2 | ⬜ Todo | | |
 | CAPTURE-4 | behavior | AC-3 | ⬜ Todo | | |
@@ -40,7 +40,7 @@
 ## Open gates
 
 G-2 (test review) blocks CAPTURE-3/4/5 as behavior phases. CAPTURE-1/CAPTURE-2 are scaffold/shell (not gated
-by G-2) but CAPTURE-1 is blocked by **G-1** (spec approval).
+by G-2). **G-1 (spec approval) ✅ Resolved 2026-10-12: approved — Matt Quirk**, so CAPTURE-1 is unblocked.
 
 ## Phase CAPTURE-1 — scaffold
 
@@ -55,6 +55,46 @@ by G-2) but CAPTURE-1 is blocked by **G-1** (spec approval).
   4. Add `integration_test/bs09/pending.dart` modelled on `bs02/pending.dart`: `pendingACs` seeded with the
      10 ACs, `acTestWidgets`, `runPending` via `BS09_RUN_PENDING`, `behaviorPhases` set.
 - **Exit criteria:** gate proven both ways; baseline recorded; no product code.
+
+### Result — CAPTURE-1  <!-- 2026-10-12 -->
+
+- Branched `feat/bs-09-advanced-capture` from `main` @ `a695e4c` in worktree `/Users/matthew.quirk/Nuance-bs09`.
+  (Plan said "@ 4d4aedd"; main has since advanced only with planning-only commits `c0486f0` (bs-09 PLAN) and
+  `a695e4c` (bs-08 PLAN) — no code change; branching from current main is required so the bs-09 plan/spec,
+  absent at 4d4aedd, are present.)
+- **G-1 approved** 2026-10-12 by Matt Quirk — spec first line stamped; master + this module's Open gates
+  resolved.
+- **Baseline (green):** unit + coverage `flutter test --coverage` → **849 passed**, `coverage/lcov.info`
+  produced. Existing integration suites `flutter test integration_test/ -d <iPhone 17 udid>` (default mode,
+  pending skipped) → **131 passed** (bs-02..bs-06 + harness), exit 0, under the verify lock. `flutter analyze`
+  → no issues.
+- **Coverage gate proven both ways:** clean tree (no touched `lib/`) → PASS (exit 0); planted
+  `lib/_gate_probe.dart` + under-covering test → FAIL (`lib/_gate_probe.dart: 2/3 lines covered — uncovered
+  lines: 7`, exit 1); probe removed → PASS. Probe files deleted; no product code remains.
+- **Pending gate added:** `integration_test/bs09/pending.dart` (modelled on `bs06/pending.dart`) — all 10 ACs
+  seeded pending → owning behaviour phases (AC-1→SCREEN-2, AC-2→CAPTURE-3, AC-3→CAPTURE-4, AC-4→SCREEN-3,
+  AC-5→CAPTURE-5, AC-6/AC-8→SOURCE-2, AC-7→SOURCE-3, AC-9/AC-10→SOURCE-4); `behaviorPhases`, `acTestWidgets`,
+  `runPending` via `BS09_RUN_PENDING`. Compiles clean (analyze).
+- Coverage (touched `lib/`): none — scaffold owns no product code → gate PASS. Acceptance: n/a (no AC tests
+  yet; ITEST-1 builds the harness, ITEST-2/3 register the per-AC tests).
+- Fix passes: 0/3 (all gates green on first run).
+- Closed by: gate proven both ways; baseline recorded green; no product code.
+
+### Checkpoint / Handoff — CAPTURE-1
+
+- **Frozen for SOURCE-1:** `integration_test/bs09/pending.dart` is the un-pend registry — a behaviour phase
+  un-pends its AC by deleting that AC's row here. Don't add product code in the scaffold's wake; SOURCE-1 is
+  the first shell (signatures only).
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run
+  tool/coverage_gate.dart main` (host, no sim). Acceptance (needs a booted sim, always pass `-d <udid>` —
+  no device ⇒ zero tests, false green): `flutter test integration_test/advanced_capture_test.dart -d <udid>`
+  once ITEST-1 creates it; run-pending adds `--dart-define=BS09_RUN_PENDING=true`. Flutter SDK:
+  `/Users/matthew.quirk/development/flutter/bin`. Run sim commands under `coord.sh with-lock
+  bs-09-advanced-capture <PHASE> --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs09 && …'`
+  (`with-lock` runs from the coord repo `/Users/matthew.quirk/Nuance`). `timeout` is absent on this macOS —
+  for the push step use a plain `git push` (no `timeout` wrapper) or `gtimeout` if present.
+- **Known gaps:** no product code, no bs-09 harness yet (ITEST-1), no `CaptureSource` extensions yet
+  (SOURCE-1), no `Sample` fields yet (CAPTURE-2).
 
 ## Phase CAPTURE-2 — shell: Sample fields, command stubs, read-endpoint + router signatures
 

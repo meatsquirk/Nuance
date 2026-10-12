@@ -1,7 +1,7 @@
 # Master Plan — Advanced capture (bs-09)
 
 **Spec:** [bs-09-advanced-capture.feature](../bs-09-advanced-capture.feature)
-**Status:** Not started — next CAPTURE-1 (blocked by G-1 spec approval)
+**Status:** In progress — next SOURCE-1 (scaffold done; G-1 approved)
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) §"Cross-platform strategy" (CaptureSource / wide colour space / RAW fallback; D2), §"Capture & sampling" (torch, multi-point) · [scope](../../docs/paint-color-app-scope.md) §4.1 (flash/torch *Should*, multi-point *Should*, RAW/DNG *Could*) · **no wireframe yet** (the spec is proposed ahead of any mock; a future revision adds its UX)
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-02's capture surface and bs-03's comparison, both already merged to `main` (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -123,7 +123,7 @@ SOURCE-4; it is *pending* until then, not a limited test.
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | SOURCE | [modules/SOURCE.md](modules/SOURCE.md) | `CaptureSource` torch control + colour-space/RAW capability, selection + fallback, normalization contract, two-platform modelling; extended `SceneSpec`/`FakeCaptureSource` | bs-02 source | ⬜ Todo |
-| CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | ⬜ Todo |
+| CAPTURE | [modules/CAPTURE.md](modules/CAPTURE.md) | Scaffold; `Sample.colorSpace`/`litByTorch`/`captureMode`; controller torch mechanism + litByTorch stamp, multi-point marking + readings, send-two-to-comparison; read-endpoint + router pair handoff | SOURCE, bs-02 controller, bs-03 comparison | 🔄 In progress (CAPTURE-1 done) |
 | SCREEN | [modules/SCREEN.md](modules/SCREEN.md) | Capture screen: torch control + colour-temperature warning banner; multi-point markers + per-point readings display; send-to-comparison control | CAPTURE | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
@@ -153,7 +153,7 @@ handoff) — coordinate with any live bs-01/bs-03 nav work.
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line). The spec is **proposed ahead of any wireframe** — approving accepts building these scope §4.1 Should/Could features now, with UX to be re-linked when a mock revision adds them | CAPTURE-1 | Open |
+| G-1 | decision | Approve the spec (the `.feature` is marked "Draft: awaiting owner approval"; record approval as its first line). The spec is **proposed ahead of any wireframe** — approving accepts building these scope §4.1 Should/Could features now, with UX to be re-linked when a mock revision adds them | CAPTURE-1 | ✅ Resolved 2026-10-12: approved — Matt Quirk (spec first line stamped; scope §4.1 Should/Could capture features accepted to build now) |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -168,8 +168,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | CAPTURE-1 | scaffold: branch from main, baseline run, coverage gate proof, bs09 pending runner | ⬜ Next | | | blocked by G-1 |
-| 2 | SOURCE-1 | shell: `CaptureSource` torch + colour-space/RAW capability signatures; `SceneSpec`/`FakeCaptureSource` knobs | ⬜ Todo | | | |
+| 1 | CAPTURE-1 | scaffold: branch from main, baseline run, coverage gate proof, bs09 pending runner | ✅ Done | 7,102,221 | 15m 16s (6h 58m) | G-1 approved; unit 849 + integ 131 green; gate proven both ways; 10 ACs seeded pending |
+| 2 | SOURCE-1 | shell: `CaptureSource` torch + colour-space/RAW capability signatures; `SceneSpec`/`FakeCaptureSource` knobs | ⬜ Next | | | startable: scaffold done, no gate |
 | 3 | CAPTURE-2 | shell: `Sample.colorSpace`/`litByTorch`/`captureMode`; controller command stubs; read-endpoint + router pair-handoff signatures | ⬜ Todo | | | after SOURCE-1 |
 | 4 | SCREEN-1 | shell: Capture screen placeholders (torch control + warning, multi-point markers + readings list, send-to-comparison) | ⬜ Todo | | | after CAPTURE-2 |
 | 5 | ITEST-1 | acceptance-tests: harness over bs-02's, fixtures, pending gate (10 ACs), smoke | ⬜ Todo | | | |
@@ -191,14 +191,16 @@ when the row is marked done.
 
 ## Next phase
 
-**CAPTURE-1 (scaffold) is next — blocked by G-1 (spec approval).** Branch `feat/bs-09-advanced-capture` from
-`main` (@ 4d4aedd; bs-02 capture + bs-03 comparison present), run the baseline (unit + existing integration),
-prove the `tool/coverage_gate.dart` gate both ways, and add `integration_test/bs09/pending.dart`
-(`BS09_RUN_PENDING`). No product code.
+**SOURCE-1 (shell) is next — startable now.** On branch `feat/bs-09-advanced-capture` (off `main` @
+`a695e4c`), add the `CaptureSource` signatures this feature needs: torch control (`torchOn`,
+`turnTorchOn/Off`), colour-space/RAW capability getters (`supportsWideGamut`, `supportsRaw`, `colorSpace`,
+`captureMode`), and extend `SceneSpec`/`FakeCaptureSource` with the knobs the fixtures drive. Signatures only
+(behaviour lands in SOURCE-2/3/4). Unit gate + existing suites green.
 
-- **Decide first:** G-1 — approve the draft spec (it is proposed ahead of any wireframe; approval accepts
-  building the scope §4.1 Should/Could capture features now, UX to be re-linked later).
-- **No dependency gate:** bs-02 and bs-03 are already on `main`.
+- **No gate blocks SOURCE-1:** G-1 resolved; bs-02/bs-03 already on `main`.
+- **Then CAPTURE-2 → SCREEN-1** (shells are layered-serial), then the ITEST stage.
+- **Scaffold left in place:** `integration_test/bs09/pending.dart` (10 ACs seeded pending), coverage gate
+  proven both ways, baseline recorded.
 
 ## Token usage
 
@@ -207,7 +209,8 @@ prove the `tool/coverage_gate.dart` gate both ways, and add `integration_test/bs
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | f7184106 | 2026-10-11 21:51 EDT | 22:07 | 15m 30s | 15m 30s | claude-opus-4-8 | 64 | 237,675 | 2,662,148 | 71,989 | 2,971,876 | plan written: 17 phases, 4 modules, 10 ACs; G-1 (spec approval) + G-2 (test review) open |
-| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-11 22:07** | **15m 30s** | **15m 30s** |  | **64** | **237,675** | **2,662,148** | **71,989** | **2,971,876** |  |
+| CAPTURE-1 | 5df75034 | 2026-10-11 22:22 EDT | 2026-10-12 05:21 | 6h 58m | 15m 16s | claude-opus-4-8 | 134 | 146,744 | 6,913,544 | 41,799 | 7,102,221 | G-1 approved; scaffold green: unit 849, integ 131 (default), coverage gate proven both ways, 10 ACs seeded pending; no product code |
+| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 05:21** | **7h 13m** | **30m 46s** |  | **198** | **384,419** | **9,575,692** | **113,788** | **10,074,097** |  |
 
 ## Sign-off
 

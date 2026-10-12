@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-12 by Matt Quirk (G-1) — derived 2026-10-05 by /wireframe-behavior-specs
 # Scope beyond the wireframe: scope §4.1 Should/Could capture features, not drawn in the mock.
 Feature: Advanced capture
   The capture features the scope marks Should/Could but the wireframe does not
