@@ -78,3 +78,17 @@ Re-graded live now that CAPTURE-3 landed the torch mechanism (`turnTorchOn`/`tur
 ## Verdict
 
 CAPTURE-3: AC-2 = A; no drift — CAPTURE-3 modified only product (`capture_controller.dart`, `capture_state.dart`), its own unit tests, and the AC-2 row in `bs09/pending.dart`; the AC-2 test (`advanced_capture_test.dart`) and both harnesses (`advanced_capture_harness.dart`, `capture_harness.dart`) are unmodified (git status), and AC-2 is the only un-pended bs-09 AC (no other neighbouring un-pended test to drift).
+
+## Phase graded: SCREEN-2 (behaviour — AC-1 un-pended)
+
+Re-graded live now that SCREEN-2 un-pended AC-1 — `TorchWarnsColourTemp` runs for real (no longer a red baseline) against SCREEN-1's state-driven `torchWarningKey` banner over CAPTURE-3's `turnTorchOn` mechanism. Every currently un-pended AC test (AC-1, AC-2) plus the scaffold guard SCREEN-2 modified were re-graded in a fresh adversarial subagent against G1–G6.
+
+| AC / test | Grade | Justification |
+| --- | --- | --- |
+| AC-1 `TorchWarnsColourTemp` | A | Givens all through the public surface before the When: `CaptureScreen` shown, `lighting==low` (source), `torchOn==false` (state), and `torchWarningKey` **absent** — the `Visibility(visible: torchWarning != null)` genuinely removes the `Text` when off, so this rejects "warning present before torch on". When taps the real `torchKey` (`onPressed` = `torchOn ? turnTorchOff : turnTorchOn`, false → live `turnTorchOn`). Thens tight: `torchOn==true`, `torchWarningKey` findsOneWidget, and the **rendered** `Text.data` (not a fixture) contains `temperature` AND one of bias/skew/shift. Rejects a silent toggle (no banner), wrong/empty banner text, and a constant banner shown before torch-on. **Not green-at-baseline-vacuous:** the banner's visibility and text are both data-driven off `state.torchWarning`, which only exists once CAPTURE-3's mechanism + SCREEN-1's render are both present; before either, `findsOneWidget`/`Text.data` fail. |
+| AC-2 `ReadingLabelledTorchLit` | A | Unchanged from the CAPTURE-3 re-grade; in-test torch-off control (G5) defeats stamp-every-sample, ack keeps `torchOn` true, Then asserts `litByTorch==true` at exact bool grain. No drift (SCREEN-2 did not touch AC-2's test or the commit path). |
+| scaffold guard `pendingSkipReason skips… runs when forced` | A | Modified this phase: pending example now read from `pendingACs.keys.first` under `if (pendingACs.isNotEmpty)` (currently AC-3) — skip-by-default `isNotNull`, force-run `isNull` — so it proves the skip mechanism while anything is pending and never passes vacuously when the map drains. Two unconditional asserts always fire: delivered AC-1 runs in both modes, absent AC-999 runs in both modes. The new AC-1 positive check also cross-checks that SCREEN-2 actually deleted AC-1's pending row. |
+
+## Verdict
+
+SCREEN-2: AC-1 = A, AC-2 = A (no drift), scaffold guard = A. **3 A / 0 below A; no row needs fixing.** Whole-suite running total unchanged at **24 A / 0 below A** (the re-grades confirm the prior grid; no new AC test was written — ITEST-2 authored `TorchWarnsColourTemp`). SCREEN-2 modified only the AC-1 row in `bs09/pending.dart`, the `unpended` set + the scaffold-guard example in `advanced_capture_test.dart`, and two comment lines in `capture_controls.dart` / `capture_live_view.dart` (no logic) — no neighbouring AC test changed.

@@ -1,6 +1,6 @@
 # Module SCREEN — Capture screen: torch control, multi-point readings, send-to-comparison
 
-**Status:** In progress — SCREEN-1 done; SCREEN-2/3 are behaviour (blocked by G-2)
+**Status:** In progress — SCREEN-1 + SCREEN-2 (AC-1) done; SCREEN-3 (AC-4) next (after CAPTURE-4)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_screen.dart`, `lib/capture/capture_controls.dart`,
 `lib/capture/capture_live_view.dart`, and any new Capture-screen widgets (torch control + warning banner,
@@ -16,7 +16,7 @@ multi-point markers + readings list, send-to-comparison control)
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | SCREEN-1 | shell | — | ✅ Done | 5,909,827 | 11m 12s |
-| SCREEN-2 | behavior | AC-1 | ⬜ Todo | | |
+| SCREEN-2 | behavior | AC-1 | ✅ Done | 6,431,798 | 15m 13s |
 | SCREEN-3 | behavior | AC-4 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -33,7 +33,7 @@ multi-point markers + readings list, send-to-comparison control)
 
 ## Open gates
 
-G-2 (test review) blocks SCREEN-2/3 as behavior phases.
+None. G-2 (test review) was approved 2026-10-12 (Matt Quirk), opening the behaviour phases.
 
 ## Phase SCREEN-1 — shell: placeholders for the new controls
 
@@ -115,3 +115,39 @@ G-2 (test review) blocks SCREEN-2/3 as behavior phases.
   tool/coverage_gate.dart main` (host, no sim). Flutter: `/Users/matthew.quirk/development/flutter/bin`.
 - **Known gaps:** no torch/sampling/send behaviour yet; readings list + markers + banner are state-driven only;
   no bs-09 acceptance harness yet (**next: ITEST-1**).
+
+### Result — SCREEN-2
+
+- **Landed (AC-1 — torch control + colour-temperature warning banner):** no new product logic was needed — the
+  banner (`CaptureLiveView.torchWarningKey`, `Visibility`-gated on `state.torchWarning`, rendering the string) and
+  the torch toggle (`CaptureControls.torchKey` → `turnTorchOn/Off`, label reflecting `state.torchOn`) were built
+  **state-driven in SCREEN-1** over CAPTURE-3's mechanism (`turnTorchOn` sets `torchOn:true` +
+  `torchWarning: torchColorTemperatureWarning`). SCREEN-2 **un-pends AC-1** and proves it green.
+- **Changes:** deleted the `'AC-1': 'SCREEN-2'` row in `integration_test/bs09/pending.dart`; added `'AC-1'` to the
+  `unpended` set in `advanced_capture_test.dart`; made the scaffold guard `pendingSkipReason…` self-maintaining
+  (reads its pending example from `pendingACs.keys.first` under an `isNotEmpty` guard, + a positive check that the
+  delivered AC-1 now runs); corrected two now-stale shell comments (torch) in `capture_controls.dart` /
+  `capture_live_view.dart` (comment-only, no logic). Scaffold-guard edit recorded because un-pending AC-1 broke
+  its hardcoded AC-1 example — strengthened, not weakened (grade A).
+- **Gates:** `flutter analyze` clean; unit **896 green**; coverage gate **100% on all 10 touched lib files**
+  (`dart run tool/coverage_gate.dart main` PASS — no new lib logic). Acceptance (sim `5AB9D06D…`, under
+  `coord.sh with-lock`): default suite **+13 pass / ~8 skip / 0 fail** — `TestAC01_TorchWarnsColourTemp` and
+  `AC-2` run live and pass; AC-3..10 still pending. **Grade: AC-1 A, AC-2 A (no drift), guard A → 3 A / 0 below A**
+  (whole-suite 24 A / 0 below A, unchanged). **Fix passes: 1/3** — the first acceptance run failed only on the
+  scaffold guard's hardcoded AC-1 pending example (un-pending AC-1 made it stale); AC-1 itself passed first time.
+- **Tokens / Time:** 6,431,798 · 15m 13s (1 session).
+
+### Checkpoint / Handoff — SCREEN-2
+
+- **AC-1 ✅** (2/10 behaviour ACs; AC-2 + AC-1 done). The torch control + banner are live and asserted.
+- **SCREEN-3 (AC-4, behaviour) next for this module** — depends on **CAPTURE-4** filling `state.markedReadings`;
+  `CaptureReadingsList` already renders each `MultiPointReading` (position + value), so SCREEN-3 un-pends AC-4
+  against three distinct sampled points. **Serial with SCREEN-2** on `capture_live_view.dart` /
+  `capture_controls.dart` — start it only after CAPTURE-4 is done.
+- **Un-pend protocol (for every later behaviour phase):** delete the AC's row in `bs09/pending.dart` **and** add
+  that AC to the `unpended` set in `advanced_capture_test.dart`. The `pendingSkipReason` guard is now
+  self-maintaining (no longer needs its example updated per un-pend).
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host); acceptance `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`
+  under `coord.sh with-lock` (shared device lane). Flutter: `/Users/matthew.quirk/development/flutter/bin`.
+- **Known gaps:** sampling/send behaviour not yet built (CAPTURE-4/5); AC-4 readings not yet un-pended (SCREEN-3).

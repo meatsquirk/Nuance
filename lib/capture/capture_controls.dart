@@ -133,7 +133,7 @@ class CaptureControls extends StatelessWidget {
         ),
         // bs-09 torch toggle (AC-1, AC-2): reflects state.torchOn and drives the
         // torch on / off. The mechanism and the colour-temperature warning land
-        // in CAPTURE-3 — the stub throws until then.
+        // in CAPTURE-3; SCREEN-2 renders the toggle live against it.
         TextButton(
           key: torchKey,
           onPressed: controller.state.torchOn

@@ -57,10 +57,12 @@ void main() {
 
   group('bs-09 pending gate (scaffold guard)', () {
     // Un-pended by the behaviour phases so far: CAPTURE-3 un-pended AC-2 (torch
-    // mechanism + litByTorch stamp). This set grows one behaviour phase at a
-    // time as each deletes its row in `bs09/pending.dart`; the pending map must
-    // stay the exact complement of it across all 10 ACs.
+    // mechanism + litByTorch stamp); SCREEN-2 un-pended AC-1 (torch control +
+    // colour-temperature warning banner). This set grows one behaviour phase at
+    // a time as each deletes its row in `bs09/pending.dart`; the pending map
+    // must stay the exact complement of it across all 10 ACs.
     const unpended = <String>{
+      'AC-1',
       'AC-2',
     };
 
@@ -96,8 +98,20 @@ void main() {
       // than the ambient `runPending`, so the guard is deterministic in either
       // run — the red-baseline pass sets `BS09_RUN_PENDING=true`, under which the
       // ambient form would report "run" and this assertion would spuriously flip
-      // (the bs-08 ITEST-2 fix).
-      expect(pendingSkipReason('AC-1', forceRunPending: false), isNotNull);
+      // (the bs-08 ITEST-2 fix). The pending example is read from `pendingACs`
+      // itself so it stays honest as each behaviour phase un-pends its AC
+      // (SCREEN-2 un-pended AC-1, which used to be this example); once the map
+      // drains at the last behaviour phase the skip branch is vacuous and only
+      // the run branches below fire.
+      if (pendingACs.isNotEmpty) {
+        final stillPending = pendingACs.keys.first;
+        expect(pendingSkipReason(stillPending, forceRunPending: false),
+            isNotNull);
+        expect(pendingSkipReason(stillPending, forceRunPending: true), isNull);
+      }
+      // An un-pended AC always runs, in either mode: AC-1 (SCREEN-2) is
+      // delivered, so it is no longer skipped by default.
+      expect(pendingSkipReason('AC-1', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
       // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);

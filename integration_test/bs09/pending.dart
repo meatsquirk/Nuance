@@ -50,7 +50,8 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-6/AC-8 → SOURCE-2 (colour-space selection + narrower fallback + tag)
 ///   AC-9/AC-10 → SOURCE-4 (normalized+tagged contract + platform-agnostic)
 const Map<String, String> pendingACs = {
-  'AC-1': 'SCREEN-2',
+  // AC-1 un-pended by SCREEN-2 (torch control + colour-temperature warning
+  // banner; rendered in SCREEN-1 over CAPTURE-3's torch mechanism).
   // AC-2 un-pended by CAPTURE-3 (torch mechanism + litByTorch stamp).
   'AC-3': 'CAPTURE-4',
   'AC-4': 'SCREEN-3',

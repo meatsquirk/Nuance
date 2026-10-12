@@ -127,7 +127,8 @@ class CaptureLiveView extends StatelessWidget {
         ),
         // bs-09 torch colour-temperature warning (AC-1): a sibling banner above
         // the low-light warning, shown only while the controller has set the
-        // warning string (CAPTURE-3). Empty in this shell.
+        // warning string (raised by CAPTURE-3's turnTorchOn; AC-1 landed in
+        // SCREEN-2).
         Positioned(
           left: 8,
           bottom: 32,
