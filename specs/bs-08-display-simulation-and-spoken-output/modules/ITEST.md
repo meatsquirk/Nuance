@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — all AC-test phases done (ITEST-1..3: AC-1..10 pending tests + red baseline + grades, all A bar AC-7 B-pending-DISPLAY-8); next ITEST-4 (test review → G-2)
+**Status:** ⏸ Awaiting review — ITEST-4 packet assembled; **G-2** *awaiting decision* (a human approves the acceptance tests before any behavior phase)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/display_harness.dart`, `integration_test/display_test.dart`, `integration_test/bs08/pending.dart` (seeded in DISPLAY-1), reuse of `integration_test/fakes/fake_speech.dart` + `fake_haptics.dart`.
 **Depends on:** all shell phases (DISPLAY-2, SETTINGS-1, SPEECH-1) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 8,480,396 | 16m 57s |
 | ITEST-2 | acceptance-tests | AC-1..7 (pending) | ✅ Done | 14,829,254 | 1h 06m (1h 10m) |
 | ITEST-3 | acceptance-tests | AC-8,9,10 (pending) | ✅ Done | 6,704,225 | 18m 11s |
-| ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1,393,384 | 3m 12s |
 
 ## Interface reconciliation
 
@@ -101,6 +101,82 @@
 - **Target AC:** — · **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
 - **Tasks:** assemble the review packet (catalogue, red baseline, grades, fixtures, real-vs-faked) for a human. On **approved**, G-2 resolves and this phase is done; **changes requested** turns each item into an ITEST change phase before behavior, then a fresh review.
 - **Exit criteria:** a human records the G-2 decision.
+- **Status:** ⏸ Awaiting review (packet below; **G-2** *awaiting decision*). No code ran in this phase.
+
+### Review packet — ITEST-4 (2026-10-12)
+
+**What this is.** Ten pending acceptance tests (one per AC) over the fully wired bs-08 shells, to be
+approved before any behaviour is coded. The suite is test-complete and grades **all A** except AC-7
+(*B pending DISPLAY-8*, with a scheduled augmentation — the single allowed exception). **Approving G-2
+opens all ten behaviour phases.**
+
+**Read first (the three judgment calls a reviewer should confirm):**
+1. **Independent oracle for AC-3/AC-4.** The simulated swatch is graded against `referenceProjectDichromat`
+   — a *separate* in-harness Viénot transcription with **literal** published matrices (the shipped file
+   inverts its matrices at runtime), so the shipped projection is never graded against itself. Only the
+   colour-space `toSRGB` is deliberately shared (documented). Confirm this independence is real, not
+   cosmetic.
+2. **AC-6 structural proxy.** The harness opens on the Readout; the camera feed and palettes live on other
+   screens. AC-6 therefore asserts a **single root `ColorFiltered` ancestor of `MaterialApp`** (D-5's one
+   global filter) rather than sampling three surfaces. Confirm that the one-root-filter assertion is an
+   acceptable proxy for "greys the whole app".
+3. **Five tests are green at baseline** (AC-1, AC-7, AC-8, AC-9, AC-10) because their shells already behave.
+   They stay pending; their behaviour phase un-pends them and must keep them green. Confirm each still
+   *discriminates* a wrong impl (the catalogue's *Rejects*/control column) rather than passing vacuously —
+   this is where a green-at-baseline test most often hides a weak assertion.
+
+**Per-AC catalogue** (Given checked via the public surface → When through a real shipped control → Then +
+what it Rejects):
+
+| AC | Test (`display_test.dart`) | Given (checked) | When (real control) | Then + Rejects | Baseline | Grade |
+|---|---|---|---|---|---|---|
+| AC-1 | `AC-1: opens display & simulation settings` | panel absent (finder) | tap E2 entry | panel + E47 selector + E46 grayscale + theme each `findsOneWidget`. **Rejects** a surface missing any of the three, or an unreachable entry | PASS (green) | A |
+| AC-2 | `AC-2: sim off = original (trichromat)` | `simulationOn == false` (live endpoint) | reading renders | exactly **1** swatch, `_colorNear` `toSRGB(displaySample)`. **Rejects** a projected/desaturated sim-off view, and (via `hasLength(1)`) a spurious alongside-pair | FAIL → DISPLAY-3 | A |
+| AC-3 | `AC-3: simulate type alongside original` | settings open, `simulationOn == false`; outline protan/deutan/tritan | `whenSelectSimulation(type)` (asserts `simulationType == type`) | ≥2 swatches, one ≈ original **and** one ≈ `referenceProjectDichromat(sample,type)`. **Rejects** a no-op selector, wrong/fixed type (tritan Δ≈71 separates), or a dropped original | FAIL → DISPLAY-4 | A |
+| AC-4 | `AC-4: severity slider strength` | `simulationType == deutan` | `whenSetSeverity(60)` → `simulationSeverity closeTo(0.60, 0.03)` | swatch ≈ `referenceProjectDichromat(sample,deutan,0.60)`; **control** sev 0 ≈ original. **Rejects** a slider that never reaches the projection or renders at a fixed severity | FAIL → DISPLAY-5 | A |
+| AC-5 | `AC-5: grayscale clears an active sim` | `simulationType == deutan` | `whenSetGrayscale(on:true)` (settle) | `grayscale == true` **and** `simulationType == null`; **control** grayscale off keeps it null. **Rejects** both views active, and restore-on-off | FAIL → DISPLAY-6 | A |
+| AC-6 | `AC-6: value-only greys the whole app` | `grayscale == true` | — | a root `ColorFiltered` **ancestor** of `MaterialApp` `findsOneWidget`; **control** off → `findsNothing`. **Rejects** greys-readings-only (descendant filter fails the ancestor check) and an always-on filter | FAIL → DISPLAY-7 | A |
+| AC-7 | `AC-7: reading keeps value + label under sim` | `simulationType == deutan` | reading renders | `ValueReading` with `number == round(L)` + non-empty `word` + `find.text("55")`. **Limited (G5):** cannot yet reject "swatch with no text" until a swatch renders (DISPLAY-4) → augmentation owned by DISPLAY-8 | PASS (green, limited) | **B pending DISPLAY-8** |
+| AC-8 | `AC-8: repeats the last spoken output` | **control** repeat inert + log empty; then `whenSpeakReading` → `utterances hasLength(1)`, repeat control appears | `whenRepeatLastSpoken` (E50 repeat) | `utterances hasLength(2)` **and** `last == spoken` (count + identity). **Rejects** a different/empty/no replay | PASS (green) | A |
+| AC-9 | `AC-9: one consistent phrasing` | both slots filled via picker (`find.text('Slot A/B: …')`), `identical(appSpeech.inner, speech)` | `whenSpeakComparison` (E6) then `whenOpenReadoutForA` + `whenSpeakReading` | `utterances hasLength(2)` in the **one** injected sink; **control** reading ≠ comparison (distinct, non-empty). **Rejects** a second sink or a second phrasing route (would leave only 1) | PASS (green) | A |
+| AC-10 | `AC-10: panel stays until the painter leaves it` | **control** panel present but `lastSpokenText` absent; `whenSpeakReading` → panel + text present | `pump(60s)` then `pumpAndSettle` | panel + `lastSpokenText` still present, `Text.data == shown`. **Rejects** a timer auto-dismiss (60s+settle clears it) and (control) an always-on vacuous pass | PASS (green) | A |
+
+**Red baseline summary** (run-pending `--dart-define=BS08_RUN_PENDING=true`, sim `5AB9D06D…`): default run
+**11 pass / 10 skipped — all passed**; run-pending **16 pass / 5 fail**. The 5 fails are exactly AC-2, AC-3,
+AC-4, AC-5, AC-6, each failing on its own Then naming its owning phase (DISPLAY-3/4/5/6/7). AC-1, AC-7, AC-8,
+AC-9, AC-10 are **green at baseline** (their shells already behave) and stay pending until SETTINGS-2 /
+DISPLAY-8 / SPEECH-2 / SPEECH-3 / SPEECH-4 un-pend them. No test failed on a compile error, panic or harness
+error. Full per-test rows in the **Red baseline** table below.
+
+**Augmentations scheduled** (full table in *Test augmentations* below):
+
+| AC test | Limited because | Closed by | Add |
+|---|---|---|---|
+| `AC-7: reading keeps value + label under sim` | green-at-baseline + G5: no simulated swatch exists until DISPLAY-4, so it cannot yet reject a simulated reading that shows a swatch with **no** value/label | **DISPLAY-8** | assert the simulated swatch is shown **alongside** the value + label ("not colour alone"), then re-grade A |
+
+One optional, **non-blocking** note (not a rule failure, stays A): AC-8's single-utterance design cannot
+separate "replays the *last*" from "replays a fixed/first" utterance; SPEECH-2 *may* speak a second distinct
+reading before repeating to close the gap. Not required for the grade.
+
+**Fixtures & real-vs-faked.** The whole app is assembled through the one production `buildApp(deps)`: real
+`DisplayController`, real `projectDichromat`, real `ColorChip`/root-grayscale rendering, real
+readout/comparison/recipes speech paths. **Faked infrastructure only:** `FakeSpeech` (records utterances in
+order), `FakeHaptics`. Fixtures: `displaySample` (CIELAB 55/−25/30, a non-grey olive, in-gamut and clearly
+shifted under every type — guard-proven), `compareSampleB` (a cool blue-violet for AC-9's slot B),
+`cvdProfileFixture` (deutan, matching the panel's pre-selected default), `referenceProjectDichromat` (the
+independent oracle above).
+
+**Grade grid:** [`behavior-test-completeness-bs-08-display-simulation-and-spoken-output.md`](../behavior-test-completeness-bs-08-display-simulation-and-spoken-output.md)
+— graded by a fresh adversarial subagent that did not write the tests. **Counts: 24 A (15 ITEST-1 artifacts +
+6 ITEST-2 + 3 ITEST-3) + 1 B-pending-DISPLAY-8 (AC-7).** Two cosmetic grader notes, neither grade-affecting:
+a premature "un-pended here" group-header comment (AC-1/AC-7 remain in `pendingACs`), and `FakeHaptics`'s
+stale "AC-12" doc-comment (haptics unused by any bs-08 AC) — both can be swept in a touching behaviour phase.
+
+**Decision.** A human approves or requests changes:
+`/feature-next-phase --gate bs-08-display-simulation-and-spoken-output G-2 approved | "<changes>"`.
+On **approved**, G-2 resolves, ITEST-4 is done, and the behaviour phases open (SETTINGS-2, DISPLAY-7 and the
+SPEECH chain run concurrently with the simulation chain DISPLAY-3→4→{5,6,8}). On **changes requested**, each
+item becomes an ITEST change phase before behaviour, followed by a fresh review.
 
 ## Red baseline  <!-- filled by the AC-test phases (run-pending) -->
 
