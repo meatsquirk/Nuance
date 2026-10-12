@@ -1,7 +1,7 @@
 # Master Plan — Palette and projects (bs-06)
 
 **Spec:** [bs-06-palette-and-projects.feature](../bs-06-palette-and-projects.feature)
-**Status:** In progress — behavior stage ✅ complete (10/10 phases; all 11 ACs delivered and green by default; PALETTE + PROJECT + SCREEN modules complete). Next and last: SIGNOFF-1 (full cross-feature regression + sign-off packet, human decides).
+**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet assembled 2026-10-11 ([signoff/round-1.md](signoff/round-1.md)); all gates green (analyze clean · unit 760 · coverage 29/29 · acceptance 109 default + 23 bs-06 run-pending · grade 26×A). A human records the decision via `--signoff`.
 **Architecture:** `docs/paint-color-app-solution-intent.md` (data layer "Local data store (on-device DB)" line 209; provenance tiers + D9 append-only evidence; D6 reviewed-dataset build artifact); wireframe `Paint Color Assistant.dc.html` (in `docs/Color blindness artist tool.zip`), Palette screen S1.R1, elements E30–E34.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · extends the bs-01/04 foundation (same code home, confirmed by Matt across bs-01/02/03/04; this plan confirmed by Matt 2026-10-10)
 
@@ -174,16 +174,17 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 17 | PROJECT-6 | AC-10 export PDF studio sheet | ✅ Done | 19,430,558 | 26m 59s | `project_export.dart` (pdf studio sheet) + `exportOpenedProject` keeps bytes as `lastExport` (D-6) + E34 wired; `printing` share seam (G-4) wired in main, faked/null in tests; AC-10 un-pended + green, **all 11 ACs now run by default (23/0)**; TestAC10 closed; unit 760, coverage 100% on 29 touched; grade 11×A PASS; fix passes 0/3 |
 | 18 | SCREEN-2 | AC-1 switch My paints / Projects views | ✅ Done | 5,271,492 | 30m 22s | toggle: PaletteScreen→StatefulWidget, E31 wired, My-paints view ⇄ Projects view (one at a time); AC-1 un-pended, 14/9/0 acceptance, graded A; smoke+scaffold-guard+widget tests updated for the toggle |
 | 19 | SCREEN-3 | AC-11 vision-profile card estimate + opens self-assessment | ✅ Done | 10,052,083 | 43m 03s | AC-11 un-pended + green; coverage 100% on touched (vision_profile_card.dart, palette_screen.dart); grade AC-11 A; added 2nd-profile control; fix passes 0/3 |
-| 20 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | last phase; full cross-feature regression + packet, human decides |
+| 20 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting sign-off | 8,421,970 | 11m 53s (11m 53s) | packet [signoff/round-1.md](signoff/round-1.md); analyze clean · unit 760 · coverage 29/29 · acceptance 109 default + 23 bs-06 run-pending (0 pending) · grade 26×A/0; [summary scorecard](https://claude.ai/artifact/EWvLAX4Lef1kz5hyiniS47); a human decides via `--signoff` |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-Behavior stage ✅ complete — PROJECT-6 (AC-10) done; all 10 behavior phases landed and all 11 ACs are green by default (`pendingACs` now empty). Only SIGNOFF-1 remains.
-- **SIGNOFF-1** — the last phase. Run the **full cross-feature regression** (every feature's acceptance suite + the whole repo test target, per verification.md § Which suites), assemble the sign-off packet (`signoff/round-1.md` exists as a stub) + the summary page, and present for a **human decision** — the agent never approves. Record the decision via `--signoff`.
-
-Nothing else is startable; this is the only remaining phase.
+SIGNOFF-1 complete — the feature is **⏸ Awaiting sign-off**. The sign-off packet is assembled
+([signoff/round-1.md](signoff/round-1.md)) with full verification green (analyze clean · unit 760 ·
+coverage 29/29 · acceptance 109 default + 23 bs-06 run-pending, 0 pending · fresh full-suite grade 26×A/0)
+and the summary page linked. No agent phase remains.
+- **Next and final:** a **human** records the decision — `/feature-next-phase --signoff bs-06-palette-and-projects approved | changes "<items>"`. The agent never approves.
 
 ## Token usage
 
@@ -215,10 +216,11 @@ Nothing else is startable; this is the only remaining phase.
 | PROJECT-4 | 09698782 | 2026-10-11 18:15 EDT | 18:51 | 35m 50s | 35m 50s | claude-opus-4-8 | 208 | 335,752 | 17,568,875 | 81,872 | 17,986,707 | AC-7+AC-8 un-pended + green; grade 9xA PASS (AC-7 B->A); coverage 100% on 27 touched; fix passes 0/3 |
 | PROJECT-5 | cc220bea | 2026-10-11 18:56 EDT | 19:14 | 17m 26s | 17m 26s | claude-opus-4-8 | 170 | 286,826 | 10,293,396 | 52,967 | 10,633,359 | AC-9 un-pended + green (default 22/1, run-pending AC-9 green / AC-10 red baseline); confusion_pairs.dart glue over bs-03 detector; TestAC09 closed (non-flag control + hasLength(1)); unit 749, coverage 100% on 28 touched; grade 10xA PASS (AC-9 clean A); fix passes 0/3 |
 | PROJECT-6 | 757cefc4 | 2026-10-11 19:39 EDT | 20:06 | 26m 59s | 26m 59s | claude-opus-4-8 | 246 | 343,087 | 18,994,147 | 93,078 | 19,430,558 | AC-10 PDF studio-sheet export un-pended + green (all 11 ACs default 23/0); printing share seam wired; unit 760, coverage 100% on 29 touched; grade 11xA PASS; fix passes 0/3 |
-| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 20:06** | **22h 53m** | **8h 15m** |  | **3,038** | **4,974,968** | **196,383,711** | **1,108,785** | **202,470,502** |  |
+| SIGNOFF-1 | ff50757f | 2026-10-11 20:09 EDT | 20:21 | 11m 53s | 11m 53s | claude-opus-4-8 | 138 | 316,457 | 8,056,035 | 49,340 | 8,421,970 | sign-off packet + summary page assembled; full verification green (analyze clean · unit 760 · coverage 29/29 · acceptance 109 default + 23 bs-06 run-pending, 0 pending) · fresh full-suite grade 26×A/0; awaiting human decision |
+| **Feature total** |  | **2026-10-10 06:10 EDT** | **2026-10-11 20:21** | **23h 05m** | **8h 26m** |  | **3,176** | **5,291,425** | **204,439,746** | **1,158,125** | **210,892,472** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | — | ⬜ Not yet reached |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `6ab1440` | 26×A / 0 below A | ⏸ Awaiting owner decision (prepared 2026-10-11) |
