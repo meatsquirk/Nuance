@@ -1,6 +1,6 @@
 # Module DISPLAY — cross-cutting display pipeline (simulation + grayscale)
 
-**Status:** In progress — DISPLAY-2 done, next SETTINGS-1 (shell; the simulation/grayscale behaviour phases DISPLAY-3..8 wait on G-2)
+**Status:** In progress — DISPLAY-3 done (AC-2 un-pended, identity render path live), next DISPLAY-4 (AC-3, alongside pair); DISPLAY-7 (AC-6) is independent and startable in parallel
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/display_settings.dart`, `lib/display/display_controller.dart`, `lib/display/display_scope.dart`, `lib/display/display_read_endpoint.dart`, `lib/display/color_simulation.dart` (thin reuse of `projectDichromat`), `lib/display/grayscale_filter.dart`; integration points in `lib/widgets/color_chip.dart` and `lib/app/build_app.dart` (root grayscale wrapper + `DisplayScope` wiring). Unit tests under `test/display/`.
 **Depends on:** — · **Blocks:** SETTINGS (needs `DisplayController`), ITEST (needs the read endpoint + rendering), SPEECH (scaffold only)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | DISPLAY-1 | scaffold | — | ✅ Done | 4,979,118 | 14m 13s (15m 17s) |
 | DISPLAY-2 | shell | — | ✅ Done | 8,485,201 | 15m 04s (15m 04s) |
-| DISPLAY-3 | behavior | AC-2 | ⬜ Todo | | |
+| DISPLAY-3 | behavior | AC-2 | ✅ Done | 10,542,090 | 20m 03s (20m 03s) |
 | DISPLAY-4 | behavior | AC-3 | ⬜ Todo | | |
 | DISPLAY-5 | behavior | AC-4 | ⬜ Todo | | |
 | DISPLAY-6 | behavior | AC-5 | ⬜ Todo | | |
@@ -28,7 +28,7 @@
 ## Open gates
 
 - **G-1** (spec approval) — ✅ Resolved 2026-10-11: spec approved; Draft banner replaced with approval line — Matt Quirk. Unblocked DISPLAY-1.
-- **G-2** (acceptance tests approved) blocks DISPLAY-3..8 (all behavior). Open.
+- **G-2** (acceptance tests approved) — ✅ Resolved 2026-10-12: acceptance tests approved (ITEST-4 test review) — Matt Quirk. Unblocked DISPLAY-3..8 (all behavior).
 
 ## Phase DISPLAY-1 — scaffold
 
@@ -96,6 +96,22 @@
 - **Tasks:** establish the display-transform path through `ColorChip`: when `simulationType == null`, the displayed colour is the original (explicit identity, one swatch). This is the chokepoint DISPLAY-4 extends.
 - **Exit criteria:** unit gate; existing suites green.
 - **Acceptance gate:** un-pend AC-2; `display_test.dart` green (`TestAC02_SimOffTrichromat`).
+
+### Result — DISPLAY-3 (2026-10-12)
+
+- **Landed (AC-2, identity path live):** the Readout now renders the sample's **true colour** as one chromatic `ColorChip` swatch, routed through `simulateColor` (the D-4 chokepoint). With simulation off this maps the colour unchanged — "the colour as a trichromat sees it". `lib/readout/readout_controller.dart` gains `SRGBColor get displayColor => colorScience.toSRGB(_sample.coordinates)` (mirrors `grayscale`); `lib/readout/value_region.dart` renders `ColorChip(label: 'Displayed colour', color: …displayColor)`. `simulateColor` stays the identity (`=> original`) — doc updated to mark it live for AC-2; **no new branch** (DISPLAY-4 adds the `simulationType != null` projection branch, keeping coverage clean). `color_chip.dart` unchanged (its scope-read swatch, from DISPLAY-2, was already correct).
+- **File-ownership note (drift):** the plan listed this phase's files as `color_simulation.dart` + `color_chip.dart`, but those seams were already complete from the DISPLAY-2 shell; AC-2 could not pass until a chromatic `ColorChip` was actually placed on the live render path, which no screen did (the Readout showed only the *neutral* lightness rectangle, never the true colour). The real deliverable was wiring the chokepoint into the Readout: touched `readout/value_region.dart` + `readout/readout_controller.dart` (+ a doc-only touch of `color_simulation.dart`); `color_chip.dart` not changed. The swatch label is deliberately generic (`'Displayed colour'`) so it never duplicates the colour name (which `name_header` owns and `readout_screen_test` asserts appears exactly once).
+- **Verification:** `flutter analyze` clean; `flutter test --coverage` = **916 unit pass** (2 new: controller `displayColor`, value-region single-chromatic-swatch); coverage gate **100% on all 13 touched bs-08 lib files** (PASS). Acceptance (device `5AB9D06D…`, under the verify lock): default `display_test.dart` **green — AC-2 executes and passes**, the other nine ACs skipped/pending (12 pass / 9 skip). Fix passes: **0/3** (green on first full run).
+- **Grade gate:** fresh independent grader (did not write the tests) re-graded the un-pended AC-2 test and the modified scaffold guard against G1–G6 → **2 A / 0 below A**; AC-2's prior design-grade A upheld now the render realises it; sanity check confirmed the still-pending AC-3..AC-7 remain red-at-baseline on their own Thens (adding the identity swatch breaks none of them). Grid: `behavior-test-completeness-bs-08-display-simulation-and-spoken-output.md` § *Phase graded: DISPLAY-3*.
+- **Augmentations:** none assigned to DISPLAY-3. Noted for DISPLAY-8: a swatch is now rendered pre-DISPLAY-4, so the AC-7 augmentation has a swatch to assert against earlier than planned.
+- **Tokens / Time:** see dashboard row (ledger `DISPLAY-3`).
+
+### Checkpoint / Handoff — DISPLAY-3
+
+- **Frozen for DISPLAY-4:** the render chokepoint is live — the Readout's `ValueRegion` shows the true colour via one `ColorChip` reading `DisplayScope` → `simulateColor`. DISPLAY-4 extends `simulateColor` to project via `projectDichromat` when `simulationType != null` (scaled by severity) **and** makes `ColorChip` render the simulated swatch **alongside** the untouched original (two circular swatches) so AC-3's `swatches.length >= 2` + `any(≈ reference)` + `any(≈ original)` all hold. `_displaySwatches` reads exactly these `ColorChip` circles (the grayscale preview is a rectangle).
+- **Interfaces:** `ReadoutController.displayColor` (sRGB of the sample, live); `ColorChip(label, color)` maps `color` through `simulateColor(color, DisplayScope.settings)`; `simulateColor(Color, DisplaySettings)` is the single body the simulation phases change.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (default; pending skipped) / add `--dart-define=BS08_RUN_PENDING=true` (run-pending). Toolchain: `/Users/matthew.quirk/development/flutter/bin` on PATH. Device lane shared/contended → `coord.sh with-lock` (`FNP_COORD_REPO=/Users/matthew.quirk/Nuance`).
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
 
 ## Phase DISPLAY-4 — AC-3 simulate a chosen type alongside the original
 

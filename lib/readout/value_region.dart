@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/color_chip.dart';
 import '../widgets/value_reading.dart';
 import 'readout_controller.dart';
 
 /// The value region: the prominent lightness reading, its grayscale preview and
-/// the Munsell value beside it (AC-1, AC-2).
+/// the Munsell value beside it (AC-1, AC-2), plus the sample's displayed colour.
 ///
 /// Lightness is rendered as the largest reading on the screen through
 /// [prominentFontSize] (AC-1); the grayscale preview is the sample's own
 /// lightness shown as a neutral; the Munsell value sits beside the number; and
 /// the plain-language value word is paired with the figure by [ValueReading]
 /// so the number never stands alone (AC-2).
+///
+/// The sample's true colour is shown as a chromatic swatch through the shared
+/// [ColorChip] — the one display-simulation chokepoint (bs-08 D-4). With
+/// simulation off it is the colour "as a trichromat sees it", unchanged (bs-08
+/// AC-2, the identity path DISPLAY-4 extends to the simulated-alongside pair).
+/// The swatch never stands alone: [ColorChip] requires a text label.
 class ValueRegion extends StatelessWidget {
   const ValueRegion({required this.controller, super.key});
 
@@ -33,6 +40,7 @@ class ValueRegion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final grayscale = controller.grayscale;
+    final color = controller.displayColor;
     return Padding(
       key: regionKey,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -73,6 +81,16 @@ class ValueRegion extends StatelessWidget {
                 const SizedBox(height: 4),
                 // The Munsell value beside the lightness (AC-1).
                 Text('Munsell value ${_formatMunsellValue(controller.munsell.value)}'),
+                const SizedBox(height: 4),
+                // The sample's true displayed colour, routed through the shared
+                // ColorChip (the bs-08 simulation chokepoint). Simulation off =
+                // the colour a trichromat sees, unchanged (AC-2). The label is
+                // generic so it never repeats the colour name shown in the
+                // header — the swatch is decorative; its meaning is in the text.
+                ColorChip(
+                  label: 'Displayed colour',
+                  color: Color.fromARGB(255, color.red, color.green, color.blue),
+                ),
               ],
             ),
           ),

@@ -108,6 +108,16 @@ class ReadoutController extends ChangeNotifier {
   /// accompanies the value reading (AC-1).
   SRGBColor get grayscale => colorScience.grayscaleOf(_sample.coordinates);
 
+  /// The sample's true displayed colour (sRGB) — the chromatic swatch the
+  /// Readout shows "as a trichromat sees it" (bs-08 AC-2).
+  ///
+  /// Derived live from the sample's coordinates, mirroring [grayscale], so it
+  /// tracks [load]. The value region renders it through the shared `ColorChip`,
+  /// the one display-simulation chokepoint (bs-08 D-4): with simulation off it
+  /// shows this colour unchanged (the identity path), and DISPLAY-4 projects it
+  /// for a chosen CVD type alongside the original.
+  SRGBColor get displayColor => colorScience.toSRGB(_sample.coordinates);
+
   /// The selected colour space's values, formatted for display (AC-5).
   ///
   /// The selector shows only this space's reading; selecting another space

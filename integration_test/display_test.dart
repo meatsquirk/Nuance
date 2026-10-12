@@ -36,8 +36,16 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('bs-08 pending gate (scaffold guard)', () {
-    test('pending map covers exactly AC-1..AC-10', () {
-      final expected = {for (var i = 1; i <= 10; i++) 'AC-$i'};
+    test('pending map is exactly the still-pending ACs (shrinks as they land)',
+        () {
+      // Seeded with AC-1..AC-10 (DISPLAY-1); each behaviour phase deletes its
+      // AC's row in `bs08/pending.dart` as it un-pends it, so this set shrinks
+      // by one per delivered AC. Un-pended so far: AC-2 (DISPLAY-3, simulation
+      // off = trichromat). The remaining nine are asserted exactly (non-vacuous).
+      final expected = {
+        for (var i = 1; i <= 10; i++)
+          if (i != 2) 'AC-$i',
+      };
       expect(pendingACs.keys.toSet(), expected);
     });
 
