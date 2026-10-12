@@ -46,7 +46,7 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   'AC-1': 'SETTINGS-2', // open display & simulation settings from any screen
   // AC-2 un-pended by DISPLAY-3 (simulation off = trichromat, identity path).
-  'AC-3': 'DISPLAY-4', // simulate chosen type alongside the original
+  // AC-3 un-pended by DISPLAY-4 (simulate chosen type alongside the original).
   'AC-4': 'DISPLAY-5', // severity slider sets simulation strength
   'AC-5': 'DISPLAY-6', // grayscale clears an active simulation
   'AC-6': 'DISPLAY-7', // value-only grayscale greys the whole app

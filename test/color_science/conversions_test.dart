@@ -31,6 +31,37 @@ void main() {
     });
   });
 
+  group('srgbToLab', () {
+    test('sRGB white → CIELAB lightness 100, neutral a/b', () {
+      final lab = srgbToLab(const SRGBColor(red: 255, green: 255, blue: 255));
+      expect(lab.lightness, closeTo(100, 0.5));
+      expect(lab.a, closeTo(0, 0.5));
+      expect(lab.b, closeTo(0, 0.5));
+    });
+
+    test('sRGB black → CIELAB origin', () {
+      final lab = srgbToLab(const SRGBColor(red: 0, green: 0, blue: 0));
+      expect(lab.lightness, closeTo(0, 0.5));
+      expect(lab.a, closeTo(0, 0.5));
+      expect(lab.b, closeTo(0, 0.5));
+    });
+
+    test('is the inverse of labToSrgb on the 8-bit grid (round-trips)', () {
+      // A rendered swatch is sRGB; srgbToLab→labToSrgb must return the same
+      // 8-bit triplet, so the display simulation projects the colour the
+      // readout actually shows (AC-3).
+      const srgb = SRGBColor(red: 191, green: 91, blue: 58); // terracotta
+      final roundTripped = labToSrgb(srgbToLab(srgb));
+      expect(roundTripped, srgb);
+    });
+
+    test('a warm red-orange keeps a positive a* (red) and b* (yellow)', () {
+      final lab = srgbToLab(const SRGBColor(red: 191, green: 91, blue: 58));
+      expect(lab.a, greaterThan(0));
+      expect(lab.b, greaterThan(0));
+    });
+  });
+
   group('labToHex', () {
     test('white → #ffffff, black → #000000', () {
       expect(labToHex(const ColorCoordinates(lightness: 100, a: 0, b: 0)),

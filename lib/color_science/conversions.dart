@@ -87,6 +87,24 @@ SRGBColor labToSrgb(ColorCoordinates lab) {
   return SRGBColor(red: rgb.red, green: rgb.green, blue: rgb.blue);
 }
 
+/// The canonical CIELAB coordinates of an 8-bit sRGB [colour] — the inverse of
+/// [labToSrgb], through the same `color_models` library (SI D4: no hand-rolled
+/// colour maths).
+///
+/// The bs-08 display simulation receives a rendered sRGB swatch and must project
+/// it in CIELAB (`projectDichromat`), so it reverses the readout's own
+/// [labToSrgb]; the pair round-trips to the sRGB 8-bit grid [labToSrgb] already
+/// quantises to, so the simulated colour matches the reference projection of the
+/// sample's CIELAB within the acceptance tolerance (AC-3).
+ColorCoordinates srgbToLab(SRGBColor colour) {
+  final lab = RgbColor(colour.red, colour.green, colour.blue).toLabColor();
+  return ColorCoordinates(
+    lightness: lab.lightness.toDouble(),
+    a: lab.chromaticityA.toDouble(),
+    b: lab.chromaticityB.toDouble(),
+  );
+}
+
 /// The sample as a lowercase `#rrggbb` hex string.
 String labToHex(ColorCoordinates lab) {
   final rgb = labToSrgb(lab);

@@ -14,10 +14,15 @@ import '../display/display_settings.dart';
 ///
 /// The displayed swatch colour is routed through the app's display settings
 /// (bs-08): [ColorChip] reads the nearest `DisplayScope` and maps [color]
-/// through [simulateColor] so a CVD simulation (DISPLAY-3/4) transforms every
-/// swatch from this one chokepoint (D-4). In the shell that mapping is identity,
-/// and with no scope above it (standalone use) the chip falls back to the
-/// default view — either way the swatch renders exactly as its true [color].
+/// through [simulateColor] so a CVD simulation transforms every swatch from this
+/// one chokepoint (D-4). With simulation off (or no scope above it, standalone
+/// use) that mapping is the identity, so a single swatch renders exactly as its
+/// true [color] — "the colour a trichromat sees" (AC-2).
+///
+/// With a simulation **on**, the chip shows the simulated swatch *alongside* the
+/// untouched original (two swatches), so the painter sees both how the colour
+/// appears to them and its true colour side by side (AC-3). The label still
+/// carries all the meaning; the swatches stay decorative.
 class ColorChip extends StatelessWidget {
   const ColorChip({required this.label, this.color, super.key})
       : assert(
@@ -36,14 +41,20 @@ class ColorChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings =
         DisplayScope.maybeOf(context)?.settings ?? const DisplaySettings();
-    final swatch = color == null ? null : simulateColor(color!, settings);
+    // The swatch(es) to draw: the displayed colour (the simulation of [color],
+    // which is [color] itself when simulation is off — AC-2), and, when a
+    // simulation is on, the untouched original shown alongside it (AC-3).
+    final swatches = <Color>[
+      if (color != null) simulateColor(color!, settings),
+      if (color != null && settings.simulationOn) color!,
+    ];
     return Semantics(
       label: label,
       excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (swatch != null)
+          for (final swatch in swatches)
             Container(
               width: 16,
               height: 16,

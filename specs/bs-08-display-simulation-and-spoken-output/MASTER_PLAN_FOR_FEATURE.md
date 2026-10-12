@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** In progress — behavior stage, 1/10 ACs done (AC-2 via DISPLAY-3); startable now DISPLAY-4 ∥ SETTINGS-2 ∥ DISPLAY-7 ∥ SPEECH-2
+**Status:** In progress — behavior stage, 2/10 ACs done (AC-2 via DISPLAY-3, AC-3 via DISPLAY-4); startable now DISPLAY-5 ∥ DISPLAY-6 ∥ DISPLAY-7 ∥ DISPLAY-8 ∥ SETTINGS-2 ∥ SPEECH-2
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -36,7 +36,7 @@
 |---|---|---|---|---|
 | AC-1 | The painter opens the display and simulation settings | ITEST-2 `TestAC01_OpenDisplaySettings` | SETTINGS-2 | ⬜ Todo |
 | AC-2 | With simulation off, displayed colour is shown as a trichromat sees it | ITEST-2 `TestAC02_SimOffTrichromat` | DISPLAY-3 | ✅ Done |
-| AC-3 | The painter simulates a chosen deficiency type alongside the original | ITEST-2 `TestAC03_SimulateTypeAlongsideOriginal` | DISPLAY-4 | ⬜ Todo |
+| AC-3 | The painter simulates a chosen deficiency type alongside the original | ITEST-2 `TestAC03_SimulateTypeAlongsideOriginal` | DISPLAY-4 | ✅ Done |
 | AC-4 | The painter sets the simulation strength with the severity slider | ITEST-2 `TestAC04_SeveritySlider` | DISPLAY-5 | ⬜ Todo |
 | AC-5 | Turning on grayscale clears an active simulation | ITEST-2 `TestAC05_GrayscaleClearsSimulation` | DISPLAY-6 | ⬜ Todo |
 | AC-6 | The value-only view greys the camera and the palettes as well as the readings | ITEST-2 `TestAC06_GrayscaleWholeApp` | DISPLAY-7 | ⬜ Todo |
@@ -104,7 +104,7 @@ Augmentations (confirmed by ITEST-2): **AC-7** is green-at-baseline and *limited
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2, DISPLAY-3 ✅) |
+| DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2, DISPLAY-3, DISPLAY-4 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | 🔄 In progress (SETTINGS-1 ✅) |
 | SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1..4 ✅; G-2 approved 2026-10-12) |
@@ -156,8 +156,8 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 7 | ITEST-3 | acceptance-tests: AC-8,9,10 (speech, pending) + red baseline | ✅ Done | 6,704,225 | 18m 11s | AC-8/9/10 all green-at-baseline (SPEECH-1 wired repeat + shared seam); grades 3 A; +16 -5 run-pending; fix 0/3 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,393,384 | 3m 12s | packet assembled in modules/ITEST.md; **G-2 approved 2026-10-12 — Matt Quirk** (10 AC tests, 24 A + 1 B-pending-DISPLAY-8); acceptance stage complete; no code ran |
 | 9 | DISPLAY-3 | AC-2 simulation off = trichromat (identity path) | ✅ Done | 10,542,090 | 20m 03s (20m 03s) | AC-2 un-pended + green; true-colour ColorChip wired onto the Readout render path (identity); grade 2 A/0 below; fix 0/3 |
-| 10 | DISPLAY-4 | AC-3 simulate chosen type alongside original (protan/deutan/tritan) | ⬜ Todo | | | barrier for AC-4/5/7 |
-| 11 | DISPLAY-5 | AC-4 severity slider strength | ⬜ Todo | | | after DISPLAY-4 |
+| 10 | DISPLAY-4 | AC-3 simulate chosen type alongside original (protan/deutan/tritan) | ✅ Done | 12,709,944 | 23m 20s (23m 20s) | AC-3 un-pended + green; simulateColor projects via projectDichromat, ColorChip renders simulated-alongside-original; grade 2 A/0 below; fix 1/3 |
+| 11 | DISPLAY-5 | AC-4 severity slider strength | ⬜ Next | | | after DISPLAY-4 |
 | 12 | DISPLAY-6 | AC-5 grayscale clears simulation (mutual exclusion) | ⬜ Todo | | | after DISPLAY-4 |
 | 13 | DISPLAY-7 | AC-6 grayscale greys whole app (camera + palettes + readings) | ⬜ Todo | | | ∥ simulation chain |
 | 14 | DISPLAY-8 | AC-7 reading keeps numeric value + label under simulation | ⬜ Todo | | | after DISPLAY-4 |
@@ -171,17 +171,19 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 
 ## Next phase
 
-**Behaviour stage, 1/10 ACs done.** DISPLAY-3 landed AC-2 (simulation-off identity): the Readout now shows the sample's true colour through the one `ColorChip`/`simulateColor` chokepoint. One phase per session; each un-pends its AC test, keeps the suite green, makes its augmentations, passes unit + coverage + acceptance + grade.
+**Behaviour stage, 2/10 ACs done.** DISPLAY-4 landed AC-3: `simulateColor` now projects through the shipped `projectDichromat` (via `srgbToLab`→project→`labToSrgb`), and `ColorChip` renders the simulated swatch **alongside** the untouched original when simulation is on (one identity swatch when off, so AC-2 holds). The simulation chain's barrier is cleared. One phase per session; each un-pends its AC test, keeps the suite green, makes its augmentations, passes unit + coverage + acceptance + grade.
 
 **Startable now** (separate sessions; disjoint file ownership — safe to run concurrently):
-- **DISPLAY-4** — AC-3 simulate a chosen type **alongside** the original; extends `simulateColor` (projection via `projectDichromat`) + makes `ColorChip` render the simulated swatch beside the untouched original. Barrier for AC-4/AC-5/AC-7. (Owns `color_simulation.dart` + `color_chip.dart`; also the Readout swatch render.)
-- **SETTINGS-2** — AC-1 open settings → the three controls (SETTINGS files; independent).
+- **DISPLAY-5** — AC-4 severity slider sets simulation strength; drive the E48 slider → `setSimulationSeverity`, assert the rendered swatch tracks it (`simulateColor` already reads severity — no projection change). (`display_controller.dart`; the AC-4 test is written vs `referenceProjectDichromat(..., severity: 0.60)`.)
+- **DISPLAY-6** — AC-5 grayscale clears an active simulation; `setGrayscale(true)` nulls `simulationType` (`display_controller.dart`). ⚠ shares `display_controller.dart` with DISPLAY-5 → run the two in series, not parallel.
 - **DISPLAY-7** — AC-6 root grayscale greys the whole app (`grayscale_filter.dart` + `build_app.dart`; independent).
+- **DISPLAY-8** — AC-7 reading keeps numeric value + label under simulation; owns the AC-7 augmentation (assert the simulated swatch coexists with value+label) → re-grade A. The swatch pair renders now.
+- **SETTINGS-2** — AC-1 open settings → the three controls (SETTINGS files; independent).
 - **SPEECH-2** — AC-8 repeat last spoken output (SPEECH files; head of the speech chain).
 
-**Ordered within each chain** (not yet startable): DISPLAY-4 → {DISPLAY-5, DISPLAY-6, DISPLAY-8}; SPEECH-2 → SPEECH-3 → SPEECH-4. DISPLAY-8 owns the AC-7 augmentation (assert simulated swatch alongside value+label) → re-grade A.
+**Ordered** (not yet startable): speech chain SPEECH-2 → SPEECH-3 → SPEECH-4. In DISPLAY, DISPLAY-5 and DISPLAY-6 both edit `display_controller.dart` — pick one per session.
 
-Suite state: default **12 pass / 9 skipped** (AC-2 now passing). Device lane shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
+Suite state: default **13 pass / 8 skipped** (AC-2 + AC-3 passing). Device lane shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
 
 ## Token usage
 
@@ -202,7 +204,8 @@ Suite state: default **12 pass / 9 skipped** (AC-2 now passing). Device lane sha
 | SIGNOFF-DECISION | feabec25 | 2026-10-12 10:59 EDT | 11:33 | 34m 24s | 3m 00s | claude-opus-4-8 | 40 | 50,293 | 1,335,882 | 11,207 | 1,397,422 | ITEST-4 approved |
 | DISPLAY-3 | 4be223b0 | 2026-10-12 11:42 EDT | 12:02 | 20m 03s | 20m 03s | claude-opus-4-8 | 154 | 261,086 | 10,211,999 | 68,851 | 10,542,090 | AC-2 un-pended + green; identity ColorChip on Readout; coverage 100%; grade 2 A/0 below; fix 0/3 |
 | RECONCILE | 95d457ef | 2026-10-12 12:20 EDT | 12:24 | 3m 58s | 3m 58s | claude-opus-4-8 | 40 | 46,745 | 1,248,595 | 12,943 | 1,308,323 | merged phase/DISPLAY-3 into feat/bs-08 (ff 1112589); applied DISPLAY-3 rollup to master (AC-2 ✅, module+session log+Next); removed phase worktree/branch |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 12:24** | **4h 24m** | **3h 45m** |  | **1,250** | **1,955,203** | **80,848,328** | **647,562** | **83,452,343** |  |
+| DISPLAY-4 | 95d457ef | 2026-10-12 12:20 EDT | 12:43 | 23m 20s | 23m 20s | claude-opus-4-8 | 198 | 266,679 | 12,372,579 | 70,488 | 12,709,944 | AC-3 un-pended + green; simulateColor projects via projectDichromat, ColorChip renders simulated-alongside-original; unit 926/cov 100% (14 files)/acceptance 13 pass 8 skip/grade 2 A; fix 1/3 |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 12:24** | **4h 47m** | **4h 08m** |  | **1,448** | **2,221,882** | **93,220,907** | **718,050** | **96,162,287** |  |
 
 ## Sign-off
 

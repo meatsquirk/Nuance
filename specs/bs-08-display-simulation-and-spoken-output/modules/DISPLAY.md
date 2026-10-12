@@ -1,6 +1,6 @@
 # Module DISPLAY — cross-cutting display pipeline (simulation + grayscale)
 
-**Status:** In progress — DISPLAY-3 done (AC-2 un-pended, identity render path live), next DISPLAY-4 (AC-3, alongside pair); DISPLAY-7 (AC-6) is independent and startable in parallel
+**Status:** In progress — DISPLAY-4 done (AC-3 un-pended, simulated-alongside-original pair live); next DISPLAY-5 (AC-4 severity), DISPLAY-6 (AC-5 clear-on-grayscale), DISPLAY-8 (AC-7) all now unblocked; DISPLAY-7 (AC-6) is independent and startable in parallel
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/display/display_settings.dart`, `lib/display/display_controller.dart`, `lib/display/display_scope.dart`, `lib/display/display_read_endpoint.dart`, `lib/display/color_simulation.dart` (thin reuse of `projectDichromat`), `lib/display/grayscale_filter.dart`; integration points in `lib/widgets/color_chip.dart` and `lib/app/build_app.dart` (root grayscale wrapper + `DisplayScope` wiring). Unit tests under `test/display/`.
 **Depends on:** — · **Blocks:** SETTINGS (needs `DisplayController`), ITEST (needs the read endpoint + rendering), SPEECH (scaffold only)
@@ -12,7 +12,7 @@
 | DISPLAY-1 | scaffold | — | ✅ Done | 4,979,118 | 14m 13s (15m 17s) |
 | DISPLAY-2 | shell | — | ✅ Done | 8,485,201 | 15m 04s (15m 04s) |
 | DISPLAY-3 | behavior | AC-2 | ✅ Done | 10,542,090 | 20m 03s (20m 03s) |
-| DISPLAY-4 | behavior | AC-3 | ⬜ Todo | | |
+| DISPLAY-4 | behavior | AC-3 | ✅ Done | 12,709,944 | 23m 20s (23m 20s) |
 | DISPLAY-5 | behavior | AC-4 | ⬜ Todo | | |
 | DISPLAY-6 | behavior | AC-5 | ⬜ Todo | | |
 | DISPLAY-7 | behavior | AC-6 | ⬜ Todo | | |
@@ -122,6 +122,22 @@
 - **Tasks:** when `simulationType != null`, render the simulated swatch (colour = `projectDichromat(original, CvdProfile(type: simulationType, severity: simulationSeverity))`, D-1) **alongside** the untouched original swatch. Works for all three types.
 - **Exit criteria:** unit gate (100% incl. each type branch); existing suites green.
 - **Acceptance gate:** un-pend AC-3; `display_test.dart` green (`TestAC03_SimulateTypeAlongsideOriginal` over all 3 examples + AC-2).
+
+### Result — DISPLAY-4 (2026-10-12)
+
+- **Landed (AC-3, simulate-alongside-original live):** `simulateColor` now projects when `simulationType != null` — reverses the rendered sRGB swatch to CIELAB (`srgbToLab`, the new inverse of the readout's own `labToSrgb`), projects through the shipped `projectDichromat` at `CvdProfile(type, severity: simulationSeverity)` (D-1, reused unmodified; severity falls out for DISPLAY-5/AC-4), and maps back with `labToSrgb`. With `simulationType == null` it stays the identity (AC-2 unchanged). `ColorChip` now renders **two** circular swatches when `settings.simulationOn` — the simulated colour *and* the untouched original alongside it — and exactly one (the identity) when off, so `_displaySwatches` reads 1 off / 2 on deterministically. Added `srgbToLab` to `color_science/conversions.dart` (via `color_models` `RgbColor.toLabColor()`, SI D4 — no hand-rolled colour maths); round-trips `labToSrgb` on the 8-bit grid.
+- **Files:** `lib/display/color_simulation.dart` (projection branch), `lib/widgets/color_chip.dart` (alongside pair), `lib/color_science/conversions.dart` (`srgbToLab`). Tests: `test/display/color_simulation_test.dart` (rewritten — identity + per-type projection + severity scaling), `test/widgets/color_chip_test.dart` (sim-off one-swatch identity + sim-on two-swatch alongside), `test/color_science/conversions_test.dart` (`srgbToLab` + round-trip). Un-pended AC-3 in `integration_test/bs08/pending.dart`; updated the scaffold-guard `unpended` set to `{AC-2, AC-3}` in `integration_test/display_test.dart`.
+- **Verification:** `flutter analyze` clean; `flutter test --coverage` = **926 unit pass** (+10 vs 916); coverage gate **100% on all 14 touched lib files** (PASS). Acceptance (device `5AB9D06D…`, under the shared-lane lock): default `display_test.dart` **green — AC-2 + AC-3 execute and pass**, the other eight ACs skipped/pending (13 pass / 8 skip). Fix passes: **1/3** (first full run had a tritan control failing — tritan barely shifts a low-blue terracotta at 8-bit; switched the unit fixture to a saturated cyan-blue that all three dichromacies shift; no product change).
+- **Grade gate:** fresh independent grader (did not write the tests) re-graded the un-pended **AC-2 + AC-3** against G1–G6 → **2 A / 0 below A**. Confirmed `_displaySwatches` reads exactly the `ColorChip` circles (grayscale preview is a rectangle; the only other `BoxShape.circle` is the Capture eyedropper on another screen) and that the shipped `projectDichromat` is **never graded against itself** — AC-3 grades the rendered swatch against the harness's independent `referenceProjectDichromat`; only the CVD-neutral `toSRGB`/`labToSrgb` is shared. Grid: `behavior-test-completeness-bs-08-…md` § *Phase graded: DISPLAY-4*.
+- **Augmentations:** none assigned to DISPLAY-4; the behaviour built enables no stronger assertion on an already-green AC (AC-2's sim-off count stays pinned at 1). DISPLAY-8 still owns the AC-7 augmentation (simulated swatch alongside value+label) — a swatch pair now renders under simulation, ready for it.
+- **Tokens / Time:** see dashboard row (ledger `DISPLAY-4`).
+
+### Checkpoint / Handoff — DISPLAY-4
+
+- **Frozen for DISPLAY-5/6/8:** `simulateColor(Color, DisplaySettings)` projects through `projectDichromat` at `settings.simulationSeverity` — **DISPLAY-5 (AC-4)** needs no change to the projection (severity already flows); it only has to drive the E48 slider → `setSimulationSeverity` and assert the rendered swatch tracks it (the AC-4 test is already written against `referenceProjectDichromat(..., severity: 0.60)`). **DISPLAY-6 (AC-5)** adds the clear-on-grayscale rule in `display_controller.dart` (`setGrayscale(true)` nulls `simulationType`) — does not touch `simulateColor`/`ColorChip`. **DISPLAY-8 (AC-7)** augments the AC-7 test to assert the simulated swatch coexists with the value + label; the pair renders now.
+- **Interfaces:** `ColorChip` draws `simulateColor(color, settings)` always, plus the untouched `color` alongside when `settings.simulationOn` (two circles); off → one circle (identity). `srgbToLab(SRGBColor) → ColorCoordinates` is the inverse of `labToSrgb` (shared conversions).
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · `flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (default; pending skipped) / add `--dart-define=BS08_RUN_PENDING=true` (run-pending). Device lane shared/contended → `coord.sh with-lock` (`FNP_COORD_REPO=/Users/matthew.quirk/Nuance`).
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
 
 ## Phase DISPLAY-5 — AC-4 severity slider sets simulation strength
 
