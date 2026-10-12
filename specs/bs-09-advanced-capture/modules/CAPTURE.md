@@ -1,6 +1,6 @@
 # Module CAPTURE — controller: torch, multi-point, send-to-comparison, colour-space stamp
 
-**Status:** In progress — CAPTURE-1 done; next SOURCE-1 (SOURCE module) then CAPTURE-2
+**Status:** In progress — CAPTURE-1 done; SOURCE-1 done (SOURCE module); next CAPTURE-2 (shell)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_controller.dart`, `lib/capture/capture_state.dart`,
 `lib/capture/capture_read_endpoint.dart`, `lib/domain/sample.dart` (new fields),

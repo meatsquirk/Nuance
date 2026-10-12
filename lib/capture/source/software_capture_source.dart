@@ -17,6 +17,20 @@ const int _kGeneratedFrameCount = kStabilityFrameTarget;
 /// and widest sampling discs (up to 21 px radius) fit around the centre.
 const int _kGeneratedFrameSize = 64;
 
+/// Which platform's capture pipeline a [SceneSpec] models (plan D-7).
+///
+/// Two configs (Android / iOS) can carry different pre-normalization raw yet
+/// the same ground truth, so AC-10 can assert the committed sample is
+/// platform-agnostic. The shell only names the knob; SOURCE-4 drives the
+/// platform-specific raw offset through [SceneSpec.rawColorShift].
+enum CapturePlatform {
+  /// The Android (CameraX) pipeline.
+  android,
+
+  /// The iOS (AVFoundation) pipeline.
+  ios,
+}
+
 /// A deterministic description of what a [SoftwareCaptureSource] is looking at.
 ///
 /// Tests (and the non-native default source) build a source from one of these:
@@ -24,7 +38,11 @@ const int _kGeneratedFrameSize = 64;
 /// camera [canLock], whether a reference card is in view, optional per-frame
 /// [noise], and an optional explicit [frames] list to replay. When [frames] is
 /// null the source generates a live feed from [groundTruth] + [noise]
-/// (SOURCE-2).
+/// (SOURCE-2). The remaining knobs ([torchAvailable], [torchColorShift],
+/// [supportsWideGamut], [supportsRaw], [platform], [rawColorShift]) configure
+/// the bs-09 capabilities and default off so the existing bs-02..bs-06 scenes
+/// are unaffected; the behaviour they drive lands in SOURCE-2/3/4 and
+/// CAPTURE-3.
 class SceneSpec {
   const SceneSpec({
     required this.groundTruth,
@@ -33,6 +51,12 @@ class SceneSpec {
     this.referenceCardPresent = false,
     this.noise = 0.0,
     this.frames,
+    this.torchAvailable = false,
+    this.torchColorShift = 0.0,
+    this.supportsWideGamut = false,
+    this.supportsRaw = false,
+    this.platform = CapturePlatform.android,
+    this.rawColorShift = 0.0,
   });
 
   /// The canonical CIELAB colour the scene actually is (ΔE is measured to this).
@@ -57,6 +81,35 @@ class SceneSpec {
   /// An explicit frame list to replay, or null to use a feed generated from
   /// [groundTruth] + [noise] (SOURCE-2).
   final List<Frame>? frames;
+
+  /// Whether this device has a torch to light (AC-1, AC-2). Consumed by the
+  /// torch controls in SOURCE-2 / CAPTURE-3.
+  final bool torchAvailable;
+
+  /// How far lighting the torch biases the reading from [groundTruth] (AC-2):
+  /// the torch's colour temperature shifts the measured colour, which the
+  /// CAPTURE-3 warning is about. Zero leaves the reading unbiased.
+  final double torchColorShift;
+
+  /// Whether this device can capture in a wide gamut (Display P3) (AC-6).
+  /// Surfaced through [SoftwareCaptureSource.supportsWideGamut]; drives the
+  /// colour-space selection in SOURCE-2.
+  final bool supportsWideGamut;
+
+  /// Whether this device can capture in RAW (AC-7). Surfaced through
+  /// [SoftwareCaptureSource.supportsRaw]; drives RAW capture in SOURCE-3.
+  final bool supportsRaw;
+
+  /// Which platform's pipeline this scene models (AC-10). Paired with
+  /// [rawColorShift] so two platforms can carry different pre-normalization raw
+  /// yet normalize to the same ground truth (SOURCE-4).
+  final CapturePlatform platform;
+
+  /// The platform-specific offset applied to the raw reading *before*
+  /// normalization (AC-10): normalization against the card must remove it so
+  /// both platforms land on the identical CIELAB. Zero leaves the raw reading
+  /// at ground truth. Driven in SOURCE-4.
+  final double rawColorShift;
 }
 
 /// The deterministic, non-native [CaptureSource] bs-02 ships, built from a
@@ -158,4 +211,31 @@ class SoftwareCaptureSource implements CaptureSource {
 
   @override
   void lockFocus() => _locks = _locks.copyWith(focus: true);
+
+  bool _torchOn = false;
+
+  @override
+  bool get torchOn => _torchOn;
+
+  @override
+  void turnTorchOn() => _torchOn = true;
+
+  @override
+  void turnTorchOff() => _torchOn = false;
+
+  @override
+  bool get supportsWideGamut => scene.supportsWideGamut;
+
+  @override
+  bool get supportsRaw => scene.supportsRaw;
+
+  // Shell defaults (SOURCE-1): the source reports the processed sRGB pipeline
+  // regardless of capability. SOURCE-2 derives [colorSpace] from
+  // [supportsWideGamut] (with the narrower fallback) and SOURCE-3 switches
+  // [captureMode] to raw on RAW-capable devices.
+  @override
+  CaptureColorSpace get colorSpace => CaptureColorSpace.srgb;
+
+  @override
+  CaptureMode get captureMode => CaptureMode.processed;
 }

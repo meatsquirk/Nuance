@@ -45,6 +45,40 @@ void main() {
       expect(scene.referenceCardPresent, isTrue);
       expect(scene.noise, 1.5);
     });
+
+    test('defaults the bs-09 capability knobs off (no change to bs-02 scenes)',
+        () {
+      const scene = SceneSpec(groundTruth: groundTruth);
+      expect(scene.torchAvailable, isFalse);
+      expect(scene.torchColorShift, 0.0);
+      expect(scene.supportsWideGamut, isFalse);
+      expect(scene.supportsRaw, isFalse);
+      expect(scene.platform, CapturePlatform.android);
+      expect(scene.rawColorShift, 0.0);
+    });
+
+    test('carries overridden bs-09 capability knobs', () {
+      const scene = SceneSpec(
+        groundTruth: groundTruth,
+        torchAvailable: true,
+        torchColorShift: 2.5,
+        supportsWideGamut: true,
+        supportsRaw: true,
+        platform: CapturePlatform.ios,
+        rawColorShift: -1.5,
+      );
+      expect(scene.torchAvailable, isTrue);
+      expect(scene.torchColorShift, 2.5);
+      expect(scene.supportsWideGamut, isTrue);
+      expect(scene.supportsRaw, isTrue);
+      expect(scene.platform, CapturePlatform.ios);
+      expect(scene.rawColorShift, -1.5);
+    });
+  });
+
+  test('CapturePlatform names Android and iOS', () {
+    expect(CapturePlatform.values,
+        [CapturePlatform.android, CapturePlatform.ios]);
   });
 
   group('SoftwareCaptureSource', () {
@@ -144,6 +178,45 @@ void main() {
       expect(imported!.image, same(image));
       expect(imported.pointX, 1);
       expect(imported.pointY, 0);
+    });
+
+    test('torch is off until lit, then tracks on/off (AC-1, AC-2)', () {
+      final source =
+          SoftwareCaptureSource(const SceneSpec(groundTruth: groundTruth));
+      expect(source.torchOn, isFalse);
+
+      source.turnTorchOn();
+      expect(source.torchOn, isTrue);
+
+      source.turnTorchOff();
+      expect(source.torchOn, isFalse);
+    });
+
+    test('surfaces the scene wide-gamut and RAW capabilities (AC-6, AC-7)', () {
+      final plain =
+          SoftwareCaptureSource(const SceneSpec(groundTruth: groundTruth));
+      expect(plain.supportsWideGamut, isFalse);
+      expect(plain.supportsRaw, isFalse);
+
+      final capable = SoftwareCaptureSource(const SceneSpec(
+        groundTruth: groundTruth,
+        supportsWideGamut: true,
+        supportsRaw: true,
+      ));
+      expect(capable.supportsWideGamut, isTrue);
+      expect(capable.supportsRaw, isTrue);
+    });
+
+    test('reports the processed sRGB pipeline by default (SOURCE-1 shell)', () {
+      // Even a wide-gamut / RAW-capable device reports the shell defaults;
+      // SOURCE-2/3 make these reflect the capability.
+      final source = SoftwareCaptureSource(const SceneSpec(
+        groundTruth: groundTruth,
+        supportsWideGamut: true,
+        supportsRaw: true,
+      ));
+      expect(source.colorSpace, CaptureColorSpace.srgb);
+      expect(source.captureMode, CaptureMode.processed);
     });
 
     test('records exposure, white-balance and focus locks', () {

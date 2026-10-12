@@ -69,6 +69,29 @@ class _ControllableSource implements CaptureSource {
 
   @override
   void lockFocus() {}
+
+  bool _torchOn = false;
+
+  @override
+  bool get torchOn => _torchOn;
+
+  @override
+  void turnTorchOn() => _torchOn = true;
+
+  @override
+  void turnTorchOff() => _torchOn = false;
+
+  @override
+  bool get supportsWideGamut => false;
+
+  @override
+  bool get supportsRaw => false;
+
+  @override
+  CaptureColorSpace get colorSpace => CaptureColorSpace.srgb;
+
+  @override
+  CaptureMode get captureMode => CaptureMode.processed;
 }
 
 /// A uniform [size]×[size] frame of one [pixel].

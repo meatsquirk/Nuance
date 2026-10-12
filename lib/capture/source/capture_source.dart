@@ -124,6 +124,47 @@ class ImportedPhoto {
   final int pointY;
 }
 
+/// The colour space a [CaptureSource] is capturing in (SI D2, plan D-2).
+///
+/// A *capture-level* tag, distinct from a single [Frame]'s [FrameColorSpace]
+/// buffer tag: it is the space the source captures in *now* (after any
+/// wide-gamut → sRGB fallback), the value the controller stamps onto the
+/// committed `Sample.colorSpace`.
+///
+/// **SOURCE-1 decision (D-2):** rather than rename `FrameColorSpace`, a separate
+/// `CaptureColorSpace` is introduced and [ofFrame] maps a frame's buffer tag
+/// onto it. The two value sets coincide today (`{srgb, displayP3}`) but model
+/// different things — a frame tag describes one decoded buffer, this describes
+/// the source's current capture state — and `Sample.colorSpace` must not depend
+/// on the frame-buffer enum. `displayP3` is the widest space offered and tags
+/// both wide-gamut and the widest RAW capture; processed-vs-RAW is carried
+/// orthogonally by [CaptureMode].
+enum CaptureColorSpace {
+  /// Standard sRGB — the device default and the narrower fallback (AC-8).
+  srgb,
+
+  /// Display P3 — wide-gamut capture, and the widest space RAW capture uses.
+  displayP3;
+
+  /// The capture-level space corresponding to a frame's buffer [space].
+  ///
+  /// Used from SOURCE-2 on, where the source's [CaptureSource.colorSpace]
+  /// reflects the space its frames were actually captured in.
+  static CaptureColorSpace ofFrame(FrameColorSpace space) => switch (space) {
+        FrameColorSpace.srgb => CaptureColorSpace.srgb,
+        FrameColorSpace.displayP3 => CaptureColorSpace.displayP3,
+      };
+}
+
+/// Whether a [CaptureSource] is delivering processed frames or RAW (AC-7).
+enum CaptureMode {
+  /// The device's processed pipeline (the sRGB/JPEG-style default).
+  processed,
+
+  /// RAW capture, where the device supports it — the widest space, unprocessed.
+  raw,
+}
+
 /// A source of capture frames and the camera controls over them (SI D2).
 ///
 /// Yields a live stream of [Frame]s, exposes exposure / white-balance / focus
@@ -179,4 +220,51 @@ abstract class CaptureSource {
 
   /// Locks auto-focus (AF).
   void lockFocus();
+
+  /// Whether the camera torch (the flash LED held on) is currently lit (AC-1,
+  /// AC-2).
+  ///
+  /// The torch is a capture *illuminant*, distinct from the ambient
+  /// [lighting] assessment: turning it on floods the scene with the LED's light
+  /// so a reading can be taken in the dark. Controller-level concerns — the
+  /// colour-temperature warning string and the `litByTorch` stamp on the
+  /// committed sample — live on the capture state (CAPTURE-3), not here; the
+  /// source holds only the on/off state and the controls below.
+  bool get torchOn;
+
+  /// Lights the torch (AC-1, AC-2). Behaviour lands in SOURCE-2/CAPTURE-3; the
+  /// shell records the state.
+  void turnTorchOn();
+
+  /// Extinguishes the torch (AC-1, AC-2).
+  void turnTorchOff();
+
+  /// Whether the device can capture in a wide gamut (Display P3) rather than
+  /// only sRGB (AC-6).
+  ///
+  /// The source captures in the widest space it offers and falls back to the
+  /// narrower one otherwise (SOURCE-2); this reports the capability, while
+  /// [colorSpace] reports the space actually in use after any fallback.
+  bool get supportsWideGamut;
+
+  /// Whether the device can capture in RAW (AC-7).
+  ///
+  /// When true the source may capture unprocessed frames in the widest space
+  /// ([captureMode] == [CaptureMode.raw]); otherwise it stays on the processed
+  /// pipeline (SOURCE-3).
+  bool get supportsRaw;
+
+  /// The colour space the source is capturing in now, after any wide-gamut →
+  /// sRGB fallback (AC-6, AC-8).
+  ///
+  /// The controller stamps this onto the committed `Sample.colorSpace` so a
+  /// reading records the gamut it was measured in. SOURCE-2 derives it from the
+  /// device's capability; the shell reports the sRGB default.
+  CaptureColorSpace get colorSpace;
+
+  /// Whether the source is delivering processed frames or RAW (AC-7).
+  ///
+  /// The shell reports [CaptureMode.processed]; SOURCE-3 switches RAW-capable
+  /// devices to [CaptureMode.raw].
+  CaptureMode get captureMode;
 }
