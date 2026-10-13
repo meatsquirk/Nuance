@@ -424,8 +424,12 @@ void main() {
         // Given: the store is empty and the pipeline uses the default profile
         // (the fixed pair is confusable under it) — the control for "before save".
         expect(await h.profileCount, 0, reason: 'no profile persisted before save');
+        expect(h.liveProfile, injectedDefault,
+            reason: 'control: the live pipeline is on the injected default');
         expect(check.confusable(fixedPair.a, fixedPair.b, injectedDefault), isTrue,
             reason: 'control: the default profile confuses the fixed pair');
+        expect(check.confusable(fixedPair.a, fixedPair.b, h.liveProfile), isTrue,
+            reason: 'control: the live pipeline confuses the fixed pair');
         // Given (cont.): reach a deutan, moderate result on the result step —
         // report a deutan diagnosis and probe a moderate threshold (the "strong"
         // fixture → severity 0.6, moderate), then assemble + advance (FLOW-5).
@@ -458,6 +462,15 @@ void main() {
         expect(check.confusable(fixedPair.a, fixedPair.b, saved), isFalse,
             reason: 'the saved deutan-moderate profile reconfigures the confusion '
                 'check off the default');
+        // The live pipeline (not just the store) is reconfigured: the live
+        // AppDependencies.cvdProfile now equals the saved profile, so bs-03's
+        // ConfusionCheck on the fixed pair reflects it — rejecting a save that
+        // persists the profile but leaves the pipeline on the default (D-3/D-8).
+        expect(h.liveProfile, saved,
+            reason: 'the live AppDependencies.cvdProfile equals the saved profile');
+        expect(check.confusable(fixedPair.a, fixedPair.b, h.liveProfile), isFalse,
+            reason: 'the live pipeline no longer confuses the fixed pair after '
+                'the save (moved off the default)');
       },
     );
 
@@ -810,9 +823,8 @@ void main() {
       // AC's row here as it un-pends it, so this set shrinks by one per
       // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3), AC-4 (ENGINE-4),
       // AC-5 (ENGINE-5), AC-6/7/8 (FLOW-4), AC-9 (ENGINE-6), AC-11 (ENGINE-7),
-      // AC-10 (FLOW-6), AC-12 (FLOW-7), AC-1 (FLOW-8).
+      // AC-10 (FLOW-6), AC-12 (FLOW-7), AC-1 (FLOW-8), AC-13 (PROFILE-2).
       const expected = <String>{
-        'AC-13',
         'AC-14',
       };
       expect(pendingACs.keys.toSet(), expected);
@@ -867,6 +879,10 @@ void main() {
       expect(pendingACs.containsKey('AC-1'), isFalse);
       expect(pendingSkipReason('AC-1', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
+      // AC-13 (un-pended by PROFILE-2) always runs, in either mode.
+      expect(pendingACs.containsKey('AC-13'), isFalse);
+      expect(pendingSkipReason('AC-13', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-13', forceRunPending: true), isNull);
       // An id absent from the map always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);

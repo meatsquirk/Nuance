@@ -129,7 +129,7 @@
 | AC-10 | `TestAC10_AdjustTypeByHand` | `estimate.type==deutan` (precondition fails at baseline naming FLOW-5) | `whenAdjustType()` (opens control; **no type arg yet**) | `estimate.type==protan` deferred — bare tap can't pick protan among 3 types until FLOW-6 gives a typed driver. | **B pending FLOW-6** |
 | AC-11 | `TestAC11_SeverityBand` | `estimate != null` | drive real slider over 30/60/90 outline rows | product band == independent `referenceBand`; three distinct bands are the control. Rejects constant/inverted/off-by-one mapping. | A |
 | AC-12 | `TestAC12_SelfCalibration` | `estimate != null`; `calibratedSeverity==null` | set slider, read its **actual** value | `calibratedSeverity closeTo(kept/100, 1e-9)`; control sets a different value and tracks it. Rejects discarding the value / keeping a default. | A |
-| AC-13 | `TestAC13_SaveConfiguresPipeline` | store empty; default confuses `fixedPair`; deutan/moderate estimate | `whenSave()` | exactly 1 profile written, shape `{deutan, moderate}`; `confusable(fixedPair, saved)` flips vs default. Reject "leaves pipeline on default" (live dep) deferred to PROFILE-2; sim/dalt out of scope. | **B pending PROFILE-2** |
+| AC-13 | `TestAC13_SaveConfiguresPipeline` | store empty; default confuses `fixedPair`; live `cvdProfile`==default; deutan/moderate estimate | `whenSave()` | exactly 1 profile written, shape `{deutan, moderate}`; `confusable(fixedPair, saved)` flips vs default **and** the live `AppDependencies.cvdProfile`==saved so `confusable(fixedPair, liveProfile)` flips too (rejects a save that leaves the pipeline on the default). sim/dalt out of scope. | A (PROFILE-2 closed the live-dep augmentation) |
 | AC-14 | `TestAC14_ProgressStepOfTotal` | `stepTotal==4`, `progressText=='Step 1 of 4'`; advanced through real controls | confirm three lighting checks, then Continue | `stepIndex==1` + `'Step 2 of 4'`; control advances to `stepIndex==2`/"Step 3 of 4". Rejects an indicator hard-coded to a step or wrong total. | A |
 
 **Red baseline summary** (run-pending, `--dart-define=BS07_RUN_PENDING=true`): default run **10 passed / 14 skipped**; run-pending **+10 / −14** — every one of the 14 AC tests fails **cleanly** (no compile error, panic, or `UnimplementedError`; inert-control taps are no-op `warnIfMissed` only, so execution reaches the assertion). Each fails on its **Then** (AC-3 null prior, AC-4 null type, AC-5 null screening, AC-8 `arrangementSkipped` false, AC-9 null threshold, AC-14 `stepIndex` 0) or on a **Given precondition naming its owning phase** (AC-1/10/11/12/13 → `estimate != null` / FLOW-5; AC-2 control → FLOW-3; AC-6 → `arrangementPool` non-empty / FLOW-4; AC-7 → `arrangedCaps.length>=2` / FLOW-4). No AC test is green-at-baseline. Full table above.
@@ -139,7 +139,7 @@
 | AC test | Limited because | Closed by |
 |---|---|---|
 | TestAC10 | `whenAdjustType` carries no type arg (can't pick protan among 3) | FLOW-6 |
-| TestAC13 | reconfiguration asserted only at saved-value seam, not the live `cvdProfile` | PROFILE-2 |
+| TestAC13 | reconfiguration asserted only at saved-value seam, not the live `cvdProfile` | PROFILE-2 ✅ closed (asserts live `AppDependencies.cvdProfile`==saved + `confusable(fixedPair, liveProfile)` flips) |
 | TestAC13 | behavioural sim/dalt not built | **out of scope** (bs-08 / bs-10 — known gap, no bs-07 phase) |
 | TestAC04 | `whenReportDiagnosis` carries no type arg (no protan control) | ENGINE-4 |
 | TestAC05 | `whenReadPlate` carries no plate-response fixture (B-Y / no-deficiency controls can't be fed) | ENGINE-5 |

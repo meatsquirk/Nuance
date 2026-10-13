@@ -32,6 +32,7 @@ class OnboardingController extends ChangeNotifier {
   OnboardingController({
     this.engine = const ShellAssessmentEngine(),
     this.profileStore,
+    this.onProfileSaved,
     this.steps = defaultOnboardingSteps,
   });
 
@@ -43,6 +44,13 @@ class OnboardingController extends ChangeNotifier {
   /// The store the saved profile is written to (AC-13). Null when no persistence
   /// is wired; PROFILE-2 writes the assessed estimate through it.
   final CvdProfileStore? profileStore;
+
+  /// Called after [save] persists the profile, with the saved [CvdProfile], so
+  /// the app reconfigures the live pipeline (AC-13, D-3). Null when no live
+  /// dependency is wired (a bare controller / unit test); the production host
+  /// wires it to update the live `AppDependencies.cvdProfile` — the single seam
+  /// bs-03's `ConfusionCheck` and the bs-08/bs-10 projection read (D-8).
+  final ValueChanged<CvdProfile>? onProfileSaved;
 
   /// The ordered top-level steps the progress indicator counts (AC-14).
   final List<OnboardingStep> steps;
@@ -274,10 +282,32 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Projects the estimate onto a `CvdProfile` and saves it through
-  /// [profileStore], configuring the pipeline — PROFILE-2 (AC-13).
-  Future<void> save() =>
-      throw UnimplementedError('save is wired in PROFILE-2 (AC-13)');
+  /// Projects the assembled estimate onto a `CvdProfile`, saves it through
+  /// [profileStore] and reconfigures the live pipeline — PROFILE-2 (AC-13).
+  ///
+  /// Projects the result the painter confirmed: the (possibly by-hand overridden,
+  /// FLOW-6) [CvdEstimate.type] and the kept self-calibration
+  /// ([OnboardingState.calibratedSeverity]) — which *is* the profile severity
+  /// (D-6) — falling back to the assembled [CvdEstimate.severity] when the slider
+  /// was never moved. Writes exactly one document through [profileStore] (AC-13's
+  /// "exactly one"), marks the flow [OnboardingState.saved], and hands the saved
+  /// profile to [onProfileSaved] so the live `AppDependencies.cvdProfile` — the
+  /// single seam bs-03's `ConfusionCheck` and the bs-08/bs-10 projection read
+  /// (D-8) — is reconfigured off the default immediately. A no-op before the
+  /// estimate is assembled (no result step yet), guarding a stray call like the
+  /// other result actions.
+  Future<void> save() async {
+    final estimate = _state.estimate;
+    if (estimate == null) return;
+    final profile = CvdProfile(
+      type: estimate.type,
+      severity: _state.calibratedSeverity ?? estimate.severity,
+    );
+    await profileStore?.save(profile);
+    _state = _state.copyWith(saved: true);
+    onProfileSaved?.call(profile);
+    notifyListeners();
+  }
 }
 
 /// The three Tier 0 lighting checks the painter confirms before testing (AC-2).

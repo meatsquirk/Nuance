@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
@@ -20,6 +22,7 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/onboarding/onboarding_read_endpoint.dart';
 import 'package:paint_color_assistant/palette/palette_read_endpoint.dart';
 import 'package:paint_color_assistant/palette/palette_screen.dart';
 import 'package:paint_color_assistant/projects/project.dart';
@@ -724,6 +727,134 @@ void main() {
       // Non-const so the const constructor line is covered.
       // ignore: prefer_const_constructors
       expect(PaletteEntry(), isA<PaletteEntry>());
+    });
+  });
+
+  group('AppDependencies.withCvdProfile (bs-07 AC-13, D-3)', () {
+    test('replaces only the CVD profile, keeping every other service', () {
+      final store = InMemoryPersistentStore();
+      final photos = InMemorySourcePhotoStore();
+      final source = _captureSource();
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        captureSource: source,
+        cvdProfile: const CvdProfile(type: CvdType.deutan),
+        store: store,
+        sourcePhotoStore: photos,
+      );
+
+      const measured = CvdProfile(type: CvdType.protan, severity: 0.6);
+      final next = deps.withCvdProfile(measured);
+
+      // Only the profile changed…
+      expect(next.cvdProfile, measured);
+      // …every other injected service is carried over unchanged.
+      expect(identical(next.colorScience, deps.colorScience), isTrue);
+      expect(identical(next.speech, deps.speech), isTrue);
+      expect(identical(next.haptics, deps.haptics), isTrue);
+      expect(identical(next.captureSource, source), isTrue);
+      expect(identical(next.confusionCheck, deps.confusionCheck), isTrue);
+      expect(identical(next.store, store), isTrue);
+      expect(identical(next.sourcePhotoStore, photos), isTrue);
+    });
+  });
+
+  group('LiveProfileScope (bs-07 AC-13, D-3)', () {
+    testWidgets('of() returns the enclosing scope\'s save callback',
+        (tester) async {
+      void onSaved(CvdProfile _) {}
+      ValueChanged<CvdProfile>? seen;
+      await tester.pumpWidget(
+        LiveProfileScope(
+          onProfileSaved: onSaved,
+          child: Builder(
+            builder: (context) {
+              seen = LiveProfileScope.of(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      expect(seen, same(onSaved));
+    });
+
+    testWidgets('of() returns null when no scope is mounted', (tester) async {
+      ValueChanged<CvdProfile>? seen = (_) {};
+      await tester.pumpWidget(
+        Builder(
+          builder: (context) {
+            seen = LiveProfileScope.of(context);
+            return const SizedBox();
+          },
+        ),
+      );
+      expect(seen, isNull);
+    });
+
+    test('updateShouldNotify tracks the callback identity', () {
+      void a(CvdProfile _) {}
+      void b(CvdProfile _) {}
+      final scopeA = LiveProfileScope(onProfileSaved: a, child: const SizedBox());
+      final scopeB = LiveProfileScope(onProfileSaved: b, child: const SizedBox());
+      final scopeA2 =
+          LiveProfileScope(onProfileSaved: a, child: const SizedBox());
+      expect(scopeA.updateShouldNotify(scopeB), isTrue);
+      expect(scopeA.updateShouldNotify(scopeA2), isFalse);
+    });
+  });
+
+  group('buildApp live profile (bs-07 AC-13, D-3)', () {
+    testWidgets(
+        'a saved assessment reconfigures the live AppDependencies.cvdProfile',
+        (tester) async {
+      final store = InMemoryPersistentStore();
+      const injected = CvdProfile(type: CvdType.deutan); // severity 1.0
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        cvdProfile: injected,
+        store: store,
+      );
+      await tester.pumpWidget(buildApp(deps));
+      await tester.pumpAndSettle();
+
+      CvdProfile live() => tester
+          .widget<AppScope>(find.byType(AppScope))
+          .dependencies
+          .cvdProfile;
+      // Before any save the live profile is the injected default — and the
+      // startup tree still injects the exact deps object (bs-01..06 wiring).
+      expect(live(), injected);
+      final readoutContext = tester.element(find.byType(ReadoutScreen));
+      expect(identical(AppScope.of(readoutContext), deps), isTrue);
+
+      // Reach the self-assessment the production way and drive it to a saved
+      // result through the controller (the UI flow is the acceptance suite's; a
+      // unit test only needs the save to fire the live reconfiguration).
+      final navigator =
+          tester.firstState<NavigatorState>(find.byType(Navigator));
+      unawaited(navigator.push<void>(deps.router.toSelfAssessment()));
+      await tester.pumpAndSettle();
+      final controller = tester
+          .widget<OnboardingReadEndpoint>(
+            find.byKey(OnboardingReadEndpoint.endpointKey),
+          )
+          .controller;
+      controller.reportDiagnosis(CvdType.protan);
+      controller.advanceToResult();
+      await controller.save();
+      await tester.pumpAndSettle();
+
+      // The root re-injected the measured profile on the one seam every CVD
+      // consumer reads — off the default deutan.
+      final saved = await CvdProfileStore(store).load();
+      expect(saved, isNotNull);
+      expect(live(), saved, reason: 'the live cvdProfile equals the saved one');
+      expect(live(), isNot(injected),
+          reason: 'the pipeline moved off the injected default');
     });
   });
 

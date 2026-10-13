@@ -6,6 +6,8 @@ import 'package:paint_color_assistant/onboarding/engine/severity_band.dart';
 import 'package:paint_color_assistant/onboarding/engine/tier_results.dart';
 import 'package:paint_color_assistant/onboarding/onboarding_controller.dart';
 import 'package:paint_color_assistant/onboarding/screens/result_step.dart';
+import 'package:paint_color_assistant/store/cvd_profile_store.dart';
+import 'package:paint_color_assistant/store/persistent_store.dart';
 
 void main() {
   Future<void> pumpResult(WidgetTester tester, OnboardingController c) =>
@@ -253,5 +255,49 @@ void main() {
       expect(choice.onPressed, isNull,
           reason: '${type.name} is inert without an estimate');
     }
+  });
+
+  testWidgets('the save button saves the estimate through the controller '
+      '(AC-13, PROFILE-2)', (tester) async {
+    final store = CvdProfileStore(InMemoryPersistentStore());
+    CvdProfile? propagated;
+    final controller = OnboardingController(
+      engine: const TieredAssessmentEngine(),
+      profileStore: store,
+      onProfileSaved: (p) => propagated = p,
+    );
+    addTearDown(controller.dispose);
+    controller.reportDiagnosis(CvdType.deutan);
+    controller.scoreThreshold(const [
+      ThresholdProbe(contrast: 0.6, detected: false),
+    ]);
+    controller.advanceToResult();
+    await pumpResult(tester, controller);
+
+    // The save control is live on the assembled result.
+    final save = tester.widget<TextButton>(find.byKey(ResultStep.saveKey));
+    expect(save.onPressed, isNotNull);
+
+    await tester.tap(find.byKey(ResultStep.saveKey));
+    await tester.pumpAndSettle();
+
+    // Tapping it writes exactly one profile and reconfigures the live pipeline.
+    expect(await store.count(), 1);
+    final saved = await store.load();
+    expect(saved!.type, CvdType.deutan);
+    expect(controller.state.saved, isTrue);
+    expect(propagated, saved);
+  });
+
+  testWidgets('the save button is inert before an estimate is assembled',
+      (tester) async {
+    final controller = OnboardingController();
+    addTearDown(controller.dispose);
+    await pumpResult(tester, controller);
+
+    expect(
+      tester.widget<TextButton>(find.byKey(ResultStep.saveKey)).onPressed,
+      isNull,
+    );
   });
 }

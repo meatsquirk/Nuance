@@ -198,10 +198,13 @@ class ResultStep extends StatelessWidget {
         ),
         Text('Severity band: ${band.label}', key: bandKey),
         _caveat(),
-        const TextButton(
+        // E43 save (AC-13, PROFILE-2): projects the confirmed estimate onto the
+        // stored profile and reconfigures the live pipeline. Live only on the
+        // assembled result — the placeholder branch keeps it inert.
+        TextButton(
           key: saveKey,
-          onPressed: null,
-          child: Text('Save profile'),
+          onPressed: () => controller.save(),
+          child: const Text('Save profile'),
         ),
       ],
     );

@@ -54,7 +54,7 @@ const Map<String, String> pendingACs = {
   // AC-10 (result: adjust estimated type by hand) un-pended by FLOW-6.
   // AC-11 (severity value → plain-language band) un-pended by ENGINE-7.
   // AC-12 (severity slider doubles as self-calibration) un-pended by FLOW-7.
-  'AC-13': 'PROFILE-2', // save profile configures the pipeline
+  // AC-13 (save profile configures the pipeline) un-pended by PROFILE-2.
   'AC-14': 'FLOW-2', // progress: current step of the total
 };
 

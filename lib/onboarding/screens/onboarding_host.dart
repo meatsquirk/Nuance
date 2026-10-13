@@ -51,9 +51,13 @@ class _OnboardingHostState extends State<OnboardingHost> {
       _profileStore = CvdProfileStore(store);
       // The production flow scores through the real tiered engine (ENGINE-3 on);
       // the controller's own default stays the shell stand-in for bare tests.
+      // The live-pipeline reconfiguration on save (AC-13, D-3) rides the
+      // [LiveProfileScope] mounted by `buildApp`; it is null when the host is
+      // pumped outside the app (the save then only writes the store).
       _controller = OnboardingController(
         engine: const TieredAssessmentEngine(),
         profileStore: _profileStore,
+        onProfileSaved: LiveProfileScope.of(context),
       );
     }
   }

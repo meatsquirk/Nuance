@@ -1,6 +1,6 @@
 # Module PROFILE — persist the one CVD profile + pipeline wiring
 
-**Status:** In progress — PROFILE-1 (shell) ✅ Done; next PROFILE-2 (AC-13, blocked by ITEST-4/FLOW-5/ENGINE-7)
+**Status:** ✅ Done — PROFILE-1 (shell) + PROFILE-2 (AC-13, save configures the pipeline) ✅; module complete
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/store/cvd_profile_store.dart` (profile source over `PersistentStore`), `lib/onboarding/cvd_profile_read_endpoint.dart`; wiring in `lib/app/build_app.dart` (`AppDependencies.cvdProfile` loaded from the store). Reuses `lib/a11y/cvd/cvd_profile.dart` unchanged.
 **Depends on:** ENGINE (estimate → profile projection) · **Blocks:** FLOW-1 (save seam), SIGNOFF
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 7,782,453 | 20m 30s |
-| 2 | behavior | AC-13 | ⬜ Todo | | |
+| 2 | behavior | AC-13 | ✅ Done | 14,408,911 | 22m 50s |
 
 ## Interface reconciliation
 
@@ -68,6 +68,20 @@
 - **Exit criteria + Acceptance gate:** un-pend AC-13; suite green (`TestAC13_*` + all earlier ACs); coverage 100% touched; grade A (writes exactly one profile; pipeline moves off the default — control: before save).
 - **Augments:** confirm AC-13's confusion-check assertion discriminates (it would pass against the pre-save default only by accident — control proves it). No other AC's test touched (G6).
 
-### Result  <!-- filled on completion -->
+### Result — ✅ Done (AC-13)
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:**
+  - `lib/onboarding/onboarding_controller.dart` — `save()` implemented (was a throwing stub): projects the confirmed estimate onto `CvdProfile {type: estimate.type (post FLOW-6 override), severity: calibratedSeverity ?? estimate.severity (D-6)}`, writes it through `profileStore` (one doc), sets `OnboardingState.saved`, and hands the saved profile to a new optional `onProfileSaved` callback. Guards `estimate == null` (no-op before the result step), like the other result actions.
+  - `lib/app/build_app.dart` — the live-pipeline seam (D-3): `buildApp` now returns a stateful `_App` root holding the live `CvdProfile`; a save calls back through the new `LiveProfileScope` (InheritedWidget above the `MaterialApp`) → `_App` re-injects the measured profile on `AppDependencies.cvdProfile` so bs-03's `ConfusionCheck` + the bs-08/bs-10 projection (the single shared seam, D-8) reconfigure immediately. Added `AppDependencies.withCvdProfile` (copy with only the profile replaced). The startup tree still injects the exact deps object until a save (bs-01..06 wiring unchanged — `identical` AppScope test green).
+  - `lib/onboarding/screens/onboarding_host.dart` — wires `onProfileSaved: LiveProfileScope.of(context)` into the controller (null outside `buildApp`, e.g. bare unit tests).
+  - `lib/onboarding/screens/result_step.dart` — the E43 save button is live on the assembled result (`onPressed: () => controller.save()`); the placeholder branch stays inert.
+  - Tests: controller save group (no-op before estimate / one-profile projection + live callback / D-6 calibrated severity / bare no-throw), `withCvdProfile` + `LiveProfileScope` (of found/null, updateShouldNotify) + a `buildApp` live-reconfiguration widget test; a result-step save-tap test + its inert control. Acceptance: un-pended AC-13 (deleted its `pending.dart` row; scaffold-guard set shrunk to `{AC-14}`); added the **live-pipeline augmentation** assertions to `TestAC13` (before: `liveProfile == default`, confusable true; after: `liveProfile == saved`, confusable false) and a harness `liveProfile` accessor; fixed `whenSave` to `ensureVisible` the below-fold control.
+- **Gate:** `flutter analyze` clean · unit **1067 passed** (+10) · coverage gate vs `main` **100% on all touched files** (incl. `build_app.dart`, `onboarding_controller.dart`, `result_step.dart`, `onboarding_host.dart`) · acceptance (sim iPhone 17) default **23 pass / 1 skip** (AC-14 still pending on G-5), run-pending **24 / 0** — AC-13 green, all 14 ACs pass. **Grade A** (discriminating before/after controls; graded vs the independent `referenceBand` + the shipped `DichromatConfusionCheck`; the live-dep augmentation closed). Grid **14 A / 0**. **Fix passes: 1/3** (harness `whenSave` missed the off-screen save button → added `ensureVisible`).
+- **Augmentation closed:** TestAC13 now asserts the live `AppDependencies.cvdProfile`, not just the stored value (the Reject "leaves the pipeline on the default" is covered). Sim/dalt behavioural assertions remain the out-of-scope bs-08/bs-10 known gap (D-8).
+
+### Checkpoint / Handoff
+
+- **Frozen interfaces:** `OnboardingController({..., ValueChanged<CvdProfile>? onProfileSaved})` + `Future<void> save()` (projects estimate → profile, persists one doc, marks `saved`, calls `onProfileSaved`); `AppDependencies.withCvdProfile(CvdProfile)`; `LiveProfileScope({required ValueChanged<CvdProfile> onProfileSaved})` with `of(context)` (nullable); `buildApp` root is the stateful `_App` holding the live profile.
+- **For SIGNOFF-1 (next):** all 14 ACs delivered **except AC-14** (FLOW-2, blocked on **G-5**); 13/14 behaviour ACs green, suite **14 A / 0**. The sign-off packet must record AC-14/FLOW-2 as the one carried-open item (G-5, four-step vs five-tier, routed to the spec author) and the sim/dalt D-8 known gap. No build phase remains besides FLOW-2.
+- **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$PATH:/Users/matthew.quirk/development/flutter/bin"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · acceptance via `coord.sh with-lock bs-07 <PHASE> -- flutter test integration_test/self_assessment_test.dart -d <booted-udid>` (add `--dart-define=BS07_RUN_PENDING=true` for the run-pending pass).
+- **Known gaps:** AC-14 not built (G-5); behavioural sim/dalt owned by bs-08/bs-10 (D-8).

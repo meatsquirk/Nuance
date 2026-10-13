@@ -327,6 +327,36 @@ class AppDependencies {
   /// export only produces `ProjectController.lastExport` bytes (plan D-6, no
   /// disk file, no device popup during a test).
   final PdfShareSink? pdfShareSink;
+
+  /// Returns a copy of these dependencies with only [cvdProfile] replaced
+  /// (bs-07 AC-13, D-3).
+  ///
+  /// The one seam a saved self-assessment changes: [buildApp]'s root re-injects
+  /// the measured profile here so bs-03's `ConfusionCheck` and the bs-08/bs-10
+  /// projection — all reading `AppDependencies.cvdProfile` — reconfigure off the
+  /// default immediately, leaving every other injected service untouched.
+  AppDependencies withCvdProfile(CvdProfile cvdProfile) => AppDependencies(
+        colorScience: colorScience,
+        speech: speech,
+        haptics: haptics,
+        router: router,
+        initialSample: initialSample,
+        captureSource: captureSource,
+        cvdProfile: cvdProfile,
+        confusionCheck: confusionCheck,
+        sampleSource: sampleSource,
+        comparisonEntry: comparisonEntry,
+        mixingEngine: mixingEngine,
+        correctionEngine: correctionEngine,
+        paletteSource: paletteSource,
+        recipesEntry: recipesEntry,
+        correctionEntry: correctionEntry,
+        projectSource: projectSource,
+        paletteEntry: paletteEntry,
+        store: store,
+        sourcePhotoStore: sourcePhotoStore,
+        pdfShareSink: pdfShareSink,
+      );
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -375,25 +405,80 @@ class AppScope extends InheritedWidget {
 /// acceptance harnesses construct the app through this one entry, differing only
 /// in the injected services, the initial sample, the capture source and the
 /// comparison / recipes entries.
-Widget buildApp(AppDependencies deps) {
-  return AppScope(
-    dependencies: deps,
-    child: MaterialApp(
-      title: 'Paint Color Assistant',
-      theme: ThemeData(useMaterial3: true),
-      home: deps.correctionEntry != null
-          ? CorrectionHomeScreen(
-              target: deps.correctionEntry!.target,
-              currentMix: deps.correctionEntry!.currentMix,
-              captureSource: deps.captureSource!,
-              paletteSource: deps.paletteSource,
-              correctionEngine: deps.correctionEngine,
-              mixingEngine: deps.mixingEngine,
-              sampleSource: deps.sampleSource,
-              speech: deps.speech,
-              router: deps.router,
-            )
-          : deps.captureSource != null
+Widget buildApp(AppDependencies deps) => _App(deps: deps);
+
+/// The root widget, holding the live colour-vision profile the app's pipeline
+/// reads so a saved self-assessment can reconfigure it (bs-07 AC-13, D-3).
+///
+/// Seeds the live profile from the injected [AppDependencies.cvdProfile] and
+/// hands [_home] the dependencies unchanged until the painter saves an
+/// assessment; the save calls back through the [LiveProfileScope] mounted above
+/// the [MaterialApp], which re-injects the measured profile on the one seam all
+/// CVD consumers read. Stateful because the live profile outlives any one route
+/// (the onboarding is pushed on top of the running app and popped on save).
+class _App extends StatefulWidget {
+  const _App({required this.deps});
+
+  /// The dependencies injected at assembly; its [AppDependencies.cvdProfile]
+  /// seeds the mutable live profile.
+  final AppDependencies deps;
+
+  @override
+  State<_App> createState() => _AppState();
+}
+
+class _AppState extends State<_App> {
+  /// The live colour-vision profile the pipeline reads (bs-07 AC-13). Seeded
+  /// from the injected profile; a saved assessment replaces it so bs-03's
+  /// confusion check and the bs-08/bs-10 projection reconfigure immediately.
+  late CvdProfile _profile = widget.deps.cvdProfile;
+
+  /// Replaces the live profile with the one a save just wrote (AC-13), rebuilding
+  /// the tree so later-built CVD consumers read the measured profile.
+  void _handleProfileSaved(CvdProfile profile) {
+    setState(() => _profile = profile);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Inject the dependencies unchanged until a save replaces the profile, so the
+    // startup tree still carries the exact injected deps object (bs-01..06
+    // wiring); once the painter saves, re-inject with the measured profile on the
+    // single seam every CVD consumer reads.
+    final deps = _profile == widget.deps.cvdProfile
+        ? widget.deps
+        : widget.deps.withCvdProfile(_profile);
+    return AppScope(
+      dependencies: deps,
+      child: LiveProfileScope(
+        onProfileSaved: _handleProfileSaved,
+        child: MaterialApp(
+          title: 'Paint Color Assistant',
+          theme: ThemeData(useMaterial3: true),
+          home: _home(deps),
+        ),
+      ),
+    );
+  }
+}
+
+/// The screen [buildApp] opens on for [deps] (the entry precedence in the
+/// [buildApp] doc): correction, then capture, comparison, recipes, palette, else
+/// the Readout.
+Widget _home(AppDependencies deps) {
+  return deps.correctionEntry != null
+      ? CorrectionHomeScreen(
+          target: deps.correctionEntry!.target,
+          currentMix: deps.correctionEntry!.currentMix,
+          captureSource: deps.captureSource!,
+          paletteSource: deps.paletteSource,
+          correctionEngine: deps.correctionEngine,
+          mixingEngine: deps.mixingEngine,
+          sampleSource: deps.sampleSource,
+          speech: deps.speech,
+          router: deps.router,
+        )
+      : deps.captureSource != null
           ? const CaptureHomeScreen()
           : deps.comparisonEntry != null
               ? ComparisonHomeScreen(
@@ -414,9 +499,37 @@ Widget buildApp(AppDependencies deps) {
                     )
                   : deps.paletteEntry != null
                       ? const PaletteHomeScreen()
-                      : ReadoutScreen(sample: deps.initialSample),
-    ),
-  );
+                      : ReadoutScreen(sample: deps.initialSample);
+}
+
+/// Exposes the callback the self-assessment calls after saving a profile, so the
+/// app root can reconfigure the live `AppDependencies.cvdProfile` (bs-07 AC-13,
+/// D-3).
+///
+/// Mounted by [buildApp] above the [MaterialApp]; the onboarding host reads it
+/// ([of]) and hands it to its `OnboardingController`. Absent when the host is
+/// pumped outside [buildApp] (bare unit tests) — [of] then returns null and the
+/// save only writes the store.
+class LiveProfileScope extends InheritedWidget {
+  /// Creates the scope exposing [onProfileSaved] to the subtree.
+  const LiveProfileScope({
+    required this.onProfileSaved,
+    required super.child,
+    super.key,
+  });
+
+  /// Called with the saved profile to reconfigure the live pipeline (AC-13).
+  final ValueChanged<CvdProfile> onProfileSaved;
+
+  /// The nearest enclosing scope's callback, or null when none is mounted.
+  static ValueChanged<CvdProfile>? of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<LiveProfileScope>()
+          ?.onProfileSaved;
+
+  @override
+  bool updateShouldNotify(LiveProfileScope oldWidget) =>
+      onProfileSaved != oldWidget.onProfileSaved;
 }
 
 /// The Capture screen the app opens on when a capture source is wired (bs-02).

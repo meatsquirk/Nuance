@@ -17,34 +17,114 @@ void main() {
       expect(controller.state, const OnboardingState());
       expect(controller.engine, isA<ShellAssessmentEngine>());
       expect(controller.profileStore, isNull);
+      expect(controller.onProfileSaved, isNull);
       expect(controller.steps, defaultOnboardingSteps);
       expect(controller.stepTotal, 4);
     });
 
-    test('holds the injected engine, store and steps', () {
+    test('holds the injected engine, store, save callback and steps', () {
       final store = CvdProfileStore(InMemoryPersistentStore());
       const engine = ShellAssessmentEngine();
+      void onSaved(CvdProfile _) {}
       final controller = OnboardingController(
         engine: engine,
         profileStore: store,
+        onProfileSaved: onSaved,
         steps: const [OnboardingStep('Only')],
       );
       addTearDown(controller.dispose);
 
       expect(controller.engine, same(engine));
       expect(controller.profileStore, same(store));
+      expect(controller.onProfileSaved, same(onSaved));
       expect(controller.stepTotal, 1);
     });
   });
 
-  group('OnboardingController actions are deferred to their behaviour phase', () {
-    late OnboardingController controller;
+  group('OnboardingController save (PROFILE-2, AC-13)', () {
+    test('is a no-op before the estimate is assembled (no result step yet)',
+        () async {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      CvdProfile? propagated;
+      final controller = OnboardingController(
+        profileStore: store,
+        onProfileSaved: (p) => propagated = p,
+      );
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
 
-    setUp(() => controller = OnboardingController());
-    tearDown(() => controller.dispose());
+      await controller.save();
 
-    test('save throws (PROFILE-2)', () {
-      expect(controller.save, throwsUnimplementedError);
+      // Nothing written, nothing marked, no live reconfiguration, no notify.
+      expect(controller.state.estimate, isNull);
+      expect(controller.state.saved, isFalse);
+      expect(await store.count(), 0);
+      expect(propagated, isNull);
+      expect(notifications, 0);
+    });
+
+    test(
+        'projects the estimate onto one stored profile, marks saved and '
+        'reconfigures the live pipeline', () async {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      CvdProfile? propagated;
+      final controller = OnboardingController(
+        engine: const TieredAssessmentEngine(),
+        profileStore: store,
+        onProfileSaved: (p) => propagated = p,
+      );
+      addTearDown(controller.dispose);
+      // Reach a deutan, moderate result: a deutan diagnosis + a moderate
+      // threshold, assembled and advanced (FLOW-5).
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.6, detected: false),
+      ]);
+      controller.advanceToResult();
+      final estimate = controller.state.estimate!;
+
+      await controller.save();
+
+      // Exactly one profile is written, projecting the estimate's type/severity.
+      expect(await store.count(), 1);
+      final saved = await store.load();
+      expect(saved, CvdProfile(type: estimate.type, severity: estimate.severity));
+      // The flow is marked saved and the live pipeline is handed the profile.
+      expect(controller.state.saved, isTrue);
+      expect(propagated, saved);
+    });
+
+    test('keeps the painter-calibrated severity as the profile severity (D-6)',
+        () async {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      final controller = OnboardingController(
+        engine: const TieredAssessmentEngine(),
+        profileStore: store,
+      );
+      addTearDown(controller.dispose);
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.advanceToResult();
+      // The painter tunes the slider; the kept calibration becomes the severity.
+      controller.setSeverity(0.42);
+
+      await controller.save();
+
+      final saved = await store.load();
+      expect(saved!.severity, 0.42,
+          reason: 'the kept self-calibration is the stored severity (D-6)');
+    });
+
+    test('with no store or live callback wired still marks saved (no throw)',
+        () async {
+      final controller =
+          OnboardingController(engine: const TieredAssessmentEngine());
+      addTearDown(controller.dispose);
+      controller.advanceToResult();
+
+      await controller.save();
+
+      expect(controller.state.saved, isTrue);
     });
   });
 

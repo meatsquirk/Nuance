@@ -292,6 +292,13 @@ class SelfAssessmentHarness {
   /// The persisted profile, or null when none is saved (AC-13).
   Future<CvdProfile?> get savedProfile => profileStore.load();
 
+  /// The live `AppDependencies.cvdProfile` the confusion pipeline reads — the
+  /// single seam bs-03's `ConfusionCheck` and the bs-08/bs-10 projection share
+  /// (D-8). It is the injected default before a save and the measured profile
+  /// after one (AC-13, the PROFILE-2 live-pipeline reconfiguration).
+  CvdProfile get liveProfile =>
+      tester.widget<AppScope>(find.byType(AppScope)).dependencies.cvdProfile;
+
   /// The progress indicator's text ("Step N of M"; AC-14).
   String get progressText =>
       tester.widget<Text>(find.byKey(ProgressRegion.regionKey)).data!;
@@ -450,8 +457,14 @@ class SelfAssessmentHarness {
   }
 
   /// Saves the profile — E43 on the result step (AC-13; wired PROFILE-2).
+  /// Scrolls the control into view first (it sits below the earlier steps in the
+  /// shell's single scroll view, like the other result-step drivers) — otherwise
+  /// the tap lands off-screen and the save never fires.
   Future<void> whenSave() async {
-    await tester.tap(find.byKey(ResultStep.saveKey));
+    final save = find.byKey(ResultStep.saveKey);
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
     await tester.pumpAndSettle();
   }
 
