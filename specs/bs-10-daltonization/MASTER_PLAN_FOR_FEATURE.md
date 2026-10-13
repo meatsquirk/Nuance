@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** In progress — G-2 ✅ approved (test review); next **DALT-3** (AC-1 keystone). All gates G-1/G-2/G-3/G-4 ✅
+**Status:** In progress — DALT-3 ✅ (AC-1 keystone: real remap shipped at the one chokepoint); next **DALT-4** (AC-5), with **CONTROL-2** (AC-10) startable in parallel. All gates G-1/G-2/G-3/G-4 ✅
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -50,7 +50,7 @@ setting, no daltonization control, and nothing that reads the *saved* profile ex
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | Daltonization remaps displayed colours for the painter's type | ITEST-2 `TestAC01_RemapForType` | DALT-3 | ⬜ Todo |
+| AC-1 | Daltonization remaps displayed colours for the painter's type | ITEST-2 `TestAC01_RemapForType` | DALT-3 | ✅ Done |
 | AC-2 | With daltonization off, colours are shown unremapped | ITEST-2 `TestAC02_OffShowsOriginal` | DALT-6 | ⬜ Todo |
 | AC-3 | A remapped element still shows its label and value | ITEST-2 `TestAC03_LabelAndValueKept` | DALT-9 | ⬜ Todo |
 | AC-4 | A provenance badge stays distinguishable under daltonization | ITEST-2 `TestAC04_ProvenanceBadgeReadable` | DALT-10 | ⬜ Todo |
@@ -128,7 +128,7 @@ AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7.
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-2 done) |
+| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-3 done — AC-1 keystone) |
 | CONTROL | [modules/CONTROL.md](modules/CONTROL.md) | The daltonization settings control (toggle) + the no-saved-profile affordance (AC-10) | DALT (shell), bs-07 | 🔄 In progress (CONTROL-1 done) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 all done; G-2 approved) |
 
@@ -178,8 +178,8 @@ not as flakes.
 | 4 | ITEST-1 | acceptance-tests: harness, fixtures (`referenceDaltonize`, saved/noProfile), pending gate, smoke | ✅ Done | 5.74M | 27m 19s | harness+fixtures+smoke; unit 1239 / integ 212 green on sim; coverage PASS; 0 ACs registered yet |
 | 5 | ITEST-2 | acceptance-tests: AC-1..10 (pending) + red baseline + grades | ✅ Done | 12.25M | 34m 01s | +15/10-pending default green; run-pending red baseline +19/−6 (AC-2/3/4/8 green-at-baseline, AC-1/5/6/7/9/10 fail on Then); grades 6 A / 4 B-pending; harness extended for AC-9 capture+palette |
 | 6 | ITEST-3 | test-review: packet; G-2 | ✅ Done | 1.91M | 4m 02s | packet assembled in `modules/ITEST.md` (10-AC catalogue + red baseline + 6 A/4 B-pending grades + augmentations + grading-coupling note); **G-2 approved 2026-10-13 by Matt Quirk** — un-blocks DALT-3..11 + CONTROL-2 |
-| 7 | DALT-3 | AC-1 keystone: real remap + chokepoint applies it when on | ⬜ Next | | | |
-| 8 | DALT-4 | AC-5 remap uses stored type + severity | ⬜ Todo | | | |
+| 7 | DALT-3 | AC-1 keystone: real remap + chokepoint applies it when on | ✅ Done | 8.76M | 29m 28s | AC-1 un-pended, green protan/deutan/tritan; shipped remap == referenceDaltonize to the 8-bit swatch; `colorNear` 0.094→0.05 + identity-shell smoke updated (both recorded); default +16/~9/0, full integ +213/~9/0, red baseline +23/−2 (only AC-9/AC-10 fail) |
+| 8 | DALT-4 | AC-5 remap uses stored type + severity | ⬜ Next | | | |
 | 9 | DALT-5 | AC-7 distinct from simulation | ⬜ Todo | | | |
 | 10 | DALT-6 | AC-2 off = original (+ control) | ⬜ Todo | | | augments TestAC02 |
 | 11 | DALT-7 | AC-8 stored values unchanged (+ control) | ⬜ Todo | | | augments TestAC08 |
@@ -195,18 +195,22 @@ when the row is marked done.
 
 ## Next phase
 
-**G-2 approved** (2026-10-13, Matt Quirk) — the stage-3 acceptance suite is now the frozen contract and
-behaviour may begin. Next is **DALT-3** (AC-1 keystone: the real daltonization remap + the one `daltonize`
-chokepoint applying it when on). It un-pends `TestAC01_RemapForType` (A), must satisfy the ratified grading
-coupling (shipped `daltonize` shares `referenceDaltonize`'s error-redistribution design within ≈8/channel),
-and is the keystone every other DALT phase asserts against.
+**DALT-3 done** — the real error-redistribution remap ships at the one `daltonize`/`displayedSwatchColor`
+chokepoint (keystone). AC-1 is green for all three types; the shipped remap matches the independent
+`referenceDaltonize` to the 8-bit swatch, so the ratified grading coupling holds.
+
+Next is **DALT-4** (AC-5: the chokepoint drives the remap from the **stored** type **and** severity + the
+stronger-severity control). The run-pending baseline already shows AC-5 passing on the keystone, so DALT-4 is
+mostly un-pending + the control augmentation; it does not change `daltonize`'s body.
 
 Concurrency: **CONTROL-2** (AC-10, no-saved-profile → self-assessment needed) is independently startable — it
-touches `settings_screen.dart`, not the shared display chokepoint. DALT-4..11 are serial behind DALT-3 (they
-share the `ColorChip`/display chokepoint **and** `daltonization_test.dart`). Key gap for CONTROL-2:
+touches `settings_screen.dart`, not the shared chokepoint. DALT-5..11 are serial behind DALT-4 (they share the
+`ColorChip`/display chokepoint **and** `daltonization_test.dart`). Key gap for CONTROL-2:
 `CvdProfileReadEndpoint` has no `hasSavedProfile` and is not yet mounted in the main tree.
 
-Work in worktree `/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`.
+Carried: `colorNear`'s default is now **0.05** (do not loosen); `integration_test/bs10/pending.dart` holds 9
+ACs (AC-1 removed), scaffold guard `unpended = {'AC-1'}`. Work in worktree `/Users/matthew.quirk/Nuance-bs10`
+on `feat/bs-10`; booted sim mandatory; full `integration_test/` run exceeds 120s → background it, don't tail.
 
 ## Token usage
 
@@ -223,7 +227,8 @@ Work in worktree `/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`.
 | ITEST-2 | cff3233c | 2026-10-13 15:53 EDT | 16:27 | 34m 01s | 34m 01s | claude-opus-4-8 | 150 | 332,049 | 11,804,341 | 117,566 | 12,254,106 | acceptance-tests: 10 pending acTestWidgets (AC-1..10) + AC-9 harness capture/palette entries; default +15/10-pending green, run-pending red baseline +19/-6; grades 6 A / 4 B-pending; unit 1239 / coverage 100% touched |
 | ITEST-3 | 3be7cca0 | 2026-10-13 16:32 EDT | 16:36 | 4m 02s | 4m 02s | claude-opus-4-8 | 48 | 67,320 | 1,826,020 | 13,266 | 1,906,654 | test-review: packet assembled; ⏸ G-2 awaiting human decision (blocks DALT-3..11, CONTROL-2) |
 | SIGNOFF-DECISION | 80b4725a | 2026-10-13 17:24 EDT | 18:01 | 36m 59s | 3m 25s | claude-opus-4-8 | 62 | 55,223 | 2,205,838 | 13,672 | 2,274,795 | ITEST-3 approved (G-2) — Matt Quirk; un-blocks DALT-3..11 + CONTROL-2 |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 18:01** | **2h 57m** | **2h 24m** |  | **738** | **1,100,849** | **39,964,483** | **376,534** | **41,442,604** |  |
+| DALT-3 | 0a84d1ba | 2026-10-13 18:03 EDT | 18:33 | 29m 28s | 29m 28s | claude-opus-4-8 | 130 | 153,067 | 8,540,083 | 68,187 | 8,761,467 | AC-1 keystone: real error-redistribution remap at the chokepoint; AC-1 green protan/deutan/tritan (== referenceDaltonize to 8-bit); colorNear 0.094→0.05 + identity-shell smoke updated (recorded); default +16/~9/0, full integ +213/~9/0, red baseline +23/−2 (only AC-9/AC-10 fail); unit 1246/cov 100% 8 files |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 18:33** | **3h 27m** | **2h 53m** |  | **868** | **1,253,916** | **48,504,566** | **444,721** | **50,204,071** |  |
 
 ## Sign-off
 

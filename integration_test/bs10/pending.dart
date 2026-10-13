@@ -59,10 +59,9 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-6 → DALT-11 (profile change recomputes)
 ///   AC-10 → CONTROL-2 (no saved profile → self-assessment needed)
 const Map<String, String> pendingACs = {
-  // AC-1 un-pended by DALT-3 (real error-redistribution remap over
-  // projectDichromat, scaled by severity; the chokepoint renders a
-  // type-specific remap when daltonization is on).
-  'AC-1': 'DALT-3',
+  // AC-1 un-pended by DALT-3 — the real error-redistribution remap over
+  // projectDichromat (scaled by severity; the chokepoint renders a type-specific
+  // remap when daltonization is on) now ships, so AC-1's row is removed here.
   // AC-2 un-pended by DALT-6 (off path explicit: no remap when daltonization
   // false → the stored original is shown).
   'AC-2': 'DALT-6',

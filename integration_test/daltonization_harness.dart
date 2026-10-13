@@ -226,11 +226,20 @@ Color displayColorOf(ColorCoordinates lab) {
 final Color screenSwatchColor = displayColorOf(SCREEN_SAMPLE_LAB);
 
 /// Whether two sRGB colours match within [tol] summed across the three channels
-/// (each 0..1; ≈ 0.094 ≈ 24/255, so ~8 per channel) — loose enough for the
-/// sRGB→CIELAB→sRGB round-trip rounding in `daltonizeColor`, tight enough to
-/// tell the original from a real remap of [screenSample]. The behaviour phases
-/// may tighten it against the shipped render.
-bool colorNear(Color a, Color b, {double tol = 0.094}) =>
+/// (each 0..1; 0.05 ≈ 13/255, ~4 per channel) — loose enough for the
+/// sRGB→CIELAB→sRGB round-trip rounding in `daltonizeColor` (measured 0 for the
+/// screen sample), tight enough to tell the original from a real remap of
+/// [screenSample] for **every** CvdType.
+///
+/// Tightened from the scaffold's 0.094 by DALT-3 (the latitude this doc reserved
+/// for the behaviour phases): the shipped remap — identical to
+/// [referenceDaltonize] to the 8-bit swatch — shifts the sample ≈0.078 under
+/// protan, ≈0.106 under deutan and ≈0.510 under tritan, so the scaffold's 0.094
+/// could not separate the **protan** remap from the original (0.078 < 0.094),
+/// defeating the "it changed" half of AC-1/AC-2's contract. 0.05 sits above the
+/// round-trip rounding and below the smallest real remap, so all three register
+/// as changed while an unremapped swatch still reads as the original.
+bool colorNear(Color a, Color b, {double tol = 0.05}) =>
     (a.r - b.r).abs() + (a.g - b.g).abs() + (a.b - b.b).abs() <= tol;
 
 /// The colours of every circular-decoration display swatch currently rendered.

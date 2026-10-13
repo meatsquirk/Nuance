@@ -74,17 +74,17 @@ void main() {
         () {
       // Seeded with AC-1..AC-10 (DALT-1); each behaviour phase deletes its AC's
       // row in `bs10/pending.dart` as it un-pends it, so this set shrinks by one
-      // per delivered AC. Nothing is un-pended yet (no behaviour phase has run —
-      // every AC is still pending), so the expected set is all ten. As a phase
-      // lands, add its AC to [unpended] here.
-      const unpended = <String>{};
+      // per delivered AC. As a phase lands, add its AC to [unpended] here.
+      // Un-pended so far: AC-1 (DALT-3 keystone).
+      const unpended = <String>{'AC-1'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',
       };
       expect(pendingACs.keys.toSet(), expected);
-      // Not vacuous: the map holds exactly the ten ACs (no stray or missing key).
-      expect(pendingACs, hasLength(10));
+      // Not vacuous: the map holds exactly the still-pending ACs (no stray or
+      // missing key) — ten less the ones un-pended so far.
+      expect(pendingACs, hasLength(10 - unpended.length));
     });
 
     test('every pending AC is owned by a real behaviour phase', () {
@@ -295,19 +295,23 @@ void main() {
       await h.whenCloseSettings();
 
       // The daltonization branch now wins over the still-active simulation
-      // (D-5) and routes through `daltonize`, which is identity in this shell —
-      // so the displayed swatch is the original again, not the projection. This
-      // proves the chokepoint calls `daltonize` (and that daltonization takes
-      // precedence); the *real* remap (a visible change) is DALT-3's pending AC.
+      // (D-5) and routes through the real `daltonize` (DALT-3): the displayed
+      // swatch is the remap, not the simulation projection and not the original.
+      // (Before DALT-3 the shell remap was the identity, so this swatch read as
+      // the original; the real remap now makes it a visible, graded change.)
+      final remap = displayColorOf(
+          referenceDaltonize(SCREEN_SAMPLE_LAB, h.storedProfile));
       expect(h.daltonization, isTrue);
-      expect(colorNear(h.displayedColor(screenSwatchColor), screenSwatchColor),
-          isTrue,
-          reason: 'daltonization routes through daltonize (identity) and wins '
-              'over the simulation');
+      expect(colorNear(h.displayedColor(screenSwatchColor), remap), isTrue,
+          reason: 'daltonization routes through daltonize (the real remap) and '
+              'wins over the simulation');
+      expect(
+          colorNear(h.displayedColor(screenSwatchColor), screenSwatchColor),
+          isFalse,
+          reason: 'the real remap is a visible change, not the original');
       // The rendered Readout swatch agrees with the endpoint's displayed colour.
-      expect(h.displayedSwatches.any((c) => colorNear(c, screenSwatchColor)),
-          isTrue,
-          reason: 'the rendered swatch matches the displayed colour');
+      expect(h.displayedSwatches.any((c) => colorNear(c, remap)), isTrue,
+          reason: 'the rendered swatch matches the displayed remap');
     });
 
     testWidgets('the profile store is reachable: a saved profile persists, an '

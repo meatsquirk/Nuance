@@ -1,6 +1,6 @@
 # Module DALT — daltonization remap engine + display injection
 
-**Status:** In progress — DALT-2 (shell) done; DALT-3 (behavior) is the module's next, blocked by G-2. CONTROL-1 (other module) is the startable phase now.
+**Status:** In progress — DALT-3 (AC-1 keystone) done; the real error-redistribution remap ships at the one chokepoint. DALT-4..11 (serial behind DALT-3) and CONTROL-2 (other module, AC-10) are now startable.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
 additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
@@ -14,8 +14,8 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 |---|---|---|---|---|---|
 | DALT-1 | scaffold | — | ✅ Done | 4.07M | 21m 20s |
 | DALT-2 | shell | — | ✅ Done | 9.32M | 23m 50s |
-| DALT-3 | behavior | AC-1 | ⬜ Next | | |
-| DALT-4 | behavior | AC-5 | ⬜ Todo | | |
+| DALT-3 | behavior | AC-1 | ✅ Done | 8.76M | 29m 28s |
+| DALT-4 | behavior | AC-5 | ⬜ Next | | |
 | DALT-5 | behavior | AC-7 | ⬜ Todo | | |
 | DALT-6 | behavior | AC-2 | ⬜ Todo | | |
 | DALT-7 | behavior | AC-8 | ⬜ Todo | | |
@@ -283,3 +283,72 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
   harness/`daltonization_test.dart` yet (ITEST-1); AC-6 live recompute (DALT-11) relies on `AppScope` rebuilding
   when the live profile changes (bs-07 `withCvdProfile`) — wired, unverified until DALT-11. Carries the D-8
   sim/dalt gap note only as context — out of bs-10 scope (D-5).
+
+### Result — DALT-3  <!-- 2026-10-13 -->
+
+- **Real remap (keystone).** Replaced `daltonize`'s identity body (`lib/a11y/cvd/daltonize.dart`) with the
+  error-redistribution remap (D-2), mirroring the harness's independent `referenceDaltonize`: take the painter's
+  **full** dichromat view (`projectDichromat` at severity 1 — taken at full strength so the lost chroma is the
+  true confusion error, not a pre-scaled one), compute the a*/b* chroma lost to that collapse, rotate it 90°
+  (`(lostA,lostB)→(lostB,−lostA)`) and add it back scaled by `profile.severity`, **preserving lightness**.
+  Identity at severity 0; type-specific via the cone the projection drops. Callers unchanged (the `daltonizeColor`
+  bridge, the `displayedSwatchColor` chokepoint, the read endpoint) — only this body changed, as DALT-2 froze.
+- **Coupling verified exact.** At the AC-1 fixtures (screen sample, severity 0.6) the shipped remap equals
+  `referenceDaltonize` to the **8-bit swatch** (summed sRGB Δ = 0.0000 for protan/deutan/tritan) — the shipped
+  `projectDichromat` and bs-08's independent `referenceProjectDichromat` agree to the displayed byte, so the
+  ratified grading coupling (≈8/channel) holds with margin to spare.
+- **AC-1 un-pended** (deleted its row in `integration_test/bs10/pending.dart`); the scaffold guard's `unpended`
+  set + length updated (`10 − unpended.length`). `TestAC01_RemapForType` green for all three types.
+- **Two frozen-test calibrations, both recorded with reason** (not weakenings):
+  1. **`colorNear` tightened 0.094 → 0.05** in `daltonization_harness.dart` — the latitude that helper's own doc
+     reserved for behaviour phases ("may tighten it against the shipped render"). The real remap shifts the
+     sample ≈0.078 (protan) / 0.106 (deutan) / 0.510 (tritan) summed-sRGB; the scaffold's 0.094 could **not**
+     separate the protan remap from the original (0.078 < 0.094), defeating AC-1's "it changed" half. 0.05 sits
+     above the measured round-trip rounding (0.0) and below the smallest real remap, so all three register as
+     changed while an unremapped swatch still reads as original. Makes the suite **stricter**.
+  2. **Identity-shell smoke test updated** (`daltonization_test.dart`, "chokepoint routes … when on"): it
+     asserted daltonization-on leaves the swatch at the original (true only for the DALT-2 identity stub, as its
+     own comment flagged — "the *real* remap … is DALT-3's pending AC"). Rewritten to assert the swatch is now
+     the real remap (`displayColorOf(referenceDaltonize(_, storedProfile))`), not the original and not the
+     simulation projection — still proving the daltonization branch wins over an active simulation (D-5).
+- **Gates:** `flutter analyze` clean · `flutter test --coverage` **1246 unit pass** (daltonize 13: identity@0,
+  lightness, visible shift, type-specific, severity-monotonic, distinct-from-projection, grey, clamp>1,
+  clamp<0, near-black, bridge shifted/round-trip@0/opaque) · `dart run tool/coverage_gate.dart main` → **100%
+  on all 8 touched files**. Acceptance (booted iPhone 17 `5AB9D06D…`, under `coord.sh with-lock`): default
+  `daltonization_test.dart` → **+16 / ~9 pending / 0 fail** (AC-1 passes, guards + smoke green); full
+  `integration_test/` → **+213 / ~9 / 0** (no regression).
+- **Red baseline (`--dart-define=BS10_RUN_PENDING=true`):** +23 / −2 — AC-1 passes, and the keystone already
+  satisfies AC-2..AC-8 (they ride the one shared chokepoint); only **AC-9** (capture/palette not yet confirmed
+  to reach the chokepoint — Actual `[]`, owned by DALT-8) and **AC-10** (no-profile region still the empty
+  placeholder — owned by CONTROL-2) fail, as designed.
+- Coverage (touched `lib/`): 100% (8 files, vs `main`). Fix passes: 0/3 (every gate green on the first full run;
+  the two calibrations above were made during implementation, before the first acceptance run, not as fixes).
+- Tokens/time: 8.76M · 29m 28s active (1 session).
+- Closed by: unit + coverage + acceptance (AC-1) + grade gates green; full integration suite green.
+
+### Checkpoint / Handoff — DALT-3
+
+- **Frozen for DALT-4..11 / CONTROL-2:**
+  - `daltonize(ColorCoordinates, CvdProfile)` (`lib/a11y/cvd/daltonize.dart`) is the **real** remap now — the
+    keystone every other DALT phase asserts against. Its design: full-strength `projectDichromat` → lost a*/b*
+    chroma → 90° rotation added back × severity, lightness preserved. DALT-4 (AC-5) does **not** change this
+    body — it verifies the chokepoint already drives it from the **stored** type+severity (the run-pending
+    baseline shows AC-5 already green), and adds the stronger-severity control.
+  - `colorNear(..., {tol = 0.05})` in `daltonization_harness.dart` — the tightened display-colour tolerance all
+    bs-10 AC tests use. A later phase may tighten further against the shipped render but should not loosen it.
+  - `integration_test/bs10/pending.dart` now holds **9** ACs (AC-1 removed); the scaffold guard's `unpended`
+    set is `{'AC-1'}`. Each phase deletes its AC's row and adds it to that set.
+- **Verification commands** (Flutter SDK not on default PATH — prepend `/Users/matthew.quirk/development/flutter/bin`):
+  `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` (host). Acceptance on
+  a **booted** sim only (no `-d <udid>` ⇒ zero tests, false green): `flutter test
+  integration_test/daltonization_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685` (run-pending adds
+  `--dart-define=BS10_RUN_PENDING=true`), under `FNP_COORD_REPO=/Users/matthew.quirk/Nuance
+  ~/.claude/skills/feature-next-phase/scripts/coord.sh with-lock bs-10-daltonization <PHASE> --wait 900 -- bash
+  -c 'cd /Users/matthew.quirk/Nuance-bs10 && …'`. macOS has **no** `timeout`; the full `integration_test/` run
+  exceeds the 120s foreground cap — redirect to a file and run in the background, don't tail.
+- **Known gaps:** AC-9 (every-screen reach — capture/palette swatches not yet confirmed through the chokepoint)
+  owned by **DALT-8**; AC-10 (no-saved-profile affordance, reads `CvdProfileReadEndpoint.hasSavedProfile`, not
+  yet mounted) owned by **CONTROL-2**; AC-6 live recompute (DALT-11) relies on `AppScope` rebuilding on a live
+  profile change — wired, unverified until DALT-11. AC-2..AC-8 pass at the keystone but stay **pending** until
+  their phases un-pend them and add their controls/augmentations. Carries the D-8 sim/dalt gap as context only
+  (out of bs-10 scope, D-5).
