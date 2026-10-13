@@ -1,6 +1,6 @@
 # Module SPEECH — repeatable spoken output
 
-**Status:** In progress — SPEECH-1 (shell) + SPEECH-2 (AC-8) + SPEECH-3 (AC-9) done; G-2 resolved; next SPEECH-4 (AC-10)
+**Status:** ✅ Done — SPEECH-1 (shell) + SPEECH-2 (AC-8) + SPEECH-3 (AC-9) + SPEECH-4 (AC-10) all done; G-2 resolved; module complete (feature now at SIGNOFF-1)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/repeatable_speech.dart` (the `RepeatableSpeech` wrapper behind the existing `Speech` seam), `lib/display/spoken_output_panel.dart` (the E50 panel: repeat control + last-spoken display, persistent), wiring in `lib/app/build_app.dart` / `lib/main.dart` (inject `RepeatableSpeech` app-wide). Unit tests under `test/a11y/` and `test/display/`.
 **Depends on:** DISPLAY-1 (scaffold) only — independent of the display state · **Blocks:** ITEST (observes speech), SIGNOFF
@@ -12,7 +12,7 @@
 | SPEECH-1 | shell | — | ✅ Done | 7,712,760 | 18m 46s |
 | SPEECH-2 | behavior | AC-8 | ✅ Done | 7,026,082 | 18m 22s |
 | SPEECH-3 | behavior | AC-9 | ✅ Done | 3,647,171 | 13m 54s |
-| SPEECH-4 | behavior | AC-10 | ⬜ Todo | | |
+| SPEECH-4 | behavior | AC-10 | ✅ Done | 5,337,022 | 15m 20s (15m 20s) |
 
 ## Interface reconciliation
 
@@ -112,4 +112,21 @@
 - **Frozen / unchanged:** no production code changed; the SPEECH-1 interfaces (`RepeatableSpeech(inner)` with `speak`/`repeat`/`lastUtterance`/`canRepeat`; `SpeechScope.of`/`maybeOf`; `SpokenOutputPanel` keys `panelKey`/`repeatKey`/`lastSpokenKey`) stand as-is.
 - **Next — SPEECH-4 (AC-10, panel never auto-dismisses):** also green-at-baseline (the E50 panel is a persistent widget with no timer / no auto-dismiss, D-10 — `panelKey` is present even when inert). Expect another keep-green un-pend: delete the `'AC-10'` row in `bs08/pending.dart` and add `'AC-10'` to the `unpended` set in `display_test.dart` (then the guard expects `pendingACs = {}`). **Re-read `display_test.dart` first** — SPEECH-4 shares this file. AC-10's test (`givenDisplay` → content-free control → `whenSpeakReading` → 60s idle pump + settle → panel + last-spoken text still present and unchanged) is already written and passes under run-pending.
 - **Verification commands:** `flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · device acceptance under the shared lock: `bash <coord.sh> with-lock bs-08 SPEECH-4 --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs08 && export PATH=$HOME/development/flutter/bin:$PATH && flutter test integration_test/display_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'` (+ a `--dart-define=BS08_RUN_PENDING=true` pass). `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`. macOS has no `timeout` — redirect long device runs to a file.
+- **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).
+
+### Result — SPEECH-4 (2026-10-12)
+
+- **Landed (test-only un-pend; no `lib/` change):** AC-10 un-pended — deleted the last pending row `'AC-10': 'SPEECH-4'` in `integration_test/bs08/pending.dart` (the map `pendingACs` is now intentionally **empty `{}`** — all 10 ACs delivered) and added `'AC-10'` to the scaffold-guard `unpended` set in `integration_test/display_test.dart` (now `{AC-1..AC-10}` ⇒ the first guard expects `pendingACs = {}`). **Terminal-state guard fix:** the third scaffold guard previously read `pendingACs.keys.first`, which throws on an empty map; rewrote it to the fully-open end state — `with every AC un-pended, the gate runs each one in both modes` — asserting `pendingACs isEmpty`, that `pendingSkipReason(AC-1..AC-10, forceRunPending: false/true)` is null in both modes, that an unmapped AC runs in both modes, and that the ambient path agrees (mirrors bs-06's final-phase handling). No `lib/` change, no AC test body changed. AC-10 was **green at baseline**: SPEECH-1's E50 `SpokenOutputPanel` is a timerless `StatelessWidget`/`ListenableBuilder` (no `Timer`/`Future.delayed`/dismiss path, D-10), so the panel survives a long idle + settle. Keep-green un-pend.
+- **Augmentation:** none required (no SPEECH-4-owned row). The fresh grader confirmed AC-10's test fully discriminates: the content-free inert-panel control (`panelKey` present, `lastSpokenKey` absent) makes the "still present" Then a real signal (G3/G5); the Given captures the shown reading through the public E50 surface; the `pump(60s)` + `pumpAndSettle()` is a settle point past which a timer-based dismiss would have fired; the Then asserts panel + last-spoken text still present and the text unchanged (G4) — rejecting a timer auto-dismiss, asserting one AC (G6).
+- **Verification:** `flutter analyze` clean ("No issues found!"). `flutter test --coverage` = **931 unit pass**; coverage gate **100% line coverage on all 14 touched lib files — PASS** (no lib touched this phase, the set is unchanged). On-device acceptance (sim `5AB9D06D…`, under `coord.sh with-lock`): default run **21 pass / 0 skipped** (AC-10 now runs & passes; nothing pending) — was 20/1; run-pending run (`--dart-define=BS08_RUN_PENDING=true`) **21 pass / 0 skipped**. Fix passes: **0/3**.
+- **Grade:** fresh independent subagent re-graded all un-pended AC tests (AC-1..AC-10) + the two edited scaffold guards → **12 A / 0 below A** (AC-10 A; AC-1..AC-9 re-confirmed A, unchanged; both edited guards A). Grid appended at `../behavior-test-completeness-bs-08-display-simulation-and-spoken-output.md` (§ *Phase graded: SPEECH-4*).
+- **Tokens / Time:** see dashboard row (ledger `SPEECH-4`).
+
+### Checkpoint / Handoff — SPEECH-4
+
+- **State:** **10/10 ACs done** (AC-1..AC-10). The SPEECH module and the whole behaviour stage are complete; the pending map is empty. Only **SIGNOFF-1** remains (sign-off packet + summary page + the human decision via `--signoff`).
+- **Frozen / unchanged:** no production code changed; the SPEECH-1 interfaces (`RepeatableSpeech(inner)` with `speak`/`repeat`/`lastUtterance`/`canRepeat`; `SpeechScope.of`/`maybeOf`; `SpokenOutputPanel` keys `panelKey`/`repeatKey`/`lastSpokenKey`) stand as-is.
+- **Suite state:** default and run-pending both **21 pass / 0 skipped**; grade grid **12 A / 0 below** across the final suite.
+- **Next — SIGNOFF-1:** assemble the sign-off packet (`signoff/round-1.md`) + summary page and present the human decision. Preconditions met: all 10 ACs ✅, all gates green, no open augmentation, no open gate (G-1/G-2 resolved). A fresh independent full-suite re-grade is part of sign-off.
+- **Verification commands:** as SPEECH-3 (`flutter analyze` · `flutter test --coverage` + `dart run tool/coverage_gate.dart` · device acceptance under the shared lock, default + `--dart-define=BS08_RUN_PENDING=true`). `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`.
 - **Known gap:** none beyond the two standing carried flakes (coverage const-folded line; integration needs `-d`).

@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** In progress — behavior stage, 9/10 ACs done (AC-9 via SPEECH-3; AC-8 via SPEECH-2; AC-1 via SETTINGS-2; AC-2..7 via DISPLAY-3..8); DISPLAY + SETTINGS modules complete; next SPEECH-4 (AC-10 — last behaviour phase)
+**Status:** In progress — behavior stage COMPLETE, **10/10 ACs done** (AC-10 via SPEECH-4; AC-9 via SPEECH-3; AC-8 via SPEECH-2; AC-1 via SETTINGS-2; AC-2..7 via DISPLAY-3..8); all modules (DISPLAY/SETTINGS/SPEECH/ITEST) complete; next **SIGNOFF-1** (sign-off packet + human decision)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -43,7 +43,7 @@
 | AC-7 | A reading under simulation keeps its numeric value and label | ITEST-2 `TestAC07_ReadingKeepsValueAndLabel` | DISPLAY-8 | ✅ Done |
 | AC-8 | The painter repeats the last spoken output | ITEST-3 `TestAC08_RepeatSpokenOutput` | SPEECH-2 | ✅ Done |
 | AC-9 | Readings and comparisons are spoken through one consistent phrasing | ITEST-3 `TestAC09_OneConsistentPhrasing` | SPEECH-3 | ✅ Done |
-| AC-10 | The spoken-output panel stays until the painter leaves it | ITEST-3 `TestAC10_PanelNeverAutoDismisses` | SPEECH-4 | ⬜ Todo |
+| AC-10 | The spoken-output panel stays until the painter leaves it | ITEST-3 `TestAC10_PanelNeverAutoDismisses` | SPEECH-4 | ✅ Done |
 
 10 ACs (AC-3 is a Scenario Outline tested over its 3 examples: protan, deutan, tritan). Every AC → one integration test → exactly one behavior phase.
 
@@ -106,7 +106,7 @@ Augmentations (confirmed by ITEST-2): **AC-7** is green-at-baseline and *limited
 |---|---|---|---|---|
 | DISPLAY | [modules/DISPLAY.md](modules/DISPLAY.md) | Scaffold + the cross-cutting display pipeline: `DisplaySettings`/`DisplayController`/`DisplayScope`/`DisplayReadEndpoint`, the simulation rendering (reusing `projectDichromat`), the sim-off identity, the root value-only grayscale filter, and the mutual exclusion | — | 🔄 In progress (DISPLAY-1, DISPLAY-2, DISPLAY-3, DISPLAY-4, DISPLAY-5, DISPLAY-6, DISPLAY-7, DISPLAY-8 ✅) |
 | SETTINGS | [modules/SETTINGS.md](modules/SETTINGS.md) | The open-from-any-screen entry (E2) + the settings panel (E46 grayscale toggle, E47 simulation selector, E48 severity slider, theme control), bound to the `DisplayController` | DISPLAY | ✅ Done (SETTINGS-1, SETTINGS-2 ✅; AC-1) |
-| SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | 🔄 In progress (SPEECH-1, SPEECH-2 ✅) |
+| SPEECH | [modules/SPEECH.md](modules/SPEECH.md) | Repeatable spoken output (`RepeatableSpeech`: remembers last + `repeat()`), the one-consistent-phrasing verification, and the spoken-output panel (E50) that never auto-dismisses | DISPLAY (scaffold only) | ✅ Done (SPEECH-1, SPEECH-2, SPEECH-3, SPEECH-4 ✅; AC-8/9/10) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1..4 ✅; G-2 approved 2026-10-12) |
 
 ## Dependency graph
@@ -164,21 +164,19 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 15 | SETTINGS-2 | AC-1 open settings from any screen → the three controls shown | ✅ Done | 3,579,655 | 12m 31s (12m 31s) | pure un-pend (no lib change); AC-1 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 18 pass 3 skip, run-pending 21 pass/grade 8 A 0 below; fix 0/3 |
 | 16 | SPEECH-2 | AC-8 repeat last spoken output | ✅ Done | 7,026,082 | 18m 22s (49m 22s) | pure un-pend (no lib change); AC-8 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 19 pass 2 skip, run-pending 21 pass/grade 9 A 0 below; fix 0/3 |
 | 17 | SPEECH-3 | AC-9 reading + comparison one consistent phrasing | ✅ Done | 3,647,171 | 13m 54s (13m 54s) | pure un-pend (no lib change); AC-9 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 20 pass 1 skip, run-pending 21 pass/grade 10 A 0 below; fix 0/3 |
-| 18 | SPEECH-4 | AC-10 spoken-output panel never auto-dismisses | ⬜ Next | | | after SPEECH-3 |
-| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
+| 18 | SPEECH-4 | AC-10 spoken-output panel never auto-dismisses | ✅ Done | 5,337,022 | 15m 20s (15m 20s) | pure test-only un-pend (no lib change); AC-10 un-pended → pending map now empty {}; rewrote terminal scaffold guard off `pendingACs.keys.first`; unit 931/cov 100% (14 files)/acceptance default **21 pass 0 skip**, run-pending 21 pass/grade **12 A 0 below** (AC-1..10 + 2 guards); fix 0/3 |
+| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | behaviour stage complete — all 10 ACs ✅, all gates green, no open gate |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**Behaviour stage, 9/10 ACs done — the DISPLAY and SETTINGS modules are complete; SPEECH-2 + SPEECH-3 landed.** SPEECH-3 un-pended AC-9 (readings and comparisons spoken through one consistent phrasing): a **pure test-only un-pend** — SPEECH-1 had already routed both the comparison speak (E6) and the readout speak (E7 → `AppScope.speech`) through the one shared `RepeatableSpeech`, so AC-9 was green at baseline — deleting its `pending.dart` row and adding it to the scaffold-guard set; no lib change, no augmentation (fresh grader: AC-9's `hasLength(2)` + the one-sink identity Given + the distinct-phrasing control fully discriminate); grade 10 A / 0 below.
+**Behaviour stage COMPLETE — all 10/10 ACs delivered; SPEECH-4 landed AC-10, the last behaviour phase.** SPEECH-4 un-pended AC-10 (the spoken-output panel never auto-dismisses): a **pure test-only un-pend** — SPEECH-1's E50 panel is a timerless `StatelessWidget`/`ListenableBuilder` (no `Timer`/dismiss path, D-10), so AC-10 was green at baseline — deleting its `pending.dart` row (the map `pendingACs` is now empty `{}`) and adding it to the scaffold-guard `unpended` set; it also rewrote the terminal scaffold guard off the now-unsafe `pendingACs.keys.first` into a fully-open "runs each AC in both modes" test (mirrors bs-06's final phase). No lib change, no augmentation; grade **12 A / 0 below** (AC-1..10 + 2 edited guards).
 
-**Only SPEECH-4 remains before sign-off** (last behaviour phase):
-- **SPEECH-4** — AC-10 the spoken-output panel never auto-dismisses (startable now). Green-at-baseline (the E50 panel is persistent, no timer, D-10), so expect another keep-green un-pend: delete the `'AC-10'` row in `bs08/pending.dart` + add `'AC-10'` to the `unpended` set in `display_test.dart` (guard then expects `pendingACs = {}`). **Re-read `display_test.dart` before editing** (shared file). AC-10's test is already written and passes under run-pending.
+**Only SIGNOFF-1 remains** (feature sign-off):
+- **SIGNOFF-1** — assemble `signoff/round-1.md` (packet) + the summary page, then record the human decision via `/feature-next-phase --signoff bs08 approved | changes "<items>"`. Preconditions met: all 10 ACs ✅, all gates green, no open augmentation, G-1/G-2 resolved. Sign-off includes a fresh independent full-suite re-grade. The agent assembles the packet and stops for the human; it never approves.
 
-After SPEECH-4, only **SIGNOFF-1** remains.
-
-Suite state: default **20 pass / 1 skipped** (AC-1..9 passing; AC-10 pending), run-pending **21 pass**. Device lane shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
+Suite state: default and run-pending both **21 pass / 0 skipped** (AC-1..10 all passing; nothing pending). Device lane shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
 
 ## Token usage
 
@@ -208,7 +206,8 @@ Suite state: default **20 pass / 1 skipped** (AC-1..9 passing; AC-10 pending), r
 | SETTINGS-2 | 10900289 | 2026-10-12 17:09 EDT | 17:22 | 12m 31s | 12m 31s | claude-opus-4-8 | 80 | 180,400 | 3,375,094 | 24,081 | 3,579,655 | AC-1 un-pended + green (pure un-pend, no lib change); unit 931/cov 100% (14 files)/acceptance default 18 pass 3 skip, run-pending 21 pass/grade 8 A 0 below; fix 0/3 |
 | SPEECH-2 | 2a4813a4 | 2026-10-12 17:29 EDT | 18:19 | 49m 22s | 18m 22s | claude-opus-4-8 | 134 | 231,874 | 6,759,754 | 34,320 | 7,026,082 | AC-8 un-pended + green (test-only); unit 931/cov 100%/accept 19 pass 2 skip + run-pending 21; grade 9 A/0 below; fix 0/3 |
 | SPEECH-3 | 3b311776 | 2026-10-12 19:32 EDT | 19:46 | 13m 54s | 13m 54s | claude-opus-4-8 | 84 | 208,974 | 3,412,132 | 25,981 | 3,647,171 | AC-9 un-pended + green (pure test-only un-pend); unit 931/cov 100% (14 files)/acceptance default 20 pass 1 skip, run-pending 21 pass/grade 10 A 0 below; fix 0/3 |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 19:46** | **7h 08m** | **5h 58m** |  | **2,594** | **3,796,251** | **163,777,760** | **936,979** | **168,513,584** |  |
+| SPEECH-4 | 199c2f84 | 2026-10-12 21:04 EDT | 21:19 | 15m 20s | 15m 20s | claude-opus-4-8 | 110 | 225,713 | 5,078,874 | 32,325 | 5,337,022 | AC-10 un-pended + green (pure test-only un-pend, no lib change; pending map now empty); unit 931/cov 100% (14 files)/acceptance default 21 pass 0 skip + run-pending 21 pass/grade 12 A 0 below; fix 0/3 |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 21:19** | **7h 23m** | **6h 13m** |  | **2,704** | **4,021,964** | **168,856,634** | **969,304** | **173,850,606** |  |
 
 ## Sign-off
 

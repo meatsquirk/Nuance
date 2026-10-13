@@ -44,18 +44,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// member of [behaviorPhases]. (bs-08 has no enabler phase — every behaviour
 /// phase owns exactly one AC.)
 const Map<String, String> pendingACs = {
-  // AC-1 un-pended by SETTINGS-2 (open display & simulation settings from any
-  // screen → the three controls shown).
-  // AC-2 un-pended by DISPLAY-3 (simulation off = trichromat, identity path).
-  // AC-3 un-pended by DISPLAY-4 (simulate chosen type alongside the original).
-  // AC-4 un-pended by DISPLAY-5 (severity slider sets simulation strength).
-  // AC-5 un-pended by DISPLAY-6 (grayscale clears an active simulation, D-3).
-  // AC-6 un-pended by DISPLAY-7 (value-only grayscale greys the whole app).
-  // AC-7 un-pended by DISPLAY-8 (reading keeps numeric value + label, and the
-  // simulated swatch coexists with them — "not colour alone", D-7).
-  // AC-8 un-pended by SPEECH-2 (repeat the last spoken output).
-  // AC-9 un-pended by SPEECH-3 (reading + comparison one consistent phrasing).
-  'AC-10': 'SPEECH-4', // spoken-output panel never auto-dismisses
+  // All 10 bs-08 ACs delivered — the map is intentionally empty. AC-10 (the
+  // spoken-output panel never auto-dismisses) was un-pended by SPEECH-4, the
+  // last behaviour phase; the scaffold guard in `display_test.dart` asserts it
+  // is exactly {} and that the gate now runs every AC in both modes.
+  //
+  // Owners, for the record: AC-1 SETTINGS-2; AC-2 DISPLAY-3; AC-3 DISPLAY-4;
+  // AC-4 DISPLAY-5; AC-5 DISPLAY-6; AC-6 DISPLAY-7; AC-7 DISPLAY-8;
+  // AC-8 SPEECH-2; AC-9 SPEECH-3; AC-10 SPEECH-4.
 };
 
 /// The behaviour phases allowed to own a pending AC.

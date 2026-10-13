@@ -40,19 +40,21 @@ void main() {
         () {
       // Seeded with AC-1..AC-10 (DISPLAY-1); each behaviour phase deletes its
       // AC's row in `bs08/pending.dart` as it un-pends it, so this set shrinks
-      // by one per delivered AC. Un-pended so far: AC-2 (DISPLAY-3, simulation
-      // off = trichromat), AC-3 (DISPLAY-4, simulate a chosen type alongside
-      // the original), AC-4 (DISPLAY-5, severity slider sets simulation
-      // strength), AC-5 (DISPLAY-6, grayscale clears an active simulation) and
-      // AC-6 (DISPLAY-7, value-only grayscale greys the whole app) and AC-7
-      // (DISPLAY-8, reading keeps value + label with the simulated swatch) and
-      // AC-1 (SETTINGS-2, open display & simulation settings from any screen →
-      // the three controls shown) and AC-8 (SPEECH-2, the painter repeats the
-      // last spoken output) and AC-9 (SPEECH-3, readings and comparisons are
-      // spoken through one consistent phrasing / the single shared sink).
-      // The remaining one (AC-10) is asserted exactly (non-vacuous).
+      // by one per delivered AC. Un-pended: AC-2 (DISPLAY-3, simulation off =
+      // trichromat), AC-3 (DISPLAY-4, simulate a chosen type alongside the
+      // original), AC-4 (DISPLAY-5, severity slider sets simulation strength),
+      // AC-5 (DISPLAY-6, grayscale clears an active simulation), AC-6
+      // (DISPLAY-7, value-only grayscale greys the whole app), AC-7 (DISPLAY-8,
+      // reading keeps value + label with the simulated swatch), AC-1
+      // (SETTINGS-2, open display & simulation settings from any screen → the
+      // three controls shown), AC-8 (SPEECH-2, the painter repeats the last
+      // spoken output), AC-9 (SPEECH-3, readings and comparisons are spoken
+      // through one consistent phrasing / the single shared sink) and AC-10
+      // (SPEECH-4, the spoken-output panel never auto-dismisses) — the final
+      // phase, so every AC is now un-pended and the pending map is exactly {}.
       const unpended = {
         'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', 'AC-9',
+        'AC-10',
       };
       final expected = {
         for (var i = 1; i <= 10; i++)
@@ -72,20 +74,30 @@ void main() {
       }
     });
 
-    test('pendingSkipReason skips a pending AC unless run-pending is forced',
-        () {
-      // A still-pending AC (the map is non-empty through the acceptance stage).
-      // Both directions are driven by the explicit [forceRunPending] so the
-      // guard is deterministic in either ambient mode — in particular it holds
-      // under `--dart-define=BS08_RUN_PENDING=true` (the red-baseline run), where
-      // the ambient `runPending` is true.
-      final pendingAc = pendingACs.keys.first;
-      expect(pendingSkipReason(pendingAc, forceRunPending: false), isNotNull,
-          reason: '$pendingAc is skipped when run-pending is not forced');
-      expect(pendingSkipReason(pendingAc, forceRunPending: true), isNull,
-          reason: '$pendingAc runs when run-pending is forced');
-      // An AC absent from the map (un-pended) always runs.
-      expect(pendingSkipReason('AC-999'), isNull);
+    test('with every AC un-pended, the gate runs each one in both modes', () {
+      // SPEECH-4 un-pended the final AC (AC-10); nothing stays pending. The gate
+      // is now fully open — it admits every AC in either mode. This fails if an
+      // AC were re-pended, or if the gate inverted to skip an un-pended AC. Both
+      // directions use the explicit [forceRunPending] so the guard is
+      // deterministic in either ambient mode — in particular under
+      // `--dart-define=BS08_RUN_PENDING=true` (the red-baseline run).
+      expect(pendingACs, isEmpty,
+          reason: 'SPEECH-4 un-pended the final AC; nothing stays pending');
+      for (var i = 1; i <= 10; i++) {
+        final ac = 'AC-$i';
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is un-pended and must run even in default mode');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac must run in run-pending mode');
+      }
+      // An AC absent from the map (un-pended) also always runs, in either mode.
+      expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
+      // The ambient path (used by acTestWidgets) agrees with the current mode.
+      expect(
+        pendingSkipReason('AC-1'),
+        pendingSkipReason('AC-1', forceRunPending: runPending),
+      );
     });
   });
 
