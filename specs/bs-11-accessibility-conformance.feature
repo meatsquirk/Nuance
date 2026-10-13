@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-13 by Matt Quirk (owner). Derived 2026-10-05 by /wireframe-behavior-specs.
 # Non-functional: cross-cutting accessibility acceptance criteria, not a single UX element.
 Feature: Accessibility conformance
   Accessibility is acceptance criteria, not a checklist, enforced structurally so a

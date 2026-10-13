@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** Not started — next CONF-1 (blocked by G-1 spec approval)
+**Status:** Not started — next CONF-1 (startable; G-1 resolved)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -133,7 +133,7 @@ graph LR
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | CONF-1 | Open |
+| G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | CONF-1 | ✅ Resolved 2026-10-13 07:59 EDT: approved — Matt Quirk (owner); spec's first line now records the approval |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-3 | decision | AC-10 — the **manual eyes-free walkthrough** passes (performed under the live screen reader at SIGNOFF-1); a fail blocks acceptance (D-2) | SIGNOFF-1 (AC-10) | Open |
 | G-4 | decision | AC-12 — **on-device VoiceOver-vs-TalkBack parity** verified on iOS reference hardware at SIGNOFF-1 (D-2) | SIGNOFF-1 (AC-12) | Open |
@@ -151,7 +151,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | CONF-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs11 pending gate (10 ACs), guideline-matcher availability | ⬜ Next | | | blocked by G-1 |
+| 1 | CONF-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs11 pending gate (10 ACs), guideline-matcher availability | ⬜ Next | | | G-1 ✅ — startable |
 | 2 | A11Y-1 | shell: `lib/app/theme.dart` `AppTheme` wired into `buildApp` (behaviour unchanged) + `StatusBadge` + `AccessibleNotice` shells | ⬜ Todo | | | ∥ GATE-1 |
 | 3 | GATE-1 | shell: `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub | ⬜ Todo | | | ∥ A11Y-1 |
 | 4 | ITEST-1 | acceptance-tests: harness, real-screen + control fixtures, pending gate (10 ACs), smoke test | ⬜ Todo | | | |
@@ -173,7 +173,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CONF-1** (scaffold) is next but **blocked** by **G-1** — approve the spec (it still carries `# Draft: awaiting owner approval`; record approval as its first line). No other gate blocks the start. CONF-1 branches `feat/bs-11-accessibility-conformance` from `main` @ `0900d44` in a worktree (`../Nuance-bs11`), records the baseline, confirms `tool/coverage_gate.dart`, and lays the `integration_test/bs11/pending.dart` gate with the 10 automated ACs. G-2 (approve tests) is decided later at ITEST-4; G-3/G-4 (the two manual walkthroughs) are decided at SIGNOFF-1.
+**CONF-1** (scaffold) is next and **startable** — G-1 (spec approval) resolved 2026-10-13. CONF-1 branches `feat/bs-11-accessibility-conformance` from `main` (now @ the G-1 commit) in a worktree (`../Nuance-bs11`), records the baseline, confirms `tool/coverage_gate.dart`, and lays the `integration_test/bs11/pending.dart` gate with the 10 automated ACs. G-2 (approve tests) is decided later at ITEST-4; G-3/G-4 (the two manual walkthroughs) are decided at SIGNOFF-1.
 
 ## Token usage
 
@@ -183,7 +183,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | fnp-c571cf86 | 2026-10-13 | | | | claude-opus-4-8 | | | | | | plan written |
 | PLAN | d0fe19ea | 2026-10-13 05:14 EDT | 07:39 | 2h 24m | 14m 21s | claude-opus-4-8 | 56 | 338,185 | 1,850,667 | 66,518 | 2,255,426 | plan written: 17 phases, 3 modules, 12 ACs (10 automated + 2 manual) |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 07:39** | **2h 24m** | **14m 21s** |  | **56** | **338,185** | **1,850,667** | **66,518** | **2,255,426** |  |
+| GATE-DECISION | d0fe19ea | 2026-10-13 07:58 EDT | 08:00 | 1m 26s | 1m 26s | claude-opus-4-8 | 16 | 12,853 | 1,569,275 | 4,393 | 1,586,537 | G-1 approved: spec approved by Matt Quirk; CONF-1 startable |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 08:00** | **2h 25m** | **15m 47s** |  | **72** | **351,038** | **3,419,942** | **70,911** | **3,841,963** |  |
 
 ## Sign-off
 
