@@ -42,6 +42,7 @@ import '../recipes/palette_source.dart';
 import '../recipes/recipe_controller.dart';
 import '../recipes/recipe_read_endpoint.dart';
 import '../recipes/recipes_screen.dart';
+import '../store/cvd_profile_store.dart';
 import '../store/persistent_store.dart';
 import '../store/source_photo_store.dart';
 import 'router.dart';
@@ -133,6 +134,18 @@ class PaletteEntry {
   /// Creates the palette-entry marker.
   const PaletteEntry();
 }
+
+/// Loads the painter's saved colour-vision profile at app assembly, or the
+/// const default when none is stored (bs-07 D-3, G-4).
+///
+/// Production assembly (`main.dart`'s `productionDependencies`) calls this with
+/// a [CvdProfileStore] over the file-backed store and passes the result as
+/// [AppDependencies.cvdProfile], so a measured profile configures bs-03's
+/// `ConfusionCheck` and the shared `projectDichromat` seam bs-08/bs-10 reuse.
+/// Absent (nothing saved yet) → the deutan default, so behaviour is unchanged
+/// until the painter saves an assessment (PROFILE-2, AC-13).
+Future<CvdProfile> loadCvdProfile(CvdProfileStore store) async =>
+    await store.load() ?? const CvdProfile(type: CvdType.deutan);
 
 /// The app-wide services assembled once at startup and injected down the tree.
 ///
@@ -334,6 +347,37 @@ class AppDependencies {
   /// setters and observe the resulting view; an injected controller is owned by
   /// its injector, not by [buildApp].
   final DisplayController? displayController;
+
+  /// Returns a copy of these dependencies with only [cvdProfile] replaced
+  /// (bs-07 AC-13, D-3).
+  ///
+  /// The one seam a saved self-assessment changes: [buildApp]'s root re-injects
+  /// the measured profile here so bs-03's `ConfusionCheck` and the bs-08/bs-10
+  /// projection — all reading `AppDependencies.cvdProfile` — reconfigure off the
+  /// default immediately, leaving every other injected service untouched.
+  AppDependencies withCvdProfile(CvdProfile cvdProfile) => AppDependencies(
+        colorScience: colorScience,
+        speech: speech,
+        haptics: haptics,
+        router: router,
+        initialSample: initialSample,
+        captureSource: captureSource,
+        cvdProfile: cvdProfile,
+        confusionCheck: confusionCheck,
+        sampleSource: sampleSource,
+        comparisonEntry: comparisonEntry,
+        mixingEngine: mixingEngine,
+        correctionEngine: correctionEngine,
+        paletteSource: paletteSource,
+        recipesEntry: recipesEntry,
+        correctionEntry: correctionEntry,
+        projectSource: projectSource,
+        paletteEntry: paletteEntry,
+        store: store,
+        sourcePhotoStore: sourcePhotoStore,
+        pdfShareSink: pdfShareSink,
+        displayController: displayController,
+      );
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -395,60 +439,166 @@ Widget buildApp(AppDependencies deps) {
   final speech = injectedSpeech ?? RepeatableSpeech(deps.speech);
   final scopedDeps =
       injectedSpeech == null ? _depsWithSpeech(deps, speech) : deps;
-  return AppScope(
-    dependencies: scopedDeps,
-    child: _DisplayRoot(
-      injectedController: deps.displayController,
-      defaultSimulationType: deps.cvdProfile.type,
-      child: _SpeechRoot(
-        speech: speech,
-        owns: injectedSpeech == null,
-        child: MaterialApp(
-          title: 'Paint Color Assistant',
-          theme: ThemeData(useMaterial3: true),
-          // The shared app chrome: the open-display-settings entry (E2) on every
-          // screen (SETTINGS-1) and, beneath it, the persistent spoken-output
-          // panel (E50 — SPEECH-1) that replays the last utterance.
-          builder: (context, child) =>
-              DisplayChrome(child: _SpokenOutputChrome(child: child!)),
-          home: scopedDeps.correctionEntry != null
-              ? CorrectionHomeScreen(
-                  target: scopedDeps.correctionEntry!.target,
-                  currentMix: scopedDeps.correctionEntry!.currentMix,
-                  captureSource: scopedDeps.captureSource!,
-                  paletteSource: scopedDeps.paletteSource,
-                  correctionEngine: scopedDeps.correctionEngine,
-                  mixingEngine: scopedDeps.mixingEngine,
-                  sampleSource: scopedDeps.sampleSource,
-                  speech: speech,
-                  router: scopedDeps.router,
-                )
-              : scopedDeps.captureSource != null
-              ? const CaptureHomeScreen()
-              : scopedDeps.comparisonEntry != null
-                  ? ComparisonHomeScreen(
-                      sampleSource: scopedDeps.sampleSource,
-                      cvdProfile: scopedDeps.cvdProfile,
-                      confusionCheck: scopedDeps.confusionCheck,
-                      speech: speech,
-                      router: scopedDeps.router,
-                    )
-                  : scopedDeps.recipesEntry != null
-                      ? RecipesHomeScreen(
-                          target: scopedDeps.recipesEntry!.target,
-                          sampleSource: scopedDeps.sampleSource,
-                          paletteSource: scopedDeps.paletteSource,
-                          mixingEngine: scopedDeps.mixingEngine,
-                          speech: speech,
-                          router: scopedDeps.router,
-                        )
-                      : scopedDeps.paletteEntry != null
-                          ? const PaletteHomeScreen()
-                          : ReadoutScreen(sample: scopedDeps.initialSample),
+  return _App(
+    deps: scopedDeps,
+    speech: speech,
+    ownsSpeech: injectedSpeech == null,
+  );
+}
+
+/// The root widget, holding the live colour-vision profile the app's pipeline
+/// reads so a saved self-assessment can reconfigure it (bs-07 AC-13, D-3).
+///
+/// Seeds the live profile from the injected [AppDependencies.cvdProfile] and
+/// hands [_home] the dependencies unchanged until the painter saves an
+/// assessment; the save calls back through the [LiveProfileScope] mounted above
+/// the [MaterialApp], which re-injects the measured profile on the one seam all
+/// CVD consumers read. Stateful because the live profile outlives any one route
+/// (the onboarding is pushed on top of the running app and popped on save).
+///
+/// Beneath [LiveProfileScope] it mounts the bs-08 display and speech roots
+/// (`_DisplayRoot` + `_SpeechRoot`) and the shared chrome, so simulation,
+/// value-only grayscale and the spoken-output panel wrap every screen.
+class _App extends StatefulWidget {
+  const _App({
+    required this.deps,
+    required this.speech,
+    required this.ownsSpeech,
+  });
+
+  /// The speech-scoped dependencies injected at assembly; its
+  /// [AppDependencies.cvdProfile] seeds the mutable live profile.
+  final AppDependencies deps;
+
+  /// The app-wide repeatable speech (bs-08 SPEECH-1) provided to [_SpeechRoot].
+  final RepeatableSpeech speech;
+
+  /// Whether [buildApp] wrapped [speech] (and so [_SpeechRoot] must dispose it);
+  /// an injected repeatable speech is owned by its injector.
+  final bool ownsSpeech;
+
+  @override
+  State<_App> createState() => _AppState();
+}
+
+class _AppState extends State<_App> {
+  /// The live colour-vision profile the pipeline reads (bs-07 AC-13). Seeded
+  /// from the injected profile; a saved assessment replaces it so bs-03's
+  /// confusion check and the bs-08/bs-10 projection reconfigure immediately.
+  late CvdProfile _profile = widget.deps.cvdProfile;
+
+  /// Replaces the live profile with the one a save just wrote (AC-13), rebuilding
+  /// the tree so later-built CVD consumers read the measured profile.
+  void _handleProfileSaved(CvdProfile profile) {
+    setState(() => _profile = profile);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Inject the dependencies unchanged until a save replaces the profile, so the
+    // startup tree still carries the exact injected deps object (bs-01..06
+    // wiring); once the painter saves, re-inject with the measured profile on the
+    // single seam every CVD consumer reads.
+    final deps = _profile == widget.deps.cvdProfile
+        ? widget.deps
+        : widget.deps.withCvdProfile(_profile);
+    return AppScope(
+      dependencies: deps,
+      child: LiveProfileScope(
+        onProfileSaved: _handleProfileSaved,
+        child: _DisplayRoot(
+          injectedController: widget.deps.displayController,
+          defaultSimulationType: widget.deps.cvdProfile.type,
+          child: _SpeechRoot(
+            speech: widget.speech,
+            owns: widget.ownsSpeech,
+            child: MaterialApp(
+              title: 'Paint Color Assistant',
+              theme: ThemeData(useMaterial3: true),
+              // The shared app chrome: the open-display-settings entry (E2) on
+              // every screen (SETTINGS-1) and, beneath it, the persistent
+              // spoken-output panel (E50 — SPEECH-1) that replays the last
+              // utterance.
+              builder: (context, child) =>
+                  DisplayChrome(child: _SpokenOutputChrome(child: child!)),
+              home: _home(deps),
+            ),
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+/// The screen [buildApp] opens on for [deps] (the entry precedence in the
+/// [buildApp] doc): correction, then capture, comparison, recipes, palette, else
+/// the Readout. [deps] carries the app-wide [RepeatableSpeech] as its `speech`,
+/// so each screen speaks through the repeatable seam.
+Widget _home(AppDependencies deps) {
+  return deps.correctionEntry != null
+      ? CorrectionHomeScreen(
+          target: deps.correctionEntry!.target,
+          currentMix: deps.correctionEntry!.currentMix,
+          captureSource: deps.captureSource!,
+          paletteSource: deps.paletteSource,
+          correctionEngine: deps.correctionEngine,
+          mixingEngine: deps.mixingEngine,
+          sampleSource: deps.sampleSource,
+          speech: deps.speech,
+          router: deps.router,
+        )
+      : deps.captureSource != null
+          ? const CaptureHomeScreen()
+          : deps.comparisonEntry != null
+              ? ComparisonHomeScreen(
+                  sampleSource: deps.sampleSource,
+                  cvdProfile: deps.cvdProfile,
+                  confusionCheck: deps.confusionCheck,
+                  speech: deps.speech,
+                  router: deps.router,
+                )
+              : deps.recipesEntry != null
+                  ? RecipesHomeScreen(
+                      target: deps.recipesEntry!.target,
+                      sampleSource: deps.sampleSource,
+                      paletteSource: deps.paletteSource,
+                      mixingEngine: deps.mixingEngine,
+                      speech: deps.speech,
+                      router: deps.router,
+                    )
+                  : deps.paletteEntry != null
+                      ? const PaletteHomeScreen()
+                      : ReadoutScreen(sample: deps.initialSample);
+}
+
+/// Exposes the callback the self-assessment calls after saving a profile, so the
+/// app root can reconfigure the live `AppDependencies.cvdProfile` (bs-07 AC-13,
+/// D-3).
+///
+/// Mounted by [buildApp] above the [MaterialApp]; the onboarding host reads it
+/// ([of]) and hands it to its `OnboardingController`. Absent when the host is
+/// pumped outside [buildApp] (bare unit tests) — [of] then returns null and the
+/// save only writes the store.
+class LiveProfileScope extends InheritedWidget {
+  /// Creates the scope exposing [onProfileSaved] to the subtree.
+  const LiveProfileScope({
+    required this.onProfileSaved,
+    required super.child,
+    super.key,
+  });
+
+  /// Called with the saved profile to reconfigure the live pipeline (AC-13).
+  final ValueChanged<CvdProfile> onProfileSaved;
+
+  /// The nearest enclosing scope's callback, or null when none is mounted.
+  static ValueChanged<CvdProfile>? of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<LiveProfileScope>()
+          ?.onProfileSaved;
+
+  @override
+  bool updateShouldNotify(LiveProfileScope oldWidget) =>
+      onProfileSaved != oldWidget.onProfileSaved;
 }
 
 /// Returns a copy of [deps] with its [AppDependencies.speech] replaced by

@@ -1,0 +1,682 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/onboarding/engine/assessment_engine.dart';
+import 'package:paint_color_assistant/onboarding/engine/tier_results.dart';
+import 'package:paint_color_assistant/onboarding/onboarding_controller.dart';
+import 'package:paint_color_assistant/onboarding/onboarding_state.dart';
+import 'package:paint_color_assistant/onboarding/onboarding_steps.dart';
+import 'package:paint_color_assistant/store/cvd_profile_store.dart';
+import 'package:paint_color_assistant/store/persistent_store.dart';
+
+void main() {
+  group('OnboardingController construction', () {
+    test('starts in the empty state with the default engine and steps', () {
+      final controller = OnboardingController();
+      addTearDown(controller.dispose);
+
+      expect(controller.state, const OnboardingState());
+      expect(controller.engine, isA<ShellAssessmentEngine>());
+      expect(controller.profileStore, isNull);
+      expect(controller.onProfileSaved, isNull);
+      expect(controller.steps, defaultOnboardingSteps);
+      expect(controller.stepTotal, 4);
+    });
+
+    test('holds the injected engine, store, save callback and steps', () {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      const engine = ShellAssessmentEngine();
+      void onSaved(CvdProfile _) {}
+      final controller = OnboardingController(
+        engine: engine,
+        profileStore: store,
+        onProfileSaved: onSaved,
+        steps: const [OnboardingStep('Only')],
+      );
+      addTearDown(controller.dispose);
+
+      expect(controller.engine, same(engine));
+      expect(controller.profileStore, same(store));
+      expect(controller.onProfileSaved, same(onSaved));
+      expect(controller.stepTotal, 1);
+    });
+  });
+
+  group('OnboardingController save (PROFILE-2, AC-13)', () {
+    test('is a no-op before the estimate is assembled (no result step yet)',
+        () async {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      CvdProfile? propagated;
+      final controller = OnboardingController(
+        profileStore: store,
+        onProfileSaved: (p) => propagated = p,
+      );
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      await controller.save();
+
+      // Nothing written, nothing marked, no live reconfiguration, no notify.
+      expect(controller.state.estimate, isNull);
+      expect(controller.state.saved, isFalse);
+      expect(await store.count(), 0);
+      expect(propagated, isNull);
+      expect(notifications, 0);
+    });
+
+    test(
+        'projects the estimate onto one stored profile, marks saved and '
+        'reconfigures the live pipeline', () async {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      CvdProfile? propagated;
+      final controller = OnboardingController(
+        engine: const TieredAssessmentEngine(),
+        profileStore: store,
+        onProfileSaved: (p) => propagated = p,
+      );
+      addTearDown(controller.dispose);
+      // Reach a deutan, moderate result: a deutan diagnosis + a moderate
+      // threshold, assembled and advanced (FLOW-5).
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.6, detected: false),
+      ]);
+      controller.advanceToResult();
+      final estimate = controller.state.estimate!;
+
+      await controller.save();
+
+      // Exactly one profile is written, projecting the estimate's type/severity.
+      expect(await store.count(), 1);
+      final saved = await store.load();
+      expect(saved, CvdProfile(type: estimate.type, severity: estimate.severity));
+      // The flow is marked saved and the live pipeline is handed the profile.
+      expect(controller.state.saved, isTrue);
+      expect(propagated, saved);
+    });
+
+    test('keeps the painter-calibrated severity as the profile severity (D-6)',
+        () async {
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      final controller = OnboardingController(
+        engine: const TieredAssessmentEngine(),
+        profileStore: store,
+      );
+      addTearDown(controller.dispose);
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.advanceToResult();
+      // The painter tunes the slider; the kept calibration becomes the severity.
+      controller.setSeverity(0.42);
+
+      await controller.save();
+
+      final saved = await store.load();
+      expect(saved!.severity, 0.42,
+          reason: 'the kept self-calibration is the stored severity (D-6)');
+    });
+
+    test('with no store or live callback wired still marks saved (no throw)',
+        () async {
+      final controller =
+          OnboardingController(engine: const TieredAssessmentEngine());
+      addTearDown(controller.dispose);
+      controller.advanceToResult();
+
+      await controller.save();
+
+      expect(controller.state.saved, isTrue);
+    });
+  });
+
+  group('OnboardingController intake (ENGINE-3, AC-3)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      // The real tiered engine (as the production host injects), so the recorded
+      // answer actually moves the prior.
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('an "Often" answer leans the prior red-green and notifies', () {
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Often'),
+      );
+      expect(controller.state.prior.direction, ScreeningDirection.redGreen);
+      expect(controller.state.prior.weight, greaterThan(0));
+      expect(notifications, 1);
+    });
+
+    test('a "Never" answer leaves the prior empty', () {
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Never'),
+      );
+      expect(controller.state.prior, StartingPrior.none);
+      expect(notifications, 1);
+    });
+
+    test('re-answering the same question replaces the earlier answer', () {
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Often'),
+      );
+      expect(controller.state.prior.direction, ScreeningDirection.redGreen);
+
+      // Change the mind to "Never": the prior reverts to empty rather than
+      // keeping the first answer's lean.
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Never'),
+      );
+      expect(controller.state.prior, StartingPrior.none);
+      expect(notifications, 2);
+    });
+  });
+
+  group('OnboardingController prior diagnosis (ENGINE-4, AC-4)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('reportDiagnosis seeds the prior as the reported type and notifies', () {
+      controller.reportDiagnosis(CvdType.deutan);
+      expect(controller.state.prior.type, CvdType.deutan);
+      expect(controller.state.prior.direction, ScreeningDirection.redGreen);
+      expect(controller.state.prior.weight, 1.0);
+      expect(notifications, 1);
+    });
+
+    test('a reported diagnosis overrides a lean the intake had formed', () {
+      // An intake answer first leans the prior red-green with no type...
+      controller.answerIntake(
+        const IntakeAnswer(questionId: rgConfusionQuestionId, value: 'Often'),
+      );
+      expect(controller.state.prior.type, isNull);
+
+      // ...then a reported tritan diagnosis replaces the whole prior.
+      controller.reportDiagnosis(CvdType.tritan);
+      expect(controller.state.prior.type, CvdType.tritan);
+      expect(controller.state.prior.direction, ScreeningDirection.blueYellow);
+      expect(notifications, 2);
+    });
+  });
+
+  group('OnboardingController screening (ENGINE-5, AC-5)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      // The real tiered engine (as the production host injects), so the scored
+      // responses actually set a meaningful result.
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('scores the responses into state.screening and notifies', () {
+      controller.scoreScreening(const [
+        PlateResponse(axis: ScreeningDirection.redGreen, correct: false),
+        PlateResponse(axis: ScreeningDirection.blueYellow, correct: true),
+      ]);
+      expect(controller.state.screening, isNotNull);
+      expect(controller.state.screening!.present, isTrue);
+      expect(
+          controller.state.screening!.direction, ScreeningDirection.redGreen);
+      expect(notifications, 1);
+    });
+
+    test('a clean screening records no deficiency', () {
+      controller.scoreScreening(const [
+        PlateResponse(axis: ScreeningDirection.redGreen, correct: true),
+        PlateResponse(axis: ScreeningDirection.blueYellow, correct: true),
+      ]);
+      expect(controller.state.screening!.present, isFalse);
+      expect(notifications, 1);
+    });
+  });
+
+  group('OnboardingController threshold (ENGINE-6, AC-9)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      // The real tiered engine (as the production host injects), so the scored
+      // probes actually set a meaningful severity.
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('scores the probes into state.threshold and notifies', () {
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.2, detected: false),
+        ThresholdProbe(contrast: 0.4, detected: false),
+        ThresholdProbe(contrast: 0.6, detected: true),
+      ]);
+      expect(controller.state.threshold, isNotNull);
+      expect(controller.state.threshold!.severity, 0.4);
+      expect(notifications, 1);
+    });
+
+    test('detecting every probe records zero severity', () {
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.2, detected: true),
+        ThresholdProbe(contrast: 0.4, detected: true),
+      ]);
+      expect(controller.state.threshold!.severity, 0);
+      expect(notifications, 1);
+    });
+  });
+
+  group('OnboardingController advanceToResult (FLOW-5 enabler, D-7)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      // The real tiered engine (as the production host injects), so the assembled
+      // estimate reflects the real folding, not the shell default.
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('assembles an estimate from the gathered tiers and advances, notifying',
+        () {
+      // Report a deutan diagnosis (prior) and score a moderate threshold, then
+      // advance — the estimate folds both.
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.2, detected: false),
+        ThresholdProbe(contrast: 0.6, detected: false),
+        ThresholdProbe(contrast: 0.8, detected: true),
+      ]);
+      notifications = 0;
+
+      controller.advanceToResult();
+      final estimate = controller.state.estimate;
+      expect(estimate, isNotNull);
+      expect(estimate!.type, CvdType.deutan,
+          reason: 'the deutan diagnosis seeds the estimated type');
+      expect(estimate.severity, 0.6,
+          reason: 'the measured threshold (highest missed contrast) is the '
+              'severity');
+      expect(estimate.threshold, isNotNull);
+      // Advanced to the last top-level step (the result step).
+      expect(controller.state.stepIndex, controller.stepTotal - 1);
+      expect(notifications, 1);
+    });
+
+    test('reaches a result even with no tiers run (assembles the default)', () {
+      // No diagnosis, no screening, no threshold: a result is still reachable —
+      // the empty prior assembles the red-green deutan default at severity 0.
+      controller.advanceToResult();
+      final estimate = controller.state.estimate;
+      expect(estimate, isNotNull);
+      expect(estimate!.type, CvdType.deutan);
+      expect(estimate.severity, 0);
+      expect(estimate.arrangementPresent, isFalse,
+          reason: 'a skipped/unstarted arrangement contributes no presence');
+      expect(controller.state.stepIndex, controller.stepTotal - 1);
+    });
+
+    test('a completed arrangement is folded in as present', () {
+      // Complete the arrangement (place every cap), then advance.
+      for (final capId in [...controller.state.arrangementPool]) {
+        controller.placeCap(capId);
+      }
+      controller.advanceToResult();
+      expect(controller.state.estimate!.arrangementPresent, isTrue);
+    });
+
+    test('shows the approximate-estimate caveat once the result is reached '
+        '(FLOW-8, AC-1)', () {
+      // Before the result is reached the caveat is not shown.
+      expect(controller.state.caveatShown, isFalse,
+          reason: 'the caveat belongs to the shown result, not before it');
+
+      controller.advanceToResult();
+
+      // Reaching the result shows the caveat alongside the estimate, so the
+      // estimate never appears without the approximate-estimate label and the
+      // clinical-test recommendation beside it (AC-1).
+      expect(controller.state.caveatShown, isTrue,
+          reason: 'the result carries the approximate-estimate caveat');
+      expect(controller.state.estimate, isNotNull,
+          reason: 'the caveat is shown with the assembled estimate');
+    });
+  });
+
+  group('OnboardingController setType (FLOW-6, AC-10)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('overrides the estimated type by hand, keeping the rest, notifying',
+        () {
+      // Reach a deutan estimate with a measured moderate threshold.
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.6, detected: false),
+      ]);
+      controller.advanceToResult();
+      final before = controller.state.estimate!;
+      expect(before.type, CvdType.deutan);
+      notifications = 0;
+
+      controller.setType(CvdType.protan);
+
+      final after = controller.state.estimate!;
+      expect(after.type, CvdType.protan,
+          reason: 'the by-hand type replaces the computed one');
+      // The rest of the estimate is untouched by the override.
+      expect(after.severity, before.severity);
+      expect(after.prior, before.prior);
+      expect(after.screening, before.screening);
+      expect(after.threshold, before.threshold);
+      expect(after.arrangementPresent, before.arrangementPresent);
+      expect(notifications, 1);
+    });
+
+    test('overrides regardless of the computed type (protan input → tritan)',
+        () {
+      // A protan-leaning diagnosis computes protan; the painter picks tritan.
+      controller.reportDiagnosis(CvdType.protan);
+      controller.advanceToResult();
+      expect(controller.state.estimate!.type, CvdType.protan);
+
+      controller.setType(CvdType.tritan);
+      expect(controller.state.estimate!.type, CvdType.tritan,
+          reason: 'the override wins over the computed protan');
+    });
+
+    test('is a no-op before the estimate is assembled (no result step yet)', () {
+      // No advanceToResult: there is no estimate to adjust.
+      expect(controller.state.estimate, isNull);
+
+      controller.setType(CvdType.protan);
+
+      expect(controller.state.estimate, isNull,
+          reason: 'setType does nothing without an assembled estimate');
+      expect(notifications, 0, reason: 'a no-op does not notify');
+    });
+  });
+
+  group('OnboardingController self-calibration (FLOW-7, AC-12)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    // Reaches a deutan estimate with a measured moderate (0.6) threshold.
+    void reachEstimate() {
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.6, detected: false),
+      ]);
+      controller.advanceToResult();
+      notifications = 0;
+    }
+
+    test('setSeverity keeps the chosen severity as the calibration, notifying',
+        () {
+      reachEstimate();
+      expect(controller.state.calibratedSeverity, isNull,
+          reason: 'nothing kept before the painter moves the slider');
+
+      controller.setSeverity(0.7);
+
+      expect(controller.state.calibratedSeverity, 0.7,
+          reason: 'the chosen severity is kept as the self-calibration');
+      // The estimate's own severity is untouched — the calibration is separate.
+      expect(controller.state.estimate!.severity, 0.6);
+      expect(notifications, 1);
+    });
+
+    test('setSeverity tracks the latest value (a second set replaces the first)',
+        () {
+      reachEstimate();
+      controller.setSeverity(0.7);
+      controller.setSeverity(0.4);
+      expect(controller.state.calibratedSeverity, 0.4,
+          reason: 'the kept calibration follows the latest slider value');
+    });
+
+    test('setSeverity clamps out-of-range values to 0..1', () {
+      reachEstimate();
+      controller.setSeverity(1.4);
+      expect(controller.state.calibratedSeverity, 1.0);
+      controller.setSeverity(-0.3);
+      expect(controller.state.calibratedSeverity, 0.0);
+    });
+
+    test('setSeverity is a no-op before the estimate is assembled', () {
+      expect(controller.state.estimate, isNull);
+
+      controller.setSeverity(0.5);
+
+      expect(controller.state.calibratedSeverity, isNull,
+          reason: 'no self-calibration without a result to calibrate');
+      expect(notifications, 0, reason: 'a no-op does not notify');
+    });
+
+    test('confirmCalibration keeps the estimate severity when never moved', () {
+      reachEstimate();
+      expect(controller.state.calibratedSeverity, isNull);
+
+      controller.confirmCalibration();
+
+      expect(controller.state.calibratedSeverity, 0.6,
+          reason: 'confirming without moving keeps the estimate severity (D-6)');
+      expect(notifications, 1);
+    });
+
+    test('confirmCalibration leaves a severity the painter already chose', () {
+      reachEstimate();
+      controller.setSeverity(0.3);
+      notifications = 0;
+
+      controller.confirmCalibration();
+
+      expect(controller.state.calibratedSeverity, 0.3,
+          reason: 'a chosen calibration stands; confirm does not overwrite it');
+      expect(notifications, 0, reason: 'idempotent confirm does not notify');
+    });
+
+    test('confirmCalibration is a no-op before the estimate is assembled', () {
+      expect(controller.state.estimate, isNull);
+
+      controller.confirmCalibration();
+
+      expect(controller.state.calibratedSeverity, isNull);
+      expect(notifications, 0, reason: 'a no-op does not notify');
+    });
+  });
+
+  group('OnboardingController lighting gate (FLOW-3, AC-2)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController();
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('confirmLightingCheck sets the matching flag and notifies', () {
+      controller.confirmLightingCheck(LightingCheck.brightness);
+      expect(controller.state.brightnessConfirmed, isTrue);
+      expect(controller.state.nightLightConfirmed, isFalse);
+      expect(controller.state.daylightConfirmed, isFalse);
+
+      controller.confirmLightingCheck(LightingCheck.nightLight);
+      expect(controller.state.nightLightConfirmed, isTrue);
+
+      controller.confirmLightingCheck(LightingCheck.daylight);
+      expect(controller.state.daylightConfirmed, isTrue);
+      expect(controller.state.lightingConfirmed, isTrue);
+      expect(notifications, 3);
+    });
+
+    test('confirmLightingCheck can clear a check with confirmed: false', () {
+      controller.confirmLightingCheck(LightingCheck.daylight);
+      expect(controller.state.daylightConfirmed, isTrue);
+      controller.confirmLightingCheck(LightingCheck.daylight, confirmed: false);
+      expect(controller.state.daylightConfirmed, isFalse);
+      expect(controller.state.lightingConfirmed, isFalse);
+    });
+
+    test('tryContinue does not advance while the checks are unconfirmed', () {
+      // Two of three confirmed — the gate stays shut.
+      controller.confirmLightingCheck(LightingCheck.brightness);
+      controller.confirmLightingCheck(LightingCheck.nightLight);
+      notifications = 0;
+
+      controller.tryContinue();
+      expect(controller.state.stepIndex, 0, reason: 'still on the lighting step');
+      expect(controller.state.testingStarted, isFalse,
+          reason: 'testing must not begin until all three are confirmed');
+      expect(notifications, 0, reason: 'a declined continue notifies nothing');
+    });
+
+    test('tryContinue advances and starts testing once all three confirmed', () {
+      controller.confirmLightingCheck(LightingCheck.brightness);
+      controller.confirmLightingCheck(LightingCheck.nightLight);
+      controller.confirmLightingCheck(LightingCheck.daylight);
+      notifications = 0;
+
+      controller.tryContinue();
+      expect(controller.state.stepIndex, 1, reason: 'advanced past lighting');
+      expect(controller.state.testingStarted, isTrue,
+          reason: 'testing begins once past the gate');
+      expect(notifications, 1);
+    });
+
+    test('tryContinue does not advance past the last step', () {
+      // A single-step onboarding: confirming and continuing cannot overrun.
+      final single = OnboardingController(steps: const [OnboardingStep('Only')]);
+      addTearDown(single.dispose);
+      single.confirmLightingCheck(LightingCheck.brightness);
+      single.confirmLightingCheck(LightingCheck.nightLight);
+      single.confirmLightingCheck(LightingCheck.daylight);
+
+      single.tryContinue();
+      expect(single.state.stepIndex, 0,
+          reason: 'stepIndex is clamped to the last step');
+      expect(single.state.testingStarted, isTrue,
+          reason: 'testing still begins even at the last step');
+    });
+
+    test('the lighting gate applies only on the lighting step — a later '
+        'Continue advances without re-checking lighting (FLOW-2)', () {
+      // Confirm the three checks and leave the lighting step (step 0 → 1).
+      controller.confirmLightingCheck(LightingCheck.brightness);
+      controller.confirmLightingCheck(LightingCheck.nightLight);
+      controller.confirmLightingCheck(LightingCheck.daylight);
+      controller.tryContinue();
+      expect(controller.state.stepIndex, 1, reason: 'left the lighting step');
+
+      // Clear a lighting check so lightingConfirmed is false again. On a later
+      // step the Tier 0 gate no longer applies (FLOW-2 scopes it to step 0), so
+      // Continue still advances — the earlier Tier-0-wide gate would have stuck
+      // at step 1 here.
+      controller.confirmLightingCheck(LightingCheck.daylight, confirmed: false);
+      expect(controller.state.lightingConfirmed, isFalse);
+      notifications = 0;
+
+      controller.tryContinue();
+      expect(controller.state.stepIndex, 2,
+          reason: 'a later step advances regardless of the lighting checks');
+      expect(notifications, 1);
+    });
+  });
+
+  group('OnboardingController arrangement (FLOW-4, AC-6/7/8)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController();
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('starts with the full cap pool and nothing arranged', () {
+      expect(controller.state.arrangementPool, arrangementCaps);
+      expect(controller.state.arrangedCaps, isEmpty);
+    });
+
+    test('placeCap moves a pooled cap to the next arranged position and notifies',
+        () {
+      final first = controller.state.arrangementPool.first;
+      controller.placeCap(first);
+      expect(controller.state.arrangedCaps, [first]);
+      expect(controller.state.arrangementPool, isNot(contains(first)));
+      expect(controller.state.arrangementPool.length,
+          arrangementCaps.length - 1);
+      expect(notifications, 1);
+
+      // A second cap appends after the first (the next position).
+      final second = controller.state.arrangementPool.first;
+      controller.placeCap(second);
+      expect(controller.state.arrangedCaps, [first, second]);
+      expect(notifications, 2);
+    });
+
+    test('placeCap of a cap not in the pool is a no-op without notifying', () {
+      final first = controller.state.arrangementPool.first;
+      controller.placeCap(first);
+      notifications = 0;
+
+      // Already placed — no longer in the pool.
+      controller.placeCap(first);
+      expect(controller.state.arrangedCaps, [first],
+          reason: 'no duplicate is added');
+      // An id that is not one of the caps at all.
+      controller.placeCap(999);
+      expect(controller.state.arrangedCaps, [first]);
+      expect(notifications, 0, reason: 'a no-op place notifies nothing');
+    });
+
+    test('startOver returns every placed cap to the pool and notifies', () {
+      controller.placeCap(controller.state.arrangementPool.first);
+      controller.placeCap(controller.state.arrangementPool.first);
+      expect(controller.state.arrangedCaps.length, 2);
+      notifications = 0;
+
+      controller.startOver();
+      expect(controller.state.arrangedCaps, isEmpty);
+      expect(controller.state.arrangementPool, arrangementCaps);
+      expect(notifications, 1);
+    });
+
+    test('skipArrangement marks skipped, records no result, and notifies', () {
+      controller.skipArrangement();
+      expect(controller.state.arrangementSkipped, isTrue);
+      expect(controller.state.arrangementResult, isNull);
+      expect(notifications, 1);
+    });
+  });
+}

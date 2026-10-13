@@ -101,10 +101,10 @@ class AppRouter {
   ///
   /// The Palette screen's vision-profile card (AC-11, E30) opens this when the
   /// painter chooses to retake the self-assessment. The destination is the
-  /// [SelfAssessmentEntryScreen] placeholder bs-06 owns; bs-07 replaces that
-  /// screen behind this same route, so the card's navigation never changes.
-  /// SCREEN-3 wires the card's control to this route; the route itself is added
-  /// in the SCREEN-1 shell.
+  /// [SelfAssessmentEntryScreen]; bs-06 shipped it as a placeholder and **bs-07
+  /// FLOW-1 replaced it** with the real onboarding flow behind this same route,
+  /// so the card's navigation never changes. SCREEN-3 wired the card's control
+  /// to this route; the route itself was added in the SCREEN-1 shell.
   Route<void> toSelfAssessment() {
     return MaterialPageRoute<void>(
       builder: (_) => const SelfAssessmentEntryScreen(),

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
-/// The bs-07 CVD self-assessment entry — a placeholder this feature owns until
-/// bs-07 is built (bs-06 D-7).
+import '../onboarding/screens/onboarding_host.dart';
+
+/// The CVD self-assessment entry (bs-06 D-7, built out in bs-07).
 ///
-/// AC-11's vision-profile card (E30) routes here when the painter chooses to
-/// retake the self-assessment; bs-06 only reads the estimate and navigates, it
-/// never writes the profile. bs-07 (CVD self-assessment) replaces this screen
-/// behind the same `AppRouter.toSelfAssessment` route, so the card's navigation
-/// and the acceptance test that observes it stay unchanged when bs-07 lands. The
-/// screen carries [screenKey] so that test has a stable anchor for the
-/// destination.
+/// AC-11's vision-profile card (E30) routes here via `AppRouter.toSelfAssessment`
+/// when the painter chooses to retake the self-assessment. bs-06 shipped a
+/// placeholder behind this route; **bs-07 FLOW-1 replaces it** with the real
+/// onboarding flow — an [OnboardingHost] that owns the assessment controller and
+/// mounts the profile/onboarding read endpoints. The card's navigation and the
+/// acceptance test that observes it are unchanged: this screen still carries the
+/// stable [screenKey] anchor, now placed on the [OnboardingHost]'s scaffold.
 class SelfAssessmentEntryScreen extends StatelessWidget {
   const SelfAssessmentEntryScreen({super.key});
 
@@ -18,14 +19,6 @@ class SelfAssessmentEntryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: screenKey,
-      appBar: AppBar(title: const Text('CVD self-assessment')),
-      body: const SafeArea(
-        child: Center(
-          child: Text('The CVD self-assessment is built in bs-07.'),
-        ),
-      ),
-    );
+    return const OnboardingHost(scaffoldKey: screenKey);
   }
 }
