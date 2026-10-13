@@ -57,3 +57,56 @@ the GATE-1 stub, the Then fails because the rule is absent — the correct red
 baseline). Nothing must change for this phase to pass.
 
 No B rows.
+
+## ITEST-3 — AC tests: scaling, eyes-free, timing, gate, floor (AC-3, AC-7, AC-8, AC-9, AC-11)
+
+**Phase graded: ITEST-3 (acceptance-suite AC tests: AC-3,7,8,9,11).** Independent,
+adversarial grade of the five *pending* `acTestWidgets` ITEST-3 added to the new
+`group('bs-11 acceptance criteria — scaling, eyes-free, timing, gate, floor (ITEST-3)', …)`
+in `integration_test/bs11/accessibility_test.dart`. The ITEST-1 harness/smoke
+(12 A) and the ITEST-2 structural AC tests (5 A, above) are **not** re-graded. At
+the red baseline the GATE-1 stubs are still in place — `runConformanceCheck` →
+`ConformanceResult.empty`, `eyesFreeComplete` throws `UnimplementedError`, and
+`acceptanceDecision`/`recordedLevel` throw `UnimplementedError` — so AC-3/AC-8
+fail on their first positive **Then** (null rule outcome), AC-7 fails at the
+**When** (driver stub throws, message names GATE-2), and AC-9/AC-11 fail at a
+**Given precondition** (an empty aggregate result cannot be partial/fully-passing;
+reason names GATE-3/GATE-4). Grade key: **A** = meets the bar; **B (rule)** =
+fails a named rule; **B pending <phase>** = well-built but can only be *limited*
+now because the discriminating state cannot exist until a later phase, with a
+matching augmentation row owned by that phase. The grader ran nothing and edited
+nothing but this file.
+
+| Test | What it checks | Grade | Rule notes |
+|---|---|---|---|
+| **AC-3** `the layout survives 200% font scaling without breaking` (owner A11Y-4) | Sweep: for each of the 6 `realScreens`, `givenScreen` opens it (Given: `screen findsOneWidget`), the check runs, and `outcomeFor(fontScale200).pass isTrue` — the 200% pump + overflow capture live **inside** the rule (A11Y-4), so the test reads the `fontScale200` outcome over the unscaled subject rather than pre-scaling (honest comment; `whenScaledTo` is left for A11Y-4's rule-level tests). Reference passes `fontScale200`. Control: `control_overflow200` (a fixed-height row that clips once text doubles; Given: subtree `findsOneWidget`) has `fontScale200` in `failing`. | A | **G4** asserts the exact `ConformanceRuleId.fontScale200` at step grain, every swept screen. **G5** genuine discriminator: passes on all 6 real screens **and** the reference, **fails on `control_overflow200`** — rejects a rule that never applies the 200% check. **G6** one AC. **G3** N/A (no negative-after-settle Then). **G1** the two *discriminating* Givens are asserted through the public surface before the When — every swept screen's home finder and the control's keyed subtree. Minor, non-blocking asymmetry vs ITEST-2 / AC-8: the reference leg does **not** assert `compliantReferenceFinder findsOneWidget` before its check (scaling has no rule-specific element to pin, unlike `colourCue`'s `ColorChip`). This is **not** a G1 failure — the reference leg is a redundant positive, the test's discrimination (reject a rule that ignores overflow) rests entirely on the fully-checked control + sweep, and at baseline the reference leg fails honest-red on a null `fontScale200` Then rather than passing vacuously. Deterministic; comments match code. |
+| **AC-7** `a core task completes eyes-free under the screen reader` (owner GATE-2) | `ensureSemantics()` (+ `addTearDown(dispose)`). Given: Readout opened via `buildApp` (`readout.screen findsOneWidget`) and the entry control present **by its semantic label** (`find.bySemanticsLabel('Speak this readout') findsOneWidget`). When: `whenCompletedEyesFree(steps: ['Speak this readout'])` → `eyesFreeComplete` driver (labels + `SemanticsAction`, never keys/coords, D-6). Then: `completed isTrue`. Control: the same driver given a step whose label is on no control (`'__no control exposes this label__'`) returns `blocked isFalse`. | A | **G1** both Givens checked through the semantics surface before the When (screen present; entry control present **by label**, not by key/type). **When** goes through the real driver, not coordinates. **Then** asserts the task reached terminal state (`completed`, the driver's read-endpoint-backed observable, D-6). **G5** the label-less control is the real discriminator: a driver that ignored labels and progressed by widget position/order would also "complete" the bogus step ⇒ `blocked` true ⇒ test fails — so the control **rejects a coordinate/position-fallback driver** (and an always-true driver), exactly D-6's intent. **G6** one AC. **Not B-pending**: no augmentation row, and the test discriminates fully the moment GATE-2 lands the driver (its single owning phase) — like AC-1..6 whose rules are stubbed. Baseline fails at the When via the stub's deliberate `UnimplementedError` (message names GATE-2), the suite's accepted pending signal, not a harness error. |
+| **AC-8** `nothing auto-dismisses or imposes a time limit` (owner A11Y-7) | Sweep: each real screen opened and `outcomeFor(noTimeout).pass isTrue`. Reference: Given a descendant `AccessibleNotice findsOneWidget` asserted **before** the settle; **settle point** `whenWaited(10s)` (past the SnackBar 4s default); Then the `AccessibleNotice` is **still present after the advance** and `noTimeout` passes. Control: `control_autoDismiss`'s SnackBar present first (`find.text('Auto-dismissing notice') findsOneWidget`), then **gone** (`findsNothing`) after the same 10s advance, and `failing contains noTimeout`. | A | **G3 fully satisfied** — the task's live question: there is a real settle point (fake clock advanced 10s, well past the 4s auto-dismiss window), the negative "still present" Then is taken **only after** the advance, and the control proves the reading can change (the standard SnackBar **is gone** after the identical advance) — so the reference's persistence is a real observation, not a stuck frame. **G1** reference and control Givens (`AccessibleNotice` present; SnackBar present) asserted before their settle/advance; sweep screens checked. **G4** exact `noTimeout` id at step grain, every screen; persistence asserted via the specific `AccessibleNotice` finder, dismissal via `find.text`. **G5** `control_autoDismiss` fails `noTimeout`; reference passes — rejects a rule that never flags a timer. **G6** one AC (the SnackBar-gone assertion is the G3 change-control for the same AC, not a second AC). Deterministic (fake-clock `pump`); honest comments. |
+| **AC-9** `a feature failing the automated check is not accepted` (owner GATE-3) | Given: `control_partialFail` run through the check yields a **genuinely partial** result — `partial.failing isNotEmpty` **and** `anyPassing` (≥1 `ConformanceRuleId` passes), both asserted through the public check surface, reasons naming GATE-3 + the sub-rules. When: `acceptanceDecision(partial)`. Then: `notAccepted`. Control: a fully-passing result (reference, `full.passed isTrue`) ⇒ `acceptanceDecision(full) == accepted`. | **B pending GATE-3** | Legitimately *limited* now: the aggregate `acceptanceDecision` cannot discriminate, and the partial-result Given cannot hold, until every sub-rule exists (A11Y-2..7 + GATE-2) and GATE-3 composes them in `runConformanceCheck`. At baseline the empty stub makes `partial.failing` empty ⇒ the test fails on the **Given precondition** whose reason names GATE-3 (the honest limit). Otherwise fully built: **G1** every Given asserted via the public surface; **G5** discriminating — partial ⇒ `notAccepted` vs full ⇒ `accepted`, rejecting a constant `notAccepted` and a decision that accepts a partial result or inspects only one rule; **G4** exact `AcceptanceDecision` values; **G6** one AC. Matching augmentation row **TestAC09 → GATE-3** present in `modules/ITEST.md` (status ⬜ Open); re-graded A once GATE-3 closes it. |
+| **AC-11** `WCAG 2.2 AA is the recorded accepted floor` (owner GATE-4) | Given: a fully-passing `ConformanceResult` (reference, `passing.passed isTrue` asserted), reason naming GATE-4. When: `recordedLevel(passing)`. Then: `WcagLevel.aa22`. Control: a failing result (`control_partialFail`, `failing.passed isFalse`) records `WcagLevel.below`. | **B pending GATE-4** | Legitimately *limited* now: `recordedLevel` is a throwing stub until GATE-4, and a fully-passing result needs every sub-rule to exist — so the Given cannot hold yet. At baseline the empty stub makes `passing.passed` false ⇒ the test fails on the **Given precondition** before the throwing `recordedLevel` is reached, reason naming GATE-4. Otherwise fully built: **G1** both Givens (`passed`/`!passed`) asserted via the public surface; **G5** discriminating — passing ⇒ `aa22` vs failing ⇒ `below`, rejecting a constant `aa22` and recording AA for a result that failed a rule; **G6** one AC. The catalogue's "thresholds equal the WCAG 2.2 AA constants" assertion is correctly **deferred to the augmentation**, not asserted here. Matching augmentation row **TestAC11 → GATE-4** present in `modules/ITEST.md` (status ⬜ Open); re-graded A once GATE-4 closes it. |
+
+### ITEST-3 verdict
+
+**3 A / 2 B-pending — PASS.** AC-3, AC-7 and AC-8 are grade **A**: fully built,
+each with a discriminating control (overflow row fails `fontScale200`; a
+label-less step blocks the eyes-free driver; the SnackBar auto-dismisses while the
+`AccessibleNotice` persists) and asserting its exact observable at step grain, one
+AC each. **AC-8 nails G3** — a true settle point (10s fake-clock advance past the
+4s window), the negative Then taken only after it, and a change-control (the
+SnackBar *is* gone) proving the reading can move. **AC-7** is correctly **A, not
+B-pending**: it has no augmentation row and discriminates fully as soon as its one
+owning phase (GATE-2) lands the driver, exactly like the stubbed-rule AC-1..6.
+**AC-9 (B pending GATE-3)** and **AC-11 (B pending GATE-4)** are legitimate
+B-pending: the aggregate `acceptanceDecision` / `recordedLevel` and a genuinely
+partial / fully-passing result cannot exist until every sub-rule plus the owning
+GATE phase land, so each fails red on a **Given precondition naming its phase**;
+both are otherwise well-built (G1/G4/G5/G6 met) and each has a matching
+augmentation row owned by the named phase in `modules/ITEST.md` (TestAC09→GATE-3,
+TestAC11→GATE-4, both ⬜ Open), to be re-graded A when closed.
+
+**No ordinary B rows — nothing needs a fix in this phase.** The one noted blemish
+(AC-3's reference leg omits a `findsOneWidget` assertion that ITEST-2 and AC-8
+include) does not reach a G1 failure: the discriminating Givens (every swept
+screen + the control subtree) are all checked and the baseline is honest-red, not
+a vacuous pass. It is recorded as an optional symmetry improvement, not a required
+fix.

@@ -26,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'package:paint_color_assistant/app/theme.dart';
+import 'package:paint_color_assistant/widgets/accessible_notice.dart';
 import 'package:paint_color_assistant/widgets/color_chip.dart';
 import 'package:paint_color_assistant/widgets/status_badge.dart';
 
@@ -401,6 +402,246 @@ void main() {
       expect(ctrlResult.failing, contains(ConformanceRuleId.meaningfulLabel),
           reason: 'control_unlabelled has no semantic label — the rule must '
               'flag it');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // ITEST-3 — AC tests: scaling, eyes-free, timing, gate, floor
+  //           (AC-3, AC-7, AC-8, AC-9, AC-11).
+  //
+  // Each is registered *pending* via [acTestWidgets] (skipped by default; run
+  // under `--dart-define=BS11_RUN_PENDING=true`), un-pended by its owning
+  // behaviour phase deleting its row in `bs11/pending.dart`:
+  //   AC-3  → A11Y-4 (200% scaling)     AC-8  → A11Y-7 (no time limit)
+  //   AC-7  → GATE-2 (eyes-free driver)  AC-9  → GATE-3 (acceptanceDecision)
+  //   AC-11 → GATE-4 (recordedLevel)
+  //
+  // Red baseline (the GATE-1 stubs): `runConformanceCheck` returns
+  // `ConformanceResult.empty` (every rule outcome absent), `eyesFreeComplete`
+  // throws `UnimplementedError`, and `acceptanceDecision`/`recordedLevel` throw
+  // `UnimplementedError`. So AC-3/AC-8 fail on their first positive **Then**
+  // (a null rule outcome); AC-7 fails at the **When** (the driver stub throws,
+  // its message naming GATE-2); AC-9/AC-11 fail at a **Given precondition** that
+  // cannot hold until every sub-rule exists (its reason naming GATE-3/GATE-4) —
+  // the honest limit that makes AC-9/AC-11 *B pending* at this phase.
+  // -------------------------------------------------------------------------
+  group('bs-11 acceptance criteria — scaling, eyes-free, timing, gate, floor '
+      '(ITEST-3)', () {
+    acTestWidgets('AC-3', 'the layout survives 200% font scaling without breaking',
+        (tester) async {
+      // Scenario: System font scaling to 200% does not break the layout.
+      // The 200%-scale pump + overflow capture live inside the scaling rule
+      // (A11Y-4: "pump at textScaler 2.0; assert takeException()==null and no
+      // overflow"), so — as for the contrast/target rules in ITEST-2 — the test
+      // runs the reusable check over the *unscaled* subject and reads the
+      // `fontScale200` outcome. (`whenScaledTo` stays available for A11Y-4's own
+      // rule-level tests; pre-scaling here would surface a raw RenderFlex
+      // overflow before the check could capture it, dirtying the baseline.)
+      // Then (sweep, D-1): the scaling rule passes on every real screen.
+      for (final realScreen in realScreens) {
+        // Given: the screen is shown through the production `buildApp`.
+        await givenScreen(tester, realScreen);
+        expect(realScreen.screen, findsOneWidget,
+            reason: 'Given: ${realScreen.name} opened through buildApp');
+        // When: the scaling check runs over the screen (scales to 200%
+        // internally and watches for overflow).
+        final result = await whenCheckedForConformance(tester, realScreen.screen);
+        // Then: the layout survives 200% without clipping — the rule holds
+        // (A11Y-4 fixes the layouts + authors the rule).
+        expect(result.outcomeFor(ConformanceRuleId.fontScale200)?.pass, isTrue,
+            reason: '${realScreen.name}: the layout clips or overflows at 200%');
+      }
+      // Given: the compliant reference lays out cleanly at any scale.
+      await givenCompliantReference(tester);
+      final refResult =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      // Then: the rule passes on the reference.
+      expect(refResult.outcomeFor(ConformanceRuleId.fontScale200)?.pass, isTrue,
+          reason: 'the compliant reference must survive 200% scaling');
+      // Control (G5): a fixed-height row that clips once the text doubles fails
+      // the rule — rejects a rule that never applies the 200% check.
+      await givenControl(tester, control_overflow200);
+      expect(control_overflow200.subtree, findsOneWidget,
+          reason: 'Given: the fixed-height row is rendered');
+      final ctrlResult =
+          await whenCheckedForConformance(tester, control_overflow200.subtree);
+      expect(ctrlResult.failing, contains(ConformanceRuleId.fontScale200),
+          reason: 'control_overflow200 clips at 200% — the rule must flag it');
+    });
+
+    acTestWidgets('AC-7', 'a core task completes eyes-free under the screen reader',
+        (tester) async {
+      // Scenario: An eyes-free walkthrough completes under the screen reader.
+      // The driver finds each control by its *semantic label* and activates it
+      // via `SemanticsAction`, never by key/type/coordinate (D-6) — so a green
+      // run proves the task is operable by a screen-reader user.
+      final semantics = tester.ensureSemantics();
+      addTearDown(semantics.dispose);
+
+      // Given: the app is launched to a core task (Readout of a fixture sample)
+      // with semantics active, and the task's entry control is present *by its
+      // label* ("Speak this readout" — the label GATE-2's driver activates).
+      final readout = realScreens.firstWhere((s) => s.name == 'Readout');
+      await givenScreen(tester, readout);
+      expect(readout.screen, findsOneWidget,
+          reason: 'Given: Readout opened through buildApp');
+      expect(find.bySemanticsLabel('Speak this readout'), findsOneWidget,
+          reason: 'Given: the task entry control is present by its label');
+
+      // When: the task is performed using only semantic labels + actions.
+      final completed =
+          await whenCompletedEyesFree(tester, steps: const ['Speak this readout']);
+      // Then: the task reaches its terminal state (observed via the read
+      // endpoint inside the driver) — GATE-2 makes this true.
+      expect(completed, isTrue,
+          reason: 'the core task must complete eyes-free via semantic labels');
+
+      // Control (G5): the same driver, given a required step whose label is not
+      // exposed on any control, cannot progress — rejects a driver that falls
+      // back to coordinates / widget position rather than semantics (D-6).
+      final blocked = await whenCompletedEyesFree(
+        tester,
+        steps: const ['__no control exposes this label__'],
+      );
+      expect(blocked, isFalse,
+          reason: 'a step with no semantic label must not be reachable — an '
+              'eyes-free driver cannot use coordinates (D-6)');
+    });
+
+    acTestWidgets('AC-8', 'nothing auto-dismisses or imposes a time limit',
+        (tester) async {
+      // Scenario: No interaction imposes a time limit and nothing auto-dismisses.
+      // Then (sweep): the no-timeout rule passes on every real screen.
+      for (final realScreen in realScreens) {
+        // Given: the screen is shown through `buildApp`.
+        await givenScreen(tester, realScreen);
+        expect(realScreen.screen, findsOneWidget,
+            reason: 'Given: ${realScreen.name} opened through buildApp');
+        // When: the no-timeout rule runs over the screen.
+        final result = await whenCheckedForConformance(tester, realScreen.screen);
+        // Then: nothing on it is on an auto-dismiss timer — the rule holds
+        // (A11Y-7).
+        expect(result.outcomeFor(ConformanceRuleId.noTimeout)?.pass, isTrue,
+            reason: '${realScreen.name}: something imposes a time limit');
+      }
+
+      // Given: the reference shows an `AccessibleNotice` (never auto-dismisses),
+      // confirmed present before the settle point.
+      await givenCompliantReference(tester);
+      expect(
+          find.descendant(
+              of: compliantReferenceFinder,
+              matching: find.byType(AccessibleNotice)),
+          findsOneWidget,
+          reason: 'Given: the reference shows an AccessibleNotice');
+      // When (settle point, G3): the painter waits well past any default
+      // auto-dismiss window (the SnackBar default is 4s) without acting.
+      await whenWaited(tester, const Duration(seconds: 10));
+      // Then: the notice is *still present after the advance* — nothing was
+      // dismissed on a timer — and the no-timeout rule passes.
+      expect(
+          find.descendant(
+              of: compliantReferenceFinder,
+              matching: find.byType(AccessibleNotice)),
+          findsOneWidget,
+          reason: 'the AccessibleNotice must persist past the settle point');
+      final refResult =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      expect(refResult.outcomeFor(ConformanceRuleId.noTimeout)?.pass, isTrue,
+          reason: 'a notice that never auto-dismisses must pass the rule');
+
+      // Control (G3/G5): `control_autoDismiss`'s standard SnackBar *is gone*
+      // after the same advance — proving the reading can change (so the
+      // reference's persistence is a real observation, not a stuck frame) and
+      // that the rule flags a timer-dismissed notice.
+      await givenControl(tester, control_autoDismiss);
+      expect(find.text('Auto-dismissing notice'), findsOneWidget,
+          reason: 'Given: the auto-dismissing SnackBar is shown first');
+      await whenWaited(tester, const Duration(seconds: 10));
+      expect(find.text('Auto-dismissing notice'), findsNothing,
+          reason: 'control: the SnackBar must auto-dismiss after the advance');
+      final ctrlResult =
+          await whenCheckedForConformance(tester, control_autoDismiss.subtree);
+      expect(ctrlResult.failing, contains(ConformanceRuleId.noTimeout),
+          reason: 'control_autoDismiss imposes a timer — the rule must flag it');
+    });
+
+    acTestWidgets(
+        'AC-9', 'a feature failing the automated check is not accepted',
+        (tester) async {
+      // Scenario: A feature failing the automated check is not accepted.
+      // *B pending GATE-3*: the aggregate `acceptanceDecision` cannot
+      // discriminate until every sub-rule exists (A11Y-2..7 + GATE-2) and
+      // GATE-3 composes them — so at this phase the Given below cannot hold
+      // (the stub result is empty). GATE-3 un-pends and closes the augmentation
+      // (ITEST *Test augmentations* → TestAC09).
+
+      // Given: `control_partialFail` run through the check yields a result with
+      // ≥1 FAILING rule and ≥1 PASSING rule (a genuinely partial result) —
+      // asserted through the public check surface. Not satisfiable until GATE-3
+      // populates the aggregate; the reason names it.
+      await givenControl(tester, control_partialFail);
+      final partial =
+          await whenCheckedForConformance(tester, control_partialFail.subtree);
+      expect(partial.failing, isNotEmpty,
+          reason: 'Given (needs GATE-3 + the sub-rules A11Y-2..7/GATE-2): '
+              'control_partialFail must have ≥1 failing rule');
+      final anyPassing = ConformanceRuleId.values
+          .any((id) => partial.outcomeFor(id)?.pass == true);
+      expect(anyPassing, isTrue,
+          reason: 'Given (needs GATE-3 + the sub-rules): control_partialFail '
+              'must have ≥1 passing rule, so the result is genuinely partial');
+
+      // When: the feature is reviewed for acceptance.
+      final decision = acceptanceDecision(partial);
+      // Then: a partially-failing result is NOT accepted (rejects a decision
+      // that accepts it, or that inspects only one rule).
+      expect(decision, AcceptanceDecision.notAccepted,
+          reason: 'any failing rule ⇒ the build is not accepted');
+
+      // Control (G5): a fully-passing result (the compliant reference) ⇒
+      // accepted — so the decision is not a constant "notAccepted".
+      await givenCompliantReference(tester);
+      final full =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      expect(full.passed, isTrue,
+          reason: 'Given (needs every rule): the reference passes every rule');
+      expect(acceptanceDecision(full), AcceptanceDecision.accepted,
+          reason: 'a fully-passing result ⇒ accepted');
+    });
+
+    acTestWidgets('AC-11', 'WCAG 2.2 AA is the recorded accepted floor',
+        (tester) async {
+      // Scenario: WCAG 2.2 AA is the accepted floor.
+      // *B pending GATE-4*: `recordedLevel` is stubbed until GATE-4, and a
+      // fully-passing result needs every sub-rule — so the Given cannot hold
+      // yet; its reason names GATE-4. GATE-4 un-pends, pins the thresholds to
+      // the WCAG 2.2 AA constants (D-5) and closes the augmentation (TestAC11).
+
+      // Given: a fully-passing `ConformanceResult` (the compliant reference,
+      // asserted `passed == true`). Not satisfiable until every rule lands.
+      await givenCompliantReference(tester);
+      final passing =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      expect(passing.passed, isTrue,
+          reason: 'Given (needs every rule + GATE-4): the reference must pass '
+              'every rule so its recorded level can be AA');
+
+      // When: its compliance level is recorded.
+      final level = recordedLevel(passing);
+      // Then: it meets at least WCAG 2.2 AA.
+      expect(level, WcagLevel.aa22,
+          reason: 'a fully-passing result records WCAG 2.2 AA');
+
+      // Control (G5): a failing result records BELOW AA — rejects recording AA
+      // for a result that did not pass every rule.
+      await givenControl(tester, control_partialFail);
+      final failing =
+          await whenCheckedForConformance(tester, control_partialFail.subtree);
+      expect(failing.passed, isFalse,
+          reason: 'Given: control_partialFail does not pass every rule');
+      expect(recordedLevel(failing), WcagLevel.below,
+          reason: 'a result that fails a rule records below AA, never AA');
     });
   });
 }

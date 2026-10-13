@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-2 done (AC-1,2,4,5,6 pending + red baseline, 5 A); next ITEST-3 (shares `accessibility_test.dart` → sequential), then ITEST-4 test review (G-2)
+**Status:** In progress — ITEST-3 done (AC-3,7,8,9,11 pending + red baseline; 3 A / 2 B-pending); next ITEST-4 test review (G-2, the module's last phase)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs11/accessibility_harness.dart`, `integration_test/bs11/accessibility_test.dart`, `integration_test/bs11/pending.dart` (created at CONF-1). Consumes (does not own) the reusable check in `integration_test/conformance/` and the domain in `lib/a11y/conformance/`.
 **Depends on:** all shell phases (A11Y-1, GATE-1) · **Blocks:** every behavior phase (via G-2)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 7,883,599 | 17m 28s |
 | ITEST-2 | acceptance-tests | AC-1,2,4,5,6 (pending) | ✅ Done | 5,523,993 | 14m 07s |
-| ITEST-3 | acceptance-tests | AC-3,7,8,9,11 (pending) | ⬜ Todo | | |
+| ITEST-3 | acceptance-tests | AC-3,7,8,9,11 (pending) | ✅ Done | 7,854,428 | 26m 55s |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -66,23 +66,76 @@
 |---|---|---|---|---|---|
 | AC-1 | TestAC01_ColourCarriesNonColourCue | FAIL | Then: cue rule passes on every screen | A11Y-5 | A |
 | AC-2 | TestAC02_StatusNotBareColourDot | FAIL | Then: no-bare-dot rule | A11Y-5 | A |
-| AC-3 | TestAC03_FontScale200NoBreak | FAIL | Then: no overflow at 2.0 | A11Y-4 | — |
+| AC-3 | TestAC03_FontScale200NoBreak | FAIL | Then: `fontScale200` null on first real screen (sweep) | A11Y-4 | A |
 | AC-4 | TestAC04_TapTargetMin48 | FAIL | Then: tap-target guideline | A11Y-3 | A |
 | AC-5 | TestAC05_ContrastFloorAA | FAIL | Then: contrast guideline | A11Y-2 | A |
 | AC-6 | TestAC06_ControlHasMeaningfulLabel | FAIL | Then: labelled-control rule | A11Y-6 | A |
-| AC-7 | TestAC07_EyesFreeWalkthroughCompletes | FAIL | Then: task reaches terminal state | GATE-2 | — |
-| AC-8 | TestAC08_NothingAutoDismisses | FAIL | Then: notice persists after advance | A11Y-7 | — |
-| AC-9 | TestAC09_FailedAutomatedCheckNotAccepted | FAIL | Then: notAccepted (aggregate stub) | GATE-3 | B pending GATE-3 |
-| AC-11 | TestAC11_RecordedFloorIsWcag22AA | FAIL | Then: recordedLevel aa22 (stub) | GATE-4 | B pending GATE-4 |
+| AC-7 | TestAC07_EyesFreeWalkthroughCompletes | FAIL | When: `eyesFreeComplete` stub throws `UnimplementedError` (names GATE-2) | GATE-2 | A |
+| AC-8 | TestAC08_NothingAutoDismisses | FAIL | Then: `noTimeout` null on first real screen (sweep) | A11Y-7 | A |
+| AC-9 | TestAC09_FailedAutomatedCheckNotAccepted | FAIL | Given: `control_partialFail` has no failing rule (empty result) — precondition names GATE-3 + sub-rules | GATE-3 | B pending GATE-3 |
+| AC-11 | TestAC11_RecordedFloorIsWcag22AA | FAIL | Given: reference `result.passed` false (empty result) — precondition names GATE-4 | GATE-4 | B pending GATE-4 |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC09 | the aggregate `acceptanceDecision` cannot discriminate until every sub-rule exists (A11Y-2..7, GATE-2) | GATE-3 | compose all rules; assert a partially-failing result ⇒ notAccepted and a fully-passing one ⇒ accepted | ⬜ Open |
-| TestAC11 | `recordedLevel` is stubbed until the aggregate result exists | GATE-4 | assert a passing result records `aa22`, a failing one `below`, and thresholds equal the WCAG 2.2 AA constants | ⬜ Open |
+| TestAC09 | the aggregate `acceptanceDecision` cannot discriminate until every sub-rule exists (A11Y-2..7, GATE-2) | GATE-3 | compose all rules; assert a partially-failing result ⇒ notAccepted and a fully-passing one ⇒ accepted | ⬜ Open (confirmed ITEST-3) |
+| TestAC11 | `recordedLevel` is stubbed until the aggregate result exists | GATE-4 | assert a passing result records `aa22`, a failing one `below`, and thresholds equal the WCAG 2.2 AA constants | ⬜ Open (confirmed ITEST-3) |
 
 ### Result  <!-- one block per phase -->
+
+**ITEST-3 — AC tests: scaling, eyes-free, timing, gate, floor (AC-3, AC-7, AC-8, AC-9, AC-11)** (✅ Done)
+
+- **`integration_test/bs11/accessibility_test.dart`** — added the group
+  `bs-11 acceptance criteria — scaling, eyes-free, timing, gate, floor (ITEST-3)`
+  with five *pending* `acTestWidgets` (`AC-3`/`AC-7`/`AC-8`/`AC-9`/`AC-11`), each
+  driving the one public surface:
+  - **AC-3** `fontScale200` — sweeps all six real screens + `compliantReference`
+    (rule passes) and `control_overflow200` (rule fails). The 200%-scale pump +
+    overflow capture live **inside the A11Y-4 rule** (per A11Y task 2: "pump at
+    textScaler 2.0; assert `takeException()==null`"), so the test runs the check
+    over the *unscaled* subject and reads the outcome — pre-scaling in the test
+    would surface a raw `RenderFlex` overflow before the check could capture it,
+    dirtying the baseline. (`whenScaledTo` stays available for A11Y-4's own
+    rule-level tests.)
+  - **AC-7** eyes-free via `whenCompletedEyesFree` — launches Readout, asserts
+    the entry control present *by label* (`find.bySemanticsLabel('Speak this
+    readout')`), drives the task by semantic label only, asserts completion;
+    control = a step whose label is exposed on no control cannot progress (D-6,
+    rejects a coordinate-fallback driver).
+  - **AC-8** `noTimeout` — sweeps all six real screens (rule passes), then the
+    **G3 settle point**: `whenWaited(10s)` past the SnackBar 4s window — the
+    reference `AccessibleNotice` is *still present after the advance* and the
+    rule passes; change-control `control_autoDismiss`'s SnackBar *is gone* after
+    the same advance and the rule flags it.
+  - **AC-9** `acceptanceDecision` over `control_partialFail` (≥1 failing + ≥1
+    passing ⇒ notAccepted) with the fully-passing reference ⇒ accepted control.
+  - **AC-11** `recordedLevel` over the fully-passing reference (⇒ `aa22`) with a
+    failing-result control (⇒ `below`).
+  - Added import: `widgets/accessible_notice.dart` (AC-8 finds the notice). No
+    harness or production code touched.
+- **Gates:** `flutter analyze integration_test/bs11/` clean. **Default** run
+  (pending-skipped) **9/9 green** on booted iPhone 17 sim (udid `5AB9D06D…`) via
+  `coord.sh with-lock` (exit 0) — suite stays green with all 10 ACs pending.
+  **Red baseline** (`--dart-define=BS11_RUN_PENDING=true`): **9 pass / 10 fail**
+  (the 5 ITEST-2 + these 5), each new test failing exactly as designed — AC-3
+  Then `fontScale200` null (sweep), AC-8 Then `noTimeout` null (sweep), AC-7 When
+  `UnimplementedError … GATE-2 (AC-7)`, AC-9 Given "≥1 failing rule" (empty)
+  naming GATE-3, AC-11 Given reference `passed` false naming GATE-4. Coverage
+  gate `dart run tool/coverage_gate.dart main` **PASS 100%** — ITEST-3 touched
+  only `integration_test/**`, so the 9 branch-touched `lib/**` files are
+  unchanged from GATE-1. **Grade gate 3 A / 2 B-pending** (independent
+  adversarial grader in a fresh subagent; grid section appended) — AC-3/AC-7/AC-8
+  **A**; AC-9 **B pending GATE-3**, AC-11 **B pending GATE-4** (both legitimate:
+  the aggregate verdict + a genuinely partial/passing result need every sub-rule,
+  each has a matching augmentation row). **Fix passes:** 0/3 (analyze + both runs
+  clean on the first pass).
+- **Augmentations:** confirmed the two pre-seeded rows (TestAC09 → GATE-3,
+  TestAC11 → GATE-4), both ⬜ Open. No test weakened. Grader note (optional, not a
+  required fix): AC-3's reference leg omits a `compliantReferenceFinder
+  findsOneWidget` assertion the other tests carry — graded A regardless (the
+  discriminating Givens are all checked; honest-red on a null Then). Handed to
+  A11Y-4 as an optional symmetry touch-up.
 
 **ITEST-2 — AC tests: structural rules (AC-1, AC-2, AC-4, AC-5, AC-6)** (✅ Done)
 
@@ -133,9 +186,9 @@
 
 ### Checkpoint / Handoff
 
-**After ITEST-2 (branch `feat/bs-11-accessibility-conformance`):**
+**After ITEST-3 (branch `feat/bs-11-accessibility-conformance`):**
 
-- **Frozen for ITEST-3:** the group `bs-11 acceptance criteria — structural rules (ITEST-2)` holds AC-1/AC-2/AC-4/AC-5/AC-6 and is closed. ITEST-3 adds a **new** group (e.g. `scaling, eyes-free, timing, gate, floor`) in the **same file** `accessibility_test.dart` for AC-3, AC-7, AC-8, AC-9, AC-11 — **ITEST-2 and ITEST-3 share this file, so this phase and ITEST-3 are sequential** (do not run them as two concurrent worktrees). Import `bs11/accessibility_harness.dart` only (plus `material.dart` / specific lib types where a Given needs them, as ITEST-2 did for `AppTheme`/`ColorChip`/`StatusBadge`). AC-3 uses `whenScaledTo(tester, 2.0)` + `control_overflow200`; AC-8 uses `whenWaited` + `control_autoDismiss` (negative "nothing auto-dismisses" Then after the clock advance — a settle point, **G3**); AC-7 uses `whenCompletedEyesFree` (GATE-2); AC-9 over the aggregate result with `control_partialFail` (→ *B pending GATE-3*); AC-11 over `recordedLevel` (→ *B pending GATE-4*). Pre-seeded augmentation rows for AC-9/AC-11 are still **⬜ Open** — confirm them in ITEST-3.
-- **Pattern to copy (worked at ITEST-2, all 5 A):** sweep `for (final s in realScreens) { await givenScreen(tester, s); expect(s.screen, findsOneWidget); final r = await whenCheckedForConformance(tester, s.screen); expect(r.outcomeFor(ConformanceRuleId.<rule>)?.pass, isTrue, reason: …); }`, then positive `givenCompliantReference` + `compliantReferenceFinder`, then the discriminating control `givenControl(tester, control_X)` and `expect(r.failing, contains(ConformanceRuleId.<rule>))`. At the red baseline the stub `runConformanceCheck` returns `ConformanceResult.empty`, so `outcomeFor(...)` is null and the first positive Then fails — the correct red baseline. AC-9/AC-11 hit `acceptanceDecision`/`recordedLevel`, which **throw `UnimplementedError`** at the stub — those two fail at the When, not a null Then; keep the augmentation rows.
-- **Verification commands** (from `../Nuance-bs11`, `flutter` at `/Users/matthew.quirk/development/flutter/bin`): analyze `flutter analyze integration_test/bs11/`; acceptance `flutter test integration_test/bs11/accessibility_test.dart -d <booted-udid>` under `coord.sh with-lock` (booted `-d` mandatory — no `-d` ⇒ false green; `FNP_COORD_REPO` may be the worktree — the verify lock keys off the shared git common-dir, so it is machine-wide across all bs worktrees; `cd` into the worktree inside the `bash -c`); red-baseline adds `--dart-define=BS11_RUN_PENDING=true` (exceeds 120s ⇒ redirect to a file, don't tail); coverage gate `dart run tool/coverage_gate.dart main`.
-- **Known gaps / next:** **ITEST-3** is next and startable now (depends only on ITEST-1; shares the test file with ITEST-2 which is done). Then **ITEST-4** (test review, **G-2**) before any behaviour phase. No gate blocks ITEST-3; G-2 blocks only the behaviour stage.
+- **All AC tests landed.** `accessibility_test.dart` now holds **all 10 automated AC tests** — group `… structural rules (ITEST-2)` (AC-1/2/4/5/6) and group `… scaling, eyes-free, timing, gate, floor (ITEST-3)` (AC-3/7/8/9/11) — plus the ITEST-1 guards + smoke. Both groups are **closed**; no further AC-test phase remains. Stage 3's one remaining phase is **ITEST-4 (test review, G-2)**.
+- **ITEST-4 (next) — assemble the review packet** per the phase's task + `references/acceptance-suite.md` § *Test review*: per AC (all 10) a line or two — test name, Given checks, When, Then + Rejects; the red-baseline summary (9 pass / 10 fail; where each fails); the augmentation schedule (TestAC09→GATE-3, TestAC11→GATE-4); the grid path + counts (now **10 A-equivalent / 2 B-pending**: ITEST-2 5 A, ITEST-3 3 A + AC-9/AC-11 B-pending). Reviewer should look first at the **"every real screen" sweep** assertions (D-1) and the **control fixtures** (each rule's discriminator). Then set ITEST-4 `⏸ Awaiting review`, G-2 *awaiting decision*, record the ledger row, commit, and stop with: `/feature-next-phase --gate bs-11 G-2 approved | "<changes>"`. **Precondition check for ITEST-4:** whole-suite grade grid is all A or *B pending <phase>* — satisfied (no ordinary B).
+- **Verification commands** (from `../Nuance-bs11`, `flutter` at `/Users/matthew.quirk/development/flutter/bin`): analyze `flutter analyze integration_test/bs11/`; acceptance `flutter test integration_test/bs11/accessibility_test.dart -d <booted-udid>` under `coord.sh with-lock bs-11-accessibility-conformance <PHASE> --wait 1800 -- bash -c "cd <worktree> && …"` (booted `-d` mandatory — no `-d` ⇒ false green; the verify lock keys off the shared git common-dir ⇒ machine-wide across all bs worktrees, currently contended by bs-12; `cd` into the worktree inside the `bash -c`); red-baseline adds `--dart-define=BS11_RUN_PENDING=true` (exceeds 120s ⇒ redirect to a file, don't tail); coverage gate `dart run tool/coverage_gate.dart main`. ITEST-4 is a test-review (no new run required) — it reads the ITEST-3 red baseline recorded above.
+- **Known gaps / next:** **ITEST-4** (test review, **G-2**) is next and startable now (depends on ITEST-2+ITEST-3, both done). G-2's approval un-blocks the whole behaviour stage (A11Y-2..7, GATE-2/3/4). Optional symmetry touch-up for A11Y-4: add a `compliantReferenceFinder findsOneWidget` to AC-3's reference leg (grader-noted, not required).

@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** In progress — ITEST-2 done (AC-1,2,4,5,6 pending + red baseline, 5 A); next ITEST-3 (shares `accessibility_test.dart` → sequential), then ITEST-4 test review (G-2)
+**Status:** In progress — ITEST-3 done (all 10 AC tests landed; red baseline 9/10 fail-as-designed; 3 A / 2 B-pending); next ITEST-4 test review (G-2, last stage-3 phase)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -113,7 +113,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its che
 |---|---|---|---|---|
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ◐ In progress (CONF-1 done) |
 | GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ◐ In progress (GATE-1 done) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ◐ In progress (ITEST-1 done) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ◐ In progress (ITEST-1/2/3 done; next ITEST-4 review) |
 
 ## Dependency graph
 
@@ -156,8 +156,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | GATE-1 | shell: `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub | ✅ Done | 3,553,802 | 17m 14s | last shell; unit 1034/1034; cov 100% touched; full regression 173/173 on sim |
 | 4 | ITEST-1 | acceptance-tests: harness, real-screen + control fixtures, pending gate (10 ACs), smoke test | ✅ Done | 7,883,599 | 17m 28s | harness over 6 real screens + 7 controls; suite 9/9 on sim; cov 100% touched; no AC tests yet ⇒ no red baseline |
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,4,5,6 (pending) + red baseline | ✅ Done | 5,523,993 | 14m 07s | 5 A/0; default 9/9 green, red baseline 9/5, cov 100% touched |
-| 6 | ITEST-3 | acceptance-tests: AC-3,7,8,9,11 (pending) + red baseline | ⬜ Next | | | shares test file w/ ITEST-2 (done) → sequential |
-| 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 6 | ITEST-3 | acceptance-tests: AC-3,7,8,9,11 (pending) + red baseline | ✅ Done | 7,854,428 | 26m 55s | 3 A / 2 B-pending (AC-9→GATE-3, AC-11→GATE-4); default 9/9 green, red baseline 9/10, cov 100% touched |
+| 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | all 10 AC tests landed; assemble packet, G-2 awaits human |
 | 8 | A11Y-2 | AC-5 contrast: AA `AppTheme` + contrast check rule + sweep colours | ⬜ Todo | | | sweeps all screens |
 | 9 | A11Y-3 | AC-4 targets: 48dp floor + tap-target check rule + sweep controls | ⬜ Todo | | | |
 | 10 | A11Y-4 | AC-3 scaling: 200% resilience + scaling check rule + sweep layouts | ⬜ Todo | | | |
@@ -173,10 +173,12 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-2 (AC tests: structural rules) is **done** — five *pending* `acTestWidgets` for AC-1/AC-2/AC-4/AC-5/AC-6 in `accessibility_test.dart`, each sweeping all six real `buildApp` screens + `compliantReference` through `runConformanceCheck` and failing on its discriminating control (AC-1/AC-2→`control_bareDot`, AC-4→`control_smallTarget`, AC-5→`control_lowContrast`, AC-6→`control_unlabelled`); AC-5 pins G2 (contrast comes from the shipped `AppTheme`, not a test theme). Default run **9/9 green** (5 pending-skipped), red baseline **9 pass / 5 fail** (each fails on its positive-sweep Then — GATE-1 stub returns an empty result), coverage **100%** touched (only `integration_test/**` touched), grade **5 A / 0 B** (fresh adversarial grader). Grid at `behavior-test-completeness-bs-11-accessibility-conformance.md`.
+ITEST-3 (AC tests: scaling, eyes-free, timing, gate, floor) is **done** — five *pending* `acTestWidgets` for AC-3/AC-7/AC-8/AC-9/AC-11 in `accessibility_test.dart`, completing all 10 automated AC tests. Default run **9/9 green** (10 pending-skipped), red baseline **9 pass / 10 fail** (each new test fails as designed: AC-3/AC-8 on a null sweep Then, AC-7 at the `eyesFreeComplete` `UnimplementedError` When, AC-9/AC-11 on a Given precondition naming GATE-3/GATE-4), coverage **100%** touched (only `integration_test/**`), grade **3 A / 2 B-pending** (AC-9→GATE-3, AC-11→GATE-4; fresh adversarial grader). Grid at `behavior-test-completeness-bs-11-accessibility-conformance.md`.
 
-Next — **ITEST-3** (acceptance-tests), startable now:
-- register pending `acTestWidgets` for AC-3, AC-7, AC-8, AC-9, AC-11 in the **same** `accessibility_test.dart` (a new group) — AC-3 scaling (`whenScaledTo`/`control_overflow200`), AC-7 eyes-free (`whenCompletedEyesFree`), AC-8 no-timeout (`whenWaited`/`control_autoDismiss`, settle point), AC-9 aggregate decision (`control_partialFail` → *B pending GATE-3*), AC-11 recorded floor (→ *B pending GATE-4*); run `--dart-define=BS11_RUN_PENDING=true`; record the red baseline + grade; confirm the AC-9/AC-11 augmentation rows.
+Next — **ITEST-4** (test-review, **G-2**) — the last stage-3 phase, startable now:
+- Assemble the review packet in `modules/ITEST.md` (per `references/acceptance-suite.md` § *Test review*): for all 10 ACs the test name, Given checks, When, Then + Rejects; the red-baseline summary; the augmentation schedule (TestAC09→GATE-3, TestAC11→GATE-4); the grid path + counts; what to look at first (the D-1 "every real screen" sweep + the control fixtures).
+- Set ITEST-4 `⏸ Awaiting review`, G-2 *awaiting decision*, record the ledger row, commit, and **stop** with: `/feature-next-phase --gate bs-11 G-2 approved | "<changes>"`.
+- Precondition met: whole-suite grade is all A or *B pending <phase>* (no ordinary B). G-2's approval un-blocks the entire behaviour stage (A11Y-2..7, GATE-2/3/4).
 
 ITEST-3 depends only on ITEST-1 but **shares `accessibility_test.dart` with the now-done ITEST-2 → single session, not a concurrent worktree**. Then **ITEST-4** (test review, gate **G-2**) before any behaviour phase. No gate blocks ITEST-3; G-2 blocks only the behaviour stage; G-3/G-4 at SIGNOFF-1.
 
@@ -194,7 +196,8 @@ ITEST-3 depends only on ITEST-1 but **shares `accessibility_test.dart` with the 
 | GATE-1 | d4009850 | 2026-10-13 13:39 EDT | 13:56 | 17m 14s | 17m 14s | claude-opus-4-8 | 82 | 84,176 | 3,436,044 | 33,500 | 3,553,802 | shell: conformance model + check/eyes-free stubs; unit 1034/1034; cov 100% touched; full regression 173/173 on sim; fix passes 0/3 |
 | ITEST-1 | 8f960ca6 | 2026-10-13 14:14 EDT | 14:32 | 17m 28s | 17m 28s | claude-opus-4-8 | 118 | 246,999 | 7,573,061 | 63,421 | 7,883,599 | acceptance-tests: harness + 6 real-screen sweep + 7 control fixtures + smoke; suite 9/9 on sim; cov 100% touched; no AC tests ⇒ no red baseline; analyze clean |
 | ITEST-2 | de245eb8 | 2026-10-13 14:56 EDT | 15:10 | 14m 07s | 14m 07s | claude-opus-4-8 | 100 | 206,078 | 5,276,578 | 41,237 | 5,523,993 | 5 A/0 B; default 9/9 green, red baseline 9 pass/5 fail (each fails at Then), cov 100% touched |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 15:10** | **3h 32m** | **1h 23m** |  | **542** | **1,074,106** | **27,137,640** | **276,759** | **28,489,047** |  |
+| ITEST-3 | 092c04da | 2026-10-13 15:53 EDT | 16:20 | 26m 55s | 26m 55s | claude-opus-4-8 | 120 | 268,263 | 7,527,062 | 58,983 | 7,854,428 | acceptance-tests: AC-3/7/8/9/11 pending; default 9/9 green, red baseline 9/10; cov 100% touched; grade 3 A / 2 B-pending (AC-9→GATE-3, AC-11→GATE-4) |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 16:20** | **3h 59m** | **1h 50m** |  | **662** | **1,342,369** | **34,664,702** | **335,742** | **36,343,475** |  |
 
 ## Sign-off
 
