@@ -40,8 +40,9 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 
 ## Open gates
 
-- DALT-1 is blocked by **G-1** (spec approval), **G-3** (bs-08 merged) and **G-4** (bs-07 merged) — see the
-  master plan. All behavior phases are additionally blocked by **G-2** (acceptance tests approved).
+- DALT-1: **G-1** (spec approval) ✅ Resolved 2026-10-13 — approved by Matt Quirk; **G-3** (bs-08 merged) ✅
+  Resolved 2026-10-13 — merge `0900d44` is an ancestor of `main`. Still blocked by **G-4** (bs-07 merged) —
+  see the master plan. All behavior phases are additionally blocked by **G-2** (acceptance tests approved).
 
 ## Phase DALT-1 — scaffold
 

@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-13 by Matt Quirk (G-1; derived 2026-10-05 by /wireframe-behavior-specs)
 # Scope beyond the wireframe: scope §5.4 daltonization, not drawn in the mock.
 Feature: Daltonization and colour-distinction aids
   An optional display mode that remaps shown colours to maximise distinguishability

@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** Not started — next DALT-1 (blocked by G-1 spec approval, G-3 bs-08 merge, G-4 bs-07 merge)
+**Status:** Not started — next DALT-1 (G-1 ✅ + G-3 ✅; still blocked by G-4 bs-07 merge)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -152,9 +152,9 @@ behavior phases DALT-3..DALT-11 share the `ColorChip`/display chokepoint **and**
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" line) | DALT-1 | Open |
+| G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" line) | DALT-1 | ✅ Resolved 2026-10-13 08:00 EDT: approved — Matt Quirk (spec first line amended to the approval line) |
 | G-2 | decision | Approve the acceptance tests (ITEST-3's packet) | every behavior phase | Open |
-| G-3 | dependency | **bs-08 signed off and merged to `main`** (lands `DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint` + the `display_*` harness pattern) — closed by the human approving bs-08 SIGNOFF-1 and merging `feat/bs-08` → `main` | DALT-1 | Open |
+| G-3 | dependency | **bs-08 signed off and merged to `main`** (lands `DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint` + the `display_*` harness pattern) — closed by the human approving bs-08 SIGNOFF-1 and merging `feat/bs-08` → `main` | DALT-1 | ✅ Resolved 2026-10-13 08:00 EDT: bs-08 merged to `main` (merge `0900d44`, ancestor of `main`) — verified from git |
 | G-4 | dependency | **bs-07 signed off and merged to `main`** (lands `CvdProfileStore`/`CvdProfileReadEndpoint` + savable/empty/changeable `AppDependencies.cvdProfile`) — closed by the human approving bs-07 SIGNOFF-1 and merging `feat/bs-07` → `main` | DALT-1 | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -172,7 +172,7 @@ not as flakes.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | DALT-1 | scaffold: branch off post-bs07/bs08 main, baseline, coverage-gate proof, `bs10/pending.dart` (10 ACs) + runner | ⬜ Next | | | blocked by G-1, G-3, G-4 |
+| 1 | DALT-1 | scaffold: branch off post-bs07/bs08 main, baseline, coverage-gate proof, `bs10/pending.dart` (10 ACs) + runner | ⬜ Next | | | G-1 ✅, G-3 ✅; blocked by G-4 (bs-07 merge) |
 | 2 | DALT-2 | shell: `daltonize` identity stub + `DisplaySettings.daltonization` + chokepoint branch + `DisplayReadEndpoint` | ⬜ Todo | | | |
 | 3 | CONTROL-1 | shell: daltonization toggle + no-profile placeholder region (render-only) | ⬜ Todo | | | after DALT-2 |
 | 4 | ITEST-1 | acceptance-tests: harness, fixtures (`referenceDaltonize`, saved/noProfile), pending gate, smoke | ⬜ Todo | | | |
@@ -195,11 +195,11 @@ when the row is marked done.
 
 ## Next phase
 
-**DALT-1 (scaffold)** — blocked by three gates that must all clear first:
-- **G-1** — the owner approves the spec (replaces its "Draft: awaiting owner approval" first line).
-- **G-3** — bs-08 is signed off and merged to `main` (the display pipeline bs-10 extends).
-- **G-4** — bs-07 is signed off and merged to `main` (the stored profile bs-10 reads).
-Once all three clear, DALT-1 branches `feat/bs-10` off the updated `main`, proves the coverage gate + the
+**DALT-1 (scaffold)** — G-1 ✅ (spec approved 2026-10-13) and G-3 ✅ (bs-08 merged `0900d44`) are clear;
+one gate remains:
+- **G-4** — bs-07 must be signed off and merged to `main` (the stored profile bs-10 reads). bs-07 is still
+  pre-sign-off (PROFILE-2 then SIGNOFF-1 outstanding), so DALT-1 cannot start yet.
+Once G-4 clears, DALT-1 branches `feat/bs-10` off the updated `main`, proves the coverage gate + the
 integration runner, and seeds `integration_test/bs10/pending.dart` with all 10 ACs pending. No product code.
 
 ## Token usage
@@ -209,7 +209,8 @@ integration runner, and seeds `integration_test/bs10/pending.dart` with all 10 A
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 040f04b0 | 2026-10-12 22:32 EDT | 22:46 | 13m 38s | 13m 38s | claude-opus-4-8 | 52 | 119,700 | 2,170,426 | 62,430 | 2,352,608 | plan written: 17 phases, 3 modules (DALT/CONTROL/ITEST), 10 ACs; gates G-1 spec + G-3 bs-08 merge + G-4 bs-07 merge |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-12 22:46** | **13m 38s** | **13m 38s** |  | **52** | **119,700** | **2,170,426** | **62,430** | **2,352,608** |  |
+| GATE-DECISION | ff530524 | 2026-10-13 07:59 EDT | 08:01 | 2m 14s | 2m 14s | claude-opus-4-8 | 34 | 37,170 | 986,861 | 9,008 | 1,033,073 | G-1 approved (spec) by Matt Quirk; G-3 resolved (bs-08 merged 0900d44) |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 08:01** | **15m 52s** | **15m 52s** |  | **86** | **156,870** | **3,157,287** | **71,438** | **3,385,681** |  |
 
 ## Sign-off
 
