@@ -21,8 +21,13 @@
 // baseline / un-pend run). A booted device udid is mandatory — without `-d` the
 // run executes zero tests and still exits 0 (false green; carried flake).
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+
+import 'package:paint_color_assistant/app/theme.dart';
+import 'package:paint_color_assistant/widgets/color_chip.dart';
+import 'package:paint_color_assistant/widgets/status_badge.dart';
 
 import 'accessibility_harness.dart';
 
@@ -178,6 +183,224 @@ void main() {
           reason: '${fixture.name} threw while rendering',
         );
       }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // ITEST-2 — AC tests: the structural rules (AC-1, AC-2, AC-4, AC-5, AC-6).
+  //
+  // Each is registered *pending* via [acTestWidgets]: skipped in the default
+  // run, executed under `--dart-define=BS11_RUN_PENDING=true` (the red
+  // baseline), un-pended by its owning behaviour phase (A11Y-2..6) deleting its
+  // row in `bs11/pending.dart`. Every test runs its rule's outcome in the
+  // aggregate [ConformanceResult] over the reusable `runConformanceCheck`
+  // (D-3): the rule must **pass on every real screen and on `compliantReference`
+  // (the SI-mandated sweep, D-1), and fail on its discriminating control** — so
+  // a rule that always passes (ignores the violation) fails the control, and a
+  // real screen that leaks the violation fails the sweep (G5). At the red
+  // baseline `runConformanceCheck` is the GATE-1 stub returning
+  // `ConformanceResult.empty`, so every rule outcome is absent and each test
+  // fails on its first Then (the sweep's positive assertion).
+  // -------------------------------------------------------------------------
+  group('bs-11 acceptance criteria — structural rules (ITEST-2)', () {
+    acTestWidgets('AC-1', 'every colour-coded element carries a non-colour cue',
+        (tester) async {
+      // Scenario: Every colour-coded element carries a non-colour cue.
+      // Then (sweep, D-1): the colour-cue rule passes on every real screen.
+      for (final realScreen in realScreens) {
+        // Given: the screen is shown through the production `buildApp`.
+        await givenScreen(tester, realScreen);
+        expect(realScreen.screen, findsOneWidget,
+            reason: 'Given: ${realScreen.name} opened through buildApp');
+        // When: the colour-cue check runs over the screen.
+        final result = await whenCheckedForConformance(tester, realScreen.screen);
+        // Then: every colour-coded element on it carries a label/icon/pattern/
+        // number — the rule holds (A11Y-5 makes this true).
+        expect(result.outcomeFor(ConformanceRuleId.colourCue)?.pass, isTrue,
+            reason: '${realScreen.name}: a colour-coded element lacks a '
+                'non-colour cue');
+      }
+      // Given: the compliant reference shows a colour-coded element (ColorChip).
+      await givenCompliantReference(tester);
+      expect(
+          find.descendant(
+              of: compliantReferenceFinder, matching: find.byType(ColorChip)),
+          findsOneWidget,
+          reason: 'Given: reference shows a colour-coded ColorChip');
+      final refResult =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      // Then: the rule passes on the fully-compliant reference.
+      expect(refResult.outcomeFor(ConformanceRuleId.colourCue)?.pass, isTrue,
+          reason: 'the compliant reference must pass the colour-cue rule');
+      // Control (G5): a bare colour dot with no text/icon fails the rule — the
+      // discriminating case that rejects a rule which never flags anything.
+      await givenControl(tester, control_bareDot);
+      expect(control_bareDot.subtree, findsOneWidget,
+          reason: 'Given: the bare colour dot is rendered');
+      final ctrlResult =
+          await whenCheckedForConformance(tester, control_bareDot.subtree);
+      expect(ctrlResult.failing, contains(ConformanceRuleId.colourCue),
+          reason: 'control_bareDot shows colour with no cue — the rule must '
+              'flag it');
+    });
+
+    acTestWidgets('AC-2', 'a status is never rendered as a bare colour dot',
+        (tester) async {
+      // Scenario: A status is never rendered as a bare colour dot.
+      // Then (sweep): the no-bare-dot rule passes on every real screen.
+      for (final realScreen in realScreens) {
+        // Given: the screen is shown through `buildApp`.
+        await givenScreen(tester, realScreen);
+        expect(realScreen.screen, findsOneWidget,
+            reason: 'Given: ${realScreen.name} opened through buildApp');
+        // When: the no-bare-dot rule runs over the screen.
+        final result = await whenCheckedForConformance(tester, realScreen.screen);
+        // Then: no status is a bare colour dot — the rule holds (A11Y-5).
+        expect(result.outcomeFor(ConformanceRuleId.noBareDot)?.pass, isTrue,
+            reason: '${realScreen.name}: a status is drawn as a bare colour '
+                'dot');
+      }
+      // Given: the reference renders its status via StatusBadge (text + icon).
+      await givenCompliantReference(tester);
+      expect(
+          find.descendant(
+              of: compliantReferenceFinder, matching: find.byType(StatusBadge)),
+          findsOneWidget,
+          reason: 'Given: reference shows a status as a StatusBadge, not a dot');
+      final refResult =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      // Then: the rule passes on the reference (status carries text/icon).
+      expect(refResult.outcomeFor(ConformanceRuleId.noBareDot)?.pass, isTrue,
+          reason: 'a text/icon status must pass the no-bare-dot rule');
+      // Control (G5): a status drawn as a bare coloured dot fails the rule.
+      await givenControl(tester, control_bareDot);
+      expect(control_bareDot.subtree, findsOneWidget,
+          reason: 'Given: the bare colour dot is rendered');
+      final ctrlResult =
+          await whenCheckedForConformance(tester, control_bareDot.subtree);
+      expect(ctrlResult.failing, contains(ConformanceRuleId.noBareDot),
+          reason: 'control_bareDot is a bare coloured dot — the rule must flag '
+              'it');
+    });
+
+    acTestWidgets('AC-4', 'interactive targets meet the 48dp minimum',
+        (tester) async {
+      // Scenario: Interactive targets meet the minimum size.
+      // Then (sweep): the tap-target rule passes on every real screen.
+      for (final realScreen in realScreens) {
+        // Given: the screen is shown through `buildApp`.
+        await givenScreen(tester, realScreen);
+        expect(realScreen.screen, findsOneWidget,
+            reason: 'Given: ${realScreen.name} opened through buildApp');
+        // When: the targets are measured by the tap-target rule.
+        final result = await whenCheckedForConformance(tester, realScreen.screen);
+        // Then: each interactive target is ≥ 48dp — the rule holds (A11Y-3).
+        expect(result.outcomeFor(ConformanceRuleId.tapTarget48)?.pass, isTrue,
+            reason: '${realScreen.name}: an interactive target is below 48dp');
+      }
+      // Given: the reference shows an interactive target (a 48dp IconButton).
+      await givenCompliantReference(tester);
+      expect(
+          find.descendant(
+              of: compliantReferenceFinder, matching: find.byType(IconButton)),
+          findsOneWidget,
+          reason: 'Given: reference shows an interactive target');
+      final refResult =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      // Then: the rule passes on the reference (its target is 48dp).
+      expect(refResult.outcomeFor(ConformanceRuleId.tapTarget48)?.pass, isTrue,
+          reason: 'a 48dp target must pass the tap-target rule');
+      // Control (G5): a 24dp target fails the rule — rejects a rule that never
+      // applies the 48dp guideline.
+      await givenControl(tester, control_smallTarget);
+      expect(control_smallTarget.subtree, findsOneWidget,
+          reason: 'Given: the 24dp target is rendered');
+      final ctrlResult =
+          await whenCheckedForConformance(tester, control_smallTarget.subtree);
+      expect(ctrlResult.failing, contains(ConformanceRuleId.tapTarget48),
+          reason: 'control_smallTarget is 24dp — the rule must flag it');
+    });
+
+    acTestWidgets('AC-5', 'text meets the WCAG 2.2 AA contrast floor',
+        (tester) async {
+      // Scenario: Text meets the high-contrast floor.
+      // Then (sweep): the contrast rule passes on every real screen.
+      for (final realScreen in realScreens) {
+        // Given: the screen is shown through `buildApp` and reads the app
+        // theme (G2) — so the contrast comes from the shipped ColorScheme, not
+        // an ad-hoc ThemeData a test could over-tune. A11Y-2 tunes that one
+        // theme to AA; this Given pins that it is the single source.
+        await givenScreen(tester, realScreen);
+        expect(realScreen.screen, findsOneWidget,
+            reason: 'Given: ${realScreen.name} opened through buildApp');
+        expect(Theme.of(tester.element(realScreen.screen)).colorScheme,
+            AppTheme.light().colorScheme,
+            reason: 'Given: ${realScreen.name} uses the app theme (G2)');
+        // When: contrast is measured against the background.
+        final result = await whenCheckedForConformance(tester, realScreen.screen);
+        // Then: text meets WCAG 2.2 AA contrast — the rule holds (A11Y-2).
+        expect(result.outcomeFor(ConformanceRuleId.contrastAA)?.pass, isTrue,
+            reason: '${realScreen.name}: text is below the AA contrast floor');
+      }
+      // Given: the reference reads the same app theme.
+      await givenCompliantReference(tester);
+      expect(Theme.of(tester.element(compliantReferenceFinder)).colorScheme,
+          AppTheme.light().colorScheme,
+          reason: 'Given: reference uses the app theme');
+      final refResult =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      // Then: the rule passes on the reference.
+      expect(refResult.outcomeFor(ConformanceRuleId.contrastAA)?.pass, isTrue,
+          reason: 'the compliant reference must pass the contrast rule');
+      // Control (G5): ~1.6:1 grey-on-white text fails the rule — rejects a
+      // rule that never applies the contrast guideline.
+      await givenControl(tester, control_lowContrast);
+      expect(control_lowContrast.subtree, findsOneWidget,
+          reason: 'Given: the low-contrast text is rendered');
+      final ctrlResult =
+          await whenCheckedForConformance(tester, control_lowContrast.subtree);
+      expect(ctrlResult.failing, contains(ConformanceRuleId.contrastAA),
+          reason: 'control_lowContrast is below 4.5:1 — the rule must flag it');
+    });
+
+    acTestWidgets('AC-6', 'every control exposes a meaningful screen-reader label',
+        (tester) async {
+      // Scenario: Every control exposes a meaningful screen-reader label.
+      // Then (sweep): the labelled-control rule passes on every real screen.
+      for (final realScreen in realScreens) {
+        // Given: the screen is shown through `buildApp`.
+        await givenScreen(tester, realScreen);
+        expect(realScreen.screen, findsOneWidget,
+            reason: 'Given: ${realScreen.name} opened through buildApp');
+        // When: each control is read by the screen reader (the rule traverses
+        // the semantics tree).
+        final result = await whenCheckedForConformance(tester, realScreen.screen);
+        // Then: every interactive node carries a meaningful label — the rule
+        // holds (A11Y-6).
+        expect(result.outcomeFor(ConformanceRuleId.meaningfulLabel)?.pass, isTrue,
+            reason: '${realScreen.name}: a control has no meaningful label');
+      }
+      // Given: the reference shows a labelled control (IconButton w/ tooltip).
+      await givenCompliantReference(tester);
+      expect(
+          find.descendant(
+              of: compliantReferenceFinder, matching: find.byType(IconButton)),
+          findsOneWidget,
+          reason: 'Given: reference shows an interactive control');
+      final refResult =
+          await whenCheckedForConformance(tester, compliantReferenceFinder);
+      // Then: the rule passes on the reference (its control is labelled).
+      expect(refResult.outcomeFor(ConformanceRuleId.meaningfulLabel)?.pass, isTrue,
+          reason: 'a labelled control must pass the labelled-control rule');
+      // Control (G5): an IconButton with no tooltip/label fails the rule.
+      await givenControl(tester, control_unlabelled);
+      expect(control_unlabelled.subtree, findsOneWidget,
+          reason: 'Given: the unlabelled control is rendered');
+      final ctrlResult =
+          await whenCheckedForConformance(tester, control_unlabelled.subtree);
+      expect(ctrlResult.failing, contains(ConformanceRuleId.meaningfulLabel),
+          reason: 'control_unlabelled has no semantic label — the rule must '
+              'flag it');
     });
   });
 }
