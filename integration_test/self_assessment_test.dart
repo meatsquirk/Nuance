@@ -823,10 +823,11 @@ void main() {
       // AC's row here as it un-pends it, so this set shrinks by one per
       // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3), AC-4 (ENGINE-4),
       // AC-5 (ENGINE-5), AC-6/7/8 (FLOW-4), AC-9 (ENGINE-6), AC-11 (ENGINE-7),
-      // AC-10 (FLOW-6), AC-12 (FLOW-7), AC-1 (FLOW-8), AC-13 (PROFILE-2).
-      const expected = <String>{
-        'AC-14',
-      };
+      // AC-10 (FLOW-6), AC-12 (FLOW-7), AC-1 (FLOW-8), AC-13 (PROFILE-2),
+      // AC-14 (FLOW-2).
+      // Every bs-07 AC is now delivered — AC-14 (progress indicator) un-pended
+      // by FLOW-2, the last behaviour phase — so the pending set is empty.
+      const expected = <String>{};
       expect(pendingACs.keys.toSet(), expected);
     });
 
@@ -883,6 +884,10 @@ void main() {
       expect(pendingACs.containsKey('AC-13'), isFalse);
       expect(pendingSkipReason('AC-13', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-13', forceRunPending: true), isNull);
+      // AC-14 (un-pended by FLOW-2 — the last behaviour phase) always runs.
+      expect(pendingACs.containsKey('AC-14'), isFalse);
+      expect(pendingSkipReason('AC-14', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-14', forceRunPending: true), isNull);
       // An id absent from the map always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);

@@ -587,6 +587,29 @@ void main() {
       expect(single.state.testingStarted, isTrue,
           reason: 'testing still begins even at the last step');
     });
+
+    test('the lighting gate applies only on the lighting step — a later '
+        'Continue advances without re-checking lighting (FLOW-2)', () {
+      // Confirm the three checks and leave the lighting step (step 0 → 1).
+      controller.confirmLightingCheck(LightingCheck.brightness);
+      controller.confirmLightingCheck(LightingCheck.nightLight);
+      controller.confirmLightingCheck(LightingCheck.daylight);
+      controller.tryContinue();
+      expect(controller.state.stepIndex, 1, reason: 'left the lighting step');
+
+      // Clear a lighting check so lightingConfirmed is false again. On a later
+      // step the Tier 0 gate no longer applies (FLOW-2 scopes it to step 0), so
+      // Continue still advances — the earlier Tier-0-wide gate would have stuck
+      // at step 1 here.
+      controller.confirmLightingCheck(LightingCheck.daylight, confirmed: false);
+      expect(controller.state.lightingConfirmed, isFalse);
+      notifications = 0;
+
+      controller.tryContinue();
+      expect(controller.state.stepIndex, 2,
+          reason: 'a later step advances regardless of the lighting checks');
+      expect(notifications, 1);
+    });
   });
 
   group('OnboardingController arrangement (FLOW-4, AC-6/7/8)', () {

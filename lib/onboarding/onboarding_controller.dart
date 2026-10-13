@@ -27,8 +27,8 @@ import 'onboarding_steps.dart';
 class OnboardingController extends ChangeNotifier {
   /// Creates a controller over [engine] (the scoring seam) and the optional
   /// [profileStore] (the save seam), starting in the default empty
-  /// [OnboardingState] with the given progress [steps] (the provisional four by
-  /// default, pinned at FLOW-2).
+  /// [OnboardingState] with the given progress [steps] (the four top-level
+  /// steps by default — Lighting / Intake / Vision tests / Result, G-5 ✅).
   OnboardingController({
     this.engine = const ShellAssessmentEngine(),
     this.profileStore,
@@ -71,7 +71,7 @@ class OnboardingController extends ChangeNotifier {
   OnboardingState get state => _state;
 
   /// The number of top-level steps — the total AC-14 shows the current step
-  /// against ("… of four"). Provisional until G-5/FLOW-2.
+  /// against ("… of four"). Pinned to the four steps at FLOW-2 (G-5 ✅).
   int get stepTotal => steps.length;
 
   /// Confirms (or clears) one of the Tier 0 lighting checks (brightness /
@@ -89,13 +89,15 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Tries to advance past the current step — FLOW-3 gates the Tier 0 → testing
-  /// transition on the three lighting checks (AC-2): a Continue with the checks
-  /// unconfirmed is a no-op (testing does not begin); once all three are
-  /// confirmed it advances to the next step and marks testing started. FLOW-2
-  /// generalises the step advance across the later steps (AC-14).
+  /// Advances past the current step, driving the progress indicator (AC-14).
+  ///
+  /// The Tier 0 lighting gate (AC-2) applies **only on the lighting step**: a
+  /// Continue there with the three checks unconfirmed is a no-op (testing does
+  /// not begin). On every later step there is no lighting requirement — FLOW-2
+  /// generalises the advance across all four steps — so Continue moves to the
+  /// next step (clamped at the last) and marks testing started, then notifies.
   void tryContinue() {
-    if (!_state.lightingConfirmed) return;
+    if (_state.stepIndex == 0 && !_state.lightingConfirmed) return;
     final next = _state.stepIndex + 1;
     _state = _state.copyWith(
       stepIndex: next < stepTotal ? next : _state.stepIndex,

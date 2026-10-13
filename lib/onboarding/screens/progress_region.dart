@@ -7,9 +7,9 @@ import '../onboarding_controller.dart';
 ///
 /// Reads [OnboardingController.state]'s `stepIndex` and the controller's
 /// [OnboardingController.stepTotal] and reads them back as text (never position
-/// alone). The FLOW-1 shell renders the current count from the default state
-/// (step 1); FLOW-2 implements the step advance and pins the concrete four steps
-/// (G-5) so "the second of four steps" reads correctly.
+/// alone). FLOW-2 implemented the step advance and pinned the concrete four
+/// steps (G-5 ✅) so "the second of four steps" reads correctly as the painter
+/// moves through the flow.
 class ProgressRegion extends StatelessWidget {
   /// Creates the progress region over [controller].
   const ProgressRegion({required this.controller, super.key});

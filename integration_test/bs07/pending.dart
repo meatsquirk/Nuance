@@ -55,7 +55,7 @@ const Map<String, String> pendingACs = {
   // AC-11 (severity value → plain-language band) un-pended by ENGINE-7.
   // AC-12 (severity slider doubles as self-calibration) un-pended by FLOW-7.
   // AC-13 (save profile configures the pipeline) un-pended by PROFILE-2.
-  'AC-14': 'FLOW-2', // progress: current step of the total
+  // AC-14 (progress: current step of the total) un-pended by FLOW-2.
 };
 
 /// The behaviour phases allowed to own a pending AC.

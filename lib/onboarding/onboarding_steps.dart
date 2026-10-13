@@ -8,10 +8,10 @@
 /// sit inside a single "Vision tests" step (D-4) — so the keyed step widgets
 /// under `screens/` and this progress list are different granularities.
 ///
-/// FLOW-1 (shell) builds the list generically and renders the count; the
-/// concrete four and which tiers they group are **fixed at FLOW-2 once G-5
-/// resolves** — [defaultOnboardingSteps] below is the proposed grouping (D-4)
-/// and is provisional until then.
+/// FLOW-1 (shell) built the list generically and rendered the count; FLOW-2
+/// pinned the concrete four and which tiers they group, once **G-5 resolved**
+/// (2026-10-13, D-4 confirmed) — [defaultOnboardingSteps] below is that fixed
+/// grouping.
 library;
 
 /// One top-level step shown in the onboarding progress indicator (AC-14).
@@ -36,15 +36,15 @@ class OnboardingStep {
   String toString() => 'OnboardingStep($title)';
 }
 
-/// The provisional four top-level steps (D-4, the G-5 proposal).
+/// The four top-level steps the progress indicator counts (D-4, G-5 ✅).
 ///
-/// Setup (Tier 0 lighting), Intake (Tier 1), Vision tests (Tiers 2–4:
-/// screening, arrangement, threshold) and Result. **Provisional:** FLOW-2 pins
-/// the concrete four — and which tiers each groups — once **G-5** resolves; this
-/// list exists so the FLOW-1 shell can render a real step count against the
-/// progress indicator.
+/// Lighting (Tier 0 lighting setup), Intake (Tier 1), Vision tests (Tiers 2–4:
+/// screening, arrangement, threshold — all nested inside this one step; they do
+/// not advance the step counter) and Result. Pinned at FLOW-2 after **G-5**
+/// resolved (2026-10-13, D-4 confirmed): the count of these four is what AC-14
+/// shows the current step against ("… of four").
 const List<OnboardingStep> defaultOnboardingSteps = [
-  OnboardingStep('Setup'),
+  OnboardingStep('Lighting'),
   OnboardingStep('Intake'),
   OnboardingStep('Vision tests'),
   OnboardingStep('Result'),

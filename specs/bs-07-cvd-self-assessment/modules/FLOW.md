@@ -1,6 +1,6 @@
 # Module FLOW — onboarding controller, screens, flow
 
-**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler), FLOW-6 (AC-10), FLOW-7 (AC-12), FLOW-8 (AC-1) ✅ Done; PROFILE-2 (AC-13) ✅ Done. FLOW-2 (AC-14) now startable — G-5 resolved 2026-10-13 (D-4 confirmed: steps = Lighting/Intake/Vision-tests/Result). FLOW-2 is the last FLOW phase.
+**Status:** ✅ Done — all FLOW phases complete: FLOW-1 (shell), FLOW-2 (AC-14), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler), FLOW-6 (AC-10), FLOW-7 (AC-12), FLOW-8 (AC-1). FLOW-2 pinned the four steps = Lighting/Intake/Vision-tests/Result (G-5, D-4 confirmed 2026-10-13) and scoped the Tier-0 lighting gate to the lighting step. Only SIGNOFF-1 remains for the feature.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/onboarding_controller.dart`, `onboarding_state.dart`, `onboarding_read_endpoint.dart`, `onboarding_steps.dart`; `lib/onboarding/screens/` (host + lighting, intake, screening, arrangement, threshold, result step widgets with keyed regions); route wiring in `lib/app/router.dart` + `lib/palette/self_assessment_entry_screen.dart` (replaced). Behavior phases in ENGINE/PROFILE add thin controller calls here (merge-risky — rebase before editing).
 **Depends on:** ENGINE (estimate types + scoring), PROFILE (save seam) · **Blocks:** ITEST, SIGNOFF
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | | |
-| 2 | behavior | AC-14 | ⬜ Todo | | |
+| 2 | behavior | AC-14 | ✅ Done | 8,041,545 | 16m 48s |
 | 3 | behavior | AC-2 | ✅ Done | 8,229,212 | 16m 09s |
 | 4 | behavior | AC-6, AC-7, AC-8 | ✅ Done | 14,878,591 | 25m 54s |
 | 5 | behavior | — (enabler) | ✅ Done | 11,668,942 | 18m 21s (18m 21s) |
@@ -249,3 +249,23 @@
 - **For FLOW-2 (AC-14, blocked on G-5):** fix the concrete four steps and the stepwise progress once G-5 resolves.
 - **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance via `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… [--dart-define=BS07_RUN_PENDING=true] > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
 - **Known gaps:** the four-step count stays provisional until G-5/FLOW-2; `save` stays un-wired until PROFILE-2 (so AC-13 keeps its B-pending augmentation); presentation is not yet stepwise (FLOW-2) so all regions stay laid out at once.
+
+### Result — Phase 2 (FLOW-2, AC-14) ✅ Done — **the last build phase**
+
+- **Landed:**
+  - `lib/onboarding/onboarding_steps.dart` — pinned the four top-level steps to `[Lighting, Intake, Vision tests, Result]` (was the provisional `Setup/Intake/Vision tests/Result`): the first step is now **Lighting** (Tier 0); the three later tiers (screening/arrangement/threshold) stay nested inside the single **Vision tests** step and do **not** advance the counter — per **G-5** (D-4 confirmed 2026-10-13). De-provisionalized the doc comments.
+  - `lib/onboarding/onboarding_controller.dart` — generalised `tryContinue`: the Tier 0 lighting gate (`!lightingConfirmed`) now applies **only on the lighting step** (`if (_state.stepIndex == 0 && !_state.lightingConfirmed) return;`); every later step advances with no lighting requirement (clamped at the last step, marks `testingStarted`, notifies). This step-advance drives the progress counter across all four steps (AC-14). De-provisionalized the `stepTotal`/constructor docs.
+  - `lib/onboarding/screens/progress_region.dart` — doc only (behaviour unchanged): already renders `Step ${stepIndex+1} of ${stepTotal}` as text (never position alone); de-provisionalized.
+- **AC un-pended:** AC-14 (deleted its row in `integration_test/bs07/pending.dart`; the pending set is now **empty** — every bs-07 AC delivered).
+- **Gate:** `flutter analyze` clean · unit **1069 passed** (+2 steps-test: sample titles → `Lighting` and a new four-count test; +1 controller test: the step-0-scoped gate — a later Continue advances even with a lighting check cleared, which the old Tier-0-wide gate would have blocked) · coverage gate vs `main` **100% on all touched lib files** (incl. `onboarding_steps.dart`, `onboarding_controller.dart`, `progress_region.dart`) · acceptance (sim iPhone 17 `5AB9D06D…`, default run) **24 passed / 0 skipped** — AC-14 now runs and passes; with the pending set empty the run-pending pass exercises the same set (no pending test remains) · grade **14 A / 0** (fresh independent subagent, G1–G6): AC-14 **design-A(pending) → implemented A**; AC-13 brought current **B pending → implemented A** (PROFILE-2 landed `save` + the live-pipeline augmentation; the standalone grid had been left at FLOW-8's state); AC-2 **re-confirmed A** against the rewired `tryContinue` (step-0 gate intact and correctly scoped); no neighbour regressed from the shared `onboarding_controller.dart`/`onboarding_steps.dart` edits. **Fix passes: 0/3** (first full run met every gate).
+- **Updated tests (recorded per ground rule — not weakened):** `test/onboarding/onboarding_steps_test.dart` (sample titles `Setup`→`Lighting`; the `defaultOnboardingSteps` group now asserts `[Lighting, Intake, Vision tests, Result]` + a four-count test); `test/onboarding/onboarding_controller_test.dart` (new test proving the lighting gate is scoped to step 0 — a later Continue advances regardless of the lighting checks); `integration_test/self_assessment_test.dart` scaffold guard (`expected` set → empty + AC-14-runs assertions). No acceptance test body changed — AC-14 was green at baseline; the finalisation comes from pinning the steps and the generalised advance.
+- **Augmentations:** none (AC-14 had no augmentation row).
+- **Tokens / time:** 8,041,545 · 16m 48s.
+
+### Checkpoint / Handoff (FLOW-2) — module FLOW ✅ complete
+
+- **Frozen:** the four top-level steps are pinned `[Lighting, Intake, Vision tests, Result]` (`defaultOnboardingSteps`, `stepTotal == 4`). `OnboardingController.tryContinue` advances any step; the Tier 0 lighting gate applies **only on the lighting step** (step 0). `ProgressRegion` (`onboarding-progress-region`) renders `Step N of M` as text. Every tier below Vision tests nests inside that one step and does not move the counter.
+- **Feature state:** all **14 ACs delivered**, acceptance suite **14 A / 0**, every gate green. Modules FLOW, ENGINE and PROFILE are complete. **Only SIGNOFF-1 remains.**
+- **For SIGNOFF-1 (the one remaining phase):** assemble the sign-off packet + summary page and record the human decision. Carry the **D-8** sim/daltonization behavioural gap (AC-13's "configures simulation and daltonization" is verified only at the shared profile seam; behavioural sim/dalt assertions are owned by bs-08/bs-10). At sign-off, merge `feat/bs-07` → `main` (closes bs-10 G-4).
+- **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance via `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
+- **Known gaps / deliberate scope:** the onboarding screens still lay every step region out at once in a single scroll view (as the shell built them, and as every AC's harness driver relies on — the drivers `ensureVisible` below-fold controls). AC-14 requires only that the indicator show the current step of the total, which it does; converting to a one-step-at-a-time presentation is **not** required by AC-14 and would risk the finder-based assertions of every other AC, so it was deliberately not done. The D-8 sim/dalt behavioural gap remains (bs-08/bs-10).
