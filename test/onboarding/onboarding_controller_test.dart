@@ -43,13 +43,6 @@ void main() {
     setUp(() => controller = OnboardingController());
     tearDown(() => controller.dispose());
 
-    test('setType throws (FLOW-6)', () {
-      expect(
-        () => controller.setType(CvdType.protan),
-        throwsUnimplementedError,
-      );
-    });
-
     test('setSeverity throws (FLOW-7)', () {
       expect(() => controller.setSeverity(0.5), throwsUnimplementedError);
     });
@@ -271,6 +264,67 @@ void main() {
       }
       controller.advanceToResult();
       expect(controller.state.estimate!.arrangementPresent, isTrue);
+    });
+  });
+
+  group('OnboardingController setType (FLOW-6, AC-10)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    test('overrides the estimated type by hand, keeping the rest, notifying',
+        () {
+      // Reach a deutan estimate with a measured moderate threshold.
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.6, detected: false),
+      ]);
+      controller.advanceToResult();
+      final before = controller.state.estimate!;
+      expect(before.type, CvdType.deutan);
+      notifications = 0;
+
+      controller.setType(CvdType.protan);
+
+      final after = controller.state.estimate!;
+      expect(after.type, CvdType.protan,
+          reason: 'the by-hand type replaces the computed one');
+      // The rest of the estimate is untouched by the override.
+      expect(after.severity, before.severity);
+      expect(after.prior, before.prior);
+      expect(after.screening, before.screening);
+      expect(after.threshold, before.threshold);
+      expect(after.arrangementPresent, before.arrangementPresent);
+      expect(notifications, 1);
+    });
+
+    test('overrides regardless of the computed type (protan input → tritan)',
+        () {
+      // A protan-leaning diagnosis computes protan; the painter picks tritan.
+      controller.reportDiagnosis(CvdType.protan);
+      controller.advanceToResult();
+      expect(controller.state.estimate!.type, CvdType.protan);
+
+      controller.setType(CvdType.tritan);
+      expect(controller.state.estimate!.type, CvdType.tritan,
+          reason: 'the override wins over the computed protan');
+    });
+
+    test('is a no-op before the estimate is assembled (no result step yet)', () {
+      // No advanceToResult: there is no estimate to adjust.
+      expect(controller.state.estimate, isNull);
+
+      controller.setType(CvdType.protan);
+
+      expect(controller.state.estimate, isNull,
+          reason: 'setType does nothing without an assembled estimate');
+      expect(notifications, 0, reason: 'a no-op does not notify');
     });
   });
 

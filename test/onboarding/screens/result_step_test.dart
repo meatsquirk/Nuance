@@ -107,4 +107,48 @@ void main() {
     await tester.pump();
     expect(controller.state.calibratedSeverity, isNull);
   });
+
+  testWidgets('the by-hand type picker overrides the estimated type when a '
+      'choice is tapped (AC-10, FLOW-6)', (tester) async {
+    final controller = deutanModerate();
+    addTearDown(controller.dispose);
+    await pumpResult(tester, controller);
+
+    // The picker renders a live choice per CvdType under the group key.
+    expect(find.byKey(ResultStep.typeKey), findsOneWidget);
+    for (final type in CvdType.values) {
+      final choice = tester
+          .widget<TextButton>(find.byKey(ResultStep.typeChoiceKey(type)));
+      expect(choice.onPressed, isNotNull, reason: '${type.name} is tappable');
+    }
+    expect(find.text('Estimated type: deutan'), findsOneWidget);
+
+    // Tapping protan overrides the computed deutan and re-renders.
+    await tester.tap(find.byKey(ResultStep.typeChoiceKey(CvdType.protan)));
+    await tester.pump();
+    expect(controller.state.estimate!.type, CvdType.protan);
+    expect(find.text('Estimated type: protan'), findsOneWidget);
+
+    // Tapping deutan sets it back (the override is honoured both ways).
+    await tester.tap(find.byKey(ResultStep.typeChoiceKey(CvdType.deutan)));
+    await tester.pump();
+    expect(controller.state.estimate!.type, CvdType.deutan);
+    expect(find.text('Estimated type: deutan'), findsOneWidget);
+  });
+
+  testWidgets('the type choices are inert before an estimate is assembled',
+      (tester) async {
+    final controller = OnboardingController();
+    addTearDown(controller.dispose);
+    await pumpResult(tester, controller);
+
+    // The placeholder still carries the picker group, but the choices are inert.
+    expect(find.byKey(ResultStep.typeKey), findsOneWidget);
+    for (final type in CvdType.values) {
+      final choice = tester
+          .widget<TextButton>(find.byKey(ResultStep.typeChoiceKey(type)));
+      expect(choice.onPressed, isNull,
+          reason: '${type.name} is inert without an estimate');
+    }
+  });
 }

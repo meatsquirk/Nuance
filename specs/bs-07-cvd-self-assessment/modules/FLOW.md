@@ -1,6 +1,6 @@
 # Module FLOW — onboarding controller, screens, flow
 
-**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler) ✅ Done; FLOW-2 (AC-14) blocked by G-5; result-step ACs (ENGINE-7/FLOW-6/7/8/PROFILE-2) now unblocked
+**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler), FLOW-6 (AC-10) ✅ Done; FLOW-2 (AC-14) blocked by G-5; result-step ACs remaining: FLOW-7 (AC-12), FLOW-8 (AC-1), PROFILE-2 (AC-13)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/onboarding_controller.dart`, `onboarding_state.dart`, `onboarding_read_endpoint.dart`, `onboarding_steps.dart`; `lib/onboarding/screens/` (host + lighting, intake, screening, arrangement, threshold, result step widgets with keyed regions); route wiring in `lib/app/router.dart` + `lib/palette/self_assessment_entry_screen.dart` (replaced). Behavior phases in ENGINE/PROFILE add thin controller calls here (merge-risky — rebase before editing).
 **Depends on:** ENGINE (estimate types + scoring), PROFILE (save seam) · **Blocks:** ITEST, SIGNOFF
@@ -14,7 +14,7 @@
 | 3 | behavior | AC-2 | ✅ Done | 8,229,212 | 16m 09s |
 | 4 | behavior | AC-6, AC-7, AC-8 | ✅ Done | 14,878,591 | 25m 54s |
 | 5 | behavior | — (enabler) | ✅ Done | 11,668,942 | 18m 21s (18m 21s) |
-| 6 | behavior | AC-10 | ⬜ Todo | | |
+| 6 | behavior | AC-10 | ✅ Done | 10,189,552 | 20m 24s |
 | 7 | behavior | AC-12 | ⬜ Todo | | |
 | 8 | behavior | AC-1 | ⬜ Todo | | |
 
@@ -190,3 +190,23 @@
 - **For PROFILE-2 (AC-13):** wire `save` to project the estimate onto a `CvdProfile` and write through `profileStore`; add the live-pipeline assertion (its B-pending augmentation).
 - **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance via `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… [--dart-define=BS07_RUN_PENDING=true] > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
 - **Known gaps:** the four-step count stays provisional until G-5/FLOW-2; `band` is the trivial default until ENGINE-7; the result controls (type/slider/save) stay inert until FLOW-6/7/8/PROFILE-2. `advanceToResult` sets `stepIndex` to the last step, but presentation is not yet stepwise (FLOW-2) so all regions stay laid out at once.
+
+### Result — Phase 6 (FLOW-6, AC-10) ✅ Done
+
+- **Landed:**
+  - `lib/onboarding/onboarding_controller.dart` — `setType(CvdType)` (replaced its `UnimplementedError`): overrides the assembled estimate's `type` with the painter's chosen one regardless of what the tiers computed, keeping the rest of the estimate (severity/prior/screening/threshold/arrangementPresent) intact, then notifies. A no-op (no notify) before the estimate is assembled — the result step is the only place the control is live. `CvdEstimate` imported (reconstructed via its const ctor — it has no `copyWith`).
+  - `lib/onboarding/screens/result_step.dart` — replaced the single inert "Adjust type" `TextButton` with a by-hand **type picker**: a `Wrap` keyed `ResultStep.typeKey` holding one `TextButton` per `CvdType` (protan/deutan/tritan) keyed `ResultStep.typeChoiceKey(type)`. Live (wired to `controller.setType`) once the estimate is assembled; inert in the placeholder branch (no estimate). Added `typeChoiceKey`.
+- **AC un-pended:** AC-10 (deleted its row in `integration_test/bs07/pending.dart`).
+- **Augmentation closed (re-graded A):** TestAC10 — the harness driver `whenAdjustType(CvdType type)` now carries a type argument and taps the specific choice `ResultStep.typeChoiceKey(type)`; the AC-10 test selects **protan** explicitly (`whenAdjustType(CvdType.protan)` → `estimate!.type == protan`, rejecting tritan/deutan) with a deutan control — closing the former G4/G5 "bare tap can't discriminate a 3-way picker" limit (B pending FLOW-6 → A).
+- **Gate:** `flutter analyze` clean · unit **1047 passed** (+4 vs ENGINE-7: 3 `setType` controller tests + 2 result_step picker tests, −1 removed `setType throws`) · coverage gate vs `main` **100% on all 23 touched lib files** · acceptance (sim iPhone 17 `5AB9D06D…`): **default 20 pass / 4 skip** (AC-10 now runs and passes; AC-1/12/13/14 still pending) · **run-pending 21 pass / 3 fail** — AC-10 passes; the 3 fails (AC-1→FLOW-8 caveat, AC-12→FLOW-7 calibration, AC-13→PROFILE-2 save) each fail on their **own** downstream Then (no harness/compile error from the shared result-step change) · grade **A** for AC-10, fresh independent subagent, G1–G6; AC-2/3/4/5/6/7/8/9/11 re-confirmed still A (AC-11 specifically checked — the picker above the slider adds type-name text only, no Slider/band-label collision). Grade grid **13 A / 1 B-pending** (AC-13 → PROFILE-2). **Fix passes: 0/3** (first full run met every gate).
+- **Updated tests (recorded per ground rule — not weakened):** `onboarding_controller_test.dart` (the `setType throws (FLOW-6)` case replaced by a behaviour group: override-keeping-the-rest+notify, override-wins-over-computed, no-op-before-estimate); `self_assessment_test.dart` (AC-10 calls now pass `CvdType.protan`/`CvdType.deutan` — the augmentation closure; scaffold-guard `expected` set shrinks by AC-10 + an AC-10-runs assertion added); harness `self_assessment_harness.dart` (`whenAdjustType` gained the `CvdType` argument + `ensureVisible`). New picker cases in `test/onboarding/screens/result_step_test.dart`.
+- **Tokens / time:** 10,189,552 · 20m 24s (20m 24s).
+
+### Checkpoint / Handoff (FLOW-6)
+
+- **Frozen for later phases:** `OnboardingController.setType(CvdType)` is live — overrides `estimate.type`, keeps the rest, no-op without an estimate. `ResultStep.typeChoiceKey(type)` is the per-type control key; the picker `Wrap` carries `ResultStep.typeKey`. Harness `whenAdjustType(CvdType)` selects a specific type.
+- **For FLOW-7 (AC-12, next startable):** wire the severity slider (`setSeverity`/`confirmCalibration`) + the simulated/original pair; `calibratedSeverity` is the kept value. **Owns the result slider:** route ENGINE-7's now-live slider (the view-local `_working` in `result_step.dart`) through `controller.setSeverity`, and have the band read `calibratedSeverity ?? estimate.severity`. The type picker sits above the slider — leave it intact.
+- **For FLOW-8 (AC-1):** fill the caveat area (`approximate estimate` + `anomaloscope`).
+- **For PROFILE-2 (AC-13):** wire `save` + the live-pipeline augmentation (its B-pending augmentation — the last one open).
+- **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance via `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… [--dart-define=BS07_RUN_PENDING=true] > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
+- **Known gaps:** the four-step count stays provisional until G-5/FLOW-2; the slider (`setSeverity`/`confirmCalibration`) and save stay un-wired until FLOW-7/PROFILE-2; presentation is not yet stepwise (FLOW-2) so all regions stay laid out at once.

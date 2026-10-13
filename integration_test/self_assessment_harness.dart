@@ -419,10 +419,14 @@ class SelfAssessmentHarness {
     await tester.pumpAndSettle();
   }
 
-  /// Opens the by-hand type control on the result step — E40 (AC-10; wired
-  /// FLOW-6, which adds the type choices this taps into).
-  Future<void> whenAdjustType() async {
-    await tester.tap(find.byKey(ResultStep.typeKey));
+  /// Selects [type] in the by-hand type picker on the result step — E40 (AC-10;
+  /// wired FLOW-6). Taps the specific type choice so the Then can reject the
+  /// wrong type among protan/deutan/tritan, not merely "stays deutan". Scrolls
+  /// it into view first (the result step sits below the earlier steps).
+  Future<void> whenAdjustType(CvdType type) async {
+    final choice = find.byKey(ResultStep.typeChoiceKey(type));
+    await tester.ensureVisible(choice);
+    await tester.tap(choice);
     await tester.pumpAndSettle();
   }
 

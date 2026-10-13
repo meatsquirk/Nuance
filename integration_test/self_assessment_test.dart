@@ -329,15 +329,16 @@ void main() {
         expect(h.estimate!.type, CvdType.deutan,
             reason: 'the scenario reaches a deutan estimate before the override');
 
-        // When: set the type to protan by hand (E40). FLOW-6 adds the type
-        // choices this taps into.
-        await h.whenAdjustType();
-        // Then: the estimate type is protan.
+        // When: select protan by hand in the type picker (E40). FLOW-6 wires
+        // the per-type choices the driver taps.
+        await h.whenAdjustType(CvdType.protan);
+        // Then: the estimate type is protan — a specific choice among
+        // protan/deutan/tritan, so picking the wrong one would fail here.
         expect(h.estimate!.type, CvdType.protan,
             reason: 'the by-hand override must set the type to protan');
-        // Control: setting it back reads the other type (the override is not
-        // ignored — a control that keeps deutan fails the Then above).
-        await h.whenAdjustType();
+        // Control: selecting deutan sets it back (the override is honoured both
+        // ways — code that ignored the choice and kept protan fails here).
+        await h.whenAdjustType(CvdType.deutan);
         expect(h.estimate!.type, CvdType.deutan,
             reason: 'the by-hand override is honoured both ways');
       },
@@ -808,10 +809,10 @@ void main() {
       // Seeded with AC-1..AC-14 (ENGINE-1); each behaviour phase deletes its
       // AC's row here as it un-pends it, so this set shrinks by one per
       // delivered AC. Delivered: AC-2 (FLOW-3), AC-3 (ENGINE-3), AC-4 (ENGINE-4),
-      // AC-5 (ENGINE-5), AC-6/7/8 (FLOW-4), AC-9 (ENGINE-6), AC-11 (ENGINE-7).
+      // AC-5 (ENGINE-5), AC-6/7/8 (FLOW-4), AC-9 (ENGINE-6), AC-11 (ENGINE-7),
+      // AC-10 (FLOW-6).
       const expected = <String>{
         'AC-1',
-        'AC-10',
         'AC-12',
         'AC-13',
         'AC-14',
@@ -856,6 +857,10 @@ void main() {
       expect(pendingACs.containsKey('AC-9'), isFalse);
       expect(pendingSkipReason('AC-9', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-9', forceRunPending: true), isNull);
+      // AC-10 (un-pended by FLOW-6) always runs, in either mode.
+      expect(pendingACs.containsKey('AC-10'), isFalse);
+      expect(pendingSkipReason('AC-10', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-10', forceRunPending: true), isNull);
       // An id absent from the map always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);

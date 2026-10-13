@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../a11y/cvd/cvd_profile.dart';
 import '../store/cvd_profile_store.dart';
 import 'engine/assessment_engine.dart';
+import 'engine/cvd_estimate.dart';
 import 'engine/tier_results.dart';
 import 'onboarding_state.dart';
 import 'onboarding_steps.dart';
@@ -211,9 +212,29 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Overrides the estimated type by hand on the result step — FLOW-6 (AC-10).
-  void setType(CvdType type) =>
-      throw UnimplementedError('setType is wired in FLOW-6 (AC-10)');
+  /// Overrides the estimated [type] by hand on the result step — FLOW-6
+  /// (AC-10).
+  ///
+  /// Replaces the assembled estimate's [CvdEstimate.type] with the painter's
+  /// chosen one, regardless of what the tiers computed, keeping the rest of the
+  /// estimate (severity, prior, per-tier evidence) intact, then notifies. A
+  /// no-op before the estimate is assembled (no result step yet) — the result
+  /// step is the only place the control is live, so this guards a stray call.
+  void setType(CvdType type) {
+    final estimate = _state.estimate;
+    if (estimate == null) return;
+    _state = _state.copyWith(
+      estimate: CvdEstimate(
+        type: type,
+        severity: estimate.severity,
+        prior: estimate.prior,
+        screening: estimate.screening,
+        threshold: estimate.threshold,
+        arrangementPresent: estimate.arrangementPresent,
+      ),
+    );
+    notifyListeners();
+  }
 
   /// Sets the result severity (0..1) from the slider — FLOW-7 re-renders the
   /// simulated/original pair and the band (AC-11/AC-12).
