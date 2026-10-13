@@ -236,15 +236,37 @@ class OnboardingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sets the result severity (0..1) from the slider — FLOW-7 re-renders the
-  /// simulated/original pair and the band (AC-11/AC-12).
-  void setSeverity(double severity) =>
-      throw UnimplementedError('setSeverity is wired in FLOW-7 (AC-12)');
+  /// Keeps the painter's chosen [severity] (0..1) from the result slider as the
+  /// subjective self-calibration — FLOW-7 (AC-12).
+  ///
+  /// The result step reads this back as `calibratedSeverity ?? estimate.severity`
+  /// for the slider position, the simulated/original pair and the plain-language
+  /// band, so moving the slider re-renders all three live — the chosen severity
+  /// *is* the kept calibration. Clamped to 0..1 to match `CvdProfile.severity`.
+  /// A no-op (no notify) before the estimate is assembled: the result step is
+  /// the only place the slider is live, so this guards a stray call.
+  void setSeverity(double severity) {
+    if (_state.estimate == null) return;
+    _state = _state.copyWith(calibratedSeverity: severity.clamp(0.0, 1.0));
+    notifyListeners();
+  }
 
-  /// Keeps the chosen severity as the subjective self-calibration — FLOW-7
+  /// Finalises the self-calibration once the painter settles the slider — FLOW-7
   /// (AC-12).
-  void confirmCalibration() =>
-      throw UnimplementedError('confirmCalibration is wired in FLOW-7 (AC-12)');
+  ///
+  /// If the painter never moved the slider ([OnboardingState.calibratedSeverity]
+  /// still null), the assembled estimate's own severity is kept as the
+  /// calibration, so a confirmed result always carries a kept severity — the
+  /// value that becomes the profile severity (D-6). Idempotent: a value already
+  /// set by [setSeverity] stands (no notify). A no-op before the estimate is
+  /// assembled.
+  void confirmCalibration() {
+    final estimate = _state.estimate;
+    if (estimate == null) return;
+    if (_state.calibratedSeverity != null) return;
+    _state = _state.copyWith(calibratedSeverity: estimate.severity);
+    notifyListeners();
+  }
 
   /// Projects the estimate onto a `CvdProfile` and saves it through
   /// [profileStore], configuring the pipeline — PROFILE-2 (AC-13).

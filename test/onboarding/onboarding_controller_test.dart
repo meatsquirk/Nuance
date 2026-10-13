@@ -43,14 +43,6 @@ void main() {
     setUp(() => controller = OnboardingController());
     tearDown(() => controller.dispose());
 
-    test('setSeverity throws (FLOW-7)', () {
-      expect(() => controller.setSeverity(0.5), throwsUnimplementedError);
-    });
-
-    test('confirmCalibration throws (FLOW-7)', () {
-      expect(controller.confirmCalibration, throwsUnimplementedError);
-    });
-
     test('save throws (PROFILE-2)', () {
       expect(controller.save, throwsUnimplementedError);
     });
@@ -324,6 +316,102 @@ void main() {
 
       expect(controller.state.estimate, isNull,
           reason: 'setType does nothing without an assembled estimate');
+      expect(notifications, 0, reason: 'a no-op does not notify');
+    });
+  });
+
+  group('OnboardingController self-calibration (FLOW-7, AC-12)', () {
+    late OnboardingController controller;
+    late int notifications;
+
+    setUp(() {
+      controller = OnboardingController(engine: const TieredAssessmentEngine());
+      notifications = 0;
+      controller.addListener(() => notifications++);
+    });
+    tearDown(() => controller.dispose());
+
+    // Reaches a deutan estimate with a measured moderate (0.6) threshold.
+    void reachEstimate() {
+      controller.reportDiagnosis(CvdType.deutan);
+      controller.scoreThreshold(const [
+        ThresholdProbe(contrast: 0.6, detected: false),
+      ]);
+      controller.advanceToResult();
+      notifications = 0;
+    }
+
+    test('setSeverity keeps the chosen severity as the calibration, notifying',
+        () {
+      reachEstimate();
+      expect(controller.state.calibratedSeverity, isNull,
+          reason: 'nothing kept before the painter moves the slider');
+
+      controller.setSeverity(0.7);
+
+      expect(controller.state.calibratedSeverity, 0.7,
+          reason: 'the chosen severity is kept as the self-calibration');
+      // The estimate's own severity is untouched — the calibration is separate.
+      expect(controller.state.estimate!.severity, 0.6);
+      expect(notifications, 1);
+    });
+
+    test('setSeverity tracks the latest value (a second set replaces the first)',
+        () {
+      reachEstimate();
+      controller.setSeverity(0.7);
+      controller.setSeverity(0.4);
+      expect(controller.state.calibratedSeverity, 0.4,
+          reason: 'the kept calibration follows the latest slider value');
+    });
+
+    test('setSeverity clamps out-of-range values to 0..1', () {
+      reachEstimate();
+      controller.setSeverity(1.4);
+      expect(controller.state.calibratedSeverity, 1.0);
+      controller.setSeverity(-0.3);
+      expect(controller.state.calibratedSeverity, 0.0);
+    });
+
+    test('setSeverity is a no-op before the estimate is assembled', () {
+      expect(controller.state.estimate, isNull);
+
+      controller.setSeverity(0.5);
+
+      expect(controller.state.calibratedSeverity, isNull,
+          reason: 'no self-calibration without a result to calibrate');
+      expect(notifications, 0, reason: 'a no-op does not notify');
+    });
+
+    test('confirmCalibration keeps the estimate severity when never moved', () {
+      reachEstimate();
+      expect(controller.state.calibratedSeverity, isNull);
+
+      controller.confirmCalibration();
+
+      expect(controller.state.calibratedSeverity, 0.6,
+          reason: 'confirming without moving keeps the estimate severity (D-6)');
+      expect(notifications, 1);
+    });
+
+    test('confirmCalibration leaves a severity the painter already chose', () {
+      reachEstimate();
+      controller.setSeverity(0.3);
+      notifications = 0;
+
+      controller.confirmCalibration();
+
+      expect(controller.state.calibratedSeverity, 0.3,
+          reason: 'a chosen calibration stands; confirm does not overwrite it');
+      expect(notifications, 0, reason: 'idempotent confirm does not notify');
+    });
+
+    test('confirmCalibration is a no-op before the estimate is assembled', () {
+      expect(controller.state.estimate, isNull);
+
+      controller.confirmCalibration();
+
+      expect(controller.state.calibratedSeverity, isNull);
       expect(notifications, 0, reason: 'a no-op does not notify');
     });
   });

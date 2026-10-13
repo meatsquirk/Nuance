@@ -431,10 +431,16 @@ class SelfAssessmentHarness {
   }
 
   /// Sets the result severity slider to [value] on its 0..100 scale by tapping
-  /// along its track — E41 (AC-11/AC-12; wired FLOW-7). Approximate until FLOW-7
-  /// pins the control; the Then reads the resulting state, not the tap.
+  /// along its track — E41 (AC-11/AC-12; wired FLOW-7). The Then reads the
+  /// resulting slider value / state, not the tap, so the tap's approximation is
+  /// robust.
   Future<void> whenSetSeverity(double value) async {
     final slider = find.byKey(ResultStep.severityKey);
+    // The slider sits below the fold in the single scroll view, so bring it into
+    // view before tapping — otherwise the tap lands off the track and the slider
+    // never moves (as `whenAdjustType` / the arrangement drivers already do).
+    await tester.ensureVisible(slider);
+    await tester.pumpAndSettle();
     final box = tester.getRect(slider);
     // Slider value runs left (0) → right (max 100) across the track width.
     final fraction = (value / 100).clamp(0.0, 1.0);

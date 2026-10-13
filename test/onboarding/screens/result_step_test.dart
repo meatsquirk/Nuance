@@ -92,20 +92,94 @@ void main() {
     expect(bands.length, 3, reason: 'the three taps span three distinct bands');
   });
 
-  testWidgets('reading the slider back as a band does not persist a calibration '
-      '(that is FLOW-7)', (tester) async {
-    // ENGINE-7 owns only the band readout (AC-11); keeping the chosen severity
-    // as calibratedSeverity is AC-12/FLOW-7, so moving the slider must not set
-    // it here.
+  testWidgets('moving the slider keeps the chosen severity as the calibration '
+      '(AC-12, FLOW-7)', (tester) async {
+    // FLOW-7 routes the now-live ENGINE-7 slider through the controller: moving
+    // it keeps the chosen severity as calibratedSeverity (= the value that
+    // becomes the profile severity, D-6).
     final controller = deutanModerate();
     addTearDown(controller.dispose);
     await pumpResult(tester, controller);
 
+    // Nothing kept before the painter moves the slider; the slider sits at the
+    // assembled estimate (0.6 → 60).
     expect(controller.state.calibratedSeverity, isNull);
+    expect(tester.widget<Slider>(find.byKey(ResultStep.severityKey)).value, 60);
+
     final box = tester.getRect(find.byKey(ResultStep.severityKey));
     await tester.tapAt(Offset(box.left + box.width * 0.2, box.center.dy));
-    await tester.pump();
-    expect(controller.state.calibratedSeverity, isNull);
+    await tester.pumpAndSettle();
+
+    // The kept calibration is exactly the slider's resulting value (0..1), and
+    // the slider now reflects the kept value rather than the estimate's 0.6.
+    final kept = tester.widget<Slider>(find.byKey(ResultStep.severityKey)).value;
+    expect(controller.state.calibratedSeverity, closeTo(kept / 100, 1e-9));
+    expect(kept, isNot(60), reason: 'the control moved the slider off 0.6');
+
+    // Control: a second tap keeps a different value instead.
+    await tester.tapAt(Offset(box.left + box.width * 0.9, box.center.dy));
+    await tester.pumpAndSettle();
+    final kept2 =
+        tester.widget<Slider>(find.byKey(ResultStep.severityKey)).value;
+    expect(kept2, isNot(kept), reason: 'the control sets a different value');
+    expect(controller.state.calibratedSeverity, closeTo(kept2 / 100, 1e-9));
+  });
+
+  testWidgets('releasing the slider without moving it keeps the estimate '
+      'severity (AC-12, FLOW-7)', (tester) async {
+    // A Slider tap fires onChangeEnd, which confirms the calibration; with no
+    // prior move the estimate's own severity (0.6) is kept (D-6).
+    final controller = deutanModerate();
+    addTearDown(controller.dispose);
+    await pumpResult(tester, controller);
+
+    final box = tester.getRect(find.byKey(ResultStep.severityKey));
+    // Tap exactly on the current thumb position (60%) so the value does not move.
+    await tester.tapAt(Offset(box.left + box.width * 0.6, box.center.dy));
+    await tester.pumpAndSettle();
+    expect(controller.state.calibratedSeverity, closeTo(0.6, 0.02),
+        reason: 'confirming an unmoved slider keeps the estimate severity');
+  });
+
+  testWidgets('shows the simulated/original pair, which re-renders with the '
+      'slider (AC-12, FLOW-7)', (tester) async {
+    final controller = deutanModerate();
+    addTearDown(controller.dispose);
+    await pumpResult(tester, controller);
+
+    // Both swatches are shown beside the slider.
+    expect(find.byKey(ResultStep.pairKey), findsOneWidget);
+    Color simColour() => tester
+        .widget<Container>(find.byKey(ResultStep.pairSimulatedKey))
+        .color!;
+    Color origColour() => tester
+        .widget<Container>(find.byKey(ResultStep.pairOriginalKey))
+        .color!;
+
+    final originalBefore = origColour();
+    final simAtEstimate = simColour();
+
+    // Raising the severity collapses the simulated swatch toward the original,
+    // so the pair re-renders as the painter moves the slider.
+    final box = tester.getRect(find.byKey(ResultStep.severityKey));
+    await tester.tapAt(Offset(box.left + box.width * 0.98, box.center.dy));
+    await tester.pumpAndSettle();
+    final simAtHigh = simColour();
+
+    expect(simAtHigh, isNot(simAtEstimate),
+        reason: 'the simulated swatch tracks the slider');
+    expect(origColour(), originalBefore,
+        reason: 'the original swatch is fixed — it is the reference');
+  });
+
+  testWidgets('the pair is absent before an estimate is assembled',
+      (tester) async {
+    final controller = OnboardingController();
+    addTearDown(controller.dispose);
+    await pumpResult(tester, controller);
+
+    expect(find.byKey(ResultStep.pairKey), findsNothing,
+        reason: 'nothing to simulate without an estimate');
   });
 
   testWidgets('the by-hand type picker overrides the estimated type when a '

@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — behaviour stage open; ENGINE module COMPLETE (ENGINE-1..7 ✅); 10/14 behaviour ACs done. Next: FLOW-7 (AC-12), then FLOW-8 (AC-1) + PROFILE-2 (AC-13) (result-step ACs, one/session). FLOW-2 (AC-14) blocked on G-5.
+**Status:** In progress — behaviour stage open; ENGINE module COMPLETE (ENGINE-1..7 ✅); 11/14 behaviour ACs done. Next: FLOW-8 (AC-1), then PROFILE-2 (AC-13) (result-step ACs, one/session). FLOW-2 (AC-14) blocked on G-5.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -49,7 +49,7 @@
 | AC-9 | Threshold probing yields a severity along the confusion line | ITEST-3 `TestAC09_ThresholdSeverity` | ENGINE-6 | ✅ Done |
 | AC-10 | The painter adjusts the estimated type by hand | ITEST-2 `TestAC10_AdjustTypeByHand` | FLOW-6 | ✅ Done |
 | AC-11 | The severity value sets a plain-language band | ITEST-2 `TestAC11_SeverityBand` | ENGINE-7 | ✅ Done |
-| AC-12 | The severity slider doubles as subjective self-calibration | ITEST-2 `TestAC12_SelfCalibration` | FLOW-7 | ⬜ Todo |
+| AC-12 | The severity slider doubles as subjective self-calibration | ITEST-2 `TestAC12_SelfCalibration` | FLOW-7 | ✅ Done |
 | AC-13 | Saving the profile configures simulation, daltonization and confusion warnings | ITEST-2 `TestAC13_SaveConfiguresPipeline` | PROFILE-2 | ⬜ Todo |
 | AC-14 | The current step is shown against the total | ITEST-2 `TestAC14_ProgressStepOfTotal` | FLOW-2 | ⬜ Todo |
 
@@ -180,8 +180,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 16 | FLOW-5 | enabler: assemble estimate + advance to result step | ✅ Done | 11,668,942 | 18m 21s (18m 21s) | enabler (un-pends no AC): `assemble` fold + `advanceToResult` + "See my result" control + `ResultStep` renders type/severity; unit 1033/cov 100% (23); accept default 18 pass/6 skip, run-pending 19 pass/5 fail — result-step ACs now reach the result step, fail on own downstream Then (no FLOW-5 precondition failure); grade 12 A/2 B-pending; fix 0/3 |
 | 17 | ENGINE-7 | AC-11 severity → band (result) | ✅ Done | 10,921,888 | 21m 30s (21m 30s) | AC-11 un-pended + green over 30/60/90; `SeverityBand.forSeverity` (G-4 cut-offs) + `TieredAssessmentEngine.band` override + live result slider renders band label; unit 1043/cov 100% (23 touched)/accept default 19 pass 5 skip; grade 12 A/2 B-pending; fix 1/3 |
 | 18 | FLOW-6 | AC-10 adjust type by hand (result) | ✅ Done | 10,189,552 | 20m 24s | AC-10 un-pended + green; `setType` override + 3-way type picker (`typeChoiceKey`) on result step; `whenAdjustType(CvdType)` selects a specific type; AC-10 B-pending→A; unit 1047/cov 100% (23)/accept default 20 pass 4 skip, run-pending 21 pass 3 fail (own downstream Then); grade 13 A/1 B-pending; fix 0/3 |
-| 19 | FLOW-7 | AC-12 severity slider self-calibration (result) | ⬜ Next | | | startable (FLOW-5 done); wire `setSeverity`/`confirmCalibration`→`calibratedSeverity` + sim/original pair; owns the result slider |
-| 20 | FLOW-8 | AC-1 result caveat (result) | ⬜ Todo | | | |
+| 19 | FLOW-7 | AC-12 severity slider self-calibration (result) | ✅ Done | 12,947,153 | 25m 37s | AC-12 un-pended + green; `setSeverity`/`confirmCalibration`→`calibratedSeverity` (D-6) + sim/original pair; result step now `StatelessWidget` reading `calibratedSeverity ?? estimate.severity`; unit 1055/cov 100% touched/accept default 21 pass 3 skip, run-pending 22 pass 2 fail (own downstream Then); grade 13 A/1 B-pending (AC-12 implemented A, AC-10/11 re-confirmed); fix 1/3 |
+| 20 | FLOW-8 | AC-1 result caveat (result) | ⬜ Next | | | startable; fill caveat (`approximate estimate` + `anomaloscope`) + `caveatShown`; un-pend AC-1 |
 | 21 | PROFILE-2 | AC-13 save profile configures the pipeline | ⬜ Todo | | | |
 | 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -189,10 +189,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**Behaviour stage open — 10/14 behaviour ACs delivered.** FLOW-3 (AC-2) + ENGINE-3/4/5/6 (AC-3/4/5/9) + FLOW-4 (AC-6/7/8) + ENGINE-7 (AC-11) + **FLOW-6 (AC-10)** ✅ Done; FLOW-5 (enabler) ✅ Done (result step reachable). Grade grid **13 A / 1 B-pending** (AC-13→PROFILE-2 — the last open augmentation). Each phase is its own session (`/feature-next-phase bs07 <PHASE>`), then stop. **Three result-step behaviour phases remain — each shares `OnboardingController`/the result step + `self_assessment_test.dart`, so run ONE per session, NOT parallel:**
-- **FLOW-7** (AC-12, next) — wire `setSeverity`/`confirmCalibration` → `calibratedSeverity` (D-6) + the simulated/original pair. Owns the result slider: route ENGINE-7's now-live slider (the view-local `_working` in `result_step.dart`) through `controller.setSeverity` and have the band read `calibratedSeverity ?? estimate.severity`. The FLOW-6 type picker sits above the slider — leave it intact.
-- **FLOW-8** (AC-1) — fill the caveat (`approximate estimate` + `anomaloscope`).
-- **PROFILE-2** (AC-13) — wire `save` + the live-pipeline augmentation; closes AC-13's B-pending (the last one). Then SIGNOFF-1.
+**Behaviour stage open — 11/14 behaviour ACs delivered.** FLOW-3 (AC-2) + ENGINE-3/4/5/6 (AC-3/4/5/9) + FLOW-4 (AC-6/7/8) + ENGINE-7 (AC-11) + FLOW-6 (AC-10) + **FLOW-7 (AC-12)** ✅ Done; FLOW-5 (enabler) ✅ Done (result step reachable, slider fully wired). Grade grid **13 A / 1 B-pending** (AC-13→PROFILE-2 — the last open augmentation). Each phase is its own session (`/feature-next-phase bs07 <PHASE>`), then stop. **Two result-step behaviour phases remain — each shares `OnboardingController`/the result step + `self_assessment_test.dart`, so run ONE per session, NOT parallel:**
+- **FLOW-8** (AC-1, next) — fill the caveat area (`ResultStep.caveatKey`) with the `approximate estimate` label + the `anomaloscope` clinical-test recommendation and set `caveatShown`; un-pend AC-1.
+- **PROFILE-2** (AC-13) — wire `save` to project the estimate (type + `calibratedSeverity ?? estimate.severity`, D-6) onto a `CvdProfile` through `profileStore` + the live-pipeline augmentation; closes AC-13's B-pending (the last one). Then SIGNOFF-1.
 - **FLOW-2** (AC-14) still **blocked on G-5** (four-step vs five-tier, routed to spec author).
 
 Still open: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed to the spec author).
@@ -226,7 +225,8 @@ Still open: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed to the spe
 | FLOW-5 | be30afa8 | 2026-10-12 19:32 EDT | 19:50 | 18m 21s | 18m 21s | claude-opus-4-8 | 160 | 274,785 | 11,329,601 | 64,396 | 11,668,942 | enabler: assemble + advanceToResult + See-my-result control + ResultStep renders type/severity; un-pends no AC; unit 1033/cov 100% (23); accept default 18 pass/6 skip, run-pending 19 pass/5 fail (result-step ACs reach result step, fail on own downstream Then, no FLOW-5 precondition failure); grade 12 A/2 B-pending; fix 0/3 |
 | ENGINE-7 | 53d39318 | 2026-10-12 21:04 EDT | 21:25 | 21m 30s | 21m 30s | claude-opus-4-8 | 166 | 244,488 | 10,613,327 | 63,907 | 10,921,888 | AC-11 un-pended + green (12 A/2 B-pending); band G-4 cut-offs + live result slider; unit 1043/cov 100%/accept 19 pass 5 skip; fix 1/3 |
 | FLOW-6 | 1f0f180e | 2026-10-12 21:32 EDT | 21:52 | 20m 24s | 20m 24s | claude-opus-4-8 | 168 | 223,892 | 9,915,281 | 50,211 | 10,189,552 | AC-10 un-pended + green; setType override + 3-way type picker; whenAdjustType(CvdType) selects a specific type; AC-10 B-pending->A; unit 1047/cov 100% (23)/accept default 20 pass 4 skip, run-pending 21 pass 3 fail (own downstream Then); grade 13 A/1 B-pending; fix 0/3 |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 21:52** | **10h 09m** | **7h 04m** |  | **2,626** | **4,101,240** | **163,992,713** | **1,152,984** | **169,249,563** |  |
+| FLOW-7 | 1f334bf8 | 2026-10-12 22:14 EDT | 22:40 | 25m 37s | 25m 37s | claude-opus-4-8 | 184 | 266,453 | 12,609,466 | 71,050 | 12,947,153 | AC-12 un-pended + green; grade A (implemented); unit 1055/cov 100% touched/accept default 21 pass 3 skip, run-pending 22 pass 2 fail (own downstream Then); 13 A/1 B-pending; fix 1/3 |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-12 22:40** | **10h 35m** | **7h 29m** |  | **2,810** | **4,367,693** | **176,602,179** | **1,224,034** | **182,196,716** |  |
 
 ## Sign-off
 
