@@ -211,6 +211,22 @@ void main() {
       expect(gray.green, gray.blue);
     });
 
+    test('displayColor is the sample true sRGB (chromatic, not the neutral)',
+        () {
+      const science = ColorScienceImpl();
+      final coords =
+          const ColorCoordinates(lightness: 58, a: 25.27, b: 22.75);
+      final color = controllerAtLightness(58).displayColor;
+      // The true colour the sample's coordinates convert to (AC-2 identity).
+      expect(color, science.toSRGB(coords));
+      // Chromatic, not the lightness neutral: at least two channels differ
+      // (a muted terracotta is not a grey), so it is really the colour, not
+      // the grayscale preview re-exposed.
+      final channels = {color.red, color.green, color.blue};
+      expect(channels.length, greaterThan(1),
+          reason: 'the displayed colour is chromatic, not a neutral');
+    });
+
     test('load replaces the sample and the derived readings, and notifies', () {
       final controller = controllerAtLightness(58);
       expect(controller.valueWord, 'middle value');

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../a11y/cvd/confusion_check.dart';
 import '../a11y/cvd/cvd_profile.dart';
 import '../a11y/haptics.dart';
+import '../a11y/repeatable_speech.dart';
 import '../a11y/speech.dart';
 import '../capture/capture_controller.dart';
 import '../capture/capture_read_endpoint.dart';
@@ -15,6 +16,12 @@ import '../correction/correction_read_endpoint.dart';
 import '../correction/correction_screen.dart';
 import '../correction/engine/correction_engine.dart';
 import '../correction/engine/correction_engine_impl.dart';
+import '../display/display_controller.dart';
+import '../display/display_read_endpoint.dart';
+import '../display/display_scope.dart';
+import '../display/grayscale_filter.dart';
+import '../display/settings_screen.dart';
+import '../display/spoken_output_panel.dart';
 import '../compare/comparison_controller.dart';
 import '../compare/comparison_read_endpoint.dart';
 import '../compare/comparison_screen.dart';
@@ -155,6 +162,7 @@ class AppDependencies {
     this.store,
     this.sourcePhotoStore,
     this.pdfShareSink,
+    this.displayController,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -315,6 +323,17 @@ class AppDependencies {
   /// export only produces `ProjectController.lastExport` bytes (plan D-6, no
   /// disk file, no device popup during a test).
   final PdfShareSink? pdfShareSink;
+
+  /// The app-wide display-settings controller (bs-08 DISPLAY-2), or null to let
+  /// [buildApp] create and own a default one.
+  ///
+  /// null (the default) keeps today's assembly: [buildApp] builds a fresh
+  /// [DisplayController] whose [DisplayController.defaultSimulationType] is the
+  /// painter's [cvdProfile] type (D-2), owns it, and disposes it with the tree.
+  /// The bs-08 acceptance harness injects its own so it can both drive the
+  /// setters and observe the resulting view; an injected controller is owned by
+  /// its injector, not by [buildApp].
+  final DisplayController? displayController;
 }
 
 /// Exposes the app-wide [AppDependencies] to descendant widgets.
@@ -364,47 +383,244 @@ class AppScope extends InheritedWidget {
 /// in the injected services, the initial sample, the capture source and the
 /// comparison / recipes entries.
 Widget buildApp(AppDependencies deps) {
+  // Make the one app-wide [Speech] repeatable (bs-08 SPEECH-1): wrap the
+  // injected sink in a [RepeatableSpeech] so every caller that speaks through
+  // it (readout via [AppScope], comparison, recipes) can be replayed by the
+  // spoken-output panel (E50), and the inner sink still records each utterance
+  // for the acceptance suite. An already-repeatable injected speech is reused
+  // as-is (its injector owns it); otherwise [buildApp] wraps and owns it, and
+  // re-provides it through [AppScope] so the readout's controller picks it up.
+  final injectedSpeech =
+      deps.speech is RepeatableSpeech ? deps.speech as RepeatableSpeech : null;
+  final speech = injectedSpeech ?? RepeatableSpeech(deps.speech);
+  final scopedDeps =
+      injectedSpeech == null ? _depsWithSpeech(deps, speech) : deps;
   return AppScope(
-    dependencies: deps,
-    child: MaterialApp(
-      title: 'Paint Color Assistant',
-      theme: ThemeData(useMaterial3: true),
-      home: deps.correctionEntry != null
-          ? CorrectionHomeScreen(
-              target: deps.correctionEntry!.target,
-              currentMix: deps.correctionEntry!.currentMix,
-              captureSource: deps.captureSource!,
-              paletteSource: deps.paletteSource,
-              correctionEngine: deps.correctionEngine,
-              mixingEngine: deps.mixingEngine,
-              sampleSource: deps.sampleSource,
-              speech: deps.speech,
-              router: deps.router,
-            )
-          : deps.captureSource != null
-          ? const CaptureHomeScreen()
-          : deps.comparisonEntry != null
-              ? ComparisonHomeScreen(
-                  sampleSource: deps.sampleSource,
-                  cvdProfile: deps.cvdProfile,
-                  confusionCheck: deps.confusionCheck,
-                  speech: deps.speech,
-                  router: deps.router,
+    dependencies: scopedDeps,
+    child: _DisplayRoot(
+      injectedController: deps.displayController,
+      defaultSimulationType: deps.cvdProfile.type,
+      child: _SpeechRoot(
+        speech: speech,
+        owns: injectedSpeech == null,
+        child: MaterialApp(
+          title: 'Paint Color Assistant',
+          theme: ThemeData(useMaterial3: true),
+          // The shared app chrome: the open-display-settings entry (E2) on every
+          // screen (SETTINGS-1) and, beneath it, the persistent spoken-output
+          // panel (E50 — SPEECH-1) that replays the last utterance.
+          builder: (context, child) =>
+              DisplayChrome(child: _SpokenOutputChrome(child: child!)),
+          home: scopedDeps.correctionEntry != null
+              ? CorrectionHomeScreen(
+                  target: scopedDeps.correctionEntry!.target,
+                  currentMix: scopedDeps.correctionEntry!.currentMix,
+                  captureSource: scopedDeps.captureSource!,
+                  paletteSource: scopedDeps.paletteSource,
+                  correctionEngine: scopedDeps.correctionEngine,
+                  mixingEngine: scopedDeps.mixingEngine,
+                  sampleSource: scopedDeps.sampleSource,
+                  speech: speech,
+                  router: scopedDeps.router,
                 )
-              : deps.recipesEntry != null
-                  ? RecipesHomeScreen(
-                      target: deps.recipesEntry!.target,
-                      sampleSource: deps.sampleSource,
-                      paletteSource: deps.paletteSource,
-                      mixingEngine: deps.mixingEngine,
-                      speech: deps.speech,
-                      router: deps.router,
+              : scopedDeps.captureSource != null
+              ? const CaptureHomeScreen()
+              : scopedDeps.comparisonEntry != null
+                  ? ComparisonHomeScreen(
+                      sampleSource: scopedDeps.sampleSource,
+                      cvdProfile: scopedDeps.cvdProfile,
+                      confusionCheck: scopedDeps.confusionCheck,
+                      speech: speech,
+                      router: scopedDeps.router,
                     )
-                  : deps.paletteEntry != null
-                      ? const PaletteHomeScreen()
-                      : ReadoutScreen(sample: deps.initialSample),
+                  : scopedDeps.recipesEntry != null
+                      ? RecipesHomeScreen(
+                          target: scopedDeps.recipesEntry!.target,
+                          sampleSource: scopedDeps.sampleSource,
+                          paletteSource: scopedDeps.paletteSource,
+                          mixingEngine: scopedDeps.mixingEngine,
+                          speech: speech,
+                          router: scopedDeps.router,
+                        )
+                      : scopedDeps.paletteEntry != null
+                          ? const PaletteHomeScreen()
+                          : ReadoutScreen(sample: scopedDeps.initialSample),
+        ),
+      ),
     ),
   );
+}
+
+/// Returns a copy of [deps] with its [AppDependencies.speech] replaced by
+/// [speech], preserving every other injected service (bs-08 SPEECH-1).
+///
+/// Used by [buildApp] to re-provide the app-wide [RepeatableSpeech] wrapper
+/// through [AppScope] so the readout's controller — which reads
+/// `AppScope.of(context).speech` — speaks through the repeatable seam.
+AppDependencies _depsWithSpeech(AppDependencies deps, Speech speech) {
+  return AppDependencies(
+    colorScience: deps.colorScience,
+    speech: speech,
+    haptics: deps.haptics,
+    router: deps.router,
+    initialSample: deps.initialSample,
+    captureSource: deps.captureSource,
+    cvdProfile: deps.cvdProfile,
+    confusionCheck: deps.confusionCheck,
+    sampleSource: deps.sampleSource,
+    comparisonEntry: deps.comparisonEntry,
+    mixingEngine: deps.mixingEngine,
+    correctionEngine: deps.correctionEngine,
+    paletteSource: deps.paletteSource,
+    recipesEntry: deps.recipesEntry,
+    correctionEntry: deps.correctionEntry,
+    projectSource: deps.projectSource,
+    paletteEntry: deps.paletteEntry,
+    store: deps.store,
+    sourcePhotoStore: deps.sourcePhotoStore,
+    pdfShareSink: deps.pdfShareSink,
+    displayController: deps.displayController,
+  );
+}
+
+/// Owns the app-wide [DisplayController] and exposes it to the whole tree
+/// (bs-08 DISPLAY-2).
+///
+/// A small stateful root so the default controller [buildApp] creates has a
+/// lifecycle to be disposed with the app, while an [injectedController] (the
+/// acceptance harness's, or `main.dart`'s) is left for its injector to own. It
+/// wraps [child] (the `MaterialApp`) in the [DisplayScope] every colour surface
+/// reads and the [DisplayReadEndpoint] the acceptance suite observes, with the
+/// inert root [GrayscaleFilter] directly around the app (DISPLAY-7 makes it
+/// active). Placed above the `MaterialApp` so pushed routes read the scope too.
+class _DisplayRoot extends StatefulWidget {
+  const _DisplayRoot({
+    required this.injectedController,
+    required this.defaultSimulationType,
+    required this.child,
+  });
+
+  /// The controller to use, or null to create and own a default one.
+  final DisplayController? injectedController;
+
+  /// The type a created default controller pre-selects for simulation (D-2).
+  final CvdType defaultSimulationType;
+
+  /// The app subtree (the `MaterialApp`) wrapped in the display layer.
+  final Widget child;
+
+  @override
+  State<_DisplayRoot> createState() => _DisplayRootState();
+}
+
+class _DisplayRootState extends State<_DisplayRoot> {
+  late final DisplayController _controller;
+
+  /// Whether this state created [_controller] and must dispose it (an injected
+  /// controller is owned by its injector).
+  late final bool _owned;
+
+  @override
+  void initState() {
+    super.initState();
+    final injected = widget.injectedController;
+    _owned = injected == null;
+    _controller = injected ??
+        DisplayController(defaultSimulationType: widget.defaultSimulationType);
+  }
+
+  @override
+  void dispose() {
+    if (_owned) _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DisplayScope(
+      controller: _controller,
+      child: DisplayReadEndpoint(
+        key: DisplayReadEndpoint.endpointKey,
+        controller: _controller,
+        child: GrayscaleFilter(child: widget.child),
+      ),
+    );
+  }
+}
+
+/// Exposes the app-wide [RepeatableSpeech] to the whole tree and owns its
+/// lifecycle when [buildApp] created it (bs-08 SPEECH-1).
+///
+/// A small stateful root, symmetric to [_DisplayRoot]: it wraps [child] (the
+/// `MaterialApp`) in the [SpeechScope] the spoken-output panel (E50) reads, and
+/// disposes the [RepeatableSpeech] with the tree when it [owns] it (a wrapper
+/// [buildApp] built around the injected sink). An injected [RepeatableSpeech] is
+/// left for its injector to dispose. Placed above the `MaterialApp` so the panel
+/// in the chrome's `builder` reads the scope.
+class _SpeechRoot extends StatefulWidget {
+  const _SpeechRoot({
+    required this.speech,
+    required this.owns,
+    required this.child,
+  });
+
+  /// The app-wide repeatable speech exposed to the subtree.
+  final RepeatableSpeech speech;
+
+  /// Whether this root created [speech] and must dispose it (an injected one is
+  /// owned by its injector).
+  final bool owns;
+
+  /// The app subtree (the `MaterialApp`) wrapped in the speech scope.
+  final Widget child;
+
+  @override
+  State<_SpeechRoot> createState() => _SpeechRootState();
+}
+
+class _SpeechRootState extends State<_SpeechRoot> {
+  @override
+  void dispose() {
+    if (widget.owns) widget.speech.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SpeechScope(speech: widget.speech, child: widget.child);
+  }
+}
+
+/// Overlays the persistent spoken-output panel (E50) on every screen (bs-08
+/// SPEECH-1).
+///
+/// Composed inside the shared [DisplayChrome] (as its child) so the settings
+/// entry and any open settings panel sit above it. The panel itself collapses to
+/// nothing until something has been spoken, so this adds no visible chrome to a
+/// screen that has produced no spoken output yet.
+class _SpokenOutputChrome extends StatelessWidget {
+  const _SpokenOutputChrome({required this.child});
+
+  /// The app content the spoken-output panel overlays.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(child: child),
+        // Full-width at the bottom so the panel's last-spoken text has bounded
+        // width to lay out in; it collapses to nothing until something is
+        // spoken, so this occupies no height on a screen with no spoken output.
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: const SafeArea(child: SpokenOutputPanel()),
+        ),
+      ],
+    );
+  }
 }
 
 /// The Capture screen the app opens on when a capture source is wired (bs-02).

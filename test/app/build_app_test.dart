@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
+import 'package:paint_color_assistant/a11y/repeatable_speech.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
@@ -14,6 +15,10 @@ import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/correction/correction_read_endpoint.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine.dart';
 import 'package:paint_color_assistant/correction/engine/correction_engine_impl.dart';
+import 'package:paint_color_assistant/display/display_controller.dart';
+import 'package:paint_color_assistant/display/display_read_endpoint.dart';
+import 'package:paint_color_assistant/display/settings_screen.dart';
+import 'package:paint_color_assistant/display/spoken_output_panel.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
@@ -82,6 +87,16 @@ class _RecordingHaptics implements Haptics {
 
   @override
   Future<void> confirm() async => confirmations++;
+}
+
+/// A [Speech] that records each utterance, so a test can observe that the
+/// app-wide [RepeatableSpeech] delegates (and a repeat re-delegates) to the one
+/// injected inner sink (bs-08 SPEECH-1).
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
 }
 
 AppDependencies _captureDepsWith(
@@ -284,6 +299,23 @@ void main() {
       expect(_deps().projectSource.projects(), isEmpty);
     });
 
+    test('defaults the display controller to null (buildApp owns one — bs-08)',
+        () {
+      expect(_deps().displayController, isNull);
+    });
+
+    test('keeps an explicitly injected display controller', () {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      final deps = AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        displayController: controller,
+      );
+      expect(identical(deps.displayController, controller), isTrue);
+    });
+
     test('defaults the palette entry to null (opens on Readout — bs-06)', () {
       expect(_deps().paletteEntry, isNull);
     });
@@ -334,7 +366,8 @@ void main() {
       expect(find.text('Deep Olive Green'), findsOneWidget);
     });
 
-    testWidgets('injects the dependencies via AppScope', (tester) async {
+    testWidgets('injects the dependencies via AppScope, with the app-wide '
+        'speech wrapped in a RepeatableSpeech (bs-08 SPEECH-1)', (tester) async {
       final deps = _deps();
       late AppDependencies seen;
       await tester.pumpWidget(
@@ -343,7 +376,39 @@ void main() {
       // Reach the scope from a descendant context below the MaterialApp.
       final context = tester.element(find.byType(ReadoutScreen));
       seen = AppScope.of(context);
-      expect(identical(seen, deps), isTrue);
+      // The injected speech is wrapped so the readout speaks through the
+      // repeatable seam, while every other service is the same injected one.
+      expect(seen.speech, isA<RepeatableSpeech>());
+      expect(identical((seen.speech as RepeatableSpeech).inner, deps.speech),
+          isTrue);
+      expect(identical(seen.colorScience, deps.colorScience), isTrue);
+      expect(identical(seen.haptics, deps.haptics), isTrue);
+      expect(identical(seen.router, deps.router), isTrue);
+      expect(identical(seen.initialSample, deps.initialSample), isTrue);
+    });
+
+    testWidgets('reuses an already-repeatable injected speech as-is, and leaves '
+        'its injector to own it (bs-08 SPEECH-1)', (tester) async {
+      final repeatable = RepeatableSpeech(const NoopSpeech());
+      addTearDown(repeatable.dispose);
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: repeatable,
+            haptics: const NoopHaptics(),
+          ),
+        ),
+      );
+      final context = tester.element(find.byType(ReadoutScreen));
+      // The same instance is provided (not double-wrapped).
+      expect(identical(AppScope.of(context).speech, repeatable), isTrue);
+
+      // buildApp does not dispose an injected speech — it is still usable after
+      // the tree is torn down.
+      await tester.pumpWidget(const SizedBox());
+      repeatable.addListener(() {});
+      expect(repeatable.canRepeat, isFalse);
     });
 
     testWidgets('opens on the Capture screen when a capture source is wired',
@@ -516,6 +581,195 @@ void main() {
       expect(find.byType(ReadoutScreen), findsNothing);
       expect(find.widgetWithText(AppBar, 'Correction'), findsOneWidget);
       expect(find.text('Correction target: Deep Olive Green'), findsOneWidget);
+    });
+  });
+
+  group('buildApp display layer (bs-08)', () {
+    testWidgets('mounts a DisplayReadEndpoint over a controller whose default '
+        'simulation type is the painter\'s CVD type (D-2)', (tester) async {
+      // _deps() carries the default deutan profile.
+      await tester.pumpWidget(buildApp(_deps()));
+      final endpoint = tester.widget<DisplayReadEndpoint>(
+        find.byKey(DisplayReadEndpoint.endpointKey),
+      );
+      expect(endpoint.controller.defaultSimulationType, CvdType.deutan);
+      // The shipped view: no simulation, no grayscale.
+      expect(endpoint.settings.simulationOn, isFalse);
+      expect(endpoint.settings.grayscale, isFalse);
+    });
+
+    testWidgets('derives the default simulation type from an injected profile',
+        (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: const NoopSpeech(),
+            haptics: const NoopHaptics(),
+            cvdProfile: const CvdProfile(type: CvdType.tritan, severity: 0.5),
+          ),
+        ),
+      );
+      final endpoint = tester.widget<DisplayReadEndpoint>(
+        find.byKey(DisplayReadEndpoint.endpointKey),
+      );
+      expect(endpoint.controller.defaultSimulationType, CvdType.tritan);
+    });
+
+    testWidgets('uses an injected display controller as-is', (tester) async {
+      final controller = DisplayController(
+        defaultSimulationType: CvdType.protan,
+      );
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: const NoopSpeech(),
+            haptics: const NoopHaptics(),
+            displayController: controller,
+          ),
+        ),
+      );
+      final endpoint = tester.widget<DisplayReadEndpoint>(
+        find.byKey(DisplayReadEndpoint.endpointKey),
+      );
+      expect(identical(endpoint.controller, controller), isTrue);
+    });
+
+    testWidgets('disposes the default controller it owns when torn down',
+        (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      final controller = tester
+          .widget<DisplayReadEndpoint>(
+            find.byKey(DisplayReadEndpoint.endpointKey),
+          )
+          .controller;
+      await tester.pumpWidget(const SizedBox());
+      // A disposed ChangeNotifier throws if listened to again.
+      expect(() => controller.addListener(() {}), throwsFlutterError);
+    });
+
+    testWidgets('leaves an injected controller alive when torn down (its '
+        'injector owns it)', (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: const NoopSpeech(),
+            haptics: const NoopHaptics(),
+            displayController: controller,
+          ),
+        ),
+      );
+      await tester.pumpWidget(const SizedBox());
+      // Not disposed by buildApp: still usable (no throw).
+      controller.addListener(() {});
+      expect(controller.settings.simulationOn, isFalse);
+    });
+  });
+
+  group('buildApp display chrome (bs-08 SETTINGS-1)', () {
+    testWidgets('surfaces the open-settings entry (E2) on the home screen',
+        (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      // The shared chrome wraps every route, so the entry is present over the
+      // screen (here the Readout home).
+      expect(find.byType(DisplayChrome), findsOneWidget);
+      expect(find.byKey(DisplaySettingsButton.openKey), findsOneWidget);
+      // The panel is not shown until the painter opens it.
+      expect(find.byKey(DisplaySettingsScreen.panelKey), findsNothing);
+    });
+
+    testWidgets('opening the entry shows the settings panel over the current '
+        'screen, closing returns to it', (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      expect(find.byType(ReadoutScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(DisplaySettingsButton.openKey));
+      await tester.pumpAndSettle();
+      // The panel is shown; the feature screen is still mounted underneath.
+      expect(find.byKey(DisplaySettingsScreen.panelKey), findsOneWidget);
+      expect(find.byType(ReadoutScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(DisplaySettingsScreen.closeKey));
+      await tester.pumpAndSettle();
+      expect(find.byKey(DisplaySettingsScreen.panelKey), findsNothing);
+      expect(find.byType(ReadoutScreen), findsOneWidget);
+    });
+
+    testWidgets('the panel reads the app-wide controller — its controls drive '
+        'the live display settings', (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      final controller = tester
+          .widget<DisplayReadEndpoint>(
+            find.byKey(DisplayReadEndpoint.endpointKey),
+          )
+          .controller;
+
+      await tester.tap(find.byKey(DisplaySettingsButton.openKey));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(DisplaySettingsScreen.simulationOptionKey(CvdType.protan)),
+      );
+      await tester.pump();
+
+      expect(controller.settings.simulationType, CvdType.protan);
+    });
+  });
+
+  group('buildApp spoken-output chrome (bs-08 SPEECH-1)', () {
+    testWidgets('surfaces the spoken-output panel (E50) on every screen, inert '
+        'until something is spoken', (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      // The persistent panel is present over the screen from the start.
+      expect(find.byKey(SpokenOutputPanel.panelKey), findsOneWidget);
+      // Nothing spoken yet: no repeat control and no last-spoken text.
+      expect(find.byKey(SpokenOutputPanel.repeatKey), findsNothing);
+      expect(find.byKey(SpokenOutputPanel.lastSpokenKey), findsNothing);
+    });
+
+    testWidgets('speaking through the app-wide seam shows the panel, and the '
+        'repeat control replays the exact utterance (AC-8)', (tester) async {
+      final recorder = _RecordingSpeech();
+      await tester.pumpWidget(
+        buildApp(
+          AppDependencies(
+            colorScience: const ColorScienceImpl(),
+            speech: recorder,
+            haptics: const NoopHaptics(),
+          ),
+        ),
+      );
+      final context = tester.element(find.byType(ReadoutScreen));
+      final speech = AppScope.of(context).speech as RepeatableSpeech;
+
+      // A reading is spoken through the one injected seam (the readout's path).
+      await speech.speak('Warm Terracotta, lightness 58');
+      await tester.pump();
+      expect(find.byKey(SpokenOutputPanel.repeatKey), findsOneWidget);
+      expect(find.text('Warm Terracotta, lightness 58'), findsOneWidget);
+      expect(recorder.utterances, ['Warm Terracotta, lightness 58']);
+
+      // Repeating replays the same utterance through the same inner sink.
+      await tester.tap(find.byKey(SpokenOutputPanel.repeatKey));
+      await tester.pump();
+      expect(recorder.utterances, [
+        'Warm Terracotta, lightness 58',
+        'Warm Terracotta, lightness 58',
+      ]);
+    });
+
+    testWidgets('disposes the speech wrapper it owns when torn down',
+        (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      final context = tester.element(find.byType(ReadoutScreen));
+      final speech = AppScope.of(context).speech as RepeatableSpeech;
+      await tester.pumpWidget(const SizedBox());
+      // A disposed ChangeNotifier throws if listened to again.
+      expect(() => speech.addListener(() {}), throwsFlutterError);
     });
   });
 

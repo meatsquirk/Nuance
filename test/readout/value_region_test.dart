@@ -10,6 +10,7 @@ import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/readout_controller.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
+import 'package:paint_color_assistant/widgets/color_chip.dart';
 
 // Terracotta: CIELAB L58 → Munsell value 5.5, grayscale a neutral.
 const _terracotta = Sample(
@@ -89,6 +90,37 @@ void main() {
     final decoration = container.decoration! as BoxDecoration;
     final gray = controller.grayscale;
     expect(decoration.color, Color.fromARGB(255, gray.red, gray.green, gray.blue));
+  });
+
+  testWidgets(
+      'shows the true colour as a single chromatic ColorChip swatch '
+      '(AC-2 identity), labelled so it never stands alone', (tester) async {
+    final controller = await _pumpRegion(tester);
+
+    // One display ColorChip, labelled (never a bare swatch) and not repeating
+    // the colour name (which the name header owns).
+    final chip = tester.widget<ColorChip>(find.byType(ColorChip));
+    expect(chip.label, 'Displayed colour');
+    final rgb = controller.displayColor;
+    expect(chip.color, Color.fromARGB(255, rgb.red, rgb.green, rgb.blue),
+        reason: 'the chip carries the sample true colour (trichromat view)');
+
+    // Exactly one circular colour swatch renders (the ColorChip's) at the
+    // identity path — the grayscale preview is a rectangle, so it is excluded.
+    final circles = tester
+        .widgetList<Container>(find.byType(Container))
+        .where((c) {
+          final d = c.decoration;
+          return d is BoxDecoration &&
+              d.shape == BoxShape.circle &&
+              d.color != null;
+        })
+        .toList();
+    expect(circles, hasLength(1),
+        reason: 'sim off = one un-projected swatch (no alongside pair)');
+    expect(circles.single.decoration,
+        isA<BoxDecoration>().having((d) => d.color, 'color',
+            Color.fromARGB(255, rgb.red, rgb.green, rgb.blue)));
   });
 
   testWidgets('formats a whole Munsell value without a trailing .0',

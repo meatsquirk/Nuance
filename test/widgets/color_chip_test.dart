@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/display/color_simulation.dart';
+import 'package:paint_color_assistant/display/display_controller.dart';
+import 'package:paint_color_assistant/display/display_scope.dart';
 import 'package:paint_color_assistant/widgets/color_chip.dart';
 
 Future<void> _pump(WidgetTester tester, Widget child) {
@@ -60,5 +64,62 @@ void main() {
 
   test('rejects a colour-only construction (empty label)', () {
     expect(() => ColorChip(label: ''), throwsAssertionError);
+  });
+
+  testWidgets(
+      'with simulation off, reads the scope and draws one identity swatch '
+      '(the true colour)', (tester) async {
+    final controller = DisplayController(); // no simulation type → off
+    addTearDown(controller.dispose);
+    const original = Color(0xFFBF5B3A);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DisplayScope(
+            controller: controller,
+            child: const ColorChip(label: 'Warm Terracotta', color: original),
+          ),
+        ),
+      ),
+    );
+    // Simulation off: the identity path — exactly one swatch, its true colour.
+    expect(find.text('Warm Terracotta'), findsOneWidget);
+    final decoration =
+        tester.widget<Container>(find.byType(Container)).decoration!
+            as BoxDecoration;
+    expect(decoration.color, original);
+  });
+
+  testWidgets(
+      'with a simulation on, draws the simulated swatch alongside the original '
+      '(AC-3)', (tester) async {
+    final controller = DisplayController()..setSimulationType(CvdType.deutan);
+    addTearDown(controller.dispose);
+    const original = Color(0xFFBF5B3A);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DisplayScope(
+            controller: controller,
+            child: const ColorChip(label: 'Warm Terracotta', color: original),
+          ),
+        ),
+      ),
+    );
+    // Two swatches render: the deutan projection and the untouched original.
+    final swatches = tester
+        .widgetList<Container>(find.byType(Container))
+        .map((c) => (c.decoration! as BoxDecoration).color)
+        .toList();
+    expect(swatches, hasLength(2),
+        reason: 'the simulated swatch is shown alongside the original');
+    final simulated = simulateColor(original, controller.settings);
+    expect(swatches, contains(original),
+        reason: 'the original colour is shown alongside');
+    expect(swatches, contains(simulated),
+        reason: 'the displayed swatch is the deutan projection');
+    expect(simulated, isNot(original),
+        reason: 'deutan projection actually shifts this colour '
+            '(control: a no-op projection would fail here)');
   });
 }
