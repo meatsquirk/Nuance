@@ -391,6 +391,29 @@ void main() {
       expect(identical(seen.initialSample, deps.initialSample), isTrue);
     });
 
+    testWidgets('AppScope.maybeOf returns the dependencies when present and '
+        'null when absent (bs-10: standalone ColorChip fallback)',
+        (tester) async {
+      // Present: a descendant below buildApp's AppScope sees the deps.
+      await tester.pumpWidget(buildApp(_deps()));
+      final present = tester.element(find.byType(ReadoutScreen));
+      expect(AppScope.maybeOf(present), isNotNull);
+      expect(AppScope.maybeOf(present)!.speech, isA<RepeatableSpeech>());
+
+      // Absent: no AppScope above the context → null (not an assertion throw,
+      // unlike AppScope.of), so a standalone surface can fall back.
+      AppDependencies? seen = _deps();
+      await tester.pumpWidget(
+        Builder(
+          builder: (context) {
+            seen = AppScope.maybeOf(context);
+            return const SizedBox();
+          },
+        ),
+      );
+      expect(seen, isNull);
+    });
+
     testWidgets('reuses an already-repeatable injected speech as-is, and leaves '
         'its injector to own it (bs-08 SPEECH-1)', (tester) async {
       final repeatable = RepeatableSpeech(const NoopSpeech());

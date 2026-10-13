@@ -405,6 +405,13 @@ class AppScope extends InheritedWidget {
     return scope!.dependencies;
   }
 
+  /// The [AppDependencies] from the nearest enclosing [AppScope], or null when
+  /// there is none above [context] — for surfaces (such as `ColorChip`) that
+  /// must also render standalone, outside the app assembly, where they fall
+  /// back to a default (e.g. the stored CVD profile for daltonization, bs-10).
+  static AppDependencies? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppScope>()?.dependencies;
+
   @override
   bool updateShouldNotify(AppScope oldWidget) =>
       dependencies != oldWidget.dependencies;

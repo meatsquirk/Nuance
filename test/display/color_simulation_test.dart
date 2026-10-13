@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/a11y/cvd/daltonize.dart';
 import 'package:paint_color_assistant/color_science/color_science.dart';
 import 'package:paint_color_assistant/color_science/conversions.dart';
 import 'package:paint_color_assistant/display/color_simulation.dart';
@@ -86,6 +87,40 @@ void main() {
       expect(_channelDistance(half, original),
           lessThan(_channelDistance(full, original)),
           reason: 'a weaker severity sits closer to the true colour');
+    });
+  });
+
+  // bs-10 DALT-2: the one display-transform decision shared by ColorChip and
+  // the read endpoint. The two view modes are distinct (AC-7); daltonization,
+  // when on, takes the colour through the (identity, for now) bs-10 remap, and
+  // simulation otherwise.
+  group('displayedSwatchColor — the shared chokepoint', () {
+    const profile = CvdProfile(type: CvdType.deutan);
+
+    test('daltonization off, simulation off → the simulation identity', () {
+      const settings = DisplaySettings();
+      expect(displayedSwatchColor(original, settings, profile),
+          simulateColor(original, settings));
+      expect(displayedSwatchColor(original, settings, profile), original);
+    });
+
+    test('daltonization off, simulation on → the simulation projection', () {
+      const settings = DisplaySettings(simulationType: CvdType.deutan);
+      final displayed = displayedSwatchColor(original, settings, profile);
+      expect(displayed, simulateColor(original, settings));
+      expect(displayed, isNot(original),
+          reason: 'with simulation on the chokepoint still simulates');
+    });
+
+    test('daltonization on → the daltonization remap (not the simulation)', () {
+      // Daltonization set, with a simulation type also set: the chokepoint takes
+      // the daltonization branch, not simulateColor (AC-7 distinctness).
+      const settings = DisplaySettings(
+        simulationType: CvdType.deutan,
+        daltonization: true,
+      );
+      expect(displayedSwatchColor(original, settings, profile),
+          daltonizeColor(original, profile));
     });
   });
 }

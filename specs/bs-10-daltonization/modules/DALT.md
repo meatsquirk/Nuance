@@ -1,6 +1,6 @@
 # Module DALT — daltonization remap engine + display injection
 
-**Status:** In progress — DALT-1 (scaffold) done; next DALT-2 (shell)
+**Status:** In progress — DALT-2 (shell) done; DALT-3 (behavior) is the module's next, blocked by G-2. CONTROL-1 (other module) is the startable phase now.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
 additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
@@ -13,8 +13,8 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | DALT-1 | scaffold | — | ✅ Done | 4.07M | 21m 20s |
-| DALT-2 | shell | — | ⬜ Next | | |
-| DALT-3 | behavior | AC-1 | ⬜ Todo | | |
+| DALT-2 | shell | — | ✅ Done | 9.32M | 23m 50s |
+| DALT-3 | behavior | AC-1 | ⬜ Next | | |
 | DALT-4 | behavior | AC-5 | ⬜ Todo | | |
 | DALT-5 | behavior | AC-7 | ⬜ Todo | | |
 | DALT-6 | behavior | AC-2 | ⬜ Todo | | |
@@ -232,6 +232,54 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 - **Acceptance gate:** un-pend AC-6; `TestAC06_ProfileChangeRecomputes` green (after a save settles, the remap
   recomputes to the new type; control: it was the old type's remap before the save).
 
-### Result  <!-- filled on completion -->
+### Result — DALT-2  <!-- 2026-10-13 -->
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **New `lib/a11y/cvd/daltonize.dart`:** pure `ColorCoordinates daltonize(ColorCoordinates, CvdProfile)` —
+  **identity stub** (returns `c`), mirroring `projectDichromat`'s signature (D-2); plus the Color-level bridge
+  `Color daltonizeColor(Color, CvdProfile)` (srgb→lab→`daltonize`→srgb, symmetric to `simulateColor`).
+- **`DisplaySettings`:** added `bool daltonization` (default false) — into the `const` ctor, `==`, `hashCode`,
+  `toString`. **`DisplayController`:** added `setDaltonization(bool)` (change-or-no-op + notify; an independent
+  axis — does **not** clear simulation/grayscale, D-5), and threaded `daltonization` through the three existing
+  setters so they preserve it.
+- **One chokepoint (D-1):** added `displayedSwatchColor(Color, DisplaySettings, CvdProfile)` to
+  `color_simulation.dart` — the single display-transform decision: daltonization on → `daltonizeColor`, else →
+  `simulateColor`. `ColorChip` now draws the primary swatch through it, reading the stored profile via the new
+  `AppScope.maybeOf(context)?.cvdProfile` (deutan fallback for standalone chips; daltonization off there anyway).
+  `DisplayReadEndpoint` exposes `daltonization` + `displayedColor(Color, CvdProfile)` (same chokepoint) for the
+  acceptance suite. **No second transform path, no second swatch.**
+- **Render unchanged (identity):** daltonization defaults off, so `displayedSwatchColor` == `simulateColor` for
+  the whole existing suite; with it on, the remap is identity (an sRGB round-trip) — no behaviour yet.
+- **Gates:** `flutter analyze` clean · `flutter test --coverage` **1237 unit pass** (+17: daltonize 7,
+  settings 3, controller 3, color_simulation 3, color_chip 1, read_endpoint 2, AppScope.maybeOf 1) ·
+  `dart run tool/coverage_gate.dart main` → **100% on all 7 touched files** · full `integration_test/`
+  on booted iPhone 17 (`-d 5AB9D06D…`, under `coord.sh with-lock`) → **197 pass** (unchanged — nothing broke).
+  Acceptance: n/a (no bs-10 AC tests until ITEST; defaults keep every other feature's suite green).
+- Coverage (touched `lib/`): 100% (7 files). Fix passes: 0/3 (all gates green on first run).
+- Tokens/time: 9.32M · 23m 50s active (1 session).
+- Closed by: unit + coverage gates green; existing unit + integration suites green; identity render confirmed.
+
+### Checkpoint / Handoff — DALT-2
+
+- **Frozen for DALT-3 / CONTROL-1 / ITEST-1:**
+  - `daltonize(ColorCoordinates, CvdProfile)` (`lib/a11y/cvd/daltonize.dart`) — DALT-3 replaces **only this
+    body** with the real error-redistribution remap (D-2); callers (`daltonizeColor`, the chokepoint, the
+    endpoint) do not change. The identity stub makes AC-2/3/4/8 green at baseline (their controls come later).
+  - `DisplaySettings.daltonization` (bool, default false) + `DisplayController.setDaltonization(bool)` — the
+    control CONTROL-1's toggle drives.
+  - `displayedSwatchColor(Color, DisplaySettings, CvdProfile)` (`color_simulation.dart`) — the **one** render
+    chokepoint; `ColorChip` and `DisplayReadEndpoint.displayedColor` both route through it (D-1). DALT-8 (AC-9
+    every screen) verifies every surface reaches it.
+  - `DisplayReadEndpoint.daltonization` + `displayedColor(Color, CvdProfile)` — the acceptance observation seam.
+  - `AppScope.maybeOf(context)` (`lib/app/build_app.dart`) — null-safe deps lookup for standalone surfaces.
+- **Verification commands** (Flutter SDK not on default PATH — prepend
+  `/Users/matthew.quirk/development/flutter/bin`): `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` (host, no sim). Integration on a **booted** sim only (no `-d <udid>`
+  ⇒ zero tests, false green): `flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`, run
+  under `FNP_COORD_REPO=/Users/matthew.quirk/Nuance ~/.claude/skills/feature-next-phase/scripts/coord.sh
+  with-lock bs-10-daltonization <PHASE> --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs10 && …'`.
+  macOS has no `timeout`; redirect long sim runs to a file, don't tail.
+- **Known gaps:** the remap is identity (DALT-3); no daltonization control/toggle UI yet (CONTROL-1) and no
+  no-saved-profile affordance (CONTROL-2, reads `CvdProfileReadEndpoint.hasSavedProfile`, D-4); no bs-10
+  harness/`daltonization_test.dart` yet (ITEST-1); AC-6 live recompute (DALT-11) relies on `AppScope` rebuilding
+  when the live profile changes (bs-07 `withCvdProfile`) — wired, unverified until DALT-11. Carries the D-8
+  sim/dalt gap note only as context — out of bs-10 scope (D-5).

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
+import 'package:paint_color_assistant/a11y/cvd/daltonize.dart';
 import 'package:paint_color_assistant/display/color_simulation.dart';
 import 'package:paint_color_assistant/display/display_controller.dart';
 import 'package:paint_color_assistant/display/display_scope.dart';
@@ -121,5 +122,34 @@ void main() {
     expect(simulated, isNot(original),
         reason: 'deutan projection actually shifts this colour '
             '(control: a no-op projection would fail here)');
+  });
+
+  testWidgets(
+      'with daltonization on, draws one remapped swatch through the chokepoint '
+      '(identity in the DALT-2 shell)', (tester) async {
+    final controller = DisplayController()..setDaltonization(true);
+    addTearDown(controller.dispose);
+    const original = Color(0xFF3AA0BF);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DisplayScope(
+            controller: controller,
+            child: const ColorChip(label: 'Cool Teal', color: original),
+          ),
+        ),
+      ),
+    );
+    // Daltonization is a single-swatch view (no "alongside original"): one
+    // swatch, the colour through the chokepoint for the fallback (deutan)
+    // profile — there is no AppScope above this standalone chip.
+    final swatches = tester
+        .widgetList<Container>(find.byType(Container))
+        .map((c) => (c.decoration! as BoxDecoration).color)
+        .toList();
+    expect(swatches, hasLength(1),
+        reason: 'daltonization remaps in place — no second swatch');
+    expect(swatches.single,
+        daltonizeColor(original, const CvdProfile(type: CvdType.deutan)));
   });
 }

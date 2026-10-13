@@ -5,11 +5,12 @@ import 'package:paint_color_assistant/display/display_settings.dart';
 void main() {
   group('DisplaySettings', () {
     test('defaults to the shipped view: no simulation, full severity, no '
-        'grayscale', () {
+        'grayscale, no daltonization', () {
       const settings = DisplaySettings();
       expect(settings.simulationType, isNull);
       expect(settings.simulationSeverity, 1.0);
       expect(settings.grayscale, isFalse);
+      expect(settings.daltonization, isFalse);
     });
 
     test('keeps explicitly set fields', () {
@@ -17,10 +18,12 @@ void main() {
         simulationType: CvdType.protan,
         simulationSeverity: 0.4,
         grayscale: true,
+        daltonization: true,
       );
       expect(settings.simulationType, CvdType.protan);
       expect(settings.simulationSeverity, 0.4);
       expect(settings.grayscale, isTrue);
+      expect(settings.daltonization, isTrue);
     });
 
     test('simulationOn is false when no type is set', () {
@@ -71,18 +74,47 @@ void main() {
           ),
         ),
       );
+      expect(
+        base,
+        isNot(
+          const DisplaySettings(
+            simulationType: CvdType.deutan,
+            daltonization: true,
+          ),
+        ),
+        reason: 'daltonization is part of settings identity',
+      );
       expect(base, isNot('not settings'));
     });
 
-    test('toString names the three fields', () {
+    test('daltonization is part of equality and hashing', () {
+      const off = DisplaySettings(simulationType: CvdType.deutan);
+      const on = DisplaySettings(
+        simulationType: CvdType.deutan,
+        daltonization: true,
+      );
+      // Differs from an otherwise-identical settings with daltonization off.
+      expect(on, isNot(off));
+      // Two equal daltonization-on settings share a hash (the field is hashed).
+      const onAgain = DisplaySettings(
+        simulationType: CvdType.deutan,
+        daltonization: true,
+      );
+      expect(on, equals(onAgain));
+      expect(on.hashCode, onAgain.hashCode);
+    });
+
+    test('toString names the four fields', () {
       final text = const DisplaySettings(
         simulationType: CvdType.protan,
         simulationSeverity: 0.25,
         grayscale: true,
+        daltonization: true,
       ).toString();
       expect(text, contains('protan'));
       expect(text, contains('0.25'));
-      expect(text, contains('true'));
+      expect(text, contains('grayscale: true'));
+      expect(text, contains('daltonization: true'));
     });
   });
 }
