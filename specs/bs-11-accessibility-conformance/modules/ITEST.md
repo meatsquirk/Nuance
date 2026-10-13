@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-3 done (AC-3,7,8,9,11 pending + red baseline; 3 A / 2 B-pending); next ITEST-4 test review (G-2, the module's last phase)
+**Status:** ⏸ Awaiting review — ITEST-4 packet assembled (all 10 AC tests; 20 A / 2 B-pending / 0 ordinary B); **G-2 awaiting human decision** (approve the acceptance tests). Module's last phase.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs11/accessibility_harness.dart`, `integration_test/bs11/accessibility_test.dart`, `integration_test/bs11/pending.dart` (created at CONF-1). Consumes (does not own) the reusable check in `integration_test/conformance/` and the domain in `lib/a11y/conformance/`.
 **Depends on:** all shell phases (A11Y-1, GATE-1) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 7,883,599 | 17m 28s |
 | ITEST-2 | acceptance-tests | AC-1,2,4,5,6 (pending) | ✅ Done | 5,523,993 | 14m 07s |
 | ITEST-3 | acceptance-tests | AC-3,7,8,9,11 (pending) | ✅ Done | 7,854,428 | 26m 55s |
-| ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1,641,073 | 3m 33s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-**G-2** — approve the acceptance tests (ITEST-4's packet). Blocks every behavior phase. Decided via `--gate bs-11 G-2 …`.
+**G-2** — approve the acceptance tests (ITEST-4's packet). **Awaiting decision** (packet assembled at ITEST-4, 2026-10-13). Blocks every behavior phase. Decided via `--gate bs-11 G-2 approved | "<changes>"`.
 
 ## Phase ITEST-1 — harness + fixtures + smoke
 
@@ -57,6 +57,60 @@
 - **Target AC:** — · **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
 - **Tasks:** assemble the packet (per AC: test name, Given checks, When, Then + Rejects, in a line or two; red baseline summary; augmentation schedule; grid path + counts; what to look at first — the "every real screen" sweep assertions and the control fixtures). Set the phase `⏸ Awaiting review`, G-2 *awaiting decision*, record the ledger row, commit, and stop with: `/feature-next-phase --gate bs-11 G-2 approved | "<changes>"`.
 - **Exit criteria:** whole-suite grade grid all A (or *B pending <phase>*); packet written; G-2 awaiting a human decision.
+
+### Review packet (G-2) — `⏸ Awaiting review`
+
+The 10 automated AC tests live in `integration_test/bs11/accessibility_test.dart` (groups
+`… structural rules (ITEST-2)` and `… scaling, eyes-free, timing, gate, floor (ITEST-3)`), over the
+harness `accessibility_harness.dart` and the GATE-1 stub check. All drive the **one public surface**: the
+real screen assembled through `buildApp`, or the pure-domain `acceptanceDecision`/`recordedLevel`. AC-10 and
+AC-12 are **not here** — pure manual gates (D-2), performed and recorded at SIGNOFF-1 (G-3/G-4).
+
+**Look at first:** (1) the **D-1 "every real screen" sweep** — AC-1..6 and AC-8 each run their rule over
+**all six `buildApp` home entries** (Readout, Capture, Comparison, Recipes, Correction, Palette), not one
+screen; the sweep is over `realScreens`, whose exact size+identity ITEST-1's fixture guard pins. (2) the
+**control fixtures** — each rule's discriminator: a rule that never flags its violation fails its control
+leg, so no test can pass vacuously. (3) **AC-5's G2** (contrast source is the shipped
+`AppTheme.light().colorScheme`, not a test-injected theme) and **AC-8's G3** (a real 10s fake-clock settle
+point past the 4s window, with a change-control proving the reading can move).
+
+| AC | Test | Given (checked via public surface) | When | Then + **Rejects** |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_ColourCarriesNonColourCue` | each of 6 real screens open (`screen findsOneWidget`); reference has a descendant `ColorChip`; `control_bareDot` subtree present | run colour-cue check | `colourCue` passes on every real screen + reference, **fails on `control_bareDot`**. **Rejects** a rule that never flags a bare swatch, or a screen showing colour with no cue |
+| AC-2 | `TestAC02_StatusNotBareColourDot` | status rendered via `StatusBadge` on reference (asserted); `control_bareDot` present | run no-bare-dot check | `noBareDot` passes on real screens + `StatusBadge` reference, **fails on `control_bareDot`**. **Rejects** a status drawn as a coloured `Container`/dot with no text/icon |
+| AC-3 | `TestAC03_FontScale200NoBreak` | each of 6 real screens open; `control_overflow200` subtree present (200% pump + overflow capture live **inside** the A11Y-4 rule) | run scaling check | `fontScale200` passes on every real screen + reference, **fails on `control_overflow200`**. **Rejects** a rule that never applies the 200% check |
+| AC-4 | `TestAC04_TapTargetMin48` | each real screen + reference have ≥1 interactive target (asserted present); `control_smallTarget` (24dp) present | measure targets | `tapTarget48` passes on every real screen + reference, **fails on `control_smallTarget`**. **Rejects** a <48dp control accepted, or the guideline not applied |
+| AC-5 | `TestAC05_ContrastFloorAA` | each real screen's **`Theme.of(screen).colorScheme == AppTheme.light().colorScheme`** (G2 — contrast from the shipped AA theme); `control_lowContrast` present | measure contrast | `contrastAA` passes on every real screen + reference, **fails on `control_lowContrast`** (~1.6:1). **Rejects** text below 4.5:1 (3:1 large) accepted, or theme over-tuned by the test |
+| AC-6 | `TestAC06_ControlHasMeaningfulLabel` | each real screen + reference have an interactive control present (reference: labelled `IconButton`); `control_unlabelled` present | read each control by the screen reader | `meaningfulLabel` passes on every real screen + reference, **fails on `control_unlabelled`**. **Rejects** a control with empty/absent semantic label accepted |
+| AC-7 | `TestAC07_EyesFreeWalkthroughCompletes` | semantics enabled; Readout open via `buildApp`; entry control present **by its semantic label** (`'Speak this readout'`), not by key/type | drive the task by label + `SemanticsAction` only (D-6) | task `completed isTrue`; **control:** a step whose label is on no control stays `blocked`. **Rejects** a coordinate/position-fallback driver, or an always-true driver |
+| AC-8 | `TestAC08_NothingAutoDismisses` | each real screen open; reference `AccessibleNotice` present **before** the settle; `control_autoDismiss` SnackBar present | **settle point** `whenWaited(10s)` past the 4s window | `AccessibleNotice` **still present after the advance** and `noTimeout` passes; **control:** `control_autoDismiss`'s SnackBar is **gone** after the same advance (rule fails). **Rejects** a timer-dismissed notice, or a reading taken before the settle (G3) |
+| AC-9 | `TestAC09_FailedAutomatedCheckNotAccepted` | `control_partialFail` → result **≥1 failing AND ≥1 passing rule** (both asserted via the check) | `acceptanceDecision(partial)` | `notAccepted`; **control:** fully-passing reference ⇒ `accepted`. **Rejects** a decision that accepts a partial result, or inspects only one rule |
+| AC-11 | `TestAC11_RecordedFloorIsWcag22AA` | fully-passing `ConformanceResult` (reference, `passed isTrue` asserted) | `recordedLevel(passing)` | `WcagLevel.aa22`; **control:** a failing result records `WcagLevel.below`. **Rejects** recording AA for a failing result, or thresholds weaker than WCAG 2.2 AA |
+
+**Red baseline** (run-pending, `--dart-define=BS11_RUN_PENDING=true`): **9 pass / 10 fail** — every AC test
+fails exactly as designed, none on a compile/panic/harness error. AC-1..6 + AC-3/AC-8 fail on their first
+positive **Then** (the GATE-1 stub `runConformanceCheck` returns `ConformanceResult.empty` ⇒ null rule
+outcome); AC-7 fails at the **When** (the `eyesFreeComplete` stub's deliberate `UnimplementedError`, message
+names GATE-2); AC-9/AC-11 fail at a **Given precondition** (an empty aggregate result can be neither partial
+nor fully-passing — reason names GATE-3 / GATE-4). Default run (pending-skipped) is **9/9 green**. Full
+per-test table above under *Red baseline*.
+
+**Augmentation schedule** (the only two B-pending; both ⬜ Open, closed by their owning behaviour phase):
+- **TestAC09 → GATE-3** — the aggregate `acceptanceDecision` can't discriminate until every sub-rule exists
+  (A11Y-2..7, GATE-2) and GATE-3 composes them; add: compose all rules, assert a partial result ⇒
+  `notAccepted` and a fully-passing one ⇒ `accepted`. Re-graded A on close.
+- **TestAC11 → GATE-4** — `recordedLevel` is a stub until GATE-4; add: assert a passing result records
+  `aa22`, a failing one `below`, and the thresholds equal the WCAG 2.2 AA constants (D-5). Re-graded A on close.
+
+**Grade grid:** `behavior-test-completeness-bs-11-accessibility-conformance.md`. Counts — 10 automated AC
+tests: **8 A** (AC-1,2,3,4,5,6,7,8) **+ 2 B-pending** (AC-9→GATE-3, AC-11→GATE-4); plus ITEST-1's harness +
+fixture + smoke guards **12 A**. Whole suite **20 A / 2 B-pending / 0 ordinary B** — the test-review
+precondition (all A or *B pending <phase>* with an augmentation row) is met. Each grade comes from an
+independent adversarial grader in a fresh subagent against the G1–G6 rubric.
+
+**Decision:** `/feature-next-phase --gate bs-11 G-2 approved` (or `--gate bs-11 G-2 "changes: <items>"`).
+Approval un-blocks the entire behaviour stage (A11Y-2..7, GATE-2/3/4); changes requested turn each item into
+an `ITEST` change phase before behaviour, then a fresh review.
 
 ## Interface reconciliation / Observation — see top.
 
