@@ -1,7 +1,7 @@
 # Master Plan — Advanced capture (bs-09)
 
 **Spec:** [bs-09-advanced-capture.feature](../bs-09-advanced-capture.feature)
-**Status:** In progress — behaviour stage COMPLETE (SOURCE-4 done: AC-9 ✅, AC-10 ✅ — all 10/10 ACs delivered, all modules complete); no open gate; next SIGNOFF-1 (the only remaining phase)
+**Status:** ⏸ Awaiting sign-off — all 10/10 ACs delivered + green, SIGNOFF-1 packet assembled (round 1); a human records the decision via `--signoff`
 **Architecture:** [solution intent](../../docs/paint-color-app-solution-intent.md) §"Cross-platform strategy" (CaptureSource / wide colour space / RAW fallback; D2), §"Capture & sampling" (torch, multi-point) · [scope](../../docs/paint-color-app-scope.md) §4.1 (flash/torch *Should*, multi-point *Should*, RAW/DNG *Could*) · **no wireframe yet** (the spec is proposed ahead of any mock; a future revision adds its UX)
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-02's capture surface and bs-03's comparison, both already merged to `main` (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -185,30 +185,26 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 14 | SOURCE-2 | behavior: AC-6, AC-8 — colour-space selection + narrower fallback + tag threaded to Sample | ✅ Done | 14,008,491 | 2h 43m | AC-6+AC-8 green; colour-space selection (displayP3/srgb) + space-aware sampling; unit 905; cov 100% (2 files); accept 15 pass/6 pending; grade 5 A; 1 fix pass |
 | 15 | SOURCE-3 | behavior: AC-7 — RAW capture where supported + capture mode | ✅ Done | 5,375,373 | 13m 59s | AC-7 un-pended + green; one-line `captureMode` getter (`supportsRaw ? raw : processed`); commit already threads it + colorSpace already displayP3 on wide SCENE_RAW; unit 917; cov 100% (13 files); accept default 19 pass/2 pending; grade 8 A (suite 24 A); 0 fix passes |
 | 16 | SOURCE-4 | behavior: AC-9, AC-10 — normalized+tagged contract + platform-agnostic | ✅ Done | 8,366,552 | 21m 12s | AC-9+AC-10 un-pended + green; commit normalizes vs card when `referenceCardPresent` (contract, no whenCalibrate), tier stays opt-in; 1-line change in capture_controller.dart; unit 918; cov 100% (13 files); accept bs-09 21 pass/0 pending + bs-02 green; grade 3 A (suite 24 A); 0 fix passes; **all 10 ACs delivered** |
-| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | behaviour stage complete; run full suite + fresh whole-suite grade, assemble packet, human approves; then merge feat/bs-09 → main |
+| 17 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting decision | 9,197,171 | 19m 00s | packet [signoff/round-1.md] assembled; full suite re-run green (analyze clean · unit 918 · cov 100%/13 · regression 152 · bs-09 21 pass/0 pending · run-pending 21) + fresh 24 A grade grid; summary page published; awaits human `--signoff` → then merge feat/bs-09 → main |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**Behaviour stage COMPLETE — all 10 ACs delivered and grade A; `pendingACs` is empty.** SOURCE-4 un-pended
-AC-9 + AC-10 (green). No open gate. The only remaining phase is **SIGNOFF-1**.
+**⏸ Awaiting human sign-off (round 1).** SIGNOFF-1 assembled the packet and re-ran the full suite green; no
+agent phase remains. A human records the decision.
 
-- **Next: SIGNOFF-1 (sign-off packet + summary page + human approval).** Run in the primary worktree on
-  `feat/bs-09` HEAD. See `references/signoff.md`. It should:
-  - Run the full suite once more: unit (`flutter test --coverage`) + coverage gate + bs-09 acceptance default
-    + run-pending (now runs nothing extra — the pending map is empty) + a **fresh independent whole-suite
-    re-grade** (all AC tests, not only SOURCE-4's), under the device lock on sim `5AB9D06D-…`.
-  - Assemble the packet (AC coverage, grade grid 24 A / 0 below A, cost-per-AC from the ledger) + summary
-    page; a human records **Approved** (the agent never approves).
-  - On approval: **merge `feat/bs-09` → `main`** (as bs-05/bs-06 did).
-- **No open gate.** G-1 (spec) + G-2 (test review) resolved earlier.
-- **Acceptance runs need a booted sim under `coord.sh with-lock`** (host gates don't):
-  `flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-…`; always pass `-d <udid>` (no
-  device ⇒ zero tests, false green). The lock wrapper runs from the coord repo `/Users/matthew.quirk/Nuance`,
-  so `cd` into the worktree inside the command; the device lane is shared/contended across bs-07/08/09 — use
-  `coord.sh with-lock … --wait <n>`.
+- **Record the decision:** `/feature-next-phase --signoff bs-09-advanced-capture approved | changes "<items>"`.
+  - **Approved** → SIGNOFF-1 ✅, feature `Status: Done — signed off <date> by <reviewer> at <commit>`, then
+    **merge `feat/bs-09` → `main`** (as bs-05/bs-06 did).
+  - **Changes requested** → each item becomes a phase before a fresh SIGNOFF-2.
+- **Packet:** [signoff/round-1.md](signoff/round-1.md) · grade grid 24 A / 0 below A · cost
+  [signoff/cost-per-ac-round-1.md](signoff/cost-per-ac-round-1.md) · summary page
+  https://claude.ai/artifact/7QHEey7WZ29qfCQ1yqiz2m.
+- **This session's run** (worktree `Nuance-bs09` @ `eb5c8aa`, under the device lock on sim `5AB9D06D-…`):
+  analyze clean · unit 918 · cov 100%/13 · regression 152 pass/0 fail · bs-09 21 pass/0 pending · run-pending
+  21 pass (identical). No open gate.
 
 ## Token usage
 
@@ -237,10 +233,11 @@ AC-9 + AC-10 (green). No open gate. The only remaining phase is **SIGNOFF-1**.
 | RECONCILE | 0e23621e | 2026-10-12 18:02 EDT | 18:05 | 3m 40s | 3m 40s | claude-opus-4-8 | 40 | 49,868 | 1,268,478 | 14,156 | 1,332,542 | applied CAPTURE-5 rollup: ff-merged phase branch (ce594bf→51f8efa) into feat/bs-09; master plan AC-5 ✅ + CAPTURE module done (7/10 behaviour ACs) + ledger row; worktree/branch cleanup pending |
 | SOURCE-3 | 07521598 | 2026-10-12 19:31 EDT | 19:45 | 13m 59s | 13m 59s | claude-opus-4-8 | 100 | 221,754 | 5,127,456 | 26,063 | 5,375,373 | AC-7 un-pended + green; unit 917/cov 100% (13 files)/accept default 19 pass 2 pending/grade 8 A (suite 24 A); 0 fix passes |
 | SOURCE-4 | 8c7d2212 | 2026-10-12 21:03 EDT | 21:24 | 21m 12s | 21m 12s | claude-opus-4-8 | 138 | 244,387 | 8,067,886 | 54,141 | 8,366,552 | AC-9+AC-10 un-pended + green; commit normalizes vs card when referenceCardPresent (contract, no whenCalibrate); unit 918/cov 100%(13)/accept bs-09 21 pass 0 pending + bs-02 green/grade 3 A (suite 24 A); 0 fix passes; all 10 ACs delivered |
-| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 21:24** | **14h 55m** | **8h 06m** |  | **2,444** | **3,801,123** | **134,278,917** | **933,373** | **139,015,857** |  |
+| SIGNOFF-1 | 8d577e86 | 2026-10-12 21:30 EDT | 21:49 | 19m 00s | 19m 00s | claude-opus-4-8 | 146 | 305,313 | 8,837,912 | 53,800 | 9,197,171 | packet assembled (round 1) + summary page; full suite re-run green: analyze clean, unit 918, cov 100%/13, regression 152 pass/0 fail, bs-09 21 pass/0 pending, run-pending 21 pass; fresh whole-suite grade 24 A/0 below A; awaiting human --signoff |
+| **Feature total** |  | **2026-10-11 21:51 EDT** | **2026-10-12 21:49** | **15h 14m** | **8h 25m** |  | **2,590** | **4,106,436** | **143,116,829** | **987,173** | **148,213,028** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | — | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `eb5c8aa` | 24 A / 0 below A | ⏸ Awaiting — [summary page](https://claude.ai/artifact/7QHEey7WZ29qfCQ1yqiz2m) |
