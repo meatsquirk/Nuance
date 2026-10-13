@@ -2,7 +2,7 @@
 
 **Feature:** bs-09-advanced-capture · **Spec:** [bs-09-advanced-capture.feature](../../bs-09-advanced-capture.feature)
 **Prepared:** 2026-10-12 (SIGNOFF-1) · **At code:** `feat/bs-09` @ `eb5c8aa` (SOURCE-4; sign-off commit stamped on decision)
-**Decision:** ⏸ **Awaiting** — a human records Approved / Changes requested (the agent never approves).
+**Decision:** ✅ **Approved** — Matt Quirk, 2026-10-12 (recorded via `--signoff`).
 
 All 10 acceptance criteria are coded, un-pended and green by default (nothing pending); the full
 cross-feature regression (bs-01/02/03/04/05/06 + bs-09) is green; a fresh independent full-suite grade grid is
@@ -189,7 +189,11 @@ reference-card normalization is what turns them green.
 
 ## 10. Decision
 
-Reviewer: **________**  Date: **________**  Decision: ☐ **Approved**  ☐ Changes requested
+Reviewer: **Matt Quirk**  Date: **2026-10-12**  Decision: ☑ **Approved**  ☐ Changes requested
+
+> **Recorded 2026-10-12** via `/feature-next-phase --signoff bs-09-advanced-capture approved`. SIGNOFF-1 ✅;
+> feature **Done — signed off 2026-10-12 by Matt Quirk at `eb5c8aa`** (packet code state); `feat/bs-09`
+> merged to `main`.
 
 Record via `/feature-next-phase --signoff bs-09-advanced-capture approved | changes "<items>"`.
 
