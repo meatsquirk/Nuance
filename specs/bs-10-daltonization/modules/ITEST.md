@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-2 (AC-1..10 pending + red baseline + grades) done; next ITEST-3 (test review, G-2)
+**Status:** In progress — ITEST-3 packet assembled; ⏸ G-2 awaiting human decision before any behaviour phase
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/daltonization_harness.dart`, `integration_test/daltonization_test.dart`,
 `integration_test/bs10/pending.dart` (seeded in DALT-1), reuse of `integration_test/fakes/fake_speech.dart`,
@@ -13,7 +13,7 @@
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 5.74M | 27m 19s |
 | ITEST-2 | acceptance-tests | AC-1..10 (pending) | ✅ Done | 12.25M | 34m 01s |
-| ITEST-3 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-3 | test-review | — (G-2) | ⏸ Awaiting review | 1.91M | 4m 02s |
 
 ## Interface reconciliation
 
@@ -196,6 +196,123 @@
   phase is done; **changes requested** turns each item into an ITEST change phase before behavior, then a
   fresh review.
 - **Exit criteria:** a human records the G-2 decision.
+
+### Review packet — ITEST-3 (G-2)  <!-- assembled 2026-10-13; awaiting human decision -->
+
+**Status: ⏸ Awaiting review.** This packet puts the bs-10 daltonization acceptance suite in front of a human
+before any behaviour is coded (the cheapest point to catch a test that checks the wrong thing). On
+**approved**, G-2 resolves and the ten pending tests become the contract DALT-3..11 + CONTROL-2 un-pend
+against; on **changes requested**, each item becomes an ITEST change phase before behaviour, then a fresh
+review.
+
+**What's under review:** 10 *pending* acceptance tests — one per AC — in
+`integration_test/daltonization_test.dart`, over the harness `integration_test/daltonization_harness.dart`
+and the pending gate `integration_test/bs10/pending.dart`. No product code exists yet for any AC (the shells
+ship an *identity* remap + an empty no-profile placeholder). The full independent grade is in
+[behavior-test-completeness-bs-10-daltonization.md](../behavior-test-completeness-bs-10-daltonization.md).
+
+**Grade summary (grid):** **6 A / 4 B-pending** — A: AC-1, AC-5, AC-6, AC-7, AC-9, AC-10; B pending:
+AC-2→DALT-6, AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7. No test graded below A for a rubric reason; the four Bs
+are the planned shell-baseline limitations, each with an open augmentation row naming its un-pending phase.
+
+**Red baseline (verified run-pending, iPhone 17, under `coord.sh with-lock`):** default run **+15 / 10 pending**
+(suite green); run-pending **+19 / −6** (exit 1 as designed) — AC-2/3/4/8 green-at-baseline (identity remap +
+off-by-default), AC-1/5/6/7/9/10 each fail on its tight Then or named precondition against the identity shell
+remap / empty placeholder. All failures are assertion failures (no harness or compile errors).
+
+**Boundary — real vs faked (observe before trusting any Then):** the whole app is assembled through the one
+production entry `buildApp(deps)` — real `DisplayController`, real shipped `daltonize` chokepoint, real
+`CvdProfileStore`, real capture/readout/palette screens and the shipped settings toggle. **Only infrastructure
+is faked:** `FakeSpeech`, `FakeHaptics`, `InMemoryPersistentStore` (behind the production `PersistentStore`
+contract). **No colour-vision maths is faked.** The remap target `referenceDaltonize` is an *independent*
+in-harness error-redistribution model (built on bs-08's independent `referenceProjectDichromat`, never the
+shipped `daltonize` graded against itself); `colorNear` is a summed-channel tolerance ≈24/255 (≈8/channel), a
+fixture guard confirms it separates the original from a real remap.
+
+**Per-AC catalogue** (test · Given checked · When · Then · what it Rejects):
+
+- **AC-1 `TestAC01_RemapForType` (A → DALT-3 keystone).** Given: for each `CvdType` (protan/deutan/tritan),
+  `savedProfile(type)`; asserts stored type, daltonization off, known swatch shown unremapped. When: opens the
+  shipped panel, taps the real `daltonizationKey` toggle on. Then: a rendered swatch is
+  `colorNear(referenceDaltonize(sample, type))` **and** none is still the original, graded per type. Rejects:
+  "shows original unchanged" and "remaps the same regardless of type" (fails ≥2 of 3 types).
+- **AC-2 `TestAC02_OffShowsOriginal` (B pending DALT-6).** Given: `savedProfile(deutan)`, daltonization off
+  (default) via endpoint + settings. When: colours displayed (no toggle). Then: rendered swatch is
+  `colorNear(original)` and the pipeline returns the original. Rejects: a pipeline that remaps while off.
+  *Limited:* can't yet show "off" differs from a real remap (identity shell) — DALT-6 adds the on-remaps-away
+  control.
+- **AC-3 `TestAC03_LabelAndValueKept` (B pending DALT-9).** Given: daltonization on (real toggle). When: the
+  colour-coded Readout reading is displayed. Then: `find.text('Displayed colour')`, numeric `55`, and a swatch
+  are all present — label + value beside colour, never colour alone. Rejects: colour-only presentation.
+  *Limited:* can't yet prove they *survive a colour change* — DALT-9 adds the swatch-changed-while-text-stayed
+  control.
+- **AC-4 `TestAC04_ProvenanceBadgeReadable` (B pending DALT-10).** Given: daltonization on. When: the
+  provenance is shown (Readout `readout-provenance-region`). Then: the region and its tier word `Measured` are
+  present — provenance readable without colour. Rejects: provenance conveyed by colour alone. *Limited:*
+  provenance is text-only at the shell; DALT-10 adds the icon + the remapped-badge/label-stays control. (Spec
+  Then also names an icon — deferred to DALT-10 with the augmentation.)
+- **AC-5 `TestAC05_UsesStoredProfile` (A → DALT-4).** Given: `savedProfile(deutan)` moderate; asserts type
+  **and** severity. When: daltonization on. Then: swatch is `referenceDaltonize(_, deutan, moderate)`.
+  **Control:** a second app at severity 0.95 — asserts its reference differs from moderate, then matches the
+  strong reference. Rejects: an impl ignoring stored severity (a default would fail the strong scenario).
+- **AC-6 `TestAC06_ProfileChangeRecomputes` (A → DALT-11).** Given: on for deutan, "before" swatch remapped to
+  deutan (fails at baseline). When: `whenSaveProfile(protan)` through the **real** `CvdProfileStore`
+  write-side, settle. Then: swatch recomputes to `referenceDaltonize(_, protan)`. Rejects: an impl that reads
+  the profile once at build and never re-reads on a saved change.
+- **AC-7 `TestAC07_DistinctFromSimulation` (A → DALT-5).** Given: `savedProfile(deutan)`, simulation off. When:
+  daltonization on. Precond: the remap moves the colour (fails at identity baseline). Then: the remap is **not**
+  `colorNear` the dichromat projection (`referenceProjectDichromat`). Rejects: "daltonize by simulating". Note
+  (no downgrade): contrast uses the independent reference projection, not the shipped `projectDichromat` the
+  harness header named; a fixture guard pins `labDistance(remap, projection) > 1.0`.
+- **AC-8 `TestAC08_StoredValuesUnchanged` (B pending DALT-7).** Given: `savedProfile(deutan)`, stored colour
+  renders as original off. When: daltonization on, then off again (both directions, real toggle). Then: the
+  swatch is once more `colorNear(original)` — the remap wrote nothing to storage. Rejects: a remap that
+  persists the transformed colour. *Limited:* the round-trip is trivial while on==off at identity; DALT-7 adds
+  the swatch-did-change-in-between control.
+- **AC-9 `TestAC09_EveryScreen` (A → DALT-8).** Given: `savedProfile(deutan)`, daltonization seeded on via
+  `initialSettings` (toggle path covered by AC-1/2; capture's live feed would hang `pumpAndSettle`); known
+  swatch surfaced on readout, capture, palette; each asserts on. When: assemble the app on each of the three
+  screens. Then: `_expectKnownSwatchRemapped` on **each**. Rejects: a remap wired into one screen only.
+- **AC-10 `TestAC10_NoProfileNeedsAssessment` (A → CONTROL-2).** Given: `noProfile` → asserts the real store
+  `count() == 0` (not the injected const default). When: open the daltonization control; its no-profile region
+  shows. Then: the region contains `/self-assessment/i`. **Control:** with `savedProfile(deutan)` the region
+  has no such text. Rejects: "silently offers a remap against the const default" and "reports nothing".
+
+**Augmentations scheduled (open; closed by behaviour phases):**
+
+| AC test | Limited because | Closed by | Add |
+|---|---|---|---|
+| TestAC02 | off==original holds at the identity shell | **DALT-6** | control: turning on remaps the swatch away from original |
+| TestAC03 | label + value render regardless of an identity remap | **DALT-9** | assert the swatch colour changed while label + value stayed |
+| TestAC04 | provenance is text-only at the shell | **DALT-10** | assert the badge colour/icon remapped while its tier label stayed |
+| TestAC08 | round-trip is trivial while on==off at identity | **DALT-7** | control: while on the swatch did change (genuine round-trip) |
+
+**Supporting artifacts (all A, authored ITEST-1, unchanged):** 3 scaffold guards (pending map is exactly the
+10 ACs `hasLength(10)`; every owner a real behaviour phase; skips-pending-by-default/runs-under-run-pending),
+7 `referenceDaltonize` fixture guards + 2 `displayColorOf`/`colorNear` guards, 3 never-pending smoke tests
+(panel toggle reaches the controller; the one chokepoint routes through `daltonize` and wins over an active
+simulation per D-5; the profile store is reachable).
+
+**Look first:** the grid's §"Is the `referenceDaltonize` / `colorNear` grading fair?" — the one disclosed
+coupling the reviewer must confirm: the shipped `daltonize` (DALT-3) must share the reference's
+error-redistribution design to agree within `colorNear`. This is the single judgement G-2 most needs to
+ratify; everything else is mechanical.
+
+**Decision gate:** **G-2 — ⏸ awaiting human decision.** It gates every behaviour phase (DALT-3..11, CONTROL-2).
+Record with: `/feature-next-phase --gate bs10 G-2 approved | "<changes>"`.
+
+### Result — ITEST-3  <!-- 2026-10-13 -->
+
+- **Assembled the G-2 review packet** (above) from the ITEST-1/2 artifacts: the 10-AC catalogue
+  (Given/When/Then/Rejects per test), the verified red baseline (+15/10-pending default; +19/−6 run-pending),
+  the 6 A / 4 B-pending grades, the real-vs-faked boundary, the four open augmentation rows with their closing
+  phases, and the one disclosed grading coupling for the reviewer to ratify. No code, test, or product file
+  touched; no suite run (the baseline + grades were established and verified at ITEST-2).
+- Set this phase **⏸ Awaiting review** and **G-2** awaiting a human decision; blocks all behaviour (DALT-3..11,
+  CONTROL-2) until recorded.
+- Gates: none run (test-review assembles, it does not verify). Fix passes: n/a.
+- Tokens/time: see dashboard row / ledger.
+- Closed by: a human records G-2 (`/feature-next-phase --gate bs10 G-2 approved | "<changes>"`).
 
 ## Red baseline  <!-- filled by ITEST-2 (run-pending) -->
 
