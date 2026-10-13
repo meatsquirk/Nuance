@@ -309,4 +309,14 @@ class TieredAssessmentEngine extends ShellAssessmentEngine {
     final severity = threshold?.severity ?? prior.weight;
     return severity.clamp(0.0, 1.0).toDouble();
   }
+
+  /// Maps a 0..1 [severity] to a plain-language band (AC-11).
+  ///
+  /// The cut-offs are the G-4 anchor midpoints, held in one place by
+  /// [SeverityBand.forSeverity]: mild `[0, 0.45)`, moderate `[0.45, 0.75)`,
+  /// strong `[0.75, 1.0]`. So the result step reads back "mild" / "moderate" /
+  /// "strong" as the painter moves the 0..100 severity slider (`severity =
+  /// slider / 100`, D-5), replacing [ShellAssessmentEngine]'s always-mild stub.
+  @override
+  SeverityBand band(double severity) => SeverityBand.forSeverity(severity);
 }

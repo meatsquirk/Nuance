@@ -66,6 +66,8 @@ void main() {
         tester.widget<TextButton>(find.byKey(ResultStep.saveKey)).onPressed,
         isNull,
       );
+      // The severity slider is wired (ENGINE-7) but inert until the estimate is
+      // assembled — the fresh host has none, so it carries no handler here.
       expect(
         tester.widget<Slider>(find.byKey(ResultStep.severityKey)).onChanged,
         isNull,

@@ -120,8 +120,12 @@ void main() {
       expect(prior.weight, 1.0);
     });
 
-    test('inherits the trivial defaults for the tiers not yet built', () {
-      expect(engine.band(0.95), SeverityBand.mild);
+    test('no longer inherits the always-mild band stub (ENGINE-7 overrides it)',
+        () {
+      // ENGINE-7 is the last tier: the Tiered engine now overrides every method,
+      // so a strong severity no longer falls through to ShellAssessmentEngine's
+      // always-mild default.
+      expect(engine.band(0.95), SeverityBand.strong);
     });
   });
 
@@ -382,6 +386,41 @@ void main() {
           arrangementPresent: true,
         ),
       );
+    });
+  });
+
+  group('TieredAssessmentEngine.band (AC-11, G-4 cut-offs)', () {
+    const engine = TieredAssessmentEngine();
+
+    test('the three AC-11 slider anchors map to the three bands', () {
+      // 30 / 60 / 90 on the 0..100 slider → severity 0.30 / 0.60 / 0.90 (D-5).
+      expect(engine.band(0.30), SeverityBand.mild);
+      expect(engine.band(0.60), SeverityBand.moderate);
+      expect(engine.band(0.90), SeverityBand.strong);
+    });
+
+    test('each band region reads its band', () {
+      expect(engine.band(0.0), SeverityBand.mild); // low end of mild
+      expect(engine.band(0.44), SeverityBand.mild); // just below the cut-off
+      expect(engine.band(0.5), SeverityBand.moderate); // inside moderate
+      expect(engine.band(0.74), SeverityBand.moderate); // just below the cut-off
+      expect(engine.band(0.8), SeverityBand.strong); // inside strong
+      expect(engine.band(1.0), SeverityBand.strong); // top of the scale
+    });
+
+    test('the cut-offs are half-open going up — the midpoint reads the higher '
+        'band', () {
+      // 0.45 is moderate (not mild); 0.75 is strong (not moderate): the band
+      // steps up exactly at the anchor midpoint, so the mapping is monotone.
+      expect(engine.band(0.45), SeverityBand.moderate);
+      expect(engine.band(0.75), SeverityBand.strong);
+    });
+
+    test('out-of-range severities extend the end bands (total-safe)', () {
+      // The pipeline clamps severity to 0..1 upstream; the function still stays
+      // total for a defensively out-of-range value.
+      expect(engine.band(-0.1), SeverityBand.mild);
+      expect(engine.band(1.5), SeverityBand.strong);
     });
   });
 }

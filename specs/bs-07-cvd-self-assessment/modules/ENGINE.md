@@ -15,7 +15,7 @@
 | 4 | behavior | AC-4 | ✅ Done | 12,538,664 | 16m 43s |
 | 5 | behavior | AC-5 | ✅ Done | 16,401,020 | 21m 15s |
 | 6 | behavior | AC-9 | ✅ Done | 8,996,409 | 16m 28s |
-| 7 | behavior | AC-11 | ⬜ Todo | | |
+| 7 | behavior | AC-11 | ✅ Done | 10,921,888 | 21m 30s |
 
 ## Interface reconciliation
 
@@ -212,6 +212,24 @@
 - **Exit criteria + Acceptance gate:** un-pend AC-11; suite green over the 3 examples; coverage 100% touched; grade A (graded vs `referenceBand`; three distinct outputs).
 - **Augments:** none.
 
-### Result  <!-- filled on completion -->
+### Result — ✅ Done
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:**
+  - `lib/onboarding/engine/severity_band.dart` — `static SeverityBand.forSeverity(double)` holds the **G-4** cut-offs in two named constants: mild `[0,0.45)` / moderate `[0.45,0.75)` / strong `[0.75,1.0]`, half-open going up so each anchor midpoint (0.45, 0.75) reads the *higher* band (monotone); total-safe for out-of-range severities (the pipeline clamps upstream).
+  - `lib/onboarding/engine/assessment_engine.dart` — `TieredAssessmentEngine.band` override delegates to `SeverityBand.forSeverity`; the Tiered engine now overrides **every** tier method, so no `ShellAssessmentEngine` default is inherited any more (the always-mild stub is gone from the production path).
+  - `lib/onboarding/screens/result_step.dart` — now a `StatefulWidget`; the severity slider is **live** once an estimate is assembled (`onChanged` sets a view-local working severity 0..1 + `setState`, initialised at `estimate.severity`), and renders `Text('Severity band: <label>', key: bandKey)` via `controller.engine.band` — text, never colour alone. Inert (value 0, `onChanged: null`) with no estimate. Deliberately does **not** touch `setSeverity`/`calibratedSeverity` (that is FLOW-7/AC-12): the band readout is a pure view concern, so `calibratedSeverity` stays null here.
+  - `integration_test/bs07/pending.dart` — deleted the AC-11 row (un-pended); `integration_test/self_assessment_test.dart` scaffold-guard expected pending set shrunk to `{AC-1, AC-10, AC-12, AC-13, AC-14}`.
+- **Gate:** `flutter analyze` clean · unit **1043 pass** · coverage gate **100%** on all 23 touched lib files (incl. `severity_band`/`assessment_engine`/`result_step`) · acceptance default on-device (sim 5AB9D06D, under device-lane lock) **+19 pass / ~5 skip** — the skips are exactly the remaining pending ACs (AC-1/10/12/13/14); **AC-11 un-pended + green over the three Scenario-Outline rows (30→mild/60→moderate/90→strong)** · grade gate: a **fresh independent subagent** re-graded the whole un-pended suite → **12 A / 2 B-pending** (AC-10→FLOW-6, AC-13→PROFILE-2; no row below A outside those two augmentation rows), **AC-11 A graded against the implemented code** (slider live, band graded vs the harness's independent `referenceBand`, three distinct outputs the control). **Fix passes: 1/3** (acceptance run #1 failed only on the scaffold-guard expected pending set after the AC-11 un-pend; updated the set, reran green — no product change).
+- **Updated unit/widget tests (recorded, none weakened):** `test/onboarding/screens/result_step_test.dart` (slider now live; added band-reads-the-slider + "calibration not persisted" cases); `test/onboarding/screens/onboarding_screen_test.dart` (post-assemble slider now live, band "mild" asserted); `test/onboarding/screens/onboarding_host_test.dart` (comment precision only — the no-estimate slider-inert assertion is unchanged and still passes); `test/onboarding/engine/assessment_engine_test.dart` (replaced the obsolete "inherits trivial band default" test + added a `band` region/boundary group); `test/onboarding/engine/severity_band_test.dart` (added a `forSeverity` group).
+- **Augments:** none.
+- **Tokens / time:** 10,921,888 · 21m 30s.
+
+### Checkpoint / Handoff
+
+- **Frozen for next phases:**
+  - `SeverityBand.forSeverity(double)` (`severity_band.dart`) is the **single home** of the G-4 band cut-offs; `AssessmentEngine.band` (production `TieredAssessmentEngine`) delegates to it. `TieredAssessmentEngine` now overrides all six methods — there is no inherited `ShellAssessmentEngine` behaviour left on the production path.
+  - `ResultStep` is now stateful with a new anchor `bandKey` (`ValueKey('onboarding-result-band')`) → `Text('Severity band: <label>')`. The severity slider is live only when `state.estimate != null`, driven by a **view-local** working severity (0..1) initialised at `estimate.severity`; moving it re-renders the band but does **not** write controller state.
+- **For FLOW-7 (AC-12, next result-step slider owner):** wire `setSeverity`/`confirmCalibration` so the chosen severity is kept as `OnboardingState.calibratedSeverity` (D-6: it *is* the profile severity) and render the simulated/original pair. FLOW-7 owns the slider region: route `onChanged` through `controller.setSeverity` (replacing ENGINE-7's view-local working severity) so the kept value lands in `calibratedSeverity`, and have the band read `calibratedSeverity ?? estimate.severity`. AC-12's test sets the slider via `whenSetSeverity` and asserts `calibratedSeverity == set value` — there is no separate confirm tap in the test.
+- **For PROFILE-2 (AC-13):** the "moderate" Given is now real — a deutan diagnosis + the strong threshold fixture assembles severity 0.6, which `referenceBand` reads as moderate.
+- **Verification commands** (unchanged, worktree `../Nuance-bs07`, `export PATH="$PATH:/Users/matthew.quirk/development/flutter/bin"`): `flutter analyze` · `flutter test --coverage && dart run tool/coverage_gate.dart main` · acceptance `flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-…` via `coord.sh with-lock` (`FNP_COORD_REPO=/Users/matthew.quirk/Nuance`).
+- **Known gaps:** none introduced. The band's out-of-range extension and the inert (no-estimate) slider branch are unit-covered; the result step's live-slider band behaviour is covered by both the widget test and AC-11.

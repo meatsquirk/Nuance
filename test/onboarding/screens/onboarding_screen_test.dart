@@ -60,11 +60,17 @@ void main() {
             of: result, matching: find.text('Estimated severity: 0')),
         findsOneWidget,
       );
-      // The severity slider reflects the estimate (0) and stays inert (FLOW-7).
+      // The severity slider reflects the estimate (0) and is now live — ENGINE-7
+      // reads its value back as a plain-language band (AC-11). Severity 0 → mild.
       final slider =
           tester.widget<Slider>(find.byKey(ResultStep.severityKey));
       expect(slider.value, 0);
-      expect(slider.onChanged, isNull);
+      expect(slider.onChanged, isNotNull);
+      expect(
+        find.descendant(
+            of: result, matching: find.text('Severity band: mild')),
+        findsOneWidget,
+      );
     });
   });
 }
