@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ⏸ Awaiting review — ITEST-4 packet assembled (all 10 AC tests; 20 A / 2 B-pending / 0 ordinary B); **G-2 awaiting human decision** (approve the acceptance tests). Module's last phase.
+**Status:** ✅ Done — all 4 ITEST phases done; **G-2 approved 2026-10-13 17:59 EDT by Matt Quirk** (acceptance tests approved). Behaviour stage un-blocked. Module's last phase.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs11/accessibility_harness.dart`, `integration_test/bs11/accessibility_test.dart`, `integration_test/bs11/pending.dart` (created at CONF-1). Consumes (does not own) the reusable check in `integration_test/conformance/` and the domain in `lib/a11y/conformance/`.
 **Depends on:** all shell phases (A11Y-1, GATE-1) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 7,883,599 | 17m 28s |
 | ITEST-2 | acceptance-tests | AC-1,2,4,5,6 (pending) | ✅ Done | 5,523,993 | 14m 07s |
 | ITEST-3 | acceptance-tests | AC-3,7,8,9,11 (pending) | ✅ Done | 7,854,428 | 26m 55s |
-| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1,641,073 | 3m 33s |
+| ITEST-4 | test-review | — (G-2) | ✅ Done | 1,641,073 | 3m 33s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-**G-2** — approve the acceptance tests (ITEST-4's packet). **Awaiting decision** (packet assembled at ITEST-4, 2026-10-13). Blocks every behavior phase. Decided via `--gate bs-11 G-2 approved | "<changes>"`.
+**G-2** — approve the acceptance tests (ITEST-4's packet). ✅ **Resolved 2026-10-13 17:59 EDT: approved — Matt Quirk.** Behaviour stage un-blocked (A11Y-2..7, GATE-2/3/4). No changes requested; packet accepted as assembled at ITEST-4.
 
 ## Phase ITEST-1 — harness + fixtures + smoke
 
@@ -58,7 +58,7 @@
 - **Tasks:** assemble the packet (per AC: test name, Given checks, When, Then + Rejects, in a line or two; red baseline summary; augmentation schedule; grid path + counts; what to look at first — the "every real screen" sweep assertions and the control fixtures). Set the phase `⏸ Awaiting review`, G-2 *awaiting decision*, record the ledger row, commit, and stop with: `/feature-next-phase --gate bs-11 G-2 approved | "<changes>"`.
 - **Exit criteria:** whole-suite grade grid all A (or *B pending <phase>*); packet written; G-2 awaiting a human decision.
 
-### Review packet (G-2) — `⏸ Awaiting review`
+### Review packet (G-2) — ✅ Approved 2026-10-13 17:59 EDT (Matt Quirk)
 
 The 10 automated AC tests live in `integration_test/bs11/accessibility_test.dart` (groups
 `… structural rules (ITEST-2)` and `… scaling, eyes-free, timing, gate, floor (ITEST-3)`), over the

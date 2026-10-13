@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** ⏸ Awaiting review — ITEST-4 test-review packet assembled (all 10 AC tests; 20 A / 2 B-pending / 0 ordinary B); **G-2 awaiting human decision** — approve via `/feature-next-phase --gate bs-11 G-2 approved | "<changes>"`
+**Status:** In progress — **G-2 approved 2026-10-13 17:59 EDT by Matt Quirk**; behaviour stage un-blocked, next A11Y-2 (AC-5 contrast)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -113,7 +113,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its che
 |---|---|---|---|---|
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ◐ In progress (CONF-1 done) |
 | GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ◐ In progress (GATE-1 done) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ◐ In progress (ITEST-1/2/3 done; next ITEST-4 review) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3/4; G-2 approved 2026-10-13) |
 
 ## Dependency graph
 
@@ -134,7 +134,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | CONF-1 | ✅ Resolved 2026-10-13 07:59 EDT: approved — Matt Quirk (owner); spec's first line now records the approval |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision 2026-10-13: packet assembled at ITEST-4 ([modules/ITEST.md](modules/ITEST.md) § *Review packet*) — `--gate bs-11 G-2 approved \| "<changes>"` |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-13 17:59 EDT: approved — Matt Quirk; no changes requested, behaviour stage un-blocked (A11Y-2..7, GATE-2/3/4) |
 | G-3 | decision | AC-10 — the **manual eyes-free walkthrough** passes (performed under the live screen reader at SIGNOFF-1); a fail blocks acceptance (D-2) | SIGNOFF-1 (AC-10) | Open |
 | G-4 | decision | AC-12 — **on-device VoiceOver-vs-TalkBack parity** verified on iOS reference hardware at SIGNOFF-1 (D-2) | SIGNOFF-1 (AC-12) | Open |
 
@@ -157,8 +157,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | ITEST-1 | acceptance-tests: harness, real-screen + control fixtures, pending gate (10 ACs), smoke test | ✅ Done | 7,883,599 | 17m 28s | harness over 6 real screens + 7 controls; suite 9/9 on sim; cov 100% touched; no AC tests yet ⇒ no red baseline |
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,4,5,6 (pending) + red baseline | ✅ Done | 5,523,993 | 14m 07s | 5 A/0; default 9/9 green, red baseline 9/5, cov 100% touched |
 | 6 | ITEST-3 | acceptance-tests: AC-3,7,8,9,11 (pending) + red baseline | ✅ Done | 7,854,428 | 26m 55s | 3 A / 2 B-pending (AC-9→GATE-3, AC-11→GATE-4); default 9/9 green, red baseline 9/10, cov 100% touched |
-| 7 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,641,073 | 3m 33s | packet assembled (all 10 ACs; 20 A / 2 B-pending); G-2 awaiting human decision |
-| 8 | A11Y-2 | AC-5 contrast: AA `AppTheme` + contrast check rule + sweep colours | ⬜ Todo | | | sweeps all screens |
+| 7 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,641,073 | 3m 33s | packet assembled (all 10 ACs; 20 A / 2 B-pending); **G-2 approved 2026-10-13 17:59 EDT — Matt Quirk** |
+| 8 | A11Y-2 | AC-5 contrast: AA `AppTheme` + contrast check rule + sweep colours | ⬜ Next | | | sweeps all screens; first behaviour phase |
 | 9 | A11Y-3 | AC-4 targets: 48dp floor + tap-target check rule + sweep controls | ⬜ Todo | | | |
 | 10 | A11Y-4 | AC-3 scaling: 200% resilience + scaling check rule + sweep layouts | ⬜ Todo | | | |
 | 11 | A11Y-5 | AC-1+AC-2 colour-cue / no-bare-dot: `StatusBadge` + `ColorChip` + cue check rule + sweep | ⬜ Todo | | | slice (2 ACs) |
@@ -173,9 +173,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ITEST-4 (test review) is done — `⏸ Awaiting review`.** The G-2 review packet is assembled in `modules/ITEST.md` § *Review packet*: all 10 automated ACs (test name / Given checks / When / Then + Rejects), the red-baseline summary (9 pass / 10 fail, each honest-red), the augmentation schedule (TestAC09→GATE-3, TestAC11→GATE-4), the grid path + counts (**20 A / 2 B-pending / 0 ordinary B**), and what to look at first (the D-1 "every real screen" sweep + the control fixtures). Stage 3 is complete; **no agent phase can run until G-2 is decided.**
+**G-2 approved (2026-10-13 17:59 EDT, Matt Quirk) — the behaviour stage is open.** Stage 3 is complete (ITEST-1/2/3/4 done); all 10 pending AC tests accepted as assembled, no changes requested.
 
-**Human decision required — G-2:** `/feature-next-phase --gate bs-11 G-2 approved` (or `--gate bs-11 G-2 "changes: <items>"`). Approval un-blocks the **entire behaviour stage**: A11Y-2..7 (sweep screens; share `lib/app/theme.dart` + feature screens + `integration_test/conformance/` ⇒ run **sequentially**), GATE-2 (eyes-free; disjoint ⇒ may run ∥ one A11Y phase), then GATE-3 (barrier — needs every sub-rule) → GATE-4. Changes-requested turns each item into an `ITEST` change phase + a fresh review before behaviour. G-3/G-4 remain for SIGNOFF-1 (manual AC-10/AC-12).
+**Next — A11Y-2 (AC-5 contrast):** AA `AppTheme` + contrast check rule, sweep colours across all six real screens; un-pend AC-5. The behaviour phases **A11Y-2..7 share `lib/app/theme.dart`, the feature screens and `integration_test/conformance/`, so they run sequentially** (A11Y-2 → A11Y-3 → A11Y-4 → A11Y-5 → A11Y-6 → A11Y-7). **GATE-2** (AC-7 eyes-free) is file-disjoint and may run **∥ one A11Y phase** (separate session/worktree). Then **GATE-3** (barrier — composes every sub-rule; closes TestAC09 augmentation) → **GATE-4** (WCAG floor; closes TestAC11). Finally SIGNOFF-1 (packet + summary + manual AC-10/AC-12 → G-3/G-4 human decision).
+
+Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks A11Y-2), or `--parallel bs-11 GATE-2` to start the eyes-free phase alongside.
 
 ## Token usage
 
@@ -193,7 +195,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | ITEST-2 | de245eb8 | 2026-10-13 14:56 EDT | 15:10 | 14m 07s | 14m 07s | claude-opus-4-8 | 100 | 206,078 | 5,276,578 | 41,237 | 5,523,993 | 5 A/0 B; default 9/9 green, red baseline 9 pass/5 fail (each fails at Then), cov 100% touched |
 | ITEST-3 | 092c04da | 2026-10-13 15:53 EDT | 16:20 | 26m 55s | 26m 55s | claude-opus-4-8 | 120 | 268,263 | 7,527,062 | 58,983 | 7,854,428 | acceptance-tests: AC-3/7/8/9/11 pending; default 9/9 green, red baseline 9/10; cov 100% touched; grade 3 A / 2 B-pending (AC-9→GATE-3, AC-11→GATE-4) |
 | ITEST-4 | fa9a54d5 | 2026-10-13 16:31 EDT | 16:35 | 3m 33s | 3m 33s | claude-opus-4-8 | 38 | 79,526 | 1,548,295 | 13,214 | 1,641,073 | test-review: G-2 packet assembled (all 10 AC tests; 20 A / 2 B-pending / 0 ordinary B); ⏸ awaiting human G-2 decision |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 16:35** | **4h 03m** | **1h 53m** |  | **700** | **1,421,895** | **36,212,997** | **348,956** | **37,984,548** |  |
+| SIGNOFF-DECISION | 23de86f9 | 2026-10-13 17:24 EDT | 18:01 | 36m 22s | 2m 49s | claude-opus-4-8 | 42 | 54,107 | 1,455,922 | 11,085 | 1,521,156 | ITEST-4 approved |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 18:01** | **4h 39m** | **1h 56m** |  | **742** | **1,476,002** | **37,668,919** | **360,041** | **39,505,704** |  |
 
 ## Sign-off
 
