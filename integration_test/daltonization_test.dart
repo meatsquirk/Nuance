@@ -26,6 +26,7 @@
 // baseline / un-pend run). A booted device udid is mandatory — without `-d` the
 // run executes zero tests and still exits 0 (false green; carried flake).
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
@@ -33,6 +34,37 @@ import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 
 import 'daltonization_harness.dart';
+
+/// The displayed sRGB swatch a screen must show once [profile]'s remap is live:
+/// [referenceDaltonize] of the known sample, in display colour. The shipped
+/// `daltonize` (DALT-3) is graded against this **independent** reference (never
+/// against itself), so `colorNear` must admit the agreement between the two
+/// error-redistribution implementations — a tolerance the test review (G-2) and
+/// DALT-3 confirm.
+Color _remapOf(CvdProfile profile) =>
+    displayColorOf(referenceDaltonize(SCREEN_SAMPLE_LAB, profile));
+
+/// Asserts the known swatch currently rendered (through the shared `ColorChip`
+/// chokepoint) is remapped for [profile]: a swatch matches [referenceDaltonize]
+/// and none is still the original. Fails at the red baseline (identity shell
+/// remap leaves every swatch at the original); passes once the real remap
+/// reaches [screen].
+void _expectKnownSwatchRemapped(
+  WidgetTester tester,
+  CvdProfile profile, {
+  required String screen,
+}) {
+  final swatches = displaySwatches(tester);
+  final remapped = _remapOf(profile);
+  expect(swatches, isNotEmpty,
+      reason: '$screen: the known swatch must render through the shared '
+          'ColorChip chokepoint for daltonization to reach it');
+  expect(swatches.any((c) => colorNear(c, remapped)), isTrue,
+      reason: '$screen: the known swatch is remapped to referenceDaltonize');
+  expect(swatches.every((c) => !colorNear(c, screenSwatchColor)), isTrue,
+      reason: '$screen: no swatch still shows the original colour (it was '
+          'remapped, not left unchanged)');
+}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -306,7 +338,314 @@ void main() {
     });
   });
 
-  // The daltonization ACs (AC-1..AC-10) — one pending `acTestWidgets` each —
-  // are registered in ITEST-2 (and the test-review packet assembled in ITEST-3).
-  // They stay out of this phase so ITEST-1 lands the harness + smoke alone.
+  // The daltonization ACs (AC-1..AC-10) — one *pending* `acTestWidgets` each,
+  // registered in ITEST-2. Every test is skipped in the default run and executes
+  // under `--dart-define=BS10_RUN_PENDING=true` (the red-baseline run); each
+  // behaviour phase un-pends its AC by deleting the row in `bs10/pending.dart`.
+  // The test-review packet (ITEST-3) is assembled from these.
+  group('bs-10 daltonization acceptance criteria', () {
+    acTestWidgets('AC-1', 'TestAC01_RemapForType', (tester) async {
+      // Scenario Outline over the painter's stored CVD type (protan, deutan,
+      // tritan): daltonization remaps displayed colours for that type.
+      for (final type in CvdType.values) {
+        // Given: the painter's stored profile is <type> (moderate severity).
+        final profile = savedProfile(type);
+        final h = await givenDaltonization(tester, storedProfile: profile);
+        expect(h.storedProfile.type, type,
+            reason: 'AC-1 Given: the stored profile is $type');
+        expect(h.daltonization, isFalse,
+            reason: 'AC-1 Given: daltonization starts off');
+        expect(
+            displaySwatches(tester).any((c) => colorNear(c, screenSwatchColor)),
+            isTrue,
+            reason: 'AC-1 Given: the known swatch is shown unremapped while off');
+
+        // When: the painter turns on daltonization (the shipped panel toggle).
+        await h.whenOpenSettings();
+        await h.whenSetDaltonization(on: true);
+        await h.whenCloseSettings();
+
+        // Then: displayed colours are remapped to be more distinguishable for a
+        // <type> viewer — the rendered swatch is referenceDaltonize(_, <type>),
+        // no longer the original. Graded per type against the independent
+        // reference, so an impl that remaps the same regardless of type fails
+        // for at least two of the three types.
+        expect(h.daltonization, isTrue);
+        _expectKnownSwatchRemapped(tester, profile, screen: 'AC-1 $type');
+      }
+    });
+
+    acTestWidgets('AC-2', 'TestAC02_OffShowsOriginal', (tester) async {
+      // Given: daltonization is off (the default).
+      final h = await givenDaltonization(tester,
+          storedProfile: savedProfile(CvdType.deutan));
+      expect(h.daltonization, isFalse,
+          reason: 'AC-2 Given: daltonization off by default');
+      expect(h.settings.daltonization, isFalse);
+
+      // When: colours are displayed (the Readout renders the sample's swatch).
+      // Then: they are shown with their original values — the rendered swatch is
+      // the stored original, and the display pipeline returns the original.
+      expect(displaySwatches(tester).any((c) => colorNear(c, screenSwatchColor)),
+          isTrue,
+          reason: 'AC-2: the swatch is the original (unremapped) colour off');
+      expect(colorNear(h.displayedColor(screenSwatchColor), screenSwatchColor),
+          isTrue,
+          reason: 'AC-2: the display pipeline returns the original while off');
+
+      // LIMITED (augmented by DALT-6): with the shell's identity remap, turning
+      // daltonization on cannot yet show a *different* colour, so this cannot yet
+      // prove "off" differs from a real remap. DALT-6 adds the control (turning
+      // it on remaps the swatch away from the original).
+    });
+
+    acTestWidgets('AC-3', 'TestAC03_LabelAndValueKept', (tester) async {
+      // Given: daltonization is on, a colour-coded element (the Readout reading
+      // for the known sample) is shown.
+      final h = await givenDaltonization(tester,
+          storedProfile: savedProfile(CvdType.deutan));
+      await h.whenOpenSettings();
+      await h.whenSetDaltonization(on: true);
+      await h.whenCloseSettings();
+      expect(h.daltonization, isTrue, reason: 'AC-3 Given: daltonization on');
+
+      // When: the colour-coded element is displayed.
+      // Then: it still shows its label and numeric value, not colour alone — the
+      // swatch's text label and the reading's numeric value are both present
+      // alongside the swatch.
+      expect(find.text('Displayed colour'), findsOneWidget,
+          reason: 'AC-3: the swatch keeps its text label (never colour alone)');
+      expect(find.text('55'), findsWidgets,
+          reason: "AC-3: the sample's numeric lightness value is still shown");
+      expect(displaySwatches(tester), isNotEmpty,
+          reason: 'AC-3: the colour swatch is still rendered beside its text');
+
+      // LIMITED (augmented by DALT-9): the label and value render regardless of
+      // the remap while it is identity, so this cannot yet prove they *survive a
+      // colour change*. DALT-9 adds the control (the swatch colour changed while
+      // the label and numeric value stayed identical).
+    });
+
+    acTestWidgets('AC-4', 'TestAC04_ProvenanceBadgeReadable', (tester) async {
+      // Given: daltonization is on, a value with provenance is shown (the known
+      // sample carries a measured provenance).
+      final h = await givenDaltonization(tester,
+          storedProfile: savedProfile(CvdType.deutan));
+      await h.whenOpenSettings();
+      await h.whenSetDaltonization(on: true);
+      await h.whenCloseSettings();
+      expect(h.daltonization, isTrue, reason: 'AC-4 Given: daltonization on');
+
+      // When: the value's provenance is shown (the Readout's provenance region
+      // states the known sample's measured tier in words).
+      // Then: the provenance remains readable from its label (words), not its
+      // colour — the provenance region and its tier label are present under the
+      // remap.
+      expect(find.byKey(const ValueKey('readout-provenance-region')),
+          findsOneWidget,
+          reason: 'AC-4: the provenance is shown with the reading');
+      expect(find.text('Measured'), findsOneWidget,
+          reason: 'AC-4: the provenance states its tier in words (readable '
+              'without colour)');
+
+      // LIMITED (augmented by DALT-10): the provenance is text-only today, so
+      // this cannot yet prove the label (and the icon DALT-10 adds) *survive a
+      // colour change*. DALT-10 adds the control (a provenance colour/icon is
+      // remapped while its tier label stays).
+    });
+
+    acTestWidgets('AC-5', 'TestAC05_UsesStoredProfile', (tester) async {
+      // Given: the stored profile is deutan-type at moderate severity.
+      final moderate = savedProfile(CvdType.deutan); // severity 0.6 (moderate)
+      final h = await givenDaltonization(tester, storedProfile: moderate);
+      expect(h.storedProfile.type, CvdType.deutan,
+          reason: 'AC-5 Given: stored type is deutan');
+      expect(h.storedProfile.severity, moderate.severity,
+          reason: 'AC-5 Given: stored severity is moderate');
+
+      // When: daltonization is on.
+      await h.whenOpenSettings();
+      await h.whenSetDaltonization(on: true);
+      await h.whenCloseSettings();
+
+      // Then: the remap is computed for deutan at moderate severity — the
+      // rendered swatch is referenceDaltonize(_, deutan, moderate), using the
+      // stored type AND severity.
+      _expectKnownSwatchRemapped(tester, moderate, screen: 'AC-5 deutan@moderate');
+
+      // Control: a stronger stored severity yields a different, stronger remap —
+      // so the severity is really read, not a hardcoded default (rejects an impl
+      // that ignores the stored severity).
+      final strong = savedProfile(CvdType.deutan, severity: 0.95);
+      final hStrong = await givenDaltonization(tester, storedProfile: strong);
+      await hStrong.whenOpenSettings();
+      await hStrong.whenSetDaltonization(on: true);
+      await hStrong.whenCloseSettings();
+      expect(colorNear(_remapOf(strong), _remapOf(moderate)), isFalse,
+          reason: 'AC-5 control: a stronger stored severity remaps to a '
+              'different colour than moderate');
+      _expectKnownSwatchRemapped(tester, strong, screen: 'AC-5 deutan@strong');
+    });
+
+    acTestWidgets('AC-6', 'TestAC06_ProfileChangeRecomputes', (tester) async {
+      // Given: daltonization is on for a deutan profile — the swatch is remapped
+      // for deutan (this precondition holds once DALT-3's real remap and
+      // DALT-11's live re-read exist; it fails here at the red baseline).
+      final deutan = savedProfile(CvdType.deutan);
+      final h = await givenDaltonization(tester, storedProfile: deutan);
+      await h.whenOpenSettings();
+      await h.whenSetDaltonization(on: true);
+      await h.whenCloseSettings();
+      expect(h.daltonization, isTrue, reason: 'AC-6 Given: daltonization on');
+      _expectKnownSwatchRemapped(tester, deutan, screen: 'AC-6 before (deutan)');
+
+      // When: the painter's stored profile changes to protan (saved through the
+      // real CvdProfileStore write-side).
+      final protan = savedProfile(CvdType.protan);
+      await h.whenSaveProfile(protan);
+
+      // Then: the remap is recomputed for protan — the rendered swatch is now
+      // referenceDaltonize(_, protan) (rejects an impl that reads the profile
+      // once at build and never re-reads it on a saved change).
+      _expectKnownSwatchRemapped(tester, protan, screen: 'AC-6 after (protan)');
+    });
+
+    acTestWidgets('AC-7', 'TestAC07_DistinctFromSimulation', (tester) async {
+      // Given: both daltonization and simulation are available (deutan profile),
+      // simulation off.
+      final profile = savedProfile(CvdType.deutan);
+      final h = await givenDaltonization(tester, storedProfile: profile);
+      expect(h.settings.simulationOn, isFalse,
+          reason: 'AC-7 Given: simulation off');
+
+      // When: the painter turns daltonization on.
+      await h.whenOpenSettings();
+      await h.whenSetDaltonization(on: true);
+      await h.whenCloseSettings();
+      expect(h.daltonization, isTrue);
+
+      // The remap must actually move the colour (precondition for "aids
+      // distinction"; the real remap is DALT-3, consumed by DALT-5) — it fails
+      // here at the red baseline where the shell remap is identity.
+      final displayed = h.displayedColor(screenSwatchColor);
+      expect(colorNear(displayed, screenSwatchColor), isFalse,
+          reason: 'AC-7: daltonization remaps the colour (not the identity '
+              'shell)');
+
+      // Then: colours are remapped to aid distinction, not shown as the painter
+      // perceives them — the remapped swatch is NOT the dichromat projection
+      // (simulation) of the same colour + profile (rejects "daltonize by
+      // simulating").
+      final simulated = displayColorOf(referenceProjectDichromat(
+          SCREEN_SAMPLE_LAB, CvdType.deutan,
+          severity: profile.severity));
+      expect(colorNear(displayed, simulated), isFalse,
+          reason: 'AC-7: the remap differs from the simulation projection — it '
+              'aids distinction, it does not show perception');
+    });
+
+    acTestWidgets('AC-8', 'TestAC08_StoredValuesUnchanged', (tester) async {
+      // Given: a sample has stored colour values (the known sample on the
+      // Readout); its displayed swatch while daltonization is off is the stored
+      // original.
+      final h = await givenDaltonization(tester,
+          storedProfile: savedProfile(CvdType.deutan));
+      expect(displaySwatches(tester).any((c) => colorNear(c, screenSwatchColor)),
+          isTrue,
+          reason: 'AC-8 Given: the stored colour renders as the original off');
+
+      // When: daltonization remaps its displayed colour (turn it on), then the
+      // painter turns it back off.
+      await h.whenOpenSettings();
+      await h.whenSetDaltonization(on: true);
+      await h.whenSetDaltonization(on: false);
+      await h.whenCloseSettings();
+
+      // Then: the stored colour values are unchanged — with daltonization off
+      // again the swatch is once more the original, so the remap wrote nothing
+      // back to the stored sample (rejects a remap that persists the transformed
+      // colour).
+      expect(displaySwatches(tester).any((c) => colorNear(c, screenSwatchColor)),
+          isTrue,
+          reason: 'AC-8: turning the remap off restores the original — storage '
+              'was never overwritten');
+
+      // LIMITED (augmented by DALT-7): while the remap is identity, the "on"
+      // state does not differ from "off", so this cannot yet prove the round-trip
+      // is real. DALT-7 adds the control (while on, the swatch did change — so
+      // the restore is a genuine round-trip, not a no-op).
+    });
+
+    acTestWidgets('AC-9', 'TestAC09_EveryScreen', (tester) async {
+      // Given: daltonization is on for a deutan profile, and the known swatch is
+      // surfaced on each of the capture, readout and palette screens.
+      // Daltonization is seeded on the live display controller (its public toggle
+      // is exercised by AC-1/AC-2); here the focus is that the remap reaches
+      // *every* screen through the one shared chokepoint — not one screen only.
+      final profile = savedProfile(CvdType.deutan);
+      const on = DisplaySettings(daltonization: true);
+
+      // When/Then: on the Readout.
+      final readout = await givenDaltonization(tester,
+          storedProfile: profile, initialSettings: on);
+      expect(readout.daltonization, isTrue,
+          reason: 'AC-9 Given: daltonization on (readout)');
+      _expectKnownSwatchRemapped(tester, profile, screen: 'AC-9 readout');
+
+      // On the Capture screen.
+      final capture = await givenDaltonizationOnCapture(tester,
+          storedProfile: profile, initialSettings: on);
+      expect(capture.daltonization, isTrue,
+          reason: 'AC-9 Given: daltonization on (capture)');
+      _expectKnownSwatchRemapped(tester, profile, screen: 'AC-9 capture');
+
+      // On the Palette screen (rejects a remap wired into one screen only).
+      final palette = await givenDaltonizationOnPalette(tester,
+          storedProfile: profile, initialSettings: on);
+      expect(palette.daltonization, isTrue,
+          reason: 'AC-9 Given: daltonization on (palette)');
+      _expectKnownSwatchRemapped(tester, profile, screen: 'AC-9 palette');
+    });
+
+    acTestWidgets('AC-10', 'TestAC10_NoProfileNeedsAssessment', (tester) async {
+      // Given: no CVD profile has been saved (the store is empty).
+      final h = await givenDaltonization(tester, storedProfile: noProfile);
+      expect(await h.profileStore.count(), 0,
+          reason: 'AC-10 Given: no profile saved (store empty)');
+
+      // When: the painter opens the daltonization control.
+      await h.whenOpenSettings();
+      expect(h.noProfileRegion, findsOneWidget,
+          reason: 'AC-10: the daltonization control shows its no-profile region');
+
+      // Then: it reports that a self-assessment is needed before colours can be
+      // remapped (rejects a control that silently offers a remap against the
+      // const default, or reports nothing).
+      expect(
+        find.descendant(
+          of: h.noProfileRegion,
+          matching:
+              find.textContaining(RegExp('self-assessment', caseSensitive: false)),
+        ),
+        findsWidgets,
+        reason: 'AC-10: the no-profile region reports a self-assessment is needed',
+      );
+
+      // Control: with a saved profile the no-profile message is absent (the
+      // control only prompts when nothing is saved, and the remap is available).
+      final saved = await givenDaltonization(tester,
+          storedProfile: savedProfile(CvdType.deutan));
+      await saved.whenOpenSettings();
+      expect(
+        find.descendant(
+          of: saved.noProfileRegion,
+          matching:
+              find.textContaining(RegExp('self-assessment', caseSensitive: false)),
+        ),
+        findsNothing,
+        reason: 'AC-10 control: with a profile saved there is no self-assessment '
+            'prompt',
+      );
+    });
+  });
 }

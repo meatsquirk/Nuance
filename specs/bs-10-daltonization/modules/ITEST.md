@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 (harness + fixtures + smoke) done; next ITEST-2 (AC-1..10 pending + red baseline + grades)
+**Status:** In progress — ITEST-2 (AC-1..10 pending + red baseline + grades) done; next ITEST-3 (test review, G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/daltonization_harness.dart`, `integration_test/daltonization_test.dart`,
 `integration_test/bs10/pending.dart` (seeded in DALT-1), reuse of `integration_test/fakes/fake_speech.dart`,
@@ -12,7 +12,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 5.74M | 27m 19s |
-| ITEST-2 | acceptance-tests | AC-1..10 (pending) | ⬜ Todo | | |
+| ITEST-2 | acceptance-tests | AC-1..10 (pending) | ✅ Done | 12.25M | 34m 01s |
 | ITEST-3 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -134,6 +134,59 @@
   its Then / named Given precondition, and the four green-at-baseline tests passing (augmentation rows open);
   grade gate passed (all A, or *B pending <phase>* with a row).
 
+### Result — ITEST-2  <!-- 2026-10-13 -->
+
+- Registered one *pending* `acTestWidgets` per AC (AC-1..AC-10) in `daltonization_test.dart` (appended after
+  ITEST-1's harness + smoke), plus top-level grade helpers `_remapOf` + `_expectKnownSwatchRemapped` that grade
+  the *rendered* swatch against the independent `referenceDaltonize` (never the shipped `daltonize`).
+- Extended the harness (ITEST owns it) for AC-9's three screens: `givenDaltonizationOnCapture`
+  (`FakeCaptureSource` over `captureScene`, bounded-frame settle — the live feed never idles, so no
+  `pumpAndSettle`) and `givenDaltonizationOnPalette` (one-paint `screenPalette` via `InMemoryPaletteSource`),
+  both sharing a new private `_assembleDaltonization` core with `givenDaltonization`. New fixtures `captureScene`,
+  `screenPaint`, `screenPalette`. AC-9 seeds `DisplaySettings(daltonization: true)` (its toggle is AC-1/AC-2's
+  concern) so the capture leg needs no tap on the live-feed screen.
+- **Gates:** `flutter analyze` clean (whole project) · `flutter test --coverage` **1239 unit pass** (unchanged —
+  no `lib/` touched) · `coverage_gate.dart main` **100% on all 8 cumulative touched files** (ITEST-2 touched no
+  `lib/`) · default sim run (iPhone 17, `coord.sh with-lock`) **+15 / 10 pending** suite green · run-pending red
+  baseline **+19 / −6** (EXIT 1 expected): AC-2/3/4/8 green-at-baseline, AC-1/5/6/7/9/10 each fail on its tight
+  Then/precondition (identity remap; empty no-profile placeholder) — all assertion failures, no harness errors.
+- **Grades (fresh independent grader):** **6 A / 4 B-pending** — A: AC-1/5/6/7/9/10; B pending: AC-2→DALT-6,
+  AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7 (the planned green-at-baseline limits; each augmentation row confirmed
+  open). No below-A rubric defects. Grid: `behavior-test-completeness-bs-10-daltonization.md`.
+- **Correction vs the ITEST-1 handoff:** the provenance badge is *not* on the Readout (`ProvenanceBadge` lives
+  only in palette paint rows); the Readout states provenance via `ProvenanceRegion` text ('Measured'). AC-4
+  asserts that tier label (still green at baseline). No AC weakened; `h.provenanceBadge` left in place for DALT-10.
+- Coverage (touched `lib/`): n/a (no product code). Acceptance: suite green, 0 ACs un-pended (all 10 stay pending
+  per plan; behaviour phases un-pend). Fix passes: 0/3 (two host-caught compile fixes before the first sim run —
+  a missing `widgets.dart` import and AC-4 badge→region; all gates green on the first sim run).
+- Tokens/time: 12.25M · 34m 01s (1 session).
+- Closed by: analyze + unit + coverage green; default suite green with all 10 ACs pending; run-pending red
+  baseline matches the table; grade gate 6 A / 4 B-pending with open augmentation rows.
+
+### Checkpoint / Handoff — ITEST-2
+
+- **Frozen:** the 10 `acTestWidgets` and `bs10/pending.dart` are the un-pend registry; each behaviour phase
+  deletes its AC's row *and* adds its AC to the `unpended` set in the scaffold guard in `daltonization_test.dart`.
+- **DALT-3 (AC-1 keystone):** `_expectKnownSwatchRemapped` asserts the rendered swatch is
+  `colorNear(displayColorOf(referenceDaltonize(SCREEN_SAMPLE_LAB, profile)))` and that none equals the original —
+  so the shipped `daltonize` must agree with the independent `referenceDaltonize` within `colorNear` (summed
+  ≈24/255) or AC-1/5/9 will not go green (disclosed design coupling, D-2; the G-2 review confirms the reference is
+  a fair grader). AC-1 iterates all three `CvdType.values`.
+- **DALT-8 (AC-9):** the capture/palette legs are first *exercised* once DALT-3 makes the readout leg pass. DALT-8
+  must surface the known swatch through the shared `ColorChip` chokepoint on capture (`CaptureReadingsList`'s
+  `ColorChip` currently carries no `color`) and palette (`palette_screen`/`paint_list_region` render no `ColorChip`
+  swatch today), so both remap like the Readout.
+- **DALT-11 (AC-6):** the test reads the *rendered* swatch (not `h.displayedColor`, which uses the build-time
+  profile), so DALT-11's live `CvdProfileStore` listener is what turns it green; `whenSaveProfile` only writes the
+  store today.
+- **CONTROL-2 (AC-10):** reads `h.profileStore` directly (`CvdProfileReadEndpoint` still has no `hasSavedProfile`
+  and is unmounted); CONTROL-2 fills the keyed `noProfileRegion` with the self-assessment message (empty
+  placeholder today → the test fails on it) and the control (saved profile → no message).
+- **Verification commands:** unchanged from ITEST-1 (analyze/unit/coverage on host; sim run under
+  `coord.sh with-lock`, `--dart-define=BS10_RUN_PENDING=true` for run-pending; macOS no `timeout` → redirect).
+- **Next:** ITEST-3 (test review, **G-2**) — assemble the packet from these 10 tests; a human approves G-2 before
+  any behaviour phase (DALT-3..11, CONTROL-2) may start.
+
 ## Phase ITEST-3 — test review (G-2)
 
 - **Kind:** test-review
@@ -146,18 +199,23 @@
 
 ## Red baseline  <!-- filled by ITEST-2 (run-pending) -->
 
+Confirmed on the run-pending sim run (iPhone 17, under `coord.sh with-lock`): **+19 / −6** — the four
+green-at-baseline tests pass; the six behaviour-pending tests each fail on a tight Then/precondition (no
+harness/compile errors). Default run **+15 / 10 pending** (suite green). Grid:
+[behavior-test-completeness-bs-10-daltonization.md](../behavior-test-completeness-bs-10-daltonization.md).
+
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_RemapForType | FAIL (expected) | Then: remapped != original (identity stub) | DALT-3 | — |
-| AC-2 | TestAC02_OffShowsOriginal | green at baseline (limited) | — (off default + identity) → augment | DALT-6 | — |
-| AC-3 | TestAC03_LabelAndValueKept | green at baseline (limited) | — (text always rendered) → augment | DALT-9 | — |
-| AC-4 | TestAC04_ProvenanceBadgeReadable | green at baseline (limited) | — (label+icon always rendered) → augment | DALT-10 | — |
-| AC-5 | TestAC05_UsesStoredProfile | FAIL (expected) | Then: remap == reference at stored type+severity | DALT-4 | — |
-| AC-6 | TestAC06_ProfileChangeRecomputes | FAIL (expected) | Then: recompute after save (no listener yet) | DALT-11 | — |
-| AC-7 | TestAC07_DistinctFromSimulation | FAIL (expected) | Then: remapped != projectDichromat (identity stub) | DALT-5 | — |
-| AC-8 | TestAC08_StoredValuesUnchanged | green at baseline (limited) | — (display-only by construction) → augment | DALT-7 | — |
-| AC-9 | TestAC09_EveryScreen | FAIL (expected) | Then: remapped on each screen (identity stub) | DALT-8 | — |
-| AC-10 | TestAC10_NoProfileNeedsAssessment | FAIL (expected) | Then: no-profile message (placeholder empty) | CONTROL-2 | — |
+| AC-1 | TestAC01_RemapForType | FAIL (confirmed) | Then: swatch == referenceDaltonize per type (identity stub leaves it original) | DALT-3 | A |
+| AC-2 | TestAC02_OffShowsOriginal | green at baseline (limited) | — (off default + identity) → augment | DALT-6 | B pending DALT-6 |
+| AC-3 | TestAC03_LabelAndValueKept | green at baseline (limited) | — (label+value text always rendered) → augment | DALT-9 | B pending DALT-9 |
+| AC-4 | TestAC04_ProvenanceBadgeReadable | green at baseline (limited) | — (provenance tier label always rendered) → augment | DALT-10 | B pending DALT-10 |
+| AC-5 | TestAC05_UsesStoredProfile | FAIL (confirmed) | Then: swatch == reference at stored type+severity (identity stub) | DALT-4 | A |
+| AC-6 | TestAC06_ProfileChangeRecomputes | FAIL (confirmed) | Then/before: deutan remap (identity stub; no listener for the saved change) | DALT-11 | A |
+| AC-7 | TestAC07_DistinctFromSimulation | FAIL (confirmed) | precond: the remap moves the colour (identity stub) | DALT-5 | A |
+| AC-9 | TestAC09_EveryScreen | FAIL (confirmed) | Then: readout swatch == referenceDaltonize (identity stub; capture/palette legs reached once readout passes) | DALT-8 | A |
+| AC-8 | TestAC08_StoredValuesUnchanged | green at baseline (limited) | — (display-only; off→on→off round-trip) → augment | DALT-7 | B pending DALT-7 |
+| AC-10 | TestAC10_NoProfileNeedsAssessment | FAIL (confirmed) | Then: no-profile region reports self-assessment (placeholder empty) | CONTROL-2 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by ITEST-2; closed by behavior phases -->
 

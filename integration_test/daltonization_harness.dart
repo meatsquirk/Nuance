@@ -39,6 +39,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
+import 'package:paint_color_assistant/capture/source/capture_source.dart';
+import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/display/display_controller.dart';
@@ -46,8 +48,11 @@ import 'package:paint_color_assistant/display/display_read_endpoint.dart';
 import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/display/settings_screen.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/recipes/palette.dart';
+import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/store/cvd_profile_store.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
 import 'package:paint_color_assistant/widgets/provenance_badge.dart';
@@ -58,6 +63,7 @@ import 'package:paint_color_assistant/widgets/provenance_badge.dart';
 // `display_harness.dart` re-exports — does not collide with bs-10's.
 import 'display_harness.dart' show referenceProjectDichromat;
 
+import 'fakes/fake_capture_source.dart';
 import 'fakes/fake_haptics.dart';
 import 'fakes/fake_speech.dart';
 
@@ -105,6 +111,28 @@ const Sample screenSample = Sample(
   coordinates: SCREEN_SAMPLE_LAB,
   provenance: Provenance(ProvenanceTier.measured),
 );
+
+/// The Capture scene that surfaces the known swatch on the **Capture** screen
+/// for AC-9 — a noise-free software scene whose ground truth is
+/// [SCREEN_SAMPLE_LAB], so the capture live-view reading is the same known
+/// colour the Readout and Palette render. [givenDaltonizationOnCapture] builds a
+/// [FakeCaptureSource] over it, opening `buildApp` on the Capture screen (D-7).
+const SceneSpec captureScene = SceneSpec(groundTruth: SCREEN_SAMPLE_LAB);
+
+/// A single paint carrying the known swatch's colour as its masstone — the swatch
+/// the **Palette** screen renders for AC-9.
+const Paint screenPaint = Paint(
+  id: 'screen-swatch',
+  name: 'Screen Swatch',
+  medium: PaintMedium.oil,
+  masstone: SCREEN_SAMPLE_LAB,
+);
+
+/// The one-paint palette [givenDaltonizationOnPalette] seeds so the Palette
+/// screen surfaces exactly the known swatch ([screenPaint]) — the colour AC-9
+/// asserts is remapped on the palette screen, same as on capture and readout.
+const PaintPalette screenPalette =
+    PaintPalette(name: 'Screen palette', paints: [screenPaint]);
 
 /// The painter's stored colour-vision profile a scenario persists (AC-1/5/6/7).
 ///
@@ -401,9 +429,78 @@ Future<DaltonizationHarness> givenDaltonization(
   Sample sample = screenSample,
   CvdProfile? storedProfile = const CvdProfile(type: CvdType.deutan, severity: 0.6),
   DisplaySettings initialSettings = const DisplaySettings(),
+}) =>
+    _assembleDaltonization(
+      tester,
+      storedProfile: storedProfile,
+      initialSettings: initialSettings,
+      initialSample: sample,
+    );
+
+/// Opens the assembled app on the **Capture** screen with the known swatch
+/// ([captureScene]) in the live view — the second of AC-9's three screens.
+///
+/// A capture source is present, so `buildApp` opens on the Capture screen (D-7).
+/// The live feed is a continuous stream, so this mounts with a bounded run of
+/// frames rather than `pumpAndSettle` (which would spin on the feed — the
+/// convention `givenCaptureOf` follows). [initialSettings] seeds the display
+/// state (AC-9 passes `daltonization: true`), so the Thens read the remapped
+/// swatch directly without tapping the on-screen toggle — whose `pumpAndSettle`
+/// would likewise hang on the live feed.
+Future<DaltonizationHarness> givenDaltonizationOnCapture(
+  WidgetTester tester, {
+  CvdProfile? storedProfile = const CvdProfile(type: CvdType.deutan, severity: 0.6),
+  DisplaySettings initialSettings = const DisplaySettings(),
+}) =>
+    _assembleDaltonization(
+      tester,
+      storedProfile: storedProfile,
+      initialSettings: initialSettings,
+      captureSource: FakeCaptureSource(captureScene),
+      settle: _SettleMode.framesOnly,
+    );
+
+/// Opens the assembled app on the **Palette** screen showing the known swatch
+/// ([screenPalette]) — the third of AC-9's three screens.
+///
+/// A palette entry is present (and no capture/comparison/recipes entry), so
+/// `buildApp` opens on the Palette home screen (D-7) over a one-paint catalogue
+/// whose single paint's masstone is [SCREEN_SAMPLE_LAB].
+Future<DaltonizationHarness> givenDaltonizationOnPalette(
+  WidgetTester tester, {
+  CvdProfile? storedProfile = const CvdProfile(type: CvdType.deutan, severity: 0.6),
+  DisplaySettings initialSettings = const DisplaySettings(),
+}) =>
+    _assembleDaltonization(
+      tester,
+      storedProfile: storedProfile,
+      initialSettings: initialSettings,
+      paletteEntry: const PaletteEntry(),
+      paletteSource: const InMemoryPaletteSource(catalogue: [screenPalette]),
+    );
+
+/// How [_assembleDaltonization] drives the first frames after mounting: the
+/// usual `pumpAndSettle`, or a bounded run of frames for a screen whose live
+/// feed never goes idle (Capture).
+enum _SettleMode { pumpAndSettle, framesOnly }
+
+/// Assembles the real app through `buildApp` for a daltonization scenario,
+/// shared by [givenDaltonization] (Readout), [givenDaltonizationOnCapture] and
+/// [givenDaltonizationOnPalette]. The entry fields ([initialSample],
+/// [captureSource], [paletteEntry], [paletteSource]) select which screen
+/// `buildApp` opens on (its entry precedence, D-7).
+Future<DaltonizationHarness> _assembleDaltonization(
+  WidgetTester tester, {
+  required CvdProfile? storedProfile,
+  required DisplaySettings initialSettings,
+  Sample initialSample = screenSample,
+  CaptureSource? captureSource,
+  PaletteEntry? paletteEntry,
+  PaletteSource paletteSource = const InMemoryPaletteSource(),
+  _SettleMode settle = _SettleMode.pumpAndSettle,
 }) async {
-  // Open a fresh app each time, so a repeated `givenDaltonization` in one test
-  // does not reuse the previous screen's State (mirrors the other bs harnesses).
+  // Open a fresh app each time, so a repeated `given…` in one test does not
+  // reuse the previous screen's State (mirrors the other bs harnesses).
   await tester.pumpWidget(const SizedBox());
   await tester.pump();
 
@@ -427,12 +524,25 @@ Future<DaltonizationHarness> givenDaltonization(
     speech: speech,
     haptics: haptics,
     cvdProfile: injectedProfile,
-    initialSample: sample,
+    initialSample: initialSample,
+    captureSource: captureSource,
+    paletteEntry: paletteEntry,
+    paletteSource: paletteSource,
     store: backing,
     displayController: controller,
   );
   await tester.pumpWidget(buildApp(deps));
-  await tester.pumpAndSettle();
+  switch (settle) {
+    case _SettleMode.pumpAndSettle:
+      await tester.pumpAndSettle();
+    case _SettleMode.framesOnly:
+      // The Capture live feed never goes idle, so advance a bounded run of
+      // frames (enough for the first sample to render) instead of spinning in
+      // `pumpAndSettle`.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+  }
   return DaltonizationHarness(
     tester,
     speech: speech,
