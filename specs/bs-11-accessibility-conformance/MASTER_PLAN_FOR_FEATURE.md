@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** Not started — next CONF-1 (startable; G-1 resolved)
+**Status:** In progress — CONF-1 (scaffold) done; next A11Y-1 ∥ GATE-1 (shells)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -111,7 +111,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its che
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ⬜ Todo |
+| A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ◐ In progress (CONF-1 done) |
 | GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ⬜ Todo |
 
@@ -151,8 +151,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | CONF-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs11 pending gate (10 ACs), guideline-matcher availability | ⬜ Next | | | G-1 ✅ — startable |
-| 2 | A11Y-1 | shell: `lib/app/theme.dart` `AppTheme` wired into `buildApp` (behaviour unchanged) + `StatusBadge` + `AccessibleNotice` shells | ⬜ Todo | | | ∥ GATE-1 |
+| 1 | CONF-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs11 pending gate (10 ACs), guideline-matcher availability | ✅ Done | 3,094,668 | 9m 08s | branch @ `801a064`; unit 1000/1000; gate both-ways; 10 ACs pending; matchers OK |
+| 2 | A11Y-1 | shell: `lib/app/theme.dart` `AppTheme` wired into `buildApp` (behaviour unchanged) + `StatusBadge` + `AccessibleNotice` shells | ⬜ Next | | | ∥ GATE-1 |
 | 3 | GATE-1 | shell: `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub | ⬜ Todo | | | ∥ A11Y-1 |
 | 4 | ITEST-1 | acceptance-tests: harness, real-screen + control fixtures, pending gate (10 ACs), smoke test | ⬜ Todo | | | |
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,4,5,6 (pending) + red baseline | ⬜ Todo | | | seq w/ ITEST-3 |
@@ -173,7 +173,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CONF-1** (scaffold) is next and **startable** — G-1 (spec approval) resolved 2026-10-13. CONF-1 branches `feat/bs-11-accessibility-conformance` from `main` (now @ the G-1 commit) in a worktree (`../Nuance-bs11`), records the baseline, confirms `tool/coverage_gate.dart`, and lays the `integration_test/bs11/pending.dart` gate with the 10 automated ACs. G-2 (approve tests) is decided later at ITEST-4; G-3/G-4 (the two manual walkthroughs) are decided at SIGNOFF-1.
+CONF-1 (scaffold) is **done** — branch `feat/bs-11-accessibility-conformance` @ `801a064` in worktree `../Nuance-bs11`; unit baseline 1000/1000; coverage gate proven both ways; `integration_test/bs11/pending.dart` seeds the 10 automated ACs; `meetsGuideline` matchers importable.
+
+Next, **both startable and disjoint ⇒ parallel-safe (separate sessions):**
+- **A11Y-1** (shell) — `lib/app/theme.dart` `AppTheme` + `StatusBadge`/`AccessibleNotice` shells, wire `AppTheme` into `buildApp` (behaviour unchanged). Owns `lib/app/`, `lib/widgets/`.
+- **GATE-1** (shell) — `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub. Disjoint files from A11Y-1.
+
+Both block ITEST-1. No gate blocks them (G-1 resolved; G-2 blocks only the behaviour stage; G-3/G-4 at SIGNOFF-1).
 
 ## Token usage
 
@@ -184,7 +190,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PLAN | fnp-c571cf86 | 2026-10-13 | | | | claude-opus-4-8 | | | | | | plan written |
 | PLAN | d0fe19ea | 2026-10-13 05:14 EDT | 07:39 | 2h 24m | 14m 21s | claude-opus-4-8 | 56 | 338,185 | 1,850,667 | 66,518 | 2,255,426 | plan written: 17 phases, 3 modules, 12 ACs (10 automated + 2 manual) |
 | GATE-DECISION | d0fe19ea | 2026-10-13 07:58 EDT | 08:00 | 1m 26s | 1m 26s | claude-opus-4-8 | 16 | 12,853 | 1,569,275 | 4,393 | 1,586,537 | G-1 approved: spec approved by Matt Quirk; CONF-1 startable |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 08:00** | **2h 25m** | **15m 47s** |  | **72** | **351,038** | **3,419,942** | **70,911** | **3,841,963** |  |
+| CONF-1 | 98b4e49e | 2026-10-13 09:06 EDT | 09:15 | 9m 08s | 9m 08s | claude-opus-4-8 | 66 | 89,804 | 2,971,212 | 33,586 | 3,094,668 | scaffold: feat/bs-11 @ 801a064; unit 1000/1000; coverage gate both-ways; 10 automated ACs pending; meetsGuideline matchers OK |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 09:15** | **2h 34m** | **24m 55s** |  | **138** | **440,842** | **6,391,154** | **104,497** | **6,936,631** |  |
 
 ## Sign-off
 
