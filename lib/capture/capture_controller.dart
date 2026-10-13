@@ -401,6 +401,29 @@ class CaptureController extends ChangeNotifier {
     ));
   }
 
+  /// The poor-capture conditions currently in effect at the [source] — the
+  /// AC-9 downgrade *inputs* (plan bs-12 D-5), read-only and side-effect-free.
+  ///
+  /// Exposes, as first-class [AccuracyDowngradeReason]s, the three conditions
+  /// the spec's AC-9 requires be surfaced: low lighting
+  /// ([Lighting.low]), AE/AWB/AF not locked together
+  /// ([CaptureLocks.allLocked] false), and no reference card in view
+  /// ([CaptureSource.referenceCardPresent] false). The set is empty in the
+  /// trustworthy case — well lit, locked and a card present.
+  ///
+  /// **This is the QUALITY-1 seam, not the fix.** Reading it changes nothing: a
+  /// [commit] still states exactly the accuracy it always did, so current
+  /// behaviour is byte-for-byte unchanged. QUALITY-2 consumes this to force a
+  /// committed reading approximate (and surface the reason) whenever it is
+  /// non-empty, closing the gap where only lighting downgraded the reading.
+  Set<AccuracyDowngradeReason> get activeDowngradeReasons => {
+        if (source.lighting == Lighting.low) AccuracyDowngradeReason.lowLight,
+        if (!source.locks.allLocked)
+          AccuracyDowngradeReason.exposureUnlocked,
+        if (!source.referenceCardPresent)
+          AccuracyDowngradeReason.missingReferenceCard,
+      };
+
   /// Replaces the observable state and notifies listeners.
   ///
   /// The single mutation seam the behaviour phases move state through, so every

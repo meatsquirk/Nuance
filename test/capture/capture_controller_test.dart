@@ -1069,4 +1069,89 @@ void main() {
       controller.dispose();
     });
   });
+
+  group('activeDowngradeReasons (AC-9 seam — bs-12 D-5)', () {
+    SoftwareCaptureSource scene({
+      Lighting lighting = Lighting.adequate,
+      bool referenceCardPresent = false,
+    }) =>
+        SoftwareCaptureSource(SceneSpec(
+          groundTruth: const ColorCoordinates(lightness: 40, a: -8, b: 24),
+          lighting: lighting,
+          referenceCardPresent: referenceCardPresent,
+        ));
+
+    test('is empty only when well lit, locked and a card is present', () {
+      final controller =
+          CaptureController(source: scene(referenceCardPresent: true));
+      controller.lock(); // locks AE · AWB · AF together
+
+      expect(controller.activeDowngradeReasons, isEmpty);
+      controller.dispose();
+    });
+
+    test('reports lowLight when the scene is dimly lit', () {
+      final controller = CaptureController(
+        source: scene(lighting: Lighting.low, referenceCardPresent: true),
+      );
+      controller.lock();
+
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.lowLight));
+      controller.dispose();
+    });
+
+    test('reports exposureUnlocked until AE/AWB/AF are locked together', () {
+      final controller =
+          CaptureController(source: scene(referenceCardPresent: true));
+
+      // Unlocked at first.
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.exposureUnlocked));
+
+      controller.lock();
+      expect(controller.activeDowngradeReasons,
+          isNot(contains(AccuracyDowngradeReason.exposureUnlocked)));
+      controller.dispose();
+    });
+
+    test('reports missingReferenceCard when no card is in view', () {
+      final controller = CaptureController(source: scene());
+      controller.lock();
+
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.missingReferenceCard));
+      controller.dispose();
+    });
+
+    test('reports every poor condition at once', () {
+      final controller = CaptureController(source: scene(lighting: Lighting.low));
+      // Unlocked, card-less, dim: all three.
+
+      expect(controller.activeDowngradeReasons, <AccuracyDowngradeReason>{
+        AccuracyDowngradeReason.lowLight,
+        AccuracyDowngradeReason.exposureUnlocked,
+        AccuracyDowngradeReason.missingReferenceCard,
+      });
+      controller.dispose();
+    });
+
+    test('is purely observational — reading it changes no state (default-wired)',
+        () {
+      // The seam is a read-only report; reading it must not mutate the state or
+      // notify, so current capture behaviour is byte-for-byte unchanged until
+      // QUALITY-2 wires the triggers.
+      final controller = CaptureController(source: scene());
+      final before = controller.state;
+      var notified = 0;
+      controller.addListener(() => notified++);
+
+      final reasons = controller.activeDowngradeReasons;
+
+      expect(reasons, isNotEmpty); // unlocked + card-less here
+      expect(controller.state, same(before));
+      expect(notified, 0);
+      controller.dispose();
+    });
+  });
 }

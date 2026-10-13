@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — next QUALITY-1 (GUARD-1, GUARD-2 ✅ done; ITEST-1 needs QUALITY-1 too)
+**Status:** In progress — next ITEST-1 (GUARD-1, GUARD-2, QUALITY-1 ✅ done; stage-2 shells complete)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -130,7 +130,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its gua
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | The invariant guards (reusable test-support, no product change): offline/network-block, privacy/telemetry, interface-swap, one-colour-library, platform | — | 🔄 In progress |
-| QUALITY | [modules/QUALITY.md](modules/QUALITY.md) | The measured/behavioural targets: synthetic accuracy (D-2), performance mechanism + CI budget (D-3), out-of-gamut, and the one `lib/` change — the AC-9 reliability downgrade fix (D-5) | GUARD (shells) | ⬜ Todo |
+| QUALITY | [modules/QUALITY.md](modules/QUALITY.md) | The measured/behavioural targets: synthetic accuracy (D-2), performance mechanism + CI budget (D-3), out-of-gamut, and the one `lib/` change — the AC-9 reliability downgrade fix (D-5) | GUARD (shells) | 🔄 In progress |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real flows + controls: one pending test per automated AC, and its review | GUARD-2, QUALITY-1 | ⬜ Todo |
 
 ## Dependency graph
@@ -170,8 +170,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | GUARD-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs12 pending gate (16 ACs) | ✅ Done | 7.84M | 32m 51s | G-1 ✅; baseline unit 1220 / integ 188 (0 fails); gate both ways; pending 16 ACs |
 | 2 | GUARD-2 | shell: `integration_test/nfr/guards/` scaffolds — source-scan, swap-harness, network-block/offline harness (stubs) | ✅ Done | 3.72M | 17m 40s | ∥ QUALITY-1; analyze clean, unit 1220, acceptance 197 |
-| 3 | QUALITY-1 | shell: `integration_test/nfr/quality/` scaffolds — accuracy harness + `syntheticAccuracySet`, perf harness (stubs) + the `lib/capture` AC-9 downgrade seam (behaviour unchanged) | ⬜ Next | | | startable now; ITEST-1 needs it |
-| 4 | ITEST-1 | acceptance-tests: harness, real-flow + control + swap fixtures, pending gate (16 ACs), smoke test | ⬜ Todo | | | |
+| 3 | QUALITY-1 | shell: `integration_test/nfr/quality/` scaffolds — accuracy harness + `syntheticAccuracySet`, perf harness (stubs) + the `lib/capture` AC-9 downgrade seam (behaviour unchanged) | ✅ Done | 9.16M | 20m 33s | analyze clean, unit 1228 (+8), coverage 100%/2 lib files, acceptance 197/0; AC-9 seam `AccuracyDowngradeReason`+`activeDowngradeReasons` (no trigger) |
+| 4 | ITEST-1 | acceptance-tests: harness, real-flow + control + swap fixtures, pending gate (16 ACs), smoke test | ⬜ Next | | | unblocked — GUARD-2 + QUALITY-1 done |
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,6,7,8,14,15,16,17 (pending) + red baseline | ⬜ Todo | | | seq w/ ITEST-3 |
 | 6 | ITEST-3 | acceptance-tests: AC-3,4,9,10,11,12,13 (pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
 | 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
@@ -189,9 +189,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-GUARD-2 (shell) is **done** on `feat/bs-12-non-functional-requirements` (worktree `../Nuance-bs12`): three test-support scaffolds under `integration_test/nfr/guards/` — `source_guard.dart` (rule signatures + authority/allow-list constants + empty-result stubs), `offline_guard.dart` (`NetworkAttemptSink` + `NetworkBlockingOverrides` + `runUnderNetworkBlock`), `swap_harness.dart` (`pumpAppWithSwaps` over the real `buildApp` + `AppDependencies.mixingEngine`/`.confusionCheck` injection). No `lib/` change (D-7); scaffolds unreferenced yet, so the acceptance build is unchanged. analyze clean, unit 1220, acceptance 197 pass / exit 0.
+QUALITY-1 (shell) is **done** on `feat/bs-12-non-functional-requirements` (worktree `../Nuance-bs12`): three quality scaffolds under `integration_test/nfr/quality/` — `synthetic_accuracy_set.dart` (`AccuracyCondition`/`SyntheticAccuracySample`/`SyntheticGamutTarget` + deterministic seed `syntheticAccuracySet`/`syntheticGamutTargets`), `accuracy_harness.dart` (`AccuracyHarness.grade`/`gradeAll` → `AccuracyGrade`, graded by the independent `referenceDeltaE00`), `perf_harness.dart` (CI budgets + `isTopCandidateCount` + `PerfHarness.measure` → `PerfProbe`). The one `lib/` change — the AC-9 downgrade **seam** (D-5): `AccuracyDowngradeReason` {lowLight, exposureUnlocked, missingReferenceCard} in `capture_accuracy.dart` + the read-only `CaptureController.activeDowngradeReasons` getter; **no trigger logic**, behaviour byte-for-byte unchanged. analyze clean, unit 1228 (+8), coverage 100% on the 2 touched `lib/capture` files, acceptance 197 pass / exit 0.
 
-**Next: QUALITY-1** (the other stage-2 shell, startable now) — accuracy harness + `syntheticAccuracySet`, perf harness stubs, and the `lib/capture` AC-9 downgrade seam (behaviour unchanged). **ITEST-1 needs BOTH GUARD-2 (done) and QUALITY-1**, so ITEST-1 unblocks once QUALITY-1 lands. GUARD behaviour phases (GUARD-3..6) stay blocked on G-2 (ITEST-4). G-2 (approve tests) decided at ITEST-4; G-3 (AC-5 device frame rate + AC-3/4 timings) at SIGNOFF-1.
+**Next: ITEST-1** (acceptance-tests, now unblocked — both GUARD-2 and QUALITY-1 done): build `nfr_harness.dart` (Given/When/Then over `buildApp`, the `networkBlock`/`syntheticAccuracySet`/swap/control fixtures) + `nfr_test.dart`, wire the pending gate, and a never-pending smoke test that calls each GUARD + QUALITY stub and asserts a populated result + `pendingACs` names 16 real phases. Then ITEST-2 ∥ ITEST-3 (share `nfr_test.dart` → sequence them), then ITEST-4 (test review = **G-2**). All behaviour phases (GUARD-3..6, QUALITY-2..5) stay blocked on G-2; G-3 (AC-5 device frame rate + AC-3/4 timings) at SIGNOFF-1.
 
 ## Token usage
 
@@ -202,7 +202,8 @@ GUARD-2 (shell) is **done** on `feat/bs-12-non-functional-requirements` (worktre
 | PLAN | 47f7357b | 2026-10-13 12:26 EDT | 13:47 | 1h 21m | 15m 33s | claude-opus-4-8 | 70 | 291,619 | 2,467,416 | 65,289 | 2,824,394 | plan written: 16 phases, 3 modules (GUARD/QUALITY/ITEST), 17 ACs (16 automated + AC-5 manual) |
 | GUARD-1 | a927d1cc | 2026-10-13 14:16 EDT | 15:29 | 1h 12m | 32m 51s | claude-opus-4-8 | 146 | 125,483 | 7,663,865 | 54,806 | 7,844,300 | scaffold done: baseline unit 1220 / integ 188 (0 assertion fails, teardown flake isolated-green); coverage gate both ways; pending.dart 16 ACs; G-1 approved |
 | GUARD-2 | 3958a690 | 2026-10-13 15:53 EDT | 16:11 | 17m 40s | 17m 40s | claude-opus-4-8 | 78 | 92,664 | 3,589,500 | 37,267 | 3,719,509 | shell: 3 guard scaffolds (source/offline/swap) wired to real seams; analyze clean, unit 1220, acceptance 197/0; no lib change |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-13 16:11** | **2h 50m** | **1h 06m** |  | **294** | **509,766** | **13,720,781** | **157,362** | **14,388,203** |  |
+| QUALITY-1 | 0d43da2b | 2026-10-13 16:32 EDT | 16:52 | 20m 33s | 20m 33s | claude-opus-4-8 | 134 | 151,736 | 8,959,060 | 48,618 | 9,159,548 | shell done: quality scaffolds (accuracy+perf+synthetic set) + AC-9 lib seam (AccuracyDowngradeReason + activeDowngradeReasons, no trigger); analyze clean, unit 1228, coverage 100%/2, acceptance 197/0 |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-13 16:52** | **3h 11m** | **1h 26m** |  | **428** | **661,502** | **22,679,841** | **205,980** | **23,547,751** |  |
 
 ## Sign-off
 

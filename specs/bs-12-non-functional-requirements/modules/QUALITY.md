@@ -1,6 +1,6 @@
 # Module QUALITY — measured & behavioural targets (accuracy, performance, reliability)
 
-**Status:** Not started
+**Status:** In progress — QUALITY-1 done; next QUALITY-2..5 (behaviour, blocked on G-2 / ITEST-4)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/quality/` (accuracy harness + `syntheticAccuracySet`, performance harness — reusable test-support), and the **one `lib/` product change**: the AC-9 downgrade seam/triggers in `lib/capture/` (`capture_accuracy.dart`, `capture_controller.dart`, and the live-view label surface). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart`.
 **Depends on:** GUARD (shells) · **Blocks:** SIGNOFF-1
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| QUALITY-1 | shell | — | ⬜ Todo | | |
+| QUALITY-1 | shell | — | ✅ Done | 9.16M | 20m 33s |
 | QUALITY-2 | behavior | AC-9 | ⬜ Todo | | |
 | QUALITY-3 | behavior | AC-13 | ⬜ Todo | | |
 | QUALITY-4 | behavior | AC-10, AC-11, AC-12 | ⬜ Todo | | |
@@ -38,6 +38,25 @@
   2. `accuracy_harness.dart` / `perf_harness.dart`: signatures + stubs the ITEST smoke test can call.
   3. AC-9 seam: extend the capture surface so "exposure unlocked" and "card missing" are **representable** downgrade/label inputs (new fields/params, default-wired so current behaviour is byte-for-byte unchanged); no trigger logic yet.
 - **Exit criteria:** compiles; existing suite green (incl. bs-02 capture ACs); coverage on the touched `lib/capture` lines 100% (the seam is exercised by a unit test asserting defaults preserve current behaviour).
+- **Result (✅ Done 2026-10-13):**
+  - **Quality scaffolds** under `integration_test/nfr/quality/` (test-support, no behaviour — D-7):
+    - **`synthetic_accuracy_set.dart`** — the fixture shape `AccuracyCondition` {cardControlled ≤3 / cardlessDaylight ≤8 / recipeVsSwatch ≤5} (each carries its `maxDeltaE`), `SyntheticAccuracySample` {id, condition, input, expected, expectApproximate}, `SyntheticGamutTarget` {id, target, inGamut}; plus a **deterministic seed set** `syntheticAccuracySet` (one sample per condition, inputs inside each bound) and `syntheticGamutTargets` (one in-gamut control + one out-of-gamut). QUALITY-4 expands to the full held-out set with perturbed inputs.
+    - **`accuracy_harness.dart`** — `AccuracyGrade` {sampleId, condition, deltaE, maxDeltaE, `withinBound`} and `AccuracyHarness` (`deltaE`, `grade`, `gradeAll`) grading each sample's input vs expected with the **independent** `referenceDeltaE00` (imported `show referenceDeltaE00` from `../../comparison_harness.dart`, never the product metric against itself — D-2). Stub grades the fixture input directly; QUALITY-4 feeds inputs through the real pipeline.
+    - **`perf_harness.dart`** — the CI regression budgets `kCaptureSettleCiBudget`/`kRecipeSearchCiBudget` (10s — generous, *not* the device ~1–2s), candidate-count bounds `kMinTopCandidates=3`/`kMaxTopCandidates=5` + `isTopCandidateCount`, `PerfProbe` {label, elapsed, budget, `withinBudget`} and `PerfHarness.measure(label, budget, body)` timing a body under a `Stopwatch`. QUALITY-5 wraps a real commit / recipe search. Scaffolds are **unreferenced** by any test/lib yet → acceptance build unchanged; ITEST-1's smoke test calls each.
+  - **AC-9 seam (the one `lib/` change — D-5, behaviour byte-for-byte unchanged, no trigger logic):**
+    - `lib/capture/capture_accuracy.dart` — new `enum AccuracyDowngradeReason` {lowLight, exposureUnlocked, missingReferenceCard}, each with a user-facing `label` (words, not colour — bs-01 contract). The first-class representation of all three poor conditions AC-9 names (today only lighting downgrades; exposure/card went unenforced).
+    - `lib/capture/capture_controller.dart` — new read-only `activeDowngradeReasons` getter reporting which of the three hold at the source (`lighting==low`, `!locks.allLocked`, `!referenceCardPresent`); empty in the trustworthy case. Purely observational — a `commit` still states exactly the accuracy it always did. QUALITY-2 consumes it to force a reading approximate + surface the reason.
+  - **Verification:** `flutter analyze` → No issues. Unit `flutter test --coverage` → **1228 passed** (baseline 1220 + 8 new: 2 `AccuracyDowngradeReason` + 6 `activeDowngradeReasons` incl. the side-effect-free default-wired proof). Coverage gate (`dart run tool/coverage_gate.dart main`) → **100% on the 2 touched `lib/capture` files** (`capture_accuracy.dart`, `capture_controller.dart`). Acceptance `flutter test integration_test -d <iPhone 17 sim>` under `coord.sh with-lock` → **197 passed, exit 0** (bs-02 capture ACs green; teardown flake did not recur).
+  - **Fix passes:** 0/3 (analyze + unit + coverage + acceptance all green first pass).
+  - **Tokens / Time:** see Dashboard / master ledger (QUALITY-1 row).
+- **Checkpoint / Handoff:**
+  - **Verification commands:** `cd /Users/matthew.quirk/Nuance-bs12`; `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; acceptance via `FNP_COORD_REPO=/Users/matthew.quirk/Nuance coord.sh with-lock bs-12 <PHASE> --wait N -- bash -c 'cd …/Nuance-bs12 && flutter test integration_test -d <booted-udid>'` (shared device lane → lock mandatory; booted `-d` mandatory; run ~8m — redirect to a file, don't tail foreground).
+  - **Frozen for ITEST-1 / QUALITY-2..5:**
+    - `synthetic_accuracy_set.dart`: `AccuracyCondition`, `SyntheticAccuracySample`, `SyntheticGamutTarget`, `syntheticAccuracySet`, `syntheticGamutTargets`.
+    - `accuracy_harness.dart`: `AccuracyGrade`, `AccuracyHarness` (`deltaE`/`grade`/`gradeAll`).
+    - `perf_harness.dart`: `kCaptureSettleCiBudget`, `kRecipeSearchCiBudget`, `kMinTopCandidates`, `kMaxTopCandidates`, `isTopCandidateCount`, `PerfProbe`, `PerfHarness.measure`.
+    - `lib/capture`: `AccuracyDowngradeReason` + `CaptureController.activeDowngradeReasons`.
+  - **Known gaps / next:** **ITEST-1 is now unblocked** (both GUARD-2 and QUALITY-1 done) — it builds `nfr_harness.dart`/`nfr_test.dart` and the never-pending smoke test over the GUARD + QUALITY stubs. QUALITY-2 (the AC-9 trigger that consumes `activeDowngradeReasons` at commit + surfaces the reason in the live view) and QUALITY-3/4/5 stay blocked on G-2 (decided at ITEST-4). `AccuracyHarness` imports the whole `comparison_harness.dart` via `show referenceDeltaE00` — if a later name clash appears, extract the reference into its own file.
 
 ## Phase QUALITY-2 — AC-9 reliability downgrade fix
 
