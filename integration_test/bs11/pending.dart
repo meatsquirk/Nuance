@@ -68,7 +68,7 @@ const Map<String, String> pendingACs = {
   'AC-2': 'A11Y-5',
   'AC-3': 'A11Y-4',
   'AC-4': 'A11Y-3',
-  'AC-5': 'A11Y-2',
+  // AC-5 (AA contrast floor) un-pended by A11Y-2.
   'AC-6': 'A11Y-6',
   'AC-7': 'GATE-2',
   'AC-8': 'A11Y-7',

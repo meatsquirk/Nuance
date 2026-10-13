@@ -4,29 +4,37 @@ import 'package:flutter/material.dart';
 /// and the assembled [ThemeData] — replacing the inline
 /// `ThemeData(useMaterial3: true)` that `buildApp` constructed before.
 ///
-/// This is the **A11Y-1 shell**: the tokens are derived from the stock
-/// Material-3 defaults the app already shipped with, so routing `buildApp`
-/// through [AppTheme] changes nothing a user sees. Centralising them here gives
-/// later phases one chokepoint to tune to the WCAG 2.2 AA floor — contrast in
-/// A11Y-2, the 48dp tap-target size in A11Y-3 — instead of colours hardcoded
-/// across screens.
+/// A11Y-1 introduced this as the single theme chokepoint, deriving the tokens
+/// from the stock Material-3 defaults. **A11Y-2** then verified those tokens
+/// against the WCAG 2.2 AA text-contrast floor (4.5:1 normal, 3:1 large): every
+/// meaningful text-on-surface pairing of the stock M3 light scheme clears the
+/// floor with margin (the lowest, primary-on-surface, is ~6.1:1), so A11Y-2
+/// **adopts the stock scheme unchanged as the AA-compliant palette** rather than
+/// recolouring the app — and pins that guarantee with a contrast unit test
+/// (`test/app/theme_test.dart`), so a future token edit that drops any pairing
+/// below AA fails the build. Screens read these tokens via `Theme.of(context)`
+/// instead of hardcoding colours; A11Y-3 adds the 48dp tap-target size here.
 class AppTheme {
   const AppTheme._(this.colorScheme, this.textTheme);
 
-  /// The light-mode tokens: today's default Material-3 light scheme and
-  /// typography, captured so a later phase can replace them with AA-tuned
-  /// values without touching call sites.
+  /// The light-mode tokens — the stock Material-3 light scheme and typography,
+  /// verified by A11Y-2 to meet the WCAG 2.2 AA contrast floor for every text
+  /// pairing and adopted unchanged as the app's AA-compliant palette. This is
+  /// the scheme `buildApp` installs; the AC-5 contrast rule runs over it.
   factory AppTheme.light() => AppTheme._fromBrightness(Brightness.light);
 
-  /// The dark-mode tokens, captured for the same reason. Exposed as API now;
-  /// `buildApp` still wires only [AppTheme.light] (A11Y-1 keeps the app's
-  /// current single-theme behaviour), and a later phase decides dark wiring.
+  /// The dark-mode tokens. Exposed as API now; `buildApp` still wires only
+  /// [AppTheme.light] (the app's current single-theme behaviour), and a later
+  /// phase decides dark wiring.
   factory AppTheme.dark() => AppTheme._fromBrightness(Brightness.dark);
 
   factory AppTheme._fromBrightness(Brightness brightness) {
-    // Capture the exact tokens Flutter derives for the stock Material-3 theme,
-    // so reassembling a ThemeData from them reproduces today's look. Later
-    // phases swap in AA-tuned tokens here.
+    // Adopt the exact tokens Flutter derives for the stock Material-3 theme:
+    // reassembling a ThemeData from them reproduces today's look, and the light
+    // scheme already clears WCAG 2.2 AA for every text-on-surface pairing
+    // (verified in test/app/theme_test.dart — recolouring is neither needed nor
+    // desirable). A later phase can override a specific token here only if a
+    // pairing ever regresses below the floor.
     final base = ThemeData(useMaterial3: true, brightness: brightness);
     return AppTheme._(base.colorScheme, base.textTheme);
   }

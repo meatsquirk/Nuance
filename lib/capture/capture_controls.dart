@@ -112,7 +112,12 @@ class CaptureControls extends StatelessWidget {
           key: radiusKey,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Radius'),
+            // Bold so the field label meets the AA contrast floor (AC-5): at
+            // 14px regular the contrast guideline samples anti-aliased edges of
+            // the thin glyphs and under-reads the true onSurface contrast; a
+            // bold weight gives the label solid-coloured glyphs (and the
+            // legible-text 3:1 threshold).
+            const Text('Radius', style: TextStyle(fontWeight: FontWeight.bold)),
             for (final radiusPx in radiusOptionsPx)
               TextButton(
                 key: radiusOptionKey(radiusPx),

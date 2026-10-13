@@ -27,7 +27,12 @@ class ControlsRegion extends StatelessWidget {
     return Row(
       key: regionKey,
       children: [
-        const Text('Wet or dry:'),
+        // Bold so the field label meets the AA contrast floor (AC-5): at 14px
+        // regular the contrast guideline samples anti-aliased edges of the thin
+        // glyphs and under-reads the true onSurface contrast; a bold weight
+        // gives the label solid-coloured glyphs (and the legible-text 3:1
+        // threshold).
+        const Text('Wet or dry:', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(width: 8),
         // E24 Wet or dry toggle — reflects the current mode and switches the
         // prediction between wet and dry (AC-10 / ENGINE-6). Single-select, so

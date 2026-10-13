@@ -36,19 +36,22 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('bs-11 pending gate (scaffold guard)', () {
-    test('pending map is exactly the 10 automated ACs (shrinks as they land)',
+    test('pending map holds exactly the still-pending automated ACs (shrinks as they land)',
         () {
       // Seeded with the 10 automated ACs in CONF-1; each behaviour phase
       // deletes its AC's row in `bs11/pending.dart` as it un-pends it, so this
-      // set shrinks by one per delivered AC. Nothing is un-pended yet at
-      // ITEST-1. AC-10 and AC-12 are pure-manual gates (D-2) and never enter the
-      // gate, so the automated set is AC-1..AC-9 plus AC-11.
+      // set shrinks by one per delivered AC. **A11Y-2 un-pended AC-5** (AA
+      // contrast), so the still-pending set is now the other nine. AC-10 and
+      // AC-12 are pure-manual gates (D-2) and never enter the gate.
       const expected = {
-        'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5',
+        'AC-1', 'AC-2', 'AC-3', 'AC-4',
         'AC-6', 'AC-7', 'AC-8', 'AC-9', 'AC-11',
       };
       expect(pendingACs.keys.toSet(), expected);
-      expect(pendingACs, hasLength(10));
+      expect(pendingACs, hasLength(9));
+      // AC-5 is delivered — it must no longer be pending.
+      expect(pendingACs.containsKey('AC-5'), isFalse,
+          reason: 'AC-5 was un-pended by A11Y-2');
     });
 
     test('the two manual ACs are absent from the automated gate (D-2)', () {

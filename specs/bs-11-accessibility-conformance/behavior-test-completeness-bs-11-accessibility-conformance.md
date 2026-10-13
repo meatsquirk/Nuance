@@ -110,3 +110,40 @@ include) does not reach a G1 failure: the discriminating Givens (every swept
 screen + the control subtree) are all checked and the baseline is honest-red, not
 a vacuous pass. It is recorded as an optional symmetry improvement, not a required
 fix.
+
+## A11Y-2 — AC-5 re-grade (behaviour: AC-5 un-pended, contrast rule real)
+
+Independent, adversarial re-grade of **AC-5** (`'text meets the WCAG 2.2 AA
+contrast floor'`) now that A11Y-2 has made its rule real and un-pended it. The
+aggregate `runConformanceCheck` no longer returns `ConformanceResult.empty`: it
+composes `checkContrastAA` (`integration_test/conformance/checks/contrast.dart`),
+which delegates to Flutter's own `textContrastGuideline` pinned to the WCAG 2.2 AA
+ratios (`kMinimumRatioNormalText` 4.5 / `kMinimumRatioLargeText` 3.0, D-5) and
+reports a `ConformanceRuleOutcome`. AC-5 is removed from `bs11/pending.dart`
+(the scaffold-guard test now expects the other nine and asserts
+`!containsKey('AC-5')`), so the test runs — and passes — in the default on-device
+run. Only the AC-5 row is graded here; ITEST-1/2/3 rows above are not re-graded.
+The grader ran nothing and edited nothing but this file.
+
+Working-tree phase (uncommitted) atop **ITEST-4 / G-2** on
+`feat/bs-11-accessibility-conformance` (worktree `/Users/matthew.quirk/Nuance-bs11`).
+Verified: the A11Y-2 working-tree diff to `accessibility_test.dart` touches **only**
+the pending-gate guard test at the top of the file — the AC-5 `acTestWidgets` body
+(lines ~328–368) is **byte-for-byte identical** to the ITEST-2 version graded A, so
+un-pending weakened no assertion. `conformance_check.dart` now wires in the real
+`checkContrastAA`; `contrast.dart` is new this phase.
+
+| AC | Test | Grade | Justification against G1–G6 |
+|---|---|---|---|
+| **AC-5** | `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = real `checkContrastAA` over `textContrastGuideline` at the AA floor | **A** | **G1** every Given checked through the public surface before the When — each swept screen's home finder `findsOneWidget`, the control's keyed subtree `findsOneWidget`; the reference and sweep theme-source Givens read `tester.element(finder)`, which itself fails unless the finder resolves to exactly one element (so the reference leg is not vacuous despite having no separate `findsOneWidget`). **G2 (decisive, satisfied):** the configured Given is the one that answers — on **every** swept screen and on the reference the test asserts `Theme.of(element).colorScheme == AppTheme.light().colorScheme`, so the contrast under test comes from the **shipped** `AppTheme.light().colorScheme`, not a test-injected `ThemeData`; `ColorScheme` has content `==`, so a screen wired to a default/ad-hoc theme would fail this Given. **G3** N/A — a structural contrast check has no negative-after-settle Then (noted). **G4** asserts the exact `ConformanceRuleId.contrastAA` outcome, at step grain, on **every** real screen (loop over all six `realScreens`, whose size/identity ITEST-1's fixture guard pins) and on the reference, and the control's `failing` **contains** `contrastAA`. **G5** genuine discriminator against the **real** rule: passes on the AA `compliantReference` and all six real screens, and **fails on `control_lowContrast`** (~1.6:1 grey `0xFFBDBDBD` on white, below 4.5:1) — `failing` is the set of ids whose outcome `pass == false`, and the real `checkContrastAA` returns a failing outcome for that control, so a rule that never flagged low contrast (an always-pass stub) would leave `failing` empty and fail this leg. **G6** exactly one AC (only `contrastAA`). **Specifically verified:** (a) the sweep still asserts `outcomeFor(contrastAA)?.pass` **isTrue** (line 346), not merely non-null — no weakening vs the real rule; (b) `failing contains contrastAA` genuinely discriminates because the real rule marks the control as failing; (c) un-pending changed none of the AC-5 assertions (identical body to ITEST-2). Deterministic (`buildApp` launchers + `pumpAndSettle`, no fixed sleeps); comments now match the real rule (the former "fails at red baseline" note is gone from the active assertions' behaviour). |
+
+### A11Y-2 re-grade verdict
+
+**AC-5: A — PASS.** AC-5 holds its prior A now that A11Y-2 has made the rule real
+and un-pended the test. The decisive contrast rule **G2** is satisfied — contrast
+is pinned to the shipped `AppTheme.light().colorScheme` on every swept screen and
+the reference, not a test-tuned theme — and the real `checkContrastAA`
+(`textContrastGuideline` at the AA floor) makes the sweep a true positive sweep
+(`.pass isTrue`, not non-null) and the `control_lowContrast` leg a true
+discriminator (`failing` contains `contrastAA` because the rule genuinely flags
+sub-4.5:1 text). G1/G4/G6 met, G3 N/A. No downgrade; no fix required.

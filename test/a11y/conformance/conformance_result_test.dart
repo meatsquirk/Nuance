@@ -7,6 +7,11 @@ ConformanceResult _allPass() => ConformanceResult({
   for (final id in ConformanceRuleId.values) id: const ConformanceRuleOutcome.ok(),
 });
 
+/// Builds a [ConformanceRuleOutcome] at runtime (parameters are not
+/// compile-time constants), so the default constructor registers line coverage.
+ConformanceRuleOutcome _runtimeOutcome(bool pass, String detail) =>
+    ConformanceRuleOutcome(pass: pass, detail: detail);
+
 void main() {
   group('ConformanceRuleOutcome', () {
     test('ok() is a passing outcome with empty detail', () {
@@ -25,6 +30,26 @@ void main() {
       const o = ConformanceRuleOutcome(pass: true);
       expect(o.pass, isTrue);
       expect(o.detail, isEmpty);
+    });
+
+    test('const constructors are invocable at runtime', () {
+      // The three constructors are const, so the tests above invoke them only
+      // in const contexts — folded at compile time, they never register line
+      // coverage (the coverage artifact earlier phases carried as a re-run
+      // flake). Exercise each once at runtime (non-const args / an explicit
+      // runtime call) so the lines are genuinely covered. A11Y-2 closes this.
+      final def = _runtimeOutcome(true, 'x'); // default ctor, runtime args
+      final fail =
+          ConformanceRuleOutcome.fail(def.detail); // .fail with a runtime arg
+      // .ok() takes no args, so it is always const-eligible; call it at runtime
+      // explicitly for coverage.
+      // ignore: prefer_const_constructors
+      final ok = ConformanceRuleOutcome.ok();
+      expect(def, const ConformanceRuleOutcome(pass: true, detail: 'x'));
+      expect(fail.pass, isFalse);
+      expect(fail.detail, 'x');
+      expect(ok.pass, isTrue);
+      expect(ok.detail, isEmpty);
     });
 
     test('value equality by pass + detail', () {
