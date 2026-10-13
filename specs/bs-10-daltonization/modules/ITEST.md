@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-3 packet assembled; ⏸ G-2 awaiting human decision before any behaviour phase
+**Status:** ✅ Done — ITEST-1/2/3 complete; **G-2 approved 2026-10-13 by Matt Quirk** (behaviour un-blocked)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/daltonization_harness.dart`, `integration_test/daltonization_test.dart`,
 `integration_test/bs10/pending.dart` (seeded in DALT-1), reuse of `integration_test/fakes/fake_speech.dart`,
@@ -13,7 +13,7 @@
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 5.74M | 27m 19s |
 | ITEST-2 | acceptance-tests | AC-1..10 (pending) | ✅ Done | 12.25M | 34m 01s |
-| ITEST-3 | test-review | — (G-2) | ⏸ Awaiting review | 1.91M | 4m 02s |
+| ITEST-3 | test-review | — (G-2) | ✅ Done | 1.91M | 4m 02s |
 
 ## Interface reconciliation
 
@@ -197,9 +197,11 @@
   fresh review.
 - **Exit criteria:** a human records the G-2 decision.
 
-### Review packet — ITEST-3 (G-2)  <!-- assembled 2026-10-13; awaiting human decision -->
+### Review packet — ITEST-3 (G-2)  <!-- assembled 2026-10-13; G-2 APPROVED 2026-10-13 by Matt Quirk -->
 
-**Status: ⏸ Awaiting review.** This packet puts the bs-10 daltonization acceptance suite in front of a human
+**Status: ✅ G-2 approved (2026-10-13 17:59 EDT, Matt Quirk)** — the 10-AC suite is the frozen contract;
+the `referenceDaltonize`/`colorNear` grading coupling is ratified. Behaviour (DALT-3..11, CONTROL-2) un-blocked.
+This packet puts the bs-10 daltonization acceptance suite in front of a human
 before any behaviour is coded (the cheapest point to catch a test that checks the wrong thing). On
 **approved**, G-2 resolves and the ten pending tests become the contract DALT-3..11 + CONTROL-2 un-pend
 against; on **changes requested**, each item becomes an ITEST change phase before behaviour, then a fresh
@@ -298,8 +300,8 @@ coupling the reviewer must confirm: the shipped `daltonize` (DALT-3) must share 
 error-redistribution design to agree within `colorNear`. This is the single judgement G-2 most needs to
 ratify; everything else is mechanical.
 
-**Decision gate:** **G-2 — ⏸ awaiting human decision.** It gates every behaviour phase (DALT-3..11, CONTROL-2).
-Record with: `/feature-next-phase --gate bs10 G-2 approved | "<changes>"`.
+**Decision gate:** **G-2 — ✅ Resolved 2026-10-13 17:59 EDT: approved — Matt Quirk.** The 10-AC suite is the
+frozen contract; the grading coupling is ratified. Behaviour phases (DALT-3..11, CONTROL-2) are un-blocked.
 
 ### Result — ITEST-3  <!-- 2026-10-13 -->
 
@@ -312,7 +314,8 @@ Record with: `/feature-next-phase --gate bs10 G-2 approved | "<changes>"`.
   CONTROL-2) until recorded.
 - Gates: none run (test-review assembles, it does not verify). Fix passes: n/a.
 - Tokens/time: see dashboard row / ledger.
-- Closed by: a human records G-2 (`/feature-next-phase --gate bs10 G-2 approved | "<changes>"`).
+- **Closed: G-2 approved 2026-10-13 17:59 EDT by Matt Quirk** (SIGNOFF-DECISION this session). The 10-AC
+  suite is the frozen contract; the grading coupling is ratified. ITEST-3 done; DALT-3..11 + CONTROL-2 un-blocked.
 
 ## Red baseline  <!-- filled by ITEST-2 (run-pending) -->
 
