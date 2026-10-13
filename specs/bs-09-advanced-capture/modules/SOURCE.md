@@ -1,6 +1,6 @@
 # Module SOURCE — CaptureSource extensions (torch, colour space, RAW, normalization)
 
-**Status:** In progress — SOURCE-1, SOURCE-2, SOURCE-3 done (AC-6 ✅, AC-8 ✅, AC-7 ✅); next SOURCE-4 (AC-9/10) — the last SOURCE phase before sign-off
+**Status:** ✅ Complete — SOURCE-1..SOURCE-4 done (AC-6 ✅, AC-8 ✅, AC-7 ✅, AC-9 ✅, AC-10 ✅); all SOURCE ACs delivered, no phase left before sign-off
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/capture_source.dart`, `lib/capture/source/frame.dart`,
 `lib/capture/source/software_capture_source.dart`, `lib/capture/source/sampling.dart`,
@@ -14,7 +14,7 @@
 | SOURCE-1 | shell | — | ✅ Done | 5,166,894 | 15m 59s |
 | SOURCE-2 | behavior | AC-6, AC-8 | ✅ Done | 14,008,491 | 2h 43m |
 | SOURCE-3 | behavior | AC-7 | ✅ Done | 5,375,373 | 13m 59s |
-| SOURCE-4 | behavior | AC-9, AC-10 | ⬜ Todo | | |
+| SOURCE-4 | behavior | AC-9, AC-10 | ✅ Done | 8,366,552 | 21m 12s |
 
 ## Interface reconciliation
 
@@ -254,3 +254,62 @@ None specific to SOURCE. G-2 (test review) blocks SOURCE-2/3/4 as behavior phase
   sqlite3/objective_c cache is already seeded (SOURCE-2). macOS has no `timeout`; redirect long runs to a file.
 - **Known gaps:** platform raw offset is not yet removed by normalization (SOURCE-4 owns AC-9/AC-10). After
   SOURCE-4 the behaviour stage is complete → SIGNOFF-1.
+
+### Result — SOURCE-4  <!-- 2026-10-12 -->
+
+- **Normalized + tagged capture contract, platform-agnostic (AC-9, AC-10).** The committed sample is now
+  normalized against the reference card **whenever one is in view**, not only after the painter taps
+  calibrate: `CaptureController.commit()`'s coordinate branch changed from
+  `_state.accuracy == CaptureAccuracy.calibrated ? normaliseAgainstCard(mean) : mean` to
+  `source.referenceCardPresent ? normaliseAgainstCard(mean) : mean`. So a card-present capture returns
+  canonical CIELAB independent of the platform's pre-normalization raw offset, and the `colorSpace` tag
+  (threaded by CAPTURE-2 / SOURCE-2, always non-null) makes the sample tagged — the AC-9 contract. The two
+  platform fixtures (`SCENE_ANDROID` +10 / `SCENE_IOS` −8, injected by `FakeCaptureSource.frames`) then land
+  on the identical ground-truth CIELAB + identical `srgb` tag — the AC-10 platform-agnostic guarantee.
+- **Decoupling is forced, not a hack:** AC-9/AC-10 commit **without** `whenCalibrate`, so the normalized
+  coordinates cannot be gated on the calibrate tap; bs-02's SCENE_CARD must keep its tier **opt-in** (AC-6
+  control / AC-8 rely on approximate-before-calibrate). The two requirements force coordinate-normalization
+  (card-present) and the accuracy-tier upgrade (explicit calibrate) apart. `calibrate()` early-returns
+  without a card, so `accuracy == calibrated` was always a strict subset of `referenceCardPresent` — the new
+  condition strictly widens the old one and the stated tier (`_state.accuracy`) is untouched.
+- **One-line product change** in `capture_controller.dart` (the normalize condition + its comment). No new
+  types/signatures; `normaliseAgainstCard` (returns ground truth) and the SOURCE-1 `rawColorShift` fixture
+  knob were already in place. bs-02 unaffected: every SCENE_CARD commit in `capture_test.dart` is preceded by
+  `whenCalibrate()`, and the line-161 unit guard checks raw frame sampling, not a committed sample.
+- **Gates:** `flutter analyze` clean. Unit `flutter test --coverage` → **918 passed** (+1 new: a card-present
+  commit **without** calibrate normalizes the colour while the tier stays approximate — covers the new
+  `referenceCardPresent` true branch; the false branch is covered by the existing no-card commit tests).
+  Coverage gate `dart run tool/coverage_gate.dart main` → **100%** on the touched lib file
+  (`capture_controller.dart`) and all 13 branch-vs-main files. Acceptance (default, under the device lock on
+  iPhone 17 sim): bs-09 `advanced_capture_test.dart` **21 passed / 0 pending** — AC-9 `NormalizedTaggedSample`
+  and AC-10 `PlatformAgnosticSample` un-pended + green, **pending gate now empty (all 10 ACs delivered)**; the
+  bs-02 regression check `capture_test.dart` **all green** (shared commit path, no regression). Baseline
+  before the fix (run-pending): AC-9 ΔE 4.07 off truth, AC-10 ΔE 7.42 apart — the designed red baseline.
+  Grades: fresh adversarial subagent graded the newly un-pended AC-9 + AC-10 tests and the modified scaffold
+  guard — **3 A / 0 below A**; whole-suite running total **24 A / 0 below A** (the AC tests were authored in
+  ITEST-3, so no new artifact rows). No row needs fixing.
+- **Augmentations:** none (the ITEST packet scheduled none for AC-9/AC-10; AC-9's `rawColorShift != 0` Given
+  and AC-10's differing-raw Given are in-fixture/in-test controls that discriminate as soon as SOURCE-4
+  landed). SOURCE-4 strengthens no already-green AC test (the normalize condition is read only by the
+  platform/card commit path).
+- Fix passes: 0/3 (all gates green on first run).
+
+### Checkpoint / Handoff — SOURCE-4
+
+- **Behaviour stage COMPLETE.** All 10 bs-09 ACs are un-pended and grade A; `integration_test/bs09/pending.dart`
+  `pendingACs` is now empty (`{}`), and the `unpended` set in `advanced_capture_test.dart` is `{AC-1..AC-10}`.
+  The only remaining phase is **SIGNOFF-1** (sign-off packet + summary page + human approval).
+- **Frozen contract:** `CaptureController.commit()` normalizes a committed reading against the reference card
+  whenever `source.referenceCardPresent`; the stated accuracy tier remains the painter's explicit
+  `calibrate()`. A card-less capture commits the raw area-average; a card-present capture commits canonical
+  CIELAB. `source.colorSpace` (non-null) tags every committed sample. The platform raw offset is a fixture
+  knob (`SceneSpec.rawColorShift`, injected by `FakeCaptureSource.frames`) that the card normalization cancels.
+- **Verification commands:** `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart
+  main` (host). Acceptance under the lock: `coord.sh with-lock bs-09-advanced-capture <PHASE> --wait 900 -- bash
+  -c 'cd /Users/matthew.quirk/Nuance-bs09 && export PATH=/Users/matthew.quirk/development/flutter/bin:$PATH &&
+  flutter test integration_test/advanced_capture_test.dart -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685'` (add
+  `--dart-define=BS09_RUN_PENDING=true` for run-pending; it now runs nothing extra since the pending map is
+  empty). macOS has no `timeout`; redirect long runs to a file.
+- **Known gaps:** none in SOURCE. SIGNOFF-1 should run the full suite (unit + bs-09 acceptance default +
+  run-pending + a fresh independent whole-suite grade) and assemble the packet; `feat/bs-09` merges to `main`
+  at sign-off.

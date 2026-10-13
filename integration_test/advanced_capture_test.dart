@@ -63,7 +63,10 @@ void main() {
     // narrower fallback + tag); SCREEN-3 un-pended AC-4 (each shown reading keeps
     // its own position + value); CAPTURE-5 un-pended AC-5 (send a pair of marked
     // readings to a side-by-side comparison); SOURCE-3 un-pended AC-7 (RAW
-    // capture in the widest space on a RAW-capable device). This set grows one
+    // capture in the widest space on a RAW-capable device); SOURCE-4 un-pended
+    // AC-9 and AC-10 (the committed sample is normalised against the reference
+    // card as the capture contract — canonical CIELAB, non-null colour-space
+    // tag — so the two platform configs land identically). This set grows one
     // behaviour phase at a time as each deletes its row in `bs09/pending.dart`;
     // the pending map must stay the exact complement of it across all 10 ACs.
     const unpended = <String>{
@@ -75,6 +78,8 @@ void main() {
       'AC-6',
       'AC-7',
       'AC-8',
+      'AC-9',
+      'AC-10',
     };
 
     test('pending map is the exact complement of the un-pended ACs across all '

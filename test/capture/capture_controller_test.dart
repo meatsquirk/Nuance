@@ -673,6 +673,33 @@ void main() {
               'ground truth, exactly as the live reading was');
     });
 
+    test('committing with a card present normalises the colour even without '
+        'calibrate, while the tier stays approximate (bs-09 SOURCE-4, '
+        'AC-9/AC-10 contract)', () async {
+      // The capture contract returns a normalised sample whenever a reference
+      // card is in view — the platform-agnostic guarantee does not depend on the
+      // painter tapping calibrate. The stated accuracy tier remains the opt-in
+      // calibrate action's, so a no-calibrate commit is normalised yet still
+      // approximate.
+      final source = cardSource();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      final raw = controller.state.currentSample;
+      expect(raw!.coordinates, isNot(groundTruth),
+          reason: 'the raw card reading starts off ground truth');
+
+      controller.commit(); // no calibrate() first
+
+      final committed = controller.state.lastCommittedSample;
+      expect(committed, isNotNull);
+      expect(committed!.coordinates, groundTruth,
+          reason: 'the committed reading is normalised against the card toward '
+              'ground truth — the capture contract, not the calibrate tap');
+      expect(committed.accuracy, CaptureAccuracy.approximate,
+          reason: 'without an explicit calibrate the stated tier is unchanged');
+    });
+
     test('calibrating with no card in view is a no-op', () async {
       // _source() has no reference card: nothing to normalise against.
       final controller = CaptureController(source: _source());

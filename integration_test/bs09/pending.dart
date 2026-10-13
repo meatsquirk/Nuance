@@ -63,8 +63,10 @@ const Map<String, String> pendingACs = {
   // fallback + the tag threaded onto Sample.colorSpace).
   // AC-7 un-pended by SOURCE-3 (RAW capture in the widest space on a
   // RAW-capable device).
-  'AC-9': 'SOURCE-4',
-  'AC-10': 'SOURCE-4',
+  // AC-9 and AC-10 un-pended by SOURCE-4 (the committed sample is normalised
+  // against the reference card as the capture contract — canonical CIELAB,
+  // non-null colour-space tag — so the Android/iOS platform configs land on the
+  // identical sample regardless of their pre-normalization raw offset).
 };
 
 /// The behaviour phases allowed to own a pending AC.

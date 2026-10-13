@@ -368,7 +368,16 @@ class CaptureController extends ChangeNotifier {
         averaged.height ~/ 2,
         radiusPx: _state.radiusPx,
       );
-      coordinates = _state.accuracy == CaptureAccuracy.calibrated
+      // bs-09 SOURCE-4: the capture contract normalises a committed reading
+      // against the reference card whenever one is in view, so the sample is
+      // canonical CIELAB independent of the platform's raw pipeline offset
+      // (AC-9, AC-10) — not only after the painter taps calibrate. The explicit
+      // calibrate still upgrades the stated accuracy tier (AC-8, carried by
+      // `_state.accuracy` below); without a card there is nothing to normalise
+      // against and the raw reading stands. `calibrate()` only reaches the
+      // calibrated tier with a card present, so this is a strict superset of the
+      // old `accuracy == calibrated` condition.
+      coordinates = source.referenceCardPresent
           ? source.normaliseAgainstCard(mean)
           : mean;
       framesAveraged = _recentFrames.length;
