@@ -218,6 +218,121 @@ class CaptureController extends ChangeNotifier {
   void toggleValueOnly() =>
       emit(_state.copyWith(valueOnly: !_state.valueOnly));
 
+  /// The colour-temperature warning raised while the torch lights the scene
+  /// (AC-1): the LED's light has its own colour temperature, so a reading taken
+  /// under it is biased away from how the colour looks in ambient light. Shown
+  /// as the banner (SCREEN-2) until the painter acknowledges it, and the reason
+  /// the committed reading is flagged [Sample.litByTorch] (AC-2).
+  static const String torchColorTemperatureWarning =
+      'Torch on — its colour temperature biases the measured colour.';
+
+  /// Lights the camera torch and raises the colour-temperature warning (bs-09
+  /// AC-1, AC-2).
+  ///
+  /// Turns the torch on at the [source] (the LED floods the scene so a reading
+  /// can be taken in the dark), records [CaptureState.torchOn], and raises the
+  /// [torchColorTemperatureWarning] so the painter is told the torch biases the
+  /// reading. From here a [commit] stamps [Sample.litByTorch] true.
+  void turnTorchOn() {
+    source.turnTorchOn();
+    emit(_state.copyWith(
+      torchOn: true,
+      torchWarning: torchColorTemperatureWarning,
+    ));
+  }
+
+  /// Extinguishes the torch and clears the warning (bs-09 AC-1, AC-2).
+  ///
+  /// Turns the torch off at the [source], clears [CaptureState.torchOn] and
+  /// drops the warning banner — the reading is back under ambient light, so a
+  /// later [commit] is not torch-lit. [clearTorchWarning] is needed because the
+  /// state's set-forward merge cannot otherwise return the warning to null.
+  void turnTorchOff() {
+    source.turnTorchOff();
+    emit(_state.copyWith(torchOn: false, clearTorchWarning: true));
+  }
+
+  /// Dismisses the torch colour-temperature warning while leaving the torch lit
+  /// (bs-09 AC-1).
+  ///
+  /// A purely visual acknowledgement: it hides the banner but keeps
+  /// [CaptureState.torchOn] true, so a reading committed afterward is still
+  /// flagged [Sample.litByTorch] (AC-2).
+  void acknowledgeTorchWarning() =>
+      emit(_state.copyWith(clearTorchWarning: true));
+
+  /// Marks the point ([x], [y]) on the live frame for multi-point sampling
+  /// (bs-09 AC-3).
+  ///
+  /// Appends a [MarkedPoint] to [CaptureState.markedPoints]; the painter can
+  /// mark several before sampling them together with [sampleMarkedPoints]. The
+  /// mark records only the position — the colour is read later, off the frame
+  /// current when the painter samples.
+  void markPoint(int x, int y) => emit(_state.copyWith(
+        markedPoints: [..._state.markedPoints, MarkedPoint(x, y)],
+      ));
+
+  /// Clears every marked point (bs-09 AC-3): empties
+  /// [CaptureState.markedPoints] so the painter can start a fresh set.
+  void clearMarkedPoints() =>
+      emit(_state.copyWith(markedPoints: const <MarkedPoint>[]));
+
+  /// Samples the current frame at every marked point at once, producing one
+  /// [MultiPointReading] per point (bs-09 AC-3).
+  ///
+  /// Each marked point is area-averaged on the most recent live frame at the
+  /// current [CaptureState.radiusPx] — the same area-average a single reading
+  /// uses — so every point gets its own colour rather than one reading averaged
+  /// across them all. The readings keep their marked positions so the screen can
+  /// show each point with its own value (AC-4) and any two can be sent to a
+  /// comparison (AC-5). A no-op before any frame has arrived (nothing to sample).
+  void sampleMarkedPoints() {
+    if (_recentFrames.isEmpty) return;
+    final frame = _recentFrames.last;
+    emit(_state.copyWith(
+      markedReadings: [
+        for (final point in _state.markedPoints)
+          MultiPointReading(
+            position: point,
+            coordinates: sampleAreaAverage(
+              frame,
+              point.x,
+              point.y,
+              radiusPx: _state.radiusPx,
+            ),
+          ),
+      ],
+    ));
+  }
+
+  /// Sends the readings at marked points [i] and [j] to a side-by-side
+  /// comparison, opening it with both slots filled at once (bs-09 AC-5).
+  ///
+  /// Builds a measured [Sample] from each chosen [MultiPointReading] — carrying
+  /// its sampled colour and the reading's stated [CaptureState.accuracy] — and
+  /// publishes the pair as [CaptureState.pairToCompare] with [i] in slot A and
+  /// [j] in slot B. The Capture screen watches that field and opens the
+  /// comparison for it (the mirror of the commit → Readout handoff), so the two
+  /// marked readings arrive in the comparison together rather than being added
+  /// one at a time through the picker.
+  void sendPairToComparison(int i, int j) {
+    final readings = _state.markedReadings;
+    emit(_state.copyWith(
+      pairToCompare: ComparisonPair(
+        _sampleOf(readings[i]),
+        _sampleOf(readings[j]),
+      ),
+    ));
+  }
+
+  /// A measured [Sample] carrying [reading]'s sampled colour at the reading's
+  /// stated accuracy — the shape the comparison takes each slot in.
+  Sample _sampleOf(MultiPointReading reading) => Sample(
+        coordinates: reading.coordinates,
+        provenance: const Provenance(ProvenanceTier.measured),
+        accuracy: _state.accuracy,
+      );
+
   /// Commits the reading as [CaptureState.lastCommittedSample], stamped with the
   /// stated [CaptureState.accuracy] tier and marked [Sample.justCaptured] so the
   /// Readout confirms with a haptic as it lands (bs-01 AC-12).
@@ -253,7 +368,16 @@ class CaptureController extends ChangeNotifier {
         averaged.height ~/ 2,
         radiusPx: _state.radiusPx,
       );
-      coordinates = _state.accuracy == CaptureAccuracy.calibrated
+      // bs-09 SOURCE-4: the capture contract normalises a committed reading
+      // against the reference card whenever one is in view, so the sample is
+      // canonical CIELAB independent of the platform's raw pipeline offset
+      // (AC-9, AC-10) — not only after the painter taps calibrate. The explicit
+      // calibrate still upgrades the stated accuracy tier (AC-8, carried by
+      // `_state.accuracy` below); without a card there is nothing to normalise
+      // against and the raw reading stands. `calibrate()` only reaches the
+      // calibrated tier with a card present, so this is a strict superset of the
+      // old `accuracy == calibrated` condition.
+      coordinates = source.referenceCardPresent
           ? source.normaliseAgainstCard(mean)
           : mean;
       framesAveraged = _recentFrames.length;
@@ -264,6 +388,13 @@ class CaptureController extends ChangeNotifier {
         provenance: const Provenance(ProvenanceTier.measured),
         accuracy: _state.accuracy,
         justCaptured: true,
+        // bs-09 (CAPTURE-2): tag the committed reading with the gamut the source
+        // captured in, whether the torch lit it, and processed-vs-RAW. Until
+        // SOURCE-2/3 and CAPTURE-3 give these meaning they are the sRGB /
+        // processed / torch-off defaults, so bs-02 behaviour is unchanged.
+        colorSpace: source.colorSpace,
+        captureMode: source.captureMode,
+        litByTorch: _state.torchOn,
       ),
       framesAveraged: framesAveraged,
       lowLightWarning: source.lighting == Lighting.low,

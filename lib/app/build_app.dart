@@ -6,6 +6,7 @@ import '../a11y/haptics.dart';
 import '../a11y/speech.dart';
 import '../capture/capture_controller.dart';
 import '../capture/capture_read_endpoint.dart';
+import '../capture/capture_state.dart';
 import '../capture/capture_screen.dart';
 import '../capture/source/capture_source.dart';
 import '../color_science/color_science.dart';
@@ -428,6 +429,10 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
   /// handoff fires once per capture rather than on every later state change.
   Sample? _openedReadoutFor;
 
+  /// The pair the comparison has already been opened for, so the AC-5 pair
+  /// handoff fires once per send rather than on every later state change.
+  ComparisonPair? _openedComparisonFor;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -435,7 +440,8 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
     if (_controller == null) {
       final source = AppScope.of(context).captureSource!;
       _controller = CaptureController(source: source)
-        ..addListener(_openReadoutOnCommit);
+        ..addListener(_openReadoutOnCommit)
+        ..addListener(_openComparisonOnPair);
     }
   }
 
@@ -459,9 +465,26 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
         .push(AppScope.of(context).router.toReadout(committed));
   }
 
+  /// Opens the side-by-side comparison once the painter sends a pair of marked
+  /// readings to it (bs-09 AC-5).
+  ///
+  /// A send fills [CaptureController.state]'s `pairToCompare`; this pushes the
+  /// comparison with both slots filled from that pair, so the two readings
+  /// arrive together. Gated on the pair's identity so the push fires once per
+  /// send, not on every later state change (settling ticks, a warning dismiss)
+  /// — the mirror of [_openReadoutOnCommit].
+  void _openComparisonOnPair() {
+    final pair = _controller!.state.pairToCompare;
+    if (pair == null || identical(pair, _openedComparisonFor)) return;
+    _openedComparisonFor = pair;
+    Navigator.of(context)
+        .push(AppScope.of(context).router.toComparisonPair(pair.a, pair.b));
+  }
+
   @override
   void dispose() {
     _controller?.removeListener(_openReadoutOnCommit);
+    _controller?.removeListener(_openComparisonOnPair);
     _controller?.dispose();
     super.dispose();
   }

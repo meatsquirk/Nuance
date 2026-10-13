@@ -14,6 +14,14 @@ CaptureController _controller() => CaptureController(
       ),
     );
 
+/// The text shown inside the torch toggle (its state-driven label).
+String? _torchLabel(WidgetTester tester) => tester
+    .widget<Text>(find.descendant(
+      of: find.byKey(CaptureControls.torchKey),
+      matching: find.byType(Text),
+    ))
+    .data;
+
 Future<void> _pump(WidgetTester tester, CaptureController controller) =>
     tester.pumpWidget(
       MaterialApp(home: Scaffold(body: CaptureControls(controller: controller))),
@@ -210,5 +218,120 @@ void main() {
     expect(CaptureControls.captureKey, const ValueKey('capture-e20-capture'));
     expect(CaptureControls.valueOnlyKey,
         const ValueKey('capture-e21-value-only'));
+  });
+
+  // ---- bs-09 controls (SCREEN-1 shell: findable, wired to deferred stubs) ----
+
+  testWidgets('renders the bs-09 torch, sample-points and send-to-comparison '
+      'controls as findable buttons', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    for (final key in [
+      CaptureControls.torchKey,
+      CaptureControls.samplePointsKey,
+      CaptureControls.sendToComparisonKey,
+    ]) {
+      expect(find.byKey(key), findsOneWidget, reason: '$key missing');
+    }
+  });
+
+  testWidgets('the torch toggle reads "Torch" while off and lights it on a tap '
+      '(CAPTURE-3)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pumpListening(tester, controller);
+
+    // Off by default: the toggle reads "Torch".
+    expect(controller.state.torchOn, isFalse);
+    final button =
+        tester.widget<TextButton>(find.byKey(CaptureControls.torchKey));
+    expect(button.onPressed, isNotNull, reason: 'the torch toggle is wired');
+    expect(_torchLabel(tester), 'Torch');
+
+    // Tapping lights the torch (CAPTURE-3): the state flips, the warning is
+    // raised, and the label re-renders to the lit branch.
+    await tester.tap(find.byKey(CaptureControls.torchKey));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(controller.state.torchOn, isTrue);
+    expect(controller.state.torchWarning, isNotNull,
+        reason: 'lighting the torch raises the colour-temperature warning');
+    expect(_torchLabel(tester), '✓ Torch');
+  });
+
+  testWidgets('the torch toggle reads "✓ Torch" while lit and extinguishes it '
+      'on a tap (CAPTURE-3)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pumpListening(tester, controller);
+    // Light the torch so the lit branch renders (both label and onPressed flip).
+    controller.turnTorchOn();
+    await tester.pump();
+    expect(_torchLabel(tester), '✓ Torch');
+
+    // Tapping turns it off (CAPTURE-3): torch off, warning cleared, label back.
+    await tester.tap(find.byKey(CaptureControls.torchKey));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(controller.state.torchOn, isFalse);
+    expect(controller.state.torchWarning, isNull,
+        reason: 'extinguishing clears the colour-temperature warning');
+    expect(_torchLabel(tester), 'Torch');
+  });
+
+  testWidgets('"Sample points" drives the live sampleMarkedPoints '
+      '(AC-3, CAPTURE-4)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    final button =
+        tester.widget<TextButton>(find.byKey(CaptureControls.samplePointsKey));
+    expect(button.onPressed, isNotNull);
+
+    // Multi-point sampling is live as of CAPTURE-4: a tap reaches real
+    // behaviour and raises no deferred throw.
+    await tester.tap(find.byKey(CaptureControls.samplePointsKey));
+    await tester.pump();
+    expect(tester.takeException(), isNull,
+        reason: 'multi-point sampling is live — not a deferred throw');
+  });
+
+  testWidgets('"Send to comparison" drives the live sendPairToComparison '
+      '(AC-5, CAPTURE-5)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+    await tester.pumpAndSettle(); // the live feed buffers a frame to sample
+
+    // Two marked, sampled readings exist for the placeholder (0, 1) index pair
+    // the SCREEN-1 button carries.
+    controller
+      ..markPoint(2, 2)
+      ..markPoint(6, 6)
+      ..sampleMarkedPoints();
+
+    final button = tester
+        .widget<TextButton>(find.byKey(CaptureControls.sendToComparisonKey));
+    expect(button.onPressed, isNotNull);
+
+    // The send is live as of CAPTURE-5: a tap reaches real behaviour (no
+    // deferred throw) and publishes the pair for the screen to open.
+    await tester.tap(find.byKey(CaptureControls.sendToComparisonKey));
+    await tester.pump();
+    expect(tester.takeException(), isNull,
+        reason: 'send-to-comparison is live — not a deferred throw');
+    expect(controller.state.pairToCompare, isNotNull,
+        reason: 'the tap publishes the pair for the comparison handoff');
+  });
+
+  test('exposes stable keys for the bs-09 controls', () {
+    expect(CaptureControls.torchKey, const ValueKey('capture-torch'));
+    expect(CaptureControls.samplePointsKey,
+        const ValueKey('capture-sample-points'));
+    expect(CaptureControls.sendToComparisonKey,
+        const ValueKey('capture-send-to-comparison'));
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
+import 'package:paint_color_assistant/capture/source/frame.dart';
 
 void main() {
   test('stability target is 12 frames', () {
@@ -100,5 +101,30 @@ void main() {
 
   test('Lighting names both tiers', () {
     expect(Lighting.values, [Lighting.adequate, Lighting.low]);
+  });
+
+  group('CaptureColorSpace', () {
+    test('names the device-standard and wide-gamut spaces', () {
+      expect(
+        CaptureColorSpace.values,
+        [CaptureColorSpace.srgb, CaptureColorSpace.displayP3],
+      );
+    });
+
+    test('ofFrame maps each frame buffer space onto the capture space (D-2)',
+        () {
+      expect(
+        CaptureColorSpace.ofFrame(FrameColorSpace.srgb),
+        CaptureColorSpace.srgb,
+      );
+      expect(
+        CaptureColorSpace.ofFrame(FrameColorSpace.displayP3),
+        CaptureColorSpace.displayP3,
+      );
+    });
+  });
+
+  test('CaptureMode names the processed and RAW pipelines', () {
+    expect(CaptureMode.values, [CaptureMode.processed, CaptureMode.raw]);
   });
 }

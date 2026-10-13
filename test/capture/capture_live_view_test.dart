@@ -113,6 +113,54 @@ void main() {
     );
   });
 
+  // ---- bs-09: torch colour-temperature warning + marked points (SCREEN-1) ----
+
+  testWidgets('hides the torch warning when none is set', (tester) async {
+    await tester.pumpWidget(_host(const CaptureState()));
+
+    expect(find.byKey(CaptureLiveView.torchWarningKey), findsNothing);
+  });
+
+  testWidgets('shows the torch colour-temperature warning text when set (AC-1)',
+      (tester) async {
+    await tester.pumpWidget(_host(
+      const CaptureState(torchWarning: 'Torch (~5000 K) may bias the reading'),
+    ));
+
+    expect(find.byKey(CaptureLiveView.torchWarningKey), findsOneWidget);
+    final text =
+        tester.widget<Text>(find.byKey(CaptureLiveView.torchWarningKey));
+    expect(text.data, 'Torch (~5000 K) may bias the reading');
+  });
+
+  testWidgets('draws no marked points by default', (tester) async {
+    await tester.pumpWidget(_host(const CaptureState()));
+
+    expect(
+      find.byKey(CaptureLiveView.markedPointKey(const MarkedPoint(0, 0))),
+      findsNothing,
+    );
+  });
+
+  testWidgets('draws one marker per marked point at its frame position (AC-3)',
+      (tester) async {
+    const a = MarkedPoint(10, 20);
+    const b = MarkedPoint(30, 40);
+    await tester.pumpWidget(
+      _host(const CaptureState(markedPoints: [a, b])),
+    );
+
+    for (final point in [a, b]) {
+      final key = CaptureLiveView.markedPointKey(point);
+      expect(find.byKey(key), findsOneWidget, reason: '$point marker missing');
+      final positioned = tester.widget<Positioned>(
+        find.ancestor(of: find.byKey(key), matching: find.byType(Positioned)),
+      );
+      expect(positioned.left, point.x.toDouble());
+      expect(positioned.top, point.y.toDouble());
+    }
+  });
+
   test('exposes stable keys', () {
     expect(CaptureLiveView.liveViewKey, const ValueKey('capture-live-view'));
     expect(
@@ -130,6 +178,14 @@ void main() {
     expect(
       CaptureLiveView.warningKey,
       const ValueKey('capture-low-light-warning'),
+    );
+    expect(
+      CaptureLiveView.torchWarningKey,
+      const ValueKey('capture-torch-warning'),
+    );
+    expect(
+      CaptureLiveView.markedPointKey(const MarkedPoint(3, 7)),
+      const ValueKey('capture-marked-point-3-7'),
     );
   });
 }

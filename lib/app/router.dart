@@ -33,6 +33,20 @@ class AppRouter {
     );
   }
 
+  /// A route to the Comparison screen with [a] in slot A and [b] in slot B
+  /// (bs-09 AC-5, D-5).
+  ///
+  /// Carries two readings into the comparison at once — the multi-point capture
+  /// sends a pair of marked readings straight to a side-by-side comparison, so
+  /// both slots are filled on arrival (bs-03's [ComparisonController] already
+  /// takes both). Distinct from [toComparison], which carries one reading into a
+  /// chosen slot and leaves the other empty.
+  Route<void> toComparisonPair(Sample a, Sample b) {
+    return MaterialPageRoute<void>(
+      builder: (_) => ComparisonHomeScreen(initialA: a, initialB: b),
+    );
+  }
+
   /// A route to bs-01's full [ReadoutScreen] for [sample].
   ///
   /// Two callers share this one handoff: the Comparison → readout handoff, so the

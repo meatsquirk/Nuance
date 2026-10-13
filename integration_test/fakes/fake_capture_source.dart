@@ -81,15 +81,42 @@ class FakeCaptureSource extends SoftwareCaptureSource {
   Stream<Frame> get frames {
     // The constructor scene's feed by default; the swapped-in scene's feed once a
     // re-photograph is staged (AC-8), so the re-check pulls frames of the new
-    // swatch. Either way every frame read is counted (AC-11).
+    // swatch. Either way every frame read is counted (AC-11), and each frame
+    // carries the live scene's platform raw offset (AC-9/AC-10) before it reaches
+    // the capture pipeline.
     final feed = _rephotographed == null
         ? super.frames
         : SoftwareCaptureSource(_rephotographed!).frames;
+    final shift = _liveScene.rawColorShift.round();
     return feed.map((frame) {
       _framesRead++;
-      return frame;
+      return shift == 0 ? frame : _shiftRaw(frame, shift);
     });
   }
+
+  /// Applies the platform's pre-normalization raw offset
+  /// ([SceneSpec.rawColorShift]) to every channel of every pixel (AC-9, AC-10).
+  ///
+  /// The two platform fixtures ([SCENE_ANDROID] / [SCENE_IOS]) feed raw that
+  /// differs by this offset; the capture contract's normalization (SOURCE-4)
+  /// must remove it so both platforms land on the identical canonical sample. A
+  /// zero offset — every bs-02..bs-08 scene — leaves the feed untouched, so the
+  /// existing suites are unaffected. This is fixture infrastructure, not faked
+  /// colour maths: the offset is a property of the modelled platform, and the
+  /// normalization that cancels it is the real behaviour under test.
+  Frame _shiftRaw(Frame frame, int shift) => Frame(
+        width: frame.width,
+        height: frame.height,
+        colorSpace: frame.colorSpace,
+        pixels: [
+          for (final p in frame.pixels)
+            Pixel(
+              (p.r + shift).clamp(0, 255),
+              (p.g + shift).clamp(0, 255),
+              (p.b + shift).clamp(0, 255),
+            ),
+        ],
+      );
 }
 
 /// A gallery photo the painter can import and sample a point from (AC-9).

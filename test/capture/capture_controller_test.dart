@@ -69,6 +69,29 @@ class _ControllableSource implements CaptureSource {
 
   @override
   void lockFocus() {}
+
+  bool _torchOn = false;
+
+  @override
+  bool get torchOn => _torchOn;
+
+  @override
+  void turnTorchOn() => _torchOn = true;
+
+  @override
+  void turnTorchOff() => _torchOn = false;
+
+  @override
+  bool get supportsWideGamut => false;
+
+  @override
+  bool get supportsRaw => false;
+
+  @override
+  CaptureColorSpace get colorSpace => CaptureColorSpace.srgb;
+
+  @override
+  CaptureMode get captureMode => CaptureMode.processed;
 }
 
 /// A uniform [size]×[size] frame of one [pixel].
@@ -650,6 +673,33 @@ void main() {
               'ground truth, exactly as the live reading was');
     });
 
+    test('committing with a card present normalises the colour even without '
+        'calibrate, while the tier stays approximate (bs-09 SOURCE-4, '
+        'AC-9/AC-10 contract)', () async {
+      // The capture contract returns a normalised sample whenever a reference
+      // card is in view — the platform-agnostic guarantee does not depend on the
+      // painter tapping calibrate. The stated accuracy tier remains the opt-in
+      // calibrate action's, so a no-calibrate commit is normalised yet still
+      // approximate.
+      final source = cardSource();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      final raw = controller.state.currentSample;
+      expect(raw!.coordinates, isNot(groundTruth),
+          reason: 'the raw card reading starts off ground truth');
+
+      controller.commit(); // no calibrate() first
+
+      final committed = controller.state.lastCommittedSample;
+      expect(committed, isNotNull);
+      expect(committed!.coordinates, groundTruth,
+          reason: 'the committed reading is normalised against the card toward '
+              'ground truth — the capture contract, not the calibrate tap');
+      expect(committed.accuracy, CaptureAccuracy.approximate,
+          reason: 'without an explicit calibrate the stated tier is unchanged');
+    });
+
     test('calibrating with no card in view is a no-op', () async {
       // _source() has no reference card: nothing to normalise against.
       final controller = CaptureController(source: _source());
@@ -684,6 +734,312 @@ void main() {
           reason: 'the tier upgrades the moment the card is read');
       expect(controller.state.currentSample, isNull,
           reason: 'nothing sampled yet → no reading to normalise');
+    });
+  });
+
+  group('commit tags the sample with capture provenance (CAPTURE-2)', () {
+    test('stamps the source colour space + capture mode, torch off by default',
+        () async {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+
+      controller.commit();
+
+      final committed = controller.state.lastCommittedSample!;
+      expect(committed.colorSpace, CaptureColorSpace.srgb,
+          reason: 'the shell source captures in the sRGB default (SOURCE-2 '
+              'makes it reflect the gamut)');
+      expect(committed.captureMode, CaptureMode.processed,
+          reason: 'the shell source is on the processed pipeline (SOURCE-3 '
+              'switches RAW-capable devices)');
+      expect(committed.litByTorch, isFalse,
+          reason: 'the torch is off, so the reading is not torch-lit');
+    });
+
+    test('stamps litByTorch from the controller torch state', () async {
+      final controller = _TestController(source: _source());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      // The torch control is a CAPTURE-3 stub; set the state directly so the
+      // commit's `litByTorch = state.torchOn` threading can be observed now.
+      controller.pump(controller.state.copyWith(torchOn: true));
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.litByTorch, isTrue,
+          reason: 'commit stamps the reading as torch-lit when the torch is on');
+    });
+  });
+
+  group('torch mechanism (CAPTURE-3, AC-1/AC-2)', () {
+    test('turnTorchOn lights the source, sets torchOn and raises the '
+        'colour-temperature warning', () {
+      final source = _source();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.turnTorchOn();
+
+      expect(source.torchOn, isTrue, reason: 'the source torch is lit');
+      expect(controller.state.torchOn, isTrue);
+      expect(controller.state.torchWarning, isNotNull);
+      expect(notifications, 1, reason: 'lighting the torch emits one change');
+    });
+
+    test('the colour-temperature warning names the temperature bias (makes '
+        "AC-1's Given real)", () {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+
+      controller.turnTorchOn();
+
+      expect(controller.state.torchWarning,
+          CaptureController.torchColorTemperatureWarning);
+      final warning = controller.state.torchWarning!.toLowerCase();
+      expect(warning, contains('temperature'),
+          reason: 'the banner must name the torch colour temperature (AC-1)');
+      expect(
+          warning,
+          anyOf(contains('bias'), contains('skew'), contains('shift')),
+          reason: 'the banner must say the temperature biases the reading');
+    });
+
+    test('turnTorchOff extinguishes the source, clears torchOn and drops the '
+        'warning', () {
+      final source = _source();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      controller.turnTorchOn();
+      expect(controller.state.torchWarning, isNotNull);
+
+      controller.turnTorchOff();
+
+      expect(source.torchOn, isFalse,
+          reason: 'the source torch is extinguished');
+      expect(controller.state.torchOn, isFalse);
+      expect(controller.state.torchWarning, isNull,
+          reason: 'the set-forward merge is overridden so the banner clears');
+    });
+
+    test('acknowledgeTorchWarning drops the banner but leaves the torch lit',
+        () {
+      final source = _source();
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      controller.turnTorchOn();
+
+      controller.acknowledgeTorchWarning();
+
+      expect(controller.state.torchWarning, isNull,
+          reason: 'acknowledging hides the banner');
+      expect(controller.state.torchOn, isTrue,
+          reason: 'the torch stays lit after acknowledgement (AC-2)');
+      expect(source.torchOn, isTrue,
+          reason: 'acknowledging is visual only — the source torch is '
+              'untouched');
+    });
+  });
+
+  group('send pair to comparison (CAPTURE-5, AC-5)', () {
+    // A 16×16 frame with three distinct discs so each marked point samples its
+    // own colour — the unit analogue of the acceptance SCENE_THREE_POINTS, so a
+    // sent pair can be told apart by colour.
+    const background = Pixel(128, 128, 128);
+    const teal = Pixel(20, 160, 150);
+    const red = Pixel(210, 40, 50);
+    const yellow = Pixel(230, 210, 30);
+    const p1 = MarkedPoint(4, 4);
+    const p2 = MarkedPoint(12, 4);
+    const p3 = MarkedPoint(8, 12);
+
+    Frame threeDiscFrame() {
+      const discs = <(MarkedPoint, Pixel)>[(p1, teal), (p2, red), (p3, yellow)];
+      final pixels = <Pixel>[];
+      for (var y = 0; y < 16; y++) {
+        for (var x = 0; x < 16; x++) {
+          var px = background;
+          for (final (point, discPx) in discs) {
+            final dx = x - point.x;
+            final dy = y - point.y;
+            if (dx * dx + dy * dy <= 3 * 3) {
+              px = discPx;
+              break;
+            }
+          }
+          pixels.add(px);
+        }
+      }
+      return Frame(width: 16, height: 16, pixels: pixels);
+    }
+
+    /// A controller with three sampled marked readings (P1/P2/P3), each its own
+    /// colour, ready for a pair to be sent to a comparison.
+    Future<CaptureController> threeReadings() async {
+      final controller = CaptureController(
+        source: SoftwareCaptureSource(SceneSpec(
+          groundTruth: const ColorCoordinates(lightness: 40, a: -8, b: 24),
+          frames: [threeDiscFrame()],
+        )),
+      );
+      addTearDown(controller.dispose);
+      await pumpEventQueue(); // the live frame arrives and buffers
+      controller
+        ..markPoint(p1.x, p1.y)
+        ..markPoint(p2.x, p2.y)
+        ..markPoint(p3.x, p3.y)
+        // Radius 1 so each 3 px disc fully contains the sampling disc.
+        ..setRadius(1)
+        ..sampleMarkedPoints();
+      return controller;
+    }
+
+    test('publishes the chosen two readings as a pair — slot A = i, slot B = j',
+        () async {
+      final controller = await threeReadings();
+      final readings = controller.state.markedReadings;
+
+      // Send the first and third readings (non-adjacent, so the indices must
+      // select — not just take the first two).
+      controller.sendPairToComparison(0, 2);
+
+      final pair = controller.state.pairToCompare;
+      expect(pair, isNotNull, reason: 'the send publishes a pair');
+      expect(pair!.a.coordinates, readings[0].coordinates,
+          reason: 'slot A carries the reading at index 0 (P1)');
+      expect(pair.b.coordinates, readings[2].coordinates,
+          reason: 'slot B carries the reading at index 2 (P3)');
+      // The two slots carry genuinely different colours, not a duplicate.
+      expect(pair.a.coordinates, isNot(readings[2].coordinates),
+          reason: 'the pair is not a duplicate of one reading');
+    });
+
+    test('each sent reading is measured at the capture\'s stated accuracy',
+        () async {
+      final controller = await threeReadings();
+
+      controller.sendPairToComparison(0, 1);
+
+      final pair = controller.state.pairToCompare!;
+      expect(pair.a.provenance.tier, ProvenanceTier.measured);
+      expect(pair.b.provenance.tier, ProvenanceTier.measured);
+      expect(pair.a.accuracy, controller.state.accuracy);
+      expect(pair.b.accuracy, controller.state.accuracy);
+    });
+
+    test('a send emits one change so the screen can open the comparison',
+        () async {
+      final controller = await threeReadings();
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.sendPairToComparison(0, 1);
+
+      expect(notifications, 1, reason: 'the send publishes the pair once');
+    });
+  });
+
+  group('multi-point sampling (CAPTURE-4, AC-3)', () {
+    // A 16×16 frame of a background field with three distinct discs so each
+    // marked point's area-average is its own colour, distinct from the others
+    // and from the field — the unit analogue of the acceptance SCENE_THREE_POINTS.
+    const background = Pixel(128, 128, 128);
+    const teal = Pixel(20, 160, 150);
+    const red = Pixel(210, 40, 50);
+    const yellow = Pixel(230, 210, 30);
+    const p1 = MarkedPoint(4, 4);
+    const p2 = MarkedPoint(12, 4);
+    const p3 = MarkedPoint(8, 12);
+
+    Frame threeDiscFrame() {
+      const discs = <(MarkedPoint, Pixel)>[(p1, teal), (p2, red), (p3, yellow)];
+      final pixels = <Pixel>[];
+      for (var y = 0; y < 16; y++) {
+        for (var x = 0; x < 16; x++) {
+          var px = background;
+          for (final (point, discPx) in discs) {
+            final dx = x - point.x;
+            final dy = y - point.y;
+            if (dx * dx + dy * dy <= 3 * 3) {
+              px = discPx;
+              break;
+            }
+          }
+          pixels.add(px);
+        }
+      }
+      return Frame(width: 16, height: 16, pixels: pixels);
+    }
+
+    SoftwareCaptureSource withFrame(Frame frame) => SoftwareCaptureSource(
+          SceneSpec(
+            groundTruth:
+                const ColorCoordinates(lightness: 40, a: -8, b: 24),
+            frames: [frame],
+          ),
+        );
+
+    test('markPoint appends each point to markedPoints, in order', () {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.markPoint(4, 4);
+      controller.markPoint(12, 4);
+
+      expect(controller.state.markedPoints, const [p1, p2]);
+      expect(notifications, 2, reason: 'each mark emits one change');
+    });
+
+    test('clearMarkedPoints empties the marked points', () {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      controller.markPoint(4, 4);
+      controller.markPoint(12, 4);
+      expect(controller.state.markedPoints, hasLength(2));
+
+      controller.clearMarkedPoints();
+
+      expect(controller.state.markedPoints, isEmpty);
+    });
+
+    test('sampleMarkedPoints returns one reading per point, each its own colour',
+        () async {
+      final controller = CaptureController(source: withFrame(threeDiscFrame()));
+      addTearDown(controller.dispose);
+      await pumpEventQueue(); // the live frame arrives and buffers
+      controller.markPoint(p1.x, p1.y);
+      controller.markPoint(p2.x, p2.y);
+      controller.markPoint(p3.x, p3.y);
+      // Radius 1 so each 3 px disc fully contains the sampling disc.
+      controller.setRadius(1);
+
+      controller.sampleMarkedPoints();
+
+      final readings = controller.state.markedReadings;
+      // One reading per marked point — not one averaged over them all.
+      expect(readings, hasLength(3));
+      expect(readings.map((r) => r.position).toList(), const [p1, p2, p3],
+          reason: 'each reading keeps its own marked position');
+      // Each reading carries that point's own disc colour, not the field or a
+      // neighbour's.
+      expect(_l1(readings[0].coordinates, teal), lessThan(12));
+      expect(_l1(readings[1].coordinates, red), lessThan(12));
+      expect(_l1(readings[2].coordinates, yellow), lessThan(12));
+    });
+
+    test('sampleMarkedPoints is a no-op before any frame has arrived', () {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      controller.markPoint(4, 4);
+
+      controller.sampleMarkedPoints();
+
+      expect(controller.state.markedReadings, isEmpty,
+          reason: 'nothing to sample until a frame has been seen');
     });
   });
 

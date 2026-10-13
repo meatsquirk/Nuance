@@ -36,6 +36,28 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('a long label wraps within a narrow width without overflowing',
+      (tester) async {
+    // A multi-point reading label (position + full colour value) in a width
+    // narrower than its natural extent: it must wrap, raising no RenderFlex
+    // overflow (the failure a bare, unflexed Text produced).
+    await _pump(
+      tester,
+      const SizedBox(
+        width: 120,
+        child: ColorChip(
+          label: 'Point (32, 50): L 96.538472 a -20.113847 b 93.884219',
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull,
+        reason: 'the long label wraps instead of overflowing the row');
+    expect(
+      find.text('Point (32, 50): L 96.538472 a -20.113847 b 93.884219'),
+      findsOneWidget,
+    );
+  });
+
   test('rejects a colour-only construction (empty label)', () {
     expect(() => ColorChip(label: ''), throwsAssertionError);
   });

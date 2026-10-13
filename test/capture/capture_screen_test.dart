@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/capture_controller.dart';
 import 'package:paint_color_assistant/capture/capture_controls.dart';
 import 'package:paint_color_assistant/capture/capture_live_view.dart';
+import 'package:paint_color_assistant/capture/capture_readings_list.dart';
 import 'package:paint_color_assistant/capture/capture_screen.dart';
 import 'package:paint_color_assistant/capture/capture_state.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
@@ -44,6 +45,19 @@ void main() {
 
     expect(find.byType(CaptureLiveView), findsOneWidget);
     expect(find.byType(CaptureControls), findsOneWidget);
+  });
+
+  testWidgets('places the bs-09 readings region bound to the state (SCREEN-1)',
+      (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    final list = tester
+        .widget<CaptureReadingsList>(find.byType(CaptureReadingsList));
+    // Bound to the controller's marked readings (empty in this shell).
+    expect(identical(list.readings, controller.state.markedReadings), isTrue);
+    expect(list.readings, isEmpty);
   });
 
   testWidgets('binds the live view to the controller state', (tester) async {

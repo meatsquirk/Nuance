@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'capture_controller.dart';
 import 'capture_controls.dart';
 import 'capture_live_view.dart';
+import 'capture_readings_list.dart';
 
 /// The Capture screen: the single surface a painter captures a colour through
 /// (wireframe S1.R1, elements E15–E21).
@@ -16,6 +17,10 @@ import 'capture_live_view.dart';
 /// lock/accuracy/commit CAPTURE-3..6, eyedropper + radius SCREEN-2, value-only
 /// SCREEN-3). The controller ownership and the acceptance read endpoint stay
 /// with [CaptureHomeScreen] above this screen.
+///
+/// bs-09 places the multi-point readings region ([CaptureReadingsList]) between
+/// the live view and the controls; it is empty until points are sampled
+/// (CAPTURE-4).
 class CaptureScreen extends StatelessWidget {
   const CaptureScreen({required this.controller, super.key});
 
@@ -36,7 +41,17 @@ class CaptureScreen extends StatelessWidget {
                 Expanded(child: CaptureLiveView(state: controller.state)),
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: CaptureControls(controller: controller),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // bs-09 multi-point readings region (AC-3/AC-4); empty
+                      // until points are sampled (CAPTURE-4).
+                      CaptureReadingsList(
+                        readings: controller.state.markedReadings,
+                      ),
+                      CaptureControls(controller: controller),
+                    ],
+                  ),
                 ),
               ],
             );
