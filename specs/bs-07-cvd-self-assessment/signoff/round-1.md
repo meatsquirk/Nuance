@@ -2,7 +2,7 @@
 
 **Feature:** bs-07-cvd-self-assessment · **Spec:** [bs-07-cvd-self-assessment.feature](../../bs-07-cvd-self-assessment.feature)
 **Prepared:** 2026-10-13 (SIGNOFF-1) · **At code:** `feat/bs-07-cvd-self-assessment` @ `df530dd` (FLOW-2; the sign-off commit is stamped on the decision)
-**Decision:** ⏸ **Awaiting sign-off** — a human records Approved or Changes requested (the agent never approves).
+**Decision:** ☑ **Approved** — 2026-10-13 by Matt Quirk. `feat/bs-07-cvd-self-assessment` merged to `main`.
 
 All 14 acceptance criteria are coded, un-pended and green by default (nothing pending); the full
 cross-feature regression (bs-01/02/03/04/05/06 + bs-07) is green; a fresh independent full-suite grade grid
@@ -214,10 +214,10 @@ tests discriminate. (Run-pending mode is identical to default now — nothing is
 
 ## 10. Decision
 
-Reviewer: **________**  Date: **________**  Decision: ☐ **Approved**  ☐ Changes requested
+Reviewer: **Matt Quirk**  Date: **2026-10-13**  Decision: ☑ **Approved**  ☐ Changes requested
 
 Signed off at code `df530dd` (FLOW-2; the SIGNOFF-1 packet makes no product-code change, so the signed tree
-equals the verified tree). On **Approved**, `feat/bs-07-cvd-self-assessment` merges to `main` (closes bs-10 G-4).
+equals the verified tree). On approval, `feat/bs-07-cvd-self-assessment` merged to `main` (closes bs-10 G-4).
 
 Record via `/feature-next-phase --signoff bs-07-cvd-self-assessment approved | changes "<items>"`.
 
