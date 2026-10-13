@@ -224,3 +224,44 @@ SPEECH-4 is **test-only** (no `lib/` change): the working-tree diff against HEAD
 
 ### Verdict
 SPEECH-4: **10 A (AC-1..AC-10) + 2 A (edited scaffold guards) = 12 A / 0 below A**. No rule failed; **no augmentation row required** — the suite is fully delivered with every AC graded A. AC-10 is **A**: a content-free inert-panel control makes the "still present" Then a real signal (G3/G5), the Given captures the shown reading through the public E50 surface (G1/G2), the 60 s pump + `pumpAndSettle` is a settle point past which a timer-based dismiss would have fired (and the timerless `SpokenOutputPanel` lets `pumpAndSettle` terminate), and the Then asserts panel + last-spoken text still present and the text unchanged (G4) — rejecting a timer auto-dismiss while asserting exactly one AC (G6). SPEECH-4 is test-only (2 files: the pending row deleted → empty map, and the two scaffold guards edited); no production file and no AC test body changed, so AC-1..AC-9's prior A grades carry with no regression. Note: the untouched sibling guard `every pending AC is owned by a real behaviour phase` now loops over the empty map and so passes vacuously — this is the intended terminal end-state (no AC remains to own), and emptiness is pinned by the first guard's exact `{}` assertion, so it is by-design, not a rule failure.
+
+## Phase graded: SIGNOFF-1 (fresh independent full-suite re-grade)
+
+Sign-off re-grade by a fresh-context adversarial subagent that did not write the tests, given the prior
+SPEECH-4 grid (12 A / 0 below A) and asked to justify any downgrade against a named rule. It graded the whole
+suite as the code now stands at `feat/bs-08` @ `5e5c531` — the 10 AC tests, the 2 smoke tests and the 9
+fixture / pending-gate guards — tracing every Given/When/Then into the real production widgets/controllers,
+and confirmed the independent-oracle discipline (AC-3/4/7 compare against the harness's literal-matrix
+`referenceProjectDichromat` at `display_harness.dart:193`, never the shipped `projectDichromat`).
+
+| # | Test / artifact | Grade | Rationale (one line) |
+|---|---|---|---|
+| 1 | pending-gate · `pending map is exactly the still-pending ACs` | A | Builds `expected = {}` and asserts `pendingACs.keys.toSet() == {}` — exact equality, non-vacuous; fails on any stale/re-pended row. |
+| 2 | pending-gate · `every pending AC is owned by a real behaviour phase` | A (flagged) | Terminal empty map → zero iterations; benign because #1 pins emptiness exactly. By-design end-state, not a rule failure (matches prior grader). |
+| 3 | pending-gate · `with every AC un-pended, the gate runs each one in both modes` | A | Asserts `pendingACs isEmpty`, both `forceRunPending` modes null over AC-1..10, `AC-999` null, ambient agrees. Deterministic; rejects a re-pend / inverted gate. |
+| 4 | fixtures · reference projection identity at severity 0 | A | `labDistance(sample, proj@sev0) < 1e-3` over all 3 types — the sev-0=trichromat property AC-4's control leans on. |
+| 5 | fixtures · reference projection keeps neutral grey near-neutral | A | Grey stays `|a|,|b| < 1` per type — fixes the achromatic axis. Model property. |
+| 6 | fixtures · reference projection idempotent at full severity | A | `labDistance(once, twice) < 1e-2` per type — proves projection onto the dichromat surface. |
+| 7 | fixtures · reference projection clearly shifts the display sample | A | `labDistance(sample, proj) > 3.0` per type — guarantees AC-3/4 have an observable shift and the tolerance separates original from simulated. |
+| 8 | fixtures · reference projection handles a near-black colour | A | Exercises the CIELAB sub-knee inverse; asserts finite L/a/b, L<20. Guards against NaN on the gamut edge. |
+| 9 | fixtures · `labDistance` zero iff identical | A | Metric sanity the other guards/ACs depend on. Non-vacuous. |
+| 10 | smoke · E2 opens the panel with all three controls (+theme) | A | Live `DisplayReadEndpoint` defaults, open→panel + E47/E46/E48/theme each present, close→absent. Proves end-to-end wiring. |
+| 11 | smoke · one app-wide speech wraps the injected sink | A | `appSpeech is RepeatableSpeech`, `identical(appSpeech.inner, speech)`, speak→1 utterance, panel reflects it, repeat control + last-spoken equal the recorded utterance. |
+| 12 | AC-1 `TestAC01_OpenDisplaySettings` | A | Given panel absent (G1); real E2 tap; three spec-named controls at the right grain (G4); real chrome not a fake (G2); rejects a surface missing any one. |
+| 13 | AC-2 `TestAC02_SimOffTrichromat` | A | `simulationOn==false` via live endpoint; single swatch ≈ `toSRGB(sample)`, `hasLength(1)`; rejects a sim-off projection/desaturation and a spurious pair. |
+| 14 | AC-3 `TestAC03_SimulateTypeAlongsideOriginal` | A | Outline over 3 types, real selector (G2); `any ≈ original` AND `any ≈ referenceProjectDichromat` (independent); rejects noop/wrong-type/dropped-original. |
+| 15 | AC-4 `TestAC04_SeveritySlider` | A | `setSeverity(60)` → `0.60` via live endpoint (D-6, G2); swatch ≈ reference at 0.60; control sev-0 → original; rejects fixed/non-zero severity. |
+| 16 | AC-5 `TestAC05_GrayscaleClearsSimulation` | A | Given deutan (G1); grayscale on + settle (G3) → `grayscale==true` AND `simulationType==null` (D-3, observable change); control rejects restore-on-off. |
+| 17 | AC-6 `TestAC06_GrayscaleWholeApp` | A | Exactly one `ColorFiltered` ancestor of `MaterialApp` (root, not per-surface); off-control `findsNothing`; saturation-0 matrix pinned by unit test. |
+| 18 | AC-7 `TestAC07_ReadingKeepsValueAndLabel` | A | `ValueReading` number `"55"` + non-empty word + `find.text("55")`; augmentation: simulated swatch (≈ reference) coexists with value/label; rejects colour-alone. |
+| 19 | AC-8 `TestAC08_RepeatSpokenOutput` | A | Inert-before control; speak → 1 utterance + control appears; repeat → `hasLength(2)` AND `last==spoken` (exact count + identity, G4); rejects different/empty/no replay. |
+| 20 | AC-9 `TestAC09_OneConsistentPhrasing` | A | `identical(appSpeech.inner, speech)` pins the one shared sink (G2); comparison + reading → `hasLength(2)` (a 2nd sink/route leaves 1); `reading!=comparison` control. |
+| 21 | AC-10 `TestAC10_PanelNeverAutoDismisses` | A | Content-free control; `pump(60s)` + `pumpAndSettle` is a settle point past a timer-dismiss; timerless `StatelessWidget`; panel + text still present and unchanged (G4); rejects auto-dismiss. |
+
+### Verdict
+SIGNOFF-1: **21 A / 0 below A** across the full suite (10 AC tests + 2 smoke + 9 fixture/pending-gate
+guards). No downgrades from the SPEECH-4 grid; this re-grade covers the full 21-test suite and agrees with
+every prior A. The suite is sign-off ready; **no augmentation row required**. Two non-grade-affecting notes:
+(1) the owner guard (#2) now iterates the empty map and so passes vacuously — the intended terminal end-state,
+with emptiness pinned non-vacuously by #1; (2) cosmetic — `integration_test/fakes/fake_haptics.dart` carries a
+stale "AC-12" doc-comment (no bs-08 AC exercises haptics), harmless, worth a future sweep.

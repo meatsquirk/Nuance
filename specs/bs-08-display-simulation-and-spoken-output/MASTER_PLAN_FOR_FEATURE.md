@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** In progress — behavior stage COMPLETE, **10/10 ACs done** (AC-10 via SPEECH-4; AC-9 via SPEECH-3; AC-8 via SPEECH-2; AC-1 via SETTINGS-2; AC-2..7 via DISPLAY-3..8); all modules (DISPLAY/SETTINGS/SPEECH/ITEST) complete; next **SIGNOFF-1** (sign-off packet + human decision)
+**Status:** ⏸ Awaiting sign-off — all **10/10 ACs ✅**, all gates green; **SIGNOFF-1** packet assembled (round 1): verification green (analyze clean, unit 931, coverage 100% on 14 files, regression 152, bs-08 21 default + 21 run-pending), fresh independent grid **21 A / 0 below**; awaiting the human decision
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -165,18 +165,24 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 16 | SPEECH-2 | AC-8 repeat last spoken output | ✅ Done | 7,026,082 | 18m 22s (49m 22s) | pure un-pend (no lib change); AC-8 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 19 pass 2 skip, run-pending 21 pass/grade 9 A 0 below; fix 0/3 |
 | 17 | SPEECH-3 | AC-9 reading + comparison one consistent phrasing | ✅ Done | 3,647,171 | 13m 54s (13m 54s) | pure un-pend (no lib change); AC-9 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 20 pass 1 skip, run-pending 21 pass/grade 10 A 0 below; fix 0/3 |
 | 18 | SPEECH-4 | AC-10 spoken-output panel never auto-dismisses | ✅ Done | 5,337,022 | 15m 20s (15m 20s) | pure test-only un-pend (no lib change); AC-10 un-pended → pending map now empty {}; rewrote terminal scaffold guard off `pendingACs.keys.first`; unit 931/cov 100% (14 files)/acceptance default **21 pass 0 skip**, run-pending 21 pass/grade **12 A 0 below** (AC-1..10 + 2 guards); fix 0/3 |
-| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | behaviour stage complete — all 10 ACs ✅, all gates green, no open gate |
+| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting sign-off | 7,894,365 | 20m 59s (20m 59s) | packet `signoff/round-1.md` + `cost-per-ac-round-1.md` + summary page; verification green (analyze clean, unit 931, cov 100%/14 files, regression 152, bs-08 21 default + 21 run-pending); fresh independent grid 21 A/0 below; awaiting human decision |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**Behaviour stage COMPLETE — all 10/10 ACs delivered; SPEECH-4 landed AC-10, the last behaviour phase.** SPEECH-4 un-pended AC-10 (the spoken-output panel never auto-dismisses): a **pure test-only un-pend** — SPEECH-1's E50 panel is a timerless `StatelessWidget`/`ListenableBuilder` (no `Timer`/dismiss path, D-10), so AC-10 was green at baseline — deleting its `pending.dart` row (the map `pendingACs` is now empty `{}`) and adding it to the scaffold-guard `unpended` set; it also rewrote the terminal scaffold guard off the now-unsafe `pendingACs.keys.first` into a fully-open "runs each AC in both modes" test (mirrors bs-06's final phase). No lib change, no augmentation; grade **12 A / 0 below** (AC-1..10 + 2 edited guards).
+**SIGNOFF-1 packet assembled — awaiting the human decision.** The feature is code-complete and fully
+verified this session: analyze clean, unit **931**, coverage gate **100% on 14 touched files**, the full
+cross-feature regression **152 pass / 0 fail**, bs-08 acceptance **21 pass** in both default and run-pending
+(nothing pending), and a fresh independent full-suite re-grade of **21 A / 0 below A**. Packet:
+`signoff/round-1.md` (+ `signoff/cost-per-ac-round-1.md`, + the summary-page scorecard). All preconditions met;
+no open gate (G-1/G-2 resolved), no open augmentation.
 
-**Only SIGNOFF-1 remains** (feature sign-off):
-- **SIGNOFF-1** — assemble `signoff/round-1.md` (packet) + the summary page, then record the human decision via `/feature-next-phase --signoff bs08 approved | changes "<items>"`. Preconditions met: all 10 ACs ✅, all gates green, no open augmentation, G-1/G-2 resolved. Sign-off includes a fresh independent full-suite re-grade. The agent assembles the packet and stops for the human; it never approves.
-
-Suite state: default and run-pending both **21 pass / 0 skipped** (AC-1..10 all passing; nothing pending). Device lane shared/contended (`coord.sh with-lock`, `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`, sim `5AB9D06D…`).
+**Next — record the decision (human):**
+`/feature-next-phase --signoff bs-08-display-simulation-and-spoken-output approved | changes "<items>"`.
+The agent assembled the packet and stopped; it never approves. On **approved**, SIGNOFF-1 ✅, the feature
+Status → Done — signed off, and `feat/bs-08` merges to `main` (as bs-05/bs-06 did). On **changes requested**,
+each item becomes a new phase before a fresh SIGNOFF-2.
 
 ## Token usage
 
@@ -207,10 +213,11 @@ Suite state: default and run-pending both **21 pass / 0 skipped** (AC-1..10 all 
 | SPEECH-2 | 2a4813a4 | 2026-10-12 17:29 EDT | 18:19 | 49m 22s | 18m 22s | claude-opus-4-8 | 134 | 231,874 | 6,759,754 | 34,320 | 7,026,082 | AC-8 un-pended + green (test-only); unit 931/cov 100%/accept 19 pass 2 skip + run-pending 21; grade 9 A/0 below; fix 0/3 |
 | SPEECH-3 | 3b311776 | 2026-10-12 19:32 EDT | 19:46 | 13m 54s | 13m 54s | claude-opus-4-8 | 84 | 208,974 | 3,412,132 | 25,981 | 3,647,171 | AC-9 un-pended + green (pure test-only un-pend); unit 931/cov 100% (14 files)/acceptance default 20 pass 1 skip, run-pending 21 pass/grade 10 A 0 below; fix 0/3 |
 | SPEECH-4 | 199c2f84 | 2026-10-12 21:04 EDT | 21:19 | 15m 20s | 15m 20s | claude-opus-4-8 | 110 | 225,713 | 5,078,874 | 32,325 | 5,337,022 | AC-10 un-pended + green (pure test-only un-pend, no lib change; pending map now empty); unit 931/cov 100% (14 files)/acceptance default 21 pass 0 skip + run-pending 21 pass/grade 12 A 0 below; fix 0/3 |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 21:19** | **7h 23m** | **6h 13m** |  | **2,704** | **4,021,964** | **168,856,634** | **969,304** | **173,850,606** |  |
+| SIGNOFF-1 | 1189fd6a | 2026-10-12 22:15 EDT | 22:36 | 20m 59s | 20m 59s | claude-opus-4-8 | 128 | 309,986 | 7,527,149 | 57,102 | 7,894,365 | sign-off packet + cost-per-ac + summary-page scorecard assembled; verification green (analyze clean, unit 931, coverage 100% on 14 files, regression 152, bs-08 default+run-pending 21/21), fresh independent grid 21 A/0 below; awaiting human decision |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 22:36** | **7h 44m** | **6h 34m** |  | **2,832** | **4,331,950** | **176,383,783** | **1,026,406** | **181,744,971** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | | ⏸ Not yet created |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `5e5c531` | 21 A / 0 below A | ⏸ Awaiting sign-off (prepared 2026-10-12) |
