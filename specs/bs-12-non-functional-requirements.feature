@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-13 by Matt Quirk (G-1; derived 2026-10-05 by /wireframe-behavior-specs)
 # Non-functional: testable system-wide requirements, not a single UX element.
 Feature: Core non-functional requirements
   The system-wide requirements the solution intent states as testable: everything

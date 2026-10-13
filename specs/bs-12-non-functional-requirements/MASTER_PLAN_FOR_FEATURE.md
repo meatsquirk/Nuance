@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** Not started — next GUARD-1 (⛔ blocked on G-1 spec approval)
+**Status:** Not started — next GUARD-1 (G-1 ✅ spec approved; startable)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -150,7 +150,7 @@ graph LR
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | GUARD-1 | Open |
+| G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | GUARD-1 | ✅ Resolved 2026-10-13 14:59 EDT: approved — Matt Quirk (spec first line amended to the approval line) |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-3 | decision | AC-5 — the **live-preview frame rate** verified on device at SIGNOFF, and the AC-3/AC-4 **target-hardware ~1–2s timings** recorded as owner evidence (D-3); a fail blocks acceptance | SIGNOFF-1 (AC-5) | Open |
 
@@ -167,7 +167,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | GUARD-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs12 pending gate (16 ACs) | ⬜ Next | | | ⛔ G-1 (spec approval) |
+| 1 | GUARD-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs12 pending gate (16 ACs) | ⬜ Next | | | G-1 ✅ (approved 2026-10-13); startable |
 | 2 | GUARD-2 | shell: `integration_test/nfr/guards/` scaffolds — source-scan, swap-harness, network-block/offline harness (stubs) | ⬜ Todo | | | ∥ QUALITY-1 |
 | 3 | QUALITY-1 | shell: `integration_test/nfr/quality/` scaffolds — accuracy harness + `syntheticAccuracySet`, perf harness (stubs) + the `lib/capture` AC-9 downgrade seam (behaviour unchanged) | ⬜ Todo | | | ∥ GUARD-2 |
 | 4 | ITEST-1 | acceptance-tests: harness, real-flow + control + swap fixtures, pending gate (16 ACs), smoke test | ⬜ Todo | | | |
@@ -188,7 +188,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**GUARD-1** (scaffold) is next but **⛔ blocked on G-1** (spec approval). The spec is still `# Draft: awaiting owner approval`, so no code runs until the owner approves it — resolve with `/feature-next-phase --gate bs12 G-1 approved` (records the approval as the spec's first line). Once G-1 is resolved, GUARD-1 branches `feat/bs-12-non-functional-requirements` from `main` @ `ecd3a9e` in a worktree (`../Nuance-bs12`), records the baseline, confirms `tool/coverage_gate.dart`, and lays `integration_test/bs12/pending.dart` seeding the 16 automatable ACs (AC-5 never enters — pure-manual, D-3). G-2 (approve tests) is decided at ITEST-4; G-3 (AC-5 device frame rate + AC-3/4 timings) at SIGNOFF-1.
+**GUARD-1** (scaffold) — **G-1 ✅** (spec approved 2026-10-13 by Matt Quirk); no gate now blocks it, so it is **startable**. GUARD-1 branches `feat/bs-12-non-functional-requirements` from the current `main` tip (post-bs-12-PLAN) in a worktree (`../Nuance-bs12`), records the baseline, confirms `tool/coverage_gate.dart` (pass on clean tree, fail on a planted gap), and lays `integration_test/bs12/pending.dart` seeding the 16 automatable ACs (AC-5 never enters — pure-manual, D-3). G-2 (approve tests) is decided at ITEST-4; G-3 (AC-5 device frame rate + AC-3/4 timings) at SIGNOFF-1.
 
 ## Token usage
 

@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| GUARD-1 | scaffold | — | ⬜ Next (⛔ G-1) | | |
+| GUARD-1 | scaffold | — | ⬜ Next (G-1 ✅) | | |
 | GUARD-2 | shell | — | ⬜ Todo | | |
 | GUARD-3 | behavior | AC-1, AC-2 | ⬜ Todo | | |
 | GUARD-4 | behavior | AC-6, AC-7, AC-8 | ⬜ Todo | | |
@@ -25,14 +25,14 @@
 
 ## Open gates
 
-- **G-1** (spec approval) blocks **GUARD-1** — the spec is a Draft; nothing runs until the owner approves.
+- **G-1** (spec approval) ✅ Resolved 2026-10-13 14:59 EDT: approved — Matt Quirk (spec first line amended to the approval line); GUARD-1 unblocked.
 - **G-2** (approve acceptance tests) blocks **GUARD-3..GUARD-6** (all behavior phases).
 
 ## Phase GUARD-1 — scaffold
 
 - **Kind:** scaffold
 - **Target AC:** —
-- **Depends on:** — (⛔ G-1) · **Blocks:** GUARD-2, QUALITY-1
+- **Depends on:** — (G-1 ✅) · **Blocks:** GUARD-2, QUALITY-1
 - **Files:** `../Nuance-bs12` worktree; `integration_test/bs12/pending.dart`; (confirm, don't recreate) `tool/coverage_gate.dart`
 - **Tasks:**
   1. From the primary checkout's committed state, create worktree `../Nuance-bs12` on branch `feat/bs-12-non-functional-requirements` off `main` @ `ecd3a9e`; `flutter pub get` in the worktree; copy/link untracked tool binaries if any.
