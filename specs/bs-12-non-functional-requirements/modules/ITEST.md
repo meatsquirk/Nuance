@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 ✅ done; next ITEST-2 ∥ ITEST-3 (share `nfr_test.dart` → sequence)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs12/nfr_harness.dart`, `integration_test/bs12/nfr_test.dart`. Consumes (does not own) the reusable guards in `integration_test/nfr/` (GUARD + QUALITY) and the `integration_test/bs12/pending.dart` gate (created by GUARD-1).
 **Depends on:** GUARD-2, QUALITY-1 (the shells) · **Blocks:** every behavior phase (via the test review G-2)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| ITEST-1 | acceptance-tests | — (harness + smoke) | ⬜ Todo | | |
+| ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 7.3M | 17m 59s |
 | ITEST-2 | acceptance-tests | AC-1,2,6,7,8,14,15,16,17 (pending) | ⬜ Todo | | |
 | ITEST-3 | acceptance-tests | AC-3,4,9,10,11,12,13 (pending) | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
@@ -56,6 +56,26 @@
 - **Files:** `integration_test/bs12/nfr_harness.dart`, `integration_test/bs12/nfr_test.dart`
 - **Tasks:** build the harness vocabulary (launch `buildApp` to each core flow; the `networkBlock`, `syntheticAccuracySet`, swap-double and control fixtures) over the GUARD/QUALITY stubs; wire the pending gate; a **never-pending smoke test** that calls each guard/harness stub and asserts it returns a populated (stub) result — proving the shells + harness are wired — plus that `pendingACs` keys name real phases and the count is exactly 16 (no vacuous pass).
 - **Exit criteria:** suite green with all 16 ACs pending; smoke passes on a booted `-d`; grade gate on the harness/smoke (no vacuous passes, deterministic — poll, no fixed sleeps).
+- **Result (✅ Done 2026-10-13):**
+  - **`nfr_harness.dart`** — the bs-12 Given/When/Then vocabulary over the real assembled app and the reusable NFR guards:
+    - `enum NfrFlow {readout, capture, comparison, recipes, palette}` — the core flows the guards sweep (save-project + export both live on `palette`); `givenTheApp(tester, {flow, mixingEngine, confusionCheck, captureSource})` launches the real `buildApp` into the chosen flow through its `AppDependencies` entry (the one production assembly path, D-7), faking only `Speech`/`Haptics`, injecting the real `ColorScienceImpl`, and defaulting the two swap seams to the shipped impls (GUARD-5 passes the alternates). Returns `NfrHarness` {`tester`, `flow`, `speech`, `haptics`, `settle()`}.
+    - Fixtures: `nfrRecipeTarget` (a reachable mid earth for the recipes flow), `nfrCaptureScene`/`nfrCaptureSource()` (a deterministic `FakeCaptureSource` scene).
+    - **Re-exports** the pending gate (`acTestWidgets`), the platform fakes, and the six reusable guard/quality modules, so an AC test imports the harness alone. The guard/quality modules are `export`-only (the harness references none of their symbols directly — the AC tests do); offline/network use goes through the re-exported `runUnderNetworkBlock` wrapping a whole scenario body.
+  - **`nfr_test.dart`** — the never-pending smoke + scaffold tests (ITEST-2/3 append the per-AC pending tests here):
+    - **5 flow-launch smokes** — one per `NfrFlow`, asserting `buildApp` opens the expected home screen (`ReadoutScreen`/`CaptureHomeScreen`/`ComparisonHomeScreen`/`RecipesHomeScreen`/`PaletteHomeScreen`) + a real `MaterialApp` + inert sinks.
+    - **6 guard/harness-wired tests** — offline guard runs a body & refuses an `HttpClient` (`NetworkBlockedException`), GUARD-2 sink inert; source guard's 5 scans empty over **populated** authorities (sizes/seam string pinned); accuracy harness grades the 3-sample seed set within bound by the independent `referenceDeltaE00`, ids & conditions pinned; perf harness `measure` within budget + `isTopCandidateCount` bounds; synthetic gamut one-in/one-out; swap harness assembles the real app.
+    - **2 pending-gate guards** — the map is exactly the 16 automatable ACs {AC-1..4, AC-6..17} (AC-5 absent), count 16, every owner a real `behaviorPhase`; skip-by-default / run-in-run-pending (+ absent-AC always runs + ambient path agrees).
+    - **2 fake-record tests** — `FakeSpeech` order, `FakeHaptics` count.
+  - **Verification:** `flutter analyze` → No issues (whole project). Unit `flutter test --coverage` → **1228 passed** (unchanged; the new files are integration tests). Coverage gate (`dart run tool/coverage_gate.dart main`) → **100%** (no new `lib/` touched; the 2 QUALITY-1 `lib/capture` files still 100% vs `main`). Acceptance `flutter test integration_test/bs12/nfr_test.dart -d <iPhone 17 sim>` under `coord.sh with-lock` → **15 passed, exit 0** (all 16 ACs still pending, skipped by default; smoke green on the booted sim).
+  - **Grade gate:** fresh independent subagent (adversarial, G1–G6 + scaffold rules) → **15 A / 0 B — PASS**; grid `../behavior-test-completeness-bs-12-non-functional-requirements.md`. Non-vacuous: source-guard pins authority contents/sizes/seam (not bare `isEmpty`), pending-map pins the exact 16-key set+count+ownership before its loop, flow smokes discriminate 5 distinct real home-screen types.
+  - **Fix passes:** 0/3 (analyze + unit + coverage + acceptance + grade all green first pass).
+  - **Tokens / Time:** see Dashboard / master ledger (ITEST-1 row).
+- **Checkpoint / Handoff:**
+  - **Verification commands:** `cd /Users/matthew.quirk/Nuance-bs12`; `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; acceptance via `FNP_COORD_REPO=/Users/matthew.quirk/Nuance <scripts>/coord.sh with-lock bs-12 <PHASE> --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs12 && export PATH=… && flutter test integration_test/bs12/nfr_test.dart -d <booted-udid>'` (shared device lane → lock mandatory; booted `-d` mandatory — no `-d` ⇒ 0 tests/exit 0/false green; add `--dart-define=BS12_RUN_PENDING=true` for the ITEST-2/3 red baseline; whole-suite redirect to a file, don't tail). macOS has no `timeout`.
+  - **Frozen for ITEST-2 / ITEST-3 (and the behaviour phases):**
+    - `nfr_harness.dart`: `NfrFlow` {readout, capture, comparison, recipes, palette}, `givenTheApp(...)` → `NfrHarness` {tester, flow, speech, haptics, settle()}, fixtures `nfrRecipeTarget` / `nfrCaptureScene` / `nfrCaptureSource()`, and the re-exports (import the harness alone).
+    - `nfr_test.dart`: AC tests register one `acTestWidgets('AC-n', …)` each in this file; ITEST-2 ∥ ITEST-3 **share this file → sequence them**. Run run-pending and record the red baseline (the table above).
+  - **Known gaps / next:** **ITEST-2 is next** (AC-1,2,6,7,8,14,15,16,17 — the invariant guards, all pending), then ITEST-3 (AC-3,4,9,10,11,12,13), then ITEST-4 (test review = **G-2**). The guard/quality **behaviour** is still stubbed (offline sink inert, source scans empty, accuracy grades the fixture input directly, swap uses shipped impls), so each AC test lands red at baseline on its Then (or a Given naming its owning phase); the stubs are filled by GUARD-3..6 / QUALITY-2..5 **after G-2**. `givenTheApp` does not install the network block — a scenario that needs it wraps its whole body in `runUnderNetworkBlock`.
 
 ## Phase ITEST-2 — AC tests: invariant guards (pending)
 
