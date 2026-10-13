@@ -1,6 +1,6 @@
 # Module DALT — daltonization remap engine + display injection
 
-**Status:** Not started
+**Status:** In progress — DALT-1 (scaffold) done; next DALT-2 (shell)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
 additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
@@ -12,8 +12,8 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| DALT-1 | scaffold | — | ⬜ Next | | |
-| DALT-2 | shell | — | ⬜ Todo | | |
+| DALT-1 | scaffold | — | ✅ Done | 4.07M | 21m 20s |
+| DALT-2 | shell | — | ⬜ Next | | |
 | DALT-3 | behavior | AC-1 | ⬜ Todo | | |
 | DALT-4 | behavior | AC-5 | ⬜ Todo | | |
 | DALT-5 | behavior | AC-7 | ⬜ Todo | | |
@@ -32,17 +32,37 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 - **Consumes:** bs-08 `DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/
   `DisplayReadEndpoint`; bs-07 `AppDependencies.cvdProfile` (live) + `CvdProfileStore` (for the AC-6 recompute
   listener); `projectDichromat` + `CvdProfile` (bs-03).
-- **Reconciliation:** bs-08/bs-07 are not yet merged, so DALT-1 **re-confirms the exact class/method/file names
-  against merged `main`** before any shell edit; if a name drifted during bs-07/bs-08 implementation, adapt the
-  shell to the real surface and note it here. The remap extends the **one** chokepoint bs-08 built (D-1) — it
-  does not add a second transform path. Daltonization reads the **stored** profile (D-3), unlike simulation
-  which carries its own painter-chosen `simulationType`.
+- **Reconciliation:** bs-08/bs-07 are now merged to `main` (@ `ecd3a9e`). DALT-1 confirmed the real surface
+  against merged `main` — the names hold, with these **path drifts** to use when DALT-2 edits them:
+  - `DisplaySettings` → `lib/display/display_settings.dart` (fields today: `CvdType? simulationType`,
+    `double simulationSeverity`, `bool grayscale`; `const` ctor + `==`/`hashCode`/`toString` — DALT-2 adds
+    `bool daltonization` default false to all four).
+  - `DisplayController extends ChangeNotifier` → `lib/display/display_controller.dart` (has
+    `setSimulationType` / `setSimulationSeverity` / `setGrayscale` — DALT-2 adds `setDaltonization(bool)`).
+  - `DisplayReadEndpoint extends InheritedWidget` → `lib/display/display_read_endpoint.dart` (exposes
+    `DisplaySettings get settings => controller.settings`; DALT-2 surfaces `daltonization` + the effective
+    displayed colour here).
+  - `ColorChip` → `lib/widgets/color_chip.dart` — the chokepoint reads `DisplayScope.maybeOf(context)?.settings`
+    and maps `color` through **`simulateColor`** (from `lib/display/color_simulation.dart`), drawing the
+    original alongside when simulation is on. DALT-2 adds the `daltonization` branch here (the one transform
+    path, D-1), not a second chip.
+  - `projectDichromat(ColorCoordinates c, CvdProfile profile)` lives in **`lib/a11y/cvd/confusion_check.dart`**
+    (not a standalone file); `CvdProfile {CvdType type; double severity}` + `enum CvdType` in
+    `lib/a11y/cvd/cvd_profile.dart`. `daltonize.dart` is net-new alongside them.
+  - `AppDependencies.cvdProfile` (+ `withCvdProfile`) is in **`lib/app/build_app.dart`** (field at ~l216); the
+    live profile is seeded there and reconfigured at the app root (bs-07). `CvdProfileStore` →
+    **`lib/store/cvd_profile_store.dart`**; `CvdProfileReadEndpoint` → **`lib/onboarding/cvd_profile_read_endpoint.dart`**
+    (DALT-4/AC-10 read `hasSavedProfile` from it, D-4).
+  The remap extends the **one** chokepoint bs-08 built (D-1) — it does not add a second transform path.
+  Daltonization reads the **stored** profile (D-3), unlike simulation which carries its own painter-chosen
+  `simulationType`.
 
 ## Open gates
 
 - DALT-1: **G-1** (spec approval) ✅ Resolved 2026-10-13 — approved by Matt Quirk; **G-3** (bs-08 merged) ✅
-  Resolved 2026-10-13 — merge `0900d44` is an ancestor of `main`. Still blocked by **G-4** (bs-07 merged) —
-  see the master plan. All behavior phases are additionally blocked by **G-2** (acceptance tests approved).
+  Resolved 2026-10-13 — merge `0900d44` is an ancestor of `main`; **G-4** (bs-07 merged) ✅ Resolved
+  2026-10-13 — merge `ecd3a9e` is an ancestor of `main` (verified from git in DALT-1). DALT-1 is unblocked
+  and done. All behavior phases are additionally blocked by **G-2** (acceptance tests approved, at ITEST-3).
 
 ## Phase DALT-1 — scaffold
 
@@ -58,6 +78,50 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
   4. Seed `integration_test/bs10/pending.dart` exposing `acTestWidgets`, `pendingACs` (all 10 ACs → owning
      phase) and `pendingSkipReason`, gated by `--dart-define=BS10_RUN_PENDING=true`.
 - **Exit criteria:** `feat/bs-10` builds; the gate proof passes; baseline recorded; no product code changed.
+
+### Result — DALT-1  <!-- 2026-10-13 -->
+
+- Branched `feat/bs-10` off `main` @ `ecd3a9e` (bs-07 merge `ecd3a9e` + bs-08 merge `0900d44` both confirmed
+  ancestors of `main`; `main` in sync with origin) in worktree `/Users/matthew.quirk/Nuance-bs10`. `BASE = ecd3a9e`.
+- **G-4 resolved** (dependency): bs-07 signed off + merged to `main` @ `ecd3a9e` — verified from git, not a
+  human decision. G-1 ✅ + G-3 ✅ already held, so DALT-1 was fully unblocked.
+- **Surface re-confirmed against merged `main`** — all bs-07/bs-08 names hold; path drifts recorded in
+  *Interface reconciliation* (chief: `projectDichromat` lives in `confusion_check.dart`; the `ColorChip`
+  chokepoint maps through `simulateColor`; `CvdProfileStore`→`lib/store/`, `CvdProfileReadEndpoint`→
+  `lib/onboarding/`; `AppDependencies.cvdProfile` in `lib/app/build_app.dart`).
+- **Baseline (green):** `flutter test --coverage` → **1220 unit passed**, `coverage/lcov.info` produced.
+  `flutter test integration_test/ -d <iPhone 17 5AB9D06D…>` (default, pending skipped) → **197 passed**,
+  exit 0, run under the verify lock (`coord.sh with-lock bs-10-daltonization DALT-1`). `flutter analyze` →
+  no issues.
+- **Coverage gate proven both ways:** clean tree (no touched `lib/`) → `nothing to gate. PASS` (exit 0);
+  planted `lib/_gate_probe.dart` + under-covering test → `FAIL … 2/3 lines covered — uncovered lines: 6`
+  (exit 1); probe files removed → no product code remains.
+- **Pending gate added:** `integration_test/bs10/pending.dart` (modelled on `bs09/pending.dart`) — all 10 ACs
+  seeded pending → owning phases (AC-1→DALT-3, AC-2→DALT-6, AC-3→DALT-9, AC-4→DALT-10, AC-5→DALT-4,
+  AC-6→DALT-11, AC-7→DALT-5, AC-8→DALT-7, AC-9→DALT-8, AC-10→CONTROL-2); `behaviorPhases`, `acTestWidgets`,
+  `pendingSkipReason`, `runPending` via `BS10_RUN_PENDING`. Analyzes clean.
+- Coverage (touched `lib/`): none — scaffold owns no product code → gate PASS. Acceptance: n/a (no AC tests
+  yet; ITEST-1 builds the harness, ITEST-2/3 register per-AC tests).
+- Fix passes: 0/3 (all gates green on first run).
+- Closed by: gate proven both ways; baseline recorded green; no product code.
+
+### Checkpoint / Handoff — DALT-1
+
+- **Frozen for DALT-2:** `integration_test/bs10/pending.dart` is the un-pend registry — a behaviour phase
+  un-pends its AC by deleting that AC's row. DALT-2 is the first shell (identity `daltonize` stub +
+  `DisplaySettings.daltonization` + chokepoint branch + `DisplayReadEndpoint.daltonization`); render must stay
+  unchanged (identity remap), suite green.
+- **Verification commands** (Flutter SDK `/Users/matthew.quirk/development/flutter/bin`, not on default PATH —
+  prepend it): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main`
+  (host, no sim). Acceptance (needs a booted sim, always pass `-d <udid>` — no device ⇒ zero tests, false
+  green): `flutter test integration_test/daltonization_test.dart -d <udid>` once ITEST-1 creates it;
+  run-pending adds `--dart-define=BS10_RUN_PENDING=true`. Run sim commands under
+  `coord.sh with-lock bs-10-daltonization <PHASE> --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs10 && …'`
+  (`FNP_COORD_REPO=/Users/matthew.quirk/Nuance`; `with-lock` runs from the coord repo). macOS has **no**
+  `timeout`; redirect long sim runs to a file, don't tail a foreground run.
+- **Known gaps:** no product code, no `daltonize`/`DisplaySettings.daltonization`/read-endpoint field yet
+  (DALT-2), no bs-10 harness or `daltonization_test.dart` yet (ITEST-1), no toggle/no-profile control yet
+  (CONTROL-1/CONTROL-2). Carries the D-8 sim/dalt gap note only as context — out of bs-10 scope (D-5).
 
 ## Phase DALT-2 — shell: remap stub + pipeline wiring
 

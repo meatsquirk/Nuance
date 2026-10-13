@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** Not started — next DALT-1 (G-1 ✅ + G-3 ✅; still blocked by G-4 bs-07 merge)
+**Status:** In progress — next DALT-2 (shell). DALT-1 (scaffold) done; G-1/G-3/G-4 all ✅
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -128,7 +128,7 @@ AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7.
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | ⬜ Todo |
+| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-1 done) |
 | CONTROL | [modules/CONTROL.md](modules/CONTROL.md) | The daltonization settings control (toggle) + the no-saved-profile affordance (AC-10) | DALT (shell), bs-07 | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
@@ -155,7 +155,7 @@ behavior phases DALT-3..DALT-11 share the `ColorChip`/display chokepoint **and**
 | G-1 | decision | Approve the spec (record the approval as its first line, replacing the "Draft: awaiting owner approval" line) | DALT-1 | ✅ Resolved 2026-10-13 08:00 EDT: approved — Matt Quirk (spec first line amended to the approval line) |
 | G-2 | decision | Approve the acceptance tests (ITEST-3's packet) | every behavior phase | Open |
 | G-3 | dependency | **bs-08 signed off and merged to `main`** (lands `DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint` + the `display_*` harness pattern) — closed by the human approving bs-08 SIGNOFF-1 and merging `feat/bs-08` → `main` | DALT-1 | ✅ Resolved 2026-10-13 08:00 EDT: bs-08 merged to `main` (merge `0900d44`, ancestor of `main`) — verified from git |
-| G-4 | dependency | **bs-07 signed off and merged to `main`** (lands `CvdProfileStore`/`CvdProfileReadEndpoint` + savable/empty/changeable `AppDependencies.cvdProfile`) — closed by the human approving bs-07 SIGNOFF-1 and merging `feat/bs-07` → `main` | DALT-1 | Open |
+| G-4 | dependency | **bs-07 signed off and merged to `main`** (lands `CvdProfileStore`/`CvdProfileReadEndpoint` + savable/empty/changeable `AppDependencies.cvdProfile`) — closed by the human approving bs-07 SIGNOFF-1 and merging `feat/bs-07` → `main` | DALT-1 | ✅ Resolved 2026-10-13: bs-07 merged to `main` (merge `ecd3a9e`, ancestor of `main`) — verified from git in DALT-1 |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -172,8 +172,8 @@ not as flakes.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | DALT-1 | scaffold: branch off post-bs07/bs08 main, baseline, coverage-gate proof, `bs10/pending.dart` (10 ACs) + runner | ⬜ Next | | | G-1 ✅, G-3 ✅; blocked by G-4 (bs-07 merge) |
-| 2 | DALT-2 | shell: `daltonize` identity stub + `DisplaySettings.daltonization` + chokepoint branch + `DisplayReadEndpoint` | ⬜ Todo | | | |
+| 1 | DALT-1 | scaffold: branch off post-bs07/bs08 main, baseline, coverage-gate proof, `bs10/pending.dart` (10 ACs) + runner | ✅ Done | 4.07M | 21m 20s | unit 1220 / integ 197 green; gate proven both ways; G-1/G-3/G-4 ✅ |
+| 2 | DALT-2 | shell: `daltonize` identity stub + `DisplaySettings.daltonization` + chokepoint branch + `DisplayReadEndpoint` | ⬜ Next | | | |
 | 3 | CONTROL-1 | shell: daltonization toggle + no-profile placeholder region (render-only) | ⬜ Todo | | | after DALT-2 |
 | 4 | ITEST-1 | acceptance-tests: harness, fixtures (`referenceDaltonize`, saved/noProfile), pending gate, smoke | ⬜ Todo | | | |
 | 5 | ITEST-2 | acceptance-tests: AC-1..10 (pending) + red baseline + grades | ⬜ Todo | | | |
@@ -195,12 +195,15 @@ when the row is marked done.
 
 ## Next phase
 
-**DALT-1 (scaffold)** — G-1 ✅ (spec approved 2026-10-13) and G-3 ✅ (bs-08 merged `0900d44`) are clear;
-one gate remains:
-- **G-4** — bs-07 must be signed off and merged to `main` (the stored profile bs-10 reads). bs-07 is still
-  pre-sign-off (PROFILE-2 then SIGNOFF-1 outstanding), so DALT-1 cannot start yet.
-Once G-4 clears, DALT-1 branches `feat/bs-10` off the updated `main`, proves the coverage gate + the
-integration runner, and seeds `integration_test/bs10/pending.dart` with all 10 ACs pending. No product code.
+**DALT-2 (shell)** — startable now (DALT-1 done; depends only on DALT-1). In worktree
+`/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`: add the identity `daltonize(c, profile)` stub
+(`lib/a11y/cvd/daltonize.dart`), `bool daltonization` (default false) to `DisplaySettings` +
+`DisplayController.setDaltonization`, the `daltonization` branch of the `ColorChip`/`DisplayScope` chokepoint
+(identity for now), and `daltonization` + the effective displayed colour on `DisplayReadEndpoint`. Render must
+stay unchanged (identity remap); unit gate + existing suite green; no behaviour yet. See *Interface
+reconciliation* for the confirmed file paths.
+- **G-2** (acceptance tests approved) does **not** block DALT-2; it blocks the behaviour phases (DALT-3+),
+  decided at ITEST-3's test review. DALT-2 → CONTROL-1 and ITEST-1 are the next openings after it.
 
 ## Token usage
 
@@ -210,7 +213,8 @@ integration runner, and seeds `integration_test/bs10/pending.dart` with all 10 A
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 040f04b0 | 2026-10-12 22:32 EDT | 22:46 | 13m 38s | 13m 38s | claude-opus-4-8 | 52 | 119,700 | 2,170,426 | 62,430 | 2,352,608 | plan written: 17 phases, 3 modules (DALT/CONTROL/ITEST), 10 ACs; gates G-1 spec + G-3 bs-08 merge + G-4 bs-07 merge |
 | GATE-DECISION | ff530524 | 2026-10-13 07:59 EDT | 08:01 | 2m 14s | 2m 14s | claude-opus-4-8 | 34 | 37,170 | 986,861 | 9,008 | 1,033,073 | G-1 approved (spec) by Matt Quirk; G-3 resolved (bs-08 merged 0900d44) |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 08:01** | **15m 52s** | **15m 52s** |  | **86** | **156,870** | **3,157,287** | **71,438** | **3,385,681** |  |
+| DALT-1 | 6f42cd8f | 2026-10-13 12:40 EDT | 13:01 | 21m 20s | 21m 20s | claude-opus-4-8 | 90 | 87,074 | 3,952,138 | 30,360 | 4,069,662 | scaffold: feat/bs-10 off main @ ecd3a9e; baseline unit 1220 / integ 197 green; coverage gate proven both ways; bs10/pending.dart seeded (10 ACs); G-4 resolved (bs-07 merged ecd3a9e); no product code |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 13:01** | **37m 12s** | **37m 12s** |  | **176** | **243,944** | **7,109,425** | **101,798** | **7,455,343** |  |
 
 ## Sign-off
 
