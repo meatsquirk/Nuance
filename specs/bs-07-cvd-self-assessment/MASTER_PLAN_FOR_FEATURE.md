@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — **behaviour stage COMPLETE; all 14 ACs delivered (suite 14 A/0); every gate green.** FLOW-2 (AC-14) done 2026-10-13 — the last build phase. **Next = SIGNOFF-1** (the only remaining phase).
+**Status:** ⏸ Awaiting sign-off — all 21 build phases done; all 14 ACs delivered (suite 14 A/0); full verification green (unit 1069/cov 100% touched/regression 155/bs-07 run-pending 24). SIGNOFF-1 packet assembled 2026-10-13 @ `df530dd`; a human records the decision via `--signoff`.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -183,14 +183,17 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 19 | FLOW-7 | AC-12 severity slider self-calibration (result) | ✅ Done | 12,947,153 | 25m 37s | AC-12 un-pended + green; `setSeverity`/`confirmCalibration`→`calibratedSeverity` (D-6) + sim/original pair; result step now `StatelessWidget` reading `calibratedSeverity ?? estimate.severity`; unit 1055/cov 100% touched/accept default 21 pass 3 skip, run-pending 22 pass 2 fail (own downstream Then); grade 13 A/1 B-pending (AC-12 implemented A, AC-10/11 re-confirmed); fix 1/3 |
 | 20 | FLOW-8 | AC-1 result caveat (result) | ✅ Done | 7,458,547 | 13m 45s | AC-1 un-pended + green; `_caveat()` (approximate-estimate label + anomaloscope recommendation) in result estimate branch + `advanceToResult` sets `caveatShown`; unit 1057/cov 100% (24 touched)/accept default 22 pass 2 skip, run-pending 23 pass 1 fail (AC-13 own save Then); grade 13 A/1 B-pending (AC-1 implemented A, AC-10/11/12 re-confirmed); fix 0/3 |
 | 21 | PROFILE-2 | AC-13 save profile configures the pipeline | ✅ Done | 14,408,911 | 22m 50s | AC-13 un-pended + green; `save` projects estimate→`CvdProfile` (type + `calibratedSeverity ?? estimate.severity`, D-6) through `profileStore` (1 doc) + sets `saved` + live-pipeline reconfig via `LiveProfileScope`/`withCvdProfile`/stateful `_App` root (D-3/D-8); live-dep augmentation closed; unit 1067/cov 100% touched/accept default 23 pass 1 skip, run-pending 24/0; grade 14 A/0; fix 1/3 |
-| 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | **startable** — all 14 ACs delivered; suite 14 A/0; every gate green. Assemble packet + summary page, record the human decision; carry the D-8 sim/dalt gap; merge `feat/bs-07`→`main` at sign-off (closes bs-10 G-4) |
+| 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting sign-off | 6,549,247 | 14m 59s | packet [signoff/round-1.md](signoff/round-1.md) @ `df530dd`; verification green (unit 1069/cov 100% touched/regression 155/run-pending 24); fresh grade **14 A/0**; carries D-8 sim/dalt gap. Human decision pending via `--signoff` |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**Behaviour stage COMPLETE — all 14 ACs delivered; suite 14 A / 0; every gate green. FLOW-2 (AC-14, the last build phase) done 2026-10-13.**
-- **SIGNOFF-1** — **now startable, the only remaining phase.** Assemble the sign-off packet + summary page and record the human decision. Carry the **D-8** sim/daltonization behavioural gap (AC-13 verified at the shared profile seam; behavioural sim/dalt owned by bs-08/bs-10). On approval, merge `feat/bs-07` → `main` (closes **bs-10 G-4**). Run with `/feature-next-phase bs07 SIGNOFF-1`.
+**⏸ Awaiting sign-off — the build is complete (21/21 phases, all 14 ACs, suite 14 A/0, verification green). SIGNOFF-1 packet assembled 2026-10-13.**
+- **A human records the decision:** `/feature-next-phase --signoff bs07 approved` (or `changes "<items>"`). The packet is [signoff/round-1.md](signoff/round-1.md); the summary page link is in it.
+- **On Approved:** feature → Done; then merge `feat/bs-07-cvd-self-assessment` → `main` (throwaway worktree on main — the primary checkout on feat/bs-04 has stale untracked specs that abort `checkout main`; `git merge -F <file>`). This closes **bs-10 G-4**.
+- **On Changes requested:** each item becomes a new phase before a fresh SIGNOFF-2.
+- The one carried gap is **D-8** (behavioural sim/dalt, owned by bs-08/bs-10) — verified at the shared profile seam only.
 
 Open gates: none (G-1..G-5 all resolved).
 
@@ -228,10 +231,11 @@ Open gates: none (G-1..G-5 all resolved).
 | PROFILE-2 | 9067b96e | 2026-10-13 07:26 EDT | 07:48 | 22m 50s | 22m 50s | claude-opus-4-8 | 146 | 243,212 | 14,091,623 | 73,930 | 14,408,911 | AC-13 un-pended + green; save projects estimate->CvdProfile (type + calibratedSeverity ?? estimate.severity, D-6) through profileStore (1 doc) + sets saved + live-pipeline reconfig (LiveProfileScope/withCvdProfile/stateful _App, D-3/D-8); live-dep augmentation closed; unit 1067/cov 100% touched/accept default 23 pass 1 skip, run-pending 24/0; grade 14 A/0; fix 1/3 |
 | GATE-DECISION | 792eb5ec | 2026-10-13 07:58 EDT | 09:08 | 1h 10m | 5m 56s | claude-opus-4-8 | 66 | 105,085 | 2,456,417 | 23,154 | 2,584,722 | G-5 approved: four steps = Lighting/Intake/Vision-tests/Result (D-4 confirmed) |
 | FLOW-2 | 1d47144c | 2026-10-13 10:35 EDT | 10:51 | 16m 48s | 16m 48s | claude-opus-4-8 | 132 | 259,085 | 7,730,203 | 52,125 | 8,041,545 | AC-14 un-pended + green; four steps pinned (G-5); grade 14 A/0; fix 0/3 |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-13 10:51** | **12h 38m** | **8h 28m** |  | **3,286** | **5,206,192** | **208,073,599** | **1,407,364** | **214,690,441** |  |
+| SIGNOFF-1 | 1d47144c | 2026-10-13 11:08 EDT | 11:23 | 14m 59s | 14m 59s | claude-opus-4-8 | 60 | 205,037 | 6,316,830 | 27,320 | 6,549,247 | sign-off packet + summary + fresh grade 14 A/0; verification green; awaiting human decision |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-13 11:23** | **12h 53m** | **8h 43m** |  | **3,346** | **5,411,229** | **214,390,429** | **1,434,684** | **221,239,688** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | | ⏸ Not yet created |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `df530dd` | 14 A / 0 | ⏸ Awaiting sign-off (prepared 2026-10-13) |
