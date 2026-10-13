@@ -1,7 +1,7 @@
 # Master Plan — CVD self-assessment (onboarding)
 
 **Spec:** [bs-07-cvd-self-assessment.feature](../bs-07-cvd-self-assessment.feature)
-**Status:** In progress — behaviour stage all but done; ENGINE + PROFILE modules COMPLETE; 13/14 behaviour ACs done (suite 14 A/0). Next: SIGNOFF-1. FLOW-2 (AC-14) blocked on G-5.
+**Status:** In progress — behaviour stage all but done; ENGINE + PROFILE modules COMPLETE; 13/14 behaviour ACs done (suite 14 A/0). G-5 resolved (D-4 confirmed) 2026-10-13; FLOW-2 (AC-14) now startable → then SIGNOFF-1.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"CVD self-assessment (onboarding)" (tiers 0–4) + §"CVD pipeline"; wireframe `Paint Color Assistant.dc.html` region S1.R1 (E36–E41, E43); reuses `lib/a11y/cvd/cvd_profile.dart` (bs-03) and `lib/store/PersistentStore` (bs-06).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` after the bs-05 + bs-06 merge (G-3) · extends the bs-01..bs-06 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-11)
 
@@ -62,7 +62,7 @@
 | D-1 | Reuse `CvdProfile {CvdType type, double severity 0..1}` unchanged; bs-07 only populates measured values, no schema change | The profile's own doc-comment designates bs-07 as the "populate" change; bs-03/bs-08/bs-10 already consume this value type |
 | D-2 | Persist the one profile as a single document — collection `cvd_profile`, id `current` — over `PersistentStore`, matching `source_photo_store.dart`; body `{type: <name>, severity: <double>}` | One stored profile (spec); reuses the bs-06 generic document store; no new persistence engine |
 | D-3 | Load `AppDependencies.cvdProfile` from the store at app assembly, defaulting to the const default when absent; saving updates both the store and the live dependency | So the measured profile flows to bs-03's `ConfusionCheck` and the `projectDichromat` seam bs-08/bs-10 reuse |
-| D-4 | The onboarding presents **four** top-level steps (progress = N of 4); tiers 2 (screening) and 4 (threshold) nest inside a step rather than adding to the count — **proposed, pending G-5** | AC-14 says "four steps"; the wireframe draws four (lighting, intake, arrangement, result); screening+threshold are in-scope-but-undrawn tiers |
+| D-4 | The onboarding presents **four** top-level steps (progress = N of 4): **[Lighting (T0), Intake (T1), Vision tests, Result]**; screening (T2), arrangement (T3) and threshold (T4) all nest inside the single **Vision-tests** step and do not advance the step counter — **confirmed by Matt Quirk via G-5, 2026-10-13** | AC-14 says "four steps"; the wireframe draws four (lighting, intake, arrangement, result); screening+threshold are in-scope-but-undrawn tiers |
 | D-5 | UI severity slider is 0..100; stored `severity = value/100`. Band anchors 30→mild, 60→moderate, 90→strong; boundaries at the anchor midpoints — **confirmed G-4 2026-10-12**: mild `[0,0.45)`, moderate `[0.45,0.75)`, strong `[0.75,1.0]` | AC-11 examples fix three anchors; the profile stores 0..1 |
 | D-6 | Self-calibration (AC-12) is kept **as** the profile severity — the painter-tuned slider value is the subjective calibration; no separate field | AC-12's "kept as the subjective self-calibration" with a profile that has only type+severity |
 | D-7 | The engine assembles the estimate from whatever tier results are present (prior + screening direction + arrangement + threshold); the result step shows type+severity even when a tier was skipped (AC-8) | Tiers are optional/fastest-first; the flow must reach a result without every tier |
@@ -147,7 +147,7 @@ graph LR
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-12: **approved** — Matt Quirk; packet (14 pending AC tests, clean red baseline, 7 A / 7 B-pending all deferred-driver limits, 3 judgment calls) accepted as-is; un-blocks every behavior phase |
 | G-3 | dependency | bs-05 **and** bs-06 signed off and merged to `main` (the `PersistentStore`, the `self_assessment` entry seam and the pubspec superset land on main) — closed by the human merging `feat/bs-05` and `feat/bs-06` | ENGINE-1 | ✅ Resolved 2026-10-11 21:46 EDT: `feat/bs-05` (990a67a→merge 9760a4f) + `feat/bs-06` (e998bac→merge cd1c86b) merged to `main`; `persistent_store.dart`, `self_assessment_entry_screen.dart`, `router.toSelfAssessment()`, pubspec superset (drift/path_provider/printing) confirmed present; analyze clean + 849 unit tests green post-merge — Matt Quirk |
 | G-4 | decision | Pin the profile persistence + scales: (a) persist via `PersistentStore` collection `cvd_profile`/id `current`, reusing `CvdProfile` unchanged; (b) slider 0..100 → severity 0..1; (c) band boundaries around the 30/60/90 anchors | PROFILE-1, ENGINE-7 | ✅ Resolved 2026-10-12 — approved as proposed (Matt Quirk): (a) collection `cvd_profile`/id `current`, body `{type, severity}`, `CvdProfile` reused unchanged; (b) `severity = slider/100`; (c) midpoint cutoffs mild `[0,0.45)` / moderate `[0.45,0.75)` / strong `[0.75,1.0]` |
-| G-5 | decision | Reconcile the four-step progress (AC-14) with the five tiers: which tiers are the four counted steps, and where screening (Tier 2) and threshold (Tier 4) sit (proposed D-4) — routed to the spec author | FLOW-2 | Open |
+| G-5 | decision | Reconcile the four-step progress (AC-14) with the five tiers: which tiers are the four counted steps, and where screening (Tier 2) and threshold (Tier 4) sit (proposed D-4) — routed to the spec author | FLOW-2 | ✅ Resolved 2026-10-13 09:06 EDT — Matt Quirk: the four counted steps are **Lighting (T0), Intake (T1), Vision tests, Result**; screening (T2), arrangement (T3) and threshold (T4) nest inside the single Vision-tests step (D-4 confirmed) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -170,7 +170,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,10,11,12,13,14 (pending) + red baseline | ✅ Done | 6,494,040 | 27m 23s | 7 pending tests; default 10 pass/7 skip, run-pending +10/−7; grade 5 A + 2 B-pending (AC-10→FLOW-6, AC-13→PROFILE-2); fix 0/3 |
 | 7 | ITEST-3 | acceptance-tests: AC-3,4,5,6,7,8,9 (pending) + red baseline | ✅ Done | 5,169,129 | 18m 56s | 7 pending tests; default 10 pass/14 skip, run-pending +10/−14 (all fail cleanly on Then/precondition); grade 2 A (AC-3, AC-9) + 5 B-pending (AC-4→ENGINE-4, AC-5→ENGINE-5, AC-6/7/8→FLOW-4); fix 0/3 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 847,758 | 2m 56s | packet assembled (14-AC catalogue + red-baseline + 8 augmentation rows + 3 look-first calls); **G-2 approved 2026-10-12 — Matt Quirk** (packet accepted as-is); no code |
-| 9 | FLOW-2 | AC-14 progress indicator | ⬜ Todo | | | blocked: G-5 |
+| 9 | FLOW-2 | AC-14 progress indicator | ⬜ Next | | | startable — G-5 resolved (D-4: Lighting/Intake/Vision-tests/Result, stepTotal=4) |
 | 10 | FLOW-3 | AC-2 lighting gate (Tier 0) | ✅ Done | 8,229,212 | 16m 09s (16m 09s) | AC-2 un-pended + green; unit 967; cov 100% (23); accept 11 pass/13 skip; grade A; fix 0/3 |
 | 11 | ENGINE-3 | AC-3 intake answer → prior (Tier 1) | ✅ Done | 9,029,262 | 16m 39s (2h 53m) | AC-3 un-pended + green; real `TieredAssessmentEngine.recordIntake` (host-injected); unit 980; cov 100% (23); accept 12 pass/12 skip; grade A; fix 0/3 |
 | 12 | ENGINE-4 | AC-4 diagnosis seeds prior (Tier 1) | ✅ Done | 12,538,664 | 16m 43s | AC-4 un-pended + green; `seedFromDiagnosis` override + `reportDiagnosis` + intake type-picker; AC-4 B-pending→A (protan control); unit 988; cov 100% (23); accept 13 pass/11 skip; grade 3×A; fix 0/3 |
@@ -183,17 +183,17 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 19 | FLOW-7 | AC-12 severity slider self-calibration (result) | ✅ Done | 12,947,153 | 25m 37s | AC-12 un-pended + green; `setSeverity`/`confirmCalibration`→`calibratedSeverity` (D-6) + sim/original pair; result step now `StatelessWidget` reading `calibratedSeverity ?? estimate.severity`; unit 1055/cov 100% touched/accept default 21 pass 3 skip, run-pending 22 pass 2 fail (own downstream Then); grade 13 A/1 B-pending (AC-12 implemented A, AC-10/11 re-confirmed); fix 1/3 |
 | 20 | FLOW-8 | AC-1 result caveat (result) | ✅ Done | 7,458,547 | 13m 45s | AC-1 un-pended + green; `_caveat()` (approximate-estimate label + anomaloscope recommendation) in result estimate branch + `advanceToResult` sets `caveatShown`; unit 1057/cov 100% (24 touched)/accept default 22 pass 2 skip, run-pending 23 pass 1 fail (AC-13 own save Then); grade 13 A/1 B-pending (AC-1 implemented A, AC-10/11/12 re-confirmed); fix 0/3 |
 | 21 | PROFILE-2 | AC-13 save profile configures the pipeline | ✅ Done | 14,408,911 | 22m 50s | AC-13 un-pended + green; `save` projects estimate→`CvdProfile` (type + `calibratedSeverity ?? estimate.severity`, D-6) through `profileStore` (1 doc) + sets `saved` + live-pipeline reconfig via `LiveProfileScope`/`withCvdProfile`/stateful `_App` root (D-3/D-8); live-dep augmentation closed; unit 1067/cov 100% touched/accept default 23 pass 1 skip, run-pending 24/0; grade 14 A/0; fix 1/3 |
-| 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | startable; all 14 ACs delivered except AC-14 (FLOW-2, blocked on G-5); suite 14 A/0 |
+| 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | blocked: FLOW-2 (AC-14) must be done first — all other 13 ACs delivered; suite 14 A/0 |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**Behaviour stage all but done — 13/14 behaviour ACs delivered; suite 14 A / 0.** FLOW-3 (AC-2) + ENGINE-3/4/5/6 (AC-3/4/5/9) + FLOW-4 (AC-6/7/8) + ENGINE-7 (AC-11) + FLOW-6 (AC-10) + FLOW-7 (AC-12) + FLOW-8 (AC-1) + **PROFILE-2 (AC-13)** ✅ Done; FLOW-5 (enabler) ✅ Done. The AC-13 live-pipeline augmentation (the last open one) is closed.
-- **SIGNOFF-1** (next) — assemble the sign-off packet + summary page, record the human decision. Carry the one open item: AC-14/FLOW-2 blocked on **G-5**; and the sim/dalt D-8 known gap (bs-08/bs-10). No build phase remains besides FLOW-2.
-- **FLOW-2** (AC-14) still **blocked on G-5** (four-step vs five-tier, routed to spec author) — AC-14 is green-at-baseline in run-pending, so the behaviour is effectively present; G-5 is the formal four-step/five-tier reconciliation.
+**Behaviour stage all but done — 13/14 behaviour ACs delivered; suite 14 A / 0. G-5 resolved 2026-10-13 (D-4 confirmed).**
+- **FLOW-2** (AC-14) — **now startable** (the last build phase). Fix the four counted steps in `onboarding_steps.dart` to **[Lighting (T0), Intake (T1), Vision tests, Result]** (screening/arrangement/threshold nest inside the Vision-tests step, not the counter); implement step advance; progress indicator renders "N of 4"; read endpoint `stepIndex`/`stepTotal`==4. AC-14 is already green-at-baseline in run-pending, so this un-pends/finalizes it. Shares `onboarding_controller.dart`/`onboarding_steps.dart` with other FLOW work ⇒ own session, not parallel.
+- **SIGNOFF-1** — after FLOW-2. Assemble the sign-off packet + summary page, record the human decision. Carry the sim/dalt D-8 known gap (bs-08/bs-10).
 
-Still open: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed to the spec author).
+Open gates: none (G-1..G-5 all resolved).
 
 ## Token usage
 
@@ -227,7 +227,8 @@ Still open: **G-5** (four-step vs five-tier, blocks FLOW-2 — routed to the spe
 | FLOW-7 | 1f334bf8 | 2026-10-12 22:14 EDT | 22:40 | 25m 37s | 25m 37s | claude-opus-4-8 | 184 | 266,453 | 12,609,466 | 71,050 | 12,947,153 | AC-12 un-pended + green; grade A (implemented); unit 1055/cov 100% touched/accept default 21 pass 3 skip, run-pending 22 pass 2 fail (own downstream Then); 13 A/1 B-pending; fix 1/3 |
 | FLOW-8 | 79617e82 | 2026-10-13 05:02 EDT | 05:16 | 13m 45s | 13m 45s | claude-opus-4-8 | 132 | 231,117 | 7,193,177 | 34,121 | 7,458,547 | AC-1 un-pended + green; result caveat (approximate-estimate label + anomaloscope recommendation) + advanceToResult sets caveatShown; unit 1057/cov 100% (24 touched)/accept default 22 pass 2 skip, run-pending 23 pass 1 fail (AC-13 own save Then); grade 13 A/1 B-pending; fix 0/3 |
 | PROFILE-2 | 9067b96e | 2026-10-13 07:26 EDT | 07:48 | 22m 50s | 22m 50s | claude-opus-4-8 | 146 | 243,212 | 14,091,623 | 73,930 | 14,408,911 | AC-13 un-pended + green; save projects estimate->CvdProfile (type + calibratedSeverity ?? estimate.severity, D-6) through profileStore (1 doc) + sets saved + live-pipeline reconfig (LiveProfileScope/withCvdProfile/stateful _App, D-3/D-8); live-dep augmentation closed; unit 1067/cov 100% touched/accept default 23 pass 1 skip, run-pending 24/0; grade 14 A/0; fix 1/3 |
-| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-13 07:48** | **11h 11m** | **8h 06m** |  | **3,088** | **4,842,022** | **197,886,979** | **1,332,085** | **204,064,174** |  |
+| GATE-DECISION | 792eb5ec | 2026-10-13 07:58 EDT | 09:08 | 1h 10m | 5m 56s | claude-opus-4-8 | 66 | 105,085 | 2,456,417 | 23,154 | 2,584,722 | G-5 approved: four steps = Lighting/Intake/Vision-tests/Result (D-4 confirmed) |
+| **Feature total** |  | **2026-10-11 21:04 EDT** | **2026-10-13 09:08** | **12h 21m** | **8h 12m** |  | **3,154** | **4,947,107** | **200,343,396** | **1,355,239** | **206,648,896** |  |
 
 ## Sign-off
 

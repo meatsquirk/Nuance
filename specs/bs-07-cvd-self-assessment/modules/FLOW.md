@@ -1,6 +1,6 @@
 # Module FLOW — onboarding controller, screens, flow
 
-**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler), FLOW-6 (AC-10), FLOW-7 (AC-12), FLOW-8 (AC-1) ✅ Done; FLOW-2 (AC-14) blocked by G-5; result-step AC remaining: PROFILE-2 (AC-13)
+**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler), FLOW-6 (AC-10), FLOW-7 (AC-12), FLOW-8 (AC-1) ✅ Done; PROFILE-2 (AC-13) ✅ Done. FLOW-2 (AC-14) now startable — G-5 resolved 2026-10-13 (D-4 confirmed: steps = Lighting/Intake/Vision-tests/Result). FLOW-2 is the last FLOW phase.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/onboarding_controller.dart`, `onboarding_state.dart`, `onboarding_read_endpoint.dart`, `onboarding_steps.dart`; `lib/onboarding/screens/` (host + lighting, intake, screening, arrangement, threshold, result step widgets with keyed regions); route wiring in `lib/app/router.dart` + `lib/palette/self_assessment_entry_screen.dart` (replaced). Behavior phases in ENGINE/PROFILE add thin controller calls here (merge-risky — rebase before editing).
 **Depends on:** ENGINE (estimate types + scoring), PROFILE (save seam) · **Blocks:** ITEST, SIGNOFF
@@ -21,14 +21,14 @@
 ## Interface reconciliation
 
 - **Replace, don't re-route.** bs-07 replaces `SelfAssessmentEntryScreen` behind the existing `AppRouter.toSelfAssessment()`; keep the stable anchor `ValueKey('self-assessment-entry-screen')` (bs-06's vision-profile card nav and its acceptance test observe it) and add it to the new host so the bs-06 suite stays green.
-- **Four steps vs five tiers (D-4, G-5).** The progress model is `onboarding_steps.dart` — a `List<OnboardingStep>` with a current index. The **count** of top-level steps is what AC-14 asserts ("four"). Proposed: steps = [Setup/lighting, Intake, Vision tests, Result], with screening (Tier 2) and threshold (Tier 4) nested inside the Vision-tests step alongside the arrangement. FLOW-1 builds the list generically; the concrete four are fixed at FLOW-2 once **G-5** resolves.
+- **Four steps vs five tiers (D-4, G-5 ✅ resolved 2026-10-13).** The progress model is `onboarding_steps.dart` — a `List<OnboardingStep>` with a current index. The **count** of top-level steps is what AC-14 asserts ("four"). **Confirmed four:** `[Lighting (T0), Intake (T1), Vision tests, Result]`, with screening (Tier 2), arrangement (Tier 3) and threshold (Tier 4) all nested inside the Vision-tests step — they do not advance the step counter. FLOW-1 built the list generically; FLOW-2 pins these concrete four (`stepTotal`==4).
 - **Read endpoint is the Then surface.** `OnboardingReadEndpoint` exposes: `stepIndex`, `stepTotal`, lighting flags + `testingStarted`, `prior`, `screening`, arrangement `pool`/`arranged`, `threshold`, `estimate` (type/severity), `band`, `caveatShown`, `calibratedSeverity`. Keyed widgets render the same state for finder-based assertions.
 - **Estimate assembly is the barrier (FLOW-5).** Result-step ACs (AC-1/10/11/12 and PROFILE-2's AC-13) need "on the result step with an estimate" as a Given. FLOW-5 (enabler) makes the controller assemble `CvdEstimate` from whatever tier results exist and advance to the result step; before it, those tests fail on a precondition naming FLOW-5.
 - **Severity normalization (D-5).** The result slider is 0..100; the controller stores `severity = value/100` on the estimate and (at save) the profile.
 
 ## Open gates
 
-- **G-5** (decision) blocks **FLOW-2**: which tiers are the four counted steps (proposed D-4).
+- **G-5** (decision) ✅ Resolved 2026-10-13 09:06 EDT — Matt Quirk: the four counted steps are **Lighting (T0), Intake (T1), Vision tests, Result**; screening/arrangement/threshold nest inside the Vision-tests step (D-4 confirmed). FLOW-2 unblocked.
 - **G-2** (ITEST-4) blocks every behavior phase here.
 
 ## Phase 1 — shell: controller, state, read endpoint, screens, route
@@ -47,9 +47,9 @@
 ## Phase 2 — AC-14: the current step is shown against the total
 
 - **Kind:** behavior · **Target AC:** AC-14 (full)
-- **Depends on:** ITEST-4 (G-2), FLOW-1, **G-5** (the four steps) · **Blocks:** —
+- **Depends on:** ITEST-4 (G-2 ✅), FLOW-1, **G-5 ✅ resolved** (the four steps = Lighting/Intake/Vision-tests/Result) · **Blocks:** —
 - **Files:** `onboarding_steps.dart` (fix the four steps), `onboarding_controller.dart` (step advance), progress widget in `screens/`
-- **Tasks:** fix the four top-level steps (per G-5); implement step advance; the progress indicator renders "N of 4"; read endpoint `stepIndex`/`stepTotal`.
+- **Tasks:** fix the four top-level steps to `[Lighting (T0), Intake (T1), Vision tests, Result]` (screening/arrangement/threshold nest inside Vision-tests, do not advance the counter — per G-5); implement step advance; the progress indicator renders "N of 4"; read endpoint `stepIndex`/`stepTotal`==4.
 - **Acceptance gate:** un-pend AC-14; suite green; coverage 100% touched; grade A (control: advancing again reads 3 of 4).
 - **Augments:** none.
 
