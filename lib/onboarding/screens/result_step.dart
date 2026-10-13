@@ -101,6 +101,22 @@ class ResultStep extends StatelessWidget {
     );
   }
 
+  /// The approximate-estimate caveat (E40 body, AC-1, FLOW-8): shown once the
+  /// result is reached, it labels the estimate an **approximate estimate** (the
+  /// self-assessment estimates, it does not diagnose) and recommends a clinical
+  /// **anomaloscope** test for ground truth. Both strings are rendered so a
+  /// painter cannot read the result as a clinical diagnosis.
+  Widget _caveat() => const Column(
+        key: caveatKey,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('This is an approximate estimate, not a clinical diagnosis.'),
+          Text(
+            'For ground truth, a clinical anomaloscope test is recommended.',
+          ),
+        ],
+      );
+
   /// The simulated-versus-original pair (E41): two swatches side by side. The
   /// simulated one collapses toward the original as [severity] rises, so the
   /// painter raises the slider until "the pair stops looking different to them"
@@ -181,7 +197,7 @@ class ResultStep extends StatelessWidget {
           onChangeEnd: (_) => controller.confirmCalibration(),
         ),
         Text('Severity band: ${band.label}', key: bandKey),
-        const SizedBox(key: caveatKey),
+        _caveat(),
         const TextButton(
           key: saveKey,
           onPressed: null,

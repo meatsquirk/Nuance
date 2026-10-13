@@ -42,7 +42,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// member of [behaviorPhases]. Mapping is taken verbatim from the master plan's
 /// AC-coverage table.
 const Map<String, String> pendingACs = {
-  'AC-1': 'FLOW-8', // result caveat: approximate estimate + clinical test
+  // AC-1 (result caveat: approximate estimate + clinical test) un-pended by FLOW-8.
   // AC-2 (Tier 0 lighting gate) un-pended by FLOW-3.
   // AC-3 (Tier 1 intake answer → starting prior) un-pended by ENGINE-3.
   // AC-4 (Tier 1 prior-diagnosis seeds the prior) un-pended by ENGINE-4.

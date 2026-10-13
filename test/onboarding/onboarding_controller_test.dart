@@ -257,6 +257,23 @@ void main() {
       controller.advanceToResult();
       expect(controller.state.estimate!.arrangementPresent, isTrue);
     });
+
+    test('shows the approximate-estimate caveat once the result is reached '
+        '(FLOW-8, AC-1)', () {
+      // Before the result is reached the caveat is not shown.
+      expect(controller.state.caveatShown, isFalse,
+          reason: 'the caveat belongs to the shown result, not before it');
+
+      controller.advanceToResult();
+
+      // Reaching the result shows the caveat alongside the estimate, so the
+      // estimate never appears without the approximate-estimate label and the
+      // clinical-test recommendation beside it (AC-1).
+      expect(controller.state.caveatShown, isTrue,
+          reason: 'the result carries the approximate-estimate caveat');
+      expect(controller.state.estimate, isNotNull,
+          reason: 'the caveat is shown with the assembled estimate');
+    });
   });
 
   group('OnboardingController setType (FLOW-6, AC-10)', () {

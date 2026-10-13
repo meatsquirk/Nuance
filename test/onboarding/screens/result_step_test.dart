@@ -43,6 +43,35 @@ void main() {
     final slider = tester.widget<Slider>(find.byKey(ResultStep.severityKey));
     expect(slider.value, 0);
     expect(slider.onChanged, isNull);
+    // The caveat belongs to the shown result, so the placeholder carries none.
+    expect(find.textContaining('approximate estimate'), findsNothing);
+    expect(find.textContaining('anomaloscope'), findsNothing);
+  });
+
+  testWidgets('shows the approximate-estimate caveat and the clinical '
+      'anomaloscope recommendation on the result (FLOW-8, AC-1)',
+      (tester) async {
+    final controller = deutanModerate();
+    addTearDown(controller.dispose);
+    await pumpResult(tester, controller);
+
+    // The caveat sits within the result step's caveat area…
+    final caveat = find.byKey(ResultStep.caveatKey);
+    expect(caveat, findsOneWidget);
+    // …labelling the estimate approximate (it estimates, it does not diagnose)…
+    expect(
+      find.descendant(
+          of: caveat, matching: find.textContaining('approximate estimate')),
+      findsOneWidget,
+      reason: 'the result labels the estimate an approximate estimate',
+    );
+    // …and recommending a clinical anomaloscope test for ground truth.
+    expect(
+      find.descendant(
+          of: caveat, matching: find.textContaining('anomaloscope')),
+      findsOneWidget,
+      reason: 'the result recommends a clinical anomaloscope test',
+    );
   });
 
   testWidgets('renders the assembled type and severity, with the slider live '

@@ -1,6 +1,6 @@
 # Module FLOW — onboarding controller, screens, flow
 
-**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler), FLOW-6 (AC-10), FLOW-7 (AC-12) ✅ Done; FLOW-2 (AC-14) blocked by G-5; result-step ACs remaining: FLOW-8 (AC-1), PROFILE-2 (AC-13)
+**Status:** In progress — FLOW-1 (shell), FLOW-3 (AC-2), FLOW-4 (AC-6/7/8), FLOW-5 (enabler), FLOW-6 (AC-10), FLOW-7 (AC-12), FLOW-8 (AC-1) ✅ Done; FLOW-2 (AC-14) blocked by G-5; result-step AC remaining: PROFILE-2 (AC-13)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/onboarding/onboarding_controller.dart`, `onboarding_state.dart`, `onboarding_read_endpoint.dart`, `onboarding_steps.dart`; `lib/onboarding/screens/` (host + lighting, intake, screening, arrangement, threshold, result step widgets with keyed regions); route wiring in `lib/app/router.dart` + `lib/palette/self_assessment_entry_screen.dart` (replaced). Behavior phases in ENGINE/PROFILE add thin controller calls here (merge-risky — rebase before editing).
 **Depends on:** ENGINE (estimate types + scoring), PROFILE (save seam) · **Blocks:** ITEST, SIGNOFF
@@ -16,7 +16,7 @@
 | 5 | behavior | — (enabler) | ✅ Done | 11,668,942 | 18m 21s (18m 21s) |
 | 6 | behavior | AC-10 | ✅ Done | 10,189,552 | 20m 24s |
 | 7 | behavior | AC-12 | ✅ Done | 12,947,153 | 25m 37s |
-| 8 | behavior | AC-1 | ⬜ Todo | | |
+| 8 | behavior | AC-1 | ✅ Done | 7.46M | 13m 45s |
 
 ## Interface reconciliation
 
@@ -230,3 +230,22 @@
 - **For FLOW-2 (AC-14, blocked on G-5):** fix the concrete four steps and the stepwise progress once G-5 resolves.
 - **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance via `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… [--dart-define=BS07_RUN_PENDING=true] > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
 - **Known gaps:** the four-step count stays provisional until G-5/FLOW-2; `save` stays un-wired until PROFILE-2 (so AC-13 keeps its B-pending augmentation); presentation is not yet stepwise (FLOW-2) so all regions stay laid out at once. The simulated/original pair is an illustrative stand-in (grey-collapse), not the real CVD projection (bs-08/bs-10).
+
+### Result — Phase 8 (FLOW-8, AC-1) ✅ Done
+
+- **Landed:**
+  - `lib/onboarding/screens/result_step.dart` — new `_caveat()` widget (keyed `ResultStep.caveatKey`) rendered in the **estimate branch** (replacing the empty `SizedBox` placeholder there): a `Column` of two `Text`s — "This is an approximate estimate, not a clinical diagnosis." + "For ground truth, a clinical anomaloscope test is recommended." — so the result carries both the **approximate-estimate** label and the **clinical anomaloscope** recommendation (AC-1). The placeholder branch (no estimate, e.g. the shell) keeps the empty `SizedBox(key: caveatKey)` so the anchor still exists but no caveat is shown before a result.
+  - `lib/onboarding/onboarding_controller.dart` — `advanceToResult()` now also sets `caveatShown: true` in its `copyWith`: reaching the result is when the result is *shown*, so the estimate never appears without the caveat beside it. The `OnboardingState.caveatShown` field (frozen at FLOW-1) is the read-endpoint observable AC-1 asserts.
+- **AC un-pended:** AC-1 (deleted its row in `integration_test/bs07/pending.dart`; scaffold-guard `expected` set shrank to `{AC-13, AC-14}` + AC-1-runs assertion added).
+- **Augmentations:** none (AC-1 had no augmentation row; it closed as a clean implemented A).
+- **Gate:** `flutter analyze` clean · unit **1057 passed** (+2 vs FLOW-7: 1 controller caveat-on-advance test + 1 result_step caveat-present test, and the placeholder test gained caveat-absent assertions) · coverage gate vs `main` **100% on all 24 touched lib files** · acceptance (sim iPhone 17 `5AB9D06D…`): **default 22 pass / 2 skip** (AC-1 now runs and passes; AC-13/AC-14 still pending) · **run-pending 23 pass / 1 fail** — AC-1 passes; the single fail (AC-13→PROFILE-2 save: "exactly one profile is written" expected 1, actual 0 — `save` throws `UnimplementedError`) fails on its **own** downstream Then (no harness/compile error from the shared result-step change; AC-14 is green at baseline, un-pends at FLOW-2) · grade **A** for AC-1 (fresh independent subagent, G1–G6, design-A → implemented A); AC-10/AC-11/AC-12 re-confirmed A against the shared `result_step.dart` (no regression — no text-finder collides with the new caveat Texts: band labels mild/moderate/strong are not substrings of the caveat strings; AC-10/12 use key finders; `caveatShown` never touches `estimate.type`/severity). Grade grid **13 A / 1 B-pending** (AC-13 → PROFILE-2). **Fix passes: 0/3** (first full run met every gate).
+- **Updated tests (recorded per ground rule — not weakened):** `onboarding_controller_test.dart` (new caveat-on-advance test in the `advanceToResult` group: `caveatShown` false before, true after, estimate non-null); `result_step_test.dart` (new caveat-present test + the placeholder test now asserts caveat-absent); `self_assessment_test.dart` scaffold guard (`expected` set shrinks by AC-1 + an AC-1-runs assertion added). No acceptance test body changed — the pass comes from production code.
+- **Tokens / time:** 7,458,547 · 13m 45s.
+
+### Checkpoint / Handoff (FLOW-8)
+
+- **Frozen for later phases:** the result caveat is live — `OnboardingController.advanceToResult()` raises `OnboardingState.caveatShown`, and `ResultStep._caveat()` (keyed `ResultStep.caveatKey`) renders the `approximate estimate` label + `anomaloscope` recommendation whenever an estimate is present. The placeholder branch keeps an empty `caveatKey` anchor. Only `save` (PROFILE-2) remains inert on the result step.
+- **For PROFILE-2 (AC-13, the last startable result-step phase):** wire `save` to project the estimate (type + `calibratedSeverity ?? estimate.severity`, D-6) onto a `CvdProfile`, write it through `profileStore`, set `state.saved`; close AC-13's B-pending augmentation (assert the live `AppDependencies.cvdProfile`/confusion pipeline reflects the saved profile). It shares `result_step.dart` + `OnboardingController` + `self_assessment_test.dart` with the FLOW phases — run it in its own session, not parallel.
+- **For FLOW-2 (AC-14, blocked on G-5):** fix the concrete four steps and the stepwise progress once G-5 resolves.
+- **Verification commands** (worktree `../Nuance-bs07`, `export PATH="$HOME/development/flutter/bin:$PATH"`): `flutter analyze` · `flutter test --coverage` · `dart run tool/coverage_gate.dart main` · device acceptance via `coord.sh with-lock bs-07-cvd-self-assessment <PHASE> --wait 900 -- bash -c "cd <worktree> && … flutter test integration_test/self_assessment_test.dart -d 5AB9D06D-… [--dart-define=BS07_RUN_PENDING=true] > log 2>&1"` (FNP_COORD_REPO=/Users/matthew.quirk/Nuance; `-d` mandatory; redirect, don't tail).
+- **Known gaps:** the four-step count stays provisional until G-5/FLOW-2; `save` stays un-wired until PROFILE-2 (so AC-13 keeps its B-pending augmentation); presentation is not yet stepwise (FLOW-2) so all regions stay laid out at once.

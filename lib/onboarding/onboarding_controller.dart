@@ -199,6 +199,11 @@ class OnboardingController extends ChangeNotifier {
   /// reachable even when a tier was skipped (AC-8) — `assemble` stands in the
   /// defaults for a tier never run. The result adjustments (FLOW-6/7/8) refine
   /// the assembled estimate from here.
+  ///
+  /// Reaching the result is when the result is *shown*, so this also raises
+  /// [OnboardingState.caveatShown] — the result carries the approximate-estimate
+  /// caveat and the clinical-anomaloscope recommendation the step renders
+  /// (FLOW-8, AC-1): the estimate never appears without the caveat beside it.
   void advanceToResult() {
     _state = _state.copyWith(
       estimate: engine.assemble(
@@ -208,6 +213,7 @@ class OnboardingController extends ChangeNotifier {
         threshold: _state.threshold,
       ),
       stepIndex: steps.length - 1,
+      caveatShown: true,
     );
     notifyListeners();
   }
