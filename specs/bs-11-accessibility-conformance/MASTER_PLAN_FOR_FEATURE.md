@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** In progress — A11Y-1 (shell) done; next GATE-1 (last shell); ITEST-1 after both shells
+**Status:** In progress — both shells done (A11Y-1 + GATE-1); next ITEST-1 (acceptance harness)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -112,7 +112,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its che
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ◐ In progress (CONF-1 done) |
-| GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ⬜ Todo |
+| GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ◐ In progress (GATE-1 done) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ⬜ Todo |
 
 ## Dependency graph
@@ -153,8 +153,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | CONF-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs11 pending gate (10 ACs), guideline-matcher availability | ✅ Done | 3,094,668 | 9m 08s | branch @ `801a064`; unit 1000/1000; gate both-ways; 10 ACs pending; matchers OK |
 | 2 | A11Y-1 | shell: `lib/app/theme.dart` `AppTheme` wired into `buildApp` (behaviour unchanged) + `StatusBadge` + `AccessibleNotice` shells | ✅ Done | 4,591,022 | 9m 25s | unit 1018/1018; cov 100% touched; readout itest 12/12 on sim |
-| 3 | GATE-1 | shell: `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub | ⬜ Next | | | last shell; unblocks ITEST-1 |
-| 4 | ITEST-1 | acceptance-tests: harness, real-screen + control fixtures, pending gate (10 ACs), smoke test | ⬜ Todo | | | |
+| 3 | GATE-1 | shell: `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub | ✅ Done | 3,553,802 | 17m 14s | last shell; unit 1034/1034; cov 100% touched; full regression 173/173 on sim |
+| 4 | ITEST-1 | acceptance-tests: harness, real-screen + control fixtures, pending gate (10 ACs), smoke test | ⬜ Next | | | both shells done ⇒ unblocked |
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,4,5,6 (pending) + red baseline | ⬜ Todo | | | seq w/ ITEST-3 |
 | 6 | ITEST-3 | acceptance-tests: AC-3,7,8,9,11 (pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
 | 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
@@ -173,12 +173,12 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-A11Y-1 (shell) is **done** — `AppTheme` (`lib/app/theme.dart`) wired into `buildApp` replacing the inline `ThemeData` (behaviour-preserving: reassembled `ColorScheme` == the stock one); `StatusBadge` + `AccessibleNotice` shells added (unwired). unit 1018/1018; coverage 100% touched; `readout_test.dart` 12/12 on the booted sim.
+GATE-1 (shell, last shell phase) is **done** — `lib/a11y/conformance/` landed the pure-domain model (`ConformanceRuleId` × 8, `ConformanceRuleOutcome`, `ConformanceResult.passed`) + the stubbed verdicts `acceptanceDecision`/`recordedLevel`; `integration_test/conformance/` landed the `runConformanceCheck` and `eyesFreeComplete` stubs. unit 1034/1034; coverage 100% touched; full cross-feature regression 173/173 on the booted sim. **Both shells (A11Y-1 + GATE-1) are now complete.**
 
-Next — the **last shell phase**, startable now:
-- **GATE-1** (shell) — `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub. Disjoint from A11Y-1's files. No gate blocks it (G-1 resolved; G-2 blocks only the behaviour stage; G-3/G-4 at SIGNOFF-1).
+Next — stage 3 (acceptance tests), startable now:
+- **ITEST-1** (acceptance-tests) — build the bs-11 accessibility harness (`integration_test/bs11/accessibility_harness.dart` + `accessibility_test.dart`) over the wired shells and the reusable `runConformanceCheck`: Given/When/Then vocabulary, the real-screen + non-compliant control fixtures, re-export the pending gate (10 ACs, already seeded in CONF-1), and a green smoke test. No gate blocks it (G-2 blocks only the behaviour stage; G-3/G-4 at SIGNOFF-1).
 
-Once GATE-1 is done, **both shells are complete ⇒ ITEST-1** (acceptance harness) unblocks.
+After ITEST-1: **ITEST-2 ∥ ITEST-3** register the per-AC pending tests (they **share `accessibility_test.dart` → run sequentially**), then **ITEST-4** (test review, gate **G-2**) before any behaviour phase.
 
 ## Token usage
 
@@ -191,7 +191,8 @@ Once GATE-1 is done, **both shells are complete ⇒ ITEST-1** (acceptance harnes
 | GATE-DECISION | d0fe19ea | 2026-10-13 07:58 EDT | 08:00 | 1m 26s | 1m 26s | claude-opus-4-8 | 16 | 12,853 | 1,569,275 | 4,393 | 1,586,537 | G-1 approved: spec approved by Matt Quirk; CONF-1 startable |
 | CONF-1 | 98b4e49e | 2026-10-13 09:06 EDT | 09:15 | 9m 08s | 9m 08s | claude-opus-4-8 | 66 | 89,804 | 2,971,212 | 33,586 | 3,094,668 | scaffold: feat/bs-11 @ 801a064; unit 1000/1000; coverage gate both-ways; 10 automated ACs pending; meetsGuideline matchers OK |
 | A11Y-1 | 7580c44e | 2026-10-13 11:55 EDT | 12:04 | 9m 25s | 9m 25s | claude-opus-4-8 | 104 | 96,011 | 4,460,803 | 34,104 | 4,591,022 | shell: AppTheme wired into buildApp (behaviour-preserving) + StatusBadge/AccessibleNotice shells; unit 1018/1018; cov 100% touched; readout itest 12/12 on sim; fix passes 0/3 |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 12:04** | **2h 43m** | **34m 20s** |  | **242** | **536,853** | **10,851,957** | **138,601** | **11,527,653** |  |
+| GATE-1 | d4009850 | 2026-10-13 13:39 EDT | 13:56 | 17m 14s | 17m 14s | claude-opus-4-8 | 82 | 84,176 | 3,436,044 | 33,500 | 3,553,802 | shell: conformance model + check/eyes-free stubs; unit 1034/1034; cov 100% touched; full regression 173/173 on sim; fix passes 0/3 |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 13:56** | **3h 01m** | **51m 34s** |  | **324** | **621,029** | **14,288,001** | **172,101** | **15,081,455** |  |
 
 ## Sign-off
 

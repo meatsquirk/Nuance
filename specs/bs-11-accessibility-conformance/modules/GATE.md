@@ -1,6 +1,6 @@
 # Module GATE — the conformance gate + eyes-free driver
 
-**Status:** Not started
+**Status:** ◐ In progress (GATE-1 done)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/conformance/conformance_result.dart`, `lib/a11y/conformance/acceptance.dart` (pure domain: `ConformanceResult`, `ConformanceRuleId`, `AcceptanceDecision`, `WcagLevel`, `acceptanceDecision`, `recordedLevel`); `integration_test/conformance/conformance_check.dart` (the aggregate `runConformanceCheck` that composes A11Y's per-rule rules into a `ConformanceResult`); `integration_test/conformance/eyes_free.dart` (the semantics-only driver).
 **Depends on:** A11Y (the per-rule check rules; the aggregate needs all of them) · **Blocks:** SIGNOFF-1
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| GATE-1 | shell | — | ⬜ Todo | | |
+| GATE-1 | shell | — | ✅ Done | 3,553,802 | 17m 14s |
 | GATE-2 | behavior | AC-7 | ⬜ Todo | | |
 | GATE-3 | behavior | AC-9 | ⬜ Todo | | |
 | GATE-4 | behavior | AC-11 | ⬜ Todo | | |
@@ -77,4 +77,23 @@
 
 ### Result  <!-- filled on completion; one block per phase -->
 
+**GATE-1 — shell: conformance model + check stub** (✅ Done, 17m 14s / 3,553,802)
+
+- **`lib/a11y/conformance/conformance_result.dart` (pure domain, no `flutter_test`):** `ConformanceRuleId` enum over the 8 automated rules (`colourCue`, `noBareDot`, `fontScale200`, `tapTarget48`, `contrastAA`, `meaningfulLabel`, `eyesFree`, `noTimeout`) — AC-10/AC-12 deliberately absent (manual, D-2); `ConformanceRuleOutcome{pass, detail}` value type (+ `.ok()`/`.fail(detail)` consts, content equality); `ConformanceResult` immutable map `ConformanceRuleId → ConformanceRuleOutcome` (`Map.unmodifiable`) with `outcomeFor`, `failing`, content equality, and the gate predicate **`bool get passed` ⇒ true iff every `ConformanceRuleId` has an outcome and all pass** (completeness required, so the empty/partial baseline reads not-conformant). `const ConformanceResult.empty()` is the all-absent result.
+- **`lib/a11y/conformance/acceptance.dart` (pure domain):** `AcceptanceDecision{accepted, notAccepted}` (AC-9), `WcagLevel{below, aa22}` (AC-11); `acceptanceDecision(ConformanceResult)` and `recordedLevel(ConformanceResult)` **present but stubbed → throw `UnimplementedError`** (implemented GATE-3 / GATE-4). Signatures frozen so stage-3 AC tests compile and fail their Then at the red baseline.
+- **`integration_test/conformance/conformance_check.dart` (test-support):** `Future<ConformanceResult> runConformanceCheck(WidgetTester, Finder)` stub returns `ConformanceResult.empty` (⇒ not `passed`) — the reusable per-screen check (D-3) that GATE-3 populates by composing the A11Y per-rule checks.
+- **`integration_test/conformance/eyes_free.dart` (test-support):** `Future<bool> eyesFreeComplete(WidgetTester, {required List<String> steps})` stub throws `UnimplementedError` — the semantics-only driver (D-6) GATE-2 implements.
+- **Gates:** `flutter analyze` (new files) clean; unit **1034/1034** (1018 baseline + 16 new covering every branch of the domain types + both stub throws); coverage gate **100% line** on all 9 touched `lib/**` files (the 2 new conformance files + the A11Y-1 files vs `main`). **Full cross-feature regression** (last shell phase): all 9 integration suites on booted iPhone 17 sim via `coord.sh with-lock` → **173/173, exit 0** (advanced_capture, capture, comparison, correction, display, harness, palette, readout, recipes) — confirms the new files broke nothing (they are unwired: no `lib/**` production code imports them, the test-support stubs are imported by no test yet). **Fix passes:** 0/3 (all gates green first run).
+- **No behaviour change:** the new domain is referenced by no production code; the test-support stubs by no test — purely additive shells.
+
 ### Checkpoint / Handoff  <!-- filled on completion -->
+
+**After GATE-1 (branch `feat/bs-11-accessibility-conformance`):**
+
+- **Frozen interfaces for the next phases:**
+  - `ConformanceRuleId` (8 ids), `ConformanceRuleOutcome{pass, detail}`, `ConformanceResult` (`passed` ⇒ all 8 ids present & passing; `outcomeFor`, `failing`, `.empty()`) in `lib/a11y/conformance/conformance_result.dart`.
+  - `AcceptanceDecision`, `WcagLevel`, and the signatures `acceptanceDecision(ConformanceResult)` / `recordedLevel(ConformanceResult)` in `lib/a11y/conformance/acceptance.dart` — **A11Y phases do not touch these**; GATE-3 implements `acceptanceDecision` (accepted iff `result.passed`), GATE-4 `recordedLevel` (`aa22` iff `result.passed`) + the WCAG 2.2 AA threshold constants.
+  - `runConformanceCheck(WidgetTester, Finder)` in `integration_test/conformance/conformance_check.dart` — A11Y-2..7 each add a per-rule `check<Rule>` the harness/GATE-3 compose here; GATE-3 populates every `ConformanceRuleId`.
+  - `eyesFreeComplete(WidgetTester, {required List<String> steps})` in `integration_test/conformance/eyes_free.dart` — GATE-2 implements; it owns this file and may refine the `steps` shape if the driver needs richer per-step data.
+- **Verification commands** (from `../Nuance-bs11`, `flutter` at `/Users/matthew.quirk/development/flutter/bin`): analyze `flutter analyze`; unit+coverage `flutter test --coverage`; coverage gate `dart run tool/coverage_gate.dart main`; acceptance/regression `flutter test integration_test/<suite>_test.dart -d <booted-udid>` (or the whole `integration_test` dir) under `coord.sh with-lock` — booted `-d` mandatory (no `-d` ⇒ false green).
+- **Known gaps / next:** **both shells (A11Y-1 + GATE-1) are now complete ⇒ ITEST-1 unblocks** (the acceptance harness over the wired shells + the reusable conformance check). GATE-2/3/4 remain blocked by **G-2** (approve the tests at ITEST-4). G-3 (AC-10) / G-4 (AC-12) are manual, resolved at SIGNOFF-1.
