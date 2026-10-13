@@ -1,6 +1,6 @@
 # Module GUARD — invariant guards (offline, privacy, swappable, portability)
 
-**Status:** In progress — GUARD-1 done; next GUARD-2
+**Status:** In progress — GUARD-1, GUARD-2 done; next GUARD-3 (behaviour, blocked on G-2 / ITEST-4)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/guards/` (source-scan, swap-harness, network-block/offline harness — reusable test-support), `integration_test/bs12/pending.dart` (created at GUARD-1). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart` with ITEST/QUALITY. **No `lib/` product change** (D-7).
 **Depends on:** — · **Blocks:** ITEST (via GUARD-2), QUALITY (shells)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | GUARD-1 | scaffold | — | ✅ Done | 7.84M | 32m 51s |
-| GUARD-2 | shell | — | ⬜ Next | | |
+| GUARD-2 | shell | — | ✅ Done | 3.72M | 17m 40s |
 | GUARD-3 | behavior | AC-1, AC-2 | ⬜ Todo | | |
 | GUARD-4 | behavior | AC-6, AC-7, AC-8 | ⬜ Todo | | |
 | GUARD-5 | behavior | AC-14, AC-15 | ⬜ Todo | | |
@@ -65,6 +65,22 @@
   2. `swap_harness.dart`: a helper that builds `AppDependencies` with an injected alternate `MixingEngine`/`ConfusionCheck` and runs the relevant callers — stubbed to the real injection path (no assertions yet).
   3. `offline_guard.dart`: the `networkBlock` `HttpOverrides` + attempt sink, and a `runUnderNetworkBlock(body)` helper — stub that installs the override but records nothing yet.
 - **Exit criteria:** files compile; the existing suite stays green; no behaviour change; the stubs are wired so ITEST-1's smoke test can call them.
+- **Result (✅ Done 2026-10-13):**
+  - Three test-support scaffolds under `integration_test/nfr/guards/`, no `lib/` change (D-7):
+    - **`source_guard.dart`** — the `SourceOffender` record, four rule-id constants, the authority/allow-list constants (`conversionAuthorityFiles` = the three `lib/color_science/` files; `deltaEAuthorityFiles` = `lib/compare/difference.dart` — the shipped CIEDE2000; `nativeCaptureSeam` = `lib/capture/source/`; `forbiddenDependencyNames` = analytics/crash/account/remote-sync SDKs), and the five rule scans as empty-result stubs (`conversionOffenders`/`deltaEOffenders`/`platformOffenders` → `const []`, `forbiddenDependencies` → `const <String>[]`, `offDeviceSenders` → `const []`). Real scans: GUARD-6 (AC-16/17), GUARD-4 (AC-7/8).
+    - **`offline_guard.dart`** — `NetworkAttemptSink` (inert `record()`/`reset()`/`attempts`), `NetworkBlockingOverrides extends HttpOverrides` (refuses via `NetworkBlockedException` from `createHttpClient`), and `runUnderNetworkBlock<T>(body, {sink})` installing it through `HttpOverrides.runWithHttpOverrides`. Stub installs the block but does **not** record yet — GUARD-3 wires `sink.record()` + drives every core flow.
+    - **`swap_harness.dart`** — `pumpAppWithSwaps(tester, {mixingEngine, confusionCheck})` pumping the **real** `buildApp(AppDependencies(…))` with the two interfaces injected (defaults = shipped `SubtractiveMixingEngine` / `DichromatConfusionCheck`), platform sinks faked (`FakeSpeech`/`FakeHaptics`), real `ColorScienceImpl`. The real injection path AC-14/15 assert over; no assertions yet, no doubles (GUARD-5 adds the recording alternates).
+  - **Verification:** `flutter analyze` → No issues (project-wide). Unit `flutter test` → **1220 passed** (baseline, no regression). Acceptance `flutter test integration_test -d <iPhone 17 sim>` under `coord.sh with-lock` → **197 passed, exit 0** (a clean full-suite run — the GUARD-1 teardown race did not recur; 197 is the un-flaked full count vs GUARD-1's flake-reduced 188). The scaffolds are **unreferenced** by any test/lib yet, so the acceptance build is unchanged by this phase; ITEST-1 wires them in.
+  - **Coverage gate:** N/A — no `lib/**.dart` touched (shell adds only `integration_test/` support files).
+  - **Fix passes:** 0/3 (analyze + both suites green first pass).
+  - **Tokens / Time:** see Dashboard / master ledger (GUARD-2 row).
+- **Checkpoint / Handoff:**
+  - **Verification commands:** unchanged from GUARD-1 — `cd /Users/matthew.quirk/Nuance-bs12` + `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test` (unit); acceptance via `FNP_COORD_REPO=/Users/matthew.quirk/Nuance coord.sh with-lock bs-12-non-functional-requirements <PHASE> --wait N -- bash -c 'cd …/Nuance-bs12 && flutter test integration_test -d <booted-udid>'` (shared device lane → lock mandatory; booted `-d` mandatory).
+  - **Frozen for ITEST-1 / the behaviour phases:** the three files' public surface —
+    - `source_guard.dart`: `SourceOffender`; `conversionOffenders()`, `deltaEOffenders()`, `platformOffenders()`, `forbiddenDependencies()`, `offDeviceSenders()`; constants `conversionAuthorityFiles`, `deltaEAuthorityFiles`, `nativeCaptureSeam`, `forbiddenDependencyNames`; rule-ids `ruleStrayConversion`/`ruleStrayDeltaE`/`rulePlatformOutsideSeam`/`ruleOffDeviceSender`.
+    - `offline_guard.dart`: `NetworkAttemptSink`, `NetworkBlockingOverrides`, `NetworkBlockedException`, `runUnderNetworkBlock`.
+    - `swap_harness.dart`: `pumpAppWithSwaps`.
+  - **Known gaps / next:** QUALITY-1 (the other stage-2 shell) is still ⬜ Next and startable now (disjoint: `integration_test/nfr/quality/` + the `lib/capture` AC-9 seam); **ITEST-1 needs BOTH GUARD-2 and QUALITY-1**. GUARD-3 (behaviour, AC-1/AC-2) wires the offline sink but is blocked on G-2 (ITEST-4). Teardown flake is intermittent — a full-suite re-run may exit 1 on it; re-run the affected file alone, the `-N` count is the signal.
 
 ## Phase GUARD-3 — AC-1 + AC-2 offline
 

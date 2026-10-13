@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — next GUARD-2 ∥ QUALITY-1 (GUARD-1 scaffold ✅ done)
+**Status:** In progress — next QUALITY-1 (GUARD-1, GUARD-2 ✅ done; ITEST-1 needs QUALITY-1 too)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -162,15 +162,15 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|
 | coverage_gate — const-constructor line | `flutter test --coverage` intermittently records a const-folded constructor line in `lib/**` as uncovered, so the gate may FAIL on a file this phase never touched | intermittent | first bs-01 `88c5add` | re-run `flutter test --coverage` once; green on re-run ⇒ ignore | Open (carried) |
 | integration suite — no `-d <udid>` | `flutter test integration_test/…` with no booted device runs zero tests and still exits 0 (false green) | deterministic | bs-05/bs-06 | always pass `-d <booted-udid>` | Open (carried) |
-| integration suite — sim `stopApp`/`terminate` teardown race | a file's `tearDownAll` fails with `Unable to terminate <bundle-id>: … found nothing to terminate` (NSPOSIXErrorDomain code=3); the app already exited, so the whole run exits 1 and marks that file's tests as *did not complete* — not an assertion failure | intermittent (1/1 full-suite run at GUARD-1; hit `display_test` non-fatally + `correction_test` fatally) | bs-12 GUARD-1 | re-run the affected file alone (`correction_test` → 22/22 green in isolation); real `-N` count stays 0 | Open |
+| integration suite — sim `stopApp`/`terminate` teardown race | a file's `tearDownAll` fails with `Unable to terminate <bundle-id>: … found nothing to terminate` (NSPOSIXErrorDomain code=3); the app already exited, so the whole run exits 1 and marks that file's tests as *did not complete* — not an assertion failure | intermittent (1/2 full-suite runs: hit at GUARD-1; **not** hit at GUARD-2 — clean 197 pass / exit 0) | bs-12 GUARD-1 | re-run the affected file alone (`correction_test` → 22/22 green in isolation); real `-N` count stays 0 | Open |
 
 ## Session log
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | GUARD-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs12 pending gate (16 ACs) | ✅ Done | 7.84M | 32m 51s | G-1 ✅; baseline unit 1220 / integ 188 (0 fails); gate both ways; pending 16 ACs |
-| 2 | GUARD-2 | shell: `integration_test/nfr/guards/` scaffolds — source-scan, swap-harness, network-block/offline harness (stubs) | ⬜ Next | | | ∥ QUALITY-1 |
-| 3 | QUALITY-1 | shell: `integration_test/nfr/quality/` scaffolds — accuracy harness + `syntheticAccuracySet`, perf harness (stubs) + the `lib/capture` AC-9 downgrade seam (behaviour unchanged) | ⬜ Todo | | | ∥ GUARD-2 |
+| 2 | GUARD-2 | shell: `integration_test/nfr/guards/` scaffolds — source-scan, swap-harness, network-block/offline harness (stubs) | ✅ Done | 3.72M | 17m 40s | ∥ QUALITY-1; analyze clean, unit 1220, acceptance 197 |
+| 3 | QUALITY-1 | shell: `integration_test/nfr/quality/` scaffolds — accuracy harness + `syntheticAccuracySet`, perf harness (stubs) + the `lib/capture` AC-9 downgrade seam (behaviour unchanged) | ⬜ Next | | | startable now; ITEST-1 needs it |
 | 4 | ITEST-1 | acceptance-tests: harness, real-flow + control + swap fixtures, pending gate (16 ACs), smoke test | ⬜ Todo | | | |
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,6,7,8,14,15,16,17 (pending) + red baseline | ⬜ Todo | | | seq w/ ITEST-3 |
 | 6 | ITEST-3 | acceptance-tests: AC-3,4,9,10,11,12,13 (pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
@@ -189,9 +189,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-GUARD-1 (scaffold) is **done** on `feat/bs-12-non-functional-requirements` (worktree `../Nuance-bs12`, off `main` @ `c17f46d`): baseline recorded (analyze clean, unit 1220, acceptance 188 pass / 0 assertion failures), coverage gate proven both ways, `integration_test/bs12/pending.dart` seeds the 16 automatable ACs mapped to their owning phases (AC-5 excluded — pure-manual, D-3).
+GUARD-2 (shell) is **done** on `feat/bs-12-non-functional-requirements` (worktree `../Nuance-bs12`): three test-support scaffolds under `integration_test/nfr/guards/` — `source_guard.dart` (rule signatures + authority/allow-list constants + empty-result stubs), `offline_guard.dart` (`NetworkAttemptSink` + `NetworkBlockingOverrides` + `runUnderNetworkBlock`), `swap_harness.dart` (`pumpAppWithSwaps` over the real `buildApp` + `AppDependencies.mixingEngine`/`.confusionCheck` injection). No `lib/` change (D-7); scaffolds unreferenced yet, so the acceptance build is unchanged. analyze clean, unit 1220, acceptance 197 pass / exit 0.
 
-**Next: GUARD-2 ∥ QUALITY-1** (both shells, startable now, run in separate sessions — disjoint files: `integration_test/nfr/guards/` vs `integration_test/nfr/quality/` + the `lib/capture` AC-9 seam). GUARD-2 lays the source-scan / swap-harness / offline-block guard stubs; QUALITY-1 lays the accuracy + perf harness stubs and the `lib/capture` downgrade seam (behaviour unchanged). Both feed ITEST-1. G-2 (approve tests) is decided at ITEST-4; G-3 (AC-5 device frame rate + AC-3/4 timings) at SIGNOFF-1.
+**Next: QUALITY-1** (the other stage-2 shell, startable now) — accuracy harness + `syntheticAccuracySet`, perf harness stubs, and the `lib/capture` AC-9 downgrade seam (behaviour unchanged). **ITEST-1 needs BOTH GUARD-2 (done) and QUALITY-1**, so ITEST-1 unblocks once QUALITY-1 lands. GUARD behaviour phases (GUARD-3..6) stay blocked on G-2 (ITEST-4). G-2 (approve tests) decided at ITEST-4; G-3 (AC-5 device frame rate + AC-3/4 timings) at SIGNOFF-1.
 
 ## Token usage
 
@@ -201,7 +201,8 @@ GUARD-1 (scaffold) is **done** on `feat/bs-12-non-functional-requirements` (work
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 47f7357b | 2026-10-13 12:26 EDT | 13:47 | 1h 21m | 15m 33s | claude-opus-4-8 | 70 | 291,619 | 2,467,416 | 65,289 | 2,824,394 | plan written: 16 phases, 3 modules (GUARD/QUALITY/ITEST), 17 ACs (16 automated + AC-5 manual) |
 | GUARD-1 | a927d1cc | 2026-10-13 14:16 EDT | 15:29 | 1h 12m | 32m 51s | claude-opus-4-8 | 146 | 125,483 | 7,663,865 | 54,806 | 7,844,300 | scaffold done: baseline unit 1220 / integ 188 (0 assertion fails, teardown flake isolated-green); coverage gate both ways; pending.dart 16 ACs; G-1 approved |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-13 15:29** | **2h 33m** | **48m 24s** |  | **216** | **417,102** | **10,131,281** | **120,095** | **10,668,694** |  |
+| GUARD-2 | 3958a690 | 2026-10-13 15:53 EDT | 16:11 | 17m 40s | 17m 40s | claude-opus-4-8 | 78 | 92,664 | 3,589,500 | 37,267 | 3,719,509 | shell: 3 guard scaffolds (source/offline/swap) wired to real seams; analyze clean, unit 1220, acceptance 197/0; no lib change |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-13 16:11** | **2h 50m** | **1h 06m** |  | **294** | **509,766** | **13,720,781** | **157,362** | **14,388,203** |  |
 
 ## Sign-off
 
