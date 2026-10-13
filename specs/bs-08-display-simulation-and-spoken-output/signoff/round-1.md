@@ -198,7 +198,9 @@ goes red on its own Then, confirming the tests discriminate.
 
 ## 10. Decision
 
-Reviewer: **________________**  Date: **____________**  Decision: ☐ **Approved**  ☐ Changes requested
+Reviewer: **Matt Quirk**  Date: **2026-10-13**  Decision: ☑ **Approved**  ☐ Changes requested
+
+Signed off at code `5e5c531` (SPEECH-4; the SIGNOFF-1 packet made no product-code change, so the signed tree equals the verified tree). `feat/bs-08` merged to `main` on sign-off.
 
 Record via `/feature-next-phase --signoff bs-08-display-simulation-and-spoken-output approved | changes "<items>"`.
 

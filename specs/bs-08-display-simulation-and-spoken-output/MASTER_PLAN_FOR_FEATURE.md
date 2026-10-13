@@ -1,7 +1,7 @@
 # Master Plan — Display, simulation and spoken output
 
 **Spec:** [bs-08-display-simulation-and-spoken-output.feature](../bs-08-display-simulation-and-spoken-output.feature)
-**Status:** ⏸ Awaiting sign-off — all **10/10 ACs ✅**, all gates green; **SIGNOFF-1** packet assembled (round 1): verification green (analyze clean, unit 931, coverage 100% on 14 files, regression 152, bs-08 21 default + 21 run-pending), fresh independent grid **21 A / 0 below**; awaiting the human decision
+**Status:** Done — signed off 2026-10-13 by Matt Quirk at `5e5c531` (SIGNOFF-DECISION approved, round 1); all **10/10 ACs ✅**, grid **21 A / 0 below**, all gates resolved; `feat/bs-08` merged to `main`
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (TTS seam, CVD pipeline, value-only views, label contract) + §"Architecture overview" (accessibility services apply to every layer); wireframe `Paint Color Assistant.dc.html` region S1.R1 (E2, E46, E47, E48, E50). Reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/confusion_check.dart`, `cvd_profile.dart`, both exposed for bs-08 reuse), the `Speech` seam (`lib/a11y/speech.dart`), and the shared colour widgets (`lib/widgets/color_chip.dart`).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` @ `4d4aedd` (bs-01..bs-06 merged) · extends the bs-01..bs-06 foundation (confirmed by sibling *Code home* lines + Matt Quirk directing the bs-06→main merge, 2026-10-11)
 
@@ -165,24 +165,15 @@ Note (not a gate): bs-08 consumes `AppDependencies.cvdProfile`, which **bs-07** 
 | 16 | SPEECH-2 | AC-8 repeat last spoken output | ✅ Done | 7,026,082 | 18m 22s (49m 22s) | pure un-pend (no lib change); AC-8 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 19 pass 2 skip, run-pending 21 pass/grade 9 A 0 below; fix 0/3 |
 | 17 | SPEECH-3 | AC-9 reading + comparison one consistent phrasing | ✅ Done | 3,647,171 | 13m 54s (13m 54s) | pure un-pend (no lib change); AC-9 un-pended + green; unit 931/cov 100% (14 files)/acceptance default 20 pass 1 skip, run-pending 21 pass/grade 10 A 0 below; fix 0/3 |
 | 18 | SPEECH-4 | AC-10 spoken-output panel never auto-dismisses | ✅ Done | 5,337,022 | 15m 20s (15m 20s) | pure test-only un-pend (no lib change); AC-10 un-pended → pending map now empty {}; rewrote terminal scaffold guard off `pendingACs.keys.first`; unit 931/cov 100% (14 files)/acceptance default **21 pass 0 skip**, run-pending 21 pass/grade **12 A 0 below** (AC-1..10 + 2 guards); fix 0/3 |
-| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting sign-off | 7,894,365 | 20m 59s (20m 59s) | packet `signoff/round-1.md` + `cost-per-ac-round-1.md` + summary page; verification green (analyze clean, unit 931, cov 100%/14 files, regression 152, bs-08 21 default + 21 run-pending); fresh independent grid 21 A/0 below; awaiting human decision |
+| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ✅ Done | 7,894,365 | 20m 59s (20m 59s) | packet `signoff/round-1.md` + `cost-per-ac-round-1.md` + summary page; verification green (analyze clean, unit 931, cov 100%/14 files, regression 152, bs-08 21 default + 21 run-pending); fresh independent grid 21 A/0 below; **approved 2026-10-13 by Matt Quirk** (round 1, at code `5e5c531`) |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-1 packet assembled — awaiting the human decision.** The feature is code-complete and fully
-verified this session: analyze clean, unit **931**, coverage gate **100% on 14 touched files**, the full
-cross-feature regression **152 pass / 0 fail**, bs-08 acceptance **21 pass** in both default and run-pending
-(nothing pending), and a fresh independent full-suite re-grade of **21 A / 0 below A**. Packet:
-`signoff/round-1.md` (+ `signoff/cost-per-ac-round-1.md`, + the summary-page scorecard). All preconditions met;
-no open gate (G-1/G-2 resolved), no open augmentation.
-
-**Next — record the decision (human):**
-`/feature-next-phase --signoff bs-08-display-simulation-and-spoken-output approved | changes "<items>"`.
-The agent assembled the packet and stopped; it never approves. On **approved**, SIGNOFF-1 ✅, the feature
-Status → Done — signed off, and `feat/bs-08` merges to `main` (as bs-05/bs-06 did). On **changes requested**,
-each item becomes a new phase before a fresh SIGNOFF-2.
+**None — feature complete.** SIGNOFF-1 was approved 2026-10-13 by Matt Quirk (round 1, at code `5e5c531`).
+All 19 phases ✅, all 10 ACs ✅ (grid 21 A / 0 below A), G-1/G-2 resolved, no open augmentation.
+`feat/bs-08` has been merged to `main`. No phase remains.
 
 ## Token usage
 
@@ -214,10 +205,11 @@ each item becomes a new phase before a fresh SIGNOFF-2.
 | SPEECH-3 | 3b311776 | 2026-10-12 19:32 EDT | 19:46 | 13m 54s | 13m 54s | claude-opus-4-8 | 84 | 208,974 | 3,412,132 | 25,981 | 3,647,171 | AC-9 un-pended + green (pure test-only un-pend); unit 931/cov 100% (14 files)/acceptance default 20 pass 1 skip, run-pending 21 pass/grade 10 A 0 below; fix 0/3 |
 | SPEECH-4 | 199c2f84 | 2026-10-12 21:04 EDT | 21:19 | 15m 20s | 15m 20s | claude-opus-4-8 | 110 | 225,713 | 5,078,874 | 32,325 | 5,337,022 | AC-10 un-pended + green (pure test-only un-pend, no lib change; pending map now empty); unit 931/cov 100% (14 files)/acceptance default 21 pass 0 skip + run-pending 21 pass/grade 12 A 0 below; fix 0/3 |
 | SIGNOFF-1 | 1189fd6a | 2026-10-12 22:15 EDT | 22:36 | 20m 59s | 20m 59s | claude-opus-4-8 | 128 | 309,986 | 7,527,149 | 57,102 | 7,894,365 | sign-off packet + cost-per-ac + summary-page scorecard assembled; verification green (analyze clean, unit 931, coverage 100% on 14 files, regression 152, bs-08 default+run-pending 21/21), fresh independent grid 21 A/0 below; awaiting human decision |
-| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-12 22:36** | **7h 44m** | **6h 34m** |  | **2,832** | **4,331,950** | **176,383,783** | **1,026,406** | **181,744,971** |  |
+| SIGNOFF-DECISION | d99cd987 | 2026-10-13 05:01 EDT | 05:02 | 1m 50s | 1m 50s | claude-opus-4-8 | 36 | 42,908 | 1,071,757 | 7,105 | 1,121,806 | SIGNOFF-1 approved — round 1, by Matt Quirk 2026-10-13 at code 5e5c531; feat/bs-08 merged to main |
+| **Feature total** |  | **2026-10-11 21:46 EDT** | **2026-10-13 05:02** | **7h 46m** | **6h 36m** |  | **2,868** | **4,374,858** | **177,455,540** | **1,033,511** | **182,866,777** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `5e5c531` | 21 A / 0 below A | ⏸ Awaiting sign-off (prepared 2026-10-12) |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `5e5c531` | 21 A / 0 below A | ✅ Approved 2026-10-13 — Matt Quirk |
