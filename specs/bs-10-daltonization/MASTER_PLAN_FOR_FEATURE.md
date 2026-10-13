@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** In progress — DALT-2 (shell) done; next CONTROL-1 (shell, startable). G-1/G-3/G-4 ✅; G-2 open (gates DALT-3+)
+**Status:** In progress — CONTROL-1 (shell) done; shells complete, next ITEST-1 (acceptance-tests, startable). G-1/G-3/G-4 ✅; G-2 open (gates DALT-3+/CONTROL-2)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -129,7 +129,7 @@ AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7.
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-2 done) |
-| CONTROL | [modules/CONTROL.md](modules/CONTROL.md) | The daltonization settings control (toggle) + the no-saved-profile affordance (AC-10) | DALT (shell), bs-07 | ⬜ Todo |
+| CONTROL | [modules/CONTROL.md](modules/CONTROL.md) | The daltonization settings control (toggle) + the no-saved-profile affordance (AC-10) | DALT (shell), bs-07 | 🔄 In progress (CONTROL-1 done) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
 ## Dependency graph
@@ -174,8 +174,8 @@ not as flakes.
 |---|---|---|---|---|---|---|
 | 1 | DALT-1 | scaffold: branch off post-bs07/bs08 main, baseline, coverage-gate proof, `bs10/pending.dart` (10 ACs) + runner | ✅ Done | 4.07M | 21m 20s | unit 1220 / integ 197 green; gate proven both ways; G-1/G-3/G-4 ✅ |
 | 2 | DALT-2 | shell: `daltonize` identity stub + `DisplaySettings.daltonization` + chokepoint branch + `DisplayReadEndpoint` | ✅ Done | 9.32M | 23m 50s | unit 1237 (+17) / integ 197 green; coverage 100% on 7 touched files; identity render — nothing broke |
-| 3 | CONTROL-1 | shell: daltonization toggle + no-profile placeholder region (render-only) | ⬜ Next | | | startable now (DALT-2 done) |
-| 4 | ITEST-1 | acceptance-tests: harness, fixtures (`referenceDaltonize`, saved/noProfile), pending gate, smoke | ⬜ Todo | | | |
+| 3 | CONTROL-1 | shell: daltonization toggle + no-profile placeholder region (render-only) | ✅ Done | 2.49M | 14m 20s | toggle wired to setDaltonization + keyed no-profile placeholder; unit 1239 (+2)/integ 197 green; coverage 100% on 8 touched files |
+| 4 | ITEST-1 | acceptance-tests: harness, fixtures (`referenceDaltonize`, saved/noProfile), pending gate, smoke | ⬜ Next | | | startable now (DALT-2 + CONTROL-1 done) |
 | 5 | ITEST-2 | acceptance-tests: AC-1..10 (pending) + red baseline + grades | ⬜ Todo | | | |
 | 6 | ITEST-3 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 7 | DALT-3 | AC-1 keystone: real remap + chokepoint applies it when on | ⬜ Todo | | | |
@@ -195,14 +195,13 @@ when the row is marked done.
 
 ## Next phase
 
-**CONTROL-1 (shell)** — the only startable phase now (depends on DALT-2). The daltonization toggle (drives
-`DisplayController.setDaltonization`) + the no-saved-profile placeholder region, render-only; touches the
-settings panel (`lib/display/settings_screen.dart`). ITEST-1 is **not** yet open — the graph has it depending
-on both DALT-2 **and** CONTROL-1, so it unblocks once CONTROL-1 is done.
+**ITEST-1 (acceptance-tests)** — the only startable phase now (shells complete: DALT-2 + CONTROL-1 both done).
+Build `integration_test/daltonization_harness.dart` + `daltonization_test.dart`: the harness over the wired
+shells, the fixtures (`referenceDaltonize`, `savedProfile`/`noProfile`, `screenColours`), the pending gate and
+a smoke test. Then ITEST-2 (AC-1..10 pending + red baseline + grades) → ITEST-3 (test review, **G-2**).
 
-Then: ITEST-1 → ITEST-2 → ITEST-3 (test review, **G-2**). **G-2** still gates every behaviour phase (DALT-3+);
-DALT-3 is the keystone the DALT behaviour phases assert against. Work in worktree
-`/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`.
+**G-2** still gates every behaviour phase (DALT-3..11 and CONTROL-2); DALT-3 is the keystone the DALT
+behaviour phases assert against. Work in worktree `/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`.
 
 ## Token usage
 
@@ -214,7 +213,8 @@ DALT-3 is the keystone the DALT behaviour phases assert against. Work in worktre
 | GATE-DECISION | ff530524 | 2026-10-13 07:59 EDT | 08:01 | 2m 14s | 2m 14s | claude-opus-4-8 | 34 | 37,170 | 986,861 | 9,008 | 1,033,073 | G-1 approved (spec) by Matt Quirk; G-3 resolved (bs-08 merged 0900d44) |
 | DALT-1 | 6f42cd8f | 2026-10-13 12:40 EDT | 13:01 | 21m 20s | 21m 20s | claude-opus-4-8 | 90 | 87,074 | 3,952,138 | 30,360 | 4,069,662 | scaffold: feat/bs-10 off main @ ecd3a9e; baseline unit 1220 / integ 197 green; coverage gate proven both ways; bs10/pending.dart seeded (10 ACs); G-4 resolved (bs-07 merged ecd3a9e); no product code |
 | DALT-2 | 6df95cbd | 2026-10-13 13:20 EDT | 13:44 | 23m 50s | 23m 50s | claude-opus-4-8 | 160 | 137,355 | 9,125,190 | 55,908 | 9,318,613 | shell: daltonize identity stub + daltonizeColor bridge + DisplaySettings.daltonization + setDaltonization + displayedSwatchColor chokepoint + DisplayReadEndpoint.daltonization/displayedColor + AppScope.maybeOf; unit 1237 (+17)/integ 197 green; coverage 100% on 7 touched files; identity render — nothing broke; 0/3 fix passes |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 13:44** | **1h 01m** | **1h 01m** |  | **336** | **381,299** | **16,234,615** | **157,706** | **16,773,956** |  |
+| CONTROL-1 | 1b3146e6 | 2026-10-13 14:15 EDT | 14:29 | 14m 20s | 14m 20s | claude-opus-4-8 | 62 | 76,210 | 2,397,537 | 14,425 | 2,488,234 | shell: daltonization toggle wired to setDaltonization + keyed no-profile placeholder (render-only); unit 1239 (+2)/integ 197 green; coverage 100% on 8 touched files; 0/3 fix passes |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 14:29** | **1h 15m** | **1h 15m** |  | **398** | **457,509** | **18,632,152** | **172,131** | **19,262,190** |  |
 
 ## Sign-off
 

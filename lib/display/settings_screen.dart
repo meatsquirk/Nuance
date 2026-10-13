@@ -116,6 +116,14 @@ class _DisplayChromeState extends State<DisplayChrome> {
 ///     AC-1 but presentation only: its selection is local and drives no
 ///     behaviour this feature grades (theme is a spec boundary).
 ///
+/// bs-10 adds, on their own axis (D-3/D-5):
+///
+///   * the daltonization on/off toggle ([daltonizationKey]), driving
+///     [DisplayController.setDaltonization] — the remap itself lands in the
+///     DALT behaviour phases;
+///   * a no-saved-profile region ([noProfileRegionKey]) — an empty placeholder
+///     in this shell, filled by CONTROL-2 (AC-10).
+///
 /// This is the SETTINGS-1 shell: the controls are wired to the setters, but the
 /// *rendering* consequences (simulating swatches, greying the app) land in the
 /// DISPLAY behaviour phases. The selector reads
@@ -142,6 +150,17 @@ class DisplaySettingsScreen extends StatelessWidget {
 
   /// Stable anchor for the theme (light/dark) control (D-11, presentation).
   static const Key themeKey = ValueKey('display-theme');
+
+  /// Stable anchor for the bs-10 daltonization on/off toggle, driving
+  /// [DisplayController.setDaltonization]. Daltonization is beyond the drawn
+  /// mock (scope §5.4), so it carries no wireframe element id.
+  static const Key daltonizationKey = ValueKey('display-bs10-daltonization');
+
+  /// Stable anchor for the bs-10 no-saved-profile region — an empty placeholder
+  /// in this shell (CONTROL-1); CONTROL-2 (AC-10) fills it with the
+  /// self-assessment-needed affordance driven by
+  /// `CvdProfileReadEndpoint.hasSavedProfile`.
+  static const Key noProfileRegionKey = ValueKey('display-bs10-no-profile');
 
   /// Stable per-option anchor under [simulationKey], one per selectable
   /// simulation ([type] null ⇔ the "off"/trichromat option).
@@ -243,6 +262,20 @@ class DisplaySettingsScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                // bs-10: the daltonization on/off toggle, an independent axis
+                // from simulation/grayscale (D-3/D-5), driving
+                // DisplayController.setDaltonization. The rendering consequence
+                // (remapping swatches) lands in the DALT behaviour phases.
+                SwitchListTile(
+                  key: daltonizationKey,
+                  title: const Text('Daltonize colours'),
+                  value: settings.daltonization,
+                  onChanged: controller.setDaltonization,
+                ),
+                // bs-10: the no-saved-profile region. An empty placeholder in
+                // this shell; CONTROL-2 (AC-10) fills it so that, without a
+                // stored profile, it reports a self-assessment is needed.
+                const SizedBox(key: noProfileRegionKey),
                 // The theme control — shown (AC-1) but presentation only (D-11).
                 const _ThemeControl(key: themeKey),
               ],

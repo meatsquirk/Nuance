@@ -131,6 +131,45 @@ void main() {
       expect(controller.settings.grayscale, isTrue);
     });
 
+    testWidgets('the daltonization toggle drives setDaltonization (both ways)',
+        (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      await _pumpPanel(tester, controller);
+
+      // The switch reflects the (default off) setting and is findable.
+      final tile = tester.widget<SwitchListTile>(
+        find.byKey(DisplaySettingsScreen.daltonizationKey),
+      );
+      expect(tile.value, isFalse);
+
+      // On, then off — covers both branches of setDaltonization's no-op guard.
+      expect(controller.settings.daltonization, isFalse);
+      await tester.tap(find.byKey(DisplaySettingsScreen.daltonizationKey));
+      await tester.pump();
+      expect(controller.settings.daltonization, isTrue);
+      // The other axes are untouched — daltonization stands alone (D-3/D-5).
+      expect(controller.settings.simulationType, isNull);
+      expect(controller.settings.grayscale, isFalse);
+
+      await tester.tap(find.byKey(DisplaySettingsScreen.daltonizationKey));
+      await tester.pump();
+      expect(controller.settings.daltonization, isFalse);
+    });
+
+    testWidgets('the no-saved-profile region is a reachable placeholder',
+        (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      await _pumpPanel(tester, controller);
+
+      // Present and keyed so ITEST/CONTROL-2 can observe it; empty for now.
+      expect(
+        find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('the severity slider drives setSimulationSeverity over 0..1',
         (tester) async {
       final controller = DisplayController(
@@ -194,6 +233,10 @@ void main() {
           const ValueKey('display-e48-severity'));
       expect(
           DisplaySettingsScreen.themeKey, const ValueKey('display-theme'));
+      expect(DisplaySettingsScreen.daltonizationKey,
+          const ValueKey('display-bs10-daltonization'));
+      expect(DisplaySettingsScreen.noProfileRegionKey,
+          const ValueKey('display-bs10-no-profile'));
       expect(DisplaySettingsScreen.simulationOptionKey(CvdType.deutan),
           const ValueKey('display-e47-sim-deutan'));
       expect(DisplaySettingsScreen.simulationOptionKey(null),
