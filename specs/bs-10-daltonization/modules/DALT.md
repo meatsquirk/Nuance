@@ -1,0 +1,172 @@
+# Module DALT — daltonization remap engine + display injection
+
+**Status:** Not started
+**Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
+**Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
+additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
+`display_scope.dart`, `display_read_endpoint.dart` — exact paths confirmed in DALT-1 against merged bs-08) and
+the daltonization branch of the shared `lib/widgets/color_chip.dart` display-transform.
+**Depends on:** bs-07 (stored profile), bs-08 (display pipeline) — both via G-3/G-4 · **Blocks:** CONTROL (shell method), SIGNOFF-1
+
+## Dashboard
+
+| Phase | Kind | Target AC | Status | Tokens | Time |
+|---|---|---|---|---|---|
+| DALT-1 | scaffold | — | ⬜ Next | | |
+| DALT-2 | shell | — | ⬜ Todo | | |
+| DALT-3 | behavior | AC-1 | ⬜ Todo | | |
+| DALT-4 | behavior | AC-5 | ⬜ Todo | | |
+| DALT-5 | behavior | AC-7 | ⬜ Todo | | |
+| DALT-6 | behavior | AC-2 | ⬜ Todo | | |
+| DALT-7 | behavior | AC-8 | ⬜ Todo | | |
+| DALT-8 | behavior | AC-9 | ⬜ Todo | | |
+| DALT-9 | behavior | AC-3 | ⬜ Todo | | |
+| DALT-10 | behavior | AC-4 | ⬜ Todo | | |
+| DALT-11 | behavior | AC-6 | ⬜ Todo | | |
+
+## Interface reconciliation
+
+- **Exposes:** `ColorCoordinates daltonize(ColorCoordinates c, CvdProfile profile)` (pure, `lib/a11y/cvd/daltonize.dart`),
+  mirroring `projectDichromat`'s signature; `DisplaySettings.daltonization` (bool, default false) +
+  `DisplayController.setDaltonization(bool)`; `DisplayReadEndpoint.daltonization` + the effective displayed colour.
+- **Consumes:** bs-08 `DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/
+  `DisplayReadEndpoint`; bs-07 `AppDependencies.cvdProfile` (live) + `CvdProfileStore` (for the AC-6 recompute
+  listener); `projectDichromat` + `CvdProfile` (bs-03).
+- **Reconciliation:** bs-08/bs-07 are not yet merged, so DALT-1 **re-confirms the exact class/method/file names
+  against merged `main`** before any shell edit; if a name drifted during bs-07/bs-08 implementation, adapt the
+  shell to the real surface and note it here. The remap extends the **one** chokepoint bs-08 built (D-1) — it
+  does not add a second transform path. Daltonization reads the **stored** profile (D-3), unlike simulation
+  which carries its own painter-chosen `simulationType`.
+
+## Open gates
+
+- DALT-1 is blocked by **G-1** (spec approval), **G-3** (bs-08 merged) and **G-4** (bs-07 merged) — see the
+  master plan. All behavior phases are additionally blocked by **G-2** (acceptance tests approved).
+
+## Phase DALT-1 — scaffold
+
+- **Kind:** scaffold
+- **Target AC:** — · **Depends on:** G-1, G-3, G-4 · **Blocks:** DALT-2
+- **Files:** `integration_test/bs10/pending.dart`; no product code
+- **Tasks:**
+  1. Branch `feat/bs-10` off the updated `main` (bs-07 + bs-08 merged); record `BASE`.
+  2. Re-confirm the merged bs-08 display-pipeline surface + bs-07 profile-store surface against `main`; note
+     any drift from this plan's names in *Interface reconciliation*.
+  3. Prove the existing coverage gate (passes on a clean tree, fails on a planted gap) and the integration
+     runner still work; record the baseline test counts.
+  4. Seed `integration_test/bs10/pending.dart` exposing `acTestWidgets`, `pendingACs` (all 10 ACs → owning
+     phase) and `pendingSkipReason`, gated by `--dart-define=BS10_RUN_PENDING=true`.
+- **Exit criteria:** `feat/bs-10` builds; the gate proof passes; baseline recorded; no product code changed.
+
+## Phase DALT-2 — shell: remap stub + pipeline wiring
+
+- **Kind:** shell
+- **Target AC:** — · **Depends on:** DALT-1 · **Blocks:** CONTROL-1, ITEST-1
+- **Files:** `lib/a11y/cvd/daltonize.dart`, the bs-08 display-pipeline files, `lib/widgets/color_chip.dart`
+- **Tasks:**
+  1. `ColorCoordinates daltonize(ColorCoordinates c, CvdProfile profile)` returning `c` unchanged (identity stub).
+  2. Add `bool daltonization` (default false) to `DisplaySettings` + `DisplayController.setDaltonization(bool)`.
+  3. Extend the shared `ColorChip`/`DisplayScope` display-transform: when `daltonization` is on, route the
+     swatch colour through `daltonize(c, AppDependencies.cvdProfile)` (identity for now); when off, leave it.
+  4. Expose `daltonization` and the effective displayed colour on `DisplayReadEndpoint` (the read endpoint the
+     acceptance tests observe).
+- **Exit criteria:** unit gate passes; the existing suite stays green; render unchanged (identity remap); the
+  flag + read endpoint observable. **No behaviour yet** (remap is identity).
+
+## Phase DALT-3 — AC-1: remap for the painter's type (keystone)
+
+- **Kind:** behavior
+- **Target AC:** AC-1 (full; Scenario Outline over protan/deutan/tritan) · **Depends on:** DALT-2, ITEST-3 (G-2) · **Blocks:** DALT-4
+- **Files:** `lib/a11y/cvd/daltonize.dart` (+ unit test)
+- **Tasks:** implement the real error-redistribution remap (D-2) over `projectDichromat`, scaled by severity,
+  producing a type-specific distinguishing remap; the chokepoint (from DALT-2) now renders remapped colours
+  when daltonization is on, per the painter's stored type.
+- **Exit criteria:** unit gate; chokepoint shows a non-identity, type-specific remap.
+- **Acceptance gate:** un-pend AC-1; `daltonization_test.dart` green with `TestAC01_RemapForType` passing for
+  each of protan/deutan/tritan (remapped != original, == `referenceDaltonize`), all other ACs still pending.
+
+## Phase DALT-4 — AC-5: remap uses the stored type + severity
+
+- **Kind:** behavior
+- **Target AC:** AC-5 · **Depends on:** DALT-3 · **Blocks:** DALT-5
+- **Files:** display chokepoint (profile read) (+ unit test)
+- **Tasks:** the chokepoint drives the remap from the **stored** profile's type **and** severity
+  (`AppDependencies.cvdProfile`), not a default; verify severity scales the remap.
+- **Acceptance gate:** un-pend AC-5; `TestAC05_UsesStoredProfile` green (== `referenceDaltonize` at the stored
+  type+severity; control: a stronger stored severity → a stronger remap).
+
+## Phase DALT-5 — AC-7: distinct from simulation
+
+- **Kind:** behavior
+- **Target AC:** AC-7 · **Depends on:** DALT-3 · **Blocks:** DALT-6
+- **Files:** `daltonize.dart` / chokepoint (+ unit test)
+- **Tasks:** establish and assert that the remap is distinct from the simulation projection — the remapped
+  swatch aids distinction, it is not `projectDichromat(c, profile)` (how the painter sees).
+- **Acceptance gate:** un-pend AC-7; `TestAC07_DistinctFromSimulation` green (remapped != `projectDichromat`
+  for the same colour + profile).
+
+## Phase DALT-6 — AC-2: off shows the original
+
+- **Kind:** behavior
+- **Target AC:** AC-2 · **Depends on:** DALT-3 · **Blocks:** DALT-7
+- **Files:** chokepoint (+ unit test)
+- **Tasks:** make the off path explicit (no remap when `daltonization` false → the stored original is shown).
+- **Acceptance gate:** un-pend AC-2; `TestAC02_OffShowsOriginal` green.
+- **Augments:** `TestAC02`: add the control (turning daltonization on remaps the swatch) now that the real
+  remap exists — closes its green-at-baseline limit.
+
+## Phase DALT-7 — AC-8: stored values unchanged
+
+- **Kind:** behavior
+- **Target AC:** AC-8 · **Depends on:** DALT-3 · **Blocks:** DALT-8
+- **Files:** chokepoint / `SampleSource` read path (+ unit test)
+- **Tasks:** ensure the remap is applied only at render and never written back; assert the stored
+  `Sample`/`ColorCoordinates` are unchanged after a remapped render.
+- **Acceptance gate:** un-pend AC-8; `TestAC08_StoredValuesUnchanged` green.
+- **Augments:** `TestAC08`: add the control (the displayed swatch *did* change while the stored value did not)
+  now that the real remap exists.
+
+## Phase DALT-8 — AC-9: every screen
+
+- **Kind:** behavior
+- **Target AC:** AC-9 · **Depends on:** DALT-3 · **Blocks:** DALT-9
+- **Files:** verify the shared chokepoint reaches capture/readout/palette (+ unit test if a screen bypasses it)
+- **Tasks:** confirm the remap is injected at the one shared `ColorChip`/`DisplayScope` chokepoint so every
+  screen gets it; fix any screen that renders a swatch outside the chokepoint.
+- **Acceptance gate:** un-pend AC-9; `TestAC09_EveryScreen` green (the known swatch remapped on capture,
+  readout and palette).
+
+## Phase DALT-9 — AC-3: label + value kept
+
+- **Kind:** behavior
+- **Target AC:** AC-3 · **Depends on:** DALT-3 · **Blocks:** DALT-10
+- **Files:** chokepoint / label-contract widgets (+ unit test)
+- **Tasks:** ensure a remapped colour-coded element still renders its label text + numeric value (only the
+  swatch colour changes).
+- **Acceptance gate:** un-pend AC-3; `TestAC03_LabelAndValueKept` green.
+- **Augments:** `TestAC03`: assert the swatch colour changed *while* the label + value stayed, now that the
+  real remap exists.
+
+## Phase DALT-10 — AC-4: provenance badge readable
+
+- **Kind:** behavior
+- **Target AC:** AC-4 · **Depends on:** DALT-3 · **Blocks:** DALT-11
+- **Files:** chokepoint / `provenance_badge.dart` rendering (+ unit test)
+- **Tasks:** ensure a provenance badge stays readable from its label + icon (not colour) under the remap.
+- **Acceptance gate:** un-pend AC-4; `TestAC04_ProvenanceBadgeReadable` green.
+- **Augments:** `TestAC04`: assert the badge colour is remapped *while* its label + icon stay, now that the
+  real remap exists.
+
+## Phase DALT-11 — AC-6: profile change recomputes the remap
+
+- **Kind:** behavior
+- **Target AC:** AC-6 · **Depends on:** DALT-3, bs-07 `CvdProfileStore` · **Blocks:** SIGNOFF-1
+- **Files:** display pipeline (listen to the profile store) (+ unit test)
+- **Tasks:** make the daltonization render read the **live** profile — listen to `CvdProfileStore` so a saved
+  profile change (e.g. deutan → protan) re-renders with the recomputed remap.
+- **Acceptance gate:** un-pend AC-6; `TestAC06_ProfileChangeRecomputes` green (after a save settles, the remap
+  recomputes to the new type; control: it was the old type's remap before the save).
+
+### Result  <!-- filled on completion -->
+
+### Checkpoint / Handoff  <!-- filled on completion -->
