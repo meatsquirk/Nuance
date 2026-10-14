@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/display/display_controller.dart';
@@ -49,6 +50,30 @@ void main() {
         DisplaySettingsButton.openKey,
         const ValueKey('display-e2-open-settings'),
       );
+    });
+
+    testWidgets('exposes a meaningful screen-reader label (AC-6)',
+        (tester) async {
+      // The icon-only entry sits above the Navigator's Overlay, so it cannot
+      // use a Tooltip; A11Y-6 labels it explicitly so a screen reader announces
+      // what it does. The label must land on the button's own tappable node
+      // (MergeSemantics), not an anonymous ancestor.
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DisplaySettingsButton(onPressed: () {}),
+          ),
+        ),
+      );
+
+      final data = tester
+          .getSemantics(find.byKey(DisplaySettingsButton.openKey))
+          .getSemanticsData();
+      expect(data.label, 'Display and simulation settings');
+      expect(data.hasAction(SemanticsAction.tap), isTrue,
+          reason: 'the label must land on the tappable button node');
+      handle.dispose();
     });
   });
 
@@ -159,6 +184,25 @@ void main() {
       await tester.tap(find.byKey(DisplaySettingsScreen.closeKey));
       await tester.pump();
       expect(closed, 1);
+    });
+
+    testWidgets('the close control exposes a meaningful label (AC-6)',
+        (tester) async {
+      // The icon-only close control carries an explicit label on its tappable
+      // node (A11Y-6 sweep) — the panel sits above the Navigator's Overlay, so
+      // it cannot use a Tooltip.
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      final handle = tester.ensureSemantics();
+      await _pumpPanel(tester, controller);
+
+      final data = tester
+          .getSemantics(find.byKey(DisplaySettingsScreen.closeKey))
+          .getSemanticsData();
+      expect(data.label, 'Close settings');
+      expect(data.hasAction(SemanticsAction.tap), isTrue,
+          reason: 'the label must land on the tappable close node');
+      handle.dispose();
     });
 
     testWidgets('the theme control is presentation only — selecting a theme '

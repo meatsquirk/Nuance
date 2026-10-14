@@ -1,65 +1,114 @@
 # bs-11 Accessibility conformance — behaviour-test completeness
 
-**Phase graded: A11Y-5 (un-pended AC tests AC-1,2,3,4,5).** Independent,
+**Phase graded: A11Y-6 (un-pended AC tests AC-1,2,3,4,5,6).** Independent,
 adversarial re-grade of **every currently un-pended automated AC test** against
 the code as it now stands on `feat/bs-11-accessibility-conformance` (worktree
-`/Users/matthew.quirk/Nuance-bs11`). **What A11Y-5 changed:** it implemented the
-two colour-vocabulary rules in the new `integration_test/conformance/checks/colour_cue.dart`
-— `checkColourCue` (`ConformanceRuleId.colourCue`, AC-1: every colour-coded
-element carries a non-colour cue) and `checkNoBareDot` (`ConformanceRuleId.noBareDot`,
-AC-2: no status is a bare colour dot) — which share one render-tree traversal
-(`_bareColourDots`): a **filled circular** `BoxDecoration` (`Container`/`DecoratedBox`
-with `shape: BoxShape.circle` and non-null `color`) that has **no labelled
-`Semantics` ancestor within the checked subtree** is a *bare* dot and fails both
-rules. It wired both into the aggregate `runConformanceCheck` beside
-`contrastAA`/`tapTarget48`/`fontScale200`, and dropped AC-1 + AC-2 from
-`bs11/pending.dart` (the scaffold-guard now expects the other five —
-`{AC-6,AC-7,AC-8,AC-9,AC-11}` — and asserts `!containsKey('AC-1')` /
-`!containsKey('AC-2')`). The behaviour phase must re-grade every un-pended AC test:
-**AC-1, AC-2, AC-3, AC-4, AC-5**. The grader ran nothing and edited nothing but
-this file.
+`/Users/matthew.quirk/Nuance-bs11`). **What A11Y-6 changed:** it implemented the
+**AC-6 meaningful-label rule** in the new `integration_test/conformance/checks/labels.dart`
+— `checkMeaningfulLabel` (`ConformanceRuleId.meaningfulLabel`) wraps
+`tester.ensureSemantics()` around Flutter's own `labeledTapTargetGuideline`,
+which walks the semantics tree and fails any node that has a tap/long-press
+action, is not a text field and is not merged/hidden, yet carries **neither a
+`label` nor a `tooltip`** — exactly AC-6's "every interactive control carries a
+meaningful semantic label". It composed that rule into the aggregate
+`runConformanceCheck` as the **sixth** live rule (beside
+`contrastAA`/`tapTarget48`/`fontScale200`/`colourCue`/`noBareDot`), swept `lib`
+and wrapped three previously-unlabelled tappables —
+`DisplaySettingsButton` + the panel close `IconButton`
+(`lib/display/settings_screen.dart`) and the repeat `IconButton`
+(`lib/display/spoken_output_panel.dart`) — each in
+`MergeSemantics(child: Semantics(label:…, button:true, child: IconButton…))` so
+the label lands on the tappable node (no `Tooltip`, as these sit above the
+Navigator Overlay), with new unit assertions in the two `test/display/*` files.
+It dropped AC-6 from `bs11/pending.dart` (pending set is now
+**`{AC-7,AC-8,AC-9,AC-11}`**; the scaffold-guard in `accessibility_test.dart`
+now expects 4 pending and asserts `!containsKey('AC-6')`). The behaviour phase
+re-grades **AC-1, AC-2, AC-3, AC-4, AC-5, AC-6**. The grader ran nothing and
+edited nothing but this file.
 
-**AC-3/AC-4/AC-5 are unchanged by A11Y-5** — their rules (`checkFontScale200`,
-`checkTapTarget48`, `checkContrastAA`) and test bodies are untouched; they are
-re-confirmed against the now five-rule aggregate. Adding `colourCue`/`noBareDot`
-to the result does not disturb them: each AC test reads only its own
-`outcomeFor(itsId)` and `failing.contains(itsId)` (not equality), and none of
-their controls (`control_overflow200`, `control_smallTarget`, `control_lowContrast`
-— all `ColoredBox`/text, not `Container`/`DecoratedBox` **circles**) trips the new
-dot rule, so no new failing id leaks into their `contains` legs.
+**AC-1..5 are unchanged by A11Y-6** — their rules (`checkColourCue`,
+`checkNoBareDot`, `checkFontScale200`, `checkTapTarget48`, `checkContrastAA`) and
+test bodies are untouched; they are re-confirmed against the now **six-rule**
+aggregate. Adding `meaningfulLabel` does not disturb them: each AC test reads
+**only its own** `outcomeFor(itsId)?.pass isTrue` / `failing.contains(itsId)`
+(never result equality), so a failing or passing `meaningfulLabel` on any
+subject cannot leak into their assertions. Verified the new rule does not throw
+over any AC-1..5 subject: on each of their controls the only tappable node is
+either absent (`control_lowContrast`/`control_bareDot`/`control_overflow200` have
+no tap action) or already labelled (`control_smallTarget` carries
+`Semantics(label:'Tiny action', button:true)`), so `meaningfulLabel` simply
+**passes** on those subjects and never appears in their `failing` set — no new
+id leaks anywhere. And no un-pended test reads a still-pending rule's id
+(`eyesFree`, `noTimeout` are never referenced by AC-1..6).
 
-**Special attention — the two NEW tests (AC-1, AC-2) genuinely discriminate (verified):**
-- **control_bareDot** = `Container(16×16, BoxDecoration(color: 0xFFC62828, shape: circle))` with **no `Semantics` wrapper**. Walking element ancestors from the dot up to the checked-subtree root finds no labelled `Semantics` → it is **bare → fails both `colourCue` and `noBareDot`** (`failing` contains each). So an always-pass rule would leave `failing` empty and fail both control legs.
-- **ColorChip** (AC-1's positive) and **StatusBadge** (AC-2's positive) each wrap their swatch in `Semantics(label: …, excludeSemantics: true)`; the rule walks the **widget/element** tree (not the semantics tree), so `excludeSemantics` does **not** hide the labelled node → the swatch is **not bare → passes**. The rule is therefore neither vacuous (it fails the bare dot) nor over-eager (it does not wrongly fail a labelled swatch).
-- **Reusing `control_bareDot` for both AC-1 and AC-2 is legitimate**: a bare coloured dot genuinely violates *both* "colour carries meaning with no cue" (AC-1) and "a status drawn as a bare dot" (AC-2). Each test still pins its **own** positive Given (AC-1 ⇒ a descendant `ColorChip` present; AC-2 ⇒ a descendant `StatusBadge` present) and asserts its **own** `ConformanceRuleId` (G6), so the two are not duplicates.
+**Special attention — the NEW test (AC-6) genuinely discriminates (verified):**
+- **control_unlabelled** = `IconButton(onPressed: …, icon: Icon(settings))` at
+  48×48 with **no `tooltip` and no `Semantics(label:)`**. It has a tap action,
+  is not a text field, is not merged — and carries neither label nor tooltip —
+  so `labeledTapTargetGuideline` **fails** it → `meaningfulLabel` is in
+  `failing`. This is the canonical failing case for the guideline, and the exact
+  shape of the real accessibility bug (an `IconButton` shipped with no tooltip).
+  An always-pass rule would leave `failing` empty and fail this control leg.
+- **compliantReference**'s tappable is an `IconButton` with `tooltip: 'Add
+  sample'` → it carries a tooltip → the guideline **passes** it. The reference's
+  other elements (`ColorChip`, `StatusBadge`) are **not tappable** —
+  non-interactive `Semantics(label, excludeSemantics:true)` wrappers with no
+  tap action (verified: no `GestureDetector`/`onTap`/`InkWell`/`button` in
+  either widget) — so the guideline does not apply to them, and the reference
+  passes `meaningfulLabel` on the strength of its single labelled control. So
+  the rule is neither vacuous (it fails the unlabelled control) nor over-eager
+  (it accepts a tooltip-labelled control and ignores non-interactive swatches).
+- **Documented limitation (acceptable, not a downgrade):** `labeledTapTargetGuideline`
+  checks that a tappable node's label/tooltip is **non-empty**, not that the
+  text is *semantically meaningful* ("describes what it does"). A control
+  labelled `"button"` or `"x"` would pass the automated rule. This is an
+  inherent limit of any automatable label check — meaningfulness is a human
+  judgment — and is **deliberately covered by the pure-manual gates** AC-10
+  (manual eyes-free walkthrough, G-3) and AC-12 (on-device VoiceOver/TalkBack
+  parity, G-4), performed at SIGNOFF-1. The automated rule rejects the most
+  plausible wrong implementation (a missing label), so G5 is satisfied; the
+  meaningfulness gap is a genuine but acceptable limit, not a test defect.
 
 | Test | What it checks | Grade | Rule notes |
 |---|---|---|---|
-| **AC-1** `every colour-coded element carries a non-colour cue` (owner A11Y-5), un-pended; rule = **real** `checkColourCue` (flag a filled circular colour dot with no labelled `Semantics` ancestor) | Sweep: for each of the 6 `realScreens`, `givenScreen` opens it (Given `screen findsOneWidget`), the check runs, `outcomeFor(colourCue).pass isTrue`. Reference: Given a descendant `ColorChip findsOneWidget` (a real colour-coded element present), then passes `colourCue`. Control: `control_bareDot` (Given subtree `findsOneWidget`) has `colourCue` in `failing`. | **A** | **G5 genuine discriminator (the keystone concern), satisfied:** the real rule passes on all 6 `buildApp` screens **and** the reference, and **fails on `control_bareDot`** (a bare 16dp circle with no labelled `Semantics` ancestor) — verified the rule is not vacuous (control truly fails) nor over-eager (ColorChip's circle, wrapped in `Semantics(label, excludeSemantics:true)`, passes because the walk is over the widget tree, unaffected by `excludeSemantics`). An always-pass rule would leave `failing` empty and fail the control leg; a real screen leaking a bare circle would fail the sweep. **G1** every discriminating Given checked through the public surface before the When — each swept screen's home finder, the reference's `ColorChip` descendant (non-vacuous positive), the control's keyed subtree. **G2** the colour-cue behaviour under test comes from the real shipped `ColorChip`/`StatusBadge` primitives rendered on the real screens via `buildApp` and in the reference, not a test-injected structure. **G4** asserts the exact `ConformanceRuleId.colourCue` outcome `.pass isTrue` (not non-null) at step grain, on **every** of the six `realScreens` (size/identity pinned by ITEST-1's fixture guard), and `failing` **contains** `colourCue` on the control. **G6** exactly one AC — only `colourCue` is read/asserted (extra failing ids on the control don't affect `contains`). **G3** N/A (no negative-after-settle Then). Deterministic (`buildApp` launchers + `pumpAndSettle`, no sleeps); comments match the real rule. |
-| **AC-2** `a status is never rendered as a bare colour dot` (owner A11Y-5), un-pended; rule = **real** `checkNoBareDot` (same traversal, own outcome id) | Sweep: each real screen opened and `outcomeFor(noBareDot).pass isTrue`. Reference: Given a descendant `StatusBadge findsOneWidget` (status rendered as text+icon, not a dot), then passes `noBareDot`. Control: `control_bareDot` has `noBareDot` in `failing`. | **A** | **G1** the reference Given specifically asserts the status is a `StatusBadge` (the "status = text/icon" primitive, D-7), not merely that something rendered — the configured positive that answers this scenario, distinct from AC-1's `ColorChip`. **G5** discriminating against the real rule: passes on real screens + the `StatusBadge` reference, **fails on the bare-dot control** — rejects a rule that accepts a coloured circle with no text/icon. Reusing `control_bareDot` is correct (it violates AC-2 as a bare status dot) while the AC-2-specific positive (`StatusBadge`) is pinned separately. **G4** exact `noBareDot` id `.pass isTrue`, every swept screen; `failing` **contains** `noBareDot` on the control. **G6** exactly one AC (only `noBareDot`, asserted independently of `colourCue` though they share one traversal). **G2** real `StatusBadge`/`ColorChip` source; **G3** N/A. Deterministic; honest comments. |
-| **AC-3** `the layout survives 200% font scaling without breaking` (owner A11Y-4), un-pended; rule = `checkFontScale200` (re-render at `textScaler 2.0`, measure first `RenderFlex` overflow) | Sweep: each of the 6 `realScreens` opened (Given `screen findsOneWidget`) and `outcomeFor(fontScale200).pass isTrue`. Reference passes `fontScale200`. Control: `control_overflow200` (100dp column of three `textScaler`-sized rows → 180dp at 200%; Given subtree `findsOneWidget`) has `fontScale200` in `failing`. | **A** | Unchanged by A11Y-5 (body + rule untouched); re-confirmed against the five-rule aggregate — the new `colourCue`/`noBareDot` do not flag `control_overflow200` (text rows in a `SizedBox`, no circle `Container`), so `failing contains fontScale200` is undisturbed. **G5** genuine discriminator: passes on all 6 real screens + reference, fails on `control_overflow200` (children 180 > box 100 ⇒ `over=80>0.5`); an overflow-ignoring rule leaves `failing` empty and fails the control. **G4** exact `fontScale200` `.pass isTrue`, every screen. **G6** one AC. **G3** N/A (200% pump + restore live inside the rule). **G1** discriminating Givens (every swept finder + control subtree) checked before the When; reference-leg omitted `findsOneWidget` is non-blocking (the rule's `tester.renderObject(screen)` throws on a missing finder ⇒ no vacuous pass). **G2** real screens via `buildApp`. No downgrade. |
-| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = `checkTapTarget48` (android 48×48 `&&` iOS 44×44 → 48dp floor) | Sweep: each real screen opened (Given `screen findsOneWidget`) and `outcomeFor(tapTarget48).pass isTrue`. Reference: descendant `IconButton findsOneWidget` (Given), passes `tapTarget48`. Control: `control_smallTarget` (24dp, Given subtree `findsOneWidget`) has `tapTarget48` in `failing`. | **A** | Unchanged by A11Y-5 (body + rule untouched); re-confirmed — `control_smallTarget` is a `ColoredBox` tappable (no circle `Container`), so the new dot rules add no failing id to its `failing`, and AC-4 uses `contains(tapTarget48)` (not equality), so no interference. **G1** every Given (six finders, reference `IconButton` descendant, control subtree) checked before the When. **G2** sweep drives the shipped `buildApp` assembly carrying the padded `AppTheme`/`materialTapTargetSize`. **G4** exact `tapTarget48` `.pass isTrue`, every screen; control `failing` **contains** `tapTarget48`. **G5** passes on the 48dp reference + six real padded screens, fails on the 24dp control. **G6** one AC. **G3** N/A. No downgrade. |
-| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = `checkContrastAA` over `textContrastGuideline` at the AA floor | Sweep: each real screen opened; **G2 Given** asserts `Theme.of(element).colorScheme == AppTheme.light().colorScheme`, then `outcomeFor(contrastAA).pass isTrue`. Reference: same theme asserted, passes `contrastAA`. Control: `control_lowContrast` (~1.6:1 grey-on-white) has `contrastAA` in `failing`. | **A** | Unchanged by A11Y-5 (body + rule untouched); re-confirmed — `control_lowContrast` is a `ColoredBox`+`Text` (no circle `Container`), so the new dot rules add no failing id; AC-5 uses `contains(contrastAA)`, no interference. **G2 (decisive, satisfied)** — contrast pinned to the shipped `AppTheme.light().colorScheme` (content-equal `ColorScheme`) on every swept screen and the reference, not a test-injected theme; `tester.element(finder)` fails unless the finder resolves, so the reference leg is non-vacuous. **G1** screen-open + theme-source Givens before the When. **G4** exact `contrastAA` `.pass isTrue`, every screen; control `failing` **contains** `contrastAA`. **G5** passes on AA reference + six real screens, fails on `control_lowContrast` (below 4.5:1). **G6** one AC. **G3** N/A. No downgrade. |
+| **AC-6** `every control exposes a meaningful screen-reader label` (owner A11Y-6), un-pended; rule = **real** `checkMeaningfulLabel` over `labeledTapTargetGuideline` (every tappable semantic node must carry a non-empty `label`/`tooltip`) | Sweep: for each of the 6 `realScreens`, `givenScreen` opens it (Given `screen findsOneWidget`), the check runs, `outcomeFor(meaningfulLabel).pass isTrue`. Reference: Given a descendant `IconButton findsOneWidget` (an interactive control present — tooltip `Add sample`), then passes `meaningfulLabel`. Control: `control_unlabelled` (Given subtree `findsOneWidget`) has `meaningfulLabel` in `failing`. | **A** | **G5 genuine discriminator (the keystone concern), satisfied:** the real rule passes on all 6 `buildApp` screens **and** the reference, and **fails on `control_unlabelled`** (a tappable `IconButton` with no tooltip/label — the canonical `labeledTapTargetGuideline` failure). Verified non-vacuous (the control truly fails: tappable node, no label/tooltip) and non-over-eager (the tooltipped reference IconButton passes; the non-interactive `ColorChip`/`StatusBadge` wrappers carry no tap action so the guideline skips them). An always-pass rule would leave `failing` empty and fail the control leg; a real screen leaking an unlabelled tappable fails the sweep. **G1** every discriminating Given checked through the public surface before the When — each swept screen's home finder `findsOneWidget`, the reference's descendant `IconButton findsOneWidget` (non-vacuous positive — a control is actually present to be labelled), the control's keyed subtree `findsOneWidget`. **G2** the label behaviour under test comes from the real shipped widgets rendered on the real screens via `buildApp` (A11Y-6 wrapped the live `IconButton`s in `lib/display/*` with `MergeSemantics`+`Semantics(label:)`), not a test-injected structure; the reference's tooltip is an in-harness positive control over the same `AppTheme`. **G4** asserts the exact `ConformanceRuleId.meaningfulLabel` outcome `.pass isTrue` (not merely non-null) at step grain, on **every** of the six `realScreens` (size/identity pinned by ITEST-1's fixture guard), and `failing` **contains** `meaningfulLabel` on the control. **G6** exactly one AC — only `meaningfulLabel` is read/asserted (extra failing ids on the control don't affect `contains`). **G3** N/A (no negative-after-settle Then). **Documented limitation:** the rule asserts non-empty label, not semantic meaningfulness — the meaningfulness judgment is reserved for the pure-manual AC-10/AC-12 gates (acceptable, not a G-rule failure). Deterministic (`buildApp` launchers + `pumpAndSettle`, no sleeps); `ensureSemantics` held for the walk and disposed in `finally`; comments match the real rule. |
+| **AC-1** `every colour-coded element carries a non-colour cue` (owner A11Y-5), un-pended; rule = `checkColourCue` (flag a filled circular colour dot with no labelled `Semantics` ancestor) | Sweep: each of the 6 `realScreens` opened (Given `screen findsOneWidget`), `outcomeFor(colourCue).pass isTrue`. Reference: Given a descendant `ColorChip findsOneWidget`, passes `colourCue`. Control: `control_bareDot` (Given subtree `findsOneWidget`) has `colourCue` in `failing`. | **A** | Unchanged by A11Y-6 (body + rule untouched); re-confirmed against the six-rule aggregate. **G5** passes on all 6 screens + reference, fails on `control_bareDot` (a filled 16dp circle with no labelled `Semantics` ancestor); `ColorChip`'s labelled circle passes because the walk is over the widget tree, unaffected by `excludeSemantics`. The new `meaningfulLabel` rule does not interfere: `control_bareDot` has no tappable node, so `meaningfulLabel` passes on it and is absent from `failing`, and AC-1 reads only `failing.contains(colourCue)` anyway. **G1** every Given (six finders, reference `ColorChip` descendant, control subtree) checked before the When. **G2** real `ColorChip`/`StatusBadge` primitives via `buildApp`. **G4** exact `colourCue` `.pass isTrue`, every screen; control `failing` **contains** `colourCue`. **G6** one AC. **G3** N/A. No downgrade. |
+| **AC-2** `a status is never rendered as a bare colour dot` (owner A11Y-5), un-pended; rule = `checkNoBareDot` (same traversal, own outcome id) | Sweep: each real screen opened, `outcomeFor(noBareDot).pass isTrue`. Reference: Given a descendant `StatusBadge findsOneWidget` (status as text+icon), passes `noBareDot`. Control: `control_bareDot` has `noBareDot` in `failing`. | **A** | Unchanged by A11Y-6 (body + rule untouched); re-confirmed. The AC-2-specific positive Given (`StatusBadge`) is pinned distinct from AC-1's (`ColorChip`), and reusing `control_bareDot` as the shared negative is legitimate (a bare dot violates both). `meaningfulLabel` is irrelevant to this control (no tappable node) and AC-2 reads only its own id. **G1** reference Given asserts the status is a `StatusBadge` before the When. **G4** exact `noBareDot` `.pass isTrue`, every screen; control `failing` **contains** `noBareDot`. **G5** passes on real screens + `StatusBadge` reference, fails on the bare-dot control. **G6** one AC (asserted independently of `colourCue` though they share one traversal). **G2** real primitives; **G3** N/A. No downgrade. |
+| **AC-3** `the layout survives 200% font scaling without breaking` (owner A11Y-4), un-pended; rule = `checkFontScale200` (re-render at `textScaler 2.0`, measure first `RenderFlex` overflow) | Sweep: each of the 6 `realScreens` opened (Given `screen findsOneWidget`), `outcomeFor(fontScale200).pass isTrue`. Reference passes `fontScale200`. Control: `control_overflow200` (100dp column of three `textScaler`-sized rows → 180dp at 200%; Given subtree `findsOneWidget`) has `fontScale200` in `failing`. | **A** | Unchanged by A11Y-6 (body + rule untouched); re-confirmed against the six-rule aggregate. `control_overflow200` has no tappable node, so `meaningfulLabel` passes on it and adds nothing to its `failing`; AC-3 reads only `fontScale200`. **G5** passes on all 6 screens + reference, fails on `control_overflow200` (children 180 > box 100 ⇒ `over=80>0.5`). **G4** exact `fontScale200` `.pass isTrue`, every screen. **G6** one AC. **G3** N/A (200% pump + restore live inside the rule). **G1** discriminating Givens (every swept finder + control subtree) checked before the When; the reference leg's omitted `findsOneWidget` is non-blocking (the rule's `tester.renderObject(screen)` throws on a missing finder ⇒ no vacuous pass). **G2** real screens via `buildApp`. No downgrade. |
+| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = `checkTapTarget48` (android 48×48 `&&` iOS 44×44 → 48dp floor) | Sweep: each real screen opened (Given `screen findsOneWidget`), `outcomeFor(tapTarget48).pass isTrue`. Reference: descendant `IconButton findsOneWidget` (Given), passes `tapTarget48`. Control: `control_smallTarget` (24dp, Given subtree `findsOneWidget`) has `tapTarget48` in `failing`. | **A** | Unchanged by A11Y-6 (body + rule untouched); re-confirmed. **Note on the shared control shape:** `control_smallTarget` is a 24dp `GestureDetector` **wrapped in `Semantics(label:'Tiny action', button:true)`**, so it carries a label — the new `meaningfulLabel` rule therefore **passes** on it (it fails only `tapTarget48`), keeping the control single-rule as documented; AC-4 reads only `failing.contains(tapTarget48)` regardless. **G1** every Given (six finders, reference `IconButton` descendant, control subtree) checked before the When. **G2** sweep drives the shipped `buildApp` assembly carrying the padded `AppTheme`/`materialTapTargetSize`. **G4** exact `tapTarget48` `.pass isTrue`, every screen; control `failing` **contains** `tapTarget48`. **G5** passes on the 48dp reference + six real padded screens, fails on the 24dp control. **G6** one AC. **G3** N/A. No downgrade. |
+| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = `checkContrastAA` over `textContrastGuideline` at the AA floor | Sweep: each real screen opened; **G2 Given** asserts `Theme.of(element).colorScheme == AppTheme.light().colorScheme`, then `outcomeFor(contrastAA).pass isTrue`. Reference: same theme asserted, passes `contrastAA`. Control: `control_lowContrast` (~1.6:1 grey-on-white) has `contrastAA` in `failing`. | **A** | Unchanged by A11Y-6 (body + rule untouched); re-confirmed. `control_lowContrast` has no tappable node, so `meaningfulLabel` passes on it; AC-5 reads only `contrastAA`. **G2 (decisive, satisfied)** — contrast pinned to the shipped `AppTheme.light().colorScheme` (content-equal `ColorScheme`) on every swept screen and the reference, not a test-injected theme; `tester.element(finder)` fails unless the finder resolves, so the reference leg is non-vacuous. **G1** screen-open + theme-source Givens before the When. **G4** exact `contrastAA` `.pass isTrue`, every screen; control `failing` **contains** `contrastAA`. **G5** passes on the AA reference + six real screens, fails on `control_lowContrast` (below 4.5:1). **G6** one AC. **G3** N/A. No downgrade. |
 
 ## Verdict
 
-**5 A / 0 B — PASS (all A).** Every currently un-pended automated AC test meets
-the bar against the code as it now stands. **The two NEW A11Y-5 tests are A —
-earned, not nominal:** `checkColourCue`/`checkNoBareDot` genuinely discriminate —
-`control_bareDot` (a filled 16dp circle with no labelled `Semantics` ancestor)
-**fails both rules**, while the real `ColorChip`/`StatusBadge` primitives (which
-wrap their swatch in `Semantics(label, excludeSemantics: true)`, visible to the
-widget-tree walk) **pass** on the reference and across the 6-screen `buildApp`
-sweep. The rule is neither vacuous (it flags the bare dot) nor over-eager (it does
-not flag a labelled swatch, and ignores non-circle `ColoredBox`/banner/card
-surfaces by construction). AC-1 asserts `colourCue` and AC-2 asserts `noBareDot`
-independently (G6) despite sharing one traversal, and each pins its own positive
-Given (`ColorChip` vs `StatusBadge`), so reusing `control_bareDot` as the shared
-negative is legitimate. **AC-3/AC-4/AC-5 hold their prior A, un-weakened and
-un-interfered-with** by the two new aggregate rules: their controls are not circle
-`Container`s, and their `failing.contains(itsId)` / `outcomeFor(itsId).pass` legs
-read only their own id. G1/G2/G4/G6 met across all five, G3 N/A (no
-negative-after-settle Then in this set; that is AC-8's, still pending).
+**6 A / 0 B — PASS (all A).** Every currently un-pended automated AC test meets
+the bar against the code as it now stands. **The NEW A11Y-6 test (AC-6) is A —
+earned, not nominal:** `checkMeaningfulLabel` (delegating to Flutter's
+`labeledTapTargetGuideline` under a held `SemanticsHandle`) genuinely
+discriminates — `control_unlabelled` (a tappable `IconButton` with no
+tooltip/label) **fails** the rule (`failing` contains `meaningfulLabel`), while
+the tooltip-labelled reference IconButton **passes** and the non-interactive
+`ColorChip`/`StatusBadge` swatches are correctly skipped (no tap action). The
+sweep asserts the rule PASSES on every one of the six real `buildApp` screens
+(`.pass isTrue`, not non-null), driven by the live widgets A11Y-6 relabelled in
+`lib/display/*` (G2). It asserts exactly `meaningfulLabel` at step grain (G4),
+covers one AC (G6), checks every discriminating Given before the When (G1), and
+has no negative-after-settle Then (G3 N/A). The one honest limitation — the
+automated rule proves a label is **non-empty**, not that it is *semantically
+meaningful* — is an inherent limit of any automatable label check and is
+deliberately carried by the pure-manual AC-10/AC-12 gates at SIGNOFF-1; it does
+not drop the grade, because the rule still rejects the most plausible wrong
+implementation (a missing label).
+
+**AC-1/AC-2/AC-3/AC-4/AC-5 hold their prior A, un-weakened and
+un-interfered-with** by the sixth aggregate rule: each reads only its own
+`outcomeFor(itsId).pass` / `failing.contains(itsId)`, and the new
+`meaningfulLabel` rule simply passes (never throws, never leaks a failing id)
+over each of their control fixtures — verified `control_lowContrast`,
+`control_bareDot` and `control_overflow200` have no tappable node, while
+`control_smallTarget` carries its own `Semantics(label:)` so it fails only
+`tapTarget48`. No un-pended test references a still-pending rule id (`eyesFree`,
+`noTimeout`). G1/G2/G4/G6 met across all six, G3 N/A (no negative-after-settle
+Then in this set; that remains AC-8's, still pending).
 
 **No B rows — nothing must change for this phase to pass.**
 
@@ -68,6 +117,44 @@ negative-after-settle Then in this set; that is AC-8's, still pending).
 <!-- Historical context: prior grade grids, most recent first. -->
 
 # bs-11 Accessibility conformance — behaviour-test completeness (prior grids)
+
+## A11Y-5 — re-grade of un-pended AC tests (AC-1,2,3,4,5)
+
+**Phase graded: A11Y-5 (un-pended AC tests AC-1,2,3,4,5).** Independent,
+adversarial re-grade of **every currently un-pended automated AC test** against
+the code as it then stood. **What A11Y-5 changed:** it implemented the two
+colour-vocabulary rules in the new `integration_test/conformance/checks/colour_cue.dart`
+— `checkColourCue` (`ConformanceRuleId.colourCue`, AC-1: every colour-coded
+element carries a non-colour cue) and `checkNoBareDot` (`ConformanceRuleId.noBareDot`,
+AC-2: no status is a bare colour dot) — which share one render-tree traversal
+(`_bareColourDots`): a **filled circular** `BoxDecoration` (`Container`/`DecoratedBox`
+with `shape: BoxShape.circle` and non-null `color`) that has **no labelled
+`Semantics` ancestor within the checked subtree** is a *bare* dot and fails both
+rules. It wired both into the aggregate `runConformanceCheck` beside
+`contrastAA`/`tapTarget48`/`fontScale200`, and dropped AC-1 + AC-2 from
+`bs11/pending.dart` (the scaffold-guard then expected the other five —
+`{AC-6,AC-7,AC-8,AC-9,AC-11}`).
+
+**Special attention — the two NEW tests (AC-1, AC-2) genuinely discriminate (verified):**
+- **control_bareDot** = `Container(16×16, BoxDecoration(color: 0xFFC62828, shape: circle))` with **no `Semantics` wrapper**. Walking element ancestors from the dot up to the checked-subtree root finds no labelled `Semantics` → it is **bare → fails both `colourCue` and `noBareDot`** (`failing` contains each). So an always-pass rule would leave `failing` empty and fail both control legs.
+- **ColorChip** (AC-1's positive) and **StatusBadge** (AC-2's positive) each wrap their swatch in `Semantics(label: …, excludeSemantics: true)`; the rule walks the **widget/element** tree (not the semantics tree), so `excludeSemantics` does **not** hide the labelled node → the swatch is **not bare → passes**. The rule is therefore neither vacuous (it fails the bare dot) nor over-eager (it does not wrongly fail a labelled swatch).
+- **Reusing `control_bareDot` for both AC-1 and AC-2 is legitimate**: a bare coloured dot genuinely violates *both* "colour carries meaning with no cue" (AC-1) and "a status drawn as a bare dot" (AC-2). Each test still pins its **own** positive Given (AC-1 ⇒ a descendant `ColorChip` present; AC-2 ⇒ a descendant `StatusBadge` present) and asserts its **own** `ConformanceRuleId` (G6), so the two are not duplicates.
+
+| Test | What it checks | Grade | Rule notes |
+|---|---|---|---|
+| **AC-1** `every colour-coded element carries a non-colour cue` (owner A11Y-5), un-pended; rule = **real** `checkColourCue` | Sweep over 6 `realScreens` + reference pass `colourCue`; `control_bareDot` fails. | **A** | **G5** real rule passes on all 6 screens + reference, fails on `control_bareDot` (not vacuous, not over-eager). **G1/G2/G4/G6** met; **G3** N/A. |
+| **AC-2** `a status is never rendered as a bare colour dot` (owner A11Y-5), un-pended; rule = **real** `checkNoBareDot` | Sweep + `StatusBadge` reference pass `noBareDot`; `control_bareDot` fails. | **A** | **G1** reference Given asserts `StatusBadge` (the status=text/icon primitive). **G5/G4/G6** met; **G3** N/A. |
+| **AC-3** 200% scaling (owner A11Y-4) | Unchanged; re-confirmed against the five-rule aggregate. | **A** | New dot rules don't flag `control_overflow200`; reads only `fontScale200`. No downgrade. |
+| **AC-4** 48dp targets (owner A11Y-3) | Unchanged; re-confirmed. | **A** | `control_smallTarget` not a circle `Container`; reads only `tapTarget48`. No downgrade. |
+| **AC-5** AA contrast (owner A11Y-2) | Unchanged; re-confirmed (G2 pinned to shipped theme). | **A** | `control_lowContrast` not a circle; reads only `contrastAA`. No downgrade. |
+
+### A11Y-5 verdict
+
+**5 A / 0 B — PASS (all A).** The two NEW A11Y-5 tests earned A (real rules
+genuinely discriminate via `control_bareDot`); AC-3/4/5 held their prior A,
+un-weakened by the two new aggregate rules.
+
+## ITEST-2 — AC tests: structural rules (AC-1,2,4,5,6)
 
 **Phase graded: ITEST-2 (acceptance-suite AC tests: AC-1,2,4,5,6).** Independent,
 adversarial grade of the five *pending* `acTestWidgets` ITEST-2 added to the new
@@ -103,7 +190,7 @@ AC-9→GATE-3 and AC-11→GATE-4, which are in ITEST-3, not this phase.)
 | **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2) | Sweep: each real screen opened; **G2 Given asserts `Theme.of(screen).colorScheme == AppTheme.light().colorScheme`** (the shipped AA theme is the source), then `outcomeFor(contrastAA).pass isTrue`. Reference asserts the same theme, then passes `contrastAA`. Control: `control_lowContrast` (~1.6:1 grey-on-white) has `contrastAA` in `failing`. | A | **G2 (the decisive rule here) satisfied:** contrast is asserted to come from the real, shipped `AppTheme.light().colorScheme` on each swept screen and the reference — not a test-injected `ThemeData` a test could over-tune. `ColorScheme` has content `==`, so the equality is meaningful and would fail a screen wired to the default/ad-hoc theme (exactly the pre-A11Y-2 state the catalogue warns of). **G1** screen-open + theme-source Givens checked before the When. **G4** exact `contrastAA` id, every screen. **G5** discriminating: passes on AA reference, fails on `control_lowContrast` (below 4.5:1) — rejects a rule that never applies the contrast guideline. **G6** one AC. **G3** N/A. Deterministic; honest comments. |
 | **AC-6** `every control exposes a meaningful screen-reader label` (owner A11Y-6) | Sweep: each real screen opened and `outcomeFor(meaningfulLabel).pass isTrue`. Reference (Given: a descendant `IconButton` `findsOneWidget`, tooltip `Add sample`) passes `meaningfulLabel`. Control: `control_unlabelled` (an `IconButton` with no tooltip/label) has `meaningfulLabel` in `failing`. | A | **G1** reference Given asserts an interactive control is actually present before checking it carries a label — no vacuous pass on a control-free subtree. **G4** exact `meaningfulLabel` id, every screen. **G5** discriminating: labelled reference passes, unlabelled `IconButton` control fails — rejects a rule that accepts an empty/absent semantic label (the catalogue's wrong impl). **G6** one AC. **G3** N/A. Non-vacuous sweep; deterministic; comments match code. |
 
-## Verdict
+### ITEST-2 verdict
 
 **5 A / 0 B — PASS (all A).** Every one of the five ITEST-2 structural AC tests
 is built to the bar. Each follows the same discriminating shape the catalogue
@@ -204,103 +291,65 @@ un-pending weakened no assertion. `conformance_check.dart` now wires in the real
 
 | AC | Test | Grade | Justification against G1–G6 |
 |---|---|---|---|
-| **AC-5** | `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = real `checkContrastAA` over `textContrastGuideline` at the AA floor | **A** | **G1** every Given checked through the public surface before the When — each swept screen's home finder `findsOneWidget`, the control's keyed subtree `findsOneWidget`; the reference and sweep theme-source Givens read `tester.element(finder)`, which itself fails unless the finder resolves to exactly one element (so the reference leg is not vacuous despite having no separate `findsOneWidget`). **G2 (decisive, satisfied):** the configured Given is the one that answers — on **every** swept screen and on the reference the test asserts `Theme.of(element).colorScheme == AppTheme.light().colorScheme`, so the contrast under test comes from the **shipped** `AppTheme.light().colorScheme`, not a test-injected `ThemeData`; `ColorScheme` has content `==`, so a screen wired to a default/ad-hoc theme would fail this Given. **G3** N/A — a structural contrast check has no negative-after-settle Then (noted). **G4** asserts the exact `ConformanceRuleId.contrastAA` outcome, at step grain, on **every** real screen (loop over all six `realScreens`, whose size/identity ITEST-1's fixture guard pins) and on the reference, and the control's `failing` **contains** `contrastAA`. **G5** genuine discriminator against the **real** rule: passes on the AA `compliantReference` and all six real screens, and **fails on `control_lowContrast`** (~1.6:1 grey `0xFFBDBDBD` on white, below 4.5:1) — `failing` is the set of ids whose outcome `pass == false`, and the real `checkContrastAA` returns a failing outcome for that control, so a rule that never flagged low contrast (an always-pass stub) would leave `failing` empty and fail this leg. **G6** exactly one AC (only `contrastAA`). **Specifically verified:** (a) the sweep still asserts `outcomeFor(contrastAA)?.pass` **isTrue** (line 346), not merely non-null — no weakening vs the real rule; (b) `failing contains contrastAA` genuinely discriminates because the real rule marks the control as failing; (c) un-pending changed none of the AC-5 assertions (identical body to ITEST-2). Deterministic (`buildApp` launchers + `pumpAndSettle`, no fixed sleeps); comments now match the real rule (the former "fails at red baseline" note is gone from the active assertions' behaviour). |
+| **AC-5** | `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = real `checkContrastAA` over `textContrastGuideline` at the AA floor | **A** | **G1** every Given checked through the public surface before the When — each swept screen's home finder `findsOneWidget`, the control's keyed subtree `findsOneWidget`; the reference and sweep theme-source Givens read `tester.element(finder)`, which itself fails unless the finder resolves to exactly one element (so the reference leg is not vacuous despite having no separate `findsOneWidget`). **G2 (decisive, satisfied):** the configured Given is the one that answers — on **every** swept screen and on the reference the test asserts `Theme.of(element).colorScheme == AppTheme.light().colorScheme`, so the contrast under test comes from the **shipped** `AppTheme.light().colorScheme`, not a test-injected `ThemeData`; `ColorScheme` has content `==`, so a screen wired to a default/ad-hoc theme would fail this Given. **G3** N/A — a structural contrast check has no negative-after-settle Then (noted). **G4** asserts the exact `ConformanceRuleId.contrastAA` outcome, at step grain, on **every** real screen (loop over all six `realScreens`, whose size/identity ITEST-1's fixture guard pins) and on the reference, and the control's `failing` **contains** `contrastAA`. **G5** genuine discriminator against the **real** rule: passes on the AA `compliantReference` and all six real screens, and **fails on `control_lowContrast`** (~1.6:1 grey `0xFFBDBDBD` on white, below 4.5:1). **G6** exactly one AC. Deterministic; comments match the real rule. |
 
 ### A11Y-2 re-grade verdict
 
 **AC-5: A — PASS.** AC-5 holds its prior A now that A11Y-2 has made the rule real
 and un-pended the test. The decisive contrast rule **G2** is satisfied — contrast
 is pinned to the shipped `AppTheme.light().colorScheme` on every swept screen and
-the reference, not a test-tuned theme — and the real `checkContrastAA`
-(`textContrastGuideline` at the AA floor) makes the sweep a true positive sweep
-(`.pass isTrue`, not non-null) and the `control_lowContrast` leg a true
-discriminator (`failing` contains `contrastAA` because the rule genuinely flags
-sub-4.5:1 text). G1/G4/G6 met, G3 N/A. No downgrade; no fix required.
+the reference — and the real `checkContrastAA` makes the sweep a true positive
+sweep and the `control_lowContrast` leg a true discriminator. G1/G4/G6 met, G3
+N/A. No downgrade; no fix required.
 
 ## A11Y-3 re-grade (un-pended AC tests: AC-4, AC-5)
 
 Independent, adversarial re-grade of the two currently un-pended automated AC
-tests — **AC-4** (`'interactive targets meet the 48dp minimum'`) and **AC-5**
-(`'text meets the WCAG 2.2 AA contrast floor'`) — against the code as it now
-exists. **What changed since the prior grade:** A11Y-3 implemented the **AC-4
-tap-target rule** in the new `integration_test/conformance/checks/target.dart`
-(`checkTapTarget48`), which combines Flutter's `androidTapTargetGuideline`
-(48×48) and `iOSTapTargetGuideline` (44×44) with `Evaluation.operator +`
-(`passed` is `&&`) so the stricter Android 48dp bound is the effective floor on
-every platform (D-5); `conformance_check.dart` now composes that rule into the
-aggregate beside `contrastAA`, and `pending.dart` drops AC-4 (the scaffold-guard
-now expects the other eight and asserts `!containsKey('AC-4')`). Product code was
-padded to clear the floor (`lib/app/theme.dart` `materialTapTargetSize.padded`,
-`palette_selector_region.dart`, `projects_region.dart`). **AC-5 is unchanged**
-(its rule `checkContrastAA`/`textContrastGuideline` already landed at A11Y-2).
-**Neither AC-4 nor AC-5 test body changed in A11Y-3** — the working-tree diff to
-`accessibility_test.dart` touches *only* the pending-gate guard test (it now
-drops AC-4 and asserts `!containsKey('AC-4')`); the `acTestWidgets('AC-4', …)`
-and `acTestWidgets('AC-5', …)` bodies are byte-for-byte identical to the versions
-previously graded A (AC-4 at the ITEST-2 red baseline, AC-5 at the A11Y-2
-re-grade). A11Y-3 changed only product code, the rule file, the pending gate and
-the pending-gate guard test. The grader ran nothing and edited nothing but this
-file.
+tests — **AC-4** and **AC-5** — against the code as it then existed. **What
+changed:** A11Y-3 implemented the **AC-4 tap-target rule** in the new
+`integration_test/conformance/checks/target.dart` (`checkTapTarget48`), which
+combines Flutter's `androidTapTargetGuideline` (48×48) and `iOSTapTargetGuideline`
+(44×44) with `Evaluation.operator +` (`passed` is `&&`) so the stricter Android
+48dp bound is the effective floor on every platform (D-5); product code was
+padded (`lib/app/theme.dart` `materialTapTargetSize.padded`, plus two region
+widgets). Neither test body changed. The grader ran nothing and edited nothing but
+this file.
 
 | Test | Grade | Rule notes |
 |---|---|---|
-| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = real `checkTapTarget48` (`androidTapTargetGuideline` 48×48 `&&` `iOSTapTargetGuideline` 44×44 → 48dp floor) | **A** | **G1** every Given checked through the public surface before the When — each of the six `realScreens`' home finder `findsOneWidget`, the reference's descendant `IconButton` `findsOneWidget` (an actual interactive target present, so a "pass" can't be vacuous on a target-free subtree), and `control_smallTarget`'s keyed subtree `findsOneWidget`. **G2 (satisfied):** the configured Given answers — the sweep opens every screen through the real feature `buildApp` launchers (the shipped assembly carrying the padded `AppTheme`/`materialTapTargetSize`), so the 48dp behaviour under test comes from the real shipped config, not a test-injected override; the reference's 48dp target is an in-harness positive control over the same `AppTheme`. **G3** N/A — a structural size check has no negative-after-settle Then. **G4** asserts the exact `ConformanceRuleId.tapTarget48` outcome `.pass isTrue` (not merely non-null) at step grain, on **every** real screen (loop over all six `realScreens`, whose size/identity ITEST-1's fixture guard pins) and on the reference, and the control's `failing` **contains** `tapTarget48`. **G5** genuine discriminator against the **real** rule: passes on the 48dp `compliantReference` and all six real (padded) screens, and **fails on `control_smallTarget`** (a 24dp tappable, below both guidelines) — the real `checkTapTarget48` returns a failing outcome for that control, so a rule that never applied the 48dp guideline (an always-pass stub) would leave `failing` empty and fail this leg. **G6** exactly one AC (only `tapTarget48`). Deterministic (`buildApp` launchers + `pumpAndSettle`, no fixed sleeps). Body unchanged from the ITEST-2 version graded A; un-pending weakened no assertion. No downgrade. |
-| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = `checkContrastAA` over `textContrastGuideline` at the AA floor | **A** | Unchanged by A11Y-3 (body and rule both untouched). Holds its prior A. **G2 (decisive, satisfied)** — contrast is pinned to the shipped `AppTheme.light().colorScheme` (content-equal `ColorScheme`) on every swept screen and the reference, not a test-injected theme. **G1** screen-open + theme-source Givens via the public surface before the When; **G4** exact `contrastAA` `.pass isTrue`, every screen; **G5** passes on the AA reference + six real screens, fails on `control_lowContrast` (~1.6:1); **G6** one AC; **G3** N/A. No downgrade; no fix required. |
+| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = real `checkTapTarget48` | **A** | **G1/G2/G4/G5/G6** met (sweep over the padded shipped assembly; reference 48dp passes; `control_smallTarget` 24dp fails). **G3** N/A. Body unchanged from the ITEST-2 version graded A. No downgrade. |
+| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended | **A** | Unchanged by A11Y-3. **G2** pinned to shipped theme. No downgrade. |
 
-### Verdict
+### A11Y-3 verdict
 
-**2 A / 0 B — PASS.** Both un-pended automated AC tests meet the bar against the
-code as it now stands. AC-4 is **A**: now that A11Y-3 has made its rule real
-(`checkTapTarget48` enforcing the 48dp floor via the combined android+iOS
-guidelines) and padded the shipped targets, the sweep is a true positive sweep
-(`.pass isTrue`) over all six real `buildApp` screens plus the 48dp reference,
-and `control_smallTarget` (24dp) is a true discriminator (`failing` contains
-`tapTarget48` because the real rule genuinely flags the sub-48dp target); G1/G2/
-G4/G5/G6 met, G3 N/A. AC-5 is **A**, unchanged and un-weakened (G2 pinned to the
-shipped theme). Neither test body changed in A11Y-3 — only product code, the rule
-file (`checks/target.dart`), the pending gate and the pending-gate guard test
-moved — so neither is a downgrade from its prior A. **Nothing must change for the
-phase to pass.**
+**2 A / 0 B — PASS.** AC-4 earned A (real rule + padded targets); AC-5 held its
+prior A, un-weakened. Nothing must change.
 
 ## A11Y-4 — re-grade of un-pended AC tests (AC-3, AC-4, AC-5)
 
 Independent, adversarial re-grade of the three currently un-pended automated AC
-tests against the code as it now exists. **What A11Y-4 changed:** it implemented
-the real **AC-3 font-scaling rule** in `integration_test/conformance/checks/scaling.dart`
-(`checkFontScale200`) — a *measurement-based* overflow detector that re-renders
-the subject at `textScaler 2.0`, swallows the paint-time RenderFlex error, then
-walks the render tree and flags the first `RenderFlex` whose children's summed
-main-axis extent exceeds its own (`over > 0.5`), skipping `Wrap`/scrollables by
-construction — and wired it into the aggregate `runConformanceCheck` beside
-`contrastAA`/`tapTarget48`. It **replaced** the old ITEST-1 AC-3 control (a
-fixed-*height* `Row` with its label in `Expanded`, which flex-shrinks/silently
-clips and reports **no** overflow — a non-discriminating control) with
-`control_overflow200`, a fixed-height (100dp) `Column` of three rows each sized by
-`MediaQuery.textScaler.scale(30)` (30dp→60dp at 200%), so 3×60=180dp deterministically
-overflows the 100dp box. `pending.dart` drops AC-3 (scaffold-guard now expects the
-other seven and asserts `!containsKey('AC-3')`). **AC-4 and AC-5 bodies are
-unchanged by A11Y-4** (their rules landed at A11Y-3/A11Y-2); they are re-confirmed
-against the current aggregate. The grader ran nothing and edited nothing but this
-file.
+tests. **What A11Y-4 changed:** it implemented the real **AC-3 font-scaling rule**
+in `integration_test/conformance/checks/scaling.dart` (`checkFontScale200`) — a
+*measurement-based* overflow detector that re-renders the subject at `textScaler
+2.0`, swallows the paint-time RenderFlex error, then walks the render tree and
+flags the first `RenderFlex` whose children's summed main-axis extent exceeds its
+own (`over > 0.5`), skipping `Wrap`/scrollables by construction — and wired it into
+`runConformanceCheck`. It **replaced** the old ITEST-1 AC-3 control (a fixed-height
+`Row` with its label in `Expanded`, which flex-shrinks/silently clips and reports
+**no** overflow — non-discriminating) with `control_overflow200`, a fixed-height
+(100dp) `Column` of three rows each sized by `MediaQuery.textScaler.scale(30)`
+(30dp→60dp at 200%), so 3×60=180dp deterministically overflows the 100dp box.
+**AC-4 and AC-5 bodies unchanged.** The grader ran nothing and edited nothing but
+this file.
 
-| Test | What it checks | Grade | Rule notes |
-|---|---|---|---|
-| **AC-3** `the layout survives 200% font scaling without breaking` (owner A11Y-4), un-pended; rule = real `checkFontScale200` (re-render at `textScaler 2.0`, measure first `RenderFlex` overflow) | Sweep: for each of the 6 `realScreens`, `givenScreen` opens it (Given: `screen findsOneWidget`, line 454), the check runs, `outcomeFor(fontScale200).pass isTrue` (line 461). Reference: `givenCompliantReference` then `outcomeFor(fontScale200).pass isTrue` (line 469). Control: `control_overflow200` (Given: subtree `findsOneWidget`, line 475) has `fontScale200` in `failing` (line 479). | **A** | **G5 genuine discriminator (the keystone concern), satisfied:** the rule passes on all 6 real `buildApp` screens **and** the reference and **fails on `control_overflow200`**. Verified the control truly discriminates: its 100dp `Column` holds three `textScaler`-sized rows (3×60=180dp at 200%), so the `RenderFlex`'s children (180) exceed its own extent (100 — pinned tight by the outer `SizedBox`), `_firstFlexOverflow` returns `over=80>0.5`, and the real rule marks it failing — so a rule that ignored overflow (always-pass) would leave `failing` empty and fail this leg. The replaced control (an `Expanded`-row that silently clips with no overflow) could **not** do this; the new `textScaler`-driven box height makes the overflow deterministic and font-independent (holds under the test font and the device font alike). **G4** asserts the exact `ConformanceRuleId.fontScale200` outcome `.pass isTrue` (not merely non-null) at step grain, on **every** of the six `realScreens` (whose size/identity ITEST-1's fixture guard pins) and on the reference; the control leg asserts `failing` **contains** `fontScale200`. **G6** exactly one AC (only `fontScale200` is read/asserted; other failing ids on the control don't affect `contains`). **G3** N/A — a structural overflow check has no negative-after-settle Then; the 200% pump + restore live inside the rule, so the test reads the outcome over the unscaled subject (honest comment, lines 441-449; `whenScaledTo` left for A11Y-4's own rule-level tests). **G1** the two *discriminating* Givens are checked through the public surface before the When — every swept screen's home finder `findsOneWidget` and the control's keyed subtree `findsOneWidget`. **Reference-leg asymmetry re-judged: still minor/non-blocking, NOT a G1 gap.** The reference leg omits an explicit `compliantReferenceFinder findsOneWidget`, but the real `checkFontScale200` calls `tester.renderObject(screen)` (and the composed contrast/target rules traverse the same finder), which **throws** unless the finder resolves to exactly one widget — so a non-rendered reference would error red, never pass vacuously; and the test's discrimination rests entirely on the fully-checked control + 6-screen sweep, making the reference a redundant positive. **G2** satisfied — the sweep opens every screen through the real feature `buildApp` launchers (shipped assembly/layouts), so the overflow-freedom under test comes from the real screens A11Y-4 fixed, not a test construct. Deterministic (`buildApp` launchers + `pumpAndSettle`, rule restores scale in `finally`; no fixed sleeps). No downgrade from the prior ITEST-3 "A" — the old grade was against a stub rule + non-discriminating control; the current rule + `control_overflow200` make the same A **earned**. |
-| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = real `checkTapTarget48` (android 48×48 `&&` iOS 44×44 → 48dp floor) | Sweep: each real screen opened (Given `screen findsOneWidget`) and `outcomeFor(tapTarget48).pass isTrue`. Reference: descendant `IconButton findsOneWidget` (Given), then passes `tapTarget48`. Control: `control_smallTarget` (24dp, Given subtree `findsOneWidget`) has `tapTarget48` in `failing`. | **A** | Unchanged by A11Y-4 (body + rule untouched); re-confirmed against the current 3-rule aggregate. **G1** every Given (six screen finders, reference `IconButton` descendant, control keyed subtree) checked through the public surface before the When. **G2** the sweep drives the shipped `buildApp` assembly carrying the padded `AppTheme`/`materialTapTargetSize`. **G4** exact `tapTarget48` `.pass isTrue`, every screen; control `failing` **contains** `tapTarget48`. **G5** passes on the 48dp reference + six real padded screens, fails on the 24dp `control_smallTarget` — real rule genuinely flags sub-48dp. **G6** one AC. **G3** N/A. No downgrade. |
-| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = `checkContrastAA` over `textContrastGuideline` at the AA floor | Sweep: each real screen opened; **G2 Given** asserts `Theme.of(element).colorScheme == AppTheme.light().colorScheme`, then `outcomeFor(contrastAA).pass isTrue`. Reference: same theme asserted, passes `contrastAA`. Control: `control_lowContrast` (~1.6:1 grey-on-white) has `contrastAA` in `failing`. | **A** | Unchanged by A11Y-4 (body + rule untouched); re-confirmed. **G2 (decisive, satisfied)** — contrast is pinned to the shipped `AppTheme.light().colorScheme` (content-equal `ColorScheme`) on every swept screen and the reference, not a test-injected theme; `tester.element(finder)` itself fails unless the finder resolves, so the reference leg is non-vacuous. **G1** screen-open + theme-source Givens before the When. **G4** exact `contrastAA` `.pass isTrue`, every screen; control `failing` **contains** `contrastAA`. **G5** passes on the AA reference + six real screens, fails on `control_lowContrast` (below 4.5:1). **G6** one AC. **G3** N/A. No downgrade. |
+| Test | Grade | Rule notes |
+|---|---|---|
+| **AC-3** `the layout survives 200% font scaling without breaking` (owner A11Y-4), un-pended; rule = real `checkFontScale200` | **A** | **G5 genuine discriminator (satisfied):** passes on all 6 real screens + reference, fails on `control_overflow200` (children 180 > box 100 ⇒ `over=80>0.5`). **G4** exact `fontScale200` `.pass isTrue`, every screen; **G6** one AC; **G3** N/A (pump+restore inside the rule); **G1** discriminating Givens checked (reference-leg omitted `findsOneWidget` is non-blocking — `tester.renderObject(screen)` throws on a missing finder ⇒ no vacuous pass); **G2** real screens via `buildApp`. No downgrade — the earlier ITEST-3 A was against a stub + non-discriminating control; now **earned**. |
+| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended | **A** | Unchanged by A11Y-4; re-confirmed. No downgrade. |
+| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended | **A** | Unchanged by A11Y-4; re-confirmed (G2 pinned to shipped theme). No downgrade. |
 
 ### A11Y-4 re-grade verdict
 
-**3 A / 0 B — PASS.** All three un-pended automated AC tests meet the bar against
-the code as it now stands. **AC-3 is A — now earned, not nominal:** A11Y-4's real
-`checkFontScale200` (measurement-based overflow) plus the replacement
-`control_overflow200` (a `textScaler`-driven 100dp column that deterministically
-overflows by 80px at 200%) make the control a genuine discriminator — it FAILS the
-rule, the test asserts `failing contains fontScale200`, and the sweep asserts the
-rule PASSES on every one of the six real screens and the reference (`.pass isTrue`,
-not non-null). The reference leg's omitted `findsOneWidget` is re-judged **minor /
-non-blocking**, not a G1 gap: the rule's `tester.renderObject(screen)` throws on a
-missing finder (so no vacuous pass), and discrimination rests on the fully-checked
-control + sweep. **AC-4** and **AC-5** are **A**, unchanged and un-weakened by
-A11Y-4 (G2 pinned to the shipped theme/config), re-confirmed against the current
-three-rule aggregate. **Nothing must change for the phase to pass.**
+**3 A / 0 B — PASS.** AC-3 is A — now earned (real `checkFontScale200` +
+deterministic `control_overflow200`); AC-4 and AC-5 hold their prior A, unchanged
+and un-weakened. Nothing must change for the phase to pass.

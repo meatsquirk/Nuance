@@ -26,11 +26,22 @@ class DisplaySettingsButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // No tooltip: the chrome sits above the Navigator's Overlay, and a tooltip
-    // requires an Overlay ancestor.
-    return IconButton(
-      key: openKey,
-      onPressed: onPressed,
-      icon: const Icon(Icons.contrast),
+    // requires an Overlay ancestor. A screen reader still needs to know what
+    // this control does (AC-6), so the icon-only button carries an explicit
+    // semantic label instead. `MergeSemantics` folds the label and the button's
+    // own tappable node into one, so the label lands on the node that holds the
+    // tap action (the stock IconButton starts its own semantics container, so a
+    // bare `Semantics` ancestor would leave the tappable node unlabelled).
+    return MergeSemantics(
+      child: Semantics(
+        label: 'Display and simulation settings',
+        button: true,
+        child: IconButton(
+          key: openKey,
+          onPressed: onPressed,
+          icon: const Icon(Icons.contrast),
+        ),
+      ),
     );
   }
 }
@@ -182,10 +193,16 @@ class DisplaySettingsScreen extends StatelessWidget {
                     const Expanded(
                       child: Text('Display and simulation settings'),
                     ),
-                    IconButton(
-                      key: closeKey,
-                      onPressed: onClose,
-                      icon: const Icon(Icons.close),
+                    MergeSemantics(
+                      child: Semantics(
+                        label: 'Close settings',
+                        button: true,
+                        child: IconButton(
+                          key: closeKey,
+                          onPressed: onClose,
+                          icon: const Icon(Icons.close),
+                        ),
+                      ),
                     ),
                   ],
                 ),

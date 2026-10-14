@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** In progress — behaviour stage underway; A11Y-2 (AC-5) + A11Y-3 (AC-4) + A11Y-4 (AC-3) + A11Y-5 (AC-1+AC-2) done, 5/10 automated ACs delivered; next A11Y-6 (AC-6 semantic labels)
+**Status:** In progress — behaviour stage underway; A11Y-2 (AC-5) + A11Y-3 (AC-4) + A11Y-4 (AC-3) + A11Y-5 (AC-1+AC-2) + A11Y-6 (AC-6) done, 6/10 automated ACs delivered; next A11Y-7 (AC-8 no time limit)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -41,7 +41,7 @@
 | AC-3 | System font scaling to 200% does not break the layout | ITEST-3 `TestAC03_FontScale200NoBreak` | A11Y-4 | ✅ Done |
 | AC-4 | Interactive targets meet the minimum size | ITEST-2 `TestAC04_TapTargetMin48` | A11Y-3 | ✅ Done |
 | AC-5 | Text meets the high-contrast floor | ITEST-2 `TestAC05_ContrastFloorAA` | A11Y-2 | ✅ |
-| AC-6 | Every control exposes a meaningful screen-reader label | ITEST-2 `TestAC06_ControlHasMeaningfulLabel` | A11Y-6 | ⬜ Todo |
+| AC-6 | Every control exposes a meaningful screen-reader label | ITEST-2 `TestAC06_ControlHasMeaningfulLabel` | A11Y-6 | ✅ Done |
 | AC-7 | An eyes-free walkthrough completes under the screen reader | ITEST-3 `TestAC07_EyesFreeWalkthroughCompletes` | GATE-2 | ⬜ Todo |
 | AC-8 | No interaction imposes a time limit and nothing auto-dismisses | ITEST-3 `TestAC08_NothingAutoDismisses` | A11Y-7 | ⬜ Todo |
 | AC-9 | A feature failing the automated check is not accepted | ITEST-3 `TestAC09_FailedAutomatedCheckNotAccepted` | GATE-3 | ⬜ Todo |
@@ -111,7 +111,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its che
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ◐ In progress (A11Y-2, A11Y-3, A11Y-4, A11Y-5 done; next A11Y-6) |
+| A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ◐ In progress (A11Y-2, A11Y-3, A11Y-4, A11Y-5, A11Y-6 done; next A11Y-7) |
 | GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ◐ In progress (GATE-1 done) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3/4; G-2 approved 2026-10-13) |
 
@@ -162,8 +162,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 9 | A11Y-3 | AC-4 targets: 48dp floor + tap-target check rule + sweep controls | ✅ Done | 9,227,788 | 14m 35s | 48dp `MaterialTapTargetSize` pinned on `AppTheme`; `tapTarget48` rule (android+iOS guidelines, 48dp floor) composed into `runConformanceCheck`; swept 2 custom palette targets (InkWell/GestureDetector →minHeight 48); AC-4 ✅; unit 1037; default +11 ~8 on sim; grade 2 A/0; fix 0/3 |
 | 10 | A11Y-4 | AC-3 scaling: 200% resilience + scaling check rule + sweep layouts | ✅ Done | 24,228,814 | 41m 20s | `fontScale200` measurement rule (re-render @2.0, flag any `RenderFlex` whose children exceed its bounds) composed into `runConformanceCheck`; swept 4 real screens `Row→Wrap` (Readout/Capture/Recipes/Palette); control rebuilt as a `textScaler`-sized Column (font-independent); AC-3 ✅; unit 1037; default +12 ~7 on sim; grade 3 A/0; fix 1/3 |
 | 11 | A11Y-5 | AC-1+AC-2 colour-cue / no-bare-dot: `colour_cue.dart` rule (filled circular dot w/o labelled Semantics) + marked-point sweep | ✅ Done | 10,172,202 | 19m 12s | slice (2 ACs); grade 5 A/0; fix 0/3 |
-| 12 | A11Y-6 | AC-6 semantic labels: meaningful labels + labelled-control check rule + sweep | ⬜ Next | | | |
-| 13 | A11Y-7 | AC-8 no time limit: `AccessibleNotice` (no auto-dismiss) + no-timeout check rule + sweep | ⬜ Todo | | | |
+| 12 | A11Y-6 | AC-6 semantic labels: meaningful labels + labelled-control check rule + sweep | ✅ Done | 17,920,113 | 40m 35s | `labels.dart` → `labeledTapTargetGuideline` (6th rule); swept 3 icon-only controls (settings entry/close/repeat) via MergeSemantics; AC-6 ✅; unit 1041; default +15 ~4 / run-pending +15 -4 on sim; grade 6 A/0; fix 0/3 |
+| 13 | A11Y-7 | AC-8 no time limit: `AccessibleNotice` (no auto-dismiss) + no-timeout check rule + sweep | ⬜ Next | | | |
 | 14 | GATE-2 | AC-7 eyes-free: semantics-only driver completes a core task | ⬜ Todo | | | ∥ one A11Y phase |
 | 15 | GATE-3 | AC-9 automated gate: aggregate result + `acceptanceDecision` (fail any ⇒ not accepted) | ⬜ Todo | | | barrier (needs all rules) |
 | 16 | GATE-4 | AC-11 WCAG floor: `recordedLevel` == AA when passed; thresholds pinned to WCAG 2.2 AA | ⬜ Todo | | | |
@@ -173,11 +173,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**A11Y-5 (AC-1 + AC-2 colour-cue / no-bare-dot) done — AC-1 + AC-2 ✅ delivered.** Added `checks/colour_cue.dart` with two rules sharing one traversal — `checkColourCue` (AC-1) and `checkNoBareDot` (AC-2) — composed into `runConformanceCheck` (5 of 8 rules live). The traversal flags a **filled circular `BoxDecoration` dot/swatch** (Container/DecoratedBox, `shape: circle`, non-null `color`) that lacks a labelled `Semantics` ancestor within the checked subtree — exactly the app's `ColorChip`/`StatusBadge` "colour + label" contract (both wrap their swatch in `Semantics(label, excludeSemantics:true)`, so they pass; `control_bareDot` has no label, so it fails both ids). Rectangular surfaces/banners and border-only rings (the eyedropper reticle, `color==null`) are ignored by construction. Sweep: the one latent bare dot — the capture-feed **marked point** — now carries `Semantics(label: 'Marked sample point')` (+ unit test). No `StatusBadge` change needed: its shell already renders text/icon and no real screen shows a bare-dot status (provenance/status are already text). 5/10 automated ACs delivered (AC-5 + AC-4 + AC-3 + AC-1 + AC-2). Grade 5 A/0; fix 0/3. No coverage flake this phase.
+**A11Y-6 (AC-6 meaningful screen-reader labels) done — AC-6 ✅ delivered.** `checks/labels.dart` → `checkMeaningfulLabel` delegates to Flutter's `labeledTapTargetGuideline` (6th rule in `runConformanceCheck`); every tappable node must carry a non-empty label/tooltip. Sweep (D-1): the three icon-only controls that lacked labels — the shared `DisplaySettingsButton` chrome entry (all 6 screens), the settings-panel close and the spoken-output repeat — each wrapped `MergeSemantics(Semantics(label, button:true, child: IconButton))` (no `Tooltip`: they sit above the Navigator Overlay). 6/10 automated ACs delivered. unit 1041; coverage 100%/18 touched; default +15 ~4 / run-pending +15 -4 on sim; grade 6 A/0; fix 0/3. (Placeholder-label traversal from the plan dropped: non-empty is the automated bar; content-meaningfulness is the manual AC-10/AC-12 concern.)
 
-**Next — A11Y-6 (AC-6 meaningful screen-reader labels):** give every interactive control a meaningful non-empty semantic label (sweep); author the labelled-control rule (`labeledTapTargetGuideline` + a traversal rejecting empty/placeholder labels) in `checks/labels.dart`; un-pend AC-6. **A11Y-6..7 share `lib/app/theme.dart`, the feature screens and `integration_test/conformance/`, so they stay sequential** (A11Y-6 → A11Y-7). **GATE-2** (AC-7 eyes-free) is file-disjoint and may run **∥ one A11Y phase** (separate session/worktree). Then **GATE-3** (barrier — composes every sub-rule; closes TestAC09) → **GATE-4** (WCAG floor; closes TestAC11). Finally SIGNOFF-1 (packet + summary + manual AC-10/AC-12 → G-3/G-4).
+**Next — A11Y-7 (AC-8 nothing time-limited / auto-dismissed):** finish `AccessibleNotice` (dismiss only by explicit control, no timer); route any transient surface through it; author the no-timeout rule (`checks/no_timeout.dart`: render a notice, advance the clock past any default auto-dismiss, assert it persists while the control SnackBar is gone); un-pend AC-8. A11Y-7 shares the A11Y line's files → runs **after** A11Y-6 (now done, so startable). **GATE-2** (AC-7 eyes-free) is file-disjoint and may run **∥ A11Y-7** (`--parallel bs-11 GATE-2`). Then **GATE-3** (barrier — all 8 rules; closes TestAC09) → **GATE-4** (WCAG floor; closes TestAC11). Finally SIGNOFF-1 (packet + summary + manual AC-10/AC-12 → G-3/G-4). G-1/G-2 ✅; G-3/G-4 (manual) decided at SIGNOFF-1.
 
-Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks A11Y-6), or `--parallel bs-11 GATE-2` to start the eyes-free phase alongside.
+Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks A11Y-7), or `--parallel bs-11 GATE-2` to start the eyes-free phase alongside.
 
 ## Token usage
 
@@ -200,7 +200,8 @@ Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks A11Y-6), 
 | A11Y-3 | 28280145 | 2026-10-13 20:19 EDT | 20:33 | 14m 35s | 14m 35s | claude-opus-4-8 | 152 | 227,014 | 8,957,896 | 42,726 | 9,227,788 | AC-4 48dp tap targets delivered; unit 1037/1037; coverage 100% touched; acceptance default +11 ~8 -0 green on sim; grade 2 A/0; fix 0/3 |
 | A11Y-4 | 211f7fc6 | 2026-10-13 21:32 EDT | 22:13 | 41m 20s | 41m 20s | claude-opus-4-8 | 254 | 327,250 | 23,768,382 | 132,928 | 24,228,814 | AC-3 200% font scaling delivered; fontScale200 measurement rule + 4 Row→Wrap sweep fixes + textScaler control; unit 1037; acceptance default +12 ~7 green on sim; grade 3 A/0; fix 1/3 |
 | A11Y-5 | d314e411 | 2026-10-14 05:25 EDT | 05:44 | 19m 12s | 19m 12s | claude-opus-4-8 | 162 | 247,547 | 9,867,268 | 57,225 | 10,172,202 | AC-1 + AC-2 colour-cue / no-bare-dot delivered; colour_cue.dart (colourCue+noBareDot) composed into runConformanceCheck; marked-point sweep; unit 1038; acceptance default +14~5 green / run-pending +14-5 (AC-1..5 pass); grade 5 A/0; fix 0/3 |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 05:44** | **6h 27m** | **3h 44m** |  | **1,498** | **2,607,410** | **93,915,703** | **681,989** | **97,206,600** |  |
+| A11Y-6 | e102b9f6 | 2026-10-14 07:41 EDT | 08:21 | 40m 35s | 40m 35s | claude-opus-4-8 | 246 | 316,991 | 17,518,918 | 83,958 | 17,920,113 | AC-6 meaningful labels done; grade 6 A/0; unit 1041/1041; coverage 100% on 18 touched lib; acceptance default +15~4, run-pending +15-4 on iPhone17 sim; gates green |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 08:21** | **7h 07m** | **4h 24m** |  | **1,744** | **2,924,401** | **111,434,621** | **765,947** | **115,126,713** |  |
 
 ## Sign-off
 

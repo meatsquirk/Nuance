@@ -69,7 +69,7 @@ const Map<String, String> pendingACs = {
   // AC-3 (200% font scaling) un-pended by A11Y-4.
   // AC-4 (48dp tap targets) un-pended by A11Y-3.
   // AC-5 (AA contrast floor) un-pended by A11Y-2.
-  'AC-6': 'A11Y-6',
+  // AC-6 (meaningful labels) un-pended by A11Y-6.
   'AC-7': 'GATE-2',
   'AC-8': 'A11Y-7',
   'AC-9': 'GATE-3',
