@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** In progress — DALT-4 ✅ (AC-5: chokepoint drives the remap from the stored type + severity); next **DALT-5** (AC-7), with **CONTROL-2** (AC-10) startable in parallel. All gates G-1/G-2/G-3/G-4 ✅
+**Status:** In progress — DALT-5 ✅ (AC-7: the remap is distinct from the simulation projection); next **DALT-6** (AC-2), with **CONTROL-2** (AC-10) startable in parallel. All gates G-1/G-2/G-3/G-4 ✅
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -56,7 +56,7 @@ setting, no daltonization control, and nothing that reads the *saved* profile ex
 | AC-4 | A provenance badge stays distinguishable under daltonization | ITEST-2 `TestAC04_ProvenanceBadgeReadable` | DALT-10 | ⬜ Todo |
 | AC-5 | The remap uses the type and severity from the stored profile | ITEST-2 `TestAC05_UsesStoredProfile` | DALT-4 | ✅ Done |
 | AC-6 | Changing the profile updates the remap | ITEST-2 `TestAC06_ProfileChangeRecomputes` | DALT-11 | ⬜ Todo |
-| AC-7 | Daltonization remaps to help the painter, where simulation shows how they see | ITEST-2 `TestAC07_DistinctFromSimulation` | DALT-5 | ⬜ Todo |
+| AC-7 | Daltonization remaps to help the painter, where simulation shows how they see | ITEST-2 `TestAC07_DistinctFromSimulation` | DALT-5 | ✅ Done |
 | AC-8 | Daltonization changes only what is shown, not stored values | ITEST-2 `TestAC08_StoredValuesUnchanged` | DALT-7 | ⬜ Todo |
 | AC-9 | Daltonization applies on every screen while it is on | ITEST-2 `TestAC09_EveryScreen` | DALT-8 | ⬜ Todo |
 | AC-10 | Without a stored profile, daltonization offers no remap | ITEST-2 `TestAC10_NoProfileNeedsAssessment` | CONTROL-2 | ⬜ Todo |
@@ -180,8 +180,8 @@ not as flakes.
 | 6 | ITEST-3 | test-review: packet; G-2 | ✅ Done | 1.91M | 4m 02s | packet assembled in `modules/ITEST.md` (10-AC catalogue + red baseline + 6 A/4 B-pending grades + augmentations + grading-coupling note); **G-2 approved 2026-10-13 by Matt Quirk** — un-blocks DALT-3..11 + CONTROL-2 |
 | 7 | DALT-3 | AC-1 keystone: real remap + chokepoint applies it when on | ✅ Done | 8.76M | 29m 28s | AC-1 un-pended, green protan/deutan/tritan; shipped remap == referenceDaltonize to the 8-bit swatch; `colorNear` 0.094→0.05 + identity-shell smoke updated (both recorded); default +16/~9/0, full integ +213/~9/0, red baseline +23/−2 (only AC-9/AC-10 fail) |
 | 8 | DALT-4 | AC-5 remap uses stored type + severity | ✅ Done | 7.12M | 25m 17s | AC-5 un-pended, `TestAC05` green (stored type+severity, stronger-severity control); no `lib/` body changed (chokepoint already reads `AppScope.cvdProfile` whole); +2 unit tests (chokepoint forwards type+severity); default +17/~8/0, red baseline +23/−2 unchanged, grades 6 A / 4 B-pending |
-| 9 | DALT-5 | AC-7 distinct from simulation | ⬜ Next | | | |
-| 10 | DALT-6 | AC-2 off = original (+ control) | ⬜ Todo | | | augments TestAC02 |
+| 9 | DALT-5 | AC-7 distinct from simulation | ✅ Done | 5.04M | 24m 20s | AC-7 un-pended, `TestAC07` green; no `lib/` body changed (DALT-3 keystone already distinct from `projectDichromat` by construction); +1 unit test (chokepoint shipped-vs-shipped distinctness, oracle = separate simulation path); default +18/~7/0, red baseline +23/−2 unchanged, full integ +215/~7/0; grades 6 A / 4 B-pending |
+| 10 | DALT-6 | AC-2 off = original (+ control) | ⬜ Next | | | augments TestAC02 |
 | 11 | DALT-7 | AC-8 stored values unchanged (+ control) | ⬜ Todo | | | augments TestAC08 |
 | 12 | DALT-8 | AC-9 every screen | ⬜ Todo | | | |
 | 13 | DALT-9 | AC-3 label + value kept (+ control) | ⬜ Todo | | | augments TestAC03 |
@@ -195,22 +195,23 @@ when the row is marked done.
 
 ## Next phase
 
-**DALT-4 done** — AC-5 is settled: the one `displayedSwatchColor` chokepoint, fed `AppScope.cvdProfile`, drives
-the remap from the painter's **stored** type **and** severity (not a default). No `lib/` body changed — DALT-3's
-keystone already satisfied it; DALT-4 un-pended AC-5 and added unit tests pinning the chokepoint's type/severity
-forwarding. AC-1 + AC-5 now both green in the default suite; grid 6 A / 4 B-pending.
+**DALT-5 done** — AC-7 is settled: the error-redistribution remap is **distinct from the simulation
+projection** by construction (DALT-3 keystone rotates the lost a*/b* chroma 90° and adds it back — distinction,
+not perception). No `lib/` body changed; DALT-5 un-pended AC-7 and added a chokepoint-grain shipped-vs-shipped
+distinctness unit test (oracle = the separate product simulation path, so a "daltonize by simulating" refactor
+fails). AC-1 + AC-5 + AC-7 now green in the default suite; grid 6 A / 4 B-pending.
 
-Next is **DALT-5** (AC-7: the remap aids distinction — it is **not** `projectDichromat(c, profile)`, how the
-painter sees). It asserts at the same chokepoint and shares `daltonization_test.dart`, so it is serial behind
-DALT-4 with DALT-6..11.
+Next is **DALT-6** (AC-2: with daltonization off, colours are shown unremapped — the off path explicit + its
+control). It asserts at the same chokepoint and shares `daltonization_test.dart`, so it is serial behind DALT-5
+with DALT-7..11.
 
 Concurrency: **CONTROL-2** (AC-10, no-saved-profile → self-assessment needed) is independently startable — it
 touches `settings_screen.dart`, not the shared chokepoint. Key gap for CONTROL-2: `CvdProfileReadEndpoint` has
 no `hasSavedProfile` and is not yet mounted in the main tree (the no-profile region is still CONTROL-1's empty
 placeholder).
 
-Carried: `colorNear`'s default is **0.05** (do not loosen); `integration_test/bs10/pending.dart` now holds **8**
-ACs (AC-1, AC-5 removed), scaffold guard `unpended = {'AC-1', 'AC-5'}`. Work in worktree
+Carried: `colorNear`'s default is **0.05** (do not loosen); `integration_test/bs10/pending.dart` now holds **7**
+ACs (AC-1, AC-5, AC-7 removed), scaffold guard `unpended = {'AC-1', 'AC-5', 'AC-7'}`. Work in worktree
 `/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`; booted sim mandatory; full `integration_test/` run exceeds
 120s → background it, don't tail.
 
@@ -231,7 +232,8 @@ ACs (AC-1, AC-5 removed), scaffold guard `unpended = {'AC-1', 'AC-5'}`. Work in 
 | SIGNOFF-DECISION | 80b4725a | 2026-10-13 17:24 EDT | 18:01 | 36m 59s | 3m 25s | claude-opus-4-8 | 62 | 55,223 | 2,205,838 | 13,672 | 2,274,795 | ITEST-3 approved (G-2) — Matt Quirk; un-blocks DALT-3..11 + CONTROL-2 |
 | DALT-3 | 0a84d1ba | 2026-10-13 18:03 EDT | 18:33 | 29m 28s | 29m 28s | claude-opus-4-8 | 130 | 153,067 | 8,540,083 | 68,187 | 8,761,467 | AC-1 keystone: real error-redistribution remap at the chokepoint; AC-1 green protan/deutan/tritan (== referenceDaltonize to 8-bit); colorNear 0.094→0.05 + identity-shell smoke updated (recorded); default +16/~9/0, full integ +213/~9/0, red baseline +23/−2 (only AC-9/AC-10 fail); unit 1246/cov 100% 8 files |
 | DALT-4 | 3a78f9d9 | 2026-10-13 20:19 EDT | 20:44 | 25m 17s | 25m 17s | claude-opus-4-8 | 142 | 189,931 | 6,896,067 | 35,531 | 7,121,671 | AC-5 un-pended; TestAC05 green (stored type+severity, severity control); no lib body changed; +2 unit tests; default +17/~8, red baseline +23/−2, full integ +214/~8; grades 6 A / 4 B-pending |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 20:44** | **3h 52m** | **3h 18m** |  | **1,010** | **1,443,847** | **55,400,633** | **480,252** | **57,325,742** |  |
+| DALT-5 | b48536f0 | 2026-10-13 21:31 EDT | 21:56 | 24m 20s | 24m 20s | claude-opus-4-8 | 110 | 194,760 | 4,821,025 | 28,939 | 5,044,834 | AC-7 un-pended; TestAC07 green; no lib body changed (keystone distinct from projectDichromat by construction); +1 chokepoint distinctness unit test; default +18/~7, red baseline +23/-2, full integ +215/~7; grades 6 A / 4 B-pending |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 21:56** | **4h 16m** | **3h 43m** |  | **1,120** | **1,638,607** | **60,221,658** | **509,191** | **62,370,576** |  |
 
 ## Sign-off
 

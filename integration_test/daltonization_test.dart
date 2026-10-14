@@ -76,8 +76,9 @@ void main() {
       // row in `bs10/pending.dart` as it un-pends it, so this set shrinks by one
       // per delivered AC. As a phase lands, add its AC to [unpended] here.
       // Un-pended so far: AC-1 (DALT-3 keystone), AC-5 (DALT-4 — chokepoint
-      // drives the remap from the stored type + severity).
-      const unpended = <String>{'AC-1', 'AC-5'};
+      // drives the remap from the stored type + severity), AC-7 (DALT-5 — the
+      // remap is distinct from the simulation projection).
+      const unpended = <String>{'AC-1', 'AC-5', 'AC-7'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',

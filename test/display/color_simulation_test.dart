@@ -123,6 +123,34 @@ void main() {
           daltonizeColor(original, profile));
     });
 
+    // AC-7 (DALT-5): the two view modes diverge *at the chokepoint*. With the
+    // same stored profile the daltonization output aids distinction while the
+    // simulation output shows perception, so the chokepoint must not render one
+    // as the other. This pins the distinctness at the render grain (not only
+    // that `daltonize` differs from `projectDichromat` as a pure function —
+    // daltonize_test.dart `is distinct from the dichromat projection`): a
+    // refactor that routed daltonization through the simulation projection would
+    // pass the pure-function test's inputs yet fail here.
+    test('daltonization on → distinct from the simulation render for the same '
+        'colour + profile (AC-7)', () {
+      const deutan = CvdProfile(type: CvdType.deutan);
+      const daltonized = DisplaySettings(daltonization: true);
+      const simulated = DisplaySettings(simulationType: CvdType.deutan);
+      final dalt = displayedSwatchColor(original, daltonized, deutan);
+      final sim = displayedSwatchColor(original, simulated, deutan);
+      // Both transform this chromatic swatch (neither is the identity)…
+      expect(dalt, isNot(original), reason: 'daltonization moves the colour');
+      expect(sim, isNot(original), reason: 'simulation moves the colour');
+      // …and the daltonization remap is a different colour from the simulation
+      // projection of the same colour + profile — it aids distinction, it does
+      // not show how the painter perceives the colour.
+      expect(_channelDistance(dalt, sim), greaterThan(2),
+          reason: 'the chokepoint keeps daltonization distinct from simulation');
+      // And it is not `simulateColor` either (the simulation render path).
+      expect(dalt, isNot(simulateColor(original, simulated)),
+          reason: 'the remap is not the simulation projection');
+    });
+
     // AC-5 (D-3): the chokepoint drives the remap from the *stored* profile it
     // is handed — its type and its severity — never a hard-coded default. These
     // pin that the `profile` argument is forwarded whole, so when the render

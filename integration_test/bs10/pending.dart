@@ -79,9 +79,11 @@ const Map<String, String> pendingACs = {
   // AC-6 un-pended by DALT-11 (the render listens to CvdProfileStore so a saved
   // profile change re-renders with the recomputed remap).
   'AC-6': 'DALT-11',
-  // AC-7 un-pended by DALT-5 (the remap aids distinction — it is not
-  // projectDichromat(c, profile), how the painter sees).
-  'AC-7': 'DALT-5',
+  // AC-7 un-pended by DALT-5 — the error-redistribution remap (DALT-3 keystone)
+  // is distinct from the simulation projection by construction: it rotates the
+  // lost a*/b* chroma 90° and adds it back (aiding distinction) rather than
+  // collapsing it (perception). DALT-5 verifies this at the chokepoint grain and
+  // removes AC-7's row here.
   // AC-8 un-pended by DALT-7 (the remap is applied only at render, never
   // written back; the stored Sample/ColorCoordinates are unchanged).
   'AC-8': 'DALT-7',
