@@ -83,9 +83,11 @@ const Map<String, String> pendingACs = {
   // type AND severity, not a default (verified at the unit level and by
   // `TestAC05_UsesStoredProfile` with its stronger-severity control), so AC-5's
   // row is removed here.
-  // AC-6 un-pended by DALT-11 (the render listens to CvdProfileStore so a saved
-  // profile change re-renders with the recomputed remap).
-  'AC-6': 'DALT-11',
+  // AC-6 un-pended by DALT-11 — the app root listens to `CvdProfileStore.changes`
+  // (forwarding the backing `PersistentStore`'s write notification) and re-reads
+  // the saved profile on a change, re-injecting it through `AppScope` so a saved
+  // deutan→protan change recomputes the daltonization remap live; AC-6's row is
+  // removed here.
   // AC-7 un-pended by DALT-5 — the error-redistribution remap (DALT-3 keystone)
   // is distinct from the simulation projection by construction: it rotates the
   // lost a*/b* chroma 90° and adds it back (aiding distinction) rather than

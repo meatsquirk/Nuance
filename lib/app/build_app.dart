@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../a11y/cvd/confusion_check.dart';
@@ -494,10 +496,50 @@ class _AppState extends State<_App> {
   /// confusion check and the bs-08/bs-10 projection reconfigure immediately.
   late CvdProfile _profile = widget.deps.cvdProfile;
 
+  /// The profile store the live pipeline re-reads on a saved change (bs-10
+  /// DALT-11, AC-6), or null when no persistence is wired (bare unit trees).
+  CvdProfileStore? _profileStore;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to the stored profile so a save recomputes the live pipeline even
+    // when it is written straight to the store rather than through the
+    // onboarding callback (AC-6) — the acceptance path that bypasses
+    // [LiveProfileScope]. Production saves go through both paths; the re-read is
+    // idempotent, so the extra signal never double-applies a change.
+    final store = widget.deps.store;
+    if (store != null) {
+      _profileStore = CvdProfileStore(store);
+      _profileStore!.changes.addListener(_handleStoreChanged);
+    }
+  }
+
   /// Replaces the live profile with the one a save just wrote (AC-13), rebuilding
   /// the tree so later-built CVD consumers read the measured profile.
   void _handleProfileSaved(CvdProfile profile) {
     setState(() => _profile = profile);
+  }
+
+  /// Re-reads the saved profile when the store changes, so a saved
+  /// deutan→protan change recomputes the live daltonization remap (AC-6).
+  void _handleStoreChanged() {
+    unawaited(_reloadProfile());
+  }
+
+  /// Loads the current saved profile and adopts it when it differs from the live
+  /// one; falls back to the injected default when the store was cleared.
+  Future<void> _reloadProfile() async {
+    final loaded = await _profileStore!.load();
+    if (!mounted) return;
+    final next = loaded ?? widget.deps.cvdProfile;
+    if (next != _profile) setState(() => _profile = next);
+  }
+
+  @override
+  void dispose() {
+    _profileStore?.changes.removeListener(_handleStoreChanged);
+    super.dispose();
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// One stored document: its [id] within a collection and its decoded [data].
 ///
 /// Returned by [PersistentStore.list]. A plain record (structural equality, no
@@ -19,6 +21,18 @@ typedef StoredDocument = ({String id, Map<String, Object?> data});
 /// returns an equal structure. Ids are opaque to the store; the caller chooses
 /// them and is responsible for their uniqueness within a collection.
 abstract interface class PersistentStore {
+  /// Notifies its listeners whenever a write ([put] or [delete]) changes the
+  /// store's documents (bs-10 DALT-11, AC-6).
+  ///
+  /// The reactive seam bs-10 adds so a surface reading a stored value can
+  /// re-read it when the store changes rather than once at build: the app root
+  /// listens here (via [CvdProfileStore.changes]) and re-reads the painter's
+  /// colour-vision profile on a save, so a saved deutan→protan change recomputes
+  /// the daltonization remap live. A plain [Listenable] (no change payload) — a
+  /// listener re-reads whatever document it cares about; the notification does
+  /// not say which collection changed.
+  Listenable get changes;
+
   /// Creates or replaces the document [id] in [collection] with [data].
   Future<void> put(String collection, String id, Map<String, Object?> data);
 
@@ -42,8 +56,11 @@ abstract interface class PersistentStore {
 /// "no persistence" mode can ship it. Stored maps are copied in and out so a
 /// caller cannot mutate the store's state through a reference it handed to
 /// [put] or received from [get] / [list].
-class InMemoryPersistentStore implements PersistentStore {
+class InMemoryPersistentStore with ChangeNotifier implements PersistentStore {
   final Map<String, Map<String, Map<String, Object?>>> _collections = {};
+
+  @override
+  Listenable get changes => this;
 
   @override
   Future<void> put(
@@ -52,6 +69,7 @@ class InMemoryPersistentStore implements PersistentStore {
     Map<String, Object?> data,
   ) async {
     (_collections[collection] ??= {})[id] = Map<String, Object?>.from(data);
+    notifyListeners();
   }
 
   @override
@@ -74,6 +92,7 @@ class InMemoryPersistentStore implements PersistentStore {
   @override
   Future<void> delete(String collection, String id) async {
     _collections[collection]?.remove(id);
+    notifyListeners();
   }
 
   @override

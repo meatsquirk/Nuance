@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** In progress — DALT-10 ✅ (AC-4: a provenance badge stays distinguishable from its label + icon, not colour — the decorative tint is remapped while the glyph + label stay); next **DALT-11** (AC-6), with **CONTROL-2** (AC-10) startable in parallel. All gates G-1/G-2/G-3/G-4 ✅
+**Status:** In progress — DALT module COMPLETE: DALT-11 ✅ (AC-6: a saved profile change recomputes the remap live — the app root listens to `CvdProfileStore.changes` and re-injects the re-read profile through `AppScope`). All nine render-side ACs (AC-1..9) delivered; next **CONTROL-2** (AC-10), then **SIGNOFF-1**. All gates G-1/G-2/G-3/G-4 ✅
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -55,7 +55,7 @@ setting, no daltonization control, and nothing that reads the *saved* profile ex
 | AC-3 | A remapped element still shows its label and value | ITEST-2 `TestAC03_LabelAndValueKept` | DALT-9 | ✅ Done |
 | AC-4 | A provenance badge stays distinguishable under daltonization | ITEST-2 `TestAC04_ProvenanceBadgeReadable` | DALT-10 | ✅ Done |
 | AC-5 | The remap uses the type and severity from the stored profile | ITEST-2 `TestAC05_UsesStoredProfile` | DALT-4 | ✅ Done |
-| AC-6 | Changing the profile updates the remap | ITEST-2 `TestAC06_ProfileChangeRecomputes` | DALT-11 | ⬜ Todo |
+| AC-6 | Changing the profile updates the remap | ITEST-2 `TestAC06_ProfileChangeRecomputes` | DALT-11 | ✅ Done |
 | AC-7 | Daltonization remaps to help the painter, where simulation shows how they see | ITEST-2 `TestAC07_DistinctFromSimulation` | DALT-5 | ✅ Done |
 | AC-8 | Daltonization changes only what is shown, not stored values | ITEST-2 `TestAC08_StoredValuesUnchanged` | DALT-7 | ✅ Done |
 | AC-9 | Daltonization applies on every screen while it is on | ITEST-2 `TestAC09_EveryScreen` | DALT-8 | ✅ Done |
@@ -128,7 +128,7 @@ AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7.
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-3..10 done — AC-1/5/7/2/8/9/3/4; next DALT-11) |
+| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | ✅ Done (DALT-1..11 — AC-1/5/7/2/8/9/3/4/6 all delivered) |
 | CONTROL | [modules/CONTROL.md](modules/CONTROL.md) | The daltonization settings control (toggle) + the no-saved-profile affordance (AC-10) | DALT (shell), bs-07 | 🔄 In progress (CONTROL-1 done) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 all done; G-2 approved) |
 
@@ -186,8 +186,8 @@ not as flakes.
 | 12 | DALT-8 | AC-9 every screen | ✅ Done | 19.44M | 31m 48s | AC-9 un-pended green; new `CaptureCurrentReading` + `PaintRow` masstone swatch through the chokepoint; full integ 218/0/4; grid 8 A/2 B-pending |
 | 13 | DALT-9 | AC-3 label + value kept (+ control) | ✅ Done | 9.44M | 16m 41s | test-only (AC-3 green-at-baseline — `ColorChip` label contract); un-pended AC-3, closed TestAC03 augmentation (off→on colour-change control), +ColorChip label-under-remap unit test; unit 1259/cov 100% 12 files/default +22~3/grid 9 A/1 B-pending (AC-3 B→A) |
 | 14 | DALT-10 | AC-4 provenance badge readable (+ control) | ✅ Done | 11.75M | 18m 38s | added `ProvenanceIcon` (per-tier glyph + remappable tint via the one chokepoint) to the Readout region + palette badge; un-pended AC-4, closed TestAC04 augmentation (off→on tint-remap control, glyph+label stay); +harness remapColor/provenanceIcon; +provenance_icon unit test; unit 1264/cov 100% 15 files/default +23~2/grid 10 A/0 B (AC-4 B→A, last B cleared) |
-| 15 | DALT-11 | AC-6 profile change recomputes (live) | ⬜ Next | | | |
-| 16 | CONTROL-2 | AC-10 no saved profile → self-assessment needed | ⬜ Todo | | | ∥-risky w/ DALT (shared test file) |
+| 15 | DALT-11 | AC-6 profile change recomputes (live) | ✅ Done | 13.74M | 27m 16s | store made reactive (`PersistentStore.changes`, both impls notify on put/delete; `CvdProfileStore.changes` forward); `_AppState` listens + re-reads profile → `withCvdProfile` re-inject → ColorChip re-renders. Un-pended AC-6; unit 1272/cov 100% 18 files/default 221·0·~1/run-pending AC-6 green (only AC-10 red); grid 10 A/0 B |
+| 16 | CONTROL-2 | AC-10 no saved profile → self-assessment needed | ⬜ Next | | | ∥-risky w/ DALT (shared test file), but DALT now complete; `settings_screen.dart` |
 | 17 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
@@ -195,33 +195,29 @@ when the row is marked done.
 
 ## Next phase
 
-**DALT-10 done** — AC-4 (a provenance badge stays distinguishable under daltonization) is settled. The spec Then
-names **label and icon, not colour**; the badge was text-only, so this phase adds the icon + a remappable tint:
-new `lib/widgets/provenance_icon.dart` (`ProvenanceIcon(tier)` — a distinct per-tier glyph tinted by a per-tier
-colour routed through the one `displayedSwatchColor` chokepoint), embedded as a leading icon in the Readout
-`provenance_region.dart` and the palette `provenance_badge.dart` (text column wrapped in `Flexible`). Un-pended
-AC-4; strengthened `TestAC04_ProvenanceBadgeReadable` with the off→on control (tint moves from base to
-`remapColor(base, deutan)` WHILE the glyph + 'Measured' label persist — closes the TestAC04→DALT-10 augmentation
-row, discriminates vs the text-only shell + a non-remapping tint); +harness `remapColor`/`provenanceTintFor`/
-`provenanceIcon`; +`provenance_icon_test.dart` unit test. Grid **10 A / 0 B** — AC-4 promoted **B→A** (last B
-cleared). Default acceptance **+23 / ~2 / 0 fail**; run-pending **+24 / −1** (only AC-10/CONTROL-2 red).
+**DALT-11 done — DALT module complete.** AC-6 (a saved profile change recomputes the remap) is settled. The
+AC-6 harness writes the profile straight to the store (bypassing bs-07's `LiveProfileScope` callback), so the
+fix made the persistence seam reactive: `PersistentStore` now exposes `changes` (a `Listenable` fired on
+put/delete — implemented in both `InMemoryPersistentStore` and the production `DriftPersistentStore`),
+`CvdProfileStore.changes` forwards it, and `_AppState` listens, re-reads the saved profile, and re-injects it
+through the existing `withCvdProfile`/`AppScope` seam so `ColorChip` re-renders the remap for the new type.
+Un-pended AC-6 (`bs10/pending.dart` now holds only AC-10; guard `unpended` has nine). Unit **1272** / cov
+**100% on 18 files**; acceptance default **221 / 0 / ~1** (skip = AC-10) / run-pending AC-6 green (only AC-10
+red). Grid **10 A / 0 B**.
 
-Next is **DALT-11** (AC-6: changing the saved profile recomputes the remap — make the daltonization render read
-the **live** `CvdProfileStore` so a deutan→protan save re-renders; `TestAC06_ProfileChangeRecomputes` already
-discriminates at the red baseline, un-pend it when the live re-read ships). It shares the chokepoint +
-`daltonization_test.dart` with the landed DALT line, so it is the last serial DALT phase.
+Next is **CONTROL-2** (AC-10: with no saved profile the control reports a self-assessment is needed; no remap
+applied) — the only remaining behaviour phase. It touches `settings_screen.dart` and is file-disjoint from the
+now-complete DALT line (it only needs AC-10's row deleted from the shared `daltonization_test.dart` +
+`bs10/pending.dart` and `unpended` updated). Key gap: `CvdProfileReadEndpoint.hasSavedProfile` is still absent
+and the endpoint is not mounted in the main tree (the no-profile region is CONTROL-1's empty placeholder); it
+can reuse the new `PersistentStore.changes` signal to react to a clear. After CONTROL-2, only **SIGNOFF-1**
+remains.
 
-Concurrency: **CONTROL-2** (AC-10, no-saved-profile → self-assessment needed) is independently startable — it
-touches `settings_screen.dart`, not the shared chokepoint. Key gap for CONTROL-2: `CvdProfileReadEndpoint` has
-no `hasSavedProfile` and is not yet mounted in the main tree (the no-profile region is still CONTROL-1's empty
-placeholder). After DALT-11 + CONTROL-2, only **SIGNOFF-1** remains.
-
-Carried: `colorNear`'s default is **0.05** (do not loosen); `integration_test/bs10/pending.dart` now holds **2**
-ACs (AC-6, AC-10), scaffold guard `unpended = {'AC-1','AC-5','AC-7','AC-2','AC-8','AC-9','AC-3','AC-4'}`. Render
-seams: `ProvenanceIcon` (tier glyph + remappable tint), `PaintRow.swatchColor`/`swatchKeyFor`,
-`CaptureCurrentReading.readingKey`. Work in worktree `/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`; booted
-sim mandatory (device lane contended by bs-11/bs-12 — the lock serialises); a device run can exceed 120s →
-background it, don't tail.
+Carried: `colorNear`'s default is **0.05** (do not loosen); `integration_test/bs10/pending.dart` now holds
+**1** AC (AC-10), scaffold guard `unpended = {'AC-1','AC-5','AC-7','AC-2','AC-8','AC-9','AC-3','AC-4','AC-6'}`.
+Reactive seam: `PersistentStore.changes` / `CvdProfileStore.changes`. Work in worktree
+`/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`; booted sim mandatory (device lane contended by bs-11/bs-12
+— the lock serialises); a full-suite device run can exceed 120s → background it, don't tail.
 
 ## Token usage
 
@@ -246,7 +242,8 @@ background it, don't tail.
 | DALT-8 | a8a3cfdd | 2026-10-14 07:41 EDT | 08:13 | 31m 48s | 31m 48s | claude-opus-4-8 | 248 | 321,012 | 19,036,152 | 86,217 | 19,443,629 | AC-9 un-pended green (every screen via one ColorChip chokepoint: new CaptureCurrentReading + PaintRow masstone swatch); unit 1258/cov 100% 12 files/default +21~4/full integ 218-0-4/grid 8 A/2 B-pending |
 | DALT-9 | 2d4a6367 | 2026-10-14 09:05 EDT | 09:24 | 18m 52s | 16m 41s | claude-opus-4-8 | 150 | 243,811 | 9,133,382 | 60,981 | 9,438,324 | AC-3 un-pended green (label+value kept; test-only); default +22~3; grade 9 A/1 B-pending (AC-3 B->A); all gates green |
 | DALT-10 | b43a41ec | 2026-10-14 09:44 EDT | 10:03 | 18m 38s | 18m 38s | claude-opus-4-8 | 188 | 256,858 | 11,435,527 | 57,614 | 11,750,187 | AC-4 un-pended green (provenance badge: label + per-tier icon, tint remapped via the one chokepoint); default +23~2, run-pending +24-1 (only AC-10 red); unit 1264/cov 100% 15 files; grade 10 A/0 B (AC-4 B->A, last B cleared); all gates green |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 10:03** | **6h 12m** | **5h 36m** |  | **1,988** | **2,976,695** | **115,946,561** | **796,825** | **119,722,069** |  |
+| DALT-11 | d5a48119 | 2026-10-14 10:49 EDT | 11:16 | 27m 16s | 27m 16s | claude-opus-4-8 | 180 | 332,823 | 13,343,700 | 64,074 | 13,740,777 | AC-6 un-pended green: store made reactive (PersistentStore.changes both impls; CvdProfileStore forward; _AppState listens + re-reads profile -> withCvdProfile re-inject -> ColorChip re-renders); unit 1272/cov 100% 18 files; default 221/0/~1, run-pending AC-6 green (only AC-10 red); grade 10 A/0 B; all gates green |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 11:16** | **6h 39m** | **6h 04m** |  | **2,168** | **3,309,518** | **129,290,261** | **860,899** | **133,462,846** |  |
 
 ## Sign-off
 

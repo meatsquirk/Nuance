@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../a11y/cvd/cvd_profile.dart';
 import 'persistent_store.dart';
 
@@ -20,6 +22,16 @@ class CvdProfileStore {
   const CvdProfileStore(this._store);
 
   final PersistentStore _store;
+
+  /// Notifies when the backing store changes, so a live reader re-reads the
+  /// saved profile on a save (bs-10 DALT-11, AC-6).
+  ///
+  /// Forwards the backing [PersistentStore.changes]: the app root listens here
+  /// and re-reads [load] when it fires, so a saved profile change (e.g. a new
+  /// self-assessment, or a direct store write) recomputes the daltonization
+  /// remap live rather than only at app assembly. Like the backing signal it
+  /// carries no payload — a listener re-reads [load] to see the new profile.
+  Listenable get changes => _store.changes;
 
   /// The collection the single profile document lives in.
   static const String collection = 'cvd_profile';

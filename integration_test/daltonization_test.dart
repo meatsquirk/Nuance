@@ -86,9 +86,11 @@ void main() {
       // colour-coded element still renders its label text + numeric value; only
       // the swatch colour changes), AC-4 (DALT-10 — a provenance badge states
       // its tier through its label + icon, which survive while the decorative
-      // tint is remapped).
+      // tint is remapped), AC-6 (DALT-11 — the app root listens to
+      // `CvdProfileStore.changes` and re-reads the saved profile, so a saved
+      // deutan→protan change recomputes the remap live).
       const unpended = <String>{
-        'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', 'AC-9', 'AC-3', 'AC-4', //
+        'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', 'AC-9', 'AC-3', 'AC-4', 'AC-6', //
       };
       final expected = {
         for (var i = 1; i <= 10; i++)

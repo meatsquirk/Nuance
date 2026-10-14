@@ -1,6 +1,6 @@
 # Module DALT — daltonization remap engine + display injection
 
-**Status:** In progress — DALT-10 (AC-4) done; a provenance badge now states its tier through a text label and a distinct per-tier **icon** (shape), and its decorative tint is routed through the one display chokepoint (`ProvenanceIcon`), so daltonization remaps the colour while the label + icon stay readable. AC-4 un-pended and green (default `+23/~2`), grade 10 A / 0 B (AC-4 B→A — last B cleared). DALT-11 (AC-6, live recompute) is next (serial behind DALT-3 on the shared chokepoint + `daltonization_test.dart`); CONTROL-2 (other module, AC-10) is startable in parallel.
+**Status:** DALT module COMPLETE — DALT-11 (AC-6) done; the app root now listens to `CvdProfileStore.changes` (forwarding the backing `PersistentStore`'s write notification) and re-reads the saved profile, re-injecting it through `AppScope` so a saved deutan→protan change recomputes the daltonization remap **live**. AC-6 un-pended and green in both modes (default `221/0/~1`; run-pending AC-6 green, only AC-10 red); grade 10 A / 0 B. All nine render-side ACs (AC-1..9) delivered; only CONTROL-2 (other module, AC-10) and SIGNOFF-1 remain.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
 additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
@@ -22,7 +22,7 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 | DALT-8 | behavior | AC-9 | ✅ Done | 19.44M | 31m 48s |
 | DALT-9 | behavior | AC-3 | ✅ Done | 9.44M | 16m 41s |
 | DALT-10 | behavior | AC-4 | ✅ Done | 11.75M | 18m 38s |
-| DALT-11 | behavior | AC-6 | ⬜ Todo | | |
+| DALT-11 | behavior | AC-6 | ✅ Done | 13.74M | 27m 16s |
 
 ## Interface reconciliation
 
@@ -801,3 +801,61 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
   background it, don't tail. Device lane is contended (bs-11/bs-12 also use the sim) — the lock serialises.
 - **Known gaps:** AC-6 live recompute (DALT-11); AC-10 no-saved-profile affordance (CONTROL-2). Carries the D-8
   sim/dalt gap as context only (out of bs-10 scope, D-5).
+
+### Result — DALT-11  <!-- 2026-10-14 -->
+
+- **AC-6 (profile change recomputes the remap) un-pended and green.** Made the persistence seam reactive so a
+  saved profile change recomputes the live daltonization remap — the AC-6 harness path writes the profile
+  straight to the store (`whenSaveProfile` → `CvdProfileStore.save` → backing `put`), bypassing bs-07's
+  `LiveProfileScope.onProfileSaved` callback, so the app had to **listen to the store itself**.
+- **`lib/store/persistent_store.dart`:** `PersistentStore` now declares `Listenable get changes;`;
+  `InMemoryPersistentStore` is `with ChangeNotifier`, returns `changes => this`, and `notifyListeners()` on
+  `put` + `delete`. **`lib/store/drift_persistent_store.dart`:** same pattern (production store is reactive too).
+  **`lib/store/cvd_profile_store.dart`:** new `Listenable get changes => _store.changes;` forwards the signal.
+- **`lib/app/build_app.dart`:** `_AppState.initState` builds a `CvdProfileStore(deps.store)` when a store is
+  wired and listens to `changes`; `_handleStoreChanged`→`_reloadProfile` re-reads `load()` and, when it differs,
+  re-injects via the existing `withCvdProfile` live-profile seam (`setState(_profile)`) so `AppScope`→`ColorChip`
+  re-renders the remap for the new type; `!mounted` guard + `dispose` removes the listener. Null-load (cleared
+  store) falls back to the injected default. Production saves now ride both the callback and the store listener
+  (idempotent — the re-read guards on equality). No change to `ColorChip`/the render path.
+- **Un-pended AC-6:** removed its `bs10/pending.dart` row (map now holds only AC-10→CONTROL-2) and added `AC-6`
+  to the scaffold guard's `unpended` set (`10 − 9 = 1`). No AC-6 test change needed — `TestAC06` already
+  discriminated at the red baseline; it reads the **rendered** swatch and grades the after-save swatch against
+  `referenceDaltonize(_, protan)`.
+- **Gates:** `flutter analyze` clean · `flutter test --coverage` **1272 unit pass** (+8: persistent_store ×2
+  put/delete-notify across both impls = 4, cvd_profile_store changes-forward 1, build_app live-store-listener 3)
+  · `dart run tool/coverage_gate.dart main` → **100% on all 18 touched files** · acceptance (booted iPhone 17,
+  under `coord.sh with-lock`): default full `integration_test/` **221 pass / 0 fail / 1 skip** (the skip is
+  AC-10, still pending) — AC-6 un-pended & green, nothing regressed; run-pending `daltonization_test.dart`
+  **24 pass / 1 fail** — the one failure is AC-10 `TestAC10_NoProfileNeedsAssessment` at its planned red
+  baseline (CONTROL-2), AC-6 green.
+- **Grade:** fresh independent whole-suite re-grade → **10 A / 0 B** (AC-6 A — now un-pended on shipped
+  behaviour; no row regressed or downgraded). Grid: `behavior-test-completeness-bs-10-daltonization.md`.
+- Coverage (touched `lib/`): 100% (4 files: persistent_store, drift_persistent_store, cvd_profile_store,
+  build_app). Fix passes: 0/3 (all gates green on first run).
+- Tokens/time: 13.74M · 27m 16s active (1 session).
+- Closed by: unit + coverage + acceptance (default + run-pending) + grade gates all green.
+
+### Checkpoint / Handoff — DALT-11
+
+- **Frozen for CONTROL-2 / SIGNOFF-1:**
+  - **`PersistentStore.changes`** (a `Listenable`, fired on every `put`/`delete`) is the reactive seam; both
+    shipped stores notify, `CvdProfileStore.changes` forwards it, and the app root re-reads the profile on it.
+    CONTROL-2's no-saved-profile affordance can reuse the same signal if it needs to react to a clear.
+  - `integration_test/bs10/pending.dart` now holds **1** AC (AC-10→CONTROL-2); scaffold guard `unpended` is the
+    nine `{AC-1,AC-5,AC-7,AC-2,AC-8,AC-9,AC-3,AC-4,AC-6}` (length `10 − 9 = 1`). CONTROL-2 deletes the last row
+    and adds AC-10, emptying the map.
+  - **CONTROL-2 (AC-10)** is the only remaining behaviour phase (other module, `settings_screen.dart`): with no
+    saved profile the control reports a self-assessment is needed and no remap is applied. Key gap unchanged:
+    `CvdProfileReadEndpoint.hasSavedProfile` is still absent and the endpoint is not mounted in the main tree
+    (the no-profile region is still CONTROL-1's empty placeholder). It is file-disjoint from the (now complete)
+    DALT line — the shared `daltonization_test.dart` only needs its AC-10 row deleted + `unpended` updated.
+  - After CONTROL-2, only **SIGNOFF-1** remains.
+- **Verification commands:** unchanged — `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` (Flutter at `/Users/matthew.quirk/development/flutter/bin`). Acceptance
+  on the **booted** sim only (`-d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), under `coord.sh with-lock` with
+  `FNP_COORD_REPO=/Users/matthew.quirk/Nuance`; macOS has no `timeout`; a full-suite device run can exceed the
+  120s foreground cap → redirect to a file and background it, don't tail. Device lane contended (bs-11/bs-12) —
+  the lock serialises.
+- **Known gaps:** AC-10 no-saved-profile affordance (CONTROL-2). Carries the D-8 sim/dalt gap as context only
+  (out of bs-10 scope, D-5).

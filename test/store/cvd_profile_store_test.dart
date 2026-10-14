@@ -55,4 +55,20 @@ void main() {
 
     expect(await store.load(), const CvdProfile(type: CvdType.deutan, severity: 1.0));
   });
+
+  test('changes forwards the backing store notification (bs-10 AC-6)', () async {
+    // The live-recompute listener (DALT-11) listens here; a save to this store —
+    // or a direct write to the same backing store (the AC-6 harness path) —
+    // fires it, so the app root can re-read the saved profile.
+    var fired = 0;
+    store.changes.addListener(() => fired++);
+
+    await store.save(const CvdProfile(type: CvdType.protan));
+    expect(fired, 1, reason: 'a save fires the forwarded change notification');
+
+    await backing.delete(
+        CvdProfileStore.collection, CvdProfileStore.documentId);
+    expect(fired, 2,
+        reason: 'a direct backing write fires the same forwarded signal');
+  });
 }

@@ -90,6 +90,20 @@ void runContractTests(String name, Future<PersistentStore> Function() build) {
       got['name'] = 'mutated';
       expect((await store.get('paints', 'p1'))!['name'], 'x');
     });
+
+    test('changes notifies its listeners on a put (bs-10 AC-6)', () async {
+      var fired = 0;
+      store.changes.addListener(() => fired++);
+      await store.put('paints', 'p1', {'name': 'x'});
+      expect(fired, 1, reason: 'a write fires the change notification');
+    });
+
+    test('changes notifies its listeners on a delete (bs-10 AC-6)', () async {
+      var fired = 0;
+      store.changes.addListener(() => fired++);
+      await store.delete('paints', 'p1');
+      expect(fired, 1, reason: 'a delete fires the change notification');
+    });
   });
 }
 
