@@ -1,6 +1,6 @@
 # Module DALT — daltonization remap engine + display injection
 
-**Status:** In progress — DALT-9 (AC-3) done; a daltonized colour-coded element keeps its text label + numeric value while only the swatch colour changes (test-only — `ColorChip` already guarantees the label structurally and the numeric reading is independent of the remap). AC-3 un-pended and green (default `+22/~3`), grade 9 A / 1 B-pending (AC-3 B→A). DALT-10 (AC-4) is next (serial behind DALT-3 on the shared chokepoint + `daltonization_test.dart`); DALT-11 (AC-6) follows; CONTROL-2 (other module, AC-10) is startable in parallel.
+**Status:** In progress — DALT-10 (AC-4) done; a provenance badge now states its tier through a text label and a distinct per-tier **icon** (shape), and its decorative tint is routed through the one display chokepoint (`ProvenanceIcon`), so daltonization remaps the colour while the label + icon stay readable. AC-4 un-pended and green (default `+23/~2`), grade 10 A / 0 B (AC-4 B→A — last B cleared). DALT-11 (AC-6, live recompute) is next (serial behind DALT-3 on the shared chokepoint + `daltonization_test.dart`); CONTROL-2 (other module, AC-10) is startable in parallel.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
 additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
@@ -21,7 +21,7 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 | DALT-7 | behavior | AC-8 | ✅ Done | 9.21M | 21m 10s |
 | DALT-8 | behavior | AC-9 | ✅ Done | 19.44M | 31m 48s |
 | DALT-9 | behavior | AC-3 | ✅ Done | 9.44M | 16m 41s |
-| DALT-10 | behavior | AC-4 | ⬜ Todo | | |
+| DALT-10 | behavior | AC-4 | ✅ Done | 11.75M | 18m 38s |
 | DALT-11 | behavior | AC-6 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -727,3 +727,77 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
   background it, don't tail. Device lane is contended (bs-11/bs-12 also use the sim) — the lock serialises.
 - **Known gaps:** AC-4 provenance badge icon/colour under remap (DALT-10); AC-6 live recompute (DALT-11); AC-10
   no-saved-profile affordance (CONTROL-2). Carries the D-8 sim/dalt gap as context only (out of bs-10 scope, D-5).
+
+### Result — DALT-10  <!-- 2026-10-14 -->
+
+- **A provenance badge now states its tier through a text label + a distinct per-tier icon; its decorative
+  tint is remapped under daltonization while the label + icon stay readable (AC-4).** The spec Then names
+  **label and icon, not colour** — the badge was text-only, so this phase adds the icon and a remappable tint:
+  - **New `lib/widgets/provenance_icon.dart`** — `ProvenanceIcon(tier)` renders `Icon(iconFor(tier),
+    color: displayedSwatchColor(tintFor(tier), settings, profile))`. `iconFor` is a distinct glyph per tier
+    (straighten/calculate/auto_awesome/verified — the tier reads from the **shape**); `tintFor` is a decorative
+    per-tier colour. The tint goes through the **one** shared display chokepoint (D-1), reading `DisplayScope`
+    settings + `AppScope.cvdProfile` with the same fallbacks as `ColorChip`, so daltonization remaps it exactly
+    as it does every swatch, while the glyph + accompanying label never move.
+  - **`lib/readout/provenance_region.dart`** (the Readout region AC-4 observes) and **`lib/widgets/
+    provenance_badge.dart`** (the palette badge) now render a leading `ProvenanceIcon` beside the label/note
+    column; the text column is wrapped in `Flexible` so a long caveat note wraps instead of overflowing the row.
+  - Trust is therefore carried by **words + shape**, never colour alone (SI Accessibility, SI D9); the remap
+    moving the tint costs the tier no readability.
+- **AC-4 un-pended** (deleted its row in `integration_test/bs10/pending.dart`; scaffold guard's `unpended` set is
+  now `{'AC-1','AC-5','AC-7','AC-2','AC-8','AC-9','AC-3','AC-4'}`, length `10 − 8 = 2`).
+- **Augmentation TestAC04 closed.** `TestAC04_ProvenanceBadgeReadable` strengthened: reads the OFF baseline
+  (icon glyph + 'Measured' label + base tint via new harness `provenanceIcon`/`provenanceTintFor`), turns
+  daltonization ON via the real panel toggle, then asserts the tint is remapped (`colorNear(onTint,
+  remapColor(baseTint, deutan))` — graded against the **independent** `referenceDaltonize`, never the shipped
+  `daltonizeColor`) AND `≠ baseTint` (control) WHILE the same glyph + 'Measured' label persist. The off→on
+  comparison discriminates vs the text-only shell (no icon ⇒ the glyph read fails) and vs a non-remapping tint.
+- **Harness additions** (`daltonization_harness.dart`): `remapColor(Color, CvdProfile)` (independent remap of an
+  arbitrary colour, the Color analogue of `_remapOf`), `provenanceTintFor(tier)`, `provenanceIcon(tester,
+  region)` (reads the single Icon's glyph + tint within a region, no material import in the test).
+- **Unit test added:** `test/widgets/provenance_icon_test.dart` — `iconFor`/`tintFor` distinct per tier;
+  standalone renders the glyph at the identity tint (both scope fallbacks); daltonization-on remaps the tint for
+  the fallback deutan profile and for an `AppScope` protan profile (glyph unchanged). Locks the icon contract.
+- **Gates:** `flutter analyze` clean · `flutter test --coverage` **1264 unit pass** (+5 vs DALT-9) ·
+  `dart run tool/coverage_gate.dart main` → **100% on all 15 touched `lib/` files** (incl. the new
+  `provenance_icon.dart`). Acceptance (booted iPhone 17 `5AB9D06D…`, under `coord.sh with-lock`): default
+  `daltonization_test.dart` → **+23 / ~2 pending / 0 fail** (AC-4 now green, up from DALT-9's +22/~3; the 2 skips
+  are the still-pending AC-6/AC-10). Run-pending (`--dart-define=BS10_RUN_PENDING=true`) → **+24 / −1**: the one
+  red is the pending **AC-10** (CONTROL-2 red baseline; AC-4 passes, AC-6 green-at-baseline) — unchanged from
+  DALT-9's baseline, so nothing regressed.
+- **Grade gate** (fresh independent subagent, re-graded the whole suite against the DALT-9 grid; grid rewritten
+  at `behavior-test-completeness-bs-10-daltonization.md`): **10 A / 0 B** — AC-4 promoted **B pending DALT-10 →
+  A** (earned on G5: the off→on control discriminates vs the text-only shell and a non-remapping tint; the glyph
+  + label are proven to survive a real colour change). Last B cleared; no previously-A row dropped.
+- Coverage (touched `lib/`): 100% (15 files). Fix passes: 0/3 (every gate green on the first full run — the Row
+  overflow fix was made during implementation, before the first full acceptance run, not as a gate fix).
+- Tokens/time: see dashboard cell.
+- Closed by: unit + coverage + acceptance (AC-4) + grade gates green; full default suite green with only the two
+  later-phase ACs (AC-6/AC-10) pending.
+
+### Checkpoint / Handoff — DALT-10
+
+- **Frozen for DALT-11 / CONTROL-2:**
+  - `ProvenanceIcon(tier)` (`lib/widgets/provenance_icon.dart`) — the shared tier glyph + remappable tint; its
+    tint routes through the one `displayedSwatchColor` chokepoint, so AC-6's live-recompute (DALT-11) covers it
+    for free once the display pipeline listens to the profile store. `iconFor`/`tintFor` are the frozen per-tier
+    maps. Both the Readout `ProvenanceRegion` and the palette `ProvenanceBadge` embed it.
+  - Harness: `remapColor(Color, CvdProfile)`, `provenanceTintFor(tier)`, `provenanceIcon(tester, region)` are
+    available for later phases that need to grade an arbitrary remapped colour or read an icon's glyph/tint.
+  - `integration_test/bs10/pending.dart` now holds **2** ACs (AC-6→DALT-11, AC-10→CONTROL-2); scaffold guard
+    `unpended` is `{'AC-1','AC-5','AC-7','AC-2','AC-8','AC-9','AC-3','AC-4'}` (length `10 − 8 = 2`). Each
+    remaining phase deletes its row and adds its AC to `unpended`.
+  - **DALT-11 (AC-6)** is next, serial behind here (shares the chokepoint + `daltonization_test.dart`): make the
+    daltonization render read the **live** profile — listen to `CvdProfileStore` so a saved deutan→protan change
+    re-renders with the recomputed remap. `TestAC06_ProfileChangeRecomputes` already discriminates at the red
+    baseline; un-pend it when the live re-read ships.
+  - **CONTROL-2** (AC-10) stays independently startable (`settings_screen.dart`; key gap unchanged:
+    `CvdProfileReadEndpoint.hasSavedProfile` still absent and the endpoint not mounted in the main tree).
+- **Verification commands:** unchanged — `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` (Flutter at `/Users/matthew.quirk/development/flutter/bin`). Acceptance
+  on the **booted** sim only (`-d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), under
+  `FNP_COORD_REPO=/Users/matthew.quirk/Nuance coord.sh with-lock bs-10-daltonization <PHASE> --wait 900 -- bash
+  <script>`; macOS has no `timeout`; a device run can exceed the 120s foreground cap → redirect to a file and
+  background it, don't tail. Device lane is contended (bs-11/bs-12 also use the sim) — the lock serialises.
+- **Known gaps:** AC-6 live recompute (DALT-11); AC-10 no-saved-profile affordance (CONTROL-2). Carries the D-8
+  sim/dalt gap as context only (out of bs-10 scope, D-5).

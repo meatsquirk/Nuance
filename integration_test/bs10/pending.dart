@@ -73,9 +73,11 @@ const Map<String, String> pendingACs = {
   // reading is independent text (`ValueRegion`/`ValueReading`) the remap never
   // touches, so a daltonized element keeps its label + value and only the swatch
   // colour moves; AC-3's row is removed here.
-  // AC-4 un-pended by DALT-10 (a provenance badge stays readable from its label
-  // + icon, not colour, under the remap).
-  'AC-4': 'DALT-10',
+  // AC-4 un-pended by DALT-10 — a provenance badge states its tier through a
+  // text label and a distinct per-tier icon (shape), both of which survive the
+  // remap; the badge's tint is decorative and routed through the one display
+  // chokepoint (`ProvenanceIcon`), so daltonization remaps it while the label +
+  // icon stay readable. Colour never carries the tier; AC-4's row is removed here.
   // AC-5 un-pended by DALT-4 — the one chokepoint (`displayedSwatchColor`, fed
   // `AppScope.cvdProfile`) already drives the remap from the stored profile's
   // type AND severity, not a default (verified at the unit level and by

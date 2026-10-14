@@ -43,6 +43,7 @@ import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/color_science/conversions.dart' show srgbToLab;
 import 'package:paint_color_assistant/display/display_controller.dart';
 import 'package:paint_color_assistant/display/display_read_endpoint.dart';
 import 'package:paint_color_assistant/display/display_settings.dart';
@@ -58,6 +59,7 @@ import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/store/cvd_profile_store.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
 import 'package:paint_color_assistant/widgets/provenance_badge.dart';
+import 'package:paint_color_assistant/widgets/provenance_icon.dart';
 
 // The independent dichromat projection (and its cheap CIELAB distance) bs-08's
 // ITEST-1 built, reused unchanged as the basis for bs-10's independent remap.
@@ -249,6 +251,46 @@ final Color screenSwatchColor = displayColorOf(SCREEN_SAMPLE_LAB);
 /// as changed while an unremapped swatch still reads as the original.
 bool colorNear(Color a, Color b, {double tol = 0.05}) =>
     (a.r - b.r).abs() + (a.g - b.g).abs() + (a.b - b.b).abs() <= tol;
+
+/// The independent-reference remap of an arbitrary display [original] for
+/// [profile] — the [Color] analogue of [screenSwatchColor]→[referenceDaltonize].
+///
+/// Converts [original] to CIELAB through the shared [srgbToLab] (the same
+/// conversion the render path uses), runs the **independent** [referenceDaltonize]
+/// projection, and returns the displayed sRGB colour. A remapped icon tint
+/// (AC-4) is graded against this, never against the shipped `daltonizeColor`, so
+/// a mistyped coefficient in either implementation is caught, not mirrored.
+Color remapColor(Color original, CvdProfile profile) => displayColorOf(
+      referenceDaltonize(
+        srgbToLab(SRGBColor(
+          red: (original.r * 255).round(),
+          green: (original.g * 255).round(),
+          blue: (original.b * 255).round(),
+        )),
+        profile,
+      ),
+    );
+
+/// The base (un-remapped) tint a [ProvenanceIcon] renders for [tier] with
+/// daltonization off — exposed so an AC test can grade the remapped tint against
+/// [remapColor] of it without importing the widget directly.
+Color provenanceTintFor(ProvenanceTier tier) => ProvenanceIcon.tintFor(tier);
+
+/// The glyph and current tint of the single [ProvenanceIcon] inside [region].
+///
+/// The provenance surfaces render the tier as an [Icon] (its shape is the
+/// [glyph]; its [tint] is the decorative, remappable colour), so an AC test can
+/// assert the glyph + accompanying label survive while the tint is remapped —
+/// without a `package:flutter/material.dart` import of its own.
+({IconData glyph, Color? tint}) provenanceIcon(
+  WidgetTester tester,
+  Finder region,
+) {
+  final icon = tester.widget<Icon>(
+    find.descendant(of: region, matching: find.byType(Icon)),
+  );
+  return (glyph: icon.icon!, tint: icon.color);
+}
 
 /// The colours of every circular-decoration display swatch currently rendered.
 ///

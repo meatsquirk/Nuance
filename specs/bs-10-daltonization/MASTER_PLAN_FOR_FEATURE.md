@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** In progress — DALT-9 ✅ (AC-3: a remapped colour-coded element still shows its label + numeric value — only the swatch colour changes); next **DALT-10** (AC-4), with **CONTROL-2** (AC-10) startable in parallel. All gates G-1/G-2/G-3/G-4 ✅
+**Status:** In progress — DALT-10 ✅ (AC-4: a provenance badge stays distinguishable from its label + icon, not colour — the decorative tint is remapped while the glyph + label stay); next **DALT-11** (AC-6), with **CONTROL-2** (AC-10) startable in parallel. All gates G-1/G-2/G-3/G-4 ✅
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -53,7 +53,7 @@ setting, no daltonization control, and nothing that reads the *saved* profile ex
 | AC-1 | Daltonization remaps displayed colours for the painter's type | ITEST-2 `TestAC01_RemapForType` | DALT-3 | ✅ Done |
 | AC-2 | With daltonization off, colours are shown unremapped | ITEST-2 `TestAC02_OffShowsOriginal` | DALT-6 | ✅ Done |
 | AC-3 | A remapped element still shows its label and value | ITEST-2 `TestAC03_LabelAndValueKept` | DALT-9 | ✅ Done |
-| AC-4 | A provenance badge stays distinguishable under daltonization | ITEST-2 `TestAC04_ProvenanceBadgeReadable` | DALT-10 | ⬜ Todo |
+| AC-4 | A provenance badge stays distinguishable under daltonization | ITEST-2 `TestAC04_ProvenanceBadgeReadable` | DALT-10 | ✅ Done |
 | AC-5 | The remap uses the type and severity from the stored profile | ITEST-2 `TestAC05_UsesStoredProfile` | DALT-4 | ✅ Done |
 | AC-6 | Changing the profile updates the remap | ITEST-2 `TestAC06_ProfileChangeRecomputes` | DALT-11 | ⬜ Todo |
 | AC-7 | Daltonization remaps to help the painter, where simulation shows how they see | ITEST-2 `TestAC07_DistinctFromSimulation` | DALT-5 | ✅ Done |
@@ -128,7 +128,7 @@ AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7.
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-3..9 done — AC-1/5/7/2/8/9/3; next DALT-10) |
+| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-3..10 done — AC-1/5/7/2/8/9/3/4; next DALT-11) |
 | CONTROL | [modules/CONTROL.md](modules/CONTROL.md) | The daltonization settings control (toggle) + the no-saved-profile affordance (AC-10) | DALT (shell), bs-07 | 🔄 In progress (CONTROL-1 done) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 all done; G-2 approved) |
 
@@ -185,8 +185,8 @@ not as flakes.
 | 11 | DALT-7 | AC-8 stored values unchanged (+ control) | ✅ Done | 9.21M | 21m 10s | AC-8 un-pended, `TestAC08` green with swatch-moved-while-stored-held control (augmentation closed); no `lib/` body changed (remap is pure render-time, no write-back); +1 unit test (no write-back at chokepoint) + harness `storedValuesText` seam; default +20/~5, red baseline +23/−2 unchanged; grades **8 A / 2 B-pending** (AC-8 B→A) |
 | 12 | DALT-8 | AC-9 every screen | ✅ Done | 19.44M | 31m 48s | AC-9 un-pended green; new `CaptureCurrentReading` + `PaintRow` masstone swatch through the chokepoint; full integ 218/0/4; grid 8 A/2 B-pending |
 | 13 | DALT-9 | AC-3 label + value kept (+ control) | ✅ Done | 9.44M | 16m 41s | test-only (AC-3 green-at-baseline — `ColorChip` label contract); un-pended AC-3, closed TestAC03 augmentation (off→on colour-change control), +ColorChip label-under-remap unit test; unit 1259/cov 100% 12 files/default +22~3/grid 9 A/1 B-pending (AC-3 B→A) |
-| 14 | DALT-10 | AC-4 provenance badge readable (+ control) | ⬜ Next | | | augments TestAC04 |
-| 15 | DALT-11 | AC-6 profile change recomputes (live) | ⬜ Todo | | | |
+| 14 | DALT-10 | AC-4 provenance badge readable (+ control) | ✅ Done | 11.75M | 18m 38s | added `ProvenanceIcon` (per-tier glyph + remappable tint via the one chokepoint) to the Readout region + palette badge; un-pended AC-4, closed TestAC04 augmentation (off→on tint-remap control, glyph+label stay); +harness remapColor/provenanceIcon; +provenance_icon unit test; unit 1264/cov 100% 15 files/default +23~2/grid 10 A/0 B (AC-4 B→A, last B cleared) |
+| 15 | DALT-11 | AC-6 profile change recomputes (live) | ⬜ Next | | | |
 | 16 | CONTROL-2 | AC-10 no saved profile → self-assessment needed | ⬜ Todo | | | ∥-risky w/ DALT (shared test file) |
 | 17 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ⬜ Todo | | | |
 
@@ -195,30 +195,33 @@ when the row is marked done.
 
 ## Next phase
 
-**DALT-9 done** — AC-3 (a remapped colour-coded element still shows its label + numeric value) is settled.
-Green-at-baseline and **test-only** (no `lib/` change): `ColorChip` already requires + always renders a text
-label beside the decorative swatch, and the numeric lightness reading (`ValueRegion`/`ValueReading` off
-`Sample.coordinates`) is independent of the render-time remap — so the remap moves only the swatch colour.
-Un-pended AC-3; strengthened `TestAC03_LabelAndValueKept` with the off→on control (swatch moves from original to
-the `referenceDaltonize` remap WHILE 'Displayed colour' + '55' persist — closes the TestAC03→DALT-9 augmentation
-row, discriminates vs the identity shell); added a `ColorChip` label-under-remap unit test. Grid **9 A / 1
-B-pending** — AC-3 promoted **B→A** (AC-4→DALT-10 the only remaining B). Default acceptance **+22 / ~3 / 0 fail**.
+**DALT-10 done** — AC-4 (a provenance badge stays distinguishable under daltonization) is settled. The spec Then
+names **label and icon, not colour**; the badge was text-only, so this phase adds the icon + a remappable tint:
+new `lib/widgets/provenance_icon.dart` (`ProvenanceIcon(tier)` — a distinct per-tier glyph tinted by a per-tier
+colour routed through the one `displayedSwatchColor` chokepoint), embedded as a leading icon in the Readout
+`provenance_region.dart` and the palette `provenance_badge.dart` (text column wrapped in `Flexible`). Un-pended
+AC-4; strengthened `TestAC04_ProvenanceBadgeReadable` with the off→on control (tint moves from base to
+`remapColor(base, deutan)` WHILE the glyph + 'Measured' label persist — closes the TestAC04→DALT-10 augmentation
+row, discriminates vs the text-only shell + a non-remapping tint); +harness `remapColor`/`provenanceTintFor`/
+`provenanceIcon`; +`provenance_icon_test.dart` unit test. Grid **10 A / 0 B** — AC-4 promoted **B→A** (last B
+cleared). Default acceptance **+23 / ~2 / 0 fail**; run-pending **+24 / −1** (only AC-10/CONTROL-2 red).
 
-Next is **DALT-10** (AC-4: a provenance badge stays readable from its label + icon, not colour, under the remap —
-strengthen `TestAC04_ProvenanceBadgeReadable` with the control that the provenance colour/icon is remapped while
-the tier label stays; the spec Then names an **icon**, add it if absent; augments `TestAC04`). It shares the
-chokepoint and `daltonization_test.dart`, so DALT-10 → DALT-11 (AC-6) are serial.
+Next is **DALT-11** (AC-6: changing the saved profile recomputes the remap — make the daltonization render read
+the **live** `CvdProfileStore` so a deutan→protan save re-renders; `TestAC06_ProfileChangeRecomputes` already
+discriminates at the red baseline, un-pend it when the live re-read ships). It shares the chokepoint +
+`daltonization_test.dart` with the landed DALT line, so it is the last serial DALT phase.
 
 Concurrency: **CONTROL-2** (AC-10, no-saved-profile → self-assessment needed) is independently startable — it
 touches `settings_screen.dart`, not the shared chokepoint. Key gap for CONTROL-2: `CvdProfileReadEndpoint` has
 no `hasSavedProfile` and is not yet mounted in the main tree (the no-profile region is still CONTROL-1's empty
-placeholder).
+placeholder). After DALT-11 + CONTROL-2, only **SIGNOFF-1** remains.
 
-Carried: `colorNear`'s default is **0.05** (do not loosen); `integration_test/bs10/pending.dart` now holds **3**
-ACs (AC-4, AC-6, AC-10), scaffold guard `unpended = {'AC-1','AC-5','AC-7','AC-2','AC-8','AC-9','AC-3'}`. Render
-seams: `PaintRow.swatchColor`/`swatchKeyFor`, `CaptureCurrentReading.readingKey`. Work in worktree
-`/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`; booted sim mandatory (device lane contended by bs-11/bs-12 —
-the lock serialises); a device run can exceed 120s → background it, don't tail.
+Carried: `colorNear`'s default is **0.05** (do not loosen); `integration_test/bs10/pending.dart` now holds **2**
+ACs (AC-6, AC-10), scaffold guard `unpended = {'AC-1','AC-5','AC-7','AC-2','AC-8','AC-9','AC-3','AC-4'}`. Render
+seams: `ProvenanceIcon` (tier glyph + remappable tint), `PaintRow.swatchColor`/`swatchKeyFor`,
+`CaptureCurrentReading.readingKey`. Work in worktree `/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`; booted
+sim mandatory (device lane contended by bs-11/bs-12 — the lock serialises); a device run can exceed 120s →
+background it, don't tail.
 
 ## Token usage
 
@@ -242,7 +245,8 @@ the lock serialises); a device run can exceed 120s → background it, don't tail
 | DALT-7 | 19369a77 | 2026-10-14 05:25 EDT | 05:46 | 21m 10s | 21m 10s | claude-opus-4-8 | 152 | 267,509 | 8,899,773 | 45,398 | 9,212,832 | AC-8 un-pended; TestAC08 swatch-moved-while-stored-held control (augmentation closed); no lib body changed (pure render-time remap, no write-back); +1 unit test + storedValuesText seam; default +20/~5, red baseline +23/-2; grades 8 A / 2 B-pending (AC-8 B->A) |
 | DALT-8 | a8a3cfdd | 2026-10-14 07:41 EDT | 08:13 | 31m 48s | 31m 48s | claude-opus-4-8 | 248 | 321,012 | 19,036,152 | 86,217 | 19,443,629 | AC-9 un-pended green (every screen via one ColorChip chokepoint: new CaptureCurrentReading + PaintRow masstone swatch); unit 1258/cov 100% 12 files/default +21~4/full integ 218-0-4/grid 8 A/2 B-pending |
 | DALT-9 | 2d4a6367 | 2026-10-14 09:05 EDT | 09:24 | 18m 52s | 16m 41s | claude-opus-4-8 | 150 | 243,811 | 9,133,382 | 60,981 | 9,438,324 | AC-3 un-pended green (label+value kept; test-only); default +22~3; grade 9 A/1 B-pending (AC-3 B->A); all gates green |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 09:24** | **5h 54m** | **5h 18m** |  | **1,800** | **2,719,837** | **104,511,034** | **739,211** | **107,971,882** |  |
+| DALT-10 | b43a41ec | 2026-10-14 09:44 EDT | 10:03 | 18m 38s | 18m 38s | claude-opus-4-8 | 188 | 256,858 | 11,435,527 | 57,614 | 11,750,187 | AC-4 un-pended green (provenance badge: label + per-tier icon, tint remapped via the one chokepoint); default +23~2, run-pending +24-1 (only AC-10 red); unit 1264/cov 100% 15 files; grade 10 A/0 B (AC-4 B->A, last B cleared); all gates green |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 10:03** | **6h 12m** | **5h 36m** |  | **1,988** | **2,976,695** | **115,946,561** | **796,825** | **119,722,069** |  |
 
 ## Sign-off
 

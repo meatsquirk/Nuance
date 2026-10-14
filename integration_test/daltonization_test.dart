@@ -32,6 +32,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/domain/provenance.dart';
 
 import 'daltonization_harness.dart';
 
@@ -83,9 +84,12 @@ void main() {
       // AC-9 (DALT-8 — capture, readout and palette all surface the swatch
       // through the one shared ColorChip chokepoint), AC-3 (DALT-9 — a remapped
       // colour-coded element still renders its label text + numeric value; only
-      // the swatch colour changes).
-      const unpended =
-          <String>{'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', 'AC-9', 'AC-3'};
+      // the swatch colour changes), AC-4 (DALT-10 — a provenance badge states
+      // its tier through its label + icon, which survive while the decorative
+      // tint is remapped).
+      const unpended = <String>{
+        'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', 'AC-9', 'AC-3', 'AC-4', //
+      };
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',
@@ -472,31 +476,53 @@ void main() {
     });
 
     acTestWidgets('AC-4', 'TestAC04_ProvenanceBadgeReadable', (tester) async {
-      // Given: daltonization is on, a value with provenance is shown (the known
-      // sample carries a measured provenance).
-      final h = await givenDaltonization(tester,
-          storedProfile: savedProfile(CvdType.deutan));
+      // Given: a value with provenance is shown (the known sample carries a
+      // measured provenance) with daltonization initially off.
+      final deutan = savedProfile(CvdType.deutan);
+      final h = await givenDaltonization(tester, storedProfile: deutan);
+      final region = find.byKey(const ValueKey('readout-provenance-region'));
+
+      // Baseline (daltonization off): the provenance is shown as its tier word
+      // plus a tier icon (a glyph — a shape, not colour), and the icon's
+      // decorative tint is the original (un-remapped) tint.
+      expect(h.daltonization, isFalse, reason: 'AC-4 baseline: daltonization off');
+      expect(region, findsOneWidget,
+          reason: 'AC-4: the provenance is shown with the reading');
+      expect(find.text('Measured'), findsOneWidget,
+          reason: 'AC-4 baseline: the provenance states its tier in words');
+      final baseTint = provenanceTintFor(ProvenanceTier.measured);
+      final off = provenanceIcon(tester, region);
+      final glyph = off.glyph; // the tier's shape — must be stable under the remap
+      expect(colorNear(off.tint!, baseTint), isTrue,
+          reason: 'AC-4 baseline: the icon tint is the original colour while off');
+
+      // When: daltonization is turned on through the shipped panel toggle.
       await h.whenOpenSettings();
       await h.whenSetDaltonization(on: true);
       await h.whenCloseSettings();
       expect(h.daltonization, isTrue, reason: 'AC-4 Given: daltonization on');
 
-      // When: the value's provenance is shown (the Readout's provenance region
-      // states the known sample's measured tier in words).
-      // Then: the provenance remains readable from its label (words), not its
-      // colour — the provenance region and its tier label are present under the
-      // remap.
-      expect(find.byKey(const ValueKey('readout-provenance-region')),
-          findsOneWidget,
-          reason: 'AC-4: the provenance is shown with the reading');
+      // Then: the provenance remains readable from its label and its icon, not
+      // its colour — the tier word and the same glyph are still present WHILE
+      // the decorative tint has been remapped for the stored profile.
       expect(find.text('Measured'), findsOneWidget,
-          reason: 'AC-4: the provenance states its tier in words (readable '
-              'without colour)');
+          reason: 'AC-4: the tier label stays while the colour is remapped');
+      final on = provenanceIcon(tester, region);
+      expect(on.glyph, glyph,
+          reason: 'AC-4: the tier icon (shape) stays while the colour is remapped');
+      expect(colorNear(on.tint!, remapColor(baseTint, deutan)), isTrue,
+          reason: 'AC-4: the badge tint is remapped (referenceDaltonize) under '
+              'daltonization');
 
-      // LIMITED (augmented by DALT-10): the provenance is text-only today, so
-      // this cannot yet prove the label (and the icon DALT-10 adds) *survive a
-      // colour change*. DALT-10 adds the control (a provenance colour/icon is
-      // remapped while its tier label stays).
+      // Control (DALT-10 augmentation): the off→on toggle moved the tint off the
+      // original onto the remap, so the label + icon assertions prove the tier
+      // *survives a real colour change* rather than merely rendering identity.
+      // Against an impl that left the tint unremapped this fails, so it
+      // discriminates; against the ITEST red baseline (text-only badge, no icon)
+      // the glyph read fails. Strengthens AC-4 only.
+      expect(colorNear(on.tint!, baseTint), isFalse,
+          reason: 'AC-4 control: the tint changed — it was remapped, not left as '
+              'the original');
     });
 
     acTestWidgets('AC-5', 'TestAC05_UsesStoredProfile', (tester) async {
