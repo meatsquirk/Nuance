@@ -92,9 +92,9 @@ void main() {
     });
 
     test('source guard exposes every rule scan over populated authorities', () {
-      // forbiddenDependencies / offDeviceSenders are the real GUARD-4 scans and
-      // hold over the shipped product (no forbidden package, no off-device path);
-      // conversion/deltaE/platform remain GUARD-6 stubs until GUARD-6 lands.
+      // All five rule scans are real and hold over the shipped product:
+      // forbiddenDependencies / offDeviceSenders (GUARD-4), conversion / deltaE /
+      // platform (GUARD-6). An empty list means "invariant holds" over lib/.
       expect(conversionOffenders(), isEmpty);
       expect(deltaEOffenders(), isEmpty);
       expect(platformOffenders(), isEmpty);
@@ -110,6 +110,35 @@ void main() {
       expect(nativeCaptureSeam, 'lib/capture/source/');
       expect(forbiddenDependencyNames, contains('firebase_analytics'));
       expect(forbiddenDependencyNames, contains('sentry'));
+    });
+
+    test('the GUARD-6 conversion exemption is load-bearing, not vacuous', () {
+      // Re-scoped D-4 (Matt Quirk 2026-10-14): the two domain pipelines are
+      // sanctioned authorities for conversions. Prove the exemption is doing real
+      // work — each sanctioned file genuinely carries the CIE conversion maths the
+      // scan detects, yet the full lib/ sweep is empty, so the clean result is an
+      // *exclusion*, not a "nothing to find" accident.
+      expect(sanctionedDomainConversionFiles.length, 2);
+      final conversionMarker = RegExp(r'0\.008856|7\.787|0\.95047|1\.08883');
+      for (final path in sanctionedDomainConversionFiles) {
+        final src = maskCommentsAndStrings(File(path).readAsStringSync());
+        expect(
+          conversionMarker.hasMatch(src),
+          isTrue,
+          reason: '$path must carry real conversion maths (in code, not a '
+              'comment/string) for its exemption to be load-bearing',
+        );
+      }
+      // Both sanctioned files carry conversion maths, yet the real lib/ sweep
+      // reports zero offenders — the allow-list is the only thing keeping them
+      // out, and the control fixture (same markers, not sanctioned) is still
+      // flagged (AC-16). So the exemption discriminates; it does not blanket-mute.
+      expect(conversionOffenders(), isEmpty);
+      expect(
+        conversionOffenders(roots: const [kControlFixturesRoot])
+            .any((o) => o.path.contains('control_stray_colour_math')),
+        isTrue,
+      );
     });
 
     test('the GUARD-4 source scans exclude comments / strings and parse the lock',
@@ -479,19 +508,18 @@ sdks:
       expect(deltaEOffenders(), isEmpty,
           reason: 'a stray ΔE00 computation exists in lib/');
       // Control (G5): the planted stray-maths fixture is flagged by both rules
-      // (B pending GUARD-6 — the real scan).
+      // (GUARD-6 landed the real conversion + ΔE scans).
       expect(
           conversionOffenders(roots: const [kControlFixturesRoot])
               .any((o) => o.path.contains('control_stray_colour_math')),
           isTrue,
           reason: 'control: the conversion rule must flag the planted stray '
-              'maths (GUARD-6 implements the scan)');
+              'maths');
       expect(
           deltaEOffenders(roots: const [kControlFixturesRoot])
               .any((o) => o.path.contains('control_stray_colour_math')),
           isTrue,
-          reason: 'control: the ΔE rule must flag the planted stray maths '
-              '(GUARD-6 implements the scan)');
+          reason: 'control: the ΔE rule must flag the planted stray maths');
     });
 
     acTestWidgets('AC-17',
@@ -501,14 +529,14 @@ sdks:
       // Then (sweep): no platform-conditional code outside lib/capture/source/.
       expect(platformOffenders(), isEmpty,
           reason: 'platform-conditional code exists outside the capture seam');
-      // Control (G5): the planted platform fixture is flagged (B pending
-      // GUARD-6 — the real scan).
+      // Control (G5): the planted platform fixture is flagged (GUARD-6 landed
+      // the real platform scan).
       expect(
           platformOffenders(roots: const [kControlFixturesRoot])
               .any((o) => o.path.contains('control_platform_dart')),
           isTrue,
           reason: 'control: the platform rule must flag the planted platform '
-              'code (GUARD-6 implements the scan)');
+              'code');
     });
   });
 
@@ -816,21 +844,21 @@ sdks:
     // all pending at ITEST-1; each behaviour phase deletes its row in
     // `bs12/pending.dart` as it un-pends that AC. GUARD-3 un-pended AC-1 + AC-2
     // (offline); GUARD-4 un-pended AC-6 + AC-7 + AC-8 (privacy); GUARD-5 un-pended
-    // AC-14 + AC-15 (swappable interfaces), so the gate now holds the 9 ACs still
-    // owed to later phases.
+    // AC-14 + AC-15 (swappable interfaces); GUARD-6 un-pended AC-16 + AC-17 (one
+    // colour library + portability), so the gate now holds the 7 ACs still owed
+    // to the QUALITY phases.
     final expectedPending = <String>{
       'AC-3', 'AC-4', // AC-1/AC-2 (GUARD-3), AC-6/7/8 (GUARD-4),
-      // AC-14/AC-15 (GUARD-5) un-pended; AC-5 is manual — absent
+      // AC-14/AC-15 (GUARD-5), AC-16/AC-17 (GUARD-6) un-pended; AC-5 manual — absent
       'AC-9', 'AC-10', 'AC-11', 'AC-12', 'AC-13',
-      'AC-16', 'AC-17',
     };
 
     test('the pending map is exactly the still-pending automatable ACs, each '
         'owned by a real behaviour phase', () {
       expect(pendingACs.keys.toSet(), expectedPending);
-      expect(pendingACs.length, 9);
-      // AC-1 + AC-2 (GUARD-3), AC-6 + AC-7 + AC-8 (GUARD-4) and AC-14 + AC-15
-      // (GUARD-5) were un-pended and must not reappear in the gate.
+      expect(pendingACs.length, 7);
+      // AC-1 + AC-2 (GUARD-3), AC-6 + AC-7 + AC-8 (GUARD-4), AC-14 + AC-15
+      // (GUARD-5) and AC-16 + AC-17 (GUARD-6) were un-pended and must not reappear.
       expect(pendingACs.containsKey('AC-1'), isFalse);
       expect(pendingACs.containsKey('AC-2'), isFalse);
       expect(pendingACs.containsKey('AC-6'), isFalse);
@@ -838,6 +866,8 @@ sdks:
       expect(pendingACs.containsKey('AC-8'), isFalse);
       expect(pendingACs.containsKey('AC-14'), isFalse);
       expect(pendingACs.containsKey('AC-15'), isFalse);
+      expect(pendingACs.containsKey('AC-16'), isFalse);
+      expect(pendingACs.containsKey('AC-17'), isFalse);
 
       // AC-5 (live-preview frame rate) is pure-manual and must never enter the
       // gate.

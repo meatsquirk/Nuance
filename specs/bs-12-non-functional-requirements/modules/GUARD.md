@@ -1,6 +1,6 @@
 # Module GUARD — invariant guards (offline, privacy, swappable, portability)
 
-**Status:** In progress — GUARD-1/2/3/4/5 done (AC-1/2/6/7/8/14/15 delivered); next GUARD-6 (AC-16/17 one-lib + portability)
+**Status:** ✅ COMPLETE — GUARD-1..6 done (AC-1/2/6/7/8/14/15/16/17 delivered); no phase left in this module
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/guards/` (source-scan, swap-harness, network-block/offline harness — reusable test-support), `integration_test/bs12/pending.dart` (created at GUARD-1). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart` with ITEST/QUALITY. **No `lib/` product change** (D-7).
 **Depends on:** — · **Blocks:** ITEST (via GUARD-2), QUALITY (shells)
@@ -14,7 +14,7 @@
 | GUARD-3 | behavior | AC-1, AC-2 | ✅ Done | 7.42M | 9m 39s |
 | GUARD-4 | behavior | AC-6, AC-7, AC-8 | ✅ Done | 11.5M | 27m 11s |
 | GUARD-5 | behavior | AC-14, AC-15 | ✅ Done | 10.1M | 21m 16s |
-| GUARD-6 | behavior | AC-16, AC-17 | ⬜ Todo | | |
+| GUARD-6 | behavior | AC-16, AC-17 | ✅ Done | | |
 
 ## Interface reconciliation
 
@@ -165,8 +165,19 @@ Landed the real `concreteTypeReferences(typeName, {roots})` scan in `source_guar
 - **Exit criteria (gates):** unit + coverage; acceptance green + discriminating; grade gate.
 - **Acceptance gate:** un-pend AC-16, AC-17; `TestAC16/17_*` + all earlier green.
 
-### Result  <!-- filled on completion; ≤ ~20 lines -->
+### Result (✅ Done 2026-10-14)
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the real GUARD-6 scans in `source_guard.dart` (+ an `isAllowed` exemption filter on `_scanSource`): `conversionOffenders`/`deltaEOffenders`/`platformOffenders` reuse GUARD-4/5's `maskCommentsAndStrings` + walk, keyed on principled signatures — `_conversionPatterns` (CIELAB companding ε `0.008856` / slope `7.787` + rational forms + CIE D65 white `95.047`/`108.883` & `0.95047`/`1.08883`), `_deltaEPatterns` (CIEDE2000 `pow(…,7)` / `pow(25,…)`), `_platformPatterns` (`Platform.is*`/`MethodChannel`/`EventChannel`/`dart.library` conditional import). Each honours an authority/allow-list exemption via `isAllowed`.
+- **Scope decision folded in (owner Matt Quirk, 2026-10-14):** D-4 re-scoped — AC-16 guards the *general* colorimetric authority; two domain pipelines (`lib/recipes/engine/subtractive_engine.dart` illuminant-E; `lib/a11y/cvd/confusion_check.dart` D65) are sanctioned via `sanctionedDomainConversionFiles` and exempt; the scan still flags any *other* stray conversion. Amended D-4 (master) + an AC-16 note in the spec. Surfaced because the original "zero offenders" D-4 assumption was false — a computation-level scan (the test plan forbids imports-only) found these two pre-existing conversions at the branch point.
+- Un-pended AC-16/AC-17 in `pending.dart` (gate 9→7); updated the pending-gate guard test (`length 7`, AC-16/17 asserted absent); added the wiring test `the GUARD-6 conversion exemption is load-bearing, not vacuous`; refreshed 3 forward-looking test comments to past tense. **No `lib/` change** (D-7) ⇒ coverage gate N/A.
+- **Verification (host `-d flutter-tester`, cwd = repo root):** `flutter analyze` clean; unit `flutter test test/` **1228/0** (no regression); acceptance default `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` → **+26 / ~7 skip / exit 0** (AC-16/17 run + pass, controls discriminate); run-pending (`--dart-define=BS12_RUN_PENDING=true`) → **+28 / −4** (the 4 still-unbuilt ACs AC-9/10/11/12 = intact red baseline; AC-3/4/13 green-at-baseline; AC-16/17 green).
+- **Grade gate:** fresh independent grader (prior grid as context) → **2 A / 0 B pending / 0 ordinary B** (AC-16/AC-17 close *B pending GUARD-6* → A). Exemption load-bearing (AC-16 strongly — the markers live in lib/ only in the 2 sanctioned files, verified as real code); scan non-sham (keys on CIE/platform signatures, not control filenames; comments/strings masked). Honest note (not a downgrade): AC-17's seam allow-list is not *exercised* by v1 (software capture, no platform code), so its lib/ sweep holds trivially today — but the control discriminates and any future out-of-seam platform code is caught. Grid appended (GUARD-6 §).
+- **Fix passes:** 0/3 (analyze + unit + acceptance + grade all green first pass).
+- **Tokens / Time:** see Dashboard / master ledger (GUARD-6 row).
 
-- **Verification commands:** `flutter analyze` · `flutter test` · `dart tool/coverage_gate.dart` · `flutter test integration_test/bs12/nfr_test.dart -d <udid>` (default) / `--dart-define=BS12_RUN_PENDING=true` (run-pending)
+### Checkpoint / Handoff
+
+- **Frozen for later phases:** all five `source_guard.dart` rule scans are now real; `_scanSource` takes an optional `isAllowed(path)` filter (a file it accepts is an exempt authority / seam, skipped whole); `sanctionedDomainConversionFiles` is the AC-16 exemption allow-list; pattern lists `_conversionPatterns`/`_deltaEPatterns`/`_platformPatterns`. **The GUARD module is COMPLETE** (GUARD-1..6 done; AC-1/2/6/7/8/14/15/16/17 delivered).
+- **Verification environment:** unchanged — the whole bs-12 acceptance file runs on **`-d flutter-tester`** (host VM); the source scans read the repo tree via `dart:io` (cwd = repo root). A bare run with no `-d` gives zero tests / false green.
+- **Known gaps / next:** remaining behaviour is the QUALITY line — QUALITY-2 (AC-9, the only `lib/capture` change), QUALITY-3 (AC-13 un-pend+guard), QUALITY-4 (AC-10/11/12), QUALITY-5 (AC-3/4). Those sharing `nfr_test.dart`/`pending.dart` must sequence (one phase/session, `/clear` between); QUALITY-2 (`lib/capture`-only) may run ∥. Then SIGNOFF-1. G-3 (AC-5 device frame rate + AC-3/4 target timings) stays a SIGNOFF-1 manual gate.
+- **Verification commands:** `cd /Users/matthew.quirk/Nuance-bs12` + `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test test/` (unit); acceptance `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` (default) / `--dart-define=BS12_RUN_PENDING=true` (run-pending) — host VM, no device lane.

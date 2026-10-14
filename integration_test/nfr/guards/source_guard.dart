@@ -10,14 +10,19 @@
 //     pubspec / lockfile.
 //   * AC-8  — an off-device sender ([offDeviceSenders]).
 //
-// GUARD-2 lays the signatures, the authority / allow-list constants and
-// empty-result stubs, so the existing suite stays green and ITEST-1's smoke
-// test can call every rule. The real scans land later: GUARD-6 fills
-// [conversionOffenders] / [deltaEOffenders] / [platformOffenders] (AC-16/17)
-// and GUARD-4 fills [forbiddenDependencies] / [offDeviceSenders] (AC-7/8). Each
-// scan must read text while *excluding* comments and string literals, so a doc
-// comment naming `Platform.is` or a log string mentioning a forbidden package
-// is never a false offender (module plan, Interface reconciliation).
+// GUARD-2 laid the signatures, the authority / allow-list constants and
+// empty-result stubs. The real scans then landed: GUARD-4 filled
+// [forbiddenDependencies] / [offDeviceSenders] (AC-7/8), GUARD-5 filled
+// [concreteTypeReferences] (AC-14/15), and GUARD-6 filled [conversionOffenders] /
+// [deltaEOffenders] / [platformOffenders] (AC-16/17). Each scan reads text while
+// *excluding* comments and string literals ([maskCommentsAndStrings]), so a doc
+// comment naming `Platform.is` or a log string mentioning a forbidden package is
+// never a false offender (module plan, Interface reconciliation).
+//
+// AC-16 note (re-scoped D-4, Matt Quirk 2026-10-14): the conversion scan guards
+// the *general* colorimetric authority and exempts two owner-sanctioned domain
+// pipelines ([sanctionedDomainConversionFiles]); it still flags any other stray
+// conversion. See [sanctionedDomainConversionFiles] for the rationale.
 //
 // This is test-support only — no `lib/` product code (D-7).
 //
@@ -102,6 +107,26 @@ const Set<String> deltaEAuthorityFiles = {
   'lib/compare/difference.dart',
 };
 
+/// Domain-specific colour pipelines allowed to compute their own conversion,
+/// sanctioned by the owner under the re-scoped D-4 (Matt Quirk, 2026-10-14).
+///
+/// The AC-16 invariant guards the **general** colorimetric authority
+/// ([conversionAuthorityFiles] for sRGB↔Lab, [deltaEAuthorityFiles] for ΔE00).
+/// Two pipelines need a Lab↔XYZ step the general authority does not provide, each
+/// under a *different* reference white, so neither is a duplicate of the other or
+/// of the authority:
+///   * `lib/recipes/engine/subtractive_engine.dart` — spectral rendering under
+///     **illuminant-E** (a flat-spectrum white computed from the CMFs).
+///   * `lib/a11y/cvd/confusion_check.dart` — Viénot-1999 dichromat projection
+///     under **D65**.
+/// They are sanctioned authorities for conversions; any *other* file computing a
+/// conversion is still a [conversionOffenders] offender, so the guard keeps
+/// catching a new stray conversion while these two stay exempt.
+const Set<String> sanctionedDomainConversionFiles = {
+  'lib/recipes/engine/subtractive_engine.dart',
+  'lib/a11y/cvd/confusion_check.dart',
+};
+
 /// The one seam allowed to hold platform-specific code (AC-17).
 ///
 /// Only native capture differs per platform; a `Platform.is*` / `MethodChannel`
@@ -145,43 +170,65 @@ const Set<String> forbiddenDependencyNames = {
 // ---------------------------------------------------------------------------
 // Rule scans
 //
-// [forbiddenDependencies] / [offDeviceSenders] (GUARD-4, AC-7 / AC-8) and
-// [concreteTypeReferences] (GUARD-5, AC-14 / AC-15) are the real scans;
-// [conversionOffenders] / [deltaEOffenders] / [platformOffenders] remain GUARD-2
-// stubs until GUARD-6 fills them. Each reuses the shared [maskCommentsAndStrings]
+// All rule scans are real: [forbiddenDependencies] / [offDeviceSenders]
+// (GUARD-4, AC-7 / AC-8), [concreteTypeReferences] (GUARD-5, AC-14 / AC-15) and
+// [conversionOffenders] / [deltaEOffenders] / [platformOffenders] (GUARD-6,
+// AC-16 / AC-17). Each reuses the shared [maskCommentsAndStrings] + [_scanSource]
 // machinery GUARD-4 lays at the foot of this file.
 // ---------------------------------------------------------------------------
 
-/// Sites under [roots] computing a colour-space conversion outside
-/// [conversionAuthorityFiles] (AC-16). Empty while the invariant holds.
+/// Sites under [roots] computing a colour-space conversion outside the
+/// sanctioned authorities (AC-16). Empty while the invariant holds.
+///
+/// A conversion is detected by its CIE signature constants ([_conversionPatterns])
+/// — the CIELAB companding thresholds (ε = 0.008856, slope 7.787, or their
+/// rational forms) and the CIE reference-white XYZ values — so detection is
+/// computation-level, not import-level (D-4; the test plan forbids an
+/// imports-only guard). A file is exempt when it is one of
+/// [conversionAuthorityFiles] (the general colorimetric authority) or
+/// [sanctionedDomainConversionFiles] (the two domain pipelines re-scoped D-4
+/// permits); every other file computing a conversion is an offender.
 ///
 /// [roots] defaults to [kDefaultSourceRoots] (the real `lib/` sweep); an AC test
 /// points it at the control fixtures to assert the rule flags a planted stray
-/// conversion. Stub: GUARD-6 implements the real scan (honouring [roots]).
+/// conversion. Comments and string literals are excluded ([maskCommentsAndStrings]).
 List<SourceOffender> conversionOffenders({
   Iterable<String> roots = kDefaultSourceRoots,
 }) =>
-    const <SourceOffender>[];
+    _scanSource(roots, ruleStrayConversion, _conversionPatterns,
+        isAllowed: _isConversionAuthority);
 
 /// Sites under [roots] computing a ΔE00 outside [deltaEAuthorityFiles] (AC-16).
 /// Empty while the invariant holds.
 ///
-/// [roots] defaults to [kDefaultSourceRoots]; an AC test points it at the
-/// control fixtures. Stub: GUARD-6 implements the real scan (honouring [roots]).
+/// A ΔE is detected by the CIEDE2000 signature ([_deltaEPatterns]) — the 7th-power
+/// chroma-rotation term `pow(…, 7)` and its 25-unit reference chroma — so the
+/// single `deltaE00` authority is the only file allowed to compute it; any other
+/// file is an offender.
+///
+/// [roots] defaults to [kDefaultSourceRoots]; an AC test points it at the control
+/// fixtures. Comments and string literals are excluded ([maskCommentsAndStrings]).
 List<SourceOffender> deltaEOffenders({
   Iterable<String> roots = kDefaultSourceRoots,
 }) =>
-    const <SourceOffender>[];
+    _scanSource(roots, ruleStrayDeltaE, _deltaEPatterns,
+        isAllowed: _isDeltaEAuthority);
 
 /// Sites under [roots] using a platform-specific construct outside
 /// [nativeCaptureSeam] (AC-17). Empty while the invariant holds.
 ///
-/// [roots] defaults to [kDefaultSourceRoots]; an AC test points it at the
-/// control fixtures. Stub: GUARD-6 implements the real scan (honouring [roots]).
+/// A platform construct is a `Platform.is*` / `Platform.operatingSystem` branch,
+/// a `MethodChannel` / `EventChannel` / `BasicMessageChannel`, or a
+/// `dart.library.*` conditional import ([_platformPatterns]). Only files under
+/// the one [nativeCaptureSeam] prefix may hold them; anywhere else is an offender.
+///
+/// [roots] defaults to [kDefaultSourceRoots]; an AC test points it at the control
+/// fixtures. Comments and string literals are excluded ([maskCommentsAndStrings]).
 List<SourceOffender> platformOffenders({
   Iterable<String> roots = kDefaultSourceRoots,
 }) =>
-    const <SourceOffender>[];
+    _scanSource(roots, rulePlatformOutsideSeam, _platformPatterns,
+        isAllowed: _isNativeCaptureSeam);
 
 /// Dependencies appearing in [forbiddenDependencyNames] (AC-7). Empty while the
 /// invariant holds.
@@ -298,19 +345,90 @@ final List<RegExp> _offDeviceSendPatterns = <RegExp>[
   RegExp(r'\bhttp\s*\.\s*(?:get|post|put|patch|delete|head|read)\s*\('),
 ];
 
+/// The CIE signature constants of a hand-rolled colour-space conversion (AC-16).
+///
+/// The CIELAB companding threshold ε and slope — in both the classic decimal
+/// (`0.008856` / `7.787`) and the exact rational (`216/24389` / `24389/27`) forms
+/// — and the CIE D65 reference white, as either XYZ (`95.047` / `108.883`) or its
+/// 0..1 scale (`0.95047` / `1.08883`). A file carrying any of these is computing a
+/// conversion; the two colour authorities and the sanctioned domain pipelines are
+/// exempt ([_isConversionAuthority]), so a match anywhere else is a stray
+/// conversion. The planted control (`control_stray_colour_math.dart`) carries the
+/// decimal companding + D65 white, so the scan lists it.
+final List<RegExp> _conversionPatterns = <RegExp>[
+  RegExp(r'\b0\.008856\b'),
+  RegExp(r'\b7\.787\b'),
+  RegExp(r'\b216\s*/\s*24389\b'),
+  RegExp(r'\b24389\s*/\s*27\b'),
+  RegExp(r'\b95\.047\b'),
+  RegExp(r'\b108\.883\b'),
+  RegExp(r'\b0\.95047\b'),
+  RegExp(r'\b1\.08883\b'),
+];
+
+/// The CIEDE2000 signature of a hand-rolled ΔE computation (AC-16): the 7th-power
+/// chroma-rotation term `pow(…, 7)` and its 25-unit reference chroma `pow(25, …)`.
+/// The single `deltaE00` authority is exempt ([_isDeltaEAuthority]); a match
+/// elsewhere is a stray ΔE. The planted control's `strayDeltaE00` carries both.
+final List<RegExp> _deltaEPatterns = <RegExp>[
+  RegExp(r'\bpow\s*\(\s*[^;()]*,\s*7\s*\)'),
+  RegExp(r'\bpow\s*\(\s*25(?:\.0+)?\s*,'),
+];
+
+/// The platform-specific constructs AC-17 confines to [nativeCaptureSeam]: a
+/// `Platform.is*` / `Platform.operatingSystem` branch, a Flutter platform channel
+/// (`MethodChannel` / `EventChannel` / `BasicMessageChannel`), or a
+/// `dart.library.*` conditional import. Files under the seam are exempt
+/// ([_isNativeCaptureSeam]); a match elsewhere is an offender. The planted control
+/// (`control_platform_dart.dart`) carries `Platform.is*` + a `MethodChannel`.
+final List<RegExp> _platformPatterns = <RegExp>[
+  RegExp(
+      r'\bPlatform\s*\.\s*(?:isIOS|isAndroid|isMacOS|isWindows|isLinux|isFuchsia|operatingSystem|operatingSystemVersion)\b'),
+  RegExp(r'\bMethodChannel\s*\('),
+  RegExp(r'\bEventChannel\s*\('),
+  RegExp(r'\bBasicMessageChannel\s*\('),
+  RegExp(r'\bif\s*\(\s*dart\s*\.\s*library\s*\.'),
+];
+
+/// Normalises a scanned file path to forward slashes so the `lib/…` authority /
+/// allow-list constants match on every platform.
+String _normaliseScanPath(String path) => path.replaceAll(r'\', '/');
+
+/// Exempt from the conversion scan: the general colorimetric authority
+/// ([conversionAuthorityFiles]) and the two owner-sanctioned domain pipelines
+/// ([sanctionedDomainConversionFiles]) — re-scoped D-4.
+bool _isConversionAuthority(String path) {
+  final p = _normaliseScanPath(path);
+  return conversionAuthorityFiles.contains(p) ||
+      sanctionedDomainConversionFiles.contains(p);
+}
+
+/// Exempt from the ΔE scan: the single [deltaEAuthorityFiles] authority.
+bool _isDeltaEAuthority(String path) =>
+    deltaEAuthorityFiles.contains(_normaliseScanPath(path));
+
+/// Exempt from the platform scan: anything under the [nativeCaptureSeam] prefix.
+bool _isNativeCaptureSeam(String path) =>
+    _normaliseScanPath(path).startsWith(nativeCaptureSeam);
+
 /// Walks every `.dart` file under each of [roots] (recursively, sorted for a
 /// deterministic order) and returns one [SourceOffender] per line matching any
 /// of [patterns], tagged [rule]. A missing root is skipped. The file text is run
 /// through [maskCommentsAndStrings] first, so only real code is matched; the
 /// reported snippet is the raw source line.
 ///
+/// When [isAllowed] is given, a file whose path it accepts is an exempt authority
+/// / allow-listed seam and is skipped whole — so the scan reports only the files
+/// that are *not* permitted to carry the construct.
+///
 /// Paths are resolved against the current directory (the repo root on the host
 /// VM, where these scans run — see the file header).
 List<SourceOffender> _scanSource(
   Iterable<String> roots,
   String rule,
-  List<RegExp> patterns,
-) {
+  List<RegExp> patterns, {
+  bool Function(String path)? isAllowed,
+}) {
   final offenders = <SourceOffender>[];
   for (final root in roots) {
     final dir = Directory(root);
@@ -322,6 +440,7 @@ List<SourceOffender> _scanSource(
         .toList()
       ..sort((a, b) => a.path.compareTo(b.path));
     for (final file in dartFiles) {
+      if (isAllowed != null && isAllowed(file.path)) continue;
       final source = file.readAsStringSync();
       final masked = maskCommentsAndStrings(source);
       final rawLines = source.split('\n');

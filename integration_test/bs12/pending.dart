@@ -76,9 +76,13 @@ const Map<String, String> pendingACs = {
   // through the interface (dynamic swap), and the concreteTypeReferences source
   // scan finds no lib/ caller bound to the concrete impl (static), each with a
   // planted bound-to-concrete control.
-  'AC-16': 'GUARD-6', // colour-science from one tested library
-  // Portability
-  'AC-17': 'GUARD-6', // only native capture differs per platform
+  // AC-16 (one colour-science library) un-pended by GUARD-6: the conversion /
+  // ΔE source scans find no stray colour maths outside the general colorimetric
+  // authority (re-scoped D-4 exempts the two sanctioned domain pipelines), each
+  // with a discriminating planted control.
+  // Portability — AC-17 un-pended by GUARD-6: the platform source scan finds no
+  // Platform.is* / channel / conditional-import construct in lib/ outside the one
+  // native-capture seam, with a planted platform-code control.
 };
 
 /// The behaviour phases allowed to own a pending AC.
