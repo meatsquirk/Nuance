@@ -147,13 +147,20 @@ class CaptureLiveView extends StatelessWidget {
           Positioned(
             left: point.x.toDouble(),
             top: point.y.toDouble(),
-            child: Container(
-              key: markedPointKey(point),
-              width: 12,
-              height: 12,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
+            // The marker's meaning (a marked sample point) must not ride on its
+            // white fill alone (SI Accessibility, AC-1/AC-2): a Semantics label
+            // states it in words so a screen reader announces it and the colour
+            // stays decorative.
+            child: Semantics(
+              label: 'Marked sample point',
+              child: Container(
+                key: markedPointKey(point),
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
           ),

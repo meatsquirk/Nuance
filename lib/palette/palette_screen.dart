@@ -76,9 +76,12 @@ class _PaletteScreenState extends State<PaletteScreen> {
                 ),
                 const SizedBox(height: 12),
                 // E31 Paints or projects selector — toggles which view is
-                // shown, one at a time (AC-1).
-                Row(
+                // shown, one at a time (AC-1). A `Wrap` (not a `Row`) so the two
+                // buttons reflow onto a second line instead of overflowing at
+                // 200% font scale (AC-3); one line at the default scale.
+                Wrap(
                   key: PaletteScreen.viewSelectorKey,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     TextButton(
                       onPressed: () => _show(_PaletteView.myPaints),

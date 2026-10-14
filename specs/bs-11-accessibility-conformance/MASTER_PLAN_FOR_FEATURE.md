@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** Not started — next CONF-1 (startable; G-1 resolved)
+**Status:** Done — signed off 2026-10-14 by Matt Quirk at code `254d366` (SIGNOFF-1 round 1 Approved). All 12 ACs ✅ (10 automated graded A + 2 pure-manual gates G-3/G-4 accepted at sign-off); analyze clean, unit 1048/1048, coverage 100% on 18 touched files, full regression 192/192 on sim. Next: merge `feat/bs-11` → main (rebasing in-flight feat/bs-07, feat/bs-10 onto the shared `lib/app/theme.dart` + `lib/widgets/`).
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -36,18 +36,18 @@
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | Every colour-coded element carries a non-colour cue | ITEST-2 `TestAC01_ColourCarriesNonColourCue` | A11Y-5 | ⬜ Todo |
-| AC-2 | A status is never rendered as a bare colour dot | ITEST-2 `TestAC02_StatusNotBareColourDot` | A11Y-5 | ⬜ Todo |
-| AC-3 | System font scaling to 200% does not break the layout | ITEST-3 `TestAC03_FontScale200NoBreak` | A11Y-4 | ⬜ Todo |
-| AC-4 | Interactive targets meet the minimum size | ITEST-2 `TestAC04_TapTargetMin48` | A11Y-3 | ⬜ Todo |
-| AC-5 | Text meets the high-contrast floor | ITEST-2 `TestAC05_ContrastFloorAA` | A11Y-2 | ⬜ Todo |
-| AC-6 | Every control exposes a meaningful screen-reader label | ITEST-2 `TestAC06_ControlHasMeaningfulLabel` | A11Y-6 | ⬜ Todo |
-| AC-7 | An eyes-free walkthrough completes under the screen reader | ITEST-3 `TestAC07_EyesFreeWalkthroughCompletes` | GATE-2 | ⬜ Todo |
-| AC-8 | No interaction imposes a time limit and nothing auto-dismisses | ITEST-3 `TestAC08_NothingAutoDismisses` | A11Y-7 | ⬜ Todo |
-| AC-9 | A feature failing the automated check is not accepted | ITEST-3 `TestAC09_FailedAutomatedCheckNotAccepted` | GATE-3 | ⬜ Todo |
-| AC-10 | A feature failing the manual eyes-free walkthrough is not accepted | **manual gate (SIGNOFF-1, G-3)** — no automated test (D-2) | SIGNOFF-1 (user acceptance) | ⬜ Todo |
-| AC-11 | WCAG 2.2 AA is the accepted floor | ITEST-3 `TestAC11_RecordedFloorIsWcag22AA` | GATE-4 | ⬜ Todo |
-| AC-12 | The eyes-free walkthrough passes under VoiceOver as under TalkBack | **manual gate (SIGNOFF-1, G-4)** — no automated test (D-2) | SIGNOFF-1 (user acceptance) | ⬜ Todo |
+| AC-1 | Every colour-coded element carries a non-colour cue | ITEST-2 `TestAC01_ColourCarriesNonColourCue` | A11Y-5 | ✅ Done |
+| AC-2 | A status is never rendered as a bare colour dot | ITEST-2 `TestAC02_StatusNotBareColourDot` | A11Y-5 | ✅ Done |
+| AC-3 | System font scaling to 200% does not break the layout | ITEST-3 `TestAC03_FontScale200NoBreak` | A11Y-4 | ✅ Done |
+| AC-4 | Interactive targets meet the minimum size | ITEST-2 `TestAC04_TapTargetMin48` | A11Y-3 | ✅ Done |
+| AC-5 | Text meets the high-contrast floor | ITEST-2 `TestAC05_ContrastFloorAA` | A11Y-2 | ✅ |
+| AC-6 | Every control exposes a meaningful screen-reader label | ITEST-2 `TestAC06_ControlHasMeaningfulLabel` | A11Y-6 | ✅ Done |
+| AC-7 | An eyes-free walkthrough completes under the screen reader | ITEST-3 `TestAC07_EyesFreeWalkthroughCompletes` | GATE-2 | ✅ Done |
+| AC-8 | No interaction imposes a time limit and nothing auto-dismisses | ITEST-3 `TestAC08_NothingAutoDismisses` | A11Y-7 | ✅ Done |
+| AC-9 | A feature failing the automated check is not accepted | ITEST-3 `TestAC09_FailedAutomatedCheckNotAccepted` | GATE-3 | ✅ Done |
+| AC-10 | A feature failing the manual eyes-free walkthrough is not accepted | **manual gate (SIGNOFF-1, G-3)** — no automated test (D-2) | SIGNOFF-1 (user acceptance) | ✅ Done (G-3 accepted at sign-off) |
+| AC-11 | WCAG 2.2 AA is the accepted floor | ITEST-3 `TestAC11_RecordedFloorIsWcag22AA` | GATE-4 | ✅ Done |
+| AC-12 | The eyes-free walkthrough passes under VoiceOver as under TalkBack | **manual gate (SIGNOFF-1, G-4)** — no automated test (D-2) | SIGNOFF-1 (user acceptance) | ✅ Done (G-4 accepted at sign-off) |
 
 12 ACs. **10 automated** (AC-1..9, AC-11) → one integration test → ≥1 behavior phase; **2 pure-manual** (AC-10, AC-12) closed by user acceptance at SIGNOFF-1 with the gap named (D-2). AC-1+AC-2 share A11Y-5 (one slice: the colour-cue / no-bare-dot primitive + check rule).
 
@@ -85,7 +85,7 @@ Module plan: [modules/ITEST.md](modules/ITEST.md).
 | `control_bareDot` | A status shown as a bare coloured dot, no text/icon (fails AC-1/AC-2) |
 | `control_unlabelled` | An `IconButton` with no semantic label (fails AC-6) |
 | `control_autoDismiss` | A standard SnackBar that auto-dismisses on a timer (fails AC-8) |
-| `control_overflow200` | A fixed-height row that clips at `TextScaler` 2.0 (fails AC-3) |
+| `control_overflow200` | A fixed-height `Column` whose row heights are sized by `MediaQuery.textScaler` — fits at the default scale, overflows deterministically (font-independently) at `TextScaler` 2.0 (fails AC-3) |
 | `control_partialFail` | A screen passing most rules but failing one (drives AC-9's not-accepted) |
 
 **Test catalogue:**
@@ -111,9 +111,9 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its che
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ⬜ Todo |
-| GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ⬜ Todo |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ⬜ Todo |
+| A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ✅ Done (CONF-1, A11Y-1..A11Y-7 all done; 7 of 8 conformance rules live) |
+| GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ✅ Done (GATE-1..4) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3/4; G-2 approved 2026-10-13) |
 
 ## Dependency graph
 
@@ -134,9 +134,9 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | CONF-1 | ✅ Resolved 2026-10-13 07:59 EDT: approved — Matt Quirk (owner); spec's first line now records the approval |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
-| G-3 | decision | AC-10 — the **manual eyes-free walkthrough** passes (performed under the live screen reader at SIGNOFF-1); a fail blocks acceptance (D-2) | SIGNOFF-1 (AC-10) | Open |
-| G-4 | decision | AC-12 — **on-device VoiceOver-vs-TalkBack parity** verified on iOS reference hardware at SIGNOFF-1 (D-2) | SIGNOFF-1 (AC-12) | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-13 17:59 EDT: approved — Matt Quirk; no changes requested, behaviour stage un-blocked (A11Y-2..7, GATE-2/3/4) |
+| G-3 | decision | AC-10 — the **manual eyes-free walkthrough** passes (performed under the live screen reader at SIGNOFF-1); a fail blocks acceptance (D-2) | SIGNOFF-1 (AC-10) | ✅ Resolved 2026-10-14: passed — accepted by Matt Quirk at sign-off (SIGNOFF-1 Approved) |
+| G-4 | decision | AC-12 — **on-device VoiceOver-vs-TalkBack parity** verified on iOS reference hardware at SIGNOFF-1 (D-2) | SIGNOFF-1 (AC-12) | ✅ Resolved 2026-10-14: parity confirmed — accepted by Matt Quirk at sign-off (SIGNOFF-1 Approved) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -144,36 +144,38 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | Test | Symptom | Rate (runs) | Measured at | Owner | Status |
 |---|---|---|---|---|---|
-| coverage_gate — const-constructor line | `flutter test --coverage` intermittently records a const-folded constructor line in `lib/**` as uncovered, so the gate may FAIL on a file this phase never touched | intermittent | first bs-01 `88c5add` | re-run `flutter test --coverage` once; green on re-run ⇒ ignore | Open (carried) |
+| coverage_gate — const-constructor line | `flutter test --coverage` intermittently records a const-folded constructor line in `lib/**` as uncovered, so the gate may FAIL on a file this phase never touched | intermittent → deterministic at A11Y-2 for `conformance_result.dart` ctors | first bs-01 `88c5add` | A11Y-2 / A11Y-4 | ✅ Closed 2026-10-13 (A11Y-2): runtime (non-const) invocation of the three `ConformanceRuleOutcome` ctors (lines 62/65/68). **Recurred at A11Y-4 on `conformance_result.dart:108` (`const ConformanceResult.empty()`); closed the same way** — a runtime `.empty()` invocation in `conformance_result_test.dart`'s `empty()` test |
 | integration suite — no `-d <udid>` | `flutter test integration_test/…` with no booted device runs zero tests and still exits 0 (false green) | deterministic | bs-05/bs-06 | always pass `-d <booted-udid>` | Open (carried) |
 
 ## Session log
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | CONF-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs11 pending gate (10 ACs), guideline-matcher availability | ⬜ Next | | | G-1 ✅ — startable |
-| 2 | A11Y-1 | shell: `lib/app/theme.dart` `AppTheme` wired into `buildApp` (behaviour unchanged) + `StatusBadge` + `AccessibleNotice` shells | ⬜ Todo | | | ∥ GATE-1 |
-| 3 | GATE-1 | shell: `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub | ⬜ Todo | | | ∥ A11Y-1 |
-| 4 | ITEST-1 | acceptance-tests: harness, real-screen + control fixtures, pending gate (10 ACs), smoke test | ⬜ Todo | | | |
-| 5 | ITEST-2 | acceptance-tests: AC-1,2,4,5,6 (pending) + red baseline | ⬜ Todo | | | seq w/ ITEST-3 |
-| 6 | ITEST-3 | acceptance-tests: AC-3,7,8,9,11 (pending) + red baseline | ⬜ Todo | | | shares test file w/ ITEST-2 |
-| 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
-| 8 | A11Y-2 | AC-5 contrast: AA `AppTheme` + contrast check rule + sweep colours | ⬜ Todo | | | sweeps all screens |
-| 9 | A11Y-3 | AC-4 targets: 48dp floor + tap-target check rule + sweep controls | ⬜ Todo | | | |
-| 10 | A11Y-4 | AC-3 scaling: 200% resilience + scaling check rule + sweep layouts | ⬜ Todo | | | |
-| 11 | A11Y-5 | AC-1+AC-2 colour-cue / no-bare-dot: `StatusBadge` + `ColorChip` + cue check rule + sweep | ⬜ Todo | | | slice (2 ACs) |
-| 12 | A11Y-6 | AC-6 semantic labels: meaningful labels + labelled-control check rule + sweep | ⬜ Todo | | | |
-| 13 | A11Y-7 | AC-8 no time limit: `AccessibleNotice` (no auto-dismiss) + no-timeout check rule + sweep | ⬜ Todo | | | |
-| 14 | GATE-2 | AC-7 eyes-free: semantics-only driver completes a core task | ⬜ Todo | | | ∥ one A11Y phase |
-| 15 | GATE-3 | AC-9 automated gate: aggregate result + `acceptanceDecision` (fail any ⇒ not accepted) | ⬜ Todo | | | barrier (needs all rules) |
-| 16 | GATE-4 | AC-11 WCAG floor: `recordedLevel` == AA when passed; thresholds pinned to WCAG 2.2 AA | ⬜ Todo | | | |
-| 17 | SIGNOFF-1 | sign-off: packet + summary + manual AC-10 (G-3) + manual AC-12 (G-4) + human decision | ⬜ Todo | | | |
+| 1 | CONF-1 | scaffold: worktree+branch from main, baseline, coverage-gate confirm, bs11 pending gate (10 ACs), guideline-matcher availability | ✅ Done | 3,094,668 | 9m 08s | branch @ `801a064`; unit 1000/1000; gate both-ways; 10 ACs pending; matchers OK |
+| 2 | A11Y-1 | shell: `lib/app/theme.dart` `AppTheme` wired into `buildApp` (behaviour unchanged) + `StatusBadge` + `AccessibleNotice` shells | ✅ Done | 4,591,022 | 9m 25s | unit 1018/1018; cov 100% touched; readout itest 12/12 on sim |
+| 3 | GATE-1 | shell: `lib/a11y/conformance/` types (`ConformanceResult`/`ConformanceRuleId`/`AcceptanceDecision`/`WcagLevel` + `acceptanceDecision`/`recordedLevel` signatures) + `integration_test/conformance/` check stub | ✅ Done | 3,553,802 | 17m 14s | last shell; unit 1034/1034; cov 100% touched; full regression 173/173 on sim |
+| 4 | ITEST-1 | acceptance-tests: harness, real-screen + control fixtures, pending gate (10 ACs), smoke test | ✅ Done | 7,883,599 | 17m 28s | harness over 6 real screens + 7 controls; suite 9/9 on sim; cov 100% touched; no AC tests yet ⇒ no red baseline |
+| 5 | ITEST-2 | acceptance-tests: AC-1,2,4,5,6 (pending) + red baseline | ✅ Done | 5,523,993 | 14m 07s | 5 A/0; default 9/9 green, red baseline 9/5, cov 100% touched |
+| 6 | ITEST-3 | acceptance-tests: AC-3,7,8,9,11 (pending) + red baseline | ✅ Done | 7,854,428 | 26m 55s | 3 A / 2 B-pending (AC-9→GATE-3, AC-11→GATE-4); default 9/9 green, red baseline 9/10, cov 100% touched |
+| 7 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,641,073 | 3m 33s | packet assembled (all 10 ACs; 20 A / 2 B-pending); **G-2 approved 2026-10-13 17:59 EDT — Matt Quirk** |
+| 8 | A11Y-2 | AC-5 contrast: AA `AppTheme` + contrast check rule + sweep colours | ✅ Done | 14,072,092 | 32m 35s | contrast rule over `textContrastGuideline` composed into `runConformanceCheck`; M3 scheme verified AA (adopted unchanged, pinned by unit test); swept `Radius`/`Wet or dry:` labels bold; AC-5 ✅; default +10 ~9 on sim; grade A; const-ctor flake closed; fix 1/3 |
+| 9 | A11Y-3 | AC-4 targets: 48dp floor + tap-target check rule + sweep controls | ✅ Done | 9,227,788 | 14m 35s | 48dp `MaterialTapTargetSize` pinned on `AppTheme`; `tapTarget48` rule (android+iOS guidelines, 48dp floor) composed into `runConformanceCheck`; swept 2 custom palette targets (InkWell/GestureDetector →minHeight 48); AC-4 ✅; unit 1037; default +11 ~8 on sim; grade 2 A/0; fix 0/3 |
+| 10 | A11Y-4 | AC-3 scaling: 200% resilience + scaling check rule + sweep layouts | ✅ Done | 24,228,814 | 41m 20s | `fontScale200` measurement rule (re-render @2.0, flag any `RenderFlex` whose children exceed its bounds) composed into `runConformanceCheck`; swept 4 real screens `Row→Wrap` (Readout/Capture/Recipes/Palette); control rebuilt as a `textScaler`-sized Column (font-independent); AC-3 ✅; unit 1037; default +12 ~7 on sim; grade 3 A/0; fix 1/3 |
+| 11 | A11Y-5 | AC-1+AC-2 colour-cue / no-bare-dot: `colour_cue.dart` rule (filled circular dot w/o labelled Semantics) + marked-point sweep | ✅ Done | 10,172,202 | 19m 12s | slice (2 ACs); grade 5 A/0; fix 0/3 |
+| 12 | A11Y-6 | AC-6 semantic labels: meaningful labels + labelled-control check rule + sweep | ✅ Done | 17,920,113 | 40m 35s | `labels.dart` → `labeledTapTargetGuideline` (6th rule); swept 3 icon-only controls (settings entry/close/repeat) via MergeSemantics; AC-6 ✅; unit 1041; default +15 ~4 / run-pending +15 -4 on sim; grade 6 A/0; fix 0/3 |
+| 13 | A11Y-7 | AC-8 no time limit: `AccessibleNotice` (no auto-dismiss) + no-timeout check rule + sweep | ✅ Done | 9,051,921 | 24m 30s | `no_timeout.dart` → `checkNoTimeout` (7th rule); re-render-and-detect-SnackBar (bounded pumps); D-1 sweep clean (no lib change); AC-8 ✅; unit 1041; default +16 ~3 / run-pending +16 -3 on iPhone17 sim; grade 7 A/0; fix 0/3 |
+| 14 | GATE-2 | AC-7 eyes-free: semantics-only driver completes a core task | ✅ Done | 10,094,248 | 23m 31s | `eyesFreeComplete` by label + `SemanticsAction.tap` (no coords, D-6); AC-7 ✅; unit 1041; cov vacuous (no lib); default 17 pass / 2 skip on iPhone17 sim; grade 8 A/0; fixed AC-7 test handle disposal (explicit); fix 1/3 |
+| 15 | GATE-3 | AC-9 automated gate: aggregate result + `acceptanceDecision` (fail any ⇒ not accepted) | ✅ Done | 14,490,779 | 38m 40s | composed 8th `eyesFree` rule (non-destructive semantics check) + pure `acceptanceDecision`; AC-9 un-pended + strengthened (2nd negative control); unit 1044; cov 100% touched; acceptance 18 pass/1 skip; grade 9 A/0; fix 1/3 |
+| 16 | GATE-4 | AC-11 WCAG floor: `recordedLevel` == AA when passed; thresholds pinned to WCAG 2.2 AA | ✅ Done | 6,423,118 | 16m 11s | `recordedLevel` = `aa22` iff `result.passed`; `WcagThresholds` pins 4.5/3.0/48/200%; `scaling.dart` references the const; AC-11 un-pended (**pending set empty**) + threshold-pinning leg (guidelines == constants); unit 1048; cov 100% touched; acceptance **19 pass / 0 skip** on iPhone17 sim; grade **10 A / 0 B**; fix 0/3 |
+| 17 | SIGNOFF-1 | sign-off: packet + summary + manual AC-10 (G-3) + manual AC-12 (G-4) + human decision | ✅ Done | 7,989,159 | 22m 36s (22m 36s) | packet [signoff/round-1.md](signoff/round-1.md); fresh re-grade 10 A/0; analyze clean, unit 1048, cov 100%/18, full regression 192/192 + bs11 run-pending 19/19 on sim; **Approved 2026-10-14 by Matt Quirk** — G-3/G-4 accepted at sign-off |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**CONF-1** (scaffold) is next and **startable** — G-1 (spec approval) resolved 2026-10-13. CONF-1 branches `feat/bs-11-accessibility-conformance` from `main` (now @ the G-1 commit) in a worktree (`../Nuance-bs11`), records the baseline, confirms `tool/coverage_gate.dart`, and lays the `integration_test/bs11/pending.dart` gate with the 10 automated ACs. G-2 (approve tests) is decided later at ITEST-4; G-3/G-4 (the two manual walkthroughs) are decided at SIGNOFF-1.
+**DONE — signed off.** SIGNOFF-1 round 1 **Approved 2026-10-14 by Matt Quirk** at code `254d366` (SIGNOFF-DECISION this session). All 12 ACs ✅ — the 10 automated (AC-1..9, AC-11) delivered + graded A, and the 2 pure-manual gates **G-3** (AC-10 eyes-free walkthrough) and **G-4** (AC-12 on-device VoiceOver-vs-TalkBack parity) accepted by the reviewer at sign-off (D-2). Verification green: analyze clean, unit 1048/1048, coverage 100%/18 touched, full cross-feature regression 192/192 on sim. No agent phase left.
+
+**Next (merge):** merge `feat/bs-11` → main. Because the primary checkout sits on feat/bs-04 with stale untracked specs that abort `checkout main`, do the merge in a throwaway worktree on main and use `git merge -F <file>` (not stdin). **Rebase in-flight feat/bs-07 and feat/bs-10 onto the shared `lib/app/theme.dart` + `lib/widgets/` as they merge** (D-1 sweep scope). Optional non-blocking follow-on: AC-9 hardening (pin `control_partialFail.failing` to exactly `{tapTarget48}`); wire the automated accessibility check into CI as a blocking cross-feature gate (D-8).
 
 ## Token usage
 
@@ -184,10 +186,29 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PLAN | fnp-c571cf86 | 2026-10-13 | | | | claude-opus-4-8 | | | | | | plan written |
 | PLAN | d0fe19ea | 2026-10-13 05:14 EDT | 07:39 | 2h 24m | 14m 21s | claude-opus-4-8 | 56 | 338,185 | 1,850,667 | 66,518 | 2,255,426 | plan written: 17 phases, 3 modules, 12 ACs (10 automated + 2 manual) |
 | GATE-DECISION | d0fe19ea | 2026-10-13 07:58 EDT | 08:00 | 1m 26s | 1m 26s | claude-opus-4-8 | 16 | 12,853 | 1,569,275 | 4,393 | 1,586,537 | G-1 approved: spec approved by Matt Quirk; CONF-1 startable |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-13 08:00** | **2h 25m** | **15m 47s** |  | **72** | **351,038** | **3,419,942** | **70,911** | **3,841,963** |  |
+| CONF-1 | 98b4e49e | 2026-10-13 09:06 EDT | 09:15 | 9m 08s | 9m 08s | claude-opus-4-8 | 66 | 89,804 | 2,971,212 | 33,586 | 3,094,668 | scaffold: feat/bs-11 @ 801a064; unit 1000/1000; coverage gate both-ways; 10 automated ACs pending; meetsGuideline matchers OK |
+| A11Y-1 | 7580c44e | 2026-10-13 11:55 EDT | 12:04 | 9m 25s | 9m 25s | claude-opus-4-8 | 104 | 96,011 | 4,460,803 | 34,104 | 4,591,022 | shell: AppTheme wired into buildApp (behaviour-preserving) + StatusBadge/AccessibleNotice shells; unit 1018/1018; cov 100% touched; readout itest 12/12 on sim; fix passes 0/3 |
+| GATE-1 | d4009850 | 2026-10-13 13:39 EDT | 13:56 | 17m 14s | 17m 14s | claude-opus-4-8 | 82 | 84,176 | 3,436,044 | 33,500 | 3,553,802 | shell: conformance model + check/eyes-free stubs; unit 1034/1034; cov 100% touched; full regression 173/173 on sim; fix passes 0/3 |
+| ITEST-1 | 8f960ca6 | 2026-10-13 14:14 EDT | 14:32 | 17m 28s | 17m 28s | claude-opus-4-8 | 118 | 246,999 | 7,573,061 | 63,421 | 7,883,599 | acceptance-tests: harness + 6 real-screen sweep + 7 control fixtures + smoke; suite 9/9 on sim; cov 100% touched; no AC tests ⇒ no red baseline; analyze clean |
+| ITEST-2 | de245eb8 | 2026-10-13 14:56 EDT | 15:10 | 14m 07s | 14m 07s | claude-opus-4-8 | 100 | 206,078 | 5,276,578 | 41,237 | 5,523,993 | 5 A/0 B; default 9/9 green, red baseline 9 pass/5 fail (each fails at Then), cov 100% touched |
+| ITEST-3 | 092c04da | 2026-10-13 15:53 EDT | 16:20 | 26m 55s | 26m 55s | claude-opus-4-8 | 120 | 268,263 | 7,527,062 | 58,983 | 7,854,428 | acceptance-tests: AC-3/7/8/9/11 pending; default 9/9 green, red baseline 9/10; cov 100% touched; grade 3 A / 2 B-pending (AC-9→GATE-3, AC-11→GATE-4) |
+| ITEST-4 | fa9a54d5 | 2026-10-13 16:31 EDT | 16:35 | 3m 33s | 3m 33s | claude-opus-4-8 | 38 | 79,526 | 1,548,295 | 13,214 | 1,641,073 | test-review: G-2 packet assembled (all 10 AC tests; 20 A / 2 B-pending / 0 ordinary B); ⏸ awaiting human G-2 decision |
+| SIGNOFF-DECISION | 23de86f9 | 2026-10-13 17:24 EDT | 18:01 | 36m 22s | 2m 49s | claude-opus-4-8 | 42 | 54,107 | 1,455,922 | 11,085 | 1,521,156 | ITEST-4 approved |
+| A11Y-2 | e1e3ebbd | 2026-10-13 18:03 EDT | 18:36 | 32m 35s | 32m 35s | claude-opus-4-8 | 188 | 329,597 | 13,653,238 | 89,069 | 14,072,092 | AC-5 contrast delivered: textContrastGuideline rule composed into runConformanceCheck; M3 AppTheme verified AA + pinned by unit test; Radius/Wet-or-dry labels swept bold; unit 1036; cov 100%; acceptance +10 ~9 on sim; grade A; const-ctor flake closed; fix 1/3 |
+| A11Y-3 | 28280145 | 2026-10-13 20:19 EDT | 20:33 | 14m 35s | 14m 35s | claude-opus-4-8 | 152 | 227,014 | 8,957,896 | 42,726 | 9,227,788 | AC-4 48dp tap targets delivered; unit 1037/1037; coverage 100% touched; acceptance default +11 ~8 -0 green on sim; grade 2 A/0; fix 0/3 |
+| A11Y-4 | 211f7fc6 | 2026-10-13 21:32 EDT | 22:13 | 41m 20s | 41m 20s | claude-opus-4-8 | 254 | 327,250 | 23,768,382 | 132,928 | 24,228,814 | AC-3 200% font scaling delivered; fontScale200 measurement rule + 4 Row→Wrap sweep fixes + textScaler control; unit 1037; acceptance default +12 ~7 green on sim; grade 3 A/0; fix 1/3 |
+| A11Y-5 | d314e411 | 2026-10-14 05:25 EDT | 05:44 | 19m 12s | 19m 12s | claude-opus-4-8 | 162 | 247,547 | 9,867,268 | 57,225 | 10,172,202 | AC-1 + AC-2 colour-cue / no-bare-dot delivered; colour_cue.dart (colourCue+noBareDot) composed into runConformanceCheck; marked-point sweep; unit 1038; acceptance default +14~5 green / run-pending +14-5 (AC-1..5 pass); grade 5 A/0; fix 0/3 |
+| A11Y-6 | e102b9f6 | 2026-10-14 07:41 EDT | 08:21 | 40m 35s | 40m 35s | claude-opus-4-8 | 246 | 316,991 | 17,518,918 | 83,958 | 17,920,113 | AC-6 meaningful labels done; grade 6 A/0; unit 1041/1041; coverage 100% on 18 touched lib; acceptance default +15~4, run-pending +15-4 on iPhone17 sim; gates green |
+| A11Y-7 | f6c329e0 | 2026-10-14 08:54 EDT | 09:19 | 24m 30s | 24m 30s | claude-opus-4-8 | 146 | 272,125 | 8,713,708 | 65,942 | 9,051,921 | AC-8 no-timeout rule delivered; grade 7 A/0; default +16 ~3 / run-pending +16 -3 on sim; no lib change (sweep clean); fix 0/3 |
+| GATE-2 | 3f6ee7f3 | 2026-10-14 09:34 EDT | 09:58 | 23m 31s | 23m 31s | claude-opus-4-8 | 158 | 285,103 | 9,743,914 | 65,073 | 10,094,248 | AC-7 eyes-free delivered: semantics-only eyesFreeComplete (find by label + SemanticsAction.tap, no coords D-6); unit 1041; coverage vacuous (no lib); acceptance 17 pass/2 skip on iPhone17 sim; grade 8 A/0; fixed AC-7 test SemanticsHandle disposal; fix 1/3 |
+| GATE-3 | c62f90db | 2026-10-14 10:49 EDT | 11:28 | 38m 40s | 38m 40s | claude-opus-4-8 | 202 | 319,580 | 14,097,606 | 73,391 | 14,490,779 | AC-9 automated-gate acceptance delivered (acceptanceDecision + 8th eyesFree rule); unit 1044; cov 100% touched; acceptance 18 pass/1 skip; grade 9 A/0; fix 1/3 |
+| GATE-4 | 062052a1 | 2026-10-14 11:36 EDT | 11:52 | 16m 11s | 16m 11s | claude-opus-4-8 | 108 | 265,249 | 6,121,028 | 36,733 | 6,423,118 | AC-11 recorded WCAG 2.2 AA floor delivered; unit 1048; cov 100% touched; acceptance 19 pass/0 skip on iPhone17 sim; grade 10 A/0; fix 0/3; pending set empty (behaviour stage complete) |
+| SIGNOFF-1 | 556baa62 | 2026-10-14 12:11 EDT | 12:33 | 22m 36s | 22m 36s | claude-opus-4-8 | 134 | 285,969 | 7,655,216 | 47,840 | 7,989,159 | sign-off packet assembled: 10 automated ACs delivered + fresh re-grade 10 A/0; analyze clean, unit 1048, cov 100%/18, full regression 192/192 + bs11 run-pending 19/19 on sim; ⏸ awaiting human G-3/G-4 + decision |
+| SIGNOFF-DECISION | 767c9705 | 2026-10-14 14:16 EDT | 14:18 | 2m 01s | 2m 01s | claude-opus-4-8 | 32 | 15,215 | 1,211,744 | 8,809 | 1,235,800 | SIGNOFF-1 approved — Matt Quirk 2026-10-14; G-3/G-4 manual gates accepted; feature Done |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 14:18** | **9h 15m** | **6h 32m** |  | **2,524** | **4,367,642** | **158,977,837** | **1,063,735** | **164,411,738** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | | ⏸ Not yet created |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `254d366` | 10 A / 0 B | ✅ Approved 2026-10-14 by Matt Quirk (G-3/G-4 manual gates accepted at sign-off) |

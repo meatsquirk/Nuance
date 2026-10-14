@@ -49,6 +49,7 @@ import '../store/cvd_profile_store.dart';
 import '../store/persistent_store.dart';
 import '../store/source_photo_store.dart';
 import 'router.dart';
+import 'theme.dart';
 
 /// The sample the shipped bs-01 app opens the Readout screen on.
 ///
@@ -560,11 +561,10 @@ class _AppState extends State<_App> {
         owns: widget.ownsSpeech,
         child: MaterialApp(
           title: 'Paint Color Assistant',
-          theme: ThemeData(useMaterial3: true),
-          // The shared app chrome: the open-display-settings entry (E2) on
-          // every screen (SETTINGS-1) and, beneath it, the persistent
-          // spoken-output panel (E50 — SPEECH-1) that replays the last
-          // utterance.
+          theme: AppTheme.light().themeData,
+          // The shared app chrome: the open-display-settings entry (E2) on every
+          // screen (SETTINGS-1) and, beneath it, the persistent spoken-output
+          // panel (E50 — SPEECH-1) that replays the last utterance.
           builder: (context, child) =>
               DisplayChrome(child: _SpokenOutputChrome(child: child!)),
           home: _home(deps),

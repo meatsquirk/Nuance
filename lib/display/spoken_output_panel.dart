@@ -81,12 +81,18 @@ class SpokenOutputPanel extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  // Shown only when there is a last utterance, so a repeat
-                  // always has something to replay (AC-8).
-                  key: repeatKey,
-                  onPressed: speech.repeat,
-                  icon: const Icon(Icons.replay),
+                MergeSemantics(
+                  child: Semantics(
+                    label: 'Repeat last spoken message',
+                    button: true,
+                    child: IconButton(
+                      // Shown only when there is a last utterance, so a repeat
+                      // always has something to replay (AC-8).
+                      key: repeatKey,
+                      onPressed: speech.repeat,
+                      icon: const Icon(Icons.replay),
+                    ),
+                  ),
                 ),
                 Flexible(
                   child: Text(

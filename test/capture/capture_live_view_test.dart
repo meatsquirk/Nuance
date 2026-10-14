@@ -161,6 +161,23 @@ void main() {
     }
   });
 
+  testWidgets('a marked point carries a non-colour cue (semantic label)',
+      (tester) async {
+    // bs-11 AC-1/AC-2: the white marker must not convey its meaning by colour
+    // alone — a Semantics label states it in words for a screen reader.
+    const point = MarkedPoint(10, 20);
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(_host(const CaptureState(markedPoints: [point])));
+
+    expect(
+      tester
+          .getSemantics(find.byKey(CaptureLiveView.markedPointKey(point)))
+          .label,
+      'Marked sample point',
+    );
+    handle.dispose();
+  });
+
   test('exposes stable keys', () {
     expect(CaptureLiveView.liveViewKey, const ValueKey('capture-live-view'));
     expect(

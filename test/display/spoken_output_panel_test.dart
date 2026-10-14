@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/repeatable_speech.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
@@ -117,6 +118,28 @@ void main() {
       await tester.pump();
 
       expect(inner.utterances, ['lightness 58, warm', 'lightness 58, warm']);
+    });
+
+    testWidgets('the repeat control exposes a meaningful label (AC-6)',
+        (tester) async {
+      // The icon-only repeat control carries an explicit label on its tappable
+      // node (A11Y-6 sweep).
+      final inner = _RecordingSpeech();
+      final speech = RepeatableSpeech(inner);
+      addTearDown(speech.dispose);
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(host(speech));
+
+      await speech.speak('lightness 58, warm');
+      await tester.pump();
+
+      final data = tester
+          .getSemantics(find.byKey(SpokenOutputPanel.repeatKey))
+          .getSemanticsData();
+      expect(data.label, 'Repeat last spoken message');
+      expect(data.hasAction(SemanticsAction.tap), isTrue,
+          reason: 'the label must land on the tappable repeat node');
+      handle.dispose();
     });
   });
 }
