@@ -1,5 +1,133 @@
 # bs-11 Accessibility conformance — behaviour-test completeness
 
+**Phase graded: GATE-2 (un-pended AC tests AC-1,2,3,4,5,6,7,8).** Independent,
+adversarial re-grade of **every currently un-pended automated AC test** against
+the code as it now stands on `feat/bs-11-accessibility-conformance` (worktree
+`/Users/matthew.quirk/Nuance-bs11`). **What GATE-2 changed:** it delivered
+**AC-7** (the eyes-free semantics-only driver) by implementing `eyesFreeComplete`
+in `integration_test/conformance/eyes_free.dart` (previously a stub throwing
+`UnimplementedError`). The real driver, for each step label: finds the control via
+`find.bySemanticsLabel(label)` and returns `false` if absent; resolves the
+`SemanticsNode` via `tester.semantics.find`; returns `false` if the node has no
+`SemanticsAction.tap`; otherwise dispatches the tap via
+`node.owner!.performAction(...)` and pumps — returning `true` only when every step
+was located and activated **by semantics alone** (never key/type/coordinate, D-6).
+It disposes its own `SemanticsHandle` in a `finally`. GATE-2 then un-pended AC-7 in
+`bs11/pending.dart` (deleted its row; pending set is now **`{AC-9, AC-11}`**,
+length 2) and updated the scaffold-guard in `accessibility_test.dart` to expect the
+new set and assert `!containsKey('AC-7')`. It also fixed the AC-7 test's handle
+disposal — `addTearDown(semantics.dispose)` → an explicit `semantics.dispose()` at
+the end of the test body (repo convention: the integration binding's end-of-test
+invariant runs *before* `addTearDown`, so a parked handle leaks) — **no assertion
+changed**. The behaviour phase re-grades **AC-1, AC-2, AC-3, AC-4, AC-5, AC-6,
+AC-7, AC-8**. The grader ran nothing and edited nothing but this file.
+
+**AC-1..6 and AC-8 are unchanged by GATE-2 — and structurally cannot be disturbed
+by it (verified):** their rules and test bodies are byte-for-byte the ones graded
+A under A11Y-7, re-confirmed against the current code. GATE-2 touched **only**
+`eyes_free.dart` (the AC-7 driver), `pending.dart` (removed the AC-7 row), the
+pending-gate guard test, and AC-7's own `semantics.dispose()` placement — it did
+**not** touch any conformance rule or any AC-1..6/8 test body. Decisively, GATE-2
+did **not** add `eyesFree` to the aggregate `runConformanceCheck`: that function
+still composes exactly the **seven** sweep rules
+(`contrastAA`/`tapTarget48`/`fontScale200`/`colourCue`/`noBareDot`/`meaningfulLabel`/`noTimeout`),
+so the `ConformanceResult` every AC-1..6/8 test reads is identical to the A11Y-7
+baseline. AC-7 is driven by the **separate** `eyesFreeComplete` driver, not a
+conformance rule, so it shares no state with the sweep: it opens its own subject
+(Readout), enables its own semantics, and reads only the driver's boolean —
+nothing it does can leak into another test's `outcomeFor(...)` / `failing` reads.
+(The `eyesFree` enum value exists in `ConformanceRuleId` but is left unpopulated by
+the aggregate; whether the barrier must populate it is a **GATE-3/AC-9** question,
+out of scope here and not graded.)
+
+**Special attention — the NEW test (AC-7) genuinely discriminates (verified):**
+- **G5 — the positive+control pair rejects the two named wrong drivers.** Positive
+  leg: driving `['Speak this readout']` returns `completed isTrue`. Control leg:
+  driving `['__no control exposes this label__']` (a label on no control) returns
+  `blocked isFalse`. This pair rejects **(a) an always-true driver** — it would
+  return `true` on the bogus-label control ⇒ `blocked` true ⇒ the control leg
+  fails; **(b) an always-false driver** — it would return `false` on the real step
+  ⇒ `completed` false ⇒ the positive leg fails; and **(c) a
+  coordinate/position-fallback driver** — one that ignores the semantic label and
+  taps the first interactive widget by position/order would "complete" the
+  bogus-label step ⇒ `blocked` true ⇒ the control leg fails. Only a strictly
+  semantics-by-label driver that *stops* when no node carries the label passes both
+  legs — exactly D-6's intent. G5 satisfied.
+- **G1 — every discriminating Given is checked before the When.** Readout open:
+  `expect(readout.screen, findsOneWidget)`. Entry control present *by label*:
+  `expect(find.bySemanticsLabel('Speak this readout'), findsOneWidget)` — this
+  simultaneously confirms **semantics is active** (the test called
+  `tester.ensureSemantics()`; `find.bySemanticsLabel` resolves nothing with
+  semantics off), so the "screen reader is active" Given is verified through the
+  public surface, not merely enabled. Both discriminating Givens are asserted
+  before `whenCompletedEyesFree`.
+- **G2** the behaviour under test comes from the real shipped driver over the real
+  `buildApp` Readout screen and its real `'Speak this readout'` control (bs-08
+  speech), not a fake/scripted structure. **G4** asserts the exact booleans
+  (`completed isTrue`, `blocked isFalse`) at the step's grain — a single labelled
+  step located and activated. **G6** exactly one AC (only the eyes-free driver is
+  exercised). **G3** N/A (no negative-after-settle Then; the control is a
+  discriminator, not a timed persistence check). **Handle hygiene:** the test holds
+  its own `SemanticsHandle` and disposes it explicitly at the body's end, and the
+  driver disposes its own in `finally` — no leak on the happy path.
+- **Minor honesty note (not a downgrade, consistent with the prior ITEST-3 A):**
+  the test comment says the terminal state is "observed via the read endpoint
+  inside the driver", but the driver actually returns `true` once every labelled
+  step is located and `tap`-activated — it does not read a downstream task-output
+  endpoint. For AC-7 ("the task is *operable* eyes-free") the right observable is
+  reachability-and-activation by semantics, which is exactly what the driver
+  proves; the comment slightly overstates the mechanism but the assertion is at the
+  correct grain for the AC. Recorded as a wording blemish, not a G-rule failure.
+
+| AC | Test | Grade | Justification (failing G-rule if below A) |
+|---|---|---|---|
+| **AC-7** | `a core task completes eyes-free under the screen reader` (owner GATE-2), un-pended; driver = **real** `eyesFreeComplete` (find each step's control **by semantic label**, require a `tap` action, dispatch via `node.owner!.performAction` — never key/type/coordinate, D-6) | **A** | **G1** both discriminating Givens asserted before the When — Readout open (`readout.screen findsOneWidget`) and the entry control present *by label* (`find.bySemanticsLabel('Speak this readout') findsOneWidget`, which also confirms semantics is active under the test's `ensureSemantics()`). **G2** real driver over the real `buildApp` Readout + real `'Speak this readout'` control, not a fake. **G4** exact booleans at step grain (`completed isTrue`; control `blocked isFalse`). **G5** the positive+control pair rejects **all three** plausible wrong drivers — always-true (control leg), always-false (positive leg), and **coordinate/position-fallback** (the bogus-label control leg: a non-semantics driver would progress and make `blocked` true). **G6** one AC only. **G3** N/A. Handle disposed explicitly in-body (+ driver's own `finally`). Comment overstates the terminal-state mechanism ("read endpoint") but the assertion grain is correct — a wording blemish, not a downgrade. |
+| **AC-1** | `every colour-coded element carries a non-colour cue` (owner A11Y-5), un-pended; rule = `checkColourCue` | **A** | Unchanged by GATE-2 (rule + body untouched). Re-confirmed against the identical seven-rule aggregate; reads only `failing.contains(colourCue)`. Sweep passes on 6 real screens + `ColorChip` reference; `control_bareDot` fails. **G1/G2/G4/G5/G6** met; **G3** N/A. No downgrade. |
+| **AC-2** | `a status is never rendered as a bare colour dot` (owner A11Y-5), un-pended; rule = `checkNoBareDot` | **A** | Unchanged by GATE-2. Re-confirmed; reads only `noBareDot`. Sweep + `StatusBadge` reference pass; `control_bareDot` fails. **G1/G2/G4/G5/G6** met; **G3** N/A. No downgrade. |
+| **AC-3** | `the layout survives 200% font scaling without breaking` (owner A11Y-4), un-pended; rule = `checkFontScale200` | **A** | Unchanged by GATE-2. Re-confirmed; reads only `fontScale200`. Sweep + reference pass; `control_overflow200` (180dp > 100dp box) fails. **G1/G2/G4/G5/G6** met; **G3** N/A. No downgrade. |
+| **AC-4** | `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = `checkTapTarget48` | **A** | Unchanged by GATE-2. Re-confirmed; reads only `tapTarget48`. Sweep + 48dp reference pass; `control_smallTarget` (24dp) fails. **G1/G2/G4/G5/G6** met; **G3** N/A. No downgrade. |
+| **AC-5** | `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = `checkContrastAA` | **A** | Unchanged by GATE-2. Re-confirmed; reads only `contrastAA`. **G2 decisive, still satisfied** — contrast pinned to the shipped `AppTheme.light().colorScheme` on every swept screen + reference; `control_lowContrast` fails. **G1/G4/G5/G6** met; **G3** N/A. No downgrade. |
+| **AC-6** | `every control exposes a meaningful screen-reader label` (owner A11Y-6), un-pended; rule = `checkMeaningfulLabel` over `labeledTapTargetGuideline` | **A** | Unchanged by GATE-2. Re-confirmed; reads only `meaningfulLabel`. Sweep + tooltipped reference pass; `control_unlabelled` fails. Documented non-empty-vs-meaningful limit (carried by manual AC-10/AC-12) unchanged. **G1/G2/G4/G5/G6** met; **G3** N/A. No downgrade. |
+| **AC-8** | `nothing auto-dismisses or imposes a time limit` (owner A11Y-7), un-pended; rule = `checkNoTimeout` | **A** | Unchanged by GATE-2 (rule + body untouched). Re-confirmed; reads only `noTimeout`. **G3 fully satisfied** — real 10s fake-clock settle past the 4s SnackBar window, the "still present" Then taken only after the advance, and a change-control (`control_autoDismiss`'s SnackBar **is gone** after the identical advance) proving the reading can move. `AccessibleNotice` reference persists and passes; `control_autoDismiss` fails `noTimeout`. **G1/G4/G5/G6** met. No downgrade. |
+
+## Verdict
+
+**8 A / 0 B — PASS (all A).** Every currently un-pended automated AC test meets
+the bar against the code as it now stands. **The NEW GATE-2 test (AC-7) is A —
+earned, not nominal:** the real `eyesFreeComplete` driver genuinely discriminates
+via the positive+control pair — the real `'Speak this readout'` step completes
+(`completed isTrue`) while a step whose label is on no control blocks
+(`blocked isFalse`) — and that pair rejects **all three** plausible wrong drivers:
+an always-true driver (fails the control leg), an always-false driver (fails the
+positive leg), and a **coordinate/position-fallback** driver (would progress past
+the bogus-label control ⇒ `blocked` true ⇒ fails the control leg), exactly D-6's
+intent. Every discriminating Given is checked before the When (Readout open; the
+entry control present *by label*, which also confirms semantics is active), it
+asserts the exact booleans at step grain (G4), and covers one AC (G6). The one
+wording blemish — the "read endpoint" comment overstating the terminal-state
+mechanism — does not change the assertion grain and is not a downgrade.
+
+**AC-1..6 and AC-8 hold their prior A, un-weakened and structurally
+un-interfered-with by GATE-2.** GATE-2 added the AC-7 driver as a *separate*
+artifact and did **not** touch any conformance rule, any AC-1..6/8 test body, or
+the aggregate `runConformanceCheck` (still the same seven sweep rules) — so the
+`ConformanceResult` each of those tests reads is identical to the A11Y-7 baseline,
+and each reads only its own `outcomeFor(itsId)` / `failing.contains(itsId)`. AC-7's
+driver shares no state with the sweep (own subject, own semantics, own boolean).
+No un-pended test references a still-pending rule id (AC-9/AC-11 remain pending,
+owned by GATE-3/GATE-4). AC-10 and AC-12 are pure-manual gates (no automated test),
+closed at SIGNOFF-1 (G-3/G-4).
+
+**No B rows — nothing must change for this phase to pass.**
+
+---
+
+<!-- Historical context: prior grade grids, most recent first. -->
+
+# bs-11 Accessibility conformance — behaviour-test completeness (prior grids)
+
+## A11Y-7 — re-grade of un-pended AC tests (AC-1,2,3,4,5,6,8)
+
 **Phase graded: A11Y-7 (un-pended AC tests AC-1,2,3,4,5,6,8).** Independent,
 adversarial re-grade of **every currently un-pended automated AC test** against
 the code as it now stands on `feat/bs-11-accessibility-conformance` (worktree
@@ -124,12 +252,6 @@ the 3 reds are exactly the still-pending AC-7/AC-9/AC-11, failing as designed);
 unit 1041/1041; analyze clean; coverage 100% on touched lib (no lib change).
 
 **No B rows — nothing must change for this phase to pass.**
-
----
-
-<!-- Historical context: prior grade grids, most recent first. -->
-
-# bs-11 Accessibility conformance — behaviour-test completeness (prior grids)
 
 ## A11Y-6 — re-grade of un-pended AC tests (AC-1,2,3,4,5,6)
 

@@ -45,15 +45,16 @@ void main() {
       // un-pended AC-3** (200% font scaling), **A11Y-5 un-pended AC-1 + AC-2**
       // (colour cue / no bare dot), **A11Y-6 un-pended AC-6** (meaningful
       // labels) and **A11Y-7 un-pended AC-8** (nothing auto-dismisses), so the
-      // still-pending set is now the other three. AC-10 and AC-12 are
-      // pure-manual gates (D-2) and never enter the gate.
+      // un-pended AC-8** (nothing auto-dismisses) and **GATE-2 un-pended AC-7**
+      // (eyes-free walkthrough), so the still-pending set is now the other two.
+      // AC-10 and AC-12 are pure-manual gates (D-2) and never enter the gate.
       const expected = {
-        'AC-7', 'AC-9', 'AC-11',
+        'AC-9', 'AC-11',
       };
       expect(pendingACs.keys.toSet(), expected);
-      expect(pendingACs, hasLength(3));
-      // AC-5, AC-4, AC-3, AC-1, AC-2, AC-6 and AC-8 are delivered — no longer
-      // pending.
+      expect(pendingACs, hasLength(2));
+      // AC-5, AC-4, AC-3, AC-1, AC-2, AC-6, AC-8 and AC-7 are delivered — no
+      // longer pending.
       expect(pendingACs.containsKey('AC-5'), isFalse,
           reason: 'AC-5 was un-pended by A11Y-2');
       expect(pendingACs.containsKey('AC-4'), isFalse,
@@ -68,6 +69,8 @@ void main() {
           reason: 'AC-6 was un-pended by A11Y-6');
       expect(pendingACs.containsKey('AC-8'), isFalse,
           reason: 'AC-8 was un-pended by A11Y-7');
+      expect(pendingACs.containsKey('AC-7'), isFalse,
+          reason: 'AC-7 was un-pended by GATE-2');
     });
 
     test('the two manual ACs are absent from the automated gate (D-2)', () {
@@ -497,7 +500,6 @@ void main() {
       // via `SemanticsAction`, never by key/type/coordinate (D-6) — so a green
       // run proves the task is operable by a screen-reader user.
       final semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
 
       // Given: the app is launched to a core task (Readout of a fixture sample)
       // with semantics active, and the task's entry control is present *by its
@@ -512,8 +514,9 @@ void main() {
       // When: the task is performed using only semantic labels + actions.
       final completed =
           await whenCompletedEyesFree(tester, steps: const ['Speak this readout']);
-      // Then: the task reaches its terminal state (observed via the read
-      // endpoint inside the driver) — GATE-2 makes this true.
+      // Then: the task reaches its terminal state — every step was located by
+      // its semantic label and activated through its `SemanticsAction`, so a
+      // screen-reader user can operate it end to end. GATE-2 makes this true.
       expect(completed, isTrue,
           reason: 'the core task must complete eyes-free via semantic labels');
 
@@ -527,6 +530,13 @@ void main() {
       expect(blocked, isFalse,
           reason: 'a step with no semantic label must not be reachable — an '
               'eyes-free driver cannot use coordinates (D-6)');
+
+      // Dispose the handle inside the test body (repo convention for
+      // SemanticsHandle, e.g. provenance_region_test): the integration
+      // binding's end-of-test invariant check runs before `addTearDown`
+      // callbacks, so a handle parked in a tear-down would be flagged as
+      // leaked once the driver completes.
+      semantics.dispose();
     });
 
     acTestWidgets('AC-8', 'nothing auto-dismisses or imposes a time limit',
