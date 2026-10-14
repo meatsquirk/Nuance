@@ -78,8 +78,9 @@ void main() {
       // Un-pended so far: AC-1 (DALT-3 keystone), AC-5 (DALT-4 — chokepoint
       // drives the remap from the stored type + severity), AC-7 (DALT-5 — the
       // remap is distinct from the simulation projection), AC-2 (DALT-6 — the
-      // off path is explicit, colours off keep their original values).
-      const unpended = <String>{'AC-1', 'AC-5', 'AC-7', 'AC-2'};
+      // off path is explicit, colours off keep their original values), AC-8
+      // (DALT-7 — the remap is render-only, the stored colour values unchanged).
+      const unpended = <String>{'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',
@@ -567,34 +568,54 @@ void main() {
 
     acTestWidgets('AC-8', 'TestAC08_StoredValuesUnchanged', (tester) async {
       // Given: a sample has stored colour values (the known sample on the
-      // Readout); its displayed swatch while daltonization is off is the stored
-      // original.
+      // Readout). Its displayed swatch while daltonization is off is the stored
+      // original, and the numeric space readout reports the stored values.
       final h = await givenDaltonization(tester,
           storedProfile: savedProfile(CvdType.deutan));
       expect(displaySwatches(tester).any((c) => colorNear(c, screenSwatchColor)),
           isTrue,
           reason: 'AC-8 Given: the stored colour renders as the original off');
+      final storedValuesOff = h.storedValuesText;
+      expect(storedValuesOff, isNotEmpty,
+          reason: 'AC-8 Given: the Readout reports the stored colour values');
 
-      // When: daltonization remaps its displayed colour (turn it on), then the
-      // painter turns it back off.
+      // When: daltonization remaps its displayed colour (turn it on).
       await h.whenOpenSettings();
       await h.whenSetDaltonization(on: true);
-      await h.whenSetDaltonization(on: false);
       await h.whenCloseSettings();
 
-      // Then: the stored colour values are unchanged — with daltonization off
-      // again the swatch is once more the original, so the remap wrote nothing
-      // back to the stored sample (rejects a remap that persists the transformed
-      // colour).
+      // Then: the stored colour values are unchanged — the numeric reading still
+      // reports the original stored values while the remap is on (rejects a
+      // remap that writes the transformed colour back to the sample/store).
+      expect(h.storedValuesText, storedValuesOff,
+          reason: 'AC-8: the remap changes only the display — the stored colour '
+              'values (the numeric reading) are unchanged');
+
+      // Control (DALT-7): while on, the displayed swatch *did* move away from the
+      // stored original — to the remapped colour — so "stored unchanged" is a
+      // genuine render/store separation, not a no-op. (A settle point for the
+      // negative Then above: the reading can change, and here demonstrably did.)
+      expect(displaySwatches(tester).any((c) => colorNear(c, screenSwatchColor)),
+          isFalse,
+          reason: 'AC-8 control: daltonization on moves the shown swatch away '
+              'from the stored original (the remap is real)');
+      expect(
+          displaySwatches(tester)
+              .any((c) => colorNear(c, _remapOf(h.storedProfile))),
+          isTrue,
+          reason: 'AC-8 control: the shown swatch is the remapped colour');
+
+      // And turning the remap back off restores the original swatch — a second
+      // proof the remap wrote nothing back to the stored sample.
+      await h.whenOpenSettings();
+      await h.whenSetDaltonization(on: false);
+      await h.whenCloseSettings();
       expect(displaySwatches(tester).any((c) => colorNear(c, screenSwatchColor)),
           isTrue,
           reason: 'AC-8: turning the remap off restores the original — storage '
               'was never overwritten');
-
-      // LIMITED (augmented by DALT-7): while the remap is identity, the "on"
-      // state does not differ from "off", so this cannot yet prove the round-trip
-      // is real. DALT-7 adds the control (while on, the swatch did change — so
-      // the restore is a genuine round-trip, not a no-op).
+      expect(h.storedValuesText, storedValuesOff,
+          reason: 'AC-8: the stored colour values remain the original throughout');
     });
 
     acTestWidgets('AC-9', 'TestAC09_EveryScreen', (tester) async {

@@ -1,6 +1,6 @@
 # Module DALT — daltonization remap engine + display injection
 
-**Status:** In progress — DALT-6 (AC-2) done; the chokepoint's off path is explicit (`daltonization ? daltonizeColor : simulateColor`), so colours off keep their original values — no `lib/` body changed, AC-2 un-pended with its on-remaps-away control. DALT-7..11 (serial behind DALT-3) and CONTROL-2 (other module, AC-10) are startable; DALT-7 is next.
+**Status:** In progress — DALT-7 (AC-8) done; the remap is a pure render-time transform (`displayedSwatchColor` → `daltonizeColor`, called only by `ColorChip` + the read endpoint) with no write-back to the stored `Sample`/`ColorCoordinates` or any store — no `lib/` body changed, AC-8 un-pended with its swatch-moved-while-stored-held control. DALT-8..11 (serial behind DALT-3) and CONTROL-2 (other module, AC-10) are startable; DALT-8 is next.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
 additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
@@ -18,8 +18,8 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 | DALT-4 | behavior | AC-5 | ✅ Done | 7.12M | 25m 17s |
 | DALT-5 | behavior | AC-7 | ✅ Done | 5.04M | 24m 20s |
 | DALT-6 | behavior | AC-2 | ✅ Done | 7.51M | 25m 22s |
-| DALT-7 | behavior | AC-8 | ⬜ Next | | |
-| DALT-8 | behavior | AC-9 | ⬜ Todo | | |
+| DALT-7 | behavior | AC-8 | ✅ Done | 9.21M | 21m 10s |
+| DALT-8 | behavior | AC-9 | ⬜ Next | | |
 | DALT-9 | behavior | AC-3 | ⬜ Todo | | |
 | DALT-10 | behavior | AC-4 | ⬜ Todo | | |
 | DALT-11 | behavior | AC-6 | ⬜ Todo | | |
@@ -528,4 +528,77 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 - **Known gaps:** unchanged — AC-9 (every-screen reach) owned by **DALT-8**; AC-10 (no-saved-profile affordance)
   owned by **CONTROL-2**; AC-6 live recompute (DALT-11). AC-3/4/8 pass at the keystone but stay **pending** until
   their phases un-pend them and add controls/augmentations. Carries the D-8 sim/dalt gap as context only (out of
+  bs-10 scope, D-5).
+
+### Result — DALT-7  <!-- 2026-10-14 -->
+
+- **Verification + augmentation phase — no `lib/` body changed.** AC-8 holds structurally: the remap is a pure
+  render-time transform. `displayedSwatchColor` (→ `daltonizeColor`) is a pure function of `(original, settings,
+  profile)` called only by `ColorChip` (render) and `DisplayReadEndpoint` (the test seam); nothing writes a
+  remapped colour back to the stored `Sample`/`ColorCoordinates` or to any store, and the Readout's numeric
+  reading is derived from `Sample.coordinates` via `readoutForSpace`, never the remap. DALT-7 confirms this,
+  un-pends AC-8 and adds its control; it touches no product code (`git diff --name-only` vs base = four test
+  files only).
+- **AC-8 un-pended** (deleted its row in `integration_test/bs10/pending.dart`; the scaffold guard's `unpended`
+  set in `daltonization_test.dart` is now `{'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8'}`, length `10 − 5 = 5`).
+  `TestAC08_StoredValuesUnchanged` runs green in the default suite.
+- **Augmentation closed (TestAC08 → DALT-7).** Replaced the test's LIMITED note with the planned **control**:
+  the test now captures the Readout's numeric stored-values reading off (new harness getter `storedValuesText`
+  over `SpaceSelector.valuesKey`, derived from `Sample.coordinates`), turns daltonization ON through the shipped
+  panel toggle and asserts that reading is **unchanged** while on, with the control that the displayed swatch
+  *did* move away from the stored original to `_remapOf(storedProfile)` (and no swatch is still the original);
+  turning off restores the swatch and the reading still holds. This discriminates against both the no-op/identity
+  shell (the swatch would stay the original) and a write-back bug (it would move the derived numeric reading).
+  Strengthens AC-8 only (G6). The ITEST *Test augmentations* row is marked ✅ Closed (DALT-7).
+- **Harness seam added** (`daltonization_harness.dart`): `String get storedValuesText` reads the Readout's
+  `SpaceSelector.valuesKey` Text — a public read of the sample's *stored* colour values as rendered text, the
+  observable AC-8's "stored unchanged" Then asserts (ITEST plan's `SampleSource`-read idea realised through the
+  on-screen numeric reading). Required `import '…/readout/space_selector.dart'`.
+- **Unit test added** (`test/display/color_simulation_test.dart`, chokepoint group): "daltonization on remaps
+  only the returned colour; a later off render still yields the original (no write-back, AC-8)" — the on render
+  moves the colour (control), a following off render returns the original, and repeating the on render yields the
+  same remap (a pure function carrying no state between calls). Pins the no-write-back at the chokepoint grain.
+- **Gates:** `flutter analyze` clean · `flutter test --coverage` **1251 unit pass** (+1 vs DALT-6) ·
+  `dart run tool/coverage_gate.dart main` → **100% on all 8 touched files** (no `lib/` line added). Acceptance
+  (booted iPhone 17 `5AB9D06D…`, under `coord.sh with-lock`): default `daltonization_test.dart` →
+  **+20 / ~5 pending / 0 fail** (AC-8 now runs green with its control, up from DALT-6's +19/~6); run-pending
+  (`--dart-define=BS10_RUN_PENDING=true`) → **+23 / −2** — unchanged red baseline (only AC-9/DALT-8 and
+  AC-10/CONTROL-2 fail, as designed; AC-8 now passes un-pended).
+- **Grade gate** (fresh independent subagent, re-graded the whole suite against the DALT-6 grid; grid rewritten
+  at `behavior-test-completeness-bs-10-daltonization.md`): **8 A / 2 B-pending** — A: AC-1, AC-2, AC-5, AC-6,
+  AC-7, AC-8, AC-9, AC-10; B-pending: AC-3→DALT-9, AC-4→DALT-10. **AC-8 promoted B pending → A** (the grader
+  independently verified the control discriminates against the no-op/identity shell and the write-back bug, and
+  that the numeric reading is independent of the remap). No row below A for a rubric reason; the new DALT-7
+  chokepoint unit test graded A.
+- Coverage (touched `lib/`): 100% (8 files, vs `main` — unchanged; DALT-7 added no `lib/` line). Fix passes:
+  0/3 (every gate green on the first full run).
+- Tokens/time: see dashboard cell.
+- Closed by: unit + coverage + acceptance (AC-8) + grade gates green.
+
+### Checkpoint / Handoff — DALT-7
+
+- **Frozen for DALT-8..11 / CONTROL-2:**
+  - The chokepoint contract is unchanged from DALT-3..6: `displayedSwatchColor(original, settings, profile)` →
+    `daltonizeColor(original, profile)` when `settings.daltonization`, else `simulateColor`. AC-8 (display-only,
+    stored values unchanged) is now a settled fact; later phases rely on it but don't re-assert it.
+  - `integration_test/bs10/pending.dart` now holds **5** ACs (AC-3, AC-4, AC-6, AC-9, AC-10); scaffold guard
+    `unpended` is `{'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8'}`. Each remaining phase deletes its AC's row and adds
+    it to that set.
+  - New reusable seam: `DaltonizationHarness.storedValuesText` (the Readout's numeric space reading) — available
+    to any later phase that needs the stored-values observable.
+  - **DALT-8** (AC-9, every screen) is next and serial behind here (shared `daltonization_test.dart` + the
+    chokepoint). Its test is already **A** and **red at baseline** (the remap must reach capture/readout/palette
+    through the one shared chokepoint; `_expectKnownSwatchRemapped` on each). **CONTROL-2** (AC-10) stays
+    independently startable (`settings_screen.dart`; key gap: `CvdProfileReadEndpoint.hasSavedProfile` still
+    absent and the endpoint not mounted in the main tree).
+- **Verification commands:** unchanged from DALT-6 — `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` (Flutter at `/Users/matthew.quirk/development/flutter/bin`). Acceptance
+  on the **booted** sim only (`-d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), under
+  `FNP_COORD_REPO=/Users/matthew.quirk/Nuance coord.sh with-lock bs-10-daltonization <PHASE> --wait 900 -- bash
+  -c 'cd /Users/matthew.quirk/Nuance-bs10 && …'`; macOS has no `timeout`; the full `integration_test/` run
+  exceeds the 120s foreground cap → redirect to a file and background it, don't tail. Device lane is contended
+  (bs-12 also uses the sim) — the lock serialises.
+- **Known gaps:** unchanged — AC-9 (every-screen reach) owned by **DALT-8**; AC-10 (no-saved-profile affordance)
+  owned by **CONTROL-2**; AC-6 live recompute (DALT-11); AC-3/AC-4 pass at the keystone but stay **pending**
+  until DALT-9/DALT-10 un-pend them and add their controls. Carries the D-8 sim/dalt gap as context only (out of
   bs-10 scope, D-5).

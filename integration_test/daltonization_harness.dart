@@ -51,6 +51,7 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/readout/space_selector.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/store/cvd_profile_store.dart';
@@ -373,6 +374,18 @@ class DaltonizationHarness {
   /// The provenance badge rendered for the reading (AC-4) — present on the
   /// Readout, carrying [screenSample]'s provenance label.
   Finder get provenanceBadge => find.byType(ProvenanceBadge);
+
+  /// The Readout's numeric colour reading for the selected space (AC-8) — a
+  /// public read of the sample's **stored** colour values as rendered text
+  /// (`SpaceSelector.valuesKey`).
+  ///
+  /// It is derived from the stored `Sample.coordinates` only — never from the
+  /// display remap, which transforms the swatch colour alone — so a daltonized
+  /// render must leave it unchanged. AC-8 captures it off and asserts it holds
+  /// while the remap is on (the stored values are untouched) with the swatch as
+  /// the control that the display did change.
+  String get storedValuesText =>
+      tester.widget<Text>(find.byKey(SpaceSelector.valuesKey)).data!;
 
   /// Opens the display and simulation settings panel from the current screen
   /// (the E2 entry the shared chrome shows on every screen).

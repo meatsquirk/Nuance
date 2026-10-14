@@ -334,7 +334,7 @@ harness/compile errors). Default run **+15 / 10 pending** (suite green). Grid:
 | AC-6 | TestAC06_ProfileChangeRecomputes | FAIL (confirmed) | Then/before: deutan remap (identity stub; no listener for the saved change) | DALT-11 | A |
 | AC-7 | TestAC07_DistinctFromSimulation | FAIL (confirmed) | precond: the remap moves the colour (identity stub) | DALT-5 | A |
 | AC-9 | TestAC09_EveryScreen | FAIL (confirmed) | Then: readout swatch == referenceDaltonize (identity stub; capture/palette legs reached once readout passes) | DALT-8 | A |
-| AC-8 | TestAC08_StoredValuesUnchanged | green at baseline (limited) | — (display-only; off→on→off round-trip) → augment | DALT-7 | B pending DALT-7 |
+| AC-8 | TestAC08_StoredValuesUnchanged | green at baseline (limited) | — (display-only; off→on→off round-trip) → augment | DALT-7 | A (DALT-7) |
 | AC-10 | TestAC10_NoProfileNeedsAssessment | FAIL (confirmed) | Then: no-profile region reports self-assessment (placeholder empty) | CONTROL-2 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by ITEST-2; closed by behavior phases -->
@@ -344,4 +344,4 @@ harness/compile errors). Default run **+15 / 10 pending** (suite green). Grid:
 | TestAC02 | Off == original holds at the shell (identity remap), so it can't yet show a *real* remap differs | DALT-6 | control: turning daltonization on remaps the swatch (changes from original) | ✅ Closed (DALT-6) |
 | TestAC03 | Label + value always render, so the test can't yet show they survive a *real* colour change | DALT-9 | assert the swatch colour changed while the label + numeric value stayed | ⬜ Open |
 | TestAC04 | Badge label + icon always render, so the test can't yet show they survive a *real* colour change | DALT-10 | assert the badge colour is remapped while its label + icon stayed | ⬜ Open |
-| TestAC08 | Display-only holds trivially while the remap is identity | DALT-7 | control: the displayed swatch did change while the stored value did not | ⬜ Open |
+| TestAC08 | Display-only holds trivially while the remap is identity | DALT-7 | control: the displayed swatch did change while the stored value did not | ✅ Closed (DALT-7) |

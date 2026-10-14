@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** In progress — DALT-6 ✅ (AC-2: with daltonization off, colours keep their original values); next **DALT-7** (AC-8), with **CONTROL-2** (AC-10) startable in parallel. All gates G-1/G-2/G-3/G-4 ✅
+**Status:** In progress — DALT-7 ✅ (AC-8: daltonization changes only what is shown, not stored values); next **DALT-8** (AC-9), with **CONTROL-2** (AC-10) startable in parallel. All gates G-1/G-2/G-3/G-4 ✅
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -57,7 +57,7 @@ setting, no daltonization control, and nothing that reads the *saved* profile ex
 | AC-5 | The remap uses the type and severity from the stored profile | ITEST-2 `TestAC05_UsesStoredProfile` | DALT-4 | ✅ Done |
 | AC-6 | Changing the profile updates the remap | ITEST-2 `TestAC06_ProfileChangeRecomputes` | DALT-11 | ⬜ Todo |
 | AC-7 | Daltonization remaps to help the painter, where simulation shows how they see | ITEST-2 `TestAC07_DistinctFromSimulation` | DALT-5 | ✅ Done |
-| AC-8 | Daltonization changes only what is shown, not stored values | ITEST-2 `TestAC08_StoredValuesUnchanged` | DALT-7 | ⬜ Todo |
+| AC-8 | Daltonization changes only what is shown, not stored values | ITEST-2 `TestAC08_StoredValuesUnchanged` | DALT-7 | ✅ Done |
 | AC-9 | Daltonization applies on every screen while it is on | ITEST-2 `TestAC09_EveryScreen` | DALT-8 | ⬜ Todo |
 | AC-10 | Without a stored profile, daltonization offers no remap | ITEST-2 `TestAC10_NoProfileNeedsAssessment` | CONTROL-2 | ⬜ Todo |
 
@@ -128,7 +128,7 @@ AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7.
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-3..6 done — AC-1/5/7/2; next DALT-7) |
+| DALT | [modules/DALT.md](modules/DALT.md) | The remap engine (`lib/a11y/cvd/daltonize.dart`) + its injection into bs-08's display chokepoint + all render-side behaviour (AC-1..9) | bs-07, bs-08 | 🔄 In progress (DALT-3..7 done — AC-1/5/7/2/8; next DALT-8) |
 | CONTROL | [modules/CONTROL.md](modules/CONTROL.md) | The daltonization settings control (toggle) + the no-saved-profile affordance (AC-10) | DALT (shell), bs-07 | 🔄 In progress (CONTROL-1 done) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3 all done; G-2 approved) |
 
@@ -182,8 +182,8 @@ not as flakes.
 | 8 | DALT-4 | AC-5 remap uses stored type + severity | ✅ Done | 7.12M | 25m 17s | AC-5 un-pended, `TestAC05` green (stored type+severity, stronger-severity control); no `lib/` body changed (chokepoint already reads `AppScope.cvdProfile` whole); +2 unit tests (chokepoint forwards type+severity); default +17/~8/0, red baseline +23/−2 unchanged, grades 6 A / 4 B-pending |
 | 9 | DALT-5 | AC-7 distinct from simulation | ✅ Done | 5.04M | 24m 20s | AC-7 un-pended, `TestAC07` green; no `lib/` body changed (DALT-3 keystone already distinct from `projectDichromat` by construction); +1 unit test (chokepoint shipped-vs-shipped distinctness, oracle = separate simulation path); default +18/~7/0, red baseline +23/−2 unchanged, full integ +215/~7/0; grades 6 A / 4 B-pending |
 | 10 | DALT-6 | AC-2 off = original (+ control) | ✅ Done | 7.51M | 25m 22s | AC-2 un-pended, `TestAC02` green with on-remaps-away control (augmentation closed); no `lib/` body changed (off path already explicit at the chokepoint); +1 unit test (off ignores the profile); default +19/~6, red baseline +23/−2 unchanged, full integ +216/~6; grades **7 A / 3 B-pending** (AC-2 B→A) |
-| 11 | DALT-7 | AC-8 stored values unchanged (+ control) | ⬜ Next | | | augments TestAC08 |
-| 12 | DALT-8 | AC-9 every screen | ⬜ Todo | | | |
+| 11 | DALT-7 | AC-8 stored values unchanged (+ control) | ✅ Done | 9.21M | 21m 10s | AC-8 un-pended, `TestAC08` green with swatch-moved-while-stored-held control (augmentation closed); no `lib/` body changed (remap is pure render-time, no write-back); +1 unit test (no write-back at chokepoint) + harness `storedValuesText` seam; default +20/~5, red baseline +23/−2 unchanged; grades **8 A / 2 B-pending** (AC-8 B→A) |
+| 12 | DALT-8 | AC-9 every screen | ⬜ Next | | | |
 | 13 | DALT-9 | AC-3 label + value kept (+ control) | ⬜ Todo | | | augments TestAC03 |
 | 14 | DALT-10 | AC-4 provenance badge readable (+ control) | ⬜ Todo | | | augments TestAC04 |
 | 15 | DALT-11 | AC-6 profile change recomputes (live) | ⬜ Todo | | | |
@@ -195,16 +195,18 @@ when the row is marked done.
 
 ## Next phase
 
-**DALT-6 done** — AC-2 is settled: the chokepoint's off path is explicit (`settings.daltonization ?
-daltonizeColor : simulateColor`), so with daltonization off colours keep their original values. No `lib/` body
-changed; DALT-6 un-pended AC-2, closed its augmentation (the on-remaps-away control now discriminates against
-the identity shell), and added a chokepoint unit test (off → original regardless of the stored profile). AC-1 +
-AC-2 + AC-5 + AC-7 now green in the default suite; grid **7 A / 3 B-pending** (AC-2 promoted B→A).
+**DALT-7 done** — AC-8 is settled: the remap is a pure render-time transform (`displayedSwatchColor` →
+`daltonizeColor`, called only by `ColorChip` + the read endpoint) with no write-back to the stored
+`Sample`/`ColorCoordinates` or any store, and the Readout's numeric reading is derived from `Sample.coordinates`
+(never the remap). No `lib/` body changed; DALT-7 un-pended AC-8, closed its augmentation (the swatch moved to
+the remap while the numeric stored reading held, then restored off — discriminates against the no-op and a
+write-back bug), added a chokepoint no-write-back unit test and a `storedValuesText` harness seam. AC-1 + AC-2 +
+AC-5 + AC-7 + AC-8 now green in the default suite; grid **8 A / 2 B-pending** (AC-8 promoted B→A).
 
-Next is **DALT-7** (AC-8: daltonization changes only what is shown, not stored values — assert the stored
-`Sample`/`ColorCoordinates` are unchanged after a remapped render, + its control that the displayed swatch *did*
-change). It asserts at the same chokepoint and shares `daltonization_test.dart`, so it is serial behind DALT-6
-with DALT-8..11. Its augmentation TestAC08 → DALT-7 is open.
+Next is **DALT-8** (AC-9: daltonization applies on every screen — confirm the remap reaches capture, readout
+and palette through the one shared `ColorChip`/`DisplayScope` chokepoint; `_expectKnownSwatchRemapped` on each).
+Its test is already **A** and red at baseline. It asserts at the same chokepoint and shares
+`daltonization_test.dart`, so it is serial behind DALT-7 with DALT-9..11.
 
 Concurrency: **CONTROL-2** (AC-10, no-saved-profile → self-assessment needed) is independently startable — it
 touches `settings_screen.dart`, not the shared chokepoint. Key gap for CONTROL-2: `CvdProfileReadEndpoint` has
@@ -235,7 +237,8 @@ bs-12 — the lock serialises); full `integration_test/` run exceeds 120s → ba
 | DALT-4 | 3a78f9d9 | 2026-10-13 20:19 EDT | 20:44 | 25m 17s | 25m 17s | claude-opus-4-8 | 142 | 189,931 | 6,896,067 | 35,531 | 7,121,671 | AC-5 un-pended; TestAC05 green (stored type+severity, severity control); no lib body changed; +2 unit tests; default +17/~8, red baseline +23/−2, full integ +214/~8; grades 6 A / 4 B-pending |
 | DALT-5 | b48536f0 | 2026-10-13 21:31 EDT | 21:56 | 24m 20s | 24m 20s | claude-opus-4-8 | 110 | 194,760 | 4,821,025 | 28,939 | 5,044,834 | AC-7 un-pended; TestAC07 green; no lib body changed (keystone distinct from projectDichromat by construction); +1 chokepoint distinctness unit test; default +18/~7, red baseline +23/-2, full integ +215/~7; grades 6 A / 4 B-pending |
 | DALT-6 | 43201b97 | 2026-10-13 22:08 EDT | 22:33 | 25m 22s | 25m 22s | claude-opus-4-8 | 130 | 248,898 | 7,220,069 | 37,424 | 7,506,521 | AC-2 off=original un-pended; TestAC02 on-control (augmentation closed); no lib body changed (off path already explicit); +1 unit test; default +19/~6, red baseline +23/-2, full integ +216/~6; grades 7 A / 3 B-pending (AC-2 B->A) |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-13 22:33** | **4h 42m** | **4h 08m** |  | **1,250** | **1,887,505** | **67,441,727** | **546,615** | **69,877,097** |  |
+| DALT-7 | 19369a77 | 2026-10-14 05:25 EDT | 05:46 | 21m 10s | 21m 10s | claude-opus-4-8 | 152 | 267,509 | 8,899,773 | 45,398 | 9,212,832 | AC-8 un-pended; TestAC08 swatch-moved-while-stored-held control (augmentation closed); no lib body changed (pure render-time remap, no write-back); +1 unit test + storedValuesText seam; default +20/~5, red baseline +23/-2; grades 8 A / 2 B-pending (AC-8 B->A) |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 05:46** | **5h 03m** | **4h 29m** |  | **1,402** | **2,155,014** | **76,341,500** | **592,013** | **79,089,929** |  |
 
 ## Sign-off
 

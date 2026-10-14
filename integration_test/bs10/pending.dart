@@ -85,9 +85,11 @@ const Map<String, String> pendingACs = {
   // lost a*/b* chroma 90° and adds it back (aiding distinction) rather than
   // collapsing it (perception). DALT-5 verifies this at the chokepoint grain and
   // removes AC-7's row here.
-  // AC-8 un-pended by DALT-7 (the remap is applied only at render, never
-  // written back; the stored Sample/ColorCoordinates are unchanged).
-  'AC-8': 'DALT-7',
+  // AC-8 un-pended by DALT-7 — the remap is a pure render-time transform
+  // (`displayedSwatchColor`, called only by `ColorChip` and the read endpoint);
+  // nothing writes it back to the stored `Sample`/`ColorCoordinates` or the
+  // store, so a daltonized render leaves the stored colour values unchanged;
+  // AC-8's row is removed here.
   // AC-9 un-pended by DALT-8 (the remap is injected at the one shared
   // ColorChip/DisplayScope chokepoint so capture, readout and palette all get
   // it).

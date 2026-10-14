@@ -214,6 +214,32 @@ void main() {
         reason: 'a stronger stored severity yields a stronger remap',
       );
     });
+
+    // AC-8 (DALT-7): the remap is a display transform only. The chokepoint
+    // returns a new colour for display and writes nothing back, so a daltonized
+    // render followed by an off render still yields the original. An
+    // implementation that cached or persisted the remapped colour (so the "off"
+    // read came back remapped) would fail here; the on-control shows the on
+    // render genuinely moved the colour, so the off-equality is meaningful.
+    test('daltonization on remaps only the returned colour; a later off render '
+        'still yields the original (no write-back, AC-8)', () {
+      const on = DisplaySettings(daltonization: true);
+      const off = DisplaySettings();
+      const strong = CvdProfile(type: CvdType.deutan, severity: 0.9);
+      // The on render moves the colour (a real remap)…
+      final remapped = displayedSwatchColor(original, on, strong);
+      expect(remapped, isNot(original),
+          reason: 'daltonization on genuinely remaps the shown colour');
+      // …yet a subsequent off render returns the original — the remap persisted
+      // nothing back to any shared state.
+      expect(displayedSwatchColor(original, off, strong), original,
+          reason: 'an off render after a remapped one still shows the original — '
+              'the remap was never written back');
+      // And repeating the on render yields the same remap (a pure function of
+      // its arguments, carrying no state between calls).
+      expect(displayedSwatchColor(original, on, strong), remapped,
+          reason: 'the remap is a pure transform of (colour, settings, profile)');
+    });
   });
 }
 
