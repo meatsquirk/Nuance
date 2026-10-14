@@ -66,6 +66,10 @@ const String rulePlatformOutsideSeam = 'platform-outside-capture-seam';
 /// An off-device sender reachable without explicit, opt-in consent.
 const String ruleOffDeviceSender = 'off-device-sender';
 
+/// A caller that references a concrete implementation type directly, rather than
+/// through its interface (AC-14 / AC-15 — swappable behind an interface).
+const String ruleConcreteTypeReference = 'concrete-type-reference';
+
 // ---------------------------------------------------------------------------
 // Authorities and allow-lists
 // ---------------------------------------------------------------------------
@@ -97,6 +101,16 @@ const Set<String> deltaEAuthorityFiles = {
 /// prefix is allowed, and anywhere else is a [platformOffenders] offender.
 const String nativeCaptureSeam = 'lib/capture/source/';
 
+/// The directory root(s) the source-scan rules walk by default — the real
+/// invariant sweep over the shipped product code.
+///
+/// Every scan takes an optional `roots` so an AC test can point the same rule at
+/// a planted control fixture (`integration_test/nfr/fixtures/controls/`) and
+/// assert the rule flags it (the discriminating control, ITEST-2). The default
+/// is the `lib/` sweep; the stubs ignore `roots` until GUARD-4 / GUARD-6 land
+/// the real scans, which honour it.
+const List<String> kDefaultSourceRoots = <String>['lib'];
+
 /// Package names a v1 (offline, no-account, no-telemetry) build must not depend
 /// on (AC-7 / AC-8).
 ///
@@ -124,32 +138,68 @@ const Set<String> forbiddenDependencyNames = {
 // Rule scans (GUARD-2 stubs — real scans land in GUARD-4 / GUARD-6)
 // ---------------------------------------------------------------------------
 
-/// `lib/` sites computing a colour-space conversion outside
+/// Sites under [roots] computing a colour-space conversion outside
 /// [conversionAuthorityFiles] (AC-16). Empty while the invariant holds.
 ///
-/// Stub: GUARD-6 implements the real scan.
-List<SourceOffender> conversionOffenders() => const <SourceOffender>[];
+/// [roots] defaults to [kDefaultSourceRoots] (the real `lib/` sweep); an AC test
+/// points it at the control fixtures to assert the rule flags a planted stray
+/// conversion. Stub: GUARD-6 implements the real scan (honouring [roots]).
+List<SourceOffender> conversionOffenders({
+  Iterable<String> roots = kDefaultSourceRoots,
+}) =>
+    const <SourceOffender>[];
 
-/// `lib/` sites computing a ΔE00 outside [deltaEAuthorityFiles] (AC-16). Empty
-/// while the invariant holds.
-///
-/// Stub: GUARD-6 implements the real scan.
-List<SourceOffender> deltaEOffenders() => const <SourceOffender>[];
-
-/// `lib/` sites using a platform-specific construct outside [nativeCaptureSeam]
-/// (AC-17). Empty while the invariant holds.
-///
-/// Stub: GUARD-6 implements the real scan.
-List<SourceOffender> platformOffenders() => const <SourceOffender>[];
-
-/// Resolved dependencies that appear in [forbiddenDependencyNames] (AC-7).
+/// Sites under [roots] computing a ΔE00 outside [deltaEAuthorityFiles] (AC-16).
 /// Empty while the invariant holds.
 ///
-/// Stub: GUARD-4 implements the real scan over the pubspec / lockfile.
-List<String> forbiddenDependencies() => const <String>[];
+/// [roots] defaults to [kDefaultSourceRoots]; an AC test points it at the
+/// control fixtures. Stub: GUARD-6 implements the real scan (honouring [roots]).
+List<SourceOffender> deltaEOffenders({
+  Iterable<String> roots = kDefaultSourceRoots,
+}) =>
+    const <SourceOffender>[];
 
-/// `lib/` sites that send data off the device without explicit opt-in consent
-/// (AC-8, D-6). Empty while the invariant holds.
+/// Sites under [roots] using a platform-specific construct outside
+/// [nativeCaptureSeam] (AC-17). Empty while the invariant holds.
 ///
-/// Stub: GUARD-4 implements the real scan.
-List<SourceOffender> offDeviceSenders() => const <SourceOffender>[];
+/// [roots] defaults to [kDefaultSourceRoots]; an AC test points it at the
+/// control fixtures. Stub: GUARD-6 implements the real scan (honouring [roots]).
+List<SourceOffender> platformOffenders({
+  Iterable<String> roots = kDefaultSourceRoots,
+}) =>
+    const <SourceOffender>[];
+
+/// Dependencies appearing in [forbiddenDependencyNames] (AC-7). Empty while the
+/// invariant holds.
+///
+/// Scans the resolved pubspec / lockfile by default; an AC test passes
+/// [resolvedNames] (e.g. the real set plus a planted forbidden package) to
+/// assert the rule flags it. Stub: GUARD-4 implements the real scan.
+List<String> forbiddenDependencies({Iterable<String>? resolvedNames}) =>
+    const <String>[];
+
+/// Sites under [roots] that send data off the device without explicit opt-in
+/// consent (AC-8, D-6). Empty while the invariant holds.
+///
+/// [roots] defaults to [kDefaultSourceRoots]; an AC test points it at the
+/// control fixtures. Stub: GUARD-4 implements the real scan (honouring [roots]).
+List<SourceOffender> offDeviceSenders({
+  Iterable<String> roots = kDefaultSourceRoots,
+}) =>
+    const <SourceOffender>[];
+
+/// Sites under [roots] that reference the concrete type [typeName] directly
+/// instead of its interface (AC-14 the mixing engine, AC-15 the CVD model).
+/// Empty while the invariant holds — a caller must depend on the interface, so
+/// the engine / model can be swapped without touching it.
+///
+/// The real scan (GUARD-5, using GUARD-6's scan infrastructure) excludes the
+/// type's own definition file and the single production wiring site; everything
+/// else referencing the concrete type is an offender. [roots] defaults to
+/// [kDefaultSourceRoots]; an AC test points it at the control fixtures to assert
+/// the rule flags a planted bound-to-concrete caller. Stub returns empty.
+List<SourceOffender> concreteTypeReferences(
+  String typeName, {
+  Iterable<String> roots = kDefaultSourceRoots,
+}) =>
+    const <SourceOffender>[];

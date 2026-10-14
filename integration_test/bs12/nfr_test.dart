@@ -16,11 +16,13 @@
 // tests and exits 0 (a false green).
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
+import 'package:paint_color_assistant/readout/name_header.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
 
 import 'nfr_harness.dart';
@@ -161,6 +163,285 @@ void main() {
       // the helper.
       await pumpAppWithSwaps(tester);
       expect(find.byType(MaterialApp), findsOneWidget);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // ITEST-2 — AC tests: the invariant guards (pending)
+  //
+  // AC-1,2,6 (offline / privacy over the real flows) grade A: each sweeps every
+  // core flow under the network block and is discriminated by the counting
+  // control (a deliberate touch must be recorded + refused — red until GUARD-3
+  // wires the sink). AC-7,8,16,17 (source-scan rules) and AC-14,15 (swap seams)
+  // are *limited* at this stage — the real scan / the caller-exercise land in
+  // GUARD-4 / GUARD-6 / GUARD-5 — so each is graded *B pending <phase>* with a
+  // Test-augmentations row, and fails red at baseline on its control Then.
+  // Every test is registered via [acTestWidgets]: skipped by default, run under
+  // `--dart-define=BS12_RUN_PENDING=true` (the red baseline).
+  // -------------------------------------------------------------------------
+  group('bs-12 acceptance criteria — invariant guards (ITEST-2)', () {
+    acTestWidgets('AC-1', 'every core function works with networking disabled',
+        (tester) async {
+      // Scenario: With networking disabled, every core function still works.
+      final sink = NetworkAttemptSink();
+      // When: run every core function under the network block; each assembles
+      // and runs from local data, reaching a working state.
+      await runUnderNetworkBlock(() async {
+        // Sweep every core flow (read-only launches — no navigation): each
+        // feature assembles and runs offline, reaching its screen / local state.
+        for (final flow in NfrFlow.values) {
+          final h = await givenTheApp(tester, flow: flow);
+          // Given: the flow opened through the production buildApp.
+          expect(find.byType(flowHome[flow]!), findsOneWidget,
+              reason: 'Given: ${flow.name} opened through buildApp offline');
+          switch (flow) {
+            case NfrFlow.readout:
+              expect(
+                  find.descendant(
+                      of: find.byKey(NameHeader.headerKey),
+                      matching: find.text(demoSample.name!)),
+                  findsOneWidget,
+                  reason: 'readout renders the reading offline');
+            case NfrFlow.recipes:
+              expect(h.recipeState.recipes, isNotEmpty,
+                  reason: 'recipe search returns candidates offline');
+            case NfrFlow.palette:
+              // The projects controller mounted and read its local catalogue
+              // offline (the getter resolves the read endpoint; default empty).
+              expect(h.projectController.projects, isEmpty,
+                  reason: 'projects load from local storage offline');
+            case NfrFlow.capture:
+            case NfrFlow.comparison:
+              break; // screen-present (above) is the offline-launch proof
+          }
+        }
+        // Depth, last: a capture commits a reading end to end offline. A commit
+        // pushes the Readout route, so it is the final launch (nothing after it).
+        final cap = await givenTheApp(tester, flow: NfrFlow.capture);
+        await cap.whenCaptureCommittedReading();
+        expect(cap.captureState.lastCommittedSample, isNotNull,
+            reason: 'a reading commits offline');
+      }, sink: sink);
+      // Then: no core function touched the network.
+      expect(sink.attempts, 0,
+          reason: 'a core function attempted a network connection');
+      // Control (G3/G5): the counter actually counts — a deliberate network
+      // touch is recorded and refused, so "zero attempts" above is meaningful.
+      await expectLater(
+          runUnderNetworkBlock(() async => HttpClient(), sink: sink),
+          throwsA(isA<NetworkBlockedException>()));
+      expect(sink.attempts, greaterThan(0),
+          reason: 'control: a network touch must be recorded + refused '
+              '(GUARD-3 wires the sink)');
+    });
+
+    acTestWidgets('AC-2', 'no core function blocks waiting on connectivity',
+        (tester) async {
+      // Scenario: No core function blocks on connectivity.
+      final sink = NetworkAttemptSink();
+      await runUnderNetworkBlock(() async {
+        for (final flow in NfrFlow.values) {
+          // When: the painter uses each core function. givenTheApp's
+          // pumpAndSettle completes — a flow that awaited a socket would hang
+          // here (settle would time out); reaching the assertion proves it did
+          // not block on connectivity.
+          final h = await givenTheApp(tester, flow: flow);
+          // Then: the flow completes deterministically to its screen.
+          expect(find.byType(flowHome[flow]!), findsOneWidget,
+              reason: '${flow.name} settled without blocking on connectivity');
+          expect(h.flow, flow);
+        }
+      }, sink: sink);
+      expect(sink.attempts, 0, reason: 'a flow attempted a network connection');
+      // Control: an operation that DOES require connectivity cannot complete —
+      // it is recorded and refused rather than silently waited on.
+      await expectLater(
+          runUnderNetworkBlock(() async => HttpClient(), sink: sink),
+          throwsA(isA<NetworkBlockedException>()));
+      expect(sink.attempts, greaterThan(0),
+          reason: 'control: a connectivity-dependent op must be recorded + '
+              'refused (GUARD-3 wires the sink)');
+    });
+
+    acTestWidgets('AC-6', 'photos and samples never leave the device',
+        (tester) async {
+      // Scenario: Photos and samples never leave the device.
+      final sink = NetworkAttemptSink();
+      Uint8List? exported;
+      await runUnderNetworkBlock(() async {
+        // Save + export: a locally-stored project exports to the on-device share
+        // sink — the only export destination, never a network sink.
+        final pal = await givenPaletteWithSeededProject(
+          tester,
+          pdfShareSink: (bytes, name) async => exported = bytes,
+        );
+        expect(
+            pal.projectController.projects.map((p) => p.name),
+            contains(nfrSeededProject.name),
+            reason: 'the project resolves from the local project source');
+        await pal.whenOpenAndExportProject(nfrSeededProject.name);
+        expect(pal.projectController.lastExport, isNotNull,
+            reason: 'export produced PDF bytes on-device');
+        // Reset the tree so the opened-project route is torn down before the
+        // next launch (a navigating action must not bleed into a fresh launch).
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+        // Capture, last: a committed reading is held in local controller state
+        // (a commit pushes the Readout route, so it is the final launch).
+        final cap = await givenTheApp(tester, flow: NfrFlow.capture);
+        await cap.whenCaptureCommittedReading();
+        expect(cap.captureState.lastCommittedSample, isNotNull,
+            reason: 'the captured sample is held locally');
+      }, sink: sink);
+      // Then: the export bytes went only to the on-device share sink…
+      expect(exported, isNotNull,
+          reason: 'export bytes were handed to the on-device share sink');
+      expect(String.fromCharCodes(exported!.take(5)), '%PDF-',
+          reason: 'the on-device sink received the real PDF document');
+      // …and nothing left the device.
+      expect(sink.attempts, 0, reason: 'an artefact was sent off-device');
+      // Control (G3/G5): the counter counts — a deliberate touch is recorded.
+      await expectLater(
+          runUnderNetworkBlock(() async => HttpClient(), sink: sink),
+          throwsA(isA<NetworkBlockedException>()));
+      expect(sink.attempts, greaterThan(0),
+          reason: 'control: a network touch must be recorded + refused '
+              '(GUARD-4 wires the sink)');
+    });
+
+    acTestWidgets('AC-7', 'there is no account and no telemetry in v1',
+        (tester) async {
+      // Scenario: There is no account and no telemetry in v1.
+      // Then (sweep): the resolved dependency set carries no forbidden package.
+      expect(forbiddenDependencies(), isEmpty,
+          reason: 'a forbidden analytics / account / telemetry package is '
+              'present in the resolved dependencies');
+      // …and no account surface is reachable from the running app.
+      await givenTheApp(tester);
+      expect(
+          find.textContaining(
+              RegExp(r'sign in|log in|create account|sign up',
+                  caseSensitive: false)),
+          findsNothing,
+          reason: 'no account / auth surface is reachable');
+      // Control (G5): a planted forbidden package name is flagged by the guard
+      // (B pending GUARD-4 — the real pubspec / lockfile scan).
+      expect(
+          forbiddenDependencies(
+              resolvedNames: const {'provider', 'drift', 'firebase_analytics'}),
+          contains('firebase_analytics'),
+          reason: 'control: the dependency guard must flag a forbidden package '
+              '(GUARD-4 implements the scan)');
+    });
+
+    acTestWidgets('AC-8', 'any future sync is opt-in and explicit',
+        (tester) async {
+      // Scenario: Any future sync is opt-in and explicit (D-6: no off-device
+      // path exists, and the guard defends that).
+      // Then (sweep): no off-device sender exists in lib/.
+      expect(offDeviceSenders(), isEmpty,
+          reason: 'an unconsented off-device send path exists in lib/');
+      // Control (G5): a planted unconsented off-device sender is flagged
+      // (B pending GUARD-4 — the real source scan).
+      expect(
+          offDeviceSenders(roots: const [kControlFixturesRoot])
+              .any((o) => o.path.contains('control_off_device_sender')),
+          isTrue,
+          reason: 'control: the off-device-sender guard must flag the planted '
+              'sender (GUARD-4 implements the scan)');
+    });
+
+    acTestWidgets('AC-14',
+        'the mixing engine can be replaced without touching its callers',
+        (tester) async {
+      // Scenario: The mixing engine can be replaced without touching its
+      // callers. When: the app is assembled with an alternate MixingEngine
+      // injected through AppDependencies.mixingEngine, and a recipe caller runs.
+      final alt = RecordingMixingEngine();
+      final h = await givenTheApp(tester, flow: NfrFlow.recipes, mixingEngine: alt);
+      // Then (dynamic — swap works): the recipe caller reached the engine only
+      // through the interface, driving the injected alternate and producing
+      // correct candidates with no change to caller code.
+      expect(alt.inverseCalls, greaterThan(0),
+          reason: 'a recipe caller must drive the injected engine through the '
+              'MixingEngine interface');
+      expect(h.recipeState.recipes, isNotEmpty,
+          reason: 'the callers produced recipes through the alternate engine');
+      // Then (static — no coupling): no lib/ caller references the concrete
+      // SubtractiveMixingEngine, so the swap needs no caller edit.
+      expect(concreteTypeReferences('SubtractiveMixingEngine'), isEmpty,
+          reason: 'a caller is bound to the concrete mixing engine');
+      // Control (G5, B pending GUARD-5): a planted caller bound to the concrete
+      // engine is flagged by the no-concrete-reference rule (the real scan lands
+      // with GUARD-6's scan infrastructure).
+      expect(
+          concreteTypeReferences('SubtractiveMixingEngine',
+                  roots: const [kControlFixturesRoot])
+              .any((o) => o.path.contains('control_bound_to_concrete')),
+          isTrue,
+          reason: 'control: the no-concrete-reference rule must flag the planted '
+              'bound-to-concrete caller (GUARD-5 wires the scan)');
+    });
+
+    acTestWidgets('AC-15',
+        'the CVD model can be replaced without touching its callers',
+        (tester) async {
+      // Scenario: The CVD model can be replaced without touching its callers.
+      // When: the app is assembled with an alternate ConfusionCheck injected
+      // through AppDependencies.confusionCheck.
+      final alt = RecordingConfusionCheck();
+      await pumpAppWithSwaps(tester, confusionCheck: alt);
+      expect(find.byType(MaterialApp), findsOneWidget,
+          reason: 'the real app assembles with the alternate model injected');
+      // Then: a CVD caller reaches the model only through the interface
+      // (B pending GUARD-5 — which drives the onboarding / compare / display
+      // callers through the seam).
+      expect(alt.confusableCalls, greaterThan(0),
+          reason: 'a CVD caller must drive the injected model through the '
+              'ConfusionCheck interface (GUARD-5 wires the caller exercise)');
+    });
+
+    acTestWidgets('AC-16',
+        'colour-science conversions come from one tested library',
+        (tester) async {
+      // Scenario: Colour-science conversions come from one tested library
+      // (D-4: one conversion authority, one ΔE authority).
+      // Then (sweep): no lib/ file computes a conversion or a ΔE outside them.
+      expect(conversionOffenders(), isEmpty,
+          reason: 'a stray colour-space conversion exists in lib/');
+      expect(deltaEOffenders(), isEmpty,
+          reason: 'a stray ΔE00 computation exists in lib/');
+      // Control (G5): the planted stray-maths fixture is flagged by both rules
+      // (B pending GUARD-6 — the real scan).
+      expect(
+          conversionOffenders(roots: const [kControlFixturesRoot])
+              .any((o) => o.path.contains('control_stray_colour_math')),
+          isTrue,
+          reason: 'control: the conversion rule must flag the planted stray '
+              'maths (GUARD-6 implements the scan)');
+      expect(
+          deltaEOffenders(roots: const [kControlFixturesRoot])
+              .any((o) => o.path.contains('control_stray_colour_math')),
+          isTrue,
+          reason: 'control: the ΔE rule must flag the planted stray maths '
+              '(GUARD-6 implements the scan)');
+    });
+
+    acTestWidgets('AC-17',
+        'only the native capture implementation differs per platform',
+        (tester) async {
+      // Scenario: Only the native capture implementation differs per platform.
+      // Then (sweep): no platform-conditional code outside lib/capture/source/.
+      expect(platformOffenders(), isEmpty,
+          reason: 'platform-conditional code exists outside the capture seam');
+      // Control (G5): the planted platform fixture is flagged (B pending
+      // GUARD-6 — the real scan).
+      expect(
+          platformOffenders(roots: const [kControlFixturesRoot])
+              .any((o) => o.path.contains('control_platform_dart')),
+          isTrue,
+          reason: 'control: the platform rule must flag the planted platform '
+              'code (GUARD-6 implements the scan)');
     });
   });
 

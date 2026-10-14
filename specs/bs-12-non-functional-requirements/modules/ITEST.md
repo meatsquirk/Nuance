@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅ done; next ITEST-2 ∥ ITEST-3 (share `nfr_test.dart` → sequence)
+**Status:** In progress — ITEST-1, ITEST-2 ✅ done; next ITEST-3 (shares `nfr_test.dart` w/ ITEST-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs12/nfr_harness.dart`, `integration_test/bs12/nfr_test.dart`. Consumes (does not own) the reusable guards in `integration_test/nfr/` (GUARD + QUALITY) and the `integration_test/bs12/pending.dart` gate (created by GUARD-1).
 **Depends on:** GUARD-2, QUALITY-1 (the shells) · **Blocks:** every behavior phase (via the test review G-2)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 7.3M | 17m 59s |
-| ITEST-2 | acceptance-tests | AC-1,2,6,7,8,14,15,16,17 (pending) | ⬜ Todo | | |
+| ITEST-2 | acceptance-tests | AC-1,2,6,7,8,14,15,16,17 (pending) | ✅ Done | 27.1M | 1h 00m (3h 13m) |
 | ITEST-3 | acceptance-tests | AC-3,4,9,10,11,12,13 (pending) | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -19,27 +19,29 @@
 - **Boundary:** the real app via `buildApp(AppDependencies(...))` across every feature entry present on `main`; real engines, `ColorScience`, `deltaE00`, capture controller, and a test-executor-backed `drift` store (on-device SQLite semantics without a device file). Fakes: `FakeSpeech`, `FakeHaptics`, the `networkBlock` `HttpOverrides`, and the swap doubles `altMixingEngine`/`altConfusionCheck`. The control fixtures are deliberate — they exist only to prove each guard discriminates. **No colour math faked.**
 - **Observation points:** the `networkBlock` attempt sink (AC-1/2/6/7/8); the feature read endpoints (flow completion, settling, out-of-gamut); `CaptureReadEndpoint` stated accuracy (AC-9); the single `deltaE00` over the synthetic set (AC-10/11/12); the source-guard offender lists (AC-16/17 + the AC-7/AC-8 dependency/path rules); `AppDependencies` call sites + source guard (AC-14/15); `Stopwatch` vs the CI budget (AC-3/4).
 - **Pending gate:** `integration_test/bs12/pending.dart` — a `const Map<String,String> pendingACs` (AC → owning phase) + `Set<String> behaviorPhases`, keyed to `BS12_RUN_PENDING` (compile-time `--dart-define=BS12_RUN_PENDING=true` OR host env `=1`, matching bs02/03/04). `acTestWidgets(acId, desc, body)` passes `skip:` from `pendingSkipReason`, so pending ACs are **skipped, never failed**, by default. Un-pend = delete that AC's map entry. **16 ACs pending** at GUARD-1; **AC-5 never enters the gate** (pure-manual, D-3).
+- **ITEST-2 harness additions** (`nfr_harness.dart`, ITEST-owned): `givenTheApp` gained pass-through optionals `paletteSource` (defaults to a seeded `nfrPalette` so the recipes flow returns candidates), `projectSource`, `sourcePhotoStore`, `pdfShareSink`; `NfrHarness` gained read-endpoint getters (`captureState`/`recipeState`/`projectController`) and when-actions (`whenLockCapture`/`whenCommitCapture`/`whenCaptureCommittedReading`/`whenOpenAndExportProject`); fixtures `nfrPalette` + `nfrSeededProject` + `givenPaletteWithSeededProject`; and the recording swap doubles `RecordingMixingEngine` / `RecordingConfusionCheck` (delegate to the shipped impls, count interface calls). A commit/navigation must be the final launch in a test — a navigating action bleeds into a subsequent fresh `pumpWidget` launch (observed), so AC-1/AC-6 isolate the capture-commit last (with a reset pump).
+- **Source-guard scan signatures** (`nfr/guards/source_guard.dart`, GUARD-owned — extended by ITEST-2 under the user-approved "B-pending via fixtures" decision, **kept stubbed**): every rule scan gained an optional planted-input argument the real scan (GUARD-4/5/6) must honour — `conversionOffenders`/`deltaEOffenders`/`platformOffenders`/`offDeviceSenders({Iterable<String> roots = kDefaultSourceRoots})`, `forbiddenDependencies({Iterable<String>? resolvedNames})`, and a new `concreteTypeReferences(String typeName, {roots})` (+ `ruleConcreteTypeReference`) for AC-14/15. An AC test points a rule at `kControlFixturesRoot` (`integration_test/nfr/fixtures/controls/`) to assert a planted offender is flagged; the real invariant sweep uses the default `lib/` root. Planted control fixtures: `control_off_device_sender.dart` (AC-8), `control_stray_colour_math.dart` (AC-16), `control_platform_dart.dart` (AC-17), `control_bound_to_concrete.dart` (AC-14).
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_OfflineCoreFunctionsWork | FAIL | Then: zero-attempts / flow terminal (offline guard stub) | GUARD-3 | A |
-| AC-2 | TestAC02_NoFunctionBlocksOnConnectivity | FAIL | Then: no-wait (stub) | GUARD-3 | A |
+| AC-1 | `acTestWidgets('AC-1', …)` | FAIL (as designed) | Then: control `sink.attempts > 0` (sink inert until GUARD-3); sweep of all 5 flows + capture-commit pass | GUARD-3 | A ✅ (ITEST-2) |
+| AC-2 | `acTestWidgets('AC-2', …)` | FAIL (as designed) | Then: control `sink.attempts > 0` (GUARD-3); 5-flow completion sweep passes | GUARD-3 | A ✅ (ITEST-2) |
 | AC-3 | TestAC03_ReadingSettlesWithIndicator | FAIL | Then: STABLE + budget (perf harness stub) | QUALITY-5 | A |
 | AC-4 | TestAC04_RecipeSearchReturnsTopCandidates | FAIL | Then: 3–5 + budget (stub) | QUALITY-5 | A |
-| AC-6 | TestAC06_PhotosAndSamplesStayOnDevice | FAIL | Then: zero-attempts + local-only (stub) | GUARD-4 | A |
-| AC-7 | TestAC07_NoAccountNoTelemetry | FAIL | Then: no forbidden dep (source guard stub) | GUARD-4 | A |
-| AC-8 | TestAC08_FutureSyncIsOptIn | FAIL | Then: no off-device sender (stub) | GUARD-4 | A |
+| AC-6 | `acTestWidgets('AC-6', …)` | FAIL (as designed) | Then: control `sink.attempts > 0` (GUARD-4); save+export (real `%PDF-` bytes to on-device sink) + capture-commit pass | GUARD-4 | A ✅ (ITEST-2) |
+| AC-7 | `acTestWidgets('AC-7', …)` | FAIL (as designed) | Then: control — `forbiddenDependencies(resolvedNames: {…,'firebase_analytics'})` flags it (scan stub); real-sweep isEmpty + no-account pass | GUARD-4 | B pending GUARD-4 (ITEST-2) |
+| AC-8 | `acTestWidgets('AC-8', …)` | FAIL (as designed) | Then: control — `offDeviceSenders(roots: [controls])` flags the planted sender (scan stub); real-sweep isEmpty passes | GUARD-4 | B pending GUARD-4 (ITEST-2) |
 | AC-9 | TestAC09_PoorConditionsDowngradeAccuracy | FAIL | Then: exposure/card downgrade (triggers absent) | QUALITY-2 | B pending QUALITY-2 |
 | AC-10 | TestAC10_CardControlledMeetsDeltaE3 | FAIL | Given: synthetic set absent | QUALITY-4 | B pending QUALITY-4 |
 | AC-11 | TestAC11_CardlessDaylightApproximateUnder8 | FAIL | Given: synthetic set absent | QUALITY-4 | B pending QUALITY-4 |
 | AC-12 | TestAC12_RecipePredictionUnder5InGamut | FAIL | Given: synthetic set absent | QUALITY-4 | B pending QUALITY-4 |
 | AC-13 | TestAC13_OutOfGamutNoFalseRecipe | FAIL | Then: identified + no-false-recipe (harness stub) | QUALITY-3 | A |
-| AC-14 | TestAC14_MixingEngineSwappable | FAIL | Then: callers-unchanged (swap harness stub) | GUARD-5 | B pending GUARD-5 |
-| AC-15 | TestAC15_CvdModelSwappable | FAIL | Then: callers-unchanged (stub) | GUARD-5 | B pending GUARD-5 |
-| AC-16 | TestAC16_OneColourScienceLibrary | FAIL | Then: zero offenders (source guard stub) | GUARD-6 | A |
-| AC-17 | TestAC17_OnlyNativeCaptureDiffersPerPlatform | FAIL | Then: zero offenders (stub) | GUARD-6 | A |
+| AC-14 | `acTestWidgets('AC-14', …)` | FAIL (as designed) | Then: static control — `concreteTypeReferences('SubtractiveMixingEngine', roots: [controls])` flags the planted bound-to-concrete caller (scan stub); **dynamic swap proof** (alt `inverseCalls > 0` + recipes via the alt) passes | GUARD-5 | B pending GUARD-5 (ITEST-2) |
+| AC-15 | `acTestWidgets('AC-15', …)` | FAIL (as designed) | Then: `confusableCalls > 0` — no primitive drives a CVD caller yet (GUARD-5 drives compare/display/onboarding) | GUARD-5 | B pending GUARD-5 (ITEST-2) |
+| AC-16 | `acTestWidgets('AC-16', …)` | FAIL (as designed) | Then: controls — `conversionOffenders`/`deltaEOffenders(roots: [controls])` flag the planted stray maths (scan stub); real-lib sweep isEmpty passes | GUARD-6 | B pending GUARD-6 (ITEST-2) |
+| AC-17 | `acTestWidgets('AC-17', …)` | FAIL (as designed) | Then: control — `platformOffenders(roots: [controls])` flags the planted platform code (scan stub); real-lib sweep isEmpty passes | GUARD-6 | B pending GUARD-6 (ITEST-2) |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
@@ -47,7 +49,12 @@
 |---|---|---|---|---|
 | TestAC09 | the exposure/card downgrade triggers don't exist yet, so only lighting discriminates | QUALITY-2 | assert all three poor conditions downgrade + `control_trustworthyPoor` rejected | ⬜ Open |
 | TestAC10/11/12 | `syntheticAccuracySet` + the accuracy harness are stubs | QUALITY-4 | the full synthetic set + the ΔE00 ≤ 3 / ≤ 8+approx / ≤ 5 asserts + perturbation controls | ⬜ Open |
-| TestAC14/15 | the swap injection path is stubbed (callers not yet exercised through the alt impl) | GUARD-5 | inject the alt impl + assert callers unchanged + `control_boundToConcrete` fails | ⬜ Open |
+| TestAC07 | `forbiddenDependencies()` is a stub (empty), so the real-sweep is vacuous and only the planted-name control discriminates | GUARD-4 | the real resolved-pubspec/lockfile scan honouring `resolvedNames`, so the sweep is real and the planted `firebase_analytics` is flagged | ⬜ Open |
+| TestAC08 | `offDeviceSenders()` is a stub (empty) | GUARD-4 | the real source scan honouring `roots`, so the sweep is real and `control_off_device_sender.dart` is flagged | ⬜ Open |
+| TestAC14 | the **dynamic** swap is proven today, but no source scan yet enforces the **static** "no caller references the concrete `SubtractiveMixingEngine`" guarantee — only the planted control discriminates | GUARD-5 (using GUARD-6's scan infra) | implement `concreteTypeReferences` so the real-lib sweep is a real scan and `control_bound_to_concrete.dart` is flagged | ⬜ Open |
+| TestAC15 | no harness primitive drives a CVD caller through the injected `ConfusionCheck` yet (needs a completed two-slot comparison / display flow) | GUARD-5 | drive a CVD caller so `confusableCalls > 0` + assert callers unchanged + the concrete `DichromatConfusionCheck` is not referenced by a caller | ⬜ Open |
+| TestAC16 | `conversionOffenders()`/`deltaEOffenders()` are stubs (empty) | GUARD-6 | the real conversion/ΔE source scans honouring `roots`, so the sweep is real and `control_stray_colour_math.dart` is flagged | ⬜ Open |
+| TestAC17 | `platformOffenders()` is a stub (empty) | GUARD-6 | the real platform source scan honouring `roots`, so the sweep is real and `control_platform_dart.dart` is flagged | ⬜ Open |
 
 ## Phase ITEST-1 — harness + smoke
 
@@ -83,6 +90,22 @@
 - **Target AC:** AC-1, AC-2, AC-6, AC-7, AC-8, AC-14, AC-15, AC-16, AC-17 (pending) · **Depends on:** ITEST-1 · **Blocks:** ITEST-4 · **seq w/ ITEST-3**
 - **Tasks:** write `TestAC01/02/06/07/08/14/15/16/17_*` per the master catalogue — each asserting the invariant holds over the real app/source **and** its control fixture fails. Run run-pending; record the red baseline.
 - **Exit criteria:** suite green with these pending; red baseline recorded (each fails on its Then or a Given naming its phase); grade gate (all A, or *B pending <phase>* with an augmentation row — AC-14/15 → B pending GUARD-5).
+- **Result (✅ Done 2026-10-13):**
+  - Nine *pending* AC tests added to `integration_test/bs12/nfr_test.dart` as `acTestWidgets('AC-n', …)` (group *bs-12 acceptance criteria — invariant guards (ITEST-2)*), each asserting its invariant over the **real** app/source **and** discriminated by a control that fails at baseline:
+    - **AC-1 / AC-2 / AC-6 (offline + privacy, grade A):** sweep every `NfrFlow` under `runUnderNetworkBlock` — AC-1 reaches a terminal state per flow (readout name shown, recipes non-empty, projects loaded, + a capture committed last), AC-2 proves each settles without blocking, AC-6 drives save+export (real `%PDF-` bytes to an on-device `pdfShareSink`) + a committed capture. Each asserts `sink.attempts == 0` and is discriminated by the **counting control** (`sink.attempts > 0` after a deliberate refused touch) — red until the owning phase wires `sink.record()`.
+    - **AC-7 / AC-8 (privacy source rules, B pending GUARD-4):** real-sweep `forbiddenDependencies()` / `offDeviceSenders()` isEmpty (+ no account surface); controls `forbiddenDependencies(resolvedNames: {…,'firebase_analytics'})` and `offDeviceSenders(roots: [controls])` flag the planted offender.
+    - **AC-14 / AC-15 (swap seams, B pending GUARD-5):** AC-14 drives the real recipe caller through an injected `RecordingMixingEngine` (dynamic swap proof — `inverseCalls > 0` + recipes, passes today) + a static control that a bound-to-concrete caller is flagged (`concreteTypeReferences`, red); AC-15 asserts a CVD caller drives an injected `RecordingConfusionCheck` (`confusableCalls > 0`, red — no primitive drives one yet).
+    - **AC-16 / AC-17 (one-library + portability, B pending GUARD-6):** real-lib sweeps isEmpty; controls over `kControlFixturesRoot` flag the planted stray-maths / platform fixtures.
+  - **Verification:** `flutter analyze` → No issues (whole project). Unit `flutter test --coverage` → **1228 passed** (unchanged — integration tests). Coverage gate (`dart run tool/coverage_gate.dart main`) → **100%** on the 2 touched `lib/` files (QUALITY-1's AC-9 seam; ITEST-2 touched no `lib/`). Acceptance (device lock, booted iPhone 17 sim): default `flutter test integration_test/bs12/nfr_test.dart -d <udid>` → **+15 pass / ~9 skipped / exit 0** (suite green, the 9 ACs pending); run-pending `--dart-define=BS12_RUN_PENDING=true` → **+15 / −9 / exit 1** — all 9 fail on exactly their control / limit Then naming the owning phase (clean red baseline).
+  - **Grade gate:** fresh independent adversarial subagent → **3 A / 6 B pending / 0 ordinary B — PASS** (A: AC-1/2/6; B pending GUARD-4: AC-7/8; GUARD-5: AC-14/15; GUARD-6: AC-16/17). The grader first flagged AC-14 as an ordinary B (its dynamic discriminator was drivable now); fixed by driving the recipes caller (dynamic proof) + a genuinely-pending static concrete-reference control, then re-verified → B pending GUARD-5. Grid: `../behavior-test-completeness-bs-12-non-functional-requirements.md` (§ ITEST-2).
+  - **Augmentations:** six open rows (AC-7/8 → GUARD-4; AC-14/15 → GUARD-5; AC-16/17 → GUARD-6) — see the Test augmentations table; each planted control fixture is in place.
+  - **Decision folded in:** per the user's "B-pending via fixtures" choice, the GUARD-owned source scans were extended with optional planted-input args (kept stubbed) + planted-offender fixtures under `integration_test/nfr/fixtures/controls/`; the four source-scan ACs grade *B pending* (not the plan's pre-seeded A), amended here.
+  - **Fix passes:** 2/3 — (1) AC-1/AC-6 re-ordered so the capture-commit is the final launch (a navigating action bled into the next fresh launch); (2) AC-14 reworked from ordinary-B to the dynamic-proof + static-control design.
+  - **Tokens / Time:** see Dashboard / master ledger (ITEST-2 row).
+- **Checkpoint / Handoff:**
+  - **Verification commands:** unchanged — `cd /Users/matthew.quirk/Nuance-bs12`; `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; acceptance via `FNP_COORD_REPO=/Users/matthew.quirk/Nuance <scripts>/coord.sh with-lock bs-12-non-functional-requirements <PHASE> --wait 900 -- bash -c 'cd …/Nuance-bs12 && export PATH=… && flutter test integration_test/bs12/nfr_test.dart -d <booted-udid> [--dart-define=BS12_RUN_PENDING=true]'` (shared device lane → lock mandatory; booted `-d` mandatory; whole-suite redirect to a file, don't tail).
+  - **Frozen for ITEST-3:** the harness surface above (import `nfr_harness.dart` alone). ITEST-3 writes `AC-3/4/9/10/11/12/13` in the **same** `nfr_test.dart` — **ITEST-2 and ITEST-3 share the file → ITEST-3 runs after ITEST-2 (done)**. The perf harness (`PerfHarness`, `kCaptureSettleCiBudget`, `isTopCandidateCount`, `kMin/MaxTopCandidates`) and accuracy harness + `syntheticAccuracySet` / `syntheticGamutTargets` are the ITEST-3 seams.
+  - **Known gaps / next:** **ITEST-3 is next** (AC-3,4,9,10,11,12,13), then ITEST-4 (test review = **G-2**). All GUARD/QUALITY behaviour phases stay blocked on G-2. The six B-pending augmentations are owed by GUARD-4/5/6; the source scans are stubs returning empty (real-lib sweeps pass vacuously) until then — their owning phase makes the sweep a real scan honouring the planted-input args. Env gotchas unchanged (no `timeout` on macOS; teardown race on full-suite runs — not hit this session; the `nfr_test.dart`-only runs here were clean).
 
 ## Phase ITEST-3 — AC tests: quality targets (pending)
 
