@@ -56,8 +56,14 @@ const Map<String, String> pendingACs = {
   // attempt, so each core flow sweeps offline (zero attempts) and the counter
   // control discriminates (a deliberate touch is recorded + refused).
   // Performance (AC-5 live-preview frame rate is manual — not here)
-  'AC-3': 'QUALITY-5', // reading settles within budget + visible indicator
-  'AC-4': 'QUALITY-5', // recipe search returns top 3–5 within budget
+  // AC-3, AC-4 un-pended by QUALITY-5: the reading settles to STABLE with the
+  // visible "SETTLING n/12 → STABLE 12/12" indicator and commits within the
+  // generous CI regression budget (AC-3); a recipe search returns 3–5 ranked
+  // candidates (`isTopCandidateCount`) + a solved result within the budget
+  // (AC-4). Both are satisfied by bs-02 (frame-settle) / bs-04 (`topK=5`)
+  // behaviour already on `main` — QUALITY-5 un-pends and guards them (green at
+  // baseline). The literal target-hardware ~1–2 s figures stay owner evidence
+  // at SIGNOFF-1 under G-3 (the CI budget is a regression ceiling, D-3).
   // Privacy & security — AC-6, AC-7, AC-8 un-pended by GUARD-4: every core flow
   // runs under the network block with zero attempts + local-only artefacts
   // (AC-6); the resolved dependency set carries no forbidden package and no

@@ -1,6 +1,6 @@
 # Module QUALITY — measured & behavioural targets (accuracy, performance, reliability)
 
-**Status:** In progress — QUALITY-1 + QUALITY-2 + QUALITY-3 + QUALITY-4 done (AC-9, AC-13, AC-10/11/12 delivered); only QUALITY-5 (AC-3/4) left — then SIGNOFF-1
+**Status:** ✅ Module complete — QUALITY-1..QUALITY-5 all done (AC-9, AC-13, AC-10/11/12, AC-3/4 delivered). Every automatable AC un-pended; pending map empty. Only SIGNOFF-1 (feature) left.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/quality/` (accuracy harness + `syntheticAccuracySet`, performance harness — reusable test-support), and the **one `lib/` product change**: the AC-9 downgrade seam/triggers in `lib/capture/` (`capture_accuracy.dart`, `capture_controller.dart`, and the live-view label surface). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart`.
 **Depends on:** GUARD (shells) · **Blocks:** SIGNOFF-1
@@ -13,7 +13,7 @@
 | QUALITY-2 | behavior | AC-9 | ✅ Done | 14.38M | 24m 36s |
 | QUALITY-3 | behavior | AC-13 | ✅ Done | 6.08M | 11m 42s |
 | QUALITY-4 | behavior | AC-10, AC-11, AC-12 | ✅ Done | 9.23M | 24m 28s |
-| QUALITY-5 | behavior | AC-3, AC-4 | ⬜ Todo | | |
+| QUALITY-5 | behavior | AC-3, AC-4 | ✅ Done | 4.59M | 11m 15s |
 
 ## Interface reconciliation
 
@@ -148,3 +148,20 @@
 - **Verification commands:** unchanged from QUALITY-2 (`cd /Users/matthew.quirk/Nuance-bs12`; `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` / `--dart-define=BS12_RUN_PENDING=true`). **bs-12 nfr runs on `-d flutter-tester` (host), no device lane.**
 - **Frozen:** AC-10/11/12 delivered + un-pended; `synthetic_accuracy_set.dart` + `accuracy_harness.dart` final for the accuracy ACs. All 16 automatable AC tests are now A (AC-3/4 green-at-baseline, un-pend+guard owed to QUALITY-5).
 - **Known gaps / next:** **QUALITY-5 (AC-3/4 performance — un-pend+guard, green at baseline)** is the ONLY behaviour phase left; it edits the shared `integration_test/bs12/pending.dart` (remove AC-3/4) + the `perf_harness`/`nfr_test.dart` guard. Then **SIGNOFF-1** (assemble packet + summary + fresh whole-suite re-grade; manual G-3 = AC-5 live-preview fps on device + AC-3/4 target-hardware ~1–2 s owner evidence). Pending map now holds only AC-3/4 (2 ACs).
+
+## QUALITY-5 — AC-3 + AC-4 performance (un-pend + guard)
+
+### Result (✅ Done 2026-10-14)
+
+- **Un-pend + guard only — no `lib/` change, no AC-test-body change.** AC-3 (a committed reading settles within budget with a visible indicator) and AC-4 (a recipe search returns 3–5 ranked candidates within budget) are satisfied by bs-02 (frame-settle + `CaptureLiveView.stabilityKey`/`CaptureState.stabilityText` "SETTLING n/12 → STABLE 12/12") and bs-04 (`MixOptions.topK=5` ranked search) already on `main`; QUALITY-5 un-pends their ITEST-3 tests and keeps them green. The AC-3/AC-4 `acTestWidgets` bodies are **byte-identical** to the A-graded ITEST-3 versions (confirmed `git diff` shows zero changes to their declarations) — they drive the real `buildApp` pipeline under `PerfHarness.measure(10 s generous CI regression budget)`, explicitly **not** the device ~1–2 s figure (owner evidence at SIGNOFF under G-3, D-3).
+- **AC-3/AC-4 un-pended** (`integration_test/bs12/pending.dart`); pending map 2→**0** — every automatable AC has now landed (AC-5 is pure-manual, never in the gate). Pending-gate guard updated in `nfr_test.dart`: `expectedPending` → empty, `expect(pendingACs.length, 0)`, added AC-3/AC-4 `containsKey`-false; the skip/run test reworked to assert the empty-map end state **non-vacuously** (asserts the map is empty, then that AC-3/AC-4 run in *both* modes and the ambient path agrees — a re-pend regression would fail here).
+- **Verification.** `flutter analyze` → No issues. Unit `flutter test --coverage` → **1233 pass** (unchanged — integration-test-only phase). Coverage gate `dart run tool/coverage_gate.dart main` → **100% on all touched files, PASS** (no `lib/` touched; the branch's merged-lib coverage holds). Acceptance `-d flutter-tester`: AC-3/AC-4 un-pended + **green**, default **33 pass / 0 skip / exit 0** (was 31/2); run-pending `--dart-define=BS12_RUN_PENDING=true` → **33 pass / 0 fail** (default == run-pending — nothing pending).
+- **Grade gate:** fresh independent grader (prior ITEST-3/QUALITY grid as context) → **2 A / 0 B — PASS**. AC-3/AC-4 re-confirmed **A** (green at baseline, no later-behaviour dependency); G1/G2/G4/G5/G6 ✓ — AC-3 rejects a static-placeholder/missing indicator, an unsettled or non-committing commit, and a pathological slowdown; AC-4 rejects <3/>5 candidates, an unsolved result, and a slow solve. The documented AC-3 auto-settle caveat (end-state observed, counter guarded by bs-02's own suite) is non-actionable and unchanged from the prior grid. No AC test weakened. Grid appended to `behavior-test-completeness-…md` (QUALITY-5 §).
+- **Augmentations:** none owed — AC-3/AC-4 were green-at-baseline A with no augmentation row (ITEST *Test augmentations* carries no AC-3/AC-4 entry).
+- **Fix passes:** 0/3 (analyze + unit + coverage + acceptance + grade all green first pass).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged (`cd /Users/matthew.quirk/Nuance-bs12`; `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` / `--dart-define=BS12_RUN_PENDING=true`). **bs-12 nfr runs on `-d flutter-tester` (host), no device lane.**
+- **Frozen:** QUALITY module complete — all 16 automatable AC tests A and un-pended; pending map empty; `perf_harness.dart` final (unchanged this phase — the AC-3/AC-4 tests are its guard). No behaviour phase remains.
+- **Known gaps / next:** **SIGNOFF-1** is the only phase left — assemble the sign-off packet + summary page + a fresh whole-suite re-grade, set `⏸ Awaiting sign-off`, STOP; a human records the decision via `/feature-next-phase --signoff bs12 approved | changes "<items>"`. SIGNOFF-1 also runs the pure-manual **G-3** gate: AC-5 live-preview frame rate on device + AC-3/AC-4 target-hardware ~1–2 s timings as owner evidence (D-3). Carried gaps: **D-2** (AC-10/11/12 proven against a synthetic, not physical, ground truth) and **D-3** (device timings) — both named in the packet. After sign-off, merge feat/bs-12→main via a throwaway worktree on main.

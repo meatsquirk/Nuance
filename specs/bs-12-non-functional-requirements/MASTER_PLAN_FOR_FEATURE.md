@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — GUARD module ✅ COMPLETE + QUALITY-2/3/4 ✅ done (AC-9, AC-13, AC-10/11/12 delivered; the one `lib/capture` change landed in QUALITY-2); 14 of 16 automatable ACs delivered; ONLY QUALITY-5 (AC-3/4 — un-pend+guard) left, then SIGNOFF-1
+**Status:** In progress — ⏭ **all behaviour done**: GUARD ✅ + QUALITY ✅ (QUALITY-5 AC-3/4 done 2026-10-14). All 16 automatable ACs delivered/un-pended; pending map empty; suite 33 pass / 0 skip. **Only SIGNOFF-1 left** (packet + summary + fresh whole-suite re-grade + pure-manual G-3 = AC-5 fps + AC-3/4 device timings).
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -45,8 +45,8 @@
 |---|---|---|---|---|
 | AC-1 | With networking disabled, every core function still works | ITEST-2 `TestAC01_OfflineCoreFunctionsWork` | GUARD-3 | ✅ Done (GUARD-3 2026-10-14; A) |
 | AC-2 | No core function blocks on connectivity | ITEST-2 `TestAC02_NoFunctionBlocksOnConnectivity` | GUARD-3 | ✅ Done (GUARD-3 2026-10-14; A) |
-| AC-3 | A committed reading settles within the budget with a visible indicator | ITEST-3 `TestAC03_ReadingSettlesWithIndicator` | QUALITY-5 | ⬜ Todo |
-| AC-4 | Recipe search returns within the budget | ITEST-3 `TestAC04_RecipeSearchReturnsTopCandidates` | QUALITY-5 | ⬜ Todo |
+| AC-3 | A committed reading settles within the budget with a visible indicator | ITEST-3 `TestAC03_ReadingSettlesWithIndicator` | QUALITY-5 | ✅ Done |
+| AC-4 | Recipe search returns within the budget | ITEST-3 `TestAC04_RecipeSearchReturnsTopCandidates` | QUALITY-5 | ✅ Done |
 | AC-5 | Live capture holds a usable preview frame rate | **manual gate (SIGNOFF-1, G-3)** — no automated test (D-3) | SIGNOFF-1 (user acceptance) | ⬜ Todo |
 | AC-6 | Photos and samples never leave the device | ITEST-2 `TestAC06_PhotosAndSamplesStayOnDevice` | GUARD-4 | ✅ Done (GUARD-4 2026-10-14; A) |
 | AC-7 | There is no account and no telemetry in v1 | ITEST-2 `TestAC07_NoAccountNoTelemetry` | GUARD-4 | ✅ Done (GUARD-4 2026-10-14; A) |
@@ -130,7 +130,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its gua
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | The invariant guards (reusable test-support, no product change): offline/network-block, privacy/telemetry, interface-swap, one-colour-library, platform | — | ✅ Done |
-| QUALITY | [modules/QUALITY.md](modules/QUALITY.md) | The measured/behavioural targets: synthetic accuracy (D-2), performance mechanism + CI budget (D-3), out-of-gamut, and the one `lib/` change — the AC-9 reliability downgrade fix (D-5) | GUARD (shells) | 🔄 In progress |
+| QUALITY | [modules/QUALITY.md](modules/QUALITY.md) | The measured/behavioural targets: synthetic accuracy (D-2), performance mechanism + CI budget (D-3), out-of-gamut, and the one `lib/` change — the AC-9 reliability downgrade fix (D-5) | GUARD (shells) | ✅ Done |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real flows + controls: one pending test per automated AC, and its review | GUARD-2, QUALITY-1 | ✅ Done (ITEST-1/2/3/4; G-2 approved 2026-10-14) |
 
 ## Dependency graph
@@ -182,18 +182,19 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | QUALITY-2 | AC-9 reliability fix: unlocked-exposure + missing-card downgrade triggers (`lib/capture`) | ✅ Done | 14.38M | 24m 36s | `commit()` downgrades to approximate on any `activeDowngradeReasons` (lighting/unlocked/no-card); live view surfaces the reason; un-pended AC-9; 3 bs-02 calibrate tests gained a `lock` precondition (D-5). analyze clean, unit 1233 (+5), coverage 100%/4 lib files, acceptance 27 pass/6 skip/exit 0; grade 1 A/0 (AC-9 B-pending→A) |
 | 13 | QUALITY-3 | AC-13 out-of-gamut: identified, no false recipe + in-gamut control | ✅ Done | 6.08M | 11m 42s | un-pend+guard (green at baseline, bs-04 ENGINE-5); no lib change; un-pended AC-13 (gate 6→5), guard updated; analyze clean, unit 1233, coverage 100% PASS, acceptance 28 pass/5 skip/exit 0 (run-pending 30/3 — the 3 are AC-10/11/12); grade 1 A/0 (AC-13 stays A) |
 | 14 | QUALITY-4 | AC-10+AC-11+AC-12 accuracy: synthetic held-out set fed through the real pipeline, independent ΔE00 ≤ 3 / ≤ 8+approx / ≤ 5 | ✅ Done | 9.23M | 24m 28s | full held-out set (≥3/condition) + perturbation + out-of-gamut controls; no lib change; un-pended AC-10/11/12 (gate 5→2), guard updated; analyze clean, unit 1233, coverage 100% PASS, acceptance 31 pass/2 skip/exit 0 (run-pending 33/0); grade 3 A/0 |
-| 15 | QUALITY-5 | AC-3+AC-4 performance: indicator+settle + top 3–5 + CI budget | ⬜ Next | | | ONLY behaviour phase left — un-pend+guard (AC-3/4 green at baseline); removes AC-3/4 from `pending.dart` + guards `perf_harness`/`nfr_test.dart` |
-| 16 | SIGNOFF-1 | sign-off: packet + summary + manual AC-5 (G-3) + AC-3/4 device evidence + human decision | ⬜ Todo | | | |
+| 15 | QUALITY-5 | AC-3+AC-4 performance: indicator+settle + top 3–5 + CI budget | ✅ Done | 4.59M | 11m 15s | un-pend+guard, no `lib/` + no AC-body change (AC-3/4 green at baseline, bs-02/bs-04); pending map 2→0 (empty); analyze clean, unit 1233, coverage 100% PASS, acceptance 33 pass/0 skip (default == run-pending 33/0); grade 2 A/0 |
+| 16 | SIGNOFF-1 | sign-off: packet + summary + manual AC-5 (G-3) + AC-3/4 device evidence + human decision | ⬜ Next | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**QUALITY-4 done 2026-10-14 (AC-10/11/12 ✅ accuracy — full synthetic held-out set fed through the REAL pipeline; grade 3 A/0).** Expanded `synthetic_accuracy_set.dart` (`HeldOutAccuracySample` + ≥3 samples/condition + perturbation controls) and `accuracy_harness.dart` (`gradeProduced`), and rewrote the AC-10/11/12 bodies to drive production `buildApp`: AC-10 card→calibrate→commit → ΔE00 ≤ 3 + `calibrated`; AC-11 card-less lock→commit → ΔE00 ≤ 8 + `approximate`; AC-12 real engine solve → best forward-mixed `predictedColor` ≤ ΔE00 5 + not out-of-gamut; each graded by the independent `referenceDeltaE00` with a discriminating control. No `lib/` change. Suite on **`-d flutter-tester`** (host): unit 1233/cov 100% PASS/acceptance **31 pass 2 skip** (run-pending **33/0**). Un-pended AC-10/11/12 (pending map 5→2). D-2 "synthetic ≠ physical ground truth" carried to sign-off.
+**QUALITY-5 done 2026-10-14 (AC-3/4 ✅ performance — un-pend + guard; grade 2 A/0). Behaviour stage COMPLETE.** Removed AC-3/AC-4 from `integration_test/bs12/pending.dart` (pending map 2→**0** — every automatable AC landed) and reworked the pending-gate guard in `nfr_test.dart` to assert the empty-map end state non-vacuously. **No `lib/` change, no AC-test-body change** — AC-3/AC-4 are satisfied by bs-02 (frame-settle + indicator) / bs-04 (`topK=5` search) already on `main` and drive the real `buildApp` under the generous hybrid CI budget (D-3, not the device ~1–2 s). Suite on **`-d flutter-tester`** (host): unit 1233/cov 100% PASS/acceptance **33 pass 0 skip** (default == run-pending 33/0).
 
-**ONLY QUALITY-5 left before sign-off (startable now):** QUALITY-5 (AC-3/4 performance — un-pend+guard, green at baseline) removes AC-3/4 from the shared `integration_test/bs12/pending.dart` and guards `perf_harness`/`nfr_test.dart`. Then SIGNOFF-1.
-- **No `lib/` change left** (QUALITY-2 was the only product edit); no further coverage-gated edits.
-- **G-3** (AC-5 live-preview frame rate on device + AC-3/AC-4 target-hardware ~1–2 s timings) stays a SIGNOFF-1 manual gate (D-3). Gaps carried to sign-off: D-2 (synthetic accuracy set) + D-3 (device timings).
+**ONLY SIGNOFF-1 left (startable now).** `/feature-next-phase bs12 SIGNOFF-1`: assemble the sign-off packet (`signoff/round-1.md`) + summary page + a **fresh whole-suite re-grade** of all 16 automatable AC tests, run the pure-manual **G-3** gate (AC-5 live-preview frame rate on device + AC-3/AC-4 target-hardware ~1–2 s timings as owner evidence, D-3), set `⏸ Awaiting sign-off`, and STOP. A human then records the decision via `/feature-next-phase --signoff bs12 approved | changes "<items>"`.
+- **No `lib/` change left** (QUALITY-2 was the only product edit); no behaviour phase remains.
+- Gaps carried to sign-off: **D-2** (AC-10/11/12 proven against a synthetic, not physical, ground truth) + **D-3** (AC-3/4/AC-5 device timings/frame rate — owner on-device evidence, G-3).
+- After sign-off, merge feat/bs-12→main via a throwaway worktree on main (primary checkout on feat/bs-04 has stale untracked specs that abort `checkout main`; `git merge -F <file>`, not stdin).
 
 ## Token usage
 
@@ -217,7 +218,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | QUALITY-2 | 8d5d640c | 2026-10-14 13:01 EDT | 13:25 | 24m 36s | 24m 36s | claude-opus-4-8 | 190 | 278,939 | 14,015,363 | 80,602 | 14,375,094 | AC-9 reliability downgrade delivered (the one lib/capture change): commit() downgrades to approximate on any active downgrade reason; live view surfaces the reason; un-pended AC-9; 3 bs-02 calibrate tests gained a lock precondition (D-5). analyze clean, unit 1233 (+5), coverage 100%/4 lib files, acceptance 27 pass/6 skip/exit 0; grade 1 A/0 (AC-9 B-pending->A) |
 | QUALITY-3 | 993443d0 | 2026-10-14 13:43 EDT | 13:54 | 11m 42s | 11m 42s | claude-opus-4-8 | 118 | 194,157 | 5,853,403 | 33,819 | 6,081,497 | AC-13 out-of-gamut un-pend+guard (green at baseline, bs-04 ENGINE-5); no lib change; un-pended AC-13 gate 6->5, guard updated; analyze clean, unit 1233, coverage 100% PASS, acceptance 28 pass/5 skip/exit 0 (run-pending 30/3 = AC-10/11/12); grade 1 A/0 |
 | QUALITY-4 | c663e4ac | 2026-10-14 14:15 EDT | 14:40 | 24m 28s | 24m 28s | claude-opus-4-8 | 138 | 278,416 | 8,878,962 | 68,075 | 9,225,591 | AC-10/11/12 accuracy un-pended via full synthetic held-out set fed through the real pipeline (independent referenceDeltaE00); ≥3/condition + perturbation + out-of-gamut controls; no lib change; analyze clean, unit 1233, coverage 100% PASS, acceptance 31 pass/2 skip/exit 0 (run-pending 33/0); grade 3 A / 0 B — PASS |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 14:40** | **10h 24m** | **5h 59m** |  | **2,096** | **4,096,424** | **142,879,099** | **1,036,019** | **148,013,638** |  |
+| QUALITY-5 | 8ddfc9c7 | 2026-10-14 14:45 EDT | 14:56 | 11m 15s | 11m 15s | claude-opus-4-8 | 94 | 183,462 | 4,377,119 | 34,276 | 4,594,951 | AC-3/4 performance un-pended (un-pend+guard, no lib/ + no AC-body change; green at baseline bs-02/bs-04); pending map 2->0 (empty); analyze clean, unit 1233, coverage 100% PASS, acceptance 33 pass/0 skip (default == run-pending 33/0); grade 2 A/0 - PASS |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 14:56** | **10h 36m** | **6h 10m** |  | **2,190** | **4,279,886** | **147,256,218** | **1,070,295** | **152,608,589** |  |
 
 ## Sign-off
 

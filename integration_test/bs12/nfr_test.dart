@@ -927,21 +927,22 @@ sdks:
     // AC-14 + AC-15 (swappable interfaces); GUARD-6 un-pended AC-16 + AC-17 (one
     // colour library + portability); QUALITY-2 un-pended AC-9 (reliability
     // downgrade); QUALITY-3 un-pended AC-13 (out-of-gamut); QUALITY-4 un-pended
-    // AC-10 + AC-11 + AC-12 (accuracy), so the gate now holds only the 2 ACs
-    // still owed to QUALITY-5 (AC-3/4).
+    // AC-10 + AC-11 + AC-12 (accuracy); QUALITY-5 un-pended AC-3 + AC-4
+    // (performance). Every automatable AC has now landed, so the gate is empty.
     final expectedPending = <String>{
-      'AC-3', 'AC-4', // AC-1/AC-2 (GUARD-3), AC-6/7/8 (GUARD-4),
-      // AC-14/AC-15 (GUARD-5), AC-16/AC-17 (GUARD-6), AC-9 (QUALITY-2),
-      // AC-13 (QUALITY-3), AC-10/11/12 (QUALITY-4) un-pended; AC-5 manual — absent
+      // empty — all 16 automatable ACs un-pended (AC-5 is pure-manual, absent)
     };
 
     test('the pending map is exactly the still-pending automatable ACs, each '
         'owned by a real behaviour phase', () {
       expect(pendingACs.keys.toSet(), expectedPending);
-      expect(pendingACs.length, 2);
-      // AC-1 + AC-2 (GUARD-3), AC-6 + AC-7 + AC-8 (GUARD-4), AC-14 + AC-15
-      // (GUARD-5), AC-16 + AC-17 (GUARD-6), AC-9 (QUALITY-2), AC-13 (QUALITY-3)
-      // and AC-10 + AC-11 + AC-12 (QUALITY-4) were un-pended and must not reappear.
+      expect(pendingACs.length, 0);
+      // Every automatable AC was un-pended by its owning phase and must not
+      // reappear: AC-1 + AC-2 (GUARD-3), AC-3 + AC-4 (QUALITY-5), AC-6 + AC-7 +
+      // AC-8 (GUARD-4), AC-9 (QUALITY-2), AC-10 + AC-11 + AC-12 (QUALITY-4),
+      // AC-13 (QUALITY-3), AC-14 + AC-15 (GUARD-5), AC-16 + AC-17 (GUARD-6).
+      expect(pendingACs.containsKey('AC-3'), isFalse);
+      expect(pendingACs.containsKey('AC-4'), isFalse);
       expect(pendingACs.containsKey('AC-1'), isFalse);
       expect(pendingACs.containsKey('AC-2'), isFalse);
       expect(pendingACs.containsKey('AC-6'), isFalse);
@@ -971,31 +972,33 @@ sdks:
       }
     });
 
-    test('the gate skips every pending AC by default and runs it in run-pending '
-        'mode', () {
+    test('with every automatable AC un-pended, the gate skips nothing and runs '
+        'every AC in both modes', () {
+      // The pending map is now empty (asserted by the sibling test), so this
+      // loop is intentionally over an empty set — it still holds the invariant
+      // that any residual pending AC would skip by default and run under the
+      // flag, but the live assertions below are on the un-pended end state.
+      expect(pendingACs, isEmpty);
       for (final ac in pendingACs.keys) {
-        expect(
-          pendingSkipReason(ac, forceRunPending: false),
-          isNotNull,
-          reason: '$ac is pending and must be skipped in the default run',
-        );
-        expect(
-          pendingSkipReason(ac, forceRunPending: true),
-          isNull,
-          reason: '$ac must execute in run-pending mode (the red baseline)',
-        );
+        expect(pendingSkipReason(ac, forceRunPending: false), isNotNull);
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull);
+      }
+      // QUALITY-5's ACs (AC-3, AC-4) are now un-pended, so they run in *both*
+      // modes — the end state every behaviour phase moved its AC toward (and a
+      // regression that re-pended either would fail here).
+      for (final ac in const ['AC-3', 'AC-4']) {
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is un-pended and must run in the default run');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac is un-pended and must run in run-pending mode');
+        // The ambient path (used by acTestWidgets) agrees with the current mode.
+        expect(pendingSkipReason(ac),
+            pendingSkipReason(ac, forceRunPending: runPending));
       }
       // An AC absent from the map always runs, in either mode — the un-pended
-      // end state each behaviour phase moves its AC toward.
+      // end state each behaviour phase moved its AC toward.
       expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
-      // The ambient path (used by acTestWidgets) agrees with the current mode.
-      // AC-3 is still pending (AC-1/AC-2 were un-pended by GUARD-3), so this
-      // exercises the ambient path on a genuinely-pending AC.
-      expect(
-        pendingSkipReason('AC-3'),
-        pendingSkipReason('AC-3', forceRunPending: runPending),
-      );
     });
   });
 
