@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'capture_controller.dart';
 import 'capture_controls.dart';
+import 'capture_current_reading.dart';
 import 'capture_live_view.dart';
 import 'capture_readings_list.dart';
 
@@ -44,6 +45,13 @@ class CaptureScreen extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // bs-10 live reading swatch (AC-9): the colour under the
+                      // reticle, routed through the shared ColorChip chokepoint
+                      // so daltonization reaches the Capture screen too; absent
+                      // until a colour is sampled.
+                      CaptureCurrentReading(
+                        sample: controller.state.currentSample,
+                      ),
                       // bs-09 multi-point readings region (AC-3/AC-4); empty
                       // until points are sampled (CAPTURE-4).
                       CaptureReadingsList(

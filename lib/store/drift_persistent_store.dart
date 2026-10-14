@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 
 import 'app_database.dart';
 import 'persistent_store.dart';
@@ -16,7 +17,7 @@ import 'persistent_store.dart';
 /// application-data file; that file/native binding is the platform-wiring step
 /// the first consumer (PALETTE-1/PROJECT-1) adds, kept out of this pure-Dart
 /// component as bs-02 kept native capture out of `SoftwareCaptureSource`.
-class DriftPersistentStore implements PersistentStore {
+class DriftPersistentStore with ChangeNotifier implements PersistentStore {
   /// Opens the store over [executor] (e.g. a `NativeDatabase` over a file).
   DriftPersistentStore(QueryExecutor executor) : _db = AppDatabase(executor);
 
@@ -25,6 +26,9 @@ class DriftPersistentStore implements PersistentStore {
   DriftPersistentStore.memory() : _db = AppDatabase(NativeDatabase.memory());
 
   final AppDatabase _db;
+
+  @override
+  Listenable get changes => this;
 
   @override
   Future<void> put(
@@ -39,6 +43,7 @@ class DriftPersistentStore implements PersistentStore {
             body: jsonEncode(data),
           ),
         );
+    notifyListeners();
   }
 
   @override
@@ -65,6 +70,7 @@ class DriftPersistentStore implements PersistentStore {
     await (_db.delete(_db.documents)
           ..where((t) => t.collection.equals(collection) & t.id.equals(id)))
         .go();
+    notifyListeners();
   }
 
   @override

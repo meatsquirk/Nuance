@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../a11y/cvd/cvd_profile.dart';
+import '../app/build_app.dart';
 import '../display/color_simulation.dart';
 import '../display/display_scope.dart';
 import '../display/display_settings.dart';
@@ -41,11 +43,19 @@ class ColorChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings =
         DisplayScope.maybeOf(context)?.settings ?? const DisplaySettings();
-    // The swatch(es) to draw: the displayed colour (the simulation of [color],
-    // which is [color] itself when simulation is off — AC-2), and, when a
-    // simulation is on, the untouched original shown alongside it (AC-3).
+    // The painter's stored profile drives the daltonization remap (bs-10 D-3);
+    // the deutan default matches `AppDependencies.cvdProfile` and is used only
+    // when a `ColorChip` renders standalone (no `AppScope` above it) — where
+    // daltonization is off anyway, so the fallback never alters a swatch.
+    final profile =
+        AppScope.maybeOf(context)?.cvdProfile ??
+            const CvdProfile(type: CvdType.deutan);
+    // The swatch(es) to draw: the displayed colour (the simulation or
+    // daltonization of [color] through the one chokepoint, which is [color]
+    // itself while both views are off — AC-2), and, when a simulation is on,
+    // the untouched original shown alongside it (AC-3).
     final swatches = <Color>[
-      if (color != null) simulateColor(color!, settings),
+      if (color != null) displayedSwatchColor(color!, settings, profile),
       if (color != null && settings.simulationOn) color!,
     ];
     return Semantics(

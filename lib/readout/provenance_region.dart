@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/provenance.dart';
+import '../widgets/provenance_icon.dart';
 import 'readout_controller.dart';
 
 /// The provenance region: states where the reading came from and how far to
@@ -74,12 +75,27 @@ class ProvenanceRegion extends StatelessWidget {
       key: regionKey,
       label: note == null ? label : '$label. $note',
       excludeSemantics: true,
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label),
-          if (note != null) Text(note),
+          // The tier's glyph (and its decorative, remappable tint) — the tier
+          // reads from the icon + label, never from colour alone (AC-4).
+          ProvenanceIcon(tier: provenance.tier),
+          const SizedBox(width: 8),
+          // Flexible so a long caveat note wraps within the available width
+          // instead of overflowing the row (SI Accessibility: the caveat must
+          // stay visible, never clipped).
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label),
+                if (note != null) Text(note),
+              ],
+            ),
+          ),
         ],
       ),
     );

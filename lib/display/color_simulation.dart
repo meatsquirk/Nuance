@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../a11y/cvd/confusion_check.dart';
 import '../a11y/cvd/cvd_profile.dart';
+import '../a11y/cvd/daltonize.dart';
 import '../color_science/color_science.dart';
 import '../color_science/conversions.dart';
 import 'display_settings.dart';
@@ -42,3 +43,28 @@ Color simulateColor(Color original, DisplaySettings settings) {
   final srgb = labToSrgb(projected);
   return Color.fromARGB(255, srgb.red, srgb.green, srgb.blue);
 }
+
+/// The swatch colour the render chokepoint displays for a true [original] under
+/// [settings], for a painter with [profile] — the **one** display-transform
+/// decision every colour surface shares (bs-08 D-4 + bs-10 D-1).
+///
+/// The two CVD view modes are distinct (bs-10 AC-7) and resolved here, in one
+/// place, so `ColorChip` and the read endpoint always agree on the displayed
+/// colour:
+///
+/// * [DisplaySettings.daltonization] on → the bs-10 remap that pushes confusable
+///   colours apart, [daltonizeColor] for the painter's stored [profile];
+/// * otherwise → the bs-08 simulation, [simulateColor] (itself the identity when
+///   no [DisplaySettings.simulationType] is set — the shipped trichromat view).
+///
+/// Both transforms are identity in the shells (DALT-2 / DISPLAY-2 off), so the
+/// displayed colour equals [original] until the behaviour phases fill the
+/// bodies; the callers never change.
+Color displayedSwatchColor(
+  Color original,
+  DisplaySettings settings,
+  CvdProfile profile,
+) =>
+    settings.daltonization
+        ? daltonizeColor(original, profile)
+        : simulateColor(original, settings);

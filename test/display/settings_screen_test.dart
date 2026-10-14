@@ -5,22 +5,32 @@ import 'package:paint_color_assistant/display/display_controller.dart';
 import 'package:paint_color_assistant/display/display_scope.dart';
 import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/display/settings_screen.dart';
+import 'package:paint_color_assistant/onboarding/cvd_profile_read_endpoint.dart';
+import 'package:paint_color_assistant/store/cvd_profile_store.dart';
+import 'package:paint_color_assistant/store/persistent_store.dart';
 
 /// Pumps the settings panel over a [DisplayScope] exposing [controller], so the
 /// panel reads the live controller exactly as it does under `buildApp`.
+///
+/// When [profileStore] is given it is exposed above the panel through a
+/// [CvdProfileReadEndpoint], exactly as `buildApp` mounts one at the app root,
+/// so the no-saved-profile region (bs-10 AC-10) can consult it; omitted, the
+/// panel runs with no profile store (a standalone-surface test).
 Future<void> _pumpPanel(
   WidgetTester tester,
   DisplayController controller, {
   VoidCallback? onClose,
-}) =>
-    tester.pumpWidget(
-      MaterialApp(
-        home: DisplayScope(
-          controller: controller,
-          child: DisplaySettingsScreen(onClose: onClose ?? () {}),
-        ),
-      ),
-    );
+  CvdProfileStore? profileStore,
+}) {
+  Widget panel = DisplayScope(
+    controller: controller,
+    child: DisplaySettingsScreen(onClose: onClose ?? () {}),
+  );
+  if (profileStore != null) {
+    panel = CvdProfileReadEndpoint(store: profileStore, child: panel);
+  }
+  return tester.pumpWidget(MaterialApp(home: panel));
+}
 
 void main() {
   group('DisplaySettingsButton (E2)', () {
@@ -131,6 +141,99 @@ void main() {
       expect(controller.settings.grayscale, isTrue);
     });
 
+    testWidgets('the daltonization toggle drives setDaltonization (both ways)',
+        (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      await _pumpPanel(tester, controller);
+
+      // The switch reflects the (default off) setting and is findable.
+      final tile = tester.widget<SwitchListTile>(
+        find.byKey(DisplaySettingsScreen.daltonizationKey),
+      );
+      expect(tile.value, isFalse);
+
+      // On, then off — covers both branches of setDaltonization's no-op guard.
+      expect(controller.settings.daltonization, isFalse);
+      await tester.tap(find.byKey(DisplaySettingsScreen.daltonizationKey));
+      await tester.pump();
+      expect(controller.settings.daltonization, isTrue);
+      // The other axes are untouched — daltonization stands alone (D-3/D-5).
+      expect(controller.settings.simulationType, isNull);
+      expect(controller.settings.grayscale, isFalse);
+
+      await tester.tap(find.byKey(DisplaySettingsScreen.daltonizationKey));
+      await tester.pump();
+      expect(controller.settings.daltonization, isFalse);
+    });
+
+    testWidgets('the no-saved-profile region is reachable and, with no store '
+        'mounted, shows no prompt', (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      // No profile store mounted (a standalone-surface test): the region is
+      // present and keyed, but shows no prompt (no profile concept here).
+      await _pumpPanel(tester, controller);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+          matching: find.byType(Text),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('with no saved profile it prompts for a self-assessment '
+        '(AC-10)', (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      // An empty profile store: nothing saved, so the control prompts for a
+      // self-assessment rather than remapping against the const default (D-4).
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      await _pumpPanel(tester, controller, profileStore: store);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+          matching:
+              find.textContaining(RegExp('self-assessment', caseSensitive: false)),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('with a saved profile the self-assessment prompt is absent '
+        '(AC-10 control)', (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      await store.save(const CvdProfile(type: CvdType.deutan, severity: 0.6));
+      await _pumpPanel(tester, controller, profileStore: store);
+      await tester.pumpAndSettle();
+
+      // The region is still present (keyed) but carries no prompt — the remap
+      // applies off the saved profile.
+      expect(
+        find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+          matching:
+              find.textContaining(RegExp('self-assessment', caseSensitive: false)),
+        ),
+        findsNothing,
+      );
+    });
+
     testWidgets('the severity slider drives setSimulationSeverity over 0..1',
         (tester) async {
       final controller = DisplayController(
@@ -194,6 +297,10 @@ void main() {
           const ValueKey('display-e48-severity'));
       expect(
           DisplaySettingsScreen.themeKey, const ValueKey('display-theme'));
+      expect(DisplaySettingsScreen.daltonizationKey,
+          const ValueKey('display-bs10-daltonization'));
+      expect(DisplaySettingsScreen.noProfileRegionKey,
+          const ValueKey('display-bs10-no-profile'));
       expect(DisplaySettingsScreen.simulationOptionKey(CvdType.deutan),
           const ValueKey('display-e47-sim-deutan'));
       expect(DisplaySettingsScreen.simulationOptionKey(null),

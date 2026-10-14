@@ -134,5 +134,49 @@ void main() {
           reason: 'grayscale off leaves the simulation off (never re-enabled)');
       controller.dispose();
     });
+
+    // bs-10 DALT-2: daltonization is an independent display control.
+    test('setDaltonization toggles the flag and notifies', () {
+      final controller = DisplayController();
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.setDaltonization(true);
+      expect(controller.settings.daltonization, isTrue);
+      expect(notifications, 1);
+
+      controller.setDaltonization(false);
+      expect(controller.settings.daltonization, isFalse);
+      expect(notifications, 2);
+      controller.dispose();
+    });
+
+    test('setDaltonization is a no-op when unchanged', () {
+      final controller = DisplayController();
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+      controller.setDaltonization(false); // already false
+      expect(notifications, 0);
+      controller.dispose();
+    });
+
+    test(
+      'daltonization stands on its own axis — it does not clear simulation or '
+      'grayscale, and the other setters preserve it',
+      () {
+        final controller = DisplayController()..setDaltonization(true);
+        // The other display controls leave daltonization intact.
+        controller.setSimulationType(CvdType.protan);
+        expect(controller.settings.daltonization, isTrue);
+        expect(controller.settings.simulationType, CvdType.protan,
+            reason: 'daltonization does not clear an active simulation');
+        controller.setSimulationSeverity(0.5);
+        expect(controller.settings.daltonization, isTrue);
+        controller.setGrayscale(true);
+        expect(controller.settings.daltonization, isTrue,
+            reason: 'turning grayscale on leaves daltonization on');
+        controller.dispose();
+      },
+    );
   });
 }

@@ -47,6 +47,7 @@ class DisplayController extends ChangeNotifier {
       simulationType: type,
       simulationSeverity: _settings.simulationSeverity,
       grayscale: _settings.grayscale,
+      daltonization: _settings.daltonization,
     );
     notifyListeners();
   }
@@ -59,6 +60,7 @@ class DisplayController extends ChangeNotifier {
       simulationType: _settings.simulationType,
       simulationSeverity: severity,
       grayscale: _settings.grayscale,
+      daltonization: _settings.daltonization,
     );
     notifyListeners();
   }
@@ -76,6 +78,26 @@ class DisplayController extends ChangeNotifier {
       simulationType: grayscale ? null : _settings.simulationType,
       simulationSeverity: _settings.simulationSeverity,
       grayscale: grayscale,
+      daltonization: _settings.daltonization,
+    );
+    notifyListeners();
+  }
+
+  /// Turns the display-only daltonization remap on or off (bs-10) and notifies
+  /// listeners. A no-op when unchanged.
+  ///
+  /// An independent control: unlike grayscale and simulation (mutually
+  /// exclusive, D-3), daltonization stands on its own axis — it remaps every
+  /// swatch at the one display chokepoint to aid distinction, reading the
+  /// painter's stored profile (bs-10 D-3), and leaves the other display fields
+  /// untouched. Inert in this shell (the remap is identity until DALT-3).
+  void setDaltonization(bool daltonization) {
+    if (daltonization == _settings.daltonization) return;
+    _settings = DisplaySettings(
+      simulationType: _settings.simulationType,
+      simulationSeverity: _settings.simulationSeverity,
+      grayscale: _settings.grayscale,
+      daltonization: daltonization,
     );
     notifyListeners();
   }

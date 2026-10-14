@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../a11y/cvd/confusion_check.dart';
@@ -29,6 +31,7 @@ import '../compare/sample_source.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
+import '../onboarding/cvd_profile_read_endpoint.dart';
 import '../palette/palette_controller.dart';
 import '../palette/palette_read_endpoint.dart';
 import '../palette/palette_screen.dart';
@@ -405,6 +408,13 @@ class AppScope extends InheritedWidget {
     return scope!.dependencies;
   }
 
+  /// The [AppDependencies] from the nearest enclosing [AppScope], or null when
+  /// there is none above [context] — for surfaces (such as `ColorChip`) that
+  /// must also render standalone, outside the app assembly, where they fall
+  /// back to a default (e.g. the stored CVD profile for daltonization, bs-10).
+  static AppDependencies? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppScope>()?.dependencies;
+
   @override
   bool updateShouldNotify(AppScope oldWidget) =>
       dependencies != oldWidget.dependencies;
@@ -487,10 +497,50 @@ class _AppState extends State<_App> {
   /// confusion check and the bs-08/bs-10 projection reconfigure immediately.
   late CvdProfile _profile = widget.deps.cvdProfile;
 
+  /// The profile store the live pipeline re-reads on a saved change (bs-10
+  /// DALT-11, AC-6), or null when no persistence is wired (bare unit trees).
+  CvdProfileStore? _profileStore;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to the stored profile so a save recomputes the live pipeline even
+    // when it is written straight to the store rather than through the
+    // onboarding callback (AC-6) — the acceptance path that bypasses
+    // [LiveProfileScope]. Production saves go through both paths; the re-read is
+    // idempotent, so the extra signal never double-applies a change.
+    final store = widget.deps.store;
+    if (store != null) {
+      _profileStore = CvdProfileStore(store);
+      _profileStore!.changes.addListener(_handleStoreChanged);
+    }
+  }
+
   /// Replaces the live profile with the one a save just wrote (AC-13), rebuilding
   /// the tree so later-built CVD consumers read the measured profile.
   void _handleProfileSaved(CvdProfile profile) {
     setState(() => _profile = profile);
+  }
+
+  /// Re-reads the saved profile when the store changes, so a saved
+  /// deutan→protan change recomputes the live daltonization remap (AC-6).
+  void _handleStoreChanged() {
+    unawaited(_reloadProfile());
+  }
+
+  /// Loads the current saved profile and adopts it when it differs from the live
+  /// one; falls back to the injected default when the store was cleared.
+  Future<void> _reloadProfile() async {
+    final loaded = await _profileStore!.load();
+    if (!mounted) return;
+    final next = loaded ?? widget.deps.cvdProfile;
+    if (next != _profile) setState(() => _profile = next);
+  }
+
+  @override
+  void dispose() {
+    _profileStore?.changes.removeListener(_handleStoreChanged);
+    super.dispose();
   }
 
   @override
@@ -502,29 +552,40 @@ class _AppState extends State<_App> {
     final deps = _profile == widget.deps.cvdProfile
         ? widget.deps
         : widget.deps.withCvdProfile(_profile);
+    Widget tree = _DisplayRoot(
+      injectedController: widget.deps.displayController,
+      defaultSimulationType: widget.deps.cvdProfile.type,
+      child: _SpeechRoot(
+        speech: widget.speech,
+        owns: widget.ownsSpeech,
+        child: MaterialApp(
+          title: 'Paint Color Assistant',
+          theme: ThemeData(useMaterial3: true),
+          // The shared app chrome: the open-display-settings entry (E2) on
+          // every screen (SETTINGS-1) and, beneath it, the persistent
+          // spoken-output panel (E50 — SPEECH-1) that replays the last
+          // utterance.
+          builder: (context, child) =>
+              DisplayChrome(child: _SpokenOutputChrome(child: child!)),
+          home: _home(deps),
+        ),
+      ),
+    );
+    // bs-10 CONTROL-2: expose the saved-profile store to the whole app (above
+    // the MaterialApp, so the settings panel in the chrome's builder reads it)
+    // so the daltonization control can prompt for a self-assessment when nothing
+    // is saved (AC-10). Unkeyed, so the self-assessment suite's keyed-endpoint
+    // finder still resolves to the onboarding host's. Absent when no store is
+    // wired (bare unit trees) — the control then shows no prompt.
+    final profileStore = _profileStore;
+    if (profileStore != null) {
+      tree = CvdProfileReadEndpoint(store: profileStore, child: tree);
+    }
     return AppScope(
       dependencies: deps,
       child: LiveProfileScope(
         onProfileSaved: _handleProfileSaved,
-        child: _DisplayRoot(
-          injectedController: widget.deps.displayController,
-          defaultSimulationType: widget.deps.cvdProfile.type,
-          child: _SpeechRoot(
-            speech: widget.speech,
-            owns: widget.ownsSpeech,
-            child: MaterialApp(
-              title: 'Paint Color Assistant',
-              theme: ThemeData(useMaterial3: true),
-              // The shared app chrome: the open-display-settings entry (E2) on
-              // every screen (SETTINGS-1) and, beneath it, the persistent
-              // spoken-output panel (E50 — SPEECH-1) that replays the last
-              // utterance.
-              builder: (context, child) =>
-                  DisplayChrome(child: _SpokenOutputChrome(child: child!)),
-              home: _home(deps),
-            ),
-          ),
-        ),
+        child: tree,
       ),
     );
   }

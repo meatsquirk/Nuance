@@ -21,6 +21,7 @@ class DisplaySettings {
     this.simulationType,
     this.simulationSeverity = 1.0,
     this.grayscale = false,
+    this.daltonization = false,
   });
 
   /// The CVD class the painter is viewing the app through, or null when
@@ -39,6 +40,15 @@ class DisplaySettings {
   /// simulation (D-3), a rule [DisplayController] enforces.
   final bool grayscale;
 
+  /// Whether the display-only daltonization remap is on — the bs-10 view that
+  /// pushes confusable colours apart so the painter can tell them apart,
+  /// applied to every swatch at the one display chokepoint (bs-10 D-1).
+  ///
+  /// Distinct from [simulationType] (how the painter *sees* a colour, bs-08):
+  /// daltonization *remaps* the colour to aid distinction, reading the painter's
+  /// stored profile (bs-10 D-3). Off by default — the shipped view is untouched.
+  final bool daltonization;
+
   /// Whether a CVD simulation is active (⇔ [simulationType] is non-null).
   bool get simulationOn => simulationType != null;
 
@@ -47,14 +57,16 @@ class DisplaySettings {
       other is DisplaySettings &&
       other.simulationType == simulationType &&
       other.simulationSeverity == simulationSeverity &&
-      other.grayscale == grayscale;
+      other.grayscale == grayscale &&
+      other.daltonization == daltonization;
 
   @override
   int get hashCode =>
-      Object.hash(simulationType, simulationSeverity, grayscale);
+      Object.hash(simulationType, simulationSeverity, grayscale, daltonization);
 
   @override
   String toString() =>
       'DisplaySettings(simulationType: $simulationType, '
-      'simulationSeverity: $simulationSeverity, grayscale: $grayscale)';
+      'simulationSeverity: $simulationSeverity, grayscale: $grayscale, '
+      'daltonization: $daltonization)';
 }

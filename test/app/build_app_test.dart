@@ -27,6 +27,7 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/onboarding/cvd_profile_read_endpoint.dart';
 import 'package:paint_color_assistant/onboarding/onboarding_read_endpoint.dart';
 import 'package:paint_color_assistant/palette/palette_read_endpoint.dart';
 import 'package:paint_color_assistant/palette/palette_screen.dart';
@@ -389,6 +390,29 @@ void main() {
       expect(identical(seen.haptics, deps.haptics), isTrue);
       expect(identical(seen.router, deps.router), isTrue);
       expect(identical(seen.initialSample, deps.initialSample), isTrue);
+    });
+
+    testWidgets('AppScope.maybeOf returns the dependencies when present and '
+        'null when absent (bs-10: standalone ColorChip fallback)',
+        (tester) async {
+      // Present: a descendant below buildApp's AppScope sees the deps.
+      await tester.pumpWidget(buildApp(_deps()));
+      final present = tester.element(find.byType(ReadoutScreen));
+      expect(AppScope.maybeOf(present), isNotNull);
+      expect(AppScope.maybeOf(present)!.speech, isA<RepeatableSpeech>());
+
+      // Absent: no AppScope above the context → null (not an assertion throw,
+      // unlike AppScope.of), so a standalone surface can fall back.
+      AppDependencies? seen = _deps();
+      await tester.pumpWidget(
+        Builder(
+          builder: (context) {
+            seen = AppScope.maybeOf(context);
+            return const SizedBox();
+          },
+        ),
+      );
+      expect(seen, isNull);
     });
 
     testWidgets('reuses an already-repeatable injected speech as-is, and leaves '
@@ -1149,6 +1173,118 @@ void main() {
       expect(live(), saved, reason: 'the live cvdProfile equals the saved one');
       expect(live(), isNot(injected),
           reason: 'the pipeline moved off the injected default');
+    });
+  });
+
+  group('buildApp live profile store listener (bs-10 AC-6, DALT-11)', () {
+    CvdProfile liveProfile(WidgetTester tester) => tester
+        .widget<AppScope>(find.byType(AppScope))
+        .dependencies
+        .cvdProfile;
+
+    AppDependencies depsOver(InMemoryPersistentStore store,
+            {CvdProfile injected = const CvdProfile(type: CvdType.deutan)}) =>
+        AppDependencies(
+          colorScience: const ColorScienceImpl(),
+          speech: const NoopSpeech(),
+          haptics: const NoopHaptics(),
+          cvdProfile: injected,
+          store: store,
+        );
+
+    testWidgets(
+        'a profile written straight to the store (not via the onboarding '
+        'callback) recomputes the live cvdProfile', (tester) async {
+      final store = InMemoryPersistentStore();
+      const injected = CvdProfile(type: CvdType.deutan); // severity 1.0
+      await tester.pumpWidget(buildApp(depsOver(store, injected: injected)));
+      await tester.pumpAndSettle();
+      expect(liveProfile(tester), injected);
+
+      // The AC-6 acceptance path: a save written straight to the store the app
+      // listens to, bypassing [LiveProfileScope]'s onProfileSaved callback.
+      const protan = CvdProfile(type: CvdType.protan, severity: 0.6);
+      await CvdProfileStore(store).save(protan);
+      await tester.pumpAndSettle();
+      expect(liveProfile(tester), protan,
+          reason: 'the root re-read the saved profile off the store change');
+
+      // Clearing the store re-reads to the injected default (the null-load
+      // fallback) — so a cleared profile stops applying a stale remap.
+      await store.delete(
+          CvdProfileStore.collection, CvdProfileStore.documentId);
+      await tester.pumpAndSettle();
+      expect(liveProfile(tester), injected,
+          reason: 'a cleared store falls back to the injected default');
+    });
+
+    testWidgets('a store change to the same profile leaves the live one intact',
+        (tester) async {
+      final store = InMemoryPersistentStore();
+      const injected = CvdProfile(type: CvdType.deutan);
+      await tester.pumpWidget(buildApp(depsOver(store, injected: injected)));
+      await tester.pumpAndSettle();
+      final before = liveProfile(tester);
+
+      // Saving the same profile fires the store notifier but re-reads to an
+      // equal value, so the root takes no new copy (the deps object is unchanged).
+      await CvdProfileStore(store).save(injected);
+      await tester.pumpAndSettle();
+      expect(identical(liveProfile(tester), before), isTrue,
+          reason: 'an equal saved profile leaves the injected deps untouched');
+    });
+
+    testWidgets(
+        'an in-flight re-read after the app is torn down is a safe no-op',
+        (tester) async {
+      final store = InMemoryPersistentStore();
+      await tester.pumpWidget(buildApp(depsOver(store)));
+      await tester.pumpAndSettle();
+
+      // The store notifies synchronously, so the re-read's load() is already in
+      // flight when the tree is replaced; its completion must find the state
+      // unmounted and return without calling setState.
+      unawaited(
+          CvdProfileStore(store).save(const CvdProfile(type: CvdType.protan)));
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppScope), findsNothing);
+      // No "setState after dispose" exception was thrown tearing the tree down.
+    });
+  });
+
+  group('buildApp daltonization profile endpoint (bs-10 CONTROL-2, AC-10)', () {
+    testWidgets(
+        'mounts a CvdProfileReadEndpoint at the root when a store is wired',
+        (tester) async {
+      final store = InMemoryPersistentStore();
+      await tester.pumpWidget(buildApp(AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        store: store,
+      )));
+      await tester.pumpAndSettle();
+
+      // A descendant (the Readout) can read the saved-profile store the
+      // daltonization control consults — it reports nothing saved yet.
+      final context = tester.element(find.byType(ReadoutScreen));
+      final seen = CvdProfileReadEndpoint.maybeOf(context);
+      expect(seen, isNotNull);
+      expect(await seen!.hasSavedProfile(), isFalse);
+    });
+
+    testWidgets('mounts no endpoint when no store is wired (bare assembly)',
+        (tester) async {
+      await tester.pumpWidget(buildApp(AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+      )));
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(ReadoutScreen));
+      expect(CvdProfileReadEndpoint.maybeOf(context), isNull);
     });
   });
 
