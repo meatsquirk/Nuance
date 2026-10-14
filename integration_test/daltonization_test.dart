@@ -77,8 +77,9 @@ void main() {
       // per delivered AC. As a phase lands, add its AC to [unpended] here.
       // Un-pended so far: AC-1 (DALT-3 keystone), AC-5 (DALT-4 — chokepoint
       // drives the remap from the stored type + severity), AC-7 (DALT-5 — the
-      // remap is distinct from the simulation projection).
-      const unpended = <String>{'AC-1', 'AC-5', 'AC-7'};
+      // remap is distinct from the simulation projection), AC-2 (DALT-6 — the
+      // off path is explicit, colours off keep their original values).
+      const unpended = <String>{'AC-1', 'AC-5', 'AC-7', 'AC-2'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',
@@ -399,10 +400,24 @@ void main() {
           isTrue,
           reason: 'AC-2: the display pipeline returns the original while off');
 
-      // LIMITED (augmented by DALT-6): with the shell's identity remap, turning
-      // daltonization on cannot yet show a *different* colour, so this cannot yet
-      // prove "off" differs from a real remap. DALT-6 adds the control (turning
-      // it on remaps the swatch away from the original).
+      // Control (DALT-6 augmentation): now that the real remap ships, turning
+      // daltonization ON through the shipped panel toggle moves the swatch away
+      // from the original — which proves the "off" assertions above show the
+      // *unremapped* original, not merely an identity shell. Against the DALT-2
+      // identity stub this control fails (on would still show the original), so
+      // it discriminates. Strengthens AC-2 only (off vs on for the same sample).
+      await h.whenOpenSettings();
+      await h.whenSetDaltonization(on: true);
+      await h.whenCloseSettings();
+      expect(h.daltonization, isTrue,
+          reason: 'AC-2 control: daltonization turned on through the panel');
+      final remapped = _remapOf(h.storedProfile);
+      expect(colorNear(h.displayedColor(screenSwatchColor), remapped), isTrue,
+          reason: 'AC-2 control: on → the display pipeline returns the remap');
+      expect(colorNear(h.displayedColor(screenSwatchColor), screenSwatchColor),
+          isFalse,
+          reason: 'AC-2 control: on → the swatch is no longer the original');
+      _expectKnownSwatchRemapped(tester, h.storedProfile, screen: 'AC-2 control');
     });
 
     acTestWidgets('AC-3', 'TestAC03_LabelAndValueKept', (tester) async {

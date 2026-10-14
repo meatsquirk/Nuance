@@ -104,6 +104,26 @@ void main() {
       expect(displayedSwatchColor(original, settings, profile), original);
     });
 
+    test('daltonization off → the original regardless of the stored profile '
+        '(AC-2: off is unremapped, never consults the profile)', () {
+      // AC-2 (DALT-6): with daltonization off, colours are shown with their
+      // original values. The off branch must not touch the stored profile — a
+      // strong protan profile that produces a large remap when on still leaves
+      // the colour unchanged while off. Rejects an off path that leaks a remap
+      // (or that reads the profile) when daltonization is false; the existing
+      // off/off case above only uses a default-severity deutan, which a bug that
+      // scaled a tiny remap by severity could slip past.
+      const off = DisplaySettings();
+      const strong = CvdProfile(type: CvdType.protan, severity: 1);
+      expect(displayedSwatchColor(original, off, strong), original,
+          reason: 'off → the original, whatever the stored profile');
+      // Control: that same strong profile *does* move the colour when on, so the
+      // off result above is the off branch, not a coincidentally gentle profile.
+      const on = DisplaySettings(daltonization: true);
+      expect(displayedSwatchColor(original, on, strong), isNot(original),
+          reason: 'the same strong profile remaps the colour when on');
+    });
+
     test('daltonization off, simulation on → the simulation projection', () {
       const settings = DisplaySettings(simulationType: CvdType.deutan);
       final displayed = displayedSwatchColor(original, settings, profile);
