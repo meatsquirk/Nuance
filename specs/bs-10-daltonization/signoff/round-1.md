@@ -2,7 +2,7 @@
 
 **Feature:** bs-10-daltonization · **Spec:** [bs-10-daltonization.feature](../../bs-10-daltonization.feature)
 **Prepared:** 2026-10-14 (SIGNOFF-1) · **At code:** `feat/bs-10` @ `8442885` (CONTROL-2; sign-off commit stamped on the decision)
-**Decision:** ⏸ **Awaiting** — record via `/feature-next-phase --signoff bs10 approved | changes "<items>"`
+**Decision:** ✅ **Approved** — Matt Quirk, 2026-10-14 (recorded via `/feature-next-phase --signoff bs10 approved`)
 
 All 10 acceptance criteria are coded, un-pended and green by default (nothing pending); the full
 cross-feature regression (bs-01…bs-10) is **222 / 0 / 0**; a fresh independent whole-suite grade grid is
@@ -192,9 +192,10 @@ reactive store + no-profile affordance (DALT-11/CONTROL-2) are what turn them gr
 
 ## 10. Decision
 
-Reviewer: **____________**  Date: **__________**  Decision: ☐ **Approved**  ☐ Changes requested
+Reviewer: **Matt Quirk**  Date: **2026-10-14**  Decision: ☑ **Approved**  ☐ Changes requested
 
-Record via `/feature-next-phase --signoff bs10 approved | changes "<items>"`.
+Recorded via `/feature-next-phase --signoff bs10 approved` on 2026-10-14. SIGNOFF-1 ✅. Feature `Done`.
+Next: merge `feat/bs-10` → `main` (throwaway worktree on `main`; `git merge -F <file>`). Closes **bs-07 D-8**'s daltonization-behaviour deferral.
 
 - **Approved** → SIGNOFF-1 ✅; feature `Status: Done — signed off <date> by <reviewer> at <commit>`; merge
   `feat/bs-10` → `main` (throwaway worktree on `main` — the primary checkout on `feat/bs-04` has stale

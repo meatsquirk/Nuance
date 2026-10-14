@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** ⏸ Awaiting sign-off — all 10 ACs delivered; SIGNOFF-1 packet assembled ([signoff/round-1.md](signoff/round-1.md)). Full verification green (unit 1279 · coverage 100%/19 · full regression 222/0/0 · bs-10 25/0/0 default==run-pending · grade 10 A/0 B). All gates G-1/G-2/G-3/G-4 ✅. Human records the decision via `/feature-next-phase --signoff bs10 approved | changes "<items>"`
+**Status:** Done — signed off 2026-10-14 by Matt Quirk at `8442885` (SIGNOFF-1 round 1 Approved; [signoff/round-1.md](signoff/round-1.md)). All 10 ACs delivered; verification green (unit 1279 · coverage 100%/19 · full regression 222/0/0 · bs-10 25/0/0 default==run-pending · grade 10 A/0 B); all gates G-1/G-2/G-3/G-4 ✅. Remaining: merge `feat/bs-10` → `main` (throwaway worktree on `main`; `git merge -F <file>`) — closes bs-07 D-8's daltonization-behaviour deferral.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -195,25 +195,19 @@ when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-1 assembled — feature is ⏸ Awaiting sign-off. No agent phase remains.** The sign-off packet
-([signoff/round-1.md](signoff/round-1.md)), cost report ([signoff/cost-per-ac-round-1.md](signoff/cost-per-ac-round-1.md))
-and summary page are written; the whole-suite re-grade was re-run fresh. Full verification from the worktree on
-`feat/bs-10` @ `8442885`: `flutter analyze` clean · unit **1279** · coverage gate **PASS** (100% on all 19
-touched `lib/` files) · full cross-feature `integration_test/` **222 / 0 / 0** on booted iPhone 17
-(`done.success=true`) · bs-10 `daltonization_test.dart` **25 / 0 / 0**, default == run-pending (pending map
-empty) · grade **10 A / 0 B** (fresh independent adversarial re-grade). Fix passes 0/3.
+**Feature SIGNOFF-1 ✅ Approved 2026-10-14 by Matt Quirk (round 1) at code `8442885`.** No agent phase
+remains — the feature is `Done`.
 
-**The only thing left is the human decision** — there is no further agent phase. Record it via
-`/feature-next-phase --signoff bs10 approved | changes "<items>"`. On **Approved**: SIGNOFF-1 ✅, feature
-`Done`, then merge `feat/bs-10` → `main` (throwaway worktree on `main` — the primary checkout on `feat/bs-04`
-has stale untracked specs that abort `checkout main`; `git merge -F <file>`, not stdin). The packet carries
-the one known gap: the **D-8 sim × dalt interaction** (out of bs-10 scope, D-5).
+**Remaining (not an agent phase):** merge `feat/bs-10` → `main`. Use a throwaway worktree on `main` — the
+primary checkout on `feat/bs-04` has stale untracked specs that abort `checkout main`; `git merge -F <file>`,
+not stdin. This closes **bs-07 D-8**'s daltonization-behaviour deferral. The one known gap the packet carries —
+the **D-8 sim × dalt interaction** (combined render when both aids are on) — stays out of bs-10 scope (D-5),
+owned by a future cross-aid increment.
 
-Carried: `colorNear` default **0.05** (do not loosen); `bs10/pending.dart` map **empty**; AC-10's affordance
-is `CvdProfileStore.hasSavedProfile` + the app-root **unkeyed** `CvdProfileReadEndpoint` + `_NoSavedProfileRegion`
-(keep unkeyed). Work in worktree `/Users/matthew.quirk/Nuance-bs10`; booted sim mandatory (device lane
-contended by bs-11/bs-12 — the lock serialises); a full-suite device run exceeds 120s → background + redirect.
-Two untracked `ios/**/swiftpm/` dirs appear after a sim run (build artifacts) — don't stage them.
+Carried into the merge / future work: `colorNear` default **0.05** (do not loosen); `bs10/pending.dart` map
+**empty**; AC-10's affordance is `CvdProfileStore.hasSavedProfile` + the app-root **unkeyed**
+`CvdProfileReadEndpoint` + `_NoSavedProfileRegion` (keep unkeyed). Two untracked `ios/**/swiftpm/` dirs appear
+after a sim run (build artifacts) — don't stage them.
 
 ## Token usage
 
@@ -241,10 +235,11 @@ Two untracked `ios/**/swiftpm/` dirs appear after a sim run (build artifacts) �
 | DALT-11 | d5a48119 | 2026-10-14 10:49 EDT | 11:16 | 27m 16s | 27m 16s | claude-opus-4-8 | 180 | 332,823 | 13,343,700 | 64,074 | 13,740,777 | AC-6 un-pended green: store made reactive (PersistentStore.changes both impls; CvdProfileStore forward; _AppState listens + re-reads profile -> withCvdProfile re-inject -> ColorChip re-renders); unit 1272/cov 100% 18 files; default 221/0/~1, run-pending AC-6 green (only AC-10 red); grade 10 A/0 B; all gates green |
 | CONTROL-2 | d3c8862e | 2026-10-14 12:10 EDT | 12:42 | 31m 51s | 31m 51s | claude-opus-4-8 | 204 | 349,273 | 15,635,473 | 69,137 | 16,054,087 | AC-10 un-pended green; _NoSavedProfileRegion reads CvdProfileStore.hasSavedProfile via app-root unkeyed CvdProfileReadEndpoint; pending map empty (all 10 ACs delivered); unit 1279/cov 100% 19 files/full integ 222/0/grade 10 A/0 B; 0/3 fix passes |
 | SIGNOFF-1 | 697ad31d | 2026-10-14 13:01 EDT | 13:20 | 18m 35s | 18m 35s | claude-opus-4-8 | 124 | 264,165 | 6,460,266 | 33,747 | 6,758,302 | sign-off packet + summary + fresh whole-suite re-grade; analyze clean, unit 1279, coverage 100%/19, full regression 222/0/0, bs-10 25/0/0 default==run-pending, grade 10 A/0 B; awaiting human --signoff |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 13:20** | **7h 30m** | **6h 54m** |  | **2,496** | **3,922,956** | **151,386,000** | **963,783** | **156,275,235** |  |
+| SIGNOFF-DECISION | 3416916c | 2026-10-14 13:42 EDT | 13:44 | 1m 47s | 1m 47s | claude-opus-4-8 | 28 | 49,487 | 890,675 | 6,177 | 946,367 | SIGNOFF-1 approved — Matt Quirk 2026-10-14; feature Done; next merge feat/bs-10 -> main |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 13:44** | **7h 32m** | **6h 56m** |  | **2,524** | **3,972,443** | **152,276,675** | **969,960** | **157,221,602** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `8442885` | 10 A / 0 B | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `8442885` | 10 A / 0 B | ✅ Approved 2026-10-14 — Matt Quirk |
