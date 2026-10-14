@@ -90,10 +90,13 @@ const Map<String, String> pendingACs = {
   // nothing writes it back to the stored `Sample`/`ColorCoordinates` or the
   // store, so a daltonized render leaves the stored colour values unchanged;
   // AC-8's row is removed here.
-  // AC-9 un-pended by DALT-8 (the remap is injected at the one shared
-  // ColorChip/DisplayScope chokepoint so capture, readout and palette all get
-  // it).
-  'AC-9': 'DALT-8',
+  // AC-9 un-pended by DALT-8 — the remap is injected at the one shared
+  // ColorChip/DisplayScope chokepoint, and every screen now surfaces its colour
+  // through it: the Readout's displayed-colour swatch, the Capture screen's
+  // live-reading swatch (`CaptureCurrentReading`) and the Palette screen's
+  // masstone swatch (`PaintRow`/`PaintListRegion`) all route through
+  // `ColorChip`, so daltonization reaches capture, readout and palette; AC-9's
+  // row is removed here.
   // AC-10 un-pended by CONTROL-2 (with no saved profile the control reports a
   // self-assessment is needed before colours can be remapped; no remap applied).
   'AC-10': 'CONTROL-2',

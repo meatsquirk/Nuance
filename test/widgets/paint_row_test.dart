@@ -3,12 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
+import 'package:paint_color_assistant/widgets/color_chip.dart';
 import 'package:paint_color_assistant/widgets/paint_row.dart';
 import 'package:paint_color_assistant/widgets/provenance_badge.dart';
 
-Future<void> _pump(WidgetTester tester, Paint paint) {
+Future<void> _pump(WidgetTester tester, Paint paint, {Color? swatchColor}) {
   return tester.pumpWidget(
-    MaterialApp(home: Scaffold(body: PaintRow(paint: paint))),
+    MaterialApp(
+      home: Scaffold(body: PaintRow(paint: paint, swatchColor: swatchColor)),
+    ),
   );
 }
 
@@ -72,6 +75,22 @@ void main() {
       final badge =
           tester.widget<ProvenanceBadge>(find.byKey(PaintRow.badgeKeyFor('pg7')));
       expect(badge.provenance.tier, ProvenanceTier.estimated);
+    });
+
+    testWidgets(
+        'given a swatchColor, the name renders through a ColorChip carrying '
+        'the paint name as its label (bs-10 AC-9)', (tester) async {
+      await _pump(tester, fullOil, swatchColor: const Color(0xFF0A8043));
+
+      // The name is routed through a keyed ColorChip swatch, so daltonization
+      // remaps it at the shared chokepoint; its label is the paint name.
+      final chip =
+          tester.widget<ColorChip>(find.byKey(PaintRow.swatchKeyFor('pw6')));
+      expect(chip.label, 'Titanium White');
+      expect(chip.color, const Color(0xFF0A8043));
+      // The name is shown exactly once (through the chip, not also as a plain
+      // header Text).
+      expect(find.text('Titanium White'), findsOneWidget);
     });
 
     test('mediumLabel maps each medium to its painter-facing word', () {

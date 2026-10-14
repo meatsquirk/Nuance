@@ -79,8 +79,10 @@ void main() {
       // drives the remap from the stored type + severity), AC-7 (DALT-5 — the
       // remap is distinct from the simulation projection), AC-2 (DALT-6 — the
       // off path is explicit, colours off keep their original values), AC-8
-      // (DALT-7 — the remap is render-only, the stored colour values unchanged).
-      const unpended = <String>{'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8'};
+      // (DALT-7 — the remap is render-only, the stored colour values unchanged),
+      // AC-9 (DALT-8 — capture, readout and palette all surface the swatch
+      // through the one shared ColorChip chokepoint).
+      const unpended = <String>{'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', 'AC-9'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',

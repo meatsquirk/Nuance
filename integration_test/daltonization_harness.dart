@@ -51,6 +51,7 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/palette/palette_controller.dart';
 import 'package:paint_color_assistant/readout/space_selector.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
@@ -132,8 +133,14 @@ const Paint screenPaint = Paint(
 /// The one-paint palette [givenDaltonizationOnPalette] seeds so the Palette
 /// screen surfaces exactly the known swatch ([screenPaint]) — the colour AC-9
 /// asserts is remapped on the palette screen, same as on capture and readout.
+///
+/// Named [PaletteController.myPaintsName] ("My paints") so the paint lands in
+/// the My-paints view the Palette screen opens on — the list `PaintListRegion`
+/// renders (and bs-10 AC-9 remaps the swatch of). A palette under any other name
+/// never reaches that list (the view shows only "My paints"), so the Given — the
+/// known swatch is surfaced on the Palette screen — would not hold.
 const PaintPalette screenPalette =
-    PaintPalette(name: 'Screen palette', paints: [screenPaint]);
+    PaintPalette(name: PaletteController.myPaintsName, paints: [screenPaint]);
 
 /// The painter's stored colour-vision profile a scenario persists (AC-1/5/6/7).
 ///

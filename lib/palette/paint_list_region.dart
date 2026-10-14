@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/build_app.dart';
+import '../color_science/color_science.dart';
 import '../domain/paint.dart';
 import '../widgets/paint_row.dart';
 import 'palette_controller.dart';
@@ -34,6 +36,11 @@ class PaintListRegion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final paints = controller.myPaints;
+    // The colour science that renders a paint's masstone to its display sRGB
+    // swatch (bs-10 AC-9), from the enclosing AppScope. Null in a standalone
+    // context (no scope); then each row renders its name as plain text and no
+    // swatch — exactly the pre-bs-10 layout.
+    final science = AppScope.maybeOf(context)?.colorScience;
     return Column(
       key: regionKey,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,8 +50,16 @@ class PaintListRegion extends StatelessWidget {
           const Text('No paints yet')
         else
           // Each paint renders its identity (brand/line/medium/pigment index)
-          // and a provenance badge — never colour alone (AC-2).
-          for (final paint in paints) PaintRow(paint: paint),
+          // and a provenance badge — never colour alone (AC-2) — plus a
+          // decorative masstone swatch routed through the shared display
+          // chokepoint, so daltonization remaps it on this screen too (AC-9).
+          for (final paint in paints)
+            PaintRow(
+              paint: paint,
+              swatchColor: science == null
+                  ? null
+                  : _masstoneSwatch(science, paint),
+            ),
         // E32 Add paint (AC-4): opens the reviewed-dataset picker; choosing a
         // paint adds it to "My paints" with its dataset provenance preserved.
         TextButton(
@@ -80,5 +95,15 @@ class PaintListRegion extends StatelessWidget {
     if (chosen != null) {
       await controller.addPaintFromDataset(chosen);
     }
+  }
+
+  /// The true display sRGB colour of [paint]'s masstone, via [science] — the
+  /// colour [PaintRow] hands to its [ColorChip] for the decorative swatch, which
+  /// the shared chokepoint then remaps under daltonization (bs-10 AC-9). The
+  /// swatch is the paint's own masstone; the remap is applied at render time at
+  /// the chokepoint, never written back (AC-8).
+  static Color _masstoneSwatch(ColorScience science, Paint paint) {
+    final SRGBColor s = science.toSRGB(paint.masstone);
+    return Color.fromARGB(255, s.red, s.green, s.blue);
   }
 }

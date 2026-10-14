@@ -1,6 +1,6 @@
 # Module DALT — daltonization remap engine + display injection
 
-**Status:** In progress — DALT-7 (AC-8) done; the remap is a pure render-time transform (`displayedSwatchColor` → `daltonizeColor`, called only by `ColorChip` + the read endpoint) with no write-back to the stored `Sample`/`ColorCoordinates` or any store — no `lib/` body changed, AC-8 un-pended with its swatch-moved-while-stored-held control. DALT-8..11 (serial behind DALT-3) and CONTROL-2 (other module, AC-10) are startable; DALT-8 is next.
+**Status:** In progress — DALT-8 (AC-9) done; capture, readout and palette now all surface a colour swatch through the one shared `ColorChip` chokepoint (new `CaptureCurrentReading`; `PaintRow` masstone swatch), so daltonization reaches every screen — AC-9 un-pended and green, full integration suite 218/0/4. DALT-9..11 (serial behind DALT-3) and CONTROL-2 (other module, AC-10) are startable; DALT-9 is next.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
 additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
@@ -19,8 +19,8 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 | DALT-5 | behavior | AC-7 | ✅ Done | 5.04M | 24m 20s |
 | DALT-6 | behavior | AC-2 | ✅ Done | 7.51M | 25m 22s |
 | DALT-7 | behavior | AC-8 | ✅ Done | 9.21M | 21m 10s |
-| DALT-8 | behavior | AC-9 | ⬜ Next | | |
-| DALT-9 | behavior | AC-3 | ⬜ Todo | | |
+| DALT-8 | behavior | AC-9 | ✅ Done | 19.44M | 31m 48s |
+| DALT-9 | behavior | AC-3 | ⬜ Next | | |
 | DALT-10 | behavior | AC-4 | ⬜ Todo | | |
 | DALT-11 | behavior | AC-6 | ⬜ Todo | | |
 
@@ -602,3 +602,69 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
   owned by **CONTROL-2**; AC-6 live recompute (DALT-11); AC-3/AC-4 pass at the keystone but stay **pending**
   until DALT-9/DALT-10 un-pend them and add their controls. Carries the D-8 sim/dalt gap as context only (out of
   bs-10 scope, D-5).
+
+### Result — DALT-8  <!-- 2026-10-14 -->
+
+- **Surfaced the known swatch on every screen through the one chokepoint (AC-9).** The remap was already injected
+  at the single `ColorChip`/`DisplayScope` chokepoint (DALT-2/3); DALT-8 made capture and palette actually
+  *render a colour swatch* there so daltonization reaches them (the Readout already did). First behaviour phase
+  since DALT-3 to change `lib/` bodies.
+  - **Capture:** new `lib/capture/capture_current_reading.dart` — `CaptureCurrentReading` renders
+    `CaptureState.currentSample`'s colour through `ColorChip` (sRGB via `AppScope.colorScience`), labelled with
+    the CIELAB reading so the swatch never stands alone (SI §5.1); renders nothing before a sample exists or with
+    no scope. Wired into `capture_screen.dart`'s readings column.
+  - **Palette:** `PaintRow` gained optional `swatchColor` — when supplied it routes the paint name through a
+    `ColorChip` masstone swatch; `PaintListRegion` computes it from `AppScope.maybeOf(context)?.colorScience`
+    per paint. Null (no scope) keeps the pre-bs-10 plain-name row, so standalone `PaintRow` tests are unchanged.
+- **AC-9 un-pended** (deleted its row in `integration_test/bs10/pending.dart`; scaffold guard's `unpended` set in
+  `daltonization_test.dart` is now `{'AC-1','AC-5','AC-7','AC-2','AC-8','AC-9'}`, length `10 − 6 = 4`).
+  `TestAC09_EveryScreen` runs green in the default suite (readout + capture + palette).
+- **Harness fixture fix (recorded).** `daltonization_harness.dart`'s `screenPalette` renamed `'Screen palette'`
+  → `PaletteController.myPaintsName` ("My paints"). Reason: `PaletteController.myPaints` (what `PaintListRegion`
+  renders) filters for the palette named "My paints"; under any other name the paint never reaches the list, so
+  the AC-9 palette Given would not hold. The Then (`_expectKnownSwatchRemapped` on each screen) is **unchanged** —
+  not a weakening. Added `import '…/palette/palette_controller.dart'`.
+- **Unit tests added:** `test/capture/capture_current_reading_test.dart` (null → shrink; no-scope → shrink;
+  under scope → labelled swatch at the reading's sRGB) and `test/palette/paint_list_region_test.dart` (empty
+  placeholder; no-scope row has no swatch; under-scope row renders the masstone swatch through `ColorChip`); a
+  `swatchColor` case added to `test/widgets/paint_row_test.dart`.
+- **Gates:** `flutter analyze` clean · `flutter test --coverage` **1258 unit pass** (+7 vs DALT-7) ·
+  `dart run tool/coverage_gate.dart main` → **100% on all 12 touched files**. Acceptance (booted iPhone 17
+  `5AB9D06D…`, under `coord.sh with-lock`): default `daltonization_test.dart` → **+21 / ~4 pending / 0 fail**
+  (AC-9 now green, up from DALT-7's +20/~5); **full `integration_test/` regression → 218 pass / 4 skip / 0 fail**
+  (the 4 skips are the still-pending AC-3/AC-4/AC-6/AC-10) — no regression on the capture/palette/display screens
+  the swatches were added to.
+- **Grade gate** (fresh independent subagent, re-graded the whole suite against the DALT-7 grid; grid rewritten
+  at `behavior-test-completeness-bs-10-daltonization.md`): **8 A / 2 B-pending** — A: AC-1, AC-2, AC-5, AC-6,
+  AC-7, AC-8, AC-9, AC-10; B-pending: AC-3→DALT-9, AC-4→DALT-10. **No band change** — AC-9 was already A while
+  pending and stays A on shipped behaviour; the grader independently judged the fixture rename a legitimate Given
+  fix and confirmed AC-9 rejects a one-screen-only remap (G5). The three new DALT-8 unit tests graded A.
+- Fix passes: 0/3 (every gate green on the first full run).
+- Tokens/time: see dashboard cell.
+- Closed by: unit + coverage + acceptance (AC-9) + grade gates green; full integration suite green.
+
+### Checkpoint / Handoff — DALT-8
+
+- **Frozen for DALT-9..11 / CONTROL-2:**
+  - The chokepoint contract is unchanged. Every screen now surfaces its colour through `ColorChip`: Readout
+    (`ValueRegion`), Capture (`CaptureCurrentReading`), Palette (`PaintRow` masstone). `displaySwatches(tester)`
+    reads a rendered swatch on each of the three screens. AC-9 (every-screen reach) is now a settled fact.
+  - `integration_test/bs10/pending.dart` now holds **4** ACs (AC-3, AC-4, AC-6, AC-10); scaffold guard `unpended`
+    is `{'AC-1','AC-5','AC-7','AC-2','AC-8','AC-9'}`. Each remaining phase deletes its AC's row and adds it.
+  - `PaintRow.swatchColor` + `PaintRow.swatchKeyFor(id)` and `CaptureCurrentReading.readingKey` are the new
+    render seams. **DALT-9 (AC-3)** should assert, now that the real remap renders on the palette/capture swatch,
+    that a colour-coded element keeps its label + numeric value while the swatch colour changes; **DALT-10 (AC-4)**
+    that the provenance badge stays readable from label + icon under the remap. Both share the chokepoint and
+    `daltonization_test.dart`, so they are serial behind here.
+  - **CONTROL-2** (AC-10) stays independently startable (`settings_screen.dart`; key gap unchanged:
+    `CvdProfileReadEndpoint.hasSavedProfile` still absent and the endpoint not mounted in the main tree).
+- **Verification commands:** unchanged — `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` (Flutter at `/Users/matthew.quirk/development/flutter/bin`). Acceptance
+  on the **booted** sim only (`-d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), under
+  `FNP_COORD_REPO=/Users/matthew.quirk/Nuance coord.sh with-lock bs-10-daltonization <PHASE> --wait 900 -- bash
+  -c 'cd /Users/matthew.quirk/Nuance-bs10 && …'`; macOS has no `timeout`; the full `integration_test/` run
+  exceeds the 120s foreground cap → redirect to a file and background it, don't tail. Device lane is contended
+  (bs-12 also uses the sim) — the lock serialises.
+- **Known gaps:** AC-3/AC-4 pass at the keystone but stay **pending** until DALT-9/DALT-10 un-pend them and add
+  their controls; AC-6 live recompute (DALT-11); AC-10 no-saved-profile affordance (CONTROL-2). Carries the D-8
+  sim/dalt gap as context only (out of bs-10 scope, D-5).
