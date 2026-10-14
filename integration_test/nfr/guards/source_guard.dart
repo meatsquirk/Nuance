@@ -20,6 +20,14 @@
 // is never a false offender (module plan, Interface reconciliation).
 //
 // This is test-support only — no `lib/` product code (D-7).
+//
+// These scans read the repo source tree through `dart:io`, so they run on the
+// host VM (cwd = repo root), where the existing repo-file tests live
+// (`test/color_science/munsell_table_test.dart` reads `assets/…` the same way).
+// The app-pumping ACs in the same suite are `flutter_tester`-compatible, so the
+// whole bs-12 acceptance file runs there too.
+
+import 'dart:io';
 
 /// A single site in `lib/` that breaks one of the source-scan rules.
 ///
@@ -135,7 +143,13 @@ const Set<String> forbiddenDependencyNames = {
 };
 
 // ---------------------------------------------------------------------------
-// Rule scans (GUARD-2 stubs — real scans land in GUARD-4 / GUARD-6)
+// Rule scans
+//
+// [forbiddenDependencies] / [offDeviceSenders] are the real GUARD-4 scans
+// (AC-7 / AC-8); [conversionOffenders] / [deltaEOffenders] / [platformOffenders]
+// / [concreteTypeReferences] remain GUARD-2 stubs until GUARD-6 / GUARD-5 fill
+// them (they reuse the shared [maskCommentsAndStrings] + `_scanSource` machinery
+// GUARD-4 lays at the foot of this file).
 // ---------------------------------------------------------------------------
 
 /// Sites under [roots] computing a colour-space conversion outside
@@ -172,21 +186,31 @@ List<SourceOffender> platformOffenders({
 /// Dependencies appearing in [forbiddenDependencyNames] (AC-7). Empty while the
 /// invariant holds.
 ///
-/// Scans the resolved pubspec / lockfile by default; an AC test passes
-/// [resolvedNames] (e.g. the real set plus a planted forbidden package) to
-/// assert the rule flags it. Stub: GUARD-4 implements the real scan.
-List<String> forbiddenDependencies({Iterable<String>? resolvedNames}) =>
-    const <String>[];
+/// With no [resolvedNames] it reads the resolved dependency set from the
+/// `pubspec.lock` at the repo root ([resolvedDependencyNames]); an AC test
+/// passes [resolvedNames] (e.g. the real set plus a planted forbidden package)
+/// to assert the rule flags it. The result keeps [forbiddenDependencyNames]'
+/// order so it is deterministic.
+List<String> forbiddenDependencies({Iterable<String>? resolvedNames}) {
+  final present = (resolvedNames ?? resolvedDependencyNames()).toSet();
+  return <String>[
+    for (final name in forbiddenDependencyNames)
+      if (present.contains(name)) name,
+  ];
+}
 
 /// Sites under [roots] that send data off the device without explicit opt-in
-/// consent (AC-8, D-6). Empty while the invariant holds.
+/// consent (AC-8, D-6): constructing an outbound connection or issuing an HTTP
+/// request. Empty while the invariant holds — v1 ships no off-device path.
 ///
-/// [roots] defaults to [kDefaultSourceRoots]; an AC test points it at the
-/// control fixtures. Stub: GUARD-4 implements the real scan (honouring [roots]).
+/// [roots] defaults to [kDefaultSourceRoots] (the real `lib/` sweep); an AC test
+/// points it at the control fixtures to assert the rule flags the planted
+/// unconsented sender. Comments and string literals are excluded, so a doc
+/// comment or log string naming an egress API is never a false offender.
 List<SourceOffender> offDeviceSenders({
   Iterable<String> roots = kDefaultSourceRoots,
 }) =>
-    const <SourceOffender>[];
+    _scanSource(roots, ruleOffDeviceSender, _offDeviceSendPatterns);
 
 /// Sites under [roots] that reference the concrete type [typeName] directly
 /// instead of its interface (AC-14 the mixing engine, AC-15 the CVD model).
@@ -203,3 +227,180 @@ List<SourceOffender> concreteTypeReferences(
   Iterable<String> roots = kDefaultSourceRoots,
 }) =>
     const <SourceOffender>[];
+
+// ---------------------------------------------------------------------------
+// Shared scan machinery (GUARD-4 — reused by GUARD-5 / GUARD-6)
+// ---------------------------------------------------------------------------
+
+/// The off-device-send API surface the AC-8 scan flags: opening an outbound
+/// socket / HTTP client or issuing an HTTP request. A v1 build has none in
+/// `lib/`; the planted control fixture (`control_off_device_sender.dart`) opens
+/// an `HttpClient` and POSTs, so the scan must list it.
+final List<RegExp> _offDeviceSendPatterns = <RegExp>[
+  RegExp(r'\bHttpClient\s*\('),
+  RegExp(r'\b(?:Secure)?Socket\s*\.\s*(?:connect|startConnect)\b'),
+  RegExp(r'\bRaw(?:Secure)?Socket\s*\.\s*connect\b'),
+  RegExp(r'\bWebSocket\s*\.\s*connect\b'),
+  RegExp(r'\bRawDatagramSocket\s*\.\s*bind\b'),
+  RegExp(r'\bhttp\s*\.\s*(?:get|post|put|patch|delete|head|read)\s*\('),
+];
+
+/// Walks every `.dart` file under each of [roots] (recursively, sorted for a
+/// deterministic order) and returns one [SourceOffender] per line matching any
+/// of [patterns], tagged [rule]. A missing root is skipped. The file text is run
+/// through [maskCommentsAndStrings] first, so only real code is matched; the
+/// reported snippet is the raw source line.
+///
+/// Paths are resolved against the current directory (the repo root on the host
+/// VM, where these scans run — see the file header).
+List<SourceOffender> _scanSource(
+  Iterable<String> roots,
+  String rule,
+  List<RegExp> patterns,
+) {
+  final offenders = <SourceOffender>[];
+  for (final root in roots) {
+    final dir = Directory(root);
+    if (!dir.existsSync()) continue;
+    final dartFiles = dir
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart'))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    for (final file in dartFiles) {
+      final source = file.readAsStringSync();
+      final masked = maskCommentsAndStrings(source);
+      final rawLines = source.split('\n');
+      for (final pattern in patterns) {
+        for (final match in pattern.allMatches(masked)) {
+          final line =
+              '\n'.allMatches(masked.substring(0, match.start)).length + 1;
+          final snippet =
+              (line - 1 < rawLines.length ? rawLines[line - 1] : '').trim();
+          offenders.add(SourceOffender(
+            path: file.path,
+            line: line,
+            rule: rule,
+            snippet: snippet,
+          ));
+        }
+      }
+    }
+  }
+  return offenders;
+}
+
+/// Returns [source] with every line comment, block comment and string literal
+/// blanked to spaces — newlines preserved, so line numbers are unchanged — so a
+/// rule scan matches real code only. A doc comment naming `HttpClient(` or a log
+/// string mentioning a forbidden API is therefore never a false offender
+/// (module plan, Interface reconciliation). Handles `//` and `/* … */`
+/// comments and single / double / triple-quoted strings, honouring `\` escapes
+/// in single-line non-raw strings and the `r` raw-string prefix.
+String maskCommentsAndStrings(String source) {
+  final out = StringBuffer();
+  final n = source.length;
+  var i = 0;
+  while (i < n) {
+    final c = source[i];
+    final next = i + 1 < n ? source[i + 1] : '';
+    // Line comment: blank to end of line.
+    if (c == '/' && next == '/') {
+      while (i < n && source[i] != '\n') {
+        out.write(' ');
+        i++;
+      }
+      continue;
+    }
+    // Block comment: blank through the closing `*/` (may span lines).
+    if (c == '/' && next == '*') {
+      out.write('  ');
+      i += 2;
+      while (
+          i < n && !(source[i] == '*' && i + 1 < n && source[i + 1] == '/')) {
+        out.write(source[i] == '\n' ? '\n' : ' ');
+        i++;
+      }
+      if (i < n) {
+        out.write('  ');
+        i += 2;
+      }
+      continue;
+    }
+    // String literal (single / double, optionally triple, optionally raw).
+    if (c == '"' || c == "'") {
+      final isRaw = i > 0 &&
+          source[i - 1] == 'r' &&
+          (i < 2 || !_isIdentChar(source[i - 2]));
+      final triple = next == c && i + 2 < n && source[i + 2] == c;
+      final delim = c;
+      if (triple) {
+        out.write('   ');
+        i += 3;
+        while (i < n &&
+            !(source[i] == delim &&
+                i + 2 < n &&
+                source[i + 1] == delim &&
+                source[i + 2] == delim)) {
+          out.write(source[i] == '\n' ? '\n' : ' ');
+          i++;
+        }
+        if (i < n) {
+          out.write('   ');
+          i += 3;
+        }
+      } else {
+        out.write(' ');
+        i++;
+        while (i < n && source[i] != delim && source[i] != '\n') {
+          if (!isRaw && source[i] == r'\' && i + 1 < n) {
+            out.write('  ');
+            i += 2;
+            continue;
+          }
+          out.write(' ');
+          i++;
+        }
+        if (i < n && source[i] == delim) {
+          out.write(' ');
+          i++;
+        }
+      }
+      continue;
+    }
+    out.write(c);
+    i++;
+  }
+  return out.toString();
+}
+
+bool _isIdentChar(String ch) => RegExp(r'[A-Za-z0-9_$]').hasMatch(ch);
+
+/// The resolved dependency names from the lockfile at [lockPath] (default
+/// `pubspec.lock` at the repo root), or an empty set when it is absent.
+Set<String> resolvedDependencyNames({String lockPath = 'pubspec.lock'}) {
+  final file = File(lockPath);
+  if (!file.existsSync()) return const <String>{};
+  return parseLockPackageNames(file.readAsStringSync());
+}
+
+/// Parses the resolved package names from a `pubspec.lock` [text] — the keys of
+/// its top-level `packages:` map (the 2-space-indented entries under it).
+Set<String> parseLockPackageNames(String text) {
+  final names = <String>{};
+  final entry = RegExp(r'^  ([A-Za-z0-9_]+):\s*$');
+  var inPackages = false;
+  for (final line in text.split('\n')) {
+    // A line with no leading space and some content is a top-level key; we are
+    // inside the package map only while that key is `packages:`.
+    if (line.isNotEmpty && !line.startsWith(' ')) {
+      inPackages = line.trimRight() == 'packages:';
+      continue;
+    }
+    if (!inPackages) continue;
+    final match = entry.firstMatch(line);
+    if (match != null) names.add(match.group(1)!);
+  }
+  return names;
+}

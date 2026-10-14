@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — GUARD-3 done (AC-1/AC-2 ✅ offline); next GUARD-4 (GUARD-4/5/6 + QUALITY-2/3/4/5 all startable)
+**Status:** In progress — GUARD-4 done (AC-6/AC-7/AC-8 ✅ privacy; grade 3 A/0); next GUARD-5 (GUARD-5/6 + QUALITY-2/3/4/5 all startable)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -48,9 +48,9 @@
 | AC-3 | A committed reading settles within the budget with a visible indicator | ITEST-3 `TestAC03_ReadingSettlesWithIndicator` | QUALITY-5 | ⬜ Todo |
 | AC-4 | Recipe search returns within the budget | ITEST-3 `TestAC04_RecipeSearchReturnsTopCandidates` | QUALITY-5 | ⬜ Todo |
 | AC-5 | Live capture holds a usable preview frame rate | **manual gate (SIGNOFF-1, G-3)** — no automated test (D-3) | SIGNOFF-1 (user acceptance) | ⬜ Todo |
-| AC-6 | Photos and samples never leave the device | ITEST-2 `TestAC06_PhotosAndSamplesStayOnDevice` | GUARD-4 | ⬜ Todo |
-| AC-7 | There is no account and no telemetry in v1 | ITEST-2 `TestAC07_NoAccountNoTelemetry` | GUARD-4 | ⬜ Todo |
-| AC-8 | Any future sync is opt-in and explicit | ITEST-2 `TestAC08_FutureSyncIsOptIn` | GUARD-4 | ⬜ Todo |
+| AC-6 | Photos and samples never leave the device | ITEST-2 `TestAC06_PhotosAndSamplesStayOnDevice` | GUARD-4 | ✅ Done (GUARD-4 2026-10-14; A) |
+| AC-7 | There is no account and no telemetry in v1 | ITEST-2 `TestAC07_NoAccountNoTelemetry` | GUARD-4 | ✅ Done (GUARD-4 2026-10-14; A) |
+| AC-8 | Any future sync is opt-in and explicit | ITEST-2 `TestAC08_FutureSyncIsOptIn` | GUARD-4 | ✅ Done (GUARD-4 2026-10-14; A) |
 | AC-9 | Poor conditions downgrade the stated accuracy rather than failing quietly | ITEST-3 `TestAC09_PoorConditionsDowngradeAccuracy` | QUALITY-2 | ⬜ Todo |
 | AC-10 | Capture with reference card in controlled lighting meets ΔE00 ≤ 3 | ITEST-3 `TestAC10_CardControlledMeetsDeltaE3` | QUALITY-4 | ⬜ Todo |
 | AC-11 | Capture without reference card in daylight meets ΔE00 ≤ 8, labelled approximate | ITEST-3 `TestAC11_CardlessDaylightApproximateUnder8` | QUALITY-4 | ⬜ Todo |
@@ -78,7 +78,7 @@
 
 Module plan: [modules/ITEST.md](modules/ITEST.md).
 
-**Where it lives and how it runs:** `integration_test/bs12/nfr_harness.dart` (vocabulary + fixtures + the real assembled app) and `integration_test/bs12/nfr_test.dart` (runner), over the reusable guards in `integration_test/nfr/`. Default target (pending skipped): `flutter test integration_test/bs12/nfr_test.dart -d <booted-udid>`. Run-pending / red baseline: add `--dart-define=BS12_RUN_PENDING=true` (or host env `BS12_RUN_PENDING=1`). **A booted device udid (`-d`) is mandatory** (no `-d` ⇒ zero tests, exit 0, false green — see Known flakes). Single exclusive device lane via `coord.sh with-lock` in parallel sessions.
+**Where it lives and how it runs:** `integration_test/bs12/nfr_harness.dart` (vocabulary + fixtures + the real assembled app) and `integration_test/bs12/nfr_test.dart` (runner), over the reusable guards in `integration_test/nfr/`. Default target (pending skipped): `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester`. Run-pending / red baseline: add `--dart-define=BS12_RUN_PENDING=true` (or host env `BS12_RUN_PENDING=1`). **`-d flutter-tester` (the host VM) is required from GUARD-4 on** — discovered at GUARD-4: the source-scan ACs (AC-7/AC-8, and AC-16/AC-17 at GUARD-6) read the repo tree (`lib/`, the control fixtures) through `dart:io`, which resolves only with `cwd = repo root`; an iOS-sim target (`-d <udid>`) runs in the app sandbox where those paths don't exist, so the scan controls can't discriminate there. The flow/app-pumping ACs (AC-1/2/6/9/…) are `flutter_tester`-compatible (platform sinks faked), so the whole file runs on the host. **A device (`-d flutter-tester`) is still mandatory** — a bare `flutter test integration_test/…` with no device runs zero tests and exits 0 (false green — see Known flakes); `-d flutter-tester` runs them all on the host without a sim/Xcode build and needs no device lane.
 **Where assertions look:** the `networkBlock` sink (proves nothing was sent — AC-1/2/6/7/8); the existing feature read endpoints (`CaptureReadEndpoint`, `ComparisonReadEndpoint`, `RecipeReadEndpoint`, project/export state) for flow-completion and settle/out-of-gamut state; the `CaptureAccuracy`/stated-accuracy surface for AC-9; the single `deltaE00` output over the synthetic set for AC-10/11/12; the source-scan results over `lib/` for AC-16/AC-17; `AppDependencies` call sites for AC-14/15; `Stopwatch` elapsed vs the CI budget for AC-3/AC-4.
 **What is real and what is faked:** every real screen/flow assembled through `buildApp(deps)`; the real engines, `ColorScience`, `deltaE00`, capture controller and persistence store (a test executor-backed `drift` double — on-device SQLite without a device file). Faked infrastructure only: `FakeSpeech`, `FakeHaptics` (existing), the `networkBlock` `HttpOverrides`, and the **swap doubles** `altMixingEngine` / `altConfusionCheck` (exist only to prove the seam). The **control** cases (a planted network-touching flow, a stray-ΔE file, a `Platform.is` outside capture, a caller bound to the concrete engine, a poor-condition reading returned trustworthy, an in-gamut target) are deliberate fixtures proving each guard discriminates. No colour math is faked.
 
@@ -176,8 +176,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-3 | acceptance-tests: AC-3,4,9,10,11,12,13 (pending) + red baseline | ✅ Done | 19.0M | 47m 22s | grade 3 A / 4 B pending / 0 ordinary B; default +15/~16/exit 0; run-pending +18/−13; AC-3/4/13 green at baseline (bs-02/bs-04), AC-9→QUALITY-2, AC-10/11/12→QUALITY-4 |
 | 7 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1.89M | 4m 22s | packet + whole-suite grid 6 A / 10 B pending / 0 ordinary B (+15 A smoke); **G-2 approved 2026-10-14 by Matt Quirk** → behaviour stage un-blocked |
 | 8 | GUARD-3 | AC-1+AC-2 offline: network-block guard over every core flow | ✅ Done | 7.42M | 9m 39s | sink.record() wired (no lib change); un-pended AC-1/AC-2; analyze clean, unit 1228, acceptance default 17 pass/14 skip/exit 0; grade 2 A/0 |
-| 9 | GUARD-4 | AC-6+AC-7+AC-8 privacy: nothing-leaves + no-telemetry + no-off-device-path guards | ⬜ Next | | | startable; inherits GUARD-3's live counting sink (AC-6 control already greens); also GUARD-5/6 + QUALITY-2/3/4/5 startable (sequence shared `nfr_test.dart`/guard-file writers) |
-| 10 | GUARD-5 | AC-14+AC-15 swappable: inject alt engine + alt CVD, callers unchanged | ⬜ Todo | | | |
+| 9 | GUARD-4 | AC-6+AC-7+AC-8 privacy: nothing-leaves + no-telemetry + no-off-device-path guards | ✅ Done | 11.5M | 27m 11s | real `forbiddenDependencies`/`offDeviceSenders` scans (no lib change); un-pended AC-6/7/8, closed TestAC07/08; analyze clean, unit 1228, acceptance `-d flutter-tester` 21 pass/11 skip/exit 0, run-pending +24/−8 (8 = intact red baseline); grade 3 A/0. **Suite runs on `-d flutter-tester`** (host) — source scans read the repo tree (line 81) |
+| 10 | GUARD-5 | AC-14+AC-15 swappable: inject alt engine + alt CVD, callers unchanged | ⬜ Next | | | startable; shares `source_guard.dart`+`nfr_test.dart` with GUARD-4/6 (sequence); also GUARD-6 + QUALITY-2/3/4/5 startable |
 | 11 | GUARD-6 | AC-16+AC-17 one-colour-lib + portability: source-scan guard rules | ⬜ Todo | | | |
 | 12 | QUALITY-2 | AC-9 reliability fix: unlocked-exposure + missing-card downgrade triggers (`lib/capture`) | ⬜ Todo | | | ∥ one GUARD phase |
 | 13 | QUALITY-3 | AC-13 out-of-gamut: identified, no false recipe + in-gamut control | ⬜ Todo | | | |
@@ -189,11 +189,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**GUARD-3 done 2026-10-14 (AC-1/AC-2 ✅ offline).** The network-block sink now records each refused attempt, so the offline sweep + counting control discriminate within the phase. 8 behaviour ACs remain, across 5 phases.
+**GUARD-4 done 2026-10-14 (AC-6/AC-7/AC-8 ✅ privacy; grade 3 A/0).** The real `forbiddenDependencies` (reads `pubspec.lock`) and `offDeviceSenders` (`lib/` source scan, comment/string-masked) landed in `source_guard.dart`; TestAC07/08 augmentations closed (AC-7/8 B-pending → A). **No `lib/` change.** 5 behaviour ACs-in-8-tests remain, across 4 phases. **Important (discovered here):** the bs-12 acceptance suite now runs on **`-d flutter-tester`** (host VM, cwd = repo root) because the source scans read the repo tree — an iOS-sim target breaks AC-7/8 (and AC-16/17 at GUARD-6). See "how it runs" (line 81).
 
-**Startable now (each depends only on ITEST-4):** GUARD-4 (AC-6/7/8 privacy — inherits GUARD-3's live counting sink, so AC-6's control already greens; adds the AC-7/8 source/dependency scans), GUARD-5 (AC-14/15 swap), GUARD-6 (AC-16/17 one-lib+portability), QUALITY-2 (AC-9 downgrade — the only `lib/capture` change), QUALITY-4 (AC-10/11/12 accuracy), QUALITY-3 (AC-13 — un-pend+guard), QUALITY-5 (AC-3/4 — un-pend+guard).
-- **Merge-risk:** every behaviour phase un-pends in the shared `integration_test/bs12/pending.dart` and most edit the shared `nfr_test.dart`; GUARD-4/5/6 also share `source_guard.dart` → **sequence these** (one phase per session, `/clear` between). QUALITY-2 (`lib/capture` only) may run ∥ one GUARD phase in a separate `--parallel` session with a worktree claim.
-- **Recommended order:** GUARD-4 next (privacy; the AC-6 half is nearly green on GUARD-3's sink), then the un-pend+guard QUALITY-3 / QUALITY-5 (low risk, green at baseline), then the heavier GUARD-5/6 + QUALITY-2/4.
+**Startable now (each depends only on ITEST-4):** GUARD-5 (AC-14/15 swap), GUARD-6 (AC-16/17 one-lib+portability), QUALITY-2 (AC-9 downgrade — the only `lib/capture` change), QUALITY-4 (AC-10/11/12 accuracy), QUALITY-3 (AC-13 — un-pend+guard), QUALITY-5 (AC-3/4 — un-pend+guard).
+- **Merge-risk:** every behaviour phase un-pends in the shared `integration_test/bs12/pending.dart` and most edit the shared `nfr_test.dart`; GUARD-5/6 also share `source_guard.dart` → **sequence these** (one phase per session, `/clear` between). QUALITY-2 (`lib/capture` only) may run ∥ one GUARD phase in a separate `--parallel` session with a worktree claim. GUARD-5/6 reuse GUARD-4's shared `maskCommentsAndStrings` + `_scanSource` machinery.
+- **Recommended order:** the un-pend+guard QUALITY-3 / QUALITY-5 next (low risk, green at baseline), then the heavier GUARD-5/6 + QUALITY-2/4.
 
 G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1 manual gate (D-3). Gaps carried to sign-off: D-2 (synthetic accuracy set) + D-3 (device timings).
 
@@ -213,7 +213,8 @@ G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1
 | ITEST-4 | e007e168 | 2026-10-14 05:25 EDT | 05:29 | 4m 22s | 4m 22s | claude-opus-4-8 | 40 | 92,054 | 1,782,850 | 19,529 | 1,894,473 | test-review: packet assembled + whole-suite grid 6 A / 10 B pending / 0 ordinary B (+15 A smoke); G-2 awaiting human decision; no code run |
 | SIGNOFF-DECISION | e007e168 | 2026-10-14 07:41 EDT | 07:42 | 1m 18s | 1m 18s | claude-opus-4-8 | 20 | 122,259 | 1,359,042 | 5,368 | 1,486,689 | ITEST-4 approved — G-2 approved 2026-10-14 by Matt Quirk; behaviour stage un-blocked (GUARD-3..6, QUALITY-2..5) |
 | GUARD-3 | 98019302 | 2026-10-14 07:54 EDT | 08:03 | 9m 39s | 9m 39s | claude-opus-4-8 | 130 | 187,002 | 7,199,601 | 36,480 | 7,423,213 | AC-1+AC-2 offline delivered: sink.record() wired (no lib change), un-pended AC-1/AC-2; analyze clean, unit 1228, acceptance default 17 pass/14 skip/exit 0; grade 2 A/0 |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 08:03** | **7h 44m** | **3h 47m** |  | **1,202** | **2,573,000** | **84,499,017** | **623,003** | **87,696,222** |  |
+| GUARD-4 | 7b639a43 | 2026-10-14 09:05 EDT | 09:32 | 27m 11s | 27m 11s | claude-opus-4-8 | 156 | 278,062 | 11,172,920 | 84,999 | 11,536,137 | AC-6/7/8 privacy un-pended; real forbiddenDependencies + offDeviceSenders scans (no lib change); analyze clean, unit 1228, acceptance -d flutter-tester 21 pass/11 skip/exit 0, run-pending +24/-8; grade 3 A/0 — PASS |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 09:32** | **8h 12m** | **4h 14m** |  | **1,358** | **2,851,062** | **95,671,937** | **708,002** | **99,232,359** |  |
 
 ## Sign-off
 

@@ -58,10 +58,11 @@ const Map<String, String> pendingACs = {
   // Performance (AC-5 live-preview frame rate is manual — not here)
   'AC-3': 'QUALITY-5', // reading settles within budget + visible indicator
   'AC-4': 'QUALITY-5', // recipe search returns top 3–5 within budget
-  // Privacy & security
-  'AC-6': 'GUARD-4', // photos and samples never leave the device
-  'AC-7': 'GUARD-4', // no account, no telemetry in v1
-  'AC-8': 'GUARD-4', // any future sync is opt-in and explicit
+  // Privacy & security — AC-6, AC-7, AC-8 un-pended by GUARD-4: every core flow
+  // runs under the network block with zero attempts + local-only artefacts
+  // (AC-6); the resolved dependency set carries no forbidden package and no
+  // account surface is reachable (AC-7); the real source scan finds no
+  // off-device sender in lib/ (AC-8) — each with a discriminating control.
   // Reliability
   'AC-9': 'QUALITY-2', // poor conditions downgrade stated accuracy, not silent
   // Accuracy (ΔE00 targets)

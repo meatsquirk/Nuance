@@ -1,6 +1,6 @@
 # Module GUARD — invariant guards (offline, privacy, swappable, portability)
 
-**Status:** In progress — GUARD-1/2/3 done (AC-1/AC-2 delivered); next GUARD-4 (AC-6/7/8 privacy)
+**Status:** In progress — GUARD-1/2/3/4 done (AC-1/2/6/7/8 delivered); next GUARD-5 (AC-14/15 swappable)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/guards/` (source-scan, swap-harness, network-block/offline harness — reusable test-support), `integration_test/bs12/pending.dart` (created at GUARD-1). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart` with ITEST/QUALITY. **No `lib/` product change** (D-7).
 **Depends on:** — · **Blocks:** ITEST (via GUARD-2), QUALITY (shells)
@@ -12,7 +12,7 @@
 | GUARD-1 | scaffold | — | ✅ Done | 7.84M | 32m 51s |
 | GUARD-2 | shell | — | ✅ Done | 3.72M | 17m 40s |
 | GUARD-3 | behavior | AC-1, AC-2 | ✅ Done | 7.42M | 9m 39s |
-| GUARD-4 | behavior | AC-6, AC-7, AC-8 | ⬜ Todo | | |
+| GUARD-4 | behavior | AC-6, AC-7, AC-8 | ✅ Done | 11.5M | 27m 11s |
 | GUARD-5 | behavior | AC-14, AC-15 | ⬜ Todo | | |
 | GUARD-6 | behavior | AC-16, AC-17 | ⬜ Todo | | |
 
@@ -115,6 +115,20 @@
 - **Tasks:** AC-6 — run capture+save+export under the block, assert zero network attempts + stored artefacts resolve to local paths + export bytes never leave the device. AC-7 — `forbiddenDependencies()` returns empty over the resolved pubspec/lock (control: a planted forbidden name trips it) + no account surface reachable. AC-8 — `offDeviceSenders()` returns empty (D-6; control: a planted unconsented sender trips it).
 - **Exit criteria (gates):** unit + coverage; acceptance green + discriminating; grade gate.
 - **Acceptance gate:** un-pend AC-6, AC-7, AC-8; `TestAC06/07/08_*` + all earlier green.
+
+### Result
+
+Landed the real GUARD-4 scans in `source_guard.dart` (+ `dart:io`): `forbiddenDependencies({resolvedNames})` reads `pubspec.lock` via `resolvedDependencyNames`/`parseLockPackageNames` (top-level `packages:` keys) when no names are passed, else intersects the passed set with `forbiddenDependencyNames`; `offDeviceSenders({roots})` → shared `_scanSource` walks `.dart` files under each root, runs `maskCommentsAndStrings` (blanks `//`+`/* */`+single/double/triple strings, honours `\` escapes + the `r` raw prefix, preserves newlines) and matches `_offDeviceSendPatterns` (HttpClient / sockets / websocket / datagram / `http.*`). Un-pended AC-6/AC-7/AC-8 in `pending.dart` (gate 14→11). **No `lib/` change** (D-7) ⇒ coverage gate N/A (nothing touched). Augmentations TestAC07 + TestAC08 closed (AC-7/AC-8 *B pending GUARD-4* → A). **Test changes (recorded):** 3 forward-looking control comments corrected to present/past tense + AC-6 sink attribution GUARD-4→GUARD-3; the ITEST-1 wiring test comment noting "GUARD-4/6 fill the real scans"; added one never-pending wiring test (`the GUARD-4 source scans exclude comments / strings and parse the lock`) exercising the masker + lock parser + missing-lockfile branch. No AC test weakened.
+- **Verification (host `-d flutter-tester`, cwd = repo root — see Checkpoint):** `flutter analyze` clean; `flutter test test/` **1228 pass / 0 fail** (no regression); acceptance default `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` → **+21 / ~11 skip / exit 0** (AC-6/7/8 pass, controls discriminate); run-pending (`--dart-define=BS12_RUN_PENDING=true`) → **+24 / −8** (the 8 still-unbuilt ACs AC-9/10/11/12/14/15/16/17 = intact red baseline; AC-3/4/13 green-at-baseline).
+- **Grade gate:** fresh independent grader (prior grid as context) → **3 A / 0 B pending / 0 ordinary B** (AC-6 A; AC-7/AC-8 close B-pending → A). Grid appended to `behavior-test-completeness-…md` (GUARD-4 §).
+- **Fix passes:** 0/3 (first full run green; the one earlier red was an iOS-sim run of the file-reading controls — resolved by running on `-d flutter-tester`, not a code fix).
+- **Tokens / Time:** see Dashboard / master ledger (GUARD-4 row).
+
+### Checkpoint / Handoff
+
+- **Frozen for later phases:** `source_guard.dart` now exposes shared scan machinery — `maskCommentsAndStrings(source)`, `_scanSource(roots, rule, patterns)`, `resolvedDependencyNames({lockPath})`, `parseLockPackageNames(text)` — which **GUARD-6 reuses** for `conversionOffenders`/`deltaEOffenders`/`platformOffenders` (still stubs) and **GUARD-5** for `concreteTypeReferences`. Add new rule patterns + call `_scanSource`; honour each scan's authority/allow-list constants (comments/strings already excluded).
+- **Verification environment (IMPORTANT):** the bs-12 acceptance suite runs on **`-d flutter-tester`** (host VM), NOT an iOS sim — the source scans read the repo tree through `dart:io` (`cwd = repo root`), which the sim sandbox lacks. `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` runs all tests on the host with no Xcode build and **needs no device lane** (so no `coord.sh with-lock`). A bare run with no `-d` still gives zero tests / false green — always pass `-d flutter-tester`. Master plan line 81 updated.
+- **Known gaps / next:** GUARD-5 (AC-14/15), GUARD-6 (AC-16/17), QUALITY-2/3/4/5 remain. GUARD-5/6 share `source_guard.dart`+`nfr_test.dart` → sequence (one phase/session, `/clear` between). G-3 (AC-5 device frame rate + AC-3/4 target timings) stays a SIGNOFF-1 manual gate.
 
 ## Phase GUARD-5 — AC-14 + AC-15 swappable interfaces
 
