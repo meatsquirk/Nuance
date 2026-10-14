@@ -96,6 +96,15 @@ void main() {
         expect(r.outcomeFor(id), isNull);
       }
       expect(r.failing, isEmpty);
+      // `.empty()` takes no arguments, so every use above is const-folded and
+      // its body line never registers coverage — the carried const-constructor
+      // flake that A11Y-2 closed for the ConformanceRuleOutcome ctors and that
+      // turned deterministic here for this ctor (line 108). Invoke it once at
+      // runtime so the line is genuinely covered.
+      // ignore: prefer_const_constructors
+      final runtimeEmpty = ConformanceResult.empty();
+      expect(runtimeEmpty.passed, isFalse);
+      expect(runtimeEmpty, const ConformanceResult.empty());
     });
 
     test('passed is true iff every rule is present and passes', () {

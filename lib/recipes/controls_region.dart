@@ -24,8 +24,12 @@ class ControlsRegion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mode = controller.state.mode;
-    return Row(
+    // A `Wrap` (not a `Row`) so the label + toggle reflow onto the next line
+    // instead of overflowing at 200% font scale (AC-3); at the default scale
+    // they stay on one line as before.
+    return Wrap(
       key: regionKey,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         // Bold so the field label meets the AA contrast floor (AC-5): at 14px
         // regular the contrast guideline samples anti-aliased edges of the thin

@@ -33,10 +33,11 @@ class ValueReading extends StatelessWidget {
     return Semantics(
       label: '$number, $word',
       excludeSemantics: true,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
+      // A `Wrap` (not a `Row`) so the number and its word reflow onto a second
+      // line instead of overflowing when the system font scale reaches 200%
+      // (AC-3); at the default scale they sit on one line exactly as before.
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(number, style: numberStyle),
           const SizedBox(width: 8),

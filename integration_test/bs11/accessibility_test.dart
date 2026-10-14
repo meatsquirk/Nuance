@@ -41,20 +41,23 @@ void main() {
       // Seeded with the 10 automated ACs in CONF-1; each behaviour phase
       // deletes its AC's row in `bs11/pending.dart` as it un-pends it, so this
       // set shrinks by one per delivered AC. **A11Y-2 un-pended AC-5** (AA
-      // contrast) and **A11Y-3 un-pended AC-4** (48dp tap targets), so the
-      // still-pending set is now the other eight. AC-10 and AC-12 are
-      // pure-manual gates (D-2) and never enter the gate.
+      // contrast), **A11Y-3 un-pended AC-4** (48dp tap targets) and **A11Y-4
+      // un-pended AC-3** (200% font scaling), so the still-pending set is now the
+      // other seven. AC-10 and AC-12 are pure-manual gates (D-2) and never enter
+      // the gate.
       const expected = {
-        'AC-1', 'AC-2', 'AC-3',
+        'AC-1', 'AC-2',
         'AC-6', 'AC-7', 'AC-8', 'AC-9', 'AC-11',
       };
       expect(pendingACs.keys.toSet(), expected);
-      expect(pendingACs, hasLength(8));
-      // AC-5 and AC-4 are delivered — they must no longer be pending.
+      expect(pendingACs, hasLength(7));
+      // AC-5, AC-4 and AC-3 are delivered — they must no longer be pending.
       expect(pendingACs.containsKey('AC-5'), isFalse,
           reason: 'AC-5 was un-pended by A11Y-2');
       expect(pendingACs.containsKey('AC-4'), isFalse,
           reason: 'AC-4 was un-pended by A11Y-3');
+      expect(pendingACs.containsKey('AC-3'), isFalse,
+          reason: 'AC-3 was un-pended by A11Y-4');
     });
 
     test('the two manual ACs are absent from the automated gate (D-2)', () {
@@ -436,13 +439,14 @@ void main() {
     acTestWidgets('AC-3', 'the layout survives 200% font scaling without breaking',
         (tester) async {
       // Scenario: System font scaling to 200% does not break the layout.
-      // The 200%-scale pump + overflow capture live inside the scaling rule
-      // (A11Y-4: "pump at textScaler 2.0; assert takeException()==null and no
-      // overflow"), so — as for the contrast/target rules in ITEST-2 — the test
-      // runs the reusable check over the *unscaled* subject and reads the
-      // `fontScale200` outcome. (`whenScaledTo` stays available for A11Y-4's own
-      // rule-level tests; pre-scaling here would surface a raw RenderFlex
-      // overflow before the check could capture it, dirtying the baseline.)
+      // The 200%-scale pump + overflow detection live inside the scaling rule
+      // (A11Y-4: re-render at textScaler 2.0, then flag any Row/Column whose
+      // children exceed its bounds), so — as for the contrast/target rules in
+      // ITEST-2 — the test runs the reusable check over the *unscaled* subject
+      // and reads the `fontScale200` outcome. (`whenScaledTo` stays available
+      // for A11Y-4's own rule-level tests; pre-scaling here would surface a raw
+      // RenderFlex overflow before the check could measure it, dirtying the
+      // baseline.)
       // Then (sweep, D-1): the scaling rule passes on every real screen.
       for (final realScreen in realScreens) {
         // Given: the screen is shown through the production `buildApp`.
@@ -464,11 +468,12 @@ void main() {
       // Then: the rule passes on the reference.
       expect(refResult.outcomeFor(ConformanceRuleId.fontScale200)?.pass, isTrue,
           reason: 'the compliant reference must survive 200% scaling');
-      // Control (G5): a fixed-height row that clips once the text doubles fails
-      // the rule — rejects a rule that never applies the 200% check.
+      // Control (G5): a fixed-height column of text lines that overflows once
+      // the text doubles fails the rule — rejects a rule that never applies the
+      // 200% check.
       await givenControl(tester, control_overflow200);
       expect(control_overflow200.subtree, findsOneWidget,
-          reason: 'Given: the fixed-height row is rendered');
+          reason: 'Given: the fixed-height column is rendered');
       final ctrlResult =
           await whenCheckedForConformance(tester, control_overflow200.subtree);
       expect(ctrlResult.failing, contains(ConformanceRuleId.fontScale200),

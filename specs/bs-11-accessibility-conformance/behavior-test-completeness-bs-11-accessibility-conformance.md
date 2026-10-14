@@ -192,3 +192,46 @@ shipped theme). Neither test body changed in A11Y-3 — only product code, the r
 file (`checks/target.dart`), the pending gate and the pending-gate guard test
 moved — so neither is a downgrade from its prior A. **Nothing must change for the
 phase to pass.**
+
+## A11Y-4 — re-grade of un-pended AC tests (AC-3, AC-4, AC-5)
+
+Independent, adversarial re-grade of the three currently un-pended automated AC
+tests against the code as it now exists. **What A11Y-4 changed:** it implemented
+the real **AC-3 font-scaling rule** in `integration_test/conformance/checks/scaling.dart`
+(`checkFontScale200`) — a *measurement-based* overflow detector that re-renders
+the subject at `textScaler 2.0`, swallows the paint-time RenderFlex error, then
+walks the render tree and flags the first `RenderFlex` whose children's summed
+main-axis extent exceeds its own (`over > 0.5`), skipping `Wrap`/scrollables by
+construction — and wired it into the aggregate `runConformanceCheck` beside
+`contrastAA`/`tapTarget48`. It **replaced** the old ITEST-1 AC-3 control (a
+fixed-*height* `Row` with its label in `Expanded`, which flex-shrinks/silently
+clips and reports **no** overflow — a non-discriminating control) with
+`control_overflow200`, a fixed-height (100dp) `Column` of three rows each sized by
+`MediaQuery.textScaler.scale(30)` (30dp→60dp at 200%), so 3×60=180dp deterministically
+overflows the 100dp box. `pending.dart` drops AC-3 (scaffold-guard now expects the
+other seven and asserts `!containsKey('AC-3')`). **AC-4 and AC-5 bodies are
+unchanged by A11Y-4** (their rules landed at A11Y-3/A11Y-2); they are re-confirmed
+against the current aggregate. The grader ran nothing and edited nothing but this
+file.
+
+| Test | What it checks | Grade | Rule notes |
+|---|---|---|---|
+| **AC-3** `the layout survives 200% font scaling without breaking` (owner A11Y-4), un-pended; rule = real `checkFontScale200` (re-render at `textScaler 2.0`, measure first `RenderFlex` overflow) | Sweep: for each of the 6 `realScreens`, `givenScreen` opens it (Given: `screen findsOneWidget`, line 454), the check runs, `outcomeFor(fontScale200).pass isTrue` (line 461). Reference: `givenCompliantReference` then `outcomeFor(fontScale200).pass isTrue` (line 469). Control: `control_overflow200` (Given: subtree `findsOneWidget`, line 475) has `fontScale200` in `failing` (line 479). | **A** | **G5 genuine discriminator (the keystone concern), satisfied:** the rule passes on all 6 real `buildApp` screens **and** the reference and **fails on `control_overflow200`**. Verified the control truly discriminates: its 100dp `Column` holds three `textScaler`-sized rows (3×60=180dp at 200%), so the `RenderFlex`'s children (180) exceed its own extent (100 — pinned tight by the outer `SizedBox`), `_firstFlexOverflow` returns `over=80>0.5`, and the real rule marks it failing — so a rule that ignored overflow (always-pass) would leave `failing` empty and fail this leg. The replaced control (an `Expanded`-row that silently clips with no overflow) could **not** do this; the new `textScaler`-driven box height makes the overflow deterministic and font-independent (holds under the test font and the device font alike). **G4** asserts the exact `ConformanceRuleId.fontScale200` outcome `.pass isTrue` (not merely non-null) at step grain, on **every** of the six `realScreens` (whose size/identity ITEST-1's fixture guard pins) and on the reference; the control leg asserts `failing` **contains** `fontScale200`. **G6** exactly one AC (only `fontScale200` is read/asserted; other failing ids on the control don't affect `contains`). **G3** N/A — a structural overflow check has no negative-after-settle Then; the 200% pump + restore live inside the rule, so the test reads the outcome over the unscaled subject (honest comment, lines 441-449; `whenScaledTo` left for A11Y-4's own rule-level tests). **G1** the two *discriminating* Givens are checked through the public surface before the When — every swept screen's home finder `findsOneWidget` and the control's keyed subtree `findsOneWidget`. **Reference-leg asymmetry re-judged: still minor/non-blocking, NOT a G1 gap.** The reference leg omits an explicit `compliantReferenceFinder findsOneWidget`, but the real `checkFontScale200` calls `tester.renderObject(screen)` (and the composed contrast/target rules traverse the same finder), which **throws** unless the finder resolves to exactly one widget — so a non-rendered reference would error red, never pass vacuously; and the test's discrimination rests entirely on the fully-checked control + 6-screen sweep, making the reference a redundant positive. **G2** satisfied — the sweep opens every screen through the real feature `buildApp` launchers (shipped assembly/layouts), so the overflow-freedom under test comes from the real screens A11Y-4 fixed, not a test construct. Deterministic (`buildApp` launchers + `pumpAndSettle`, rule restores scale in `finally`; no fixed sleeps). No downgrade from the prior ITEST-3 "A" — the old grade was against a stub rule + non-discriminating control; the current rule + `control_overflow200` make the same A **earned**. |
+| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = real `checkTapTarget48` (android 48×48 `&&` iOS 44×44 → 48dp floor) | Sweep: each real screen opened (Given `screen findsOneWidget`) and `outcomeFor(tapTarget48).pass isTrue`. Reference: descendant `IconButton findsOneWidget` (Given), then passes `tapTarget48`. Control: `control_smallTarget` (24dp, Given subtree `findsOneWidget`) has `tapTarget48` in `failing`. | **A** | Unchanged by A11Y-4 (body + rule untouched); re-confirmed against the current 3-rule aggregate. **G1** every Given (six screen finders, reference `IconButton` descendant, control keyed subtree) checked through the public surface before the When. **G2** the sweep drives the shipped `buildApp` assembly carrying the padded `AppTheme`/`materialTapTargetSize`. **G4** exact `tapTarget48` `.pass isTrue`, every screen; control `failing` **contains** `tapTarget48`. **G5** passes on the 48dp reference + six real padded screens, fails on the 24dp `control_smallTarget` — real rule genuinely flags sub-48dp. **G6** one AC. **G3** N/A. No downgrade. |
+| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = `checkContrastAA` over `textContrastGuideline` at the AA floor | Sweep: each real screen opened; **G2 Given** asserts `Theme.of(element).colorScheme == AppTheme.light().colorScheme`, then `outcomeFor(contrastAA).pass isTrue`. Reference: same theme asserted, passes `contrastAA`. Control: `control_lowContrast` (~1.6:1 grey-on-white) has `contrastAA` in `failing`. | **A** | Unchanged by A11Y-4 (body + rule untouched); re-confirmed. **G2 (decisive, satisfied)** — contrast is pinned to the shipped `AppTheme.light().colorScheme` (content-equal `ColorScheme`) on every swept screen and the reference, not a test-injected theme; `tester.element(finder)` itself fails unless the finder resolves, so the reference leg is non-vacuous. **G1** screen-open + theme-source Givens before the When. **G4** exact `contrastAA` `.pass isTrue`, every screen; control `failing` **contains** `contrastAA`. **G5** passes on the AA reference + six real screens, fails on `control_lowContrast` (below 4.5:1). **G6** one AC. **G3** N/A. No downgrade. |
+
+### A11Y-4 re-grade verdict
+
+**3 A / 0 B — PASS.** All three un-pended automated AC tests meet the bar against
+the code as it now stands. **AC-3 is A — now earned, not nominal:** A11Y-4's real
+`checkFontScale200` (measurement-based overflow) plus the replacement
+`control_overflow200` (a `textScaler`-driven 100dp column that deterministically
+overflows by 80px at 200%) make the control a genuine discriminator — it FAILS the
+rule, the test asserts `failing contains fontScale200`, and the sweep asserts the
+rule PASSES on every one of the six real screens and the reference (`.pass isTrue`,
+not non-null). The reference leg's omitted `findsOneWidget` is re-judged **minor /
+non-blocking**, not a G1 gap: the rule's `tester.renderObject(screen)` throws on a
+missing finder (so no vacuous pass), and discrimination rests on the fully-checked
+control + sweep. **AC-4** and **AC-5** are **A**, unchanged and un-weakened by
+A11Y-4 (G2 pinned to the shipped theme/config), re-confirmed against the current
+three-rule aggregate. **Nothing must change for the phase to pass.**

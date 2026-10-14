@@ -66,7 +66,7 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   'AC-1': 'A11Y-5',
   'AC-2': 'A11Y-5',
-  'AC-3': 'A11Y-4',
+  // AC-3 (200% font scaling) un-pended by A11Y-4.
   // AC-4 (48dp tap targets) un-pended by A11Y-3.
   // AC-5 (AA contrast floor) un-pended by A11Y-2.
   'AC-6': 'A11Y-6',

@@ -108,9 +108,12 @@ class CaptureControls extends StatelessWidget {
         ),
         // E18: the sampling-radius selector — one option per radius, the
         // selected one marked (AC-3).
-        Row(
+        // A `Wrap` (not a `Row`) so the label + radius options reflow onto the
+        // next line instead of overflowing at 200% font scale (AC-3); at the
+        // default scale they stay on one line as before.
+        Wrap(
           key: radiusKey,
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             // Bold so the field label meets the AA contrast floor (AC-5): at
             // 14px regular the contrast guideline samples anti-aliased edges of

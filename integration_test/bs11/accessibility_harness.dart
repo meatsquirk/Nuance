@@ -331,20 +331,39 @@ class _AutoDismissControlState extends State<_AutoDismissControl> {
   }
 }
 
-/// A fixed-height row that clips its text at 200% font scaling — fails AC-3
-/// (200% scaling) only. Lays out fine at 1.0 and overflows its bounded height
-/// once the text doubles.
+/// A fixed-height column of status rows whose height tracks the font scale, so
+/// it does not fit at 200% — fails AC-3 (200% scaling) only. The three rows fit
+/// inside the 100dp height at the default scale and overflow it once the text
+/// doubles (a `RenderFlex` whose children exceed its bounds — what the scaling
+/// rule measures).
+///
+/// A11Y-4 note: the ITEST-1 fixture was a fixed-*height* `Row` with its label in
+/// `Expanded`, which flex-shrinks the text to fit and *silently clips* it —
+/// reporting no overflow, so no overflow-based rule could flag it (the control
+/// was non-discriminating). It is replaced by a fixed-height column whose rows
+/// are each sized by `MediaQuery.textScaler` (30dp → 60dp at 200%). Scaling the
+/// box height by the text scaler — rather than relying on a glyph's measured
+/// width or line height — makes the overflow **deterministic and
+/// font-independent**: it holds identically under the widget-test font and the
+/// on-device font (a text-width control overflows only under the wider test
+/// font, and a raw line-height control depends on the font's metrics and
+/// wrapping). The fixture's name and single-rule intent are unchanged.
 final ControlFixture control_overflow200 = ControlFixture(
   'control_overflow200',
   _fixtureApp(
     _overflow200Key,
-    const SizedBox(
-      height: 22,
+    SizedBox(
+      height: 100,
       width: 200,
-      child: Row(
+      child: Column(
         children: [
-          Icon(Icons.info_outline, size: 16),
-          Expanded(child: Text('Fixed-height status line')),
+          for (var i = 1; i <= 3; i++)
+            Builder(
+              builder: (context) => SizedBox(
+                height: MediaQuery.textScalerOf(context).scale(30),
+                child: Text('Status line $i'),
+              ),
+            ),
         ],
       ),
     ),
