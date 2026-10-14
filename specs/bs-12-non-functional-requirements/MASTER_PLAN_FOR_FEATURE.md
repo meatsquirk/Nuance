@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — GUARD module ✅ COMPLETE (GUARD-6 done; AC-1/2/6/7/8/14/15/16/17 delivered; grade 2 A/0); next the QUALITY line (QUALITY-2/3/4/5 all startable) then SIGNOFF-1
+**Status:** In progress — GUARD module ✅ COMPLETE + QUALITY-2 ✅ done (AC-9 delivered, the one `lib/capture` change; grade 1 A/0); 10 of 16 automatable ACs delivered; next QUALITY-3/4/5 (startable; sequence — shared `nfr_test.dart`) then SIGNOFF-1
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -51,7 +51,7 @@
 | AC-6 | Photos and samples never leave the device | ITEST-2 `TestAC06_PhotosAndSamplesStayOnDevice` | GUARD-4 | ✅ Done (GUARD-4 2026-10-14; A) |
 | AC-7 | There is no account and no telemetry in v1 | ITEST-2 `TestAC07_NoAccountNoTelemetry` | GUARD-4 | ✅ Done (GUARD-4 2026-10-14; A) |
 | AC-8 | Any future sync is opt-in and explicit | ITEST-2 `TestAC08_FutureSyncIsOptIn` | GUARD-4 | ✅ Done (GUARD-4 2026-10-14; A) |
-| AC-9 | Poor conditions downgrade the stated accuracy rather than failing quietly | ITEST-3 `TestAC09_PoorConditionsDowngradeAccuracy` | QUALITY-2 | ⬜ Todo |
+| AC-9 | Poor conditions downgrade the stated accuracy rather than failing quietly | ITEST-3 `TestAC09_PoorConditionsDowngradeAccuracy` | QUALITY-2 | ✅ Done (QUALITY-2 2026-10-14; A) |
 | AC-10 | Capture with reference card in controlled lighting meets ΔE00 ≤ 3 | ITEST-3 `TestAC10_CardControlledMeetsDeltaE3` | QUALITY-4 | ⬜ Todo |
 | AC-11 | Capture without reference card in daylight meets ΔE00 ≤ 8, labelled approximate | ITEST-3 `TestAC11_CardlessDaylightApproximateUnder8` | QUALITY-4 | ⬜ Todo |
 | AC-12 | Recipe prediction vs a physically mixed swatch meets ΔE00 ≤ 5 in-gamut | ITEST-3 `TestAC12_RecipePredictionUnder5InGamut` | QUALITY-4 | ⬜ Todo |
@@ -179,8 +179,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 9 | GUARD-4 | AC-6+AC-7+AC-8 privacy: nothing-leaves + no-telemetry + no-off-device-path guards | ✅ Done | 11.5M | 27m 11s | real `forbiddenDependencies`/`offDeviceSenders` scans (no lib change); un-pended AC-6/7/8, closed TestAC07/08; analyze clean, unit 1228, acceptance `-d flutter-tester` 21 pass/11 skip/exit 0, run-pending +24/−8 (8 = intact red baseline); grade 3 A/0. **Suite runs on `-d flutter-tester`** (host) — source scans read the repo tree (line 81) |
 | 10 | GUARD-5 | AC-14+AC-15 swappable: inject alt engine + alt CVD, callers unchanged | ✅ Done | 10.1M | 21m 16s | real `concreteTypeReferences` scan (no lib change); un-pended AC-14/15, closed TestAC14/15; analyze clean, unit 1228, acceptance `-d flutter-tester` 23 pass/9 skip/exit 0, run-pending +26/−6 (6 = intact red baseline); grade 2 A/0 |
 | 11 | GUARD-6 | AC-16+AC-17 one-colour-lib + portability: source-scan guard rules | ✅ Done | 9.0M | 22m 39s | real conversion/ΔE/platform scans; **D-4 re-scoped (owner)** — 2 domain pipelines sanctioned; un-pended AC-16/17 (gate 9→7); no lib change; analyze clean, unit 1228, default +26/~7, run-pending +28/−4; grade 2 A/0 |
-| 12 | QUALITY-2 | AC-9 reliability fix: unlocked-exposure + missing-card downgrade triggers (`lib/capture`) | ⬜ Next | | | startable now (the only `lib/capture` change); ∥-able with a QUALITY phase not touching `nfr_test.dart` |
-| 13 | QUALITY-3 | AC-13 out-of-gamut: identified, no false recipe + in-gamut control | ⬜ Todo | | | |
+| 12 | QUALITY-2 | AC-9 reliability fix: unlocked-exposure + missing-card downgrade triggers (`lib/capture`) | ✅ Done | 14.38M | 24m 36s | `commit()` downgrades to approximate on any `activeDowngradeReasons` (lighting/unlocked/no-card); live view surfaces the reason; un-pended AC-9; 3 bs-02 calibrate tests gained a `lock` precondition (D-5). analyze clean, unit 1233 (+5), coverage 100%/4 lib files, acceptance 27 pass/6 skip/exit 0; grade 1 A/0 (AC-9 B-pending→A) |
+| 13 | QUALITY-3 | AC-13 out-of-gamut: identified, no false recipe + in-gamut control | ⬜ Next | | | startable now; un-pend+guard (green at baseline, bs-04 ENGINE-5); shares `nfr_test.dart` → sequence vs QUALITY-4/5 |
 | 14 | QUALITY-4 | AC-10+AC-11+AC-12 accuracy: synthetic set + harness asserts ΔE00 ≤ 3 / ≤ 8+approx / ≤ 5 | ⬜ Todo | | | |
 | 15 | QUALITY-5 | AC-3+AC-4 performance: indicator+settle + top 3–5 + CI budget | ⬜ Todo | | | |
 | 16 | SIGNOFF-1 | sign-off: packet + summary + manual AC-5 (G-3) + AC-3/4 device evidence + human decision | ⬜ Todo | | | |
@@ -189,14 +189,12 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**GUARD-6 done 2026-10-14 (AC-16/AC-17 ✅ one-colour-lib + portability; grade 2 A/0) — the GUARD module is COMPLETE.** The real conversion/ΔE/platform source scans landed in `source_guard.dart` (`_scanSource` gained an `isAllowed` exemption filter; pattern lists key on CIE signature constants + platform constructs, reusing GUARD-4/5's mask+walk). **D-4 re-scoped (owner Matt Quirk, 2026-10-14):** the AC-16 conversion scan guards the *general* colorimetric authority and exempts two owner-sanctioned domain pipelines (`subtractive_engine.dart` illuminant-E; `confusion_check.dart` D65) via `sanctionedDomainConversionFiles`, still flagging any *other* stray conversion — surfaced because the original "zero offenders" assumption was false at the branch point. Un-pended AC-16/17 (gate 9→7). **No `lib/` change.** Suite runs on **`-d flutter-tester`** (host VM, cwd = repo root).
+**QUALITY-2 done 2026-10-14 (AC-9 ✅ reliability downgrade — the one `lib/capture` behaviour change; grade 1 A/0) — the only `lib/` change bs-12 makes is now landed.** `commit()` forces the committed reading's stated accuracy to `approximate` whenever any `activeDowngradeReasons` holds (poor lighting, AE/AWB/AF not locked, or no reference card); an unqualified reading keeps its tier. The live view surfaces each active reason in words (`CaptureLiveView.downgradeReasons` ← `controller.activeDowngradeReasons`). Un-pended AC-9 (pending 7→6). The new contract made a calibrated-but-unsettled reading non-trustworthy, so **three bs-02 calibrate→commit tests gained a `lock` precondition** (unit AC-8 + integration AC-6 control/AC-8) — assertions unchanged, D-5 sanctioned. Suite runs on **`-d flutter-tester`** (host VM); unit 1233/cov 100% 4 files/acceptance 27 pass 6 skip.
 
-**Remaining behaviour = the QUALITY line (4 phases, each depends only on ITEST-4, all startable now):** QUALITY-2 (AC-9 downgrade triggers — the **only** `lib/capture` change), QUALITY-3 (AC-13 out-of-gamut — un-pend+guard, green at baseline), QUALITY-4 (AC-10/11/12 accuracy), QUALITY-5 (AC-3/4 performance — un-pend+guard). Then SIGNOFF-1.
-- **Merge-risk:** every QUALITY phase un-pends in the shared `integration_test/bs12/pending.dart` and most edit the shared `nfr_test.dart` → **sequence any two that touch `nfr_test.dart`** (one phase/session, `/clear` between). QUALITY-2 is `lib/capture`-only and disjoint, so it **may run ∥** a QUALITY phase not touching `nfr_test.dart`, in a separate `--parallel` worktree session with a claim.
-- **Recommended order:** the un-pend+guard QUALITY-3 / QUALITY-5 (low risk, green at baseline), then the heavier QUALITY-2 (the `lib/capture` fix) / QUALITY-4 (synthetic accuracy set).
-- **G-3** (AC-5 live-preview frame rate on device + AC-3/AC-4 target-hardware timings) stays a SIGNOFF-1 manual gate (D-3).
-
-G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1 manual gate (D-3). Gaps carried to sign-off: D-2 (synthetic accuracy set) + D-3 (device timings).
+**Remaining behaviour = QUALITY-3/4/5 (each depends only on ITEST-4, all startable):** QUALITY-3 (AC-13 out-of-gamut — un-pend+guard, green at baseline), QUALITY-4 (AC-10/11/12 accuracy — synthetic set), QUALITY-5 (AC-3/4 performance — un-pend+guard). Then SIGNOFF-1.
+- **Merge-risk:** all three un-pend in the shared `integration_test/bs12/pending.dart` and edit the shared `nfr_test.dart` → **sequence them** (one phase/session, `/clear` between). No `lib/` change left (QUALITY-2 was the only one), so no further coverage-gated product edits.
+- **Recommended order:** the un-pend+guard QUALITY-3 / QUALITY-5 (low risk, green at baseline), then the heavier QUALITY-4 (synthetic accuracy set).
+- **G-3** (AC-5 live-preview frame rate on device + AC-3/AC-4 target-hardware ~1–2 s timings) stays a SIGNOFF-1 manual gate (D-3). Gaps carried to sign-off: D-2 (synthetic accuracy set) + D-3 (device timings).
 
 ## Token usage
 
@@ -217,7 +215,8 @@ G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1
 | GUARD-4 | 7b639a43 | 2026-10-14 09:05 EDT | 09:32 | 27m 11s | 27m 11s | claude-opus-4-8 | 156 | 278,062 | 11,172,920 | 84,999 | 11,536,137 | AC-6/7/8 privacy un-pended; real forbiddenDependencies + offDeviceSenders scans (no lib change); analyze clean, unit 1228, acceptance -d flutter-tester 21 pass/11 skip/exit 0, run-pending +24/-8; grade 3 A/0 — PASS |
 | GUARD-5 | fe668497 | 2026-10-14 10:49 EDT | 11:11 | 21m 16s | 21m 16s | claude-opus-4-8 | 156 | 243,150 | 9,784,471 | 70,481 | 10,098,258 | AC-14/AC-15 swappable un-pended; real concreteTypeReferences scan (no lib change); analyze clean, unit 1228, acceptance -d flutter-tester 23 pass/9 skip/exit 0, run-pending +26/-6; grade 2 A/0 — PASS |
 | GUARD-6 | 0a2be238 | 2026-10-14 11:36 EDT | 12:27 | 50m 41s | 22m 39s | claude-opus-4-8 | 136 | 250,700 | 8,674,963 | 75,040 | 9,000,839 | AC-16+AC-17 un-pended (one-colour-lib + portability); real conversion/ΔE/platform source scans; D-4 re-scoped (owner) sanctioning 2 domain pipelines; no lib change; analyze clean, unit 1228, acceptance default +26/~7, run-pending +28/−4; grade 2 A/0 — PASS |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 12:27** | **9h 24m** | **4h 58m** |  | **1,650** | **3,344,912** | **114,131,371** | **853,523** | **118,331,456** |  |
+| QUALITY-2 | 8d5d640c | 2026-10-14 13:01 EDT | 13:25 | 24m 36s | 24m 36s | claude-opus-4-8 | 190 | 278,939 | 14,015,363 | 80,602 | 14,375,094 | AC-9 reliability downgrade delivered (the one lib/capture change): commit() downgrades to approximate on any active downgrade reason; live view surfaces the reason; un-pended AC-9; 3 bs-02 calibrate tests gained a lock precondition (D-5). analyze clean, unit 1233 (+5), coverage 100%/4 lib files, acceptance 27 pass/6 skip/exit 0; grade 1 A/0 (AC-9 B-pending->A) |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 13:25** | **9h 48m** | **5h 22m** |  | **1,840** | **3,623,851** | **128,146,734** | **934,125** | **132,706,550** |  |
 
 ## Sign-off
 

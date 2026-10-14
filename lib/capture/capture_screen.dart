@@ -37,8 +37,15 @@ class CaptureScreen extends StatelessWidget {
           builder: (context, _) {
             return Column(
               children: [
-                // The live viewport takes the space above the controls.
-                Expanded(child: CaptureLiveView(state: controller.state)),
+                // The live viewport takes the space above the controls; it is
+                // told which poor conditions are active (bs-12 AC-9) so it can
+                // surface the downgrade reasons in words.
+                Expanded(
+                  child: CaptureLiveView(
+                    state: controller.state,
+                    downgradeReasons: controller.activeDowngradeReasons,
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(

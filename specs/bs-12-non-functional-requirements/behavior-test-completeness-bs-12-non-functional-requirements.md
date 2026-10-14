@@ -166,3 +166,24 @@ AC tests: **13 A delivered-or-green** (AC-1/2 + AC-6/7/8 delivered + AC-3/4/13 g
 ### Whole-suite state after GUARD-6
 
 AC tests: **15 A delivered-or-green** (AC-1/2 + AC-6/7/8 + AC-14/15 + **AC-16/17 now delivered** + AC-3/4/13 green-at-baseline). Grid delta: AC-16 and AC-17 move from *B pending GUARD-6* to *A (delivered)*; *Test augmentations* TestAC16 / TestAC17 closed. The remaining **4 B-pending** rows are **AC-9 → QUALITY-2**, **AC-10/11/12 → QUALITY-4** (AC-13 is green-at-baseline, un-pended/guarded by **QUALITY-3**; AC-3/4 un-pended/guarded by QUALITY-5). Smoke/harness/wiring A rows unchanged (the GUARD-6 load-bearing-exemption wiring test adds one more passing wiring row). AC-5 remains the sole manual AC for sign-off. No ordinary B outstanding.
+
+---
+
+## QUALITY-2 § — AC-9 (reliability downgrade)
+
+**Phase graded:** QUALITY-2 (behaviour — the one AC test it un-pended: `AC-9` in `integration_test/bs12/nfr_test.dart:636-706`), now un-pended and running in the DEFAULT suite. **What was graded:** exactly `AC-9`, judged against the real `commit()` downgrade (`lib/capture/capture_controller.dart` — forces `CaptureAccuracy.approximate` whenever `activeDowngradeReasons` is non-empty), the AC-9 scenes (`integration_test/bs12/nfr_harness.dart:102-138` — `nfrLowLightScene`/`nfrUnlockedScene`/`nfrMissingCardScene`/`nfrTrustworthyScene`) and the real `FakeCaptureSource` (`lighting`/`locks.allLocked`/`referenceCardPresent` are genuine source properties, not test overrides). Graded by a **fresh independent subagent** (not the author), given the prior grid as context and asked to justify any downgrade against a named rule (G1–G6). **Grade key:** A = discriminates today with no later-behaviour dependency.
+
+| AC test | Then + control | Grade | Why |
+|---|---|---|---|
+| `AC-9` low light → downgraded | `nfrLowLightScene` (dim, card, locked, calibrated): `reasons` contains `lowLight` AND committed `accuracy == approximate` | A | G1/G2 condition read from the real source before commit; G4 exact enum + exact tier. |
+| `AC-9` unlocked exposure → downgraded | `nfrUnlockedScene` (well-lit, card, calibrated, **not locked**): `reasons` contains `exposureUnlocked` AND `accuracy == approximate` | A | **The G5 discriminator vs a low-light-only (pre-fix) impl**: a calibrated reading forced to approximate solely because exposure was not locked. |
+| `AC-9` missing card → approximate | `nfrMissingCardScene` (well-lit, locked, **no card**): `reasons` contains `missingReferenceCard` AND `accuracy == approximate` | A | G1/G2/G4 hold; non-discriminating in isolation (card-less is approximate by default) but correct and covered by the control + unlocked branch. |
+| `AC-9` control: trustworthy stays calibrated | `nfrTrustworthyScene` (well-lit, locked, card-calibrated): `reasons.isEmpty` AND `accuracy == calibrated` | A | **G3/G5 control**: rejects a blanket force-to-approximate and proves the reading CAN be trustworthy, giving the negatives meaning. |
+
+### Verdict
+
+**1 A / 0 B pending / 0 ordinary B — PASS.** AC-9 legitimately closes from *B pending QUALITY-2* to **A**. QUALITY-2 landed the real `commit()` downgrade trigger (consumes QUALITY-1's `activeDowngradeReasons` seam) plus the live-view reason surface. **Discrimination (G5) explicit:** the unlocked-exposure branch rejects a low-light-only impl (the pre-fix behaviour) — a well-lit, card-calibrated reading must still downgrade to approximate because exposure was not locked; and the trustworthy control rejects a blanket force-to-approximate (it must stay `calibrated` with an empty reason set). Both wrong impls are rejected; a control is present. Minor observed looseness (reason-set assertions use `contains` not exact-set equality, so extra spurious reasons would not be caught) does not weaken the AC — the tier assertions are exact and the control pins the no-downgrade case. No AC test was weakened. (Separately, three **bs-02** tests — unit `capture_controller_test.dart` AC-8; integration `capture_test.dart` AC-6 control + AC-8 — gained a `lock` precondition to keep demonstrating the calibrated tier under the new AC-9 contract; assertions unchanged, D-5 sanctioned.)
+
+### Whole-suite state after QUALITY-2
+
+AC tests: **16 A delivered-or-green** (AC-1/2, AC-6/7/8, AC-14/15, AC-16/17, **AC-9 now delivered**, + AC-3/4/13 green-at-baseline). Remaining **3 B-pending** rows: **AC-10/11/12 → QUALITY-4** (AC-13 green-at-baseline, un-pended/guarded by QUALITY-3; AC-3/4 by QUALITY-5). AC-5 remains the sole manual AC for sign-off. No ordinary B outstanding.

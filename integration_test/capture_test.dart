@@ -579,6 +579,11 @@ void main() {
         reason: 'AC-6 control: the card scene is in adequate light (no dim '
             'downgrade), so the tier difference is the card calibration, not '
             'lighting');
+    // bs-12 AC-9 (reliability): an unsettled reading is downgraded to
+    // approximate, so settle (lock AE/AWB/AF) before calibrating — the control
+    // demonstrates the calibrated tier a settled card capture earns, not the
+    // AC-9 unlocked-exposure downgrade.
+    await cardHarness.whenLock();
     await cardHarness.whenCalibrate();
     await cardHarness.whenCommit();
     final calibrated = cardHarness.state.lastCommittedSample;
@@ -649,7 +654,11 @@ void main() {
     expect(harness.source.referenceCardPresent, isTrue,
         reason: 'AC-8 Given: a reference card is present in the frame');
 
-    // When: the painter calibrates against the card (E17) …
+    // When: the painter settles the reading then calibrates against the card
+    // (E17). bs-12 AC-9 (reliability) downgrades an unsettled reading to
+    // approximate, so the AC-8 calibrated tier is shown on a settled (locked)
+    // reading — the natural capture flow (settle, then calibrate, then commit).
+    await harness.whenLock();
     await harness.whenCalibrate();
     final calibrateThrow = tester.takeException();
     expect(calibrateThrow, anyOf(isNull, isA<UnimplementedError>()),

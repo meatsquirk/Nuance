@@ -63,8 +63,11 @@ const Map<String, String> pendingACs = {
   // (AC-6); the resolved dependency set carries no forbidden package and no
   // account surface is reachable (AC-7); the real source scan finds no
   // off-device sender in lib/ (AC-8) — each with a discriminating control.
-  // Reliability
-  'AC-9': 'QUALITY-2', // poor conditions downgrade stated accuracy, not silent
+  // Reliability — AC-9 un-pended by QUALITY-2: poor lighting, unlocked exposure
+  // or a missing reference card each force the committed reading's stated
+  // accuracy to approximate (never returned calibrated), with the reason
+  // surfaced in words on the live view; the trustworthy control (well lit,
+  // locked, calibrated) stays calibrated.
   // Accuracy (ΔE00 targets)
   'AC-10': 'QUALITY-4', // card + controlled lighting: ΔE00 ≤ 3
   'AC-11': 'QUALITY-4', // cardless daylight: ΔE00 ≤ 8, labelled approximate

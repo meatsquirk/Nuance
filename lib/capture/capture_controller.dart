@@ -352,9 +352,23 @@ class CaptureController extends ChangeNotifier {
   /// and the Readout handoff ride on [Sample.justCaptured] through the router's
   /// `toReadout` (D-5), fired by the Capture home screen on an adequate-light
   /// commit.
+  ///
+  /// Reliability (bs-12 AC-9): whenever any [activeDowngradeReasons] holds — poor
+  /// lighting, AE/AWB/AF not locked, or no reference card in view — the committed
+  /// reading's stated accuracy is **forced to [CaptureAccuracy.approximate]**,
+  /// never returned as [CaptureAccuracy.calibrated], so an unsettled or
+  /// uncalibrated reading is not handed back as if trustworthy (plan bs-12 D-5).
+  /// With no reason active the reading keeps the tier it earned (an explicit
+  /// card calibration stays calibrated). The reason is surfaced to the painter
+  /// on the live view (the Capture screen reads [activeDowngradeReasons]).
   void commit() {
     final reading = _state.currentSample;
     if (reading == null) return;
+    // AC-9: a poor-condition reading is downgraded to approximate rather than
+    // returned at its would-be tier; an unqualified reading keeps its tier.
+    final accuracy = activeDowngradeReasons.isEmpty
+        ? _state.accuracy
+        : CaptureAccuracy.approximate;
     final ColorCoordinates coordinates;
     final int framesAveraged;
     if (_photoImported) {
@@ -386,7 +400,7 @@ class CaptureController extends ChangeNotifier {
       lastCommittedSample: Sample(
         coordinates: coordinates,
         provenance: const Provenance(ProvenanceTier.measured),
-        accuracy: _state.accuracy,
+        accuracy: accuracy,
         justCaptured: true,
         // bs-09 (CAPTURE-2): tag the committed reading with the gamut the source
         // captured in, whether the torch lit it, and processed-vs-RAW. Until

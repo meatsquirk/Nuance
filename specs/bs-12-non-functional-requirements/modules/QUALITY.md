@@ -1,6 +1,6 @@
 # Module QUALITY — measured & behavioural targets (accuracy, performance, reliability)
 
-**Status:** In progress — QUALITY-1 done; next QUALITY-2..5 (behaviour, blocked on G-2 / ITEST-4)
+**Status:** In progress — QUALITY-1 + QUALITY-2 done (AC-9 delivered); next QUALITY-3/4/5 (behaviour, startable)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/quality/` (accuracy harness + `syntheticAccuracySet`, performance harness — reusable test-support), and the **one `lib/` product change**: the AC-9 downgrade seam/triggers in `lib/capture/` (`capture_accuracy.dart`, `capture_controller.dart`, and the live-view label surface). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart`.
 **Depends on:** GUARD (shells) · **Blocks:** SIGNOFF-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | QUALITY-1 | shell | — | ✅ Done | 9.16M | 20m 33s |
-| QUALITY-2 | behavior | AC-9 | ⬜ Todo | | |
+| QUALITY-2 | behavior | AC-9 | ✅ Done | 14.38M | 24m 36s |
 | QUALITY-3 | behavior | AC-13 | ⬜ Todo | | |
 | QUALITY-4 | behavior | AC-10, AC-11, AC-12 | ⬜ Todo | | |
 | QUALITY-5 | behavior | AC-3, AC-4 | ⬜ Todo | | |
@@ -98,9 +98,18 @@
 - **Exit criteria (gates):** unit + coverage; acceptance green; grade gate (note the deliberate CI-budget ≠ device-figure limitation in the Result).
 - **Acceptance gate:** un-pend AC-3, AC-4; `TestAC03_ReadingSettlesWithIndicator`, `TestAC04_RecipeSearchReturnsTopCandidates` + all earlier green.
 
-### Result  <!-- filled on completion; ≤ ~20 lines -->
+### Result (✅ Done 2026-10-14)
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **The one `lib/capture` behaviour change (D-5).** `commit()` now forces the committed reading's stated accuracy to `CaptureAccuracy.approximate` whenever any `activeDowngradeReasons` holds (poor lighting, AE/AWB/AF not locked, or no reference card); a reading with no active reason keeps the tier it earned (an explicit card calibration stays `calibrated`). Closes the AC-9 gap where only lighting downgraded — unlocked exposure and a missing card were unenforced. The committed-accuracy decision is computed once and applied to both the live-average and imported-photo commit branches.
+- **Reason surfaced in the live view.** `CaptureLiveView` gained a `downgradeReasons` param (keyed `downgradeReasonsKey`) rendering each active reason in words; `CaptureScreen` feeds it `controller.activeDowngradeReasons` (rebuilt each notify). No `CaptureState` change — kept the state shape and its equality untouched.
+- **AC-9 un-pended** (`integration_test/bs12/pending.dart`); pending map 7→6. Pending-gate guard updated (`expectedPending` drops AC-9, length 7→6, AC-9 `containsKey` false added).
+- **Test reconciliation (recorded, not a weakening).** The new AC-9 contract makes a calibrated-but-unsettled reading non-trustworthy, so three bs-02 tests that calibrated→committed **without** locking gained a `lock` step to keep demonstrating the calibrated tier — unit `test/capture/capture_controller_test.dart` (AC-8 "committing after calibration"); integration `integration_test/capture_test.dart` (AC-6 calibrated control + AC-8). Assertions unchanged; a precondition added (settle before calibrate), the natural capture flow. D-5 sanctioned ("bs-02 AC-6/7/8 stay green").
+- **Verification.** `flutter analyze` → No issues. Unit `flutter test --coverage` → **1233 pass** (+5: 3 controller AC-9 downgrade + 2 live-view reason region). Coverage gate `dart run tool/coverage_gate.dart main` → **100% on all 4 touched `lib/capture` files** (`capture_accuracy.dart` unchanged, `capture_controller.dart`, `capture_live_view.dart`, `capture_screen.dart`). Acceptance `-d flutter-tester`: AC-9 un-pended + **green** (`TestAC09`), full bs-12 nfr suite **27 pass / 6 pending-skip / exit 0**; regression bs-02 `capture_test.dart` **19/0**, `advanced_capture_test.dart` **21/0** (the only two commit consumers expecting `calibrated` are `capture_test`/`nfr_test`, both green).
+- **Grade gate:** fresh independent grader (prior grid as context) → **1 A / 0 B pending / 0 ordinary B** — AC-9 closes *B pending QUALITY-2* → **A**. Discriminates both a low-light-only (pre-fix) impl (via the unlocked-exposure branch) and a blanket force-to-approximate (via the trustworthy control). Grid appended to `behavior-test-completeness-…md` (QUALITY-2 §).
+- **Fix passes:** 0/3 (analyze + unit + coverage + acceptance + grade all green first pass).
 
-- **Verification commands:** `flutter analyze` · `flutter test` · `dart tool/coverage_gate.dart` · `flutter test integration_test/bs12/nfr_test.dart -d <udid>` (default) / `--dart-define=BS12_RUN_PENDING=true` (run-pending)
-- **Known gaps:** AC-10/11/12 proven against the synthetic set, not physical ground truth (D-2); AC-3/AC-4 CI budget is a regression ceiling, not the target-hardware ~1–2s (D-3); AC-5 is manual-only.
+### Checkpoint / Handoff
+
+- **Verification commands:** `cd /Users/matthew.quirk/Nuance-bs12`; `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` (default) / `--dart-define=BS12_RUN_PENDING=true` (run-pending). **bs-12 nfr runs on `-d flutter-tester` (host), no device lane.**
+- **Frozen for QUALITY-3/4/5:** `lib/capture` AC-9 behaviour is final — `CaptureController.commit()` downgrades on `activeDowngradeReasons`; `CaptureLiveView.downgradeReasons` + `downgradeReasonsKey`. The remaining QUALITY phases touch only `integration_test/nfr/quality/*` + `nfr_test.dart` (no further `lib/` change).
+- **Known gaps / next:** QUALITY-3 (AC-13 out-of-gamut — un-pend+guard, green at baseline), QUALITY-4 (AC-10/11/12 accuracy, synthetic set — carries the "synthetic ≠ physical ground truth" D-2 gap), QUALITY-5 (AC-3/4 performance — un-pend+guard; CI budget is a regression ceiling, not the target-hardware ~1–2s, D-3). All three remain; **they share `nfr_test.dart` + `pending.dart` → sequence (one/session, `/clear` between)**. AC-5 is manual-only (G-3 at SIGNOFF-1). Then SIGNOFF-1.

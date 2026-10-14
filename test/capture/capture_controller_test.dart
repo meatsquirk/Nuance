@@ -660,6 +660,11 @@ void main() {
       final controller = CaptureController(source: source);
       addTearDown(controller.dispose);
       await pumpEventQueue();
+      // bs-12 AC-9: a trustworthy calibrated commit requires the reading to be
+      // settled — AE/AWB/AF locked — else the unsettled reading is downgraded to
+      // approximate (reliability). Lock first so this AC-8 case shows the
+      // calibrated tier it is asserting, not the AC-9 downgrade.
+      controller.lock();
       controller.calibrate();
 
       controller.commit();
@@ -734,6 +739,81 @@ void main() {
           reason: 'the tier upgrades the moment the card is read');
       expect(controller.state.currentSample, isNull,
           reason: 'nothing sampled yet → no reading to normalise');
+    });
+  });
+
+  group('reliability — poor conditions downgrade the committed tier '
+      '(QUALITY-2, bs-12 AC-9)', () {
+    const groundTruth = ColorCoordinates(lightness: 40, a: -8, b: 24);
+
+    // A card scene under adequate light: locked + calibrated it is trustworthy,
+    // so each poor condition below is the one thing that changes.
+    SoftwareCaptureSource cardSource({Lighting lighting = Lighting.adequate}) =>
+        SoftwareCaptureSource(
+          SceneSpec(
+            groundTruth: groundTruth,
+            referenceCardPresent: true,
+            lighting: lighting,
+            frames: [_uniformFrame(const Pixel(200, 60, 60))],
+          ),
+        );
+
+    test('a would-be-calibrated reading committed unlocked is downgraded to '
+        'approximate', () async {
+      final controller = CaptureController(source: cardSource());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      // Calibrate against the card (upgrades the live tier) but never lock, so
+      // AE/AWB/AF are unsettled at commit — the reliability gap AC-9 closes.
+      controller.calibrate();
+      expect(controller.state.accuracy, CaptureAccuracy.calibrated,
+          reason: 'the live tier is calibrated before the commit');
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.exposureUnlocked),
+          reason: 'an unlocked reading reports the exposure-unlocked condition');
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.accuracy,
+          CaptureAccuracy.approximate,
+          reason: 'AC-9: an unsettled reading is downgraded, never returned '
+              'calibrated');
+    });
+
+    test('a would-be-calibrated reading committed in low light is downgraded',
+        () async {
+      final controller =
+          CaptureController(source: cardSource(lighting: Lighting.low));
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      controller.lock();
+      controller.calibrate();
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.lowLight));
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.accuracy,
+          CaptureAccuracy.approximate,
+          reason: 'AC-9: a dim reading is downgraded even when calibrated');
+    });
+
+    test('a trustworthy reading — lit, locked, calibrated — stays calibrated',
+        () async {
+      final controller = CaptureController(source: cardSource());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      controller.lock();
+      controller.calibrate();
+      expect(controller.activeDowngradeReasons, isEmpty,
+          reason: 'control: no poor condition holds');
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.accuracy,
+          CaptureAccuracy.calibrated,
+          reason: 'AC-9 control: the downgrade is not a blanket force — a '
+              'trustworthy reading keeps the tier it earned');
     });
   });
 
