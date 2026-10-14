@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** Done — signed off 2026-10-14 by Matt Quirk at code `254d366` (SIGNOFF-1 round 1 Approved). All 12 ACs ✅ (10 automated graded A + 2 pure-manual gates G-3/G-4 accepted at sign-off); analyze clean, unit 1048/1048, coverage 100% on 18 touched files, full regression 192/192 on sim. Next: merge `feat/bs-11` → main (rebasing in-flight feat/bs-07, feat/bs-10 onto the shared `lib/app/theme.dart` + `lib/widgets/`).
+**Status:** Done — signed off 2026-10-14 by Matt Quirk at code `254d366` (SIGNOFF-1 round 1 Approved). All 12 ACs ✅ (10 automated graded A + 2 pure-manual gates G-3/G-4 accepted at sign-off). **MERGED to main 2026-10-14 (merge `0e604ac` --no-ff, parents `7015390`+`73fafc0`).** Merged-tree verification: analyze clean, unit 1327/1327, full cross-feature integration regression 241/241 on the iPhone 17 sim; one conflict resolved in `lib/app/build_app.dart` (MaterialApp theme → bs-11 `AppTheme.light().themeData`; bs-07/bs-10 already in main, no rebase needed). No phase or gate left.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -205,7 +205,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | GATE-4 | 062052a1 | 2026-10-14 11:36 EDT | 11:52 | 16m 11s | 16m 11s | claude-opus-4-8 | 108 | 265,249 | 6,121,028 | 36,733 | 6,423,118 | AC-11 recorded WCAG 2.2 AA floor delivered; unit 1048; cov 100% touched; acceptance 19 pass/0 skip on iPhone17 sim; grade 10 A/0; fix 0/3; pending set empty (behaviour stage complete) |
 | SIGNOFF-1 | 556baa62 | 2026-10-14 12:11 EDT | 12:33 | 22m 36s | 22m 36s | claude-opus-4-8 | 134 | 285,969 | 7,655,216 | 47,840 | 7,989,159 | sign-off packet assembled: 10 automated ACs delivered + fresh re-grade 10 A/0; analyze clean, unit 1048, cov 100%/18, full regression 192/192 + bs11 run-pending 19/19 on sim; ⏸ awaiting human G-3/G-4 + decision |
 | SIGNOFF-DECISION | 767c9705 | 2026-10-14 14:16 EDT | 14:18 | 2m 01s | 2m 01s | claude-opus-4-8 | 32 | 15,215 | 1,211,744 | 8,809 | 1,235,800 | SIGNOFF-1 approved — Matt Quirk 2026-10-14; G-3/G-4 manual gates accepted; feature Done |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 14:18** | **9h 15m** | **6h 32m** |  | **2,524** | **4,367,642** | **158,977,837** | **1,063,735** | **164,411,738** |  |
+| MERGE | 0826bd23 | 2026-10-14 15:00 EDT | 15:37 | 37m 23s | 37m 23s | claude-opus-4-8 | 62 | 84,259 | 2,813,452 | 18,801 | 2,916,574 | feat/bs-11 merged to main @ 0e604ac; merged-tree analyze clean, unit 1327/1327, integration 241/241; one theme-line conflict resolved |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 15:37** | **9h 52m** | **7h 09m** |  | **2,586** | **4,451,901** | **161,791,289** | **1,082,536** | **167,328,312** |  |
 
 ## Sign-off
 
