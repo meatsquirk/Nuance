@@ -422,16 +422,15 @@ sdks:
       // SubtractiveMixingEngine, so the swap needs no caller edit.
       expect(concreteTypeReferences('SubtractiveMixingEngine'), isEmpty,
           reason: 'a caller is bound to the concrete mixing engine');
-      // Control (G5, B pending GUARD-5): a planted caller bound to the concrete
-      // engine is flagged by the no-concrete-reference rule (the real scan lands
-      // with GUARD-6's scan infrastructure).
+      // Control (G5): a planted caller bound to the concrete engine is flagged
+      // by the no-concrete-reference rule.
       expect(
           concreteTypeReferences('SubtractiveMixingEngine',
                   roots: const [kControlFixturesRoot])
               .any((o) => o.path.contains('control_bound_to_concrete')),
           isTrue,
           reason: 'control: the no-concrete-reference rule must flag the planted '
-              'bound-to-concrete caller (GUARD-5 wires the scan)');
+              'bound-to-concrete caller');
     });
 
     acTestWidgets('AC-15',
@@ -439,17 +438,34 @@ sdks:
         (tester) async {
       // Scenario: The CVD model can be replaced without touching its callers.
       // When: the app is assembled with an alternate ConfusionCheck injected
-      // through AppDependencies.confusionCheck.
+      // through AppDependencies.confusionCheck, and a CVD caller runs — opening
+      // a two-sample project drives the projects controller's confusion-pair
+      // check (the production caller that reaches the CVD model).
       final alt = RecordingConfusionCheck();
-      await pumpAppWithSwaps(tester, confusionCheck: alt);
-      expect(find.byType(MaterialApp), findsOneWidget,
-          reason: 'the real app assembles with the alternate model injected');
-      // Then: a CVD caller reaches the model only through the interface
-      // (B pending GUARD-5 — which drives the onboarding / compare / display
-      // callers through the seam).
+      final h = await givenPaletteWithCvdCallerProject(tester, confusionCheck: alt);
+      await h.whenOpenProject(nfrCvdCallerProject.name);
+      // Then (dynamic — swap works): the caller reached the model only through
+      // the interface, driving the injected alternate, with no change to caller
+      // code.
       expect(alt.confusableCalls, greaterThan(0),
           reason: 'a CVD caller must drive the injected model through the '
-              'ConfusionCheck interface (GUARD-5 wires the caller exercise)');
+              'ConfusionCheck interface');
+      expect(h.projectController.openedProject?.name, nfrCvdCallerProject.name,
+          reason: 'the opened project resolved its confusion pairs through the '
+              'alternate model');
+      // Then (static — no coupling): no lib/ caller references the concrete
+      // DichromatConfusionCheck, so the swap needs no caller edit.
+      expect(concreteTypeReferences('DichromatConfusionCheck'), isEmpty,
+          reason: 'a caller is bound to the concrete CVD model');
+      // Control (G5): a planted caller bound to the concrete model is flagged by
+      // the no-concrete-reference rule.
+      expect(
+          concreteTypeReferences('DichromatConfusionCheck',
+                  roots: const [kControlFixturesRoot])
+              .any((o) => o.path.contains('control_bound_to_concrete_cvd')),
+          isTrue,
+          reason: 'control: the no-concrete-reference rule must flag the planted '
+              'bound-to-concrete CVD caller');
     });
 
     acTestWidgets('AC-16',
@@ -799,26 +815,29 @@ sdks:
     // The 16 automatable ACs (AC-5 is pure-manual, D-3, never in the gate) were
     // all pending at ITEST-1; each behaviour phase deletes its row in
     // `bs12/pending.dart` as it un-pends that AC. GUARD-3 un-pended AC-1 + AC-2
-    // (offline); GUARD-4 un-pended AC-6 + AC-7 + AC-8 (privacy), so the gate now
-    // holds the 11 ACs still owed to later phases.
+    // (offline); GUARD-4 un-pended AC-6 + AC-7 + AC-8 (privacy); GUARD-5 un-pended
+    // AC-14 + AC-15 (swappable interfaces), so the gate now holds the 9 ACs still
+    // owed to later phases.
     final expectedPending = <String>{
-      'AC-3', 'AC-4', // AC-1/AC-2 (GUARD-3), AC-6/7/8 (GUARD-4) un-pended; AC-5
-      // is manual — absent
+      'AC-3', 'AC-4', // AC-1/AC-2 (GUARD-3), AC-6/7/8 (GUARD-4),
+      // AC-14/AC-15 (GUARD-5) un-pended; AC-5 is manual — absent
       'AC-9', 'AC-10', 'AC-11', 'AC-12', 'AC-13',
-      'AC-14', 'AC-15', 'AC-16', 'AC-17',
+      'AC-16', 'AC-17',
     };
 
     test('the pending map is exactly the still-pending automatable ACs, each '
         'owned by a real behaviour phase', () {
       expect(pendingACs.keys.toSet(), expectedPending);
-      expect(pendingACs.length, 11);
-      // AC-1 + AC-2 (GUARD-3) and AC-6 + AC-7 + AC-8 (GUARD-4) were un-pended and
-      // must not reappear in the gate.
+      expect(pendingACs.length, 9);
+      // AC-1 + AC-2 (GUARD-3), AC-6 + AC-7 + AC-8 (GUARD-4) and AC-14 + AC-15
+      // (GUARD-5) were un-pended and must not reappear in the gate.
       expect(pendingACs.containsKey('AC-1'), isFalse);
       expect(pendingACs.containsKey('AC-2'), isFalse);
       expect(pendingACs.containsKey('AC-6'), isFalse);
       expect(pendingACs.containsKey('AC-7'), isFalse);
       expect(pendingACs.containsKey('AC-8'), isFalse);
+      expect(pendingACs.containsKey('AC-14'), isFalse);
+      expect(pendingACs.containsKey('AC-15'), isFalse);
 
       // AC-5 (live-preview frame rate) is pure-manual and must never enter the
       // gate.

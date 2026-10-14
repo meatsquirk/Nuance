@@ -207,6 +207,30 @@ const Project nfrSeededProject = Project(
   ],
 );
 
+/// A project with two saved samples, seeded into a [NfrFlow.palette] launch so
+/// AC-15 can drive a CVD caller: opening it renders the open-project view, which
+/// reads [ProjectController.confusionPairs] over the pair — the one production
+/// caller that reaches the injected [ConfusionCheck] (`flagConfusionPairs`,
+/// D-4/D-5). Two samples make exactly one pair, so a swap double records one
+/// interface call. Carried through the local [InMemoryProjectSource].
+const Project nfrCvdCallerProject = Project(
+  id: 'nfr-cvd-1',
+  name: 'CVD Caller Study',
+  size: '16×20 in',
+  samples: <Sample>[
+    Sample(
+      name: 'Warm Earth',
+      coordinates: ColorCoordinates(lightness: 58, a: 25.27, b: 22.75),
+      provenance: Provenance(ProvenanceTier.measured),
+    ),
+    Sample(
+      name: 'Olive Field',
+      coordinates: ColorCoordinates(lightness: 55, a: -5.5, b: 29.8),
+      provenance: Provenance(ProvenanceTier.measured),
+    ),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // Core flows
 // ---------------------------------------------------------------------------
@@ -328,9 +352,10 @@ class NfrHarness {
   }
 
   /// Opens the project named [name] in the Palette/Projects flow (switch to the
-  /// Projects view, then tap its row) and exports it to the device. Leaves the
-  /// produced PDF bytes observable on [projectController]'s `lastExport`.
-  Future<void> whenOpenAndExportProject(String name) async {
+  /// Projects view, then tap its row). Leaves the project observable as
+  /// [projectController]'s `openedProject`, and the open-project view rendered —
+  /// which reads `confusionPairs` through the injected [ConfusionCheck] (AC-15).
+  Future<void> whenOpenProject(String name) async {
     // Switch the view selector (E31) to Projects.
     await tester.tap(
       find.descendant(
@@ -350,6 +375,13 @@ class NfrHarness {
     await tester.pumpAndSettle();
     await tester.tap(row.first);
     await tester.pumpAndSettle();
+  }
+
+  /// Opens the project named [name] (via [whenOpenProject]) and exports it to
+  /// the device. Leaves the produced PDF bytes observable on
+  /// [projectController]'s `lastExport`.
+  Future<void> whenOpenAndExportProject(String name) async {
+    await whenOpenProject(name);
     // Export the opened project (E34).
     await tester.tap(find.byKey(ProjectsRegion.exportKey), warnIfMissed: false);
     await tester.pumpAndSettle();
@@ -369,6 +401,24 @@ Future<NfrHarness> givenPaletteWithSeededProject(
       projectSource:
           const InMemoryProjectSource(catalogue: <Project>[nfrSeededProject]),
       pdfShareSink: pdfShareSink,
+    );
+
+/// Launches the Palette/Projects flow with [nfrCvdCallerProject] (two samples)
+/// saved locally and [confusionCheck] injected — the AC-15 setup. Opening the
+/// project (via [NfrHarness.whenOpenProject]) drives the one production CVD
+/// caller (`ProjectController.confusionPairs`) through the injected model, so a
+/// recording double proves the caller reaches it only through the interface.
+Future<NfrHarness> givenPaletteWithCvdCallerProject(
+  WidgetTester tester, {
+  required ConfusionCheck confusionCheck,
+}) =>
+    givenTheApp(
+      tester,
+      flow: NfrFlow.palette,
+      projectSource: const InMemoryProjectSource(
+        catalogue: <Project>[nfrCvdCallerProject],
+      ),
+      confusionCheck: confusionCheck,
     );
 
 // ---------------------------------------------------------------------------

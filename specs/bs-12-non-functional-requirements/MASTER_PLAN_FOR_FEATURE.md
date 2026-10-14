@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — GUARD-4 done (AC-6/AC-7/AC-8 ✅ privacy; grade 3 A/0); next GUARD-5 (GUARD-5/6 + QUALITY-2/3/4/5 all startable)
+**Status:** In progress — GUARD-5 done (AC-14/AC-15 ✅ swappable; grade 2 A/0); next GUARD-6 (GUARD-6 + QUALITY-2/3/4/5 all startable)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -56,8 +56,8 @@
 | AC-11 | Capture without reference card in daylight meets ΔE00 ≤ 8, labelled approximate | ITEST-3 `TestAC11_CardlessDaylightApproximateUnder8` | QUALITY-4 | ⬜ Todo |
 | AC-12 | Recipe prediction vs a physically mixed swatch meets ΔE00 ≤ 5 in-gamut | ITEST-3 `TestAC12_RecipePredictionUnder5InGamut` | QUALITY-4 | ⬜ Todo |
 | AC-13 | An out-of-gamut target is identified, no false recipe | ITEST-3 `TestAC13_OutOfGamutNoFalseRecipe` | QUALITY-3 | ⬜ Todo |
-| AC-14 | The mixing engine can be replaced without touching its callers | ITEST-2 `TestAC14_MixingEngineSwappable` | GUARD-5 | ⬜ Todo |
-| AC-15 | The CVD model can be replaced without touching its callers | ITEST-2 `TestAC15_CvdModelSwappable` | GUARD-5 | ⬜ Todo |
+| AC-14 | The mixing engine can be replaced without touching its callers | ITEST-2 `TestAC14_MixingEngineSwappable` | GUARD-5 | ✅ Done (GUARD-5 2026-10-14; A) |
+| AC-15 | The CVD model can be replaced without touching its callers | ITEST-2 `TestAC15_CvdModelSwappable` | GUARD-5 | ✅ Done (GUARD-5 2026-10-14; A) |
 | AC-16 | Colour-science conversions come from one tested library | ITEST-2 `TestAC16_OneColourScienceLibrary` | GUARD-6 | ⬜ Todo |
 | AC-17 | Only the native capture implementation differs per platform | ITEST-2 `TestAC17_OnlyNativeCaptureDiffersPerPlatform` | GUARD-6 | ⬜ Todo |
 
@@ -177,8 +177,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1.89M | 4m 22s | packet + whole-suite grid 6 A / 10 B pending / 0 ordinary B (+15 A smoke); **G-2 approved 2026-10-14 by Matt Quirk** → behaviour stage un-blocked |
 | 8 | GUARD-3 | AC-1+AC-2 offline: network-block guard over every core flow | ✅ Done | 7.42M | 9m 39s | sink.record() wired (no lib change); un-pended AC-1/AC-2; analyze clean, unit 1228, acceptance default 17 pass/14 skip/exit 0; grade 2 A/0 |
 | 9 | GUARD-4 | AC-6+AC-7+AC-8 privacy: nothing-leaves + no-telemetry + no-off-device-path guards | ✅ Done | 11.5M | 27m 11s | real `forbiddenDependencies`/`offDeviceSenders` scans (no lib change); un-pended AC-6/7/8, closed TestAC07/08; analyze clean, unit 1228, acceptance `-d flutter-tester` 21 pass/11 skip/exit 0, run-pending +24/−8 (8 = intact red baseline); grade 3 A/0. **Suite runs on `-d flutter-tester`** (host) — source scans read the repo tree (line 81) |
-| 10 | GUARD-5 | AC-14+AC-15 swappable: inject alt engine + alt CVD, callers unchanged | ⬜ Next | | | startable; shares `source_guard.dart`+`nfr_test.dart` with GUARD-4/6 (sequence); also GUARD-6 + QUALITY-2/3/4/5 startable |
-| 11 | GUARD-6 | AC-16+AC-17 one-colour-lib + portability: source-scan guard rules | ⬜ Todo | | | |
+| 10 | GUARD-5 | AC-14+AC-15 swappable: inject alt engine + alt CVD, callers unchanged | ✅ Done | 10.1M | 21m 16s | real `concreteTypeReferences` scan (no lib change); un-pended AC-14/15, closed TestAC14/15; analyze clean, unit 1228, acceptance `-d flutter-tester` 23 pass/9 skip/exit 0, run-pending +26/−6 (6 = intact red baseline); grade 2 A/0 |
+| 11 | GUARD-6 | AC-16+AC-17 one-colour-lib + portability: source-scan guard rules | ⬜ Next | | | startable; shares `source_guard.dart`+`nfr_test.dart`+`pending.dart` with GUARD line (sequence); also QUALITY-2/3/4/5 startable |
 | 12 | QUALITY-2 | AC-9 reliability fix: unlocked-exposure + missing-card downgrade triggers (`lib/capture`) | ⬜ Todo | | | ∥ one GUARD phase |
 | 13 | QUALITY-3 | AC-13 out-of-gamut: identified, no false recipe + in-gamut control | ⬜ Todo | | | |
 | 14 | QUALITY-4 | AC-10+AC-11+AC-12 accuracy: synthetic set + harness asserts ΔE00 ≤ 3 / ≤ 8+approx / ≤ 5 | ⬜ Todo | | | |
@@ -189,11 +189,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**GUARD-4 done 2026-10-14 (AC-6/AC-7/AC-8 ✅ privacy; grade 3 A/0).** The real `forbiddenDependencies` (reads `pubspec.lock`) and `offDeviceSenders` (`lib/` source scan, comment/string-masked) landed in `source_guard.dart`; TestAC07/08 augmentations closed (AC-7/8 B-pending → A). **No `lib/` change.** 5 behaviour ACs-in-8-tests remain, across 4 phases. **Important (discovered here):** the bs-12 acceptance suite now runs on **`-d flutter-tester`** (host VM, cwd = repo root) because the source scans read the repo tree — an iOS-sim target breaks AC-7/8 (and AC-16/17 at GUARD-6). See "how it runs" (line 81).
+**GUARD-5 done 2026-10-14 (AC-14/AC-15 ✅ swappable; grade 2 A/0).** The real `concreteTypeReferences(typeName, {roots})` scan landed in `source_guard.dart` (reuses GUARD-4's `maskCommentsAndStrings` + walk; flags a type-position coupling, excludes the `const X()` DI default / imports / the type's own definition). AC-14 was already dynamically proven; GUARD-5 added the static no-coupling sweep + control, and a real CVD-caller driver for AC-15 (new `nfrCvdCallerProject` / `givenPaletteWithCvdCallerProject` / `whenOpenProject`; opening a two-sample project drives `ProjectController.confusionPairs` → `confusable` on the injected model) + `control_bound_to_concrete_cvd.dart`. TestAC14/15 augmentations closed. **No `lib/` change.** 3 behaviour ACs-in-6-tests remain, across 3 phases (AC-16/17 → GUARD-6; AC-9 → QUALITY-2; AC-10/11/12 → QUALITY-4; AC-13 → QUALITY-3; AC-3/4 → QUALITY-5). Suite runs on **`-d flutter-tester`** (host VM, cwd = repo root) — see "how it runs" (line 81).
 
-**Startable now (each depends only on ITEST-4):** GUARD-5 (AC-14/15 swap), GUARD-6 (AC-16/17 one-lib+portability), QUALITY-2 (AC-9 downgrade — the only `lib/capture` change), QUALITY-4 (AC-10/11/12 accuracy), QUALITY-3 (AC-13 — un-pend+guard), QUALITY-5 (AC-3/4 — un-pend+guard).
-- **Merge-risk:** every behaviour phase un-pends in the shared `integration_test/bs12/pending.dart` and most edit the shared `nfr_test.dart`; GUARD-5/6 also share `source_guard.dart` → **sequence these** (one phase per session, `/clear` between). QUALITY-2 (`lib/capture` only) may run ∥ one GUARD phase in a separate `--parallel` session with a worktree claim. GUARD-5/6 reuse GUARD-4's shared `maskCommentsAndStrings` + `_scanSource` machinery.
-- **Recommended order:** the un-pend+guard QUALITY-3 / QUALITY-5 next (low risk, green at baseline), then the heavier GUARD-5/6 + QUALITY-2/4.
+**Startable now (each depends only on ITEST-4):** GUARD-6 (AC-16/17 one-lib+portability), QUALITY-2 (AC-9 downgrade — the only `lib/capture` change), QUALITY-4 (AC-10/11/12 accuracy), QUALITY-3 (AC-13 — un-pend+guard), QUALITY-5 (AC-3/4 — un-pend+guard).
+- **Merge-risk:** every behaviour phase un-pends in the shared `integration_test/bs12/pending.dart` and most edit the shared `nfr_test.dart`; GUARD-6 also shares `source_guard.dart` with the (now-done) GUARD line → **sequence GUARD-6 against any QUALITY phase touching `nfr_test.dart`** (one phase per session, `/clear` between). QUALITY-2 (`lib/capture` only) may run ∥ GUARD-6 in a separate `--parallel` session with a worktree claim. GUARD-6 reuses GUARD-4/5's shared `maskCommentsAndStrings` + walk machinery.
+- **Recommended order:** the un-pend+guard QUALITY-3 / QUALITY-5 next (low risk, green at baseline), then the heavier GUARD-6 + QUALITY-2/4.
 
 G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1 manual gate (D-3). Gaps carried to sign-off: D-2 (synthetic accuracy set) + D-3 (device timings).
 
@@ -214,7 +214,8 @@ G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1
 | SIGNOFF-DECISION | e007e168 | 2026-10-14 07:41 EDT | 07:42 | 1m 18s | 1m 18s | claude-opus-4-8 | 20 | 122,259 | 1,359,042 | 5,368 | 1,486,689 | ITEST-4 approved — G-2 approved 2026-10-14 by Matt Quirk; behaviour stage un-blocked (GUARD-3..6, QUALITY-2..5) |
 | GUARD-3 | 98019302 | 2026-10-14 07:54 EDT | 08:03 | 9m 39s | 9m 39s | claude-opus-4-8 | 130 | 187,002 | 7,199,601 | 36,480 | 7,423,213 | AC-1+AC-2 offline delivered: sink.record() wired (no lib change), un-pended AC-1/AC-2; analyze clean, unit 1228, acceptance default 17 pass/14 skip/exit 0; grade 2 A/0 |
 | GUARD-4 | 7b639a43 | 2026-10-14 09:05 EDT | 09:32 | 27m 11s | 27m 11s | claude-opus-4-8 | 156 | 278,062 | 11,172,920 | 84,999 | 11,536,137 | AC-6/7/8 privacy un-pended; real forbiddenDependencies + offDeviceSenders scans (no lib change); analyze clean, unit 1228, acceptance -d flutter-tester 21 pass/11 skip/exit 0, run-pending +24/-8; grade 3 A/0 — PASS |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 09:32** | **8h 12m** | **4h 14m** |  | **1,358** | **2,851,062** | **95,671,937** | **708,002** | **99,232,359** |  |
+| GUARD-5 | fe668497 | 2026-10-14 10:49 EDT | 11:11 | 21m 16s | 21m 16s | claude-opus-4-8 | 156 | 243,150 | 9,784,471 | 70,481 | 10,098,258 | AC-14/AC-15 swappable un-pended; real concreteTypeReferences scan (no lib change); analyze clean, unit 1228, acceptance -d flutter-tester 23 pass/9 skip/exit 0, run-pending +26/-6; grade 2 A/0 — PASS |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 11:11** | **8h 33m** | **4h 35m** |  | **1,514** | **3,094,212** | **105,456,408** | **778,483** | **109,330,617** |  |
 
 ## Sign-off
 

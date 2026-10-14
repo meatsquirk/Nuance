@@ -71,8 +71,11 @@ const Map<String, String> pendingACs = {
   'AC-12': 'QUALITY-4', // recipe prediction vs swatch: ΔE00 ≤ 5 in-gamut
   'AC-13': 'QUALITY-3', // out-of-gamut target identified, no false recipe
   // Maintainability (swappable behind interfaces)
-  'AC-14': 'GUARD-5', // mixing engine swappable without touching callers
-  'AC-15': 'GUARD-5', // CVD model swappable without touching callers
+  // AC-14, AC-15 un-pended by GUARD-5: an alternate MixingEngine / ConfusionCheck
+  // injected through AppDependencies drives the recipe / CVD callers correctly
+  // through the interface (dynamic swap), and the concreteTypeReferences source
+  // scan finds no lib/ caller bound to the concrete impl (static), each with a
+  // planted bound-to-concrete control.
   'AC-16': 'GUARD-6', // colour-science from one tested library
   // Portability
   'AC-17': 'GUARD-6', // only native capture differs per platform

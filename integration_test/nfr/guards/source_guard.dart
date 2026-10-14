@@ -145,11 +145,11 @@ const Set<String> forbiddenDependencyNames = {
 // ---------------------------------------------------------------------------
 // Rule scans
 //
-// [forbiddenDependencies] / [offDeviceSenders] are the real GUARD-4 scans
-// (AC-7 / AC-8); [conversionOffenders] / [deltaEOffenders] / [platformOffenders]
-// / [concreteTypeReferences] remain GUARD-2 stubs until GUARD-6 / GUARD-5 fill
-// them (they reuse the shared [maskCommentsAndStrings] + `_scanSource` machinery
-// GUARD-4 lays at the foot of this file).
+// [forbiddenDependencies] / [offDeviceSenders] (GUARD-4, AC-7 / AC-8) and
+// [concreteTypeReferences] (GUARD-5, AC-14 / AC-15) are the real scans;
+// [conversionOffenders] / [deltaEOffenders] / [platformOffenders] remain GUARD-2
+// stubs until GUARD-6 fills them. Each reuses the shared [maskCommentsAndStrings]
+// machinery GUARD-4 lays at the foot of this file.
 // ---------------------------------------------------------------------------
 
 /// Sites under [roots] computing a colour-space conversion outside
@@ -212,21 +212,74 @@ List<SourceOffender> offDeviceSenders({
 }) =>
     _scanSource(roots, ruleOffDeviceSender, _offDeviceSendPatterns);
 
-/// Sites under [roots] that reference the concrete type [typeName] directly
-/// instead of its interface (AC-14 the mixing engine, AC-15 the CVD model).
-/// Empty while the invariant holds — a caller must depend on the interface, so
-/// the engine / model can be swapped without touching it.
+/// Sites under [roots] that couple a caller to the concrete type [typeName]
+/// directly instead of its interface (AC-14 the mixing engine, AC-15 the CVD
+/// model). Empty while the invariant holds — a caller must depend on the
+/// interface, so the engine / model can be swapped without touching it.
 ///
-/// The real scan (GUARD-5, using GUARD-6's scan infrastructure) excludes the
-/// type's own definition file and the single production wiring site; everything
-/// else referencing the concrete type is an offender. [roots] defaults to
-/// [kDefaultSourceRoots]; an AC test points it at the control fixtures to assert
-/// the rule flags a planted bound-to-concrete caller. Stub returns empty.
+/// A *coupling* is a use of [typeName] in a type position — declaring a field,
+/// variable, parameter or return of the concrete type, or naming it as a type
+/// argument / supertype — which a swap could not survive without a caller edit.
+/// It is **not** a coupling to:
+///   * construct the shipped default (`const SubtractiveMixingEngine()`), the
+///     dependency-injection binding every injectable defaults to — matched when
+///     [typeName] is immediately followed by `(`;
+///   * import or export the concrete name (so a file can construct that
+///     default) — matched on an `import` / `export` directive line;
+///   * define the type itself — its own definition file (the file declaring
+///     `class` / `mixin` / `enum` / `extension` [typeName]) is skipped whole.
+///
+/// Comments and string literals are excluded ([maskCommentsAndStrings]), so a
+/// doc comment or log string naming the concrete type is never a false
+/// offender. [roots] defaults to [kDefaultSourceRoots] (the real `lib/` sweep);
+/// an AC test points it at the control fixtures to assert the rule flags a
+/// planted bound-to-concrete caller.
 List<SourceOffender> concreteTypeReferences(
   String typeName, {
   Iterable<String> roots = kDefaultSourceRoots,
-}) =>
-    const <SourceOffender>[];
+}) {
+  // A type-position use of the name: a word-boundary match NOT immediately
+  // followed by `(` (which would be a constructor invocation — the DI default).
+  final reference = RegExp('\\b$typeName\\b(?!\\s*\\()');
+  // The type's own definition — the file declaring it is never a caller.
+  final definition = RegExp('\\b(?:class|mixin|enum|extension)\\s+$typeName\\b');
+  final offenders = <SourceOffender>[];
+  for (final root in roots) {
+    final dir = Directory(root);
+    if (!dir.existsSync()) continue;
+    final dartFiles = dir
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart'))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    for (final file in dartFiles) {
+      final source = file.readAsStringSync();
+      final masked = maskCommentsAndStrings(source);
+      if (definition.hasMatch(masked)) continue; // the type's own definition
+      final maskedLines = masked.split('\n');
+      final rawLines = source.split('\n');
+      for (var i = 0; i < maskedLines.length; i++) {
+        final maskedLine = maskedLines[i];
+        final trimmed = maskedLine.trimLeft();
+        // An import / export directive brings the name into scope so the file
+        // can construct the shipped default — not a caller coupling.
+        if (trimmed.startsWith('import ') || trimmed.startsWith('export ')) {
+          continue;
+        }
+        for (final _ in reference.allMatches(maskedLine)) {
+          offenders.add(SourceOffender(
+            path: file.path,
+            line: i + 1,
+            rule: ruleConcreteTypeReference,
+            snippet: (i < rawLines.length ? rawLines[i] : '').trim(),
+          ));
+        }
+      }
+    }
+  }
+  return offenders;
+}
 
 // ---------------------------------------------------------------------------
 // Shared scan machinery (GUARD-4 — reused by GUARD-5 / GUARD-6)

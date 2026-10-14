@@ -1,6 +1,6 @@
 # Module GUARD — invariant guards (offline, privacy, swappable, portability)
 
-**Status:** In progress — GUARD-1/2/3/4 done (AC-1/2/6/7/8 delivered); next GUARD-5 (AC-14/15 swappable)
+**Status:** In progress — GUARD-1/2/3/4/5 done (AC-1/2/6/7/8/14/15 delivered); next GUARD-6 (AC-16/17 one-lib + portability)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/guards/` (source-scan, swap-harness, network-block/offline harness — reusable test-support), `integration_test/bs12/pending.dart` (created at GUARD-1). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart` with ITEST/QUALITY. **No `lib/` product change** (D-7).
 **Depends on:** — · **Blocks:** ITEST (via GUARD-2), QUALITY (shells)
@@ -13,7 +13,7 @@
 | GUARD-2 | shell | — | ✅ Done | 3.72M | 17m 40s |
 | GUARD-3 | behavior | AC-1, AC-2 | ✅ Done | 7.42M | 9m 39s |
 | GUARD-4 | behavior | AC-6, AC-7, AC-8 | ✅ Done | 11.5M | 27m 11s |
-| GUARD-5 | behavior | AC-14, AC-15 | ⬜ Todo | | |
+| GUARD-5 | behavior | AC-14, AC-15 | ✅ Done | 10.1M | 21m 16s |
 | GUARD-6 | behavior | AC-16, AC-17 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -139,7 +139,21 @@ Landed the real GUARD-4 scans in `source_guard.dart` (+ `dart:io`): `forbiddenDe
 - **Tasks:** inject `altMixingEngine` via `AppDependencies.mixingEngine` and run recipe callers; inject `altConfusionCheck` via `AppDependencies.confusionCheck` and run CVD callers (onboarding/compare/display); assert callers produce correct results through the interface and the source guard shows **no caller references the concrete impl**; the `control_boundToConcrete` fixture fails.
 - **Exit criteria (gates):** unit + coverage; acceptance green + discriminating; grade gate.
 - **Acceptance gate:** un-pend AC-14, AC-15; `TestAC14/15_*` + all earlier green.
-- **Augments:** `TestAC14`, `TestAC15`: add the "no concrete reference" source-guard assertion once GUARD-6's scan rules exist (if GUARD-6 lands first, assert directly).
+- **Augments:** `TestAC14`, `TestAC15`: add the "no concrete reference" source-guard assertion once GUARD-6's scan rules exist (if GUARD-6 lands first, assert directly). **Both closed this phase** — GUARD-5 landed the scan itself (it did not need GUARD-6's rules).
+
+### Result
+
+Landed the real `concreteTypeReferences(typeName, {roots})` scan in `source_guard.dart`, reusing GUARD-4's shared `maskCommentsAndStrings` + file-walk machinery: it flags a word-boundary `\b<type>\b(?!\s*\()` match (a type-position *coupling*) while excluding the DI-default constructor call `const X()` (the `(?!\s*\()` lookahead), `import`/`export` directive lines, and the type's own definition file (`\b(?:class|mixin|enum|extension)\s+<type>\b`). **AC-14** was already dynamically proven at baseline (the recipes flow drives the injected `RecordingMixingEngine` through `MixingEngine.inverse`); GUARD-5 added the static half (empty `lib/` sweep + `control_bound_to_concrete` flagged). **AC-15** gained a real CVD-caller driver: new harness `nfrCvdCallerProject` (two samples), `givenPaletteWithCvdCallerProject`, and `whenOpenProject` (extracted from `whenOpenAndExportProject`) — opening the two-sample project renders the open-project view, which reads `ProjectController.confusionPairs` → `flagConfusionPairs` → `ConfusionCheck.confusable` on the injected `RecordingConfusionCheck` (`confusableCalls > 0`), plus the static sweep + new `control_bound_to_concrete_cvd.dart` control. Un-pended AC-14/AC-15 in `pending.dart` (gate 11→9); updated the pending-gate guard test's expected set (`length 9`, AC-14/15 asserted absent). **No `lib/` change** (D-7) ⇒ coverage gate N/A (nothing touched). Augmentations TestAC14 + TestAC15 closed. No AC test weakened.
+- **Verification (host `-d flutter-tester`, cwd = repo root):** `flutter analyze integration_test/` clean; `flutter test test/` **1228 pass / 0 fail** (no regression); acceptance default `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` → **+23 / ~9 skip / exit 0** (AC-14/15 now run + pass, controls discriminate); run-pending (`--dart-define=BS12_RUN_PENDING=true`) → **+26 / −6** (the 6 still-unbuilt ACs AC-9/10/11/12/16/17 = intact red baseline; AC-3/4/13 green-at-baseline).
+- **Grade gate:** fresh independent grader (prior grid as context) → **2 A / 0 B pending / 0 ordinary B** (AC-14/AC-15 close *B pending GUARD-5* → A). Grid appended to `behavior-test-completeness-…md` (GUARD-5 §).
+- **Fix passes:** 0/3 (first full run green bar the pending-gate guard's expected-set, updated as part of the un-pend — not a behaviour fix).
+- **Tokens / Time:** see Dashboard / master ledger (GUARD-5 row).
+
+### Checkpoint / Handoff
+
+- **Frozen for later phases:** `source_guard.dart` now exposes the real `concreteTypeReferences(typeName, {roots})` alongside GUARD-4's `forbiddenDependencies`/`offDeviceSenders`; only `conversionOffenders`/`deltaEOffenders`/`platformOffenders` remain GUARD-2 stubs for **GUARD-6** (AC-16/17), which reuses the same `maskCommentsAndStrings` + walk pattern (add rule patterns, honour the authority/allow-list constants). New harness vocabulary `nfrCvdCallerProject` / `givenPaletteWithCvdCallerProject` / `whenOpenProject` is available to later phases. New control fixture `control_bound_to_concrete_cvd.dart` sits beside `control_bound_to_concrete.dart` under `integration_test/nfr/fixtures/controls/`.
+- **Verification environment:** unchanged from GUARD-4 — the whole bs-12 acceptance file runs on **`-d flutter-tester`** (host VM), never an iOS sim; the source scans read the repo tree through `dart:io` (cwd = repo root). A bare run with no `-d` gives zero tests / false green.
+- **Known gaps / next:** GUARD-6 (AC-16/17), QUALITY-2/3/4/5 remain. GUARD-6 shares `source_guard.dart` + `nfr_test.dart` + `pending.dart` with the GUARD line → sequence (one phase/session, `/clear` between). QUALITY-2 (`lib/capture` only) may run ∥ GUARD-6 in a `--parallel` worktree session. G-3 (AC-5 device frame rate + AC-3/4 target timings) stays a SIGNOFF-1 manual gate.
 
 ## Phase GUARD-6 — AC-16 + AC-17 one colour library + portability
 
