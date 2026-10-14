@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-14 by Matt Quirk (G-1; derived 2026-10-05 by /wireframe-behavior-specs)
 # Phase: FUTURE (post-v1) — invisible crowd-refinement of the AI mappings, not a v1 feature (SI D8).
 Feature: Crowd-refinement of the AI mappings
   The intended future path for improving the quality of the LLM-seeded paint
