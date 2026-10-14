@@ -25,6 +25,7 @@ import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_live_view.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
+import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/name_header.dart';
@@ -550,10 +551,12 @@ sdks:
   // AC-9 (reliability) drives a would-be-trustworthy commit under each poor
   // condition and asserts it is downgraded, never returned trustworthy — red
   // until QUALITY-2 wires the exposure/card triggers (only lighting downgrades
-  // today), so B pending QUALITY-2. AC-10/11/12 (accuracy, D-2) grade the
-  // synthetic set with the independent reference ΔE — red on a Given precondition
-  // until QUALITY-4 builds the full held-out set + feeds inputs through the real
-  // pipeline, so B pending QUALITY-4. AC-13 (out-of-gamut) drives the real engine
+  // today), so B pending QUALITY-2. AC-10/11/12 (accuracy, D-2) feed the full
+  // synthetic held-out set (≥3 per condition) through the real capture / engine
+  // pipeline and grade each produced reading / prediction against its known
+  // truth with the independent reference ΔE (≤ 3 calibrated / ≤ 8 approximate /
+  // ≤ 5 in-gamut), each with a perturbation control — delivered in QUALITY-4.
+  // AC-13 (out-of-gamut) drives the real engine
   // toward the synthetic gamut targets. Every test is registered via
   // [acTestWidgets]: skipped by default, run under
   // `--dart-define=BS12_RUN_PENDING=true` (the red baseline).
@@ -705,83 +708,160 @@ sdks:
               'downgrade is not a blanket force-to-approximate');
     });
 
-    // AC-10/11/12 grade the synthetic accuracy set with the INDEPENDENT
-    // reference ΔE00 (never the product metric against itself, D-2). At this
-    // stage the fixture is QUALITY-1's one-sample-per-condition seed; QUALITY-4
-    // builds the full held-out set (several samples per condition + a
-    // perturbation control that must exceed the bound) and feeds inputs through
-    // the real pipeline. Each test asserts its bound over the condition's
-    // samples AND a Given precondition that the full held-out set exists — which
-    // fails now, naming QUALITY-4 (B pending QUALITY-4).
+    // AC-10/11/12 feed the full held-out set (QUALITY-4) through the REAL
+    // capture / engine pipeline and grade the *produced* reading / prediction
+    // against its known truth with the INDEPENDENT reference ΔE00 (never the
+    // product metric against itself, D-2). The synthetic truth is a
+    // deterministic stand-in for a spectrophotometer measurement — the
+    // "synthetic ≠ physical ground truth" gap is carried to sign-off; what these
+    // prove is that the real pipeline meets each bound against a known truth.
+    // Each test also drives its perturbation control, which must exceed the
+    // bound, so the within-bound assertion is not vacuously satisfiable (G5).
+    const harness = AccuracyHarness();
     const minSamplesPerCondition = 3;
+
+    // Commits a reading of [truth] through the real capture pipeline and returns
+    // the committed sample. With a reference [card] in view the card calibration
+    // is applied (the calibrated, controlled path); without one the reading is
+    // left to the honest card-less downgrade. The tree is reset after each so a
+    // pushed Readout route never bleeds into the next launch (the AC-9 hygiene).
+    Future<Sample> captureReading(
+      WidgetTester tester,
+      ColorCoordinates truth, {
+      required bool card,
+    }) async {
+      final cap = await givenTheApp(
+        tester,
+        flow: NfrFlow.capture,
+        captureSource: FakeCaptureSource(
+          SceneSpec(groundTruth: truth, referenceCardPresent: card),
+        ),
+      );
+      await cap.whenLockCapture();
+      if (card) await cap.whenCalibrate();
+      await cap.whenCommitCapture();
+      final committed = cap.captureState.lastCommittedSample;
+      expect(committed, isNotNull, reason: 'a reading commits for $truth');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      return committed!;
+    }
 
     acTestWidgets('AC-10',
         'capture with a reference card in controlled lighting meets ΔE00 ≤ 3',
         (tester) async {
       // Scenario: card + controlled lighting → ΔE00 ≤ 3 (AC-10, D-2).
-      const harness = AccuracyHarness();
-      final samples = syntheticAccuracySet
-          .where((s) => s.condition == AccuracyCondition.cardControlled)
-          .toList();
-      // Given precondition: QUALITY-4 builds the full held-out set (≥3
-      // card+controlled samples, incl. a perturbation control that exceeds 3);
-      // the seed set has only one, so the assertion is not yet discriminating.
+      final samples = heldOutCardControlled;
       expect(samples.length, greaterThanOrEqualTo(minSamplesPerCondition),
-          reason: 'Given: QUALITY-4 must build the full card+controlled '
-              'held-out set (≥$minSamplesPerCondition samples)');
-      // Then: every card+controlled sample is within ΔE00 3 by the independent
-      // reference metric.
-      for (final grade in harness.gradeAll(samples)) {
-        expect(grade.condition, AccuracyCondition.cardControlled);
+          reason: 'the held-out card+controlled set must carry '
+              '≥$minSamplesPerCondition samples');
+      // Then: each truth, read back through the real calibrated pipeline, lands
+      // within ΔE00 3 of truth (independent reference metric) and is stated
+      // calibrated — never silently downgraded under good conditions.
+      for (final sample in samples) {
+        final reading = await captureReading(tester, sample.truth, card: true);
+        expect(reading.accuracy, CaptureAccuracy.calibrated,
+            reason: 'a card-calibrated reading under good light is calibrated: '
+                '${sample.id}');
+        final grade = harness.gradeProduced(reading.coordinates, sample);
         expect(grade.maxDeltaE, 3);
         expect(grade.withinBound, isTrue,
             reason: 'card+controlled must sit within ΔE00 3: $grade');
       }
+      // Control (G5): a reading pulled far off truth exceeds the bound, so the
+      // grade + bound genuinely reject an off reading (not a vacuous pass).
+      final control = accuracyPerturbationControls
+          .firstWhere((c) => c.condition == AccuracyCondition.cardControlled);
+      expect(harness.grade(control).withinBound, isFalse,
+          reason: 'a perturbed card+controlled reading must exceed ΔE00 3');
     });
 
     acTestWidgets('AC-11',
         'capture without a reference card in daylight meets ΔE00 ≤ 8, labelled '
         'approximate', (tester) async {
       // Scenario: card-less daylight → ΔE00 ≤ 8 AND labelled approximate (AC-11).
-      const harness = AccuracyHarness();
-      final samples = syntheticAccuracySet
-          .where((s) => s.condition == AccuracyCondition.cardlessDaylight)
-          .toList();
-      // Given precondition: QUALITY-4 builds the full held-out set.
+      final samples = heldOutCardlessDaylight;
       expect(samples.length, greaterThanOrEqualTo(minSamplesPerCondition),
-          reason: 'Given: QUALITY-4 must build the full card-less daylight '
-              'held-out set (≥$minSamplesPerCondition samples)');
+          reason: 'the held-out card-less daylight set must carry '
+              '≥$minSamplesPerCondition samples');
       for (final sample in samples) {
-        // Then: labelled approximate (never calibrated)…
         expect(sample.expectApproximate, isTrue,
-            reason: 'a card-less daylight reading must be labelled approximate');
-        // …and within ΔE00 8 by the independent reference metric.
-        final grade = harness.grade(sample);
+            reason: 'a card-less daylight sample is labelled approximate');
+        final reading = await captureReading(tester, sample.truth, card: false);
+        // Then: labelled approximate (never returned calibrated)…
+        expect(reading.accuracy, CaptureAccuracy.approximate,
+            reason: 'a card-less reading must be labelled approximate: '
+                '${sample.id}');
+        // …and within ΔE00 8 of truth by the independent reference metric.
+        final grade = harness.gradeProduced(reading.coordinates, sample);
         expect(grade.maxDeltaE, 8);
         expect(grade.withinBound, isTrue,
             reason: 'card-less daylight must sit within ΔE00 8: $grade');
       }
+      // Control (G5): a reading far off truth exceeds the ΔE00 8 bound.
+      final control = accuracyPerturbationControls
+          .firstWhere((c) => c.condition == AccuracyCondition.cardlessDaylight);
+      expect(harness.grade(control).withinBound, isFalse,
+          reason: 'a perturbed card-less reading must exceed ΔE00 8');
     });
 
     acTestWidgets('AC-12',
         'a recipe prediction vs a mixed swatch meets ΔE00 ≤ 5 in-gamut',
         (tester) async {
       // Scenario: recipe prediction vs mixed swatch → ΔE00 ≤ 5 in-gamut (AC-12).
-      const harness = AccuracyHarness();
-      final samples = syntheticAccuracySet
-          .where((s) => s.condition == AccuracyCondition.recipeVsSwatch)
-          .toList();
-      // Given precondition: QUALITY-4 builds the full held-out set.
+      final samples = heldOutRecipeVsSwatch;
       expect(samples.length, greaterThanOrEqualTo(minSamplesPerCondition),
-          reason: 'Given: QUALITY-4 must build the full recipe-vs-swatch '
-              'held-out set (≥$minSamplesPerCondition samples)');
-      for (final grade in harness.gradeAll(samples)) {
-        expect(grade.condition, AccuracyCondition.recipeVsSwatch);
-        expect(grade.maxDeltaE, 5);
-        expect(grade.withinBound, isTrue,
-            reason: 'an in-gamut recipe prediction must sit within ΔE00 5: '
-                '$grade');
+          reason: 'the held-out recipe-vs-swatch set must carry '
+              '≥$minSamplesPerCondition samples');
+      for (final sample in samples) {
+        // Given + When: the real engine solves toward the reachable truth.
+        final rec = await givenTheApp(
+          tester,
+          flow: NfrFlow.recipes,
+          recipeTarget: Sample(
+            coordinates: sample.truth,
+            provenance: const Provenance(ProvenanceTier.measured),
+          ),
+        );
+        final recipes = rec.recipeState.recipes;
+        expect(recipes, isNotEmpty, reason: 'in-gamut target returns recipes: '
+            '${sample.id}');
+        // Then: the target is reachable (in gamut)…
+        expect(rec.recipeState.outOfGamut, isFalse,
+            reason: 'an in-gamut target is not flagged out of gamut: '
+                '${sample.id}');
+        // …and the best predicted (forward-mixed) colour the painter is offered
+        // sits within ΔE00 5 of truth by the INDEPENDENT reference metric (not
+        // the engine's own ΔE) — the "mixed swatch" modelled as the prediction.
+        final bestDeltaE = recipes
+            .map((r) => harness.deltaE(r.predictedColor, sample.truth))
+            .reduce((a, b) => a < b ? a : b);
+        expect(bestDeltaE, lessThanOrEqualTo(sample.maxDeltaE),
+            reason: 'an in-gamut recipe prediction must sit within ΔE00 5 of '
+                'truth (best was $bestDeltaE): ${sample.id}');
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
       }
+      // Control (G5): an out-of-gamut target cannot be predicted within ΔE00 5 —
+      // the real engine flags it and every nearest mix stays beyond the bound,
+      // so the within-bound claim discriminates reachable from unreachable.
+      final outTarget = syntheticGamutTargets.firstWhere((t) => !t.inGamut);
+      final out = await givenTheApp(
+        tester,
+        flow: NfrFlow.recipes,
+        recipeTarget: Sample(
+          coordinates: outTarget.target,
+          provenance: const Provenance(ProvenanceTier.measured),
+        ),
+      );
+      expect(out.recipeState.outOfGamut, isTrue,
+          reason: 'control: the out-of-gamut target must be flagged');
+      final outBest = out.recipeState.recipes
+          .map((r) => harness.deltaE(r.predictedColor, outTarget.target))
+          .reduce((a, b) => a < b ? a : b);
+      expect(outBest, greaterThan(5),
+          reason: 'control: an out-of-gamut target cannot be predicted within '
+              'ΔE00 5 (best was $outBest)');
     });
 
     acTestWidgets('AC-13',
@@ -846,28 +926,31 @@ sdks:
     // (offline); GUARD-4 un-pended AC-6 + AC-7 + AC-8 (privacy); GUARD-5 un-pended
     // AC-14 + AC-15 (swappable interfaces); GUARD-6 un-pended AC-16 + AC-17 (one
     // colour library + portability); QUALITY-2 un-pended AC-9 (reliability
-    // downgrade); QUALITY-3 un-pended AC-13 (out-of-gamut), so the gate now holds
-    // the 5 ACs still owed to QUALITY-4 (AC-10/11/12) and QUALITY-5 (AC-3/4).
+    // downgrade); QUALITY-3 un-pended AC-13 (out-of-gamut); QUALITY-4 un-pended
+    // AC-10 + AC-11 + AC-12 (accuracy), so the gate now holds only the 2 ACs
+    // still owed to QUALITY-5 (AC-3/4).
     final expectedPending = <String>{
       'AC-3', 'AC-4', // AC-1/AC-2 (GUARD-3), AC-6/7/8 (GUARD-4),
       // AC-14/AC-15 (GUARD-5), AC-16/AC-17 (GUARD-6), AC-9 (QUALITY-2),
-      // AC-13 (QUALITY-3) un-pended; AC-5 manual — absent
-      'AC-10', 'AC-11', 'AC-12',
+      // AC-13 (QUALITY-3), AC-10/11/12 (QUALITY-4) un-pended; AC-5 manual — absent
     };
 
     test('the pending map is exactly the still-pending automatable ACs, each '
         'owned by a real behaviour phase', () {
       expect(pendingACs.keys.toSet(), expectedPending);
-      expect(pendingACs.length, 5);
+      expect(pendingACs.length, 2);
       // AC-1 + AC-2 (GUARD-3), AC-6 + AC-7 + AC-8 (GUARD-4), AC-14 + AC-15
-      // (GUARD-5), AC-16 + AC-17 (GUARD-6), AC-9 (QUALITY-2) and AC-13 (QUALITY-3)
-      // were un-pended and must not reappear.
+      // (GUARD-5), AC-16 + AC-17 (GUARD-6), AC-9 (QUALITY-2), AC-13 (QUALITY-3)
+      // and AC-10 + AC-11 + AC-12 (QUALITY-4) were un-pended and must not reappear.
       expect(pendingACs.containsKey('AC-1'), isFalse);
       expect(pendingACs.containsKey('AC-2'), isFalse);
       expect(pendingACs.containsKey('AC-6'), isFalse);
       expect(pendingACs.containsKey('AC-7'), isFalse);
       expect(pendingACs.containsKey('AC-8'), isFalse);
       expect(pendingACs.containsKey('AC-9'), isFalse);
+      expect(pendingACs.containsKey('AC-10'), isFalse);
+      expect(pendingACs.containsKey('AC-11'), isFalse);
+      expect(pendingACs.containsKey('AC-12'), isFalse);
       expect(pendingACs.containsKey('AC-13'), isFalse);
       expect(pendingACs.containsKey('AC-14'), isFalse);
       expect(pendingACs.containsKey('AC-15'), isFalse);

@@ -79,4 +79,22 @@ class AccuracyHarness {
     List<SyntheticAccuracySample> samples = syntheticAccuracySet,
   ]) =>
       [for (final sample in samples) grade(sample)];
+
+  /// Grades a colour the **real pipeline** produced for [sample] against the
+  /// sample's known [HeldOutAccuracySample.truth] (QUALITY-4).
+  ///
+  /// The [produced] colour is the committed reading (capture conditions) or the
+  /// best recipe's predicted colour (recipe condition); grading stays the
+  /// independent `referenceDeltaE00`, never the product metric against itself
+  /// (plan bs-12 D-2).
+  AccuracyGrade gradeProduced(
+    ColorCoordinates produced,
+    HeldOutAccuracySample sample,
+  ) =>
+      AccuracyGrade(
+        sampleId: sample.id,
+        condition: sample.condition,
+        deltaE: deltaE(produced, sample.truth),
+        maxDeltaE: sample.maxDeltaE,
+      );
 }

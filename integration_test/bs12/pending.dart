@@ -68,10 +68,14 @@ const Map<String, String> pendingACs = {
   // accuracy to approximate (never returned calibrated), with the reason
   // surfaced in words on the live view; the trustworthy control (well lit,
   // locked, calibrated) stays calibrated.
-  // Accuracy (ΔE00 targets)
-  'AC-10': 'QUALITY-4', // card + controlled lighting: ΔE00 ≤ 3
-  'AC-11': 'QUALITY-4', // cardless daylight: ΔE00 ≤ 8, labelled approximate
-  'AC-12': 'QUALITY-4', // recipe prediction vs swatch: ΔE00 ≤ 5 in-gamut
+  // Accuracy (ΔE00 targets) — AC-10, AC-11, AC-12 un-pended by QUALITY-4: the
+  // full synthetic held-out set (≥3 per condition) is fed through the real
+  // capture / engine pipeline and each produced reading / prediction is graded
+  // against its known truth by the independent referenceDeltaE00 — card +
+  // controlled ≤ 3 (calibrated), card-less daylight ≤ 8 (labelled approximate),
+  // recipe prediction vs the forward-mixed swatch ≤ 5 for an in-gamut target —
+  // each with a perturbation control that exceeds its bound. (Synthetic ≠
+  // physical ground truth, D-2, carried to sign-off.)
   // AC-13 un-pended by QUALITY-3: the real engine identifies the out-of-gamut
   // target (`recipeState.outOfGamut` + the shown OUT OF GAMUT banner marker) and
   // offers no recipe as a match (every returned mix flagged nearest-not-a-match);
