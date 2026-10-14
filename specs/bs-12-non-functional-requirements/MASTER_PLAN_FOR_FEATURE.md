@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — next ITEST-4 (test review = G-2); ITEST-1/2/3 ✅ done, stage-3 tests complete
+**Status:** In progress — ⏸ G-2 awaiting human decision (ITEST-4 test-review packet assembled); stage 3 complete, behaviour stage blocked until G-2
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -151,7 +151,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | GUARD-1 | ✅ Resolved 2026-10-13 14:59 EDT: approved — Matt Quirk (spec first line amended to the approval line) |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision (2026-10-14) — ITEST-4 packet in [modules/ITEST.md](modules/ITEST.md) + whole-suite grid; decide via `/feature-next-phase --gate bs12 G-2 approved \| "<changes>"` |
 | G-3 | decision | AC-5 — the **live-preview frame rate** verified on device at SIGNOFF, and the AC-3/AC-4 **target-hardware ~1–2s timings** recorded as owner evidence (D-3); a fail blocks acceptance | SIGNOFF-1 (AC-5) | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -174,7 +174,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | ITEST-1 | acceptance-tests: harness, real-flow + control + swap fixtures, pending gate (16 ACs), smoke test | ✅ Done | 7.3M | 17m 59s | grade 15 A/0; analyze clean, unit 1228, acceptance 15 pass/exit 0 (16 ACs pending); `nfr_harness.dart`+`nfr_test.dart` |
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,6,7,8,14,15,16,17 (pending) + red baseline | ✅ Done | 27.1M | 1h 00m (3h 13m) | 9 pending AC tests; default +15/~9/exit 0; run-pending +15/−9 (clean red baseline); grade 3 A / 6 B pending / 0 ordinary B |
 | 6 | ITEST-3 | acceptance-tests: AC-3,4,9,10,11,12,13 (pending) + red baseline | ✅ Done | 19.0M | 47m 22s | grade 3 A / 4 B pending / 0 ordinary B; default +15/~16/exit 0; run-pending +18/−13; AC-3/4/13 green at baseline (bs-02/bs-04), AC-9→QUALITY-2, AC-10/11/12→QUALITY-4 |
-| 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | all 16 ACs pending; whole-suite grid + G-2 awaiting human |
+| 7 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1.89M | 4m 22s | packet assembled; whole-suite grid 6 A / 10 B pending / 0 ordinary B (+15 A smoke); G-2 awaiting human decision; behaviour stage blocked |
 | 8 | GUARD-3 | AC-1+AC-2 offline: network-block guard over every core flow | ⬜ Todo | | | |
 | 9 | GUARD-4 | AC-6+AC-7+AC-8 privacy: nothing-leaves + no-telemetry + no-off-device-path guards | ⬜ Todo | | | |
 | 10 | GUARD-5 | AC-14+AC-15 swappable: inject alt engine + alt CVD, callers unchanged | ⬜ Todo | | | |
@@ -189,9 +189,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-3 (acceptance-tests) is **done** on `feat/bs-12-non-functional-requirements` (worktree `../Nuance-bs12`): seven *pending* AC tests (`acTestWidgets('AC-n', …)`) for the quality targets **AC-3, AC-4, AC-9, AC-10, AC-11, AC-12, AC-13** in `nfr_test.dart`. Harness extended (ITEST-owned): `givenTheApp(recipeTarget:)`, the AC-9 condition scenes, `whenCalibrate`, `activeDowngradeReasons`. analyze clean; unit 1228; coverage gate 100% (no new `lib/`); acceptance default **+15/~16/exit 0**, run-pending **+18/−13**; grade **3 A / 4 B pending / 0 ordinary B — PASS**. **AC-3, AC-4, AC-13 are green at baseline** — bs-02 (frame-settle + indicator), bs-04 (`topK=5` search) and bs-04 ENGINE-5 (out-of-gamut) already satisfy them, so QUALITY-5 (AC-3/4) and QUALITY-3 (AC-13) become **un-pend + guard/confirm** phases, not new behaviour. AC-9 → B pending QUALITY-2 (`commit` must consume `activeDowngradeReasons`); AC-10/11/12 → B pending QUALITY-4 (full held-out set + real-pipeline feed). All 16 ACs stay pending (no un-pend in ITEST-3).
+**⏸ HUMAN DECIDES G-2 — no agent phase runs until decided.** ITEST-4 (test review) is **done as agent work**: the review packet is assembled in [modules/ITEST.md](modules/ITEST.md) § *Review packet — G-2* and the whole-suite grade grid rolled up in [behavior-test-completeness…md](behavior-test-completeness-bs-12-non-functional-requirements.md) § *Whole-suite roll-up*. **16 AC tests → 6 A / 10 B pending / 0 ordinary B** (+15 A harness/smoke); red baseline clean (default 15 pass/16 skip/exit 0; run-pending: AC-3/4/13 green-at-baseline pass, the other 13 fail as designed on their control/limit).
 
-**Next: ITEST-4** (test review = **G-2**) — assemble the review packet (the catalogue, the red baseline incl. the 3 green-at-baseline ACs + the recommendation to reduce QUALITY-3/5 to un-pend+guard, the controls + augmentations, the D-2 synthetic / D-3 performance gaps), the whole-suite grade grid, set the phase `⏸ Awaiting review` and **G-2 awaiting a human decision** (`/feature-next-phase --gate bs12 G-2 approved | "<changes>"`), stop. All behaviour phases (GUARD-3..6, QUALITY-2..5) stay blocked on G-2; G-3 (AC-5 device frame rate + AC-3/4 target-hardware timings) is a SIGNOFF-1 manual gate.
+Decide G-2: **`/feature-next-phase --gate bs12 G-2 approved | "<changes>"`**.
+- **Approved** un-blocks the behaviour stage: GUARD-3 (AC-1/2), GUARD-4 (AC-6/7/8), GUARD-5 (AC-14/15), GUARD-6 (AC-16/17), QUALITY-2 (AC-9 — only `lib/` change), QUALITY-4 (AC-10/11/12), and **QUALITY-3 (AC-13) + QUALITY-5 (AC-3/4) as un-pend+guard** phases (green at baseline — recommended retarget). Phases sharing `nfr_test.dart` / a guard file are merge-risky → sequence; QUALITY-2 may run ∥ one GUARD phase.
+- **Changes requested** → each item becomes an ITEST change phase + a fresh review before behaviour.
+
+G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1 manual gate (D-3). Known gaps carried to sign-off: D-2 (synthetic accuracy set) + D-3 (device timings).
 
 ## Token usage
 
@@ -206,7 +210,8 @@ ITEST-3 (acceptance-tests) is **done** on `feat/bs-12-non-functional-requirement
 | ITEST-1 | 18db4951 | 2026-10-13 17:24 EDT | 17:42 | 17m 59s | 17m 59s | claude-opus-4-8 | 116 | 256,738 | 6,981,519 | 54,729 | 7,293,102 | harness + smoke done: 15 scaffold tests (5 flow-launch + 6 guard/harness-wired + 2 pending-gate + 2 fakes); analyze clean, unit 1228, coverage 100%, acceptance 15 pass/exit 0 (16 ACs pending); grade 15 A/0 |
 | ITEST-2 | 9af4cb2a | 2026-10-13 17:59 EDT | 21:12 | 3h 13m | 1h 00m | claude-opus-4-8 | 276 | 875,261 | 26,027,948 | 186,170 | 27,089,655 | 9 pending AC tests (AC-1,2,6,7,8,14,15,16,17); default +15/~9/exit 0, run-pending +15/-9 clean red baseline; grade 3 A / 6 B pending / 0 ordinary B — PASS |
 | ITEST-3 | df303f4e | 2026-10-13 21:31 EDT | 22:19 | 47m 22s | 47m 22s | claude-opus-4-8 | 192 | 378,184 | 18,468,216 | 114,747 | 18,961,339 | 7 pending AC tests (AC-3,4,9,10,11,12,13); default +15/~16/exit 0, run-pending +18/-13; grade 3 A / 4 B pending / 0 ordinary B — PASS; AC-3/4/13 green at baseline (bs-02/bs-04), AC-9->QUALITY-2, AC-10/11/12->QUALITY-4 |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-13 22:19** | **7h 29m** | **3h 31m** |  | **1,012** | **2,171,685** | **74,157,524** | **561,626** | **76,891,847** |  |
+| ITEST-4 | e007e168 | 2026-10-14 05:25 EDT | 05:29 | 4m 22s | 4m 22s | claude-opus-4-8 | 40 | 92,054 | 1,782,850 | 19,529 | 1,894,473 | test-review: packet assembled + whole-suite grid 6 A / 10 B pending / 0 ordinary B (+15 A smoke); G-2 awaiting human decision; no code run |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 05:29** | **7h 33m** | **3h 36m** |  | **1,052** | **2,263,739** | **75,940,374** | **581,155** | **78,786,320** |  |
 
 ## Sign-off
 

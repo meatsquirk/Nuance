@@ -73,3 +73,27 @@ AC-1/2/6 verified at **A**: their offline/privacy discrimination is enforced *to
 AC-3 and AC-4 verified at **A**: both are green at baseline (bs-02 settle+indicator; bs-04 search), drive the real `buildApp` under the generous CI regression budget (never the device ~1–2 s, D-3), and discriminate today with no later-behaviour dependency — QUALITY-5 merely un-pends them. AC-3 carries a documented, non-actionable caveat (the auto-settle harness entry means only the end STABLE state is observed, and the mechanism is cross-guarded by bs-02's own suite). AC-9 is a legitimate **B pending QUALITY-2**: its low-light and unlocked branches are red at baseline because `commit()` does not yet consume the (already-wired) `activeDowngradeReasons` seam, and the trustworthy control is a real G3 pairing that will discriminate a mis-wired trigger. AC-10/11/12 are legitimate **B pending QUALITY-4**: the one-sample-per-condition seed set trips each test's `≥ 3` Given precondition red now, and the discriminating perturbation control + real-pipeline feed are genuinely QUALITY-4's deliverables, graded throughout by the independent reference ΔE (D-2).
 
 **One ordinary B must be fixed this phase — AC-13's banner assertion.** `find.byKey(GamutBanner.regionKey) findsOneWidget` does not discriminate the banner being shown from being collapsed, because `GamutBanner` keeps `regionKey` in the tree in both states by design. The fix is in-phase (the behaviour already ships): assert `find.text(GamutBanner.markerText)` is `findsOneWidget` for the out-of-gamut target and `findsNothing` for the in-gamut control. With that correction AC-13 becomes A and the phase passes.
+
+> **Fix applied in-phase (ITEST-3 Result).** AC-13's banner assertion was changed to `find.text(GamutBanner.markerText)` (`findsOneWidget` out-of-gamut / `findsNothing` in-gamut control) and re-verified green → **A**. The post-fix ITEST-3 verdict is **3 A / 4 B pending / 0 ordinary B — PASS** (AC-3/AC-4/AC-13 A; AC-9 B pending QUALITY-2; AC-10/11/12 B pending QUALITY-4). The "2 A / 1 ordinary B" line above is the first grading pass, retained for provenance.
+
+## Whole-suite roll-up — ITEST-4 (test review, G-2)
+
+**Assembled by the test review** from the three AC-test phase gradings above (ITEST-1 §, ITEST-2 §, ITEST-3 § + its in-phase fix). This is the grid the G-2 reviewer reads.
+
+| Phase | Scope | A | B pending | Ordinary B | Verdict |
+|---|---|---|---|---|---|
+| ITEST-1 | 15 harness/smoke/scaffold tests | 15 | 0 | 0 | PASS (all A) |
+| ITEST-2 | 9 AC tests (AC-1,2,6,7,8,14,15,16,17) | 3 (AC-1/2/6) | 6 (AC-7/8→GUARD-4, AC-14/15→GUARD-5, AC-16/17→GUARD-6) | 0 | PASS |
+| ITEST-3 | 7 AC tests (AC-3,4,9,10,11,12,13) | 3 (AC-3/4/13) | 4 (AC-9→QUALITY-2, AC-10/11/12→QUALITY-4) | 0 | PASS (post in-phase AC-13 fix) |
+| **AC tests total** | **16 automated ACs** | **6** | **10** | **0** | — |
+
+### Verdict
+
+**16 AC tests → 6 A / 10 B pending / 0 ordinary B** (plus **15 A / 0** harness-&-smoke tests). **All A or *B pending `<phase>`* with a Test-augmentations row — no ordinary B outstanding → the test-review precondition is met.**
+
+- **A (6):** AC-1, AC-2, AC-6 (offline/privacy enforced today by the live network block + concrete artefact checks) and AC-3, AC-4, AC-13 (green at baseline — bs-02 settle+indicator, bs-04 `topK=5` search, bs-04 ENGINE-5 out-of-gamut). The latter three need **no new behaviour**: QUALITY-5 (AC-3/4) and QUALITY-3 (AC-13) reduce to **un-pend + guard** phases.
+- **B pending (10):** each correct but *limited* — its discriminating control cannot go green until the named behaviour phase lands (AC-7/8 → GUARD-4 source/dependency scans; AC-14/15 → GUARD-5 static no-concrete-reference scan + CVD-caller driver; AC-16/17 → GUARD-6 conversion/ΔE/platform scans; AC-9 → QUALITY-2 downgrade trigger; AC-10/11/12 → QUALITY-4 full synthetic set + real-pipeline feed). Every planted control fixture already exists; each row names its closing phase in *Test augmentations*.
+- **0 ordinary B:** the one ordinary B raised in grading (AC-13's banner key) was fixed in-phase; nothing is owed before the behaviour stage.
+- **Known gaps named for sign-off (not grid defects):** D-2 — AC-10/11/12 against a *synthetic* set, not physical ground truth; D-3 — AC-3/4 device ~1–2 s + AC-5 live-preview fps are owner on-device evidence at SIGNOFF (G-3). All accuracy grading uses the independent `referenceDeltaE00`, never the product metric against itself.
+
+**No changes required by the grader before behaviour.** The human decision at G-2 is whether to accept the B-pending coupling and the green-at-baseline retargeting of QUALITY-3/5 — recorded via `/feature-next-phase --gate bs12 G-2 approved | "<changes>"`.

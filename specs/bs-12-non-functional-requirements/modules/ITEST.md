@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1, ITEST-2, ITEST-3 ✅ done; next ITEST-4 (test review = G-2)
+**Status:** In progress — ITEST-1/2/3 ✅ done; ITEST-4 packet assembled, ⏸ G-2 awaiting human decision
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs12/nfr_harness.dart`, `integration_test/bs12/nfr_test.dart`. Consumes (does not own) the reusable guards in `integration_test/nfr/` (GUARD + QUALITY) and the `integration_test/bs12/pending.dart` gate (created by GUARD-1).
 **Depends on:** GUARD-2, QUALITY-1 (the shells) · **Blocks:** every behavior phase (via the test review G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 7.3M | 17m 59s |
 | ITEST-2 | acceptance-tests | AC-1,2,6,7,8,14,15,16,17 (pending) | ✅ Done | 27.1M | 1h 00m (3h 13m) |
 | ITEST-3 | acceptance-tests | AC-3,4,9,10,11,12,13 (pending) | ✅ Done | 19.0M | 47m 22s |
-| ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1.89M | 4m 22s |
 
 ## Interface reconciliation
 
@@ -137,3 +137,103 @@
 - **Target AC:** — · **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
 - **Tasks:** assemble the review packet (the catalogue, the red baseline, the fixtures, what is real vs faked, the controls, the pre-seeded augmentations, the three known gaps D-2/D-3) for a human; whole-suite grade grid; set the gate awaiting a decision.
 - **Exit criteria:** whole-suite grade grid all A (or *B pending <phase>*); packet written; **G-2 awaiting a human decision** (`/feature-next-phase --gate bs12 G-2 approved`).
+
+### Review packet — G-2 (⏸ Awaiting review)
+
+Reviewer, this is the gate before any bs-12 behaviour is coded. The suite is **16 pending acceptance tests**
+(one per automated AC; AC-5 is pure-manual, D-3) over the **real assembled app** (`buildApp(deps)` across every
+feature merged on `main` @ `ecd3a9e`), plus 15 never-pending harness/smoke tests. No colour math is faked.
+
+**Look at these first (the three things the review is really deciding):**
+1. **The green-at-baseline recommendation.** AC-3, AC-4, AC-13 already pass at baseline — bs-02's frame-settle +
+   `stabilityKey` indicator (AC-3), bs-04's `topK=5` ranked search (AC-4) and bs-04 ENGINE-5's out-of-gamut flag
+   (AC-13) already satisfy them. **Recommendation:** reduce their owning phases **QUALITY-5 (AC-3/4)** and
+   **QUALITY-3 (AC-13)** from new-behaviour builds to **un-pend + guard/confirm** phases (delete the pending entry,
+   add a regression guard, keep green). No new behaviour is owed for those three ACs. You may fold/retarget them.
+2. **The two known gaps carried to sign-off** (not closable in bs-12): **D-2** — AC-10/11/12 are proven against a
+   **synthetic** held-out dataset, *not* physical spectrophotometer/mixed-swatch ground truth (graded by the
+   independent `referenceDeltaE00`, never the product metric against itself); **D-3** — AC-3/AC-4's literal
+   "~1–2 s on target hardware" and **AC-5**'s live-preview frame rate are **owner on-device evidence at SIGNOFF
+   (G-3)**; CI only gates the mechanism + a generous regression budget, never the device figure.
+3. **The B-pending grades are all later-*behaviour* limits, never weak tests.** 10 of the 16 AC tests are
+   *B pending `<phase>`*: their discriminating control exists and is correct but cannot go green until the named
+   behaviour phase lands (a source scan, a downgrade trigger, the full synthetic set). Each has a Test-augmentations
+   row naming the closing phase. Confirm you accept that coupling (it mirrors the approved bs-10/bs-11 pattern).
+
+**Per-AC roster** (full Given/When/Then/Rejects in the master plan's *Test catalogue*; red-baseline detail in the
+*Red baseline* table above). *G-at-B = green at baseline.*
+
+| AC | Test (`acTestWidgets`) | What it proves · its control | Baseline | Grade | Closed / un-pended by |
+|---|---|---|---|---|---|
+| AC-1 | `AC-1` offline | every core flow completes under the network block, zero attempts · control touches the block | FAIL (as designed) | **A** | GUARD-3 |
+| AC-2 | `AC-2` no-blocking | each flow settles without awaiting a connection · control cannot complete | FAIL (as designed) | **A** | GUARD-3 |
+| AC-3 | `AC-3` settle+indicator | indicator → `STABLE 12/12`, commits, under CI budget | **PASS (G-at-B)** | **A** | QUALITY-5 (un-pend+guard) |
+| AC-4 | `AC-4` search budget | 3–5 ranked candidates under CI budget | **PASS (G-at-B)** | **A** | QUALITY-5 (un-pend+guard) |
+| AC-6 | `AC-6` on-device | save+export (real `%PDF-` bytes to on-device sink), zero network · counting control | FAIL (as designed) | **A** | GUARD-4 |
+| AC-7 | `AC-7` no-account | `forbiddenDependencies()` empty + no account surface · planted `firebase_analytics` flagged | FAIL (as designed) | **B pending GUARD-4** | GUARD-4 |
+| AC-8 | `AC-8` sync opt-in | `offDeviceSenders()` empty · planted off-device sender flagged | FAIL (as designed) | **B pending GUARD-4** | GUARD-4 |
+| AC-9 | `AC-9` downgrade | low-light / unlocked / missing-card commit `approximate` · trustworthy control stays `calibrated` | FAIL (as designed) | **B pending QUALITY-2** | QUALITY-2 |
+| AC-10 | `AC-10` ΔE≤3 | card+controlled set ≤ 3 by independent ref ΔE · perturbation control exceeds | FAIL (as designed) | **B pending QUALITY-4** | QUALITY-4 |
+| AC-11 | `AC-11` ΔE≤8 | card-less daylight ≤ 8 + approximate label · mislabelled control fails | FAIL (as designed) | **B pending QUALITY-4** | QUALITY-4 |
+| AC-12 | `AC-12` ΔE≤5 | recipe-vs-swatch in-gamut ≤ 5 · perturbation control exceeds | FAIL (as designed) | **B pending QUALITY-4** | QUALITY-4 |
+| AC-13 | `AC-13` out-of-gamut | out-of-gamut target flagged + no recipe matched · in-gamut control not flagged, returns recipes | **PASS (G-at-B)** | **A** | QUALITY-3 (un-pend+guard) |
+| AC-14 | `AC-14` engine swap | dynamic: alt engine drives recipes (passes now); static: no caller references concrete `SubtractiveMixingEngine` · planted bound-to-concrete flagged | FAIL (as designed) | **B pending GUARD-5** | GUARD-5 |
+| AC-15 | `AC-15` CVD swap | a CVD caller drives the injected `ConfusionCheck` (`confusableCalls > 0`), callers unchanged | FAIL (as designed) | **B pending GUARD-5** | GUARD-5 |
+| AC-16 | `AC-16` one lib | no file outside the two authorities computes a conversion/ΔE · planted stray maths flagged | FAIL (as designed) | **B pending GUARD-6** | GUARD-6 |
+| AC-17 | `AC-17` portability | platform-conditional code only under `lib/capture/source/` · planted platform Dart flagged | FAIL (as designed) | **B pending GUARD-6** | GUARD-6 |
+| AC-5 | — (no automated test) | live-preview frame rate | — | **manual (G-3)** | SIGNOFF-1 (user acceptance) |
+
+**Red baseline (recorded at ITEST-2/3, no code changed since):** default run (pending skipped) →
+**15 pass / 16 skipped / exit 0** — the whole suite is green with all 16 ACs pending. Run-pending
+(`--dart-define=BS12_RUN_PENDING=true`) → the 3 green-at-baseline ACs (AC-3/4/13) pass and the other 13 fail on
+**exactly** their control/limit `Then` (or a `Given` naming the owning phase) — a clean red baseline, no vacuous
+passes. (ITEST-2 slice +15/−9; ITEST-3 slice +18/−13.)
+
+**What is real vs faked:** real screens/flows via `buildApp`, real engines, `ColorScience`, `deltaE00`, capture
+controller, and a test-executor-backed `drift` store (on-device SQLite without a device file). Faked only:
+`FakeSpeech`, `FakeHaptics`, the `networkBlock` `HttpOverrides`, the swap doubles `altMixingEngine` /
+`altConfusionCheck`. The planted **control fixtures** (`integration_test/nfr/fixtures/controls/*`) exist only to
+prove each guard discriminates. No colour math is faked (D-7).
+
+**Augmentations owed** (pre-seeded; each closed by the named behaviour phase — see the *Test augmentations*
+table above): AC-9 → QUALITY-2 · AC-10/11/12 → QUALITY-4 · AC-7/8 → GUARD-4 · AC-14/15 → GUARD-5 · AC-16/17 →
+GUARD-6. All 10 rows ⬜ Open.
+
+**Whole-suite grade grid:** [`../behavior-test-completeness-bs-12-non-functional-requirements.md`](../behavior-test-completeness-bs-12-non-functional-requirements.md)
+— §§ ITEST-1 / ITEST-2 / ITEST-3 + a **Whole-suite roll-up** verdict. Counts: **16 AC tests → 6 A / 10 B pending /
+0 ordinary B**; plus **15 A / 0** harness-&-smoke tests (ITEST-1). All 16 ACs are A or *B pending `<phase>`* with an
+augmentation row — **no ordinary B outstanding**. (ITEST-3's AC-13 ordinary-B was found and fixed **in-phase** to A,
+grid § ITEST-3 + roll-up.)
+
+**Decision:** approve the acceptance tests, or request changes.
+`/feature-next-phase --gate bs12 G-2 approved | "<changes>"`. Approval un-blocks every behaviour phase
+(GUARD-3..6, QUALITY-2..5). Changes requested → each item becomes an ITEST change phase + a fresh review.
+
+- **Result (⏸ Awaiting review 2026-10-14):**
+  - **Packet assembled** (above): the per-AC roster (16 tests → grade + control + closing phase), the recorded red
+    baseline (default 15 pass/16 skip/exit 0; run-pending clean), real-vs-faked, the 10 augmentation rows + their
+    closing phases, the whole-suite grid path + counts, and the three review decisions surfaced first (green-at-baseline
+    AC-3/4/13 → reduce QUALITY-3/5 to un-pend+guard; the D-2 synthetic / D-3 device-timing gaps carried to SIGNOFF;
+    the B-pending-coupling acceptance).
+  - **Whole-suite grade grid** reconciled across the three AC-test phases and a **Whole-suite roll-up** verdict appended:
+    **6 A / 10 B pending / 0 ordinary B** over the 16 AC tests (+ 15 A / 0 harness/smoke). No ordinary B outstanding.
+  - **No code run** — test-review is packet assembly; no `lib/` or test change this session, so the ITEST-3 red baseline
+    and grades stand unchanged. No unit/coverage/acceptance gate applies to a test-review phase.
+  - **Gate:** G-2 set **awaiting a human decision**; the phase is **⏸ Awaiting review**. Every behaviour phase stays blocked.
+  - **Fix passes:** n/a (no gate run).
+  - **Tokens / Time:** see Dashboard / master ledger (ITEST-4 row).
+- **Checkpoint / Handoff:**
+  - **State:** stage 3 complete pending the human decision. On **G-2 approved** the behaviour stage opens — GUARD-3
+    (AC-1/2), GUARD-4 (AC-6/7/8), GUARD-5 (AC-14/15), GUARD-6 (AC-16/17), QUALITY-2 (AC-9), QUALITY-4 (AC-10/11/12),
+    and QUALITY-3 (AC-13) + QUALITY-5 (AC-3/4) as **un-pend + guard** phases (unless the reviewer retargets them).
+    Behaviour phases editing the shared `nfr_test.dart` / a shared guard file are merge-risky → sequence them;
+    QUALITY-2 (the only `lib/capture` change) may run ∥ one GUARD phase.
+  - **Verification commands (for the behaviour phases):** unchanged from ITEST-3 — `cd /Users/matthew.quirk/Nuance-bs12`;
+    `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test --coverage`;
+    `dart run tool/coverage_gate.dart main`; acceptance via `FNP_COORD_REPO=/Users/matthew.quirk/Nuance <scripts>/coord.sh
+    with-lock bs-12-non-functional-requirements <PHASE> --wait 1500 -- bash -c 'cd …/Nuance-bs12 && export PATH=… &&
+    flutter test integration_test/bs12/nfr_test.dart -d <booted-udid> [--dart-define=BS12_RUN_PENDING=true]'` (shared
+    device lane → lock mandatory; booted `-d` mandatory; whole-suite redirect to a file, don't tail; no `timeout` on macOS;
+    full-suite teardown flake → re-run the affected file alone).
+  - **Un-pend mechanism:** a behaviour phase deletes its AC's entry in `integration_test/bs12/pending.dart` + makes its
+    augmentation real, then the AC's test runs by default (no `--dart-define`) and must be green.
