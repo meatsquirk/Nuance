@@ -22,7 +22,7 @@
 
 ## Open gates
 
-- **G-1** (approve the spec) and **G-3** (bs-13 signed off & merged) block **CORE-1**.
+- **G-1** (approve the spec) ✅ resolved 2026-10-14 (Matt Quirk). **G-3** (bs-13 signed off & merged) still blocks **CORE-1**.
 - **G-4** (sanctioned off-device path) does not block CORE, but CORE-4's background exchange depends on the EXCHANGE phases, which need G-4.
 
 ## Phase 1 — Scaffold
