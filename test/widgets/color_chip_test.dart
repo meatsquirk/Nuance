@@ -152,4 +152,37 @@ void main() {
     expect(swatches.single,
         daltonizeColor(original, const CvdProfile(type: CvdType.deutan)));
   });
+
+  testWidgets(
+      'with daltonization on, keeps its text label beside the remapped swatch '
+      '(AC-3: only the colour changes)', (tester) async {
+    // The label-contract under the remap: a remapped colour-coded element still
+    // renders its label — the colour is never shown alone. Rejects an impl that
+    // drew the remapped swatch but dropped the accompanying text.
+    final controller = DisplayController()..setDaltonization(true);
+    addTearDown(controller.dispose);
+    const original = Color(0xFF3AA0BF);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DisplayScope(
+            controller: controller,
+            child: const ColorChip(label: 'Cool Teal', color: original),
+          ),
+        ),
+      ),
+    );
+    // The swatch colour changed (it is the remap, not the original)...
+    final swatch = (tester.widget<Container>(find.byType(Container)).decoration!
+            as BoxDecoration)
+        .color;
+    final remapped =
+        daltonizeColor(original, const CvdProfile(type: CvdType.deutan));
+    expect(swatch, remapped, reason: 'the swatch is the remap');
+    expect(swatch, isNot(original),
+        reason: 'control: the remap actually moved the colour off the original');
+    // ...while the text label stayed.
+    expect(find.text('Cool Teal'), findsOneWidget,
+        reason: 'AC-3: the label survives the colour change');
+  });
 }

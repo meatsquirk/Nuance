@@ -81,8 +81,11 @@ void main() {
       // off path is explicit, colours off keep their original values), AC-8
       // (DALT-7 — the remap is render-only, the stored colour values unchanged),
       // AC-9 (DALT-8 — capture, readout and palette all surface the swatch
-      // through the one shared ColorChip chokepoint).
-      const unpended = <String>{'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', 'AC-9'};
+      // through the one shared ColorChip chokepoint), AC-3 (DALT-9 — a remapped
+      // colour-coded element still renders its label text + numeric value; only
+      // the swatch colour changes).
+      const unpended =
+          <String>{'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', 'AC-9', 'AC-3'};
       final expected = {
         for (var i = 1; i <= 10; i++)
           if (!unpended.contains('AC-$i')) 'AC-$i',
@@ -424,30 +427,48 @@ void main() {
     });
 
     acTestWidgets('AC-3', 'TestAC03_LabelAndValueKept', (tester) async {
-      // Given: daltonization is on, a colour-coded element (the Readout reading
-      // for the known sample) is shown.
+      // Given: a colour-coded element (the Readout reading for the known sample)
+      // is shown with daltonization off (the default).
       final h = await givenDaltonization(tester,
           storedProfile: savedProfile(CvdType.deutan));
+      expect(h.daltonization, isFalse, reason: 'AC-3 Given: daltonization off');
+
+      // Baseline (off): the element shows its text label, its numeric lightness
+      // value and the original (unremapped) swatch colour — captured so the
+      // "on" state can be compared against it (the swatch colour must move; the
+      // label and value must not).
+      expect(find.text('Displayed colour'), findsOneWidget,
+          reason: 'AC-3 baseline: the swatch keeps its text label off');
+      expect(find.text('55'), findsWidgets,
+          reason: 'AC-3 baseline: the numeric lightness value is shown off');
+      expect(displaySwatches(tester).any((c) => colorNear(c, screenSwatchColor)),
+          isTrue,
+          reason: 'AC-3 baseline: the swatch is the original colour while off');
+
+      // When: daltonization is turned on through the shipped panel toggle — the
+      // swatch colour is remapped (it changes).
       await h.whenOpenSettings();
       await h.whenSetDaltonization(on: true);
       await h.whenCloseSettings();
       expect(h.daltonization, isTrue, reason: 'AC-3 Given: daltonization on');
 
-      // When: the colour-coded element is displayed.
-      // Then: it still shows its label and numeric value, not colour alone — the
-      // swatch's text label and the reading's numeric value are both present
-      // alongside the swatch.
+      // Then: the swatch colour changed — it is now the remap and no swatch is
+      // still the original (`_expectKnownSwatchRemapped`) — WHILE the label and
+      // numeric value stayed: the same 'Displayed colour' label and '55' reading
+      // are still present. Only the swatch colour changes (SI Accessibility:
+      // meaning is never carried by colour alone).
+      _expectKnownSwatchRemapped(tester, h.storedProfile, screen: 'AC-3');
       expect(find.text('Displayed colour'), findsOneWidget,
-          reason: 'AC-3: the swatch keeps its text label (never colour alone)');
+          reason: 'AC-3: the label stays while the swatch colour changes');
       expect(find.text('55'), findsWidgets,
-          reason: "AC-3: the sample's numeric lightness value is still shown");
-      expect(displaySwatches(tester), isNotEmpty,
-          reason: 'AC-3: the colour swatch is still rendered beside its text');
+          reason: 'AC-3: the numeric value stays while the swatch colour changes');
 
-      // LIMITED (augmented by DALT-9): the label and value render regardless of
-      // the remap while it is identity, so this cannot yet prove they *survive a
-      // colour change*. DALT-9 adds the control (the swatch colour changed while
-      // the label and numeric value stayed identical).
+      // Control (DALT-9 augmentation): the off→on toggle moved the swatch off the
+      // original (baseline above) onto the remap (here), so the label + value
+      // assertions prove they *survive a real colour change* rather than merely
+      // rendering under an identity remap. Against the ITEST red baseline (the
+      // DALT-2 identity shell, where "on" still showed the original) this control
+      // fails, so it discriminates. Strengthens AC-3 only.
     });
 
     acTestWidgets('AC-4', 'TestAC04_ProvenanceBadgeReadable', (tester) async {
