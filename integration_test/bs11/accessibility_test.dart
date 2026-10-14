@@ -43,15 +43,17 @@ void main() {
       // set shrinks by one per delivered AC. **A11Y-2 un-pended AC-5** (AA
       // contrast), **A11Y-3 un-pended AC-4** (48dp tap targets), **A11Y-4
       // un-pended AC-3** (200% font scaling), **A11Y-5 un-pended AC-1 + AC-2**
-      // (colour cue / no bare dot) and **A11Y-6 un-pended AC-6** (meaningful
-      // labels), so the still-pending set is now the other four. AC-10 and
-      // AC-12 are pure-manual gates (D-2) and never enter the gate.
+      // (colour cue / no bare dot), **A11Y-6 un-pended AC-6** (meaningful
+      // labels) and **A11Y-7 un-pended AC-8** (nothing auto-dismisses), so the
+      // still-pending set is now the other three. AC-10 and AC-12 are
+      // pure-manual gates (D-2) and never enter the gate.
       const expected = {
-        'AC-7', 'AC-8', 'AC-9', 'AC-11',
+        'AC-7', 'AC-9', 'AC-11',
       };
       expect(pendingACs.keys.toSet(), expected);
-      expect(pendingACs, hasLength(4));
-      // AC-5, AC-4, AC-3, AC-1, AC-2 and AC-6 are delivered — no longer pending.
+      expect(pendingACs, hasLength(3));
+      // AC-5, AC-4, AC-3, AC-1, AC-2, AC-6 and AC-8 are delivered — no longer
+      // pending.
       expect(pendingACs.containsKey('AC-5'), isFalse,
           reason: 'AC-5 was un-pended by A11Y-2');
       expect(pendingACs.containsKey('AC-4'), isFalse,
@@ -64,6 +66,8 @@ void main() {
           reason: 'AC-2 was un-pended by A11Y-5');
       expect(pendingACs.containsKey('AC-6'), isFalse,
           reason: 'AC-6 was un-pended by A11Y-6');
+      expect(pendingACs.containsKey('AC-8'), isFalse,
+          reason: 'AC-8 was un-pended by A11Y-7');
     });
 
     test('the two manual ACs are absent from the automated gate (D-2)', () {
