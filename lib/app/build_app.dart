@@ -31,6 +31,7 @@ import '../compare/sample_source.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
+import '../onboarding/cvd_profile_read_endpoint.dart';
 import '../palette/palette_controller.dart';
 import '../palette/palette_read_endpoint.dart';
 import '../palette/palette_screen.dart';
@@ -551,29 +552,40 @@ class _AppState extends State<_App> {
     final deps = _profile == widget.deps.cvdProfile
         ? widget.deps
         : widget.deps.withCvdProfile(_profile);
+    Widget tree = _DisplayRoot(
+      injectedController: widget.deps.displayController,
+      defaultSimulationType: widget.deps.cvdProfile.type,
+      child: _SpeechRoot(
+        speech: widget.speech,
+        owns: widget.ownsSpeech,
+        child: MaterialApp(
+          title: 'Paint Color Assistant',
+          theme: ThemeData(useMaterial3: true),
+          // The shared app chrome: the open-display-settings entry (E2) on
+          // every screen (SETTINGS-1) and, beneath it, the persistent
+          // spoken-output panel (E50 — SPEECH-1) that replays the last
+          // utterance.
+          builder: (context, child) =>
+              DisplayChrome(child: _SpokenOutputChrome(child: child!)),
+          home: _home(deps),
+        ),
+      ),
+    );
+    // bs-10 CONTROL-2: expose the saved-profile store to the whole app (above
+    // the MaterialApp, so the settings panel in the chrome's builder reads it)
+    // so the daltonization control can prompt for a self-assessment when nothing
+    // is saved (AC-10). Unkeyed, so the self-assessment suite's keyed-endpoint
+    // finder still resolves to the onboarding host's. Absent when no store is
+    // wired (bare unit trees) — the control then shows no prompt.
+    final profileStore = _profileStore;
+    if (profileStore != null) {
+      tree = CvdProfileReadEndpoint(store: profileStore, child: tree);
+    }
     return AppScope(
       dependencies: deps,
       child: LiveProfileScope(
         onProfileSaved: _handleProfileSaved,
-        child: _DisplayRoot(
-          injectedController: widget.deps.displayController,
-          defaultSimulationType: widget.deps.cvdProfile.type,
-          child: _SpeechRoot(
-            speech: widget.speech,
-            owns: widget.ownsSpeech,
-            child: MaterialApp(
-              title: 'Paint Color Assistant',
-              theme: ThemeData(useMaterial3: true),
-              // The shared app chrome: the open-display-settings entry (E2) on
-              // every screen (SETTINGS-1) and, beneath it, the persistent
-              // spoken-output panel (E50 — SPEECH-1) that replays the last
-              // utterance.
-              builder: (context, child) =>
-                  DisplayChrome(child: _SpokenOutputChrome(child: child!)),
-              home: _home(deps),
-            ),
-          ),
-        ),
+        child: tree,
       ),
     );
   }

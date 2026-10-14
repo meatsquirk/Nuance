@@ -27,6 +27,7 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/onboarding/cvd_profile_read_endpoint.dart';
 import 'package:paint_color_assistant/onboarding/onboarding_read_endpoint.dart';
 import 'package:paint_color_assistant/palette/palette_read_endpoint.dart';
 import 'package:paint_color_assistant/palette/palette_screen.dart';
@@ -1249,6 +1250,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AppScope), findsNothing);
       // No "setState after dispose" exception was thrown tearing the tree down.
+    });
+  });
+
+  group('buildApp daltonization profile endpoint (bs-10 CONTROL-2, AC-10)', () {
+    testWidgets(
+        'mounts a CvdProfileReadEndpoint at the root when a store is wired',
+        (tester) async {
+      final store = InMemoryPersistentStore();
+      await tester.pumpWidget(buildApp(AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+        store: store,
+      )));
+      await tester.pumpAndSettle();
+
+      // A descendant (the Readout) can read the saved-profile store the
+      // daltonization control consults — it reports nothing saved yet.
+      final context = tester.element(find.byType(ReadoutScreen));
+      final seen = CvdProfileReadEndpoint.maybeOf(context);
+      expect(seen, isNotNull);
+      expect(await seen!.hasSavedProfile(), isFalse);
+    });
+
+    testWidgets('mounts no endpoint when no store is wired (bare assembly)',
+        (tester) async {
+      await tester.pumpWidget(buildApp(AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: const NoopSpeech(),
+        haptics: const NoopHaptics(),
+      )));
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(ReadoutScreen));
+      expect(CvdProfileReadEndpoint.maybeOf(context), isNull);
     });
   });
 

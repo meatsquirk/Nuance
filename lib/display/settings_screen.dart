@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../a11y/cvd/cvd_profile.dart';
+import '../onboarding/cvd_profile_read_endpoint.dart';
+import '../store/cvd_profile_store.dart';
 import 'display_controller.dart';
 import 'display_scope.dart';
 
@@ -121,8 +123,9 @@ class _DisplayChromeState extends State<DisplayChrome> {
 ///   * the daltonization on/off toggle ([daltonizationKey]), driving
 ///     [DisplayController.setDaltonization] — the remap itself lands in the
 ///     DALT behaviour phases;
-///   * a no-saved-profile region ([noProfileRegionKey]) — an empty placeholder
-///     in this shell, filled by CONTROL-2 (AC-10).
+///   * a no-saved-profile region ([noProfileRegionKey]) — prompts for a
+///     self-assessment when no profile has been saved, so daltonization does
+///     not silently remap against the const default (AC-10).
 ///
 /// This is the SETTINGS-1 shell: the controls are wired to the setters, but the
 /// *rendering* consequences (simulating swatches, greying the app) land in the
@@ -156,10 +159,12 @@ class DisplaySettingsScreen extends StatelessWidget {
   /// mock (scope §5.4), so it carries no wireframe element id.
   static const Key daltonizationKey = ValueKey('display-bs10-daltonization');
 
-  /// Stable anchor for the bs-10 no-saved-profile region — an empty placeholder
-  /// in this shell (CONTROL-1); CONTROL-2 (AC-10) fills it with the
-  /// self-assessment-needed affordance driven by
-  /// `CvdProfileReadEndpoint.hasSavedProfile`.
+  /// Stable anchor for the bs-10 no-saved-profile region ([_NoSavedProfileRegion]).
+  ///
+  /// When [CvdProfileStore.hasSavedProfile] is false (nothing saved, or no store
+  /// mounted) it prompts for a self-assessment before colours can be remapped;
+  /// when a profile is saved it renders nothing and the remap applies (AC-10,
+  /// CONTROL-2).
   static const Key noProfileRegionKey = ValueKey('display-bs10-no-profile');
 
   /// Stable per-option anchor under [simulationKey], one per selectable
@@ -272,10 +277,10 @@ class DisplaySettingsScreen extends StatelessWidget {
                   value: settings.daltonization,
                   onChanged: controller.setDaltonization,
                 ),
-                // bs-10: the no-saved-profile region. An empty placeholder in
-                // this shell; CONTROL-2 (AC-10) fills it so that, without a
-                // stored profile, it reports a self-assessment is needed.
-                const SizedBox(key: noProfileRegionKey),
+                // bs-10 (AC-10): without a saved profile, prompt for a
+                // self-assessment instead of remapping against the const
+                // default; with one saved, show nothing (the remap applies).
+                const _NoSavedProfileRegion(key: noProfileRegionKey),
                 // The theme control — shown (AC-1) but presentation only (D-11).
                 const _ThemeControl(key: themeKey),
               ],
@@ -283,6 +288,66 @@ class DisplaySettingsScreen extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// The no-saved-profile affordance in the daltonization control (bs-10 AC-10).
+///
+/// Daltonization needs a known colour-vision type and severity to remap
+/// against, so it is only meaningful once the painter has **saved** a profile
+/// (a self-assessment, bs-07 PROFILE-2) — not while the pipeline is running on
+/// the const default `loadCvdProfile` falls back to (D-4). This region consults
+/// [CvdProfileStore.hasSavedProfile] (reached through the app-root
+/// [CvdProfileReadEndpoint]) and, when nothing is saved, tells the painter a
+/// self-assessment is needed; when a profile is saved — or no store is mounted
+/// (a bare panel test) — it renders nothing, and the remap applies as usual.
+///
+/// The query is a one-shot [Future] resolved once per mount (re-run only if the
+/// endpoint's store changes), so toggling other controls does not re-issue it.
+class _NoSavedProfileRegion extends StatefulWidget {
+  const _NoSavedProfileRegion({super.key});
+
+  @override
+  State<_NoSavedProfileRegion> createState() => _NoSavedProfileRegionState();
+}
+
+class _NoSavedProfileRegionState extends State<_NoSavedProfileRegion> {
+  /// Whether the painter has saved a profile, or null while no store is mounted
+  /// above this region (no prompt in that case).
+  Future<bool>? _hasSavedProfile;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Read the store through the app-root endpoint; re-query only when it (and
+    // so the store) actually changes — the InheritedWidget dependency rebuilds
+    // this only on `updateShouldNotify`, not on the controller's own ticks.
+    final store = CvdProfileReadEndpoint.maybeOf(context);
+    _hasSavedProfile = store?.hasSavedProfile();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasSavedProfile = _hasSavedProfile;
+    // No store mounted (a standalone panel test): no profile concept, no prompt.
+    if (hasSavedProfile == null) return const SizedBox.shrink();
+    return FutureBuilder<bool>(
+      future: hasSavedProfile,
+      builder: (context, snapshot) {
+        // Prompt only once we know nothing is saved; while loading (null) or
+        // when a profile is saved (true), show nothing so the remap applies.
+        if (snapshot.data == false) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No colour-vision profile saved yet — take a self-assessment '
+              'before colours can be remapped for your vision.',
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 }

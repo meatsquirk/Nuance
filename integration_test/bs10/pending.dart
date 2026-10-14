@@ -105,9 +105,13 @@ const Map<String, String> pendingACs = {
   // masstone swatch (`PaintRow`/`PaintListRegion`) all route through
   // `ColorChip`, so daltonization reaches capture, readout and palette; AC-9's
   // row is removed here.
-  // AC-10 un-pended by CONTROL-2 (with no saved profile the control reports a
-  // self-assessment is needed before colours can be remapped; no remap applied).
-  'AC-10': 'CONTROL-2',
+  // AC-10 un-pended by CONTROL-2 — the daltonization control consults
+  // `CvdProfileStore.hasSavedProfile` (through the app-root
+  // `CvdProfileReadEndpoint`) and, when nothing is saved, prompts for a
+  // self-assessment before colours can be remapped rather than remapping
+  // against the const default; with a profile saved the prompt is absent and
+  // the remap applies, so AC-10's row is removed here. **All 10 bs-10 ACs are
+  // now delivered — this map is empty.**
 };
 
 /// The behaviour phases allowed to own a pending AC.

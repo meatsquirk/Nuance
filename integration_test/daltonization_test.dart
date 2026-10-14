@@ -89,8 +89,12 @@ void main() {
       // tint is remapped), AC-6 (DALT-11 — the app root listens to
       // `CvdProfileStore.changes` and re-reads the saved profile, so a saved
       // deutan→protan change recomputes the remap live).
+      // AC-10 (CONTROL-2 — the daltonization control prompts for a
+      // self-assessment when no profile is saved instead of remapping against
+      // the const default) is the last to land, so the pending map is now empty.
       const unpended = <String>{
-        'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', 'AC-9', 'AC-3', 'AC-4', 'AC-6', //
+        'AC-1', 'AC-5', 'AC-7', 'AC-2', 'AC-8', //
+        'AC-9', 'AC-3', 'AC-4', 'AC-6', 'AC-10', //
       };
       final expected = {
         for (var i = 1; i <= 10; i++)
@@ -113,21 +117,21 @@ void main() {
       }
     });
 
-    test('the gate skips a pending AC by default and runs it under run-pending',
-        () {
-      // Every AC is pending, so in default mode each is skipped (its body never
-      // runs) and in run-pending mode each runs. Both directions use the
+    test('with every AC delivered the gate runs them all in either mode', () {
+      // bs-10 behaviour is complete (CONTROL-2 un-pended the last AC), so the
+      // pending map is empty and every AC-1..10 runs in both the default and
+      // the run-pending modes — none is skipped. Both directions use the
       // explicit [forceRunPending] so the guard is deterministic in either
-      // ambient mode — in particular under `--dart-define=BS10_RUN_PENDING=true`
-      // (the red-baseline run). This fails if an AC were silently un-pended, or
-      // if the gate inverted to run a pending AC in the default run.
-      expect(pendingACs, isNotEmpty,
-          reason: 'bs-10 behaviour is unbuilt; every AC is still pending');
-      for (final ac in pendingACs.keys) {
-        expect(pendingSkipReason(ac, forceRunPending: false), isNotNull,
-            reason: '$ac is pending and must be skipped in the default run');
-        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
-            reason: '$ac must run in run-pending mode');
+      // ambient mode. This fails if an AC were silently *re*-pended (the map
+      // would not be empty and its skip reason would be non-null), or if the
+      // gate inverted to skip a delivered AC.
+      expect(pendingACs, isEmpty,
+          reason: 'all 10 bs-10 ACs are delivered; none is still pending');
+      for (var i = 1; i <= 10; i++) {
+        expect(pendingSkipReason('AC-$i', forceRunPending: false), isNull,
+            reason: 'AC-$i is delivered and must run in the default run');
+        expect(pendingSkipReason('AC-$i', forceRunPending: true), isNull,
+            reason: 'AC-$i must run in run-pending mode too');
       }
       // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);

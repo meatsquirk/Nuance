@@ -2,18 +2,23 @@ import 'package:flutter/widgets.dart';
 
 import '../store/cvd_profile_store.dart';
 
-/// Exposes the [CvdProfileStore] to the acceptance tests (bs-07 PROFILE-1).
+/// Exposes the [CvdProfileStore] to a subtree (bs-07 PROFILE-1; bs-10 CONTROL-2).
 ///
-/// Mirrors bs-06's `ProjectReadEndpoint` / bs-04's `RecipeReadEndpoint`: a test
-/// observation seam, not a UI control. The onboarding host (FLOW-1) wraps its
-/// subtree in one of these so a test can read the persisted profile and its
-/// [CvdProfileStore.count] — asserting AC-13's "exactly one profile written"
-/// and its fields — without reaching into the storage engine. Production screens
-/// read the store they own, not this endpoint.
+/// Mirrors bs-06's `ProjectReadEndpoint` / bs-04's `RecipeReadEndpoint`: an
+/// observation seam. The onboarding host (FLOW-1) wraps its subtree in a *keyed*
+/// one (its [endpointKey]) so the acceptance suite can read the persisted
+/// profile and its [CvdProfileStore.count] — asserting AC-13's "exactly one
+/// profile written" and its fields — without reaching into the storage engine.
 ///
-/// Find it in a pumped tree with `find.byType(CvdProfileReadEndpoint)` (or reach
-/// the nearest one from a descendant via [of]); its [endpointKey] marks it for a
-/// direct `find.byKey` lookup.
+/// bs-10 (CONTROL-2) also mounts one at the app root (`buildApp`), **unkeyed**,
+/// so the daltonization settings control can consult [CvdProfileStore.hasSavedProfile]
+/// and prompt for a self-assessment when nothing has been saved (AC-10). It is
+/// left unkeyed so the self-assessment suite's `find.byKey(endpointKey)` still
+/// resolves to exactly the onboarding host's keyed endpoint.
+///
+/// Find the keyed endpoint with `find.byKey(endpointKey)`, or reach the nearest
+/// store above a descendant via [of] (asserts one is present) or [maybeOf]
+/// (null when none is — for surfaces that must also render standalone).
 class CvdProfileReadEndpoint extends InheritedWidget {
   /// Wraps [child], exposing [store] to the subtree.
   const CvdProfileReadEndpoint({
@@ -39,6 +44,13 @@ class CvdProfileReadEndpoint extends InheritedWidget {
     );
     return endpoint!.store;
   }
+
+  /// The [CvdProfileStore] from the nearest enclosing endpoint above [context],
+  /// or null when there is none — for surfaces (such as the daltonization
+  /// control, bs-10 AC-10) that also render in trees with no profile store
+  /// mounted, where they fall back to showing no prompt.
+  static CvdProfileStore? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<CvdProfileReadEndpoint>()?.store;
 
   @override
   bool updateShouldNotify(CvdProfileReadEndpoint oldWidget) =>

@@ -59,4 +59,13 @@ class CvdProfileStore {
   /// How many profiles are stored (0 or 1) — lets the acceptance suite assert
   /// exactly one profile is written without reaching into the store engine.
   Future<int> count() async => (await _store.list(collection)).length;
+
+  /// Whether the painter has actually **saved** a profile (bs-10 AC-10, D-4).
+  ///
+  /// `true` only when a profile document exists — not when the pipeline is
+  /// merely running on the const default [loadCvdProfile] falls back to. The
+  /// daltonization control consults this (not the injected `cvdProfile`) so it
+  /// can prompt for a self-assessment when nothing has been saved, rather than
+  /// silently remapping against the default.
+  Future<bool> hasSavedProfile() async => (await count()) > 0;
 }

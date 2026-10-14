@@ -1,6 +1,6 @@
 # Module CONTROL — daltonization settings control
 
-**Status:** In progress — CONTROL-1 (shell) done; CONTROL-2 (behavior, AC-10) blocked by G-2
+**Status:** Done — CONTROL-1 (shell) + CONTROL-2 (behavior, AC-10) ✅; module complete
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** the daltonization region of bs-08's display-settings panel — the on/off toggle and the
 no-saved-profile affordance (path confirmed in DALT-1 against merged bs-08, e.g. `lib/display/display_settings_panel.dart`
@@ -12,7 +12,7 @@ or a new `lib/display/regions/daltonization_region.dart`) (+ its widget test).
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | CONTROL-1 | shell | — | ✅ Done | 2.49M | 14m 20s |
-| CONTROL-2 | behavior | AC-10 | ⬜ Todo | | |
+| CONTROL-2 | behavior | AC-10 | ✅ Done | 16.05M | 31m 51s |
 
 ## Interface reconciliation
 
@@ -26,8 +26,8 @@ or a new `lib/display/regions/daltonization_region.dart`) (+ its widget test).
 
 ## Open gates
 
-- CONTROL-1 depends on DALT-2 (the `setDaltonization` method). CONTROL-2 is blocked by **G-2** (acceptance
-  tests approved), like every behavior phase.
+- None. CONTROL-1 depended on DALT-2 (`setDaltonization`); CONTROL-2 was gated on **G-2** (acceptance tests
+  approved — resolved 2026-10-13). Both phases are done; the module carries no open gate.
 
 ## Phase CONTROL-1 — shell: toggle + no-profile placeholder
 
@@ -97,3 +97,72 @@ or a new `lib/display/regions/daltonization_region.dart`) (+ its widget test).
   still identity (DALT-3); no bs-10 harness/`daltonization_test.dart` yet (ITEST-1, now unblocked — it
   depends on DALT-2 **and** CONTROL-1, both done). Carries the D-8 sim/dalt gap note as context only
   (out of bs-10 scope, D-5).
+
+### Result — CONTROL-2  <!-- 2026-10-14 -->
+
+- **AC-10 delivered (no saved profile → self-assessment needed; a saved one →
+  prompt absent, remap applies).** The no-profile region (`noProfileRegionKey`)
+  is now a `_NoSavedProfileRegion` that consults **`CvdProfileStore.hasSavedProfile`**
+  (new: `(await count()) > 0`) through the **app-root `CvdProfileReadEndpoint`**
+  and renders a "take a self-assessment before colours can be remapped" prompt
+  only when nothing is saved; a saved profile (or no store mounted) renders
+  `SizedBox.shrink()`. It consults the *store* (D-4), not the injected
+  `cvdProfile` (which is the const deutan default whether or not a profile was
+  saved), so the two scenarios differ only by the store's document count.
+- **Wiring (`lib/app/build_app.dart`):** `_AppState.build` now wraps the tree in
+  a `CvdProfileReadEndpoint(store: _profileStore)` when a store is wired —
+  **unkeyed**, so the self-assessment suite's `find.byKey(endpointKey)` still
+  resolves to the onboarding host's keyed endpoint (no collision); absent when
+  no store (bare unit trees → region shows no prompt). Reuses the DALT-11
+  `_profileStore` instance, so it shares the same backing store and the AC-6
+  live-recompute path is intact.
+- **`CvdProfileReadEndpoint.maybeOf`** added (null-safe sibling of `of`) so the
+  settings panel reads the store without asserting presence.
+- **Un-pended AC-10** (`bs10/pending.dart` map now **empty** — every bs-10 AC
+  delivered); the scaffold guards were updated: `unpended` holds all ten
+  (`10 − 10 = 0`), and the skip-mode guard now asserts `pendingACs` isEmpty +
+  every AC-1..10 runs in both modes (replacing the "skips a pending AC" form,
+  which no longer applies with nothing pending — non-vacuous: rejects a
+  re-pended AC).
+- **Gates:** `flutter analyze` (touched) clean · unit **1279 pass** (+7:
+  `hasSavedProfile` false/true, `maybeOf` present/absent, the region's
+  no-store/no-profile/saved cases, the root-endpoint mounted/absent cases) ·
+  coverage gate **100% on all 19 touched `lib/` files** (incl. settings_screen,
+  cvd_profile_store, cvd_profile_read_endpoint, build_app) · full
+  `integration_test/` on booted iPhone 17 (`-d 5AB9D06D…`, under
+  `coord.sh with-lock`) → **222 pass / 0 fail**, exit 0, with
+  `TestAC10_NoProfileNeedsAssessment` green and every AC un-pended (default run
+  now executes all ten). Grade gate (fresh adversarial subagent): **10 A / 0 B**,
+  AC-10 A un-pended, no regression.
+- Coverage (touched `lib/`): 100%. Fix passes: 0/3 (all gates green first run).
+- Tokens/time: 16.05M · 31m 51s (1 session).
+- Closed by: unit + coverage + acceptance (222/0) + grade (10 A/0) gates green;
+  pending map empty — all 10 bs-10 ACs delivered.
+
+### Checkpoint / Handoff — CONTROL-2
+
+- **Module complete.** Both CONTROL phases done; the DALT module is complete
+  (DALT-1..11). All 10 bs-10 ACs are delivered and un-pended; the suite is
+  **222 pass** in the default run, grade **10 A / 0 B**.
+- **Frozen for SIGNOFF-1:**
+  - `_NoSavedProfileRegion` + `CvdProfileStore.hasSavedProfile` + the app-root
+    unkeyed `CvdProfileReadEndpoint` + `CvdProfileReadEndpoint.maybeOf` — the
+    AC-10 affordance. The region's keyed anchor (`noProfileRegionKey`) is
+    unchanged.
+  - `integration_test/bs10/pending.dart` `pendingACs` is **empty**; no AC
+    remains pending.
+- **Verification commands:** unchanged from CONTROL-1 — Flutter SDK not on
+  default PATH (prepend `/Users/matthew.quirk/development/flutter/bin`);
+  `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` (host); integration on a **booted**
+  sim only (`flutter test integration_test/ -d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`
+  under `FNP_COORD_REPO=/Users/matthew.quirk/Nuance coord.sh with-lock
+  bs-10-daltonization <PHASE> --wait 900 -- bash -c 'cd /Users/matthew.quirk/Nuance-bs10
+  && …'`). macOS has no `timeout`; the full sim run exceeds a 120s foreground —
+  redirect to a file, don't tail. Two untracked `ios/**/swiftpm/` dirs appear
+  after a sim run (build artifacts) — don't stage them.
+- **Next phase:** SIGNOFF-1 — the sign-off packet + summary page + a fresh
+  whole-suite re-grade; set `⏸ Awaiting sign-off`, STOP; a human records the
+  decision via `/feature-next-phase --signoff bs10 approved`.
+- **Known gaps:** carries only the D-8 sim/dalt interaction note (out of bs-10
+  scope, owned elsewhere) as context.

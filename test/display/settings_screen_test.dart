@@ -5,22 +5,32 @@ import 'package:paint_color_assistant/display/display_controller.dart';
 import 'package:paint_color_assistant/display/display_scope.dart';
 import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/display/settings_screen.dart';
+import 'package:paint_color_assistant/onboarding/cvd_profile_read_endpoint.dart';
+import 'package:paint_color_assistant/store/cvd_profile_store.dart';
+import 'package:paint_color_assistant/store/persistent_store.dart';
 
 /// Pumps the settings panel over a [DisplayScope] exposing [controller], so the
 /// panel reads the live controller exactly as it does under `buildApp`.
+///
+/// When [profileStore] is given it is exposed above the panel through a
+/// [CvdProfileReadEndpoint], exactly as `buildApp` mounts one at the app root,
+/// so the no-saved-profile region (bs-10 AC-10) can consult it; omitted, the
+/// panel runs with no profile store (a standalone-surface test).
 Future<void> _pumpPanel(
   WidgetTester tester,
   DisplayController controller, {
   VoidCallback? onClose,
-}) =>
-    tester.pumpWidget(
-      MaterialApp(
-        home: DisplayScope(
-          controller: controller,
-          child: DisplaySettingsScreen(onClose: onClose ?? () {}),
-        ),
-      ),
-    );
+  CvdProfileStore? profileStore,
+}) {
+  Widget panel = DisplayScope(
+    controller: controller,
+    child: DisplaySettingsScreen(onClose: onClose ?? () {}),
+  );
+  if (profileStore != null) {
+    panel = CvdProfileReadEndpoint(store: profileStore, child: panel);
+  }
+  return tester.pumpWidget(MaterialApp(home: panel));
+}
 
 void main() {
   group('DisplaySettingsButton (E2)', () {
@@ -157,16 +167,70 @@ void main() {
       expect(controller.settings.daltonization, isFalse);
     });
 
-    testWidgets('the no-saved-profile region is a reachable placeholder',
-        (tester) async {
+    testWidgets('the no-saved-profile region is reachable and, with no store '
+        'mounted, shows no prompt', (tester) async {
       final controller = DisplayController();
       addTearDown(controller.dispose);
+      // No profile store mounted (a standalone-surface test): the region is
+      // present and keyed, but shows no prompt (no profile concept here).
       await _pumpPanel(tester, controller);
+      await tester.pumpAndSettle();
 
-      // Present and keyed so ITEST/CONTROL-2 can observe it; empty for now.
       expect(
         find.byKey(DisplaySettingsScreen.noProfileRegionKey),
         findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+          matching: find.byType(Text),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('with no saved profile it prompts for a self-assessment '
+        '(AC-10)', (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      // An empty profile store: nothing saved, so the control prompts for a
+      // self-assessment rather than remapping against the const default (D-4).
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      await _pumpPanel(tester, controller, profileStore: store);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+          matching:
+              find.textContaining(RegExp('self-assessment', caseSensitive: false)),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('with a saved profile the self-assessment prompt is absent '
+        '(AC-10 control)', (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      final store = CvdProfileStore(InMemoryPersistentStore());
+      await store.save(const CvdProfile(type: CvdType.deutan, severity: 0.6));
+      await _pumpPanel(tester, controller, profileStore: store);
+      await tester.pumpAndSettle();
+
+      // The region is still present (keyed) but carries no prompt — the remap
+      // applies off the saved profile.
+      expect(
+        find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(DisplaySettingsScreen.noProfileRegionKey),
+          matching:
+              find.textContaining(RegExp('self-assessment', caseSensitive: false)),
+        ),
+        findsNothing,
       );
     });
 

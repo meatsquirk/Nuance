@@ -20,6 +20,17 @@ void main() {
     expect(await store.count(), 0);
   });
 
+  test('hasSavedProfile is false when nothing has been saved (AC-10)',
+      () async {
+    expect(await store.hasSavedProfile(), isFalse);
+  });
+
+  test('hasSavedProfile becomes true once a profile is saved (AC-10)',
+      () async {
+    await store.save(const CvdProfile(type: CvdType.deutan, severity: 0.6));
+    expect(await store.hasSavedProfile(), isTrue);
+  });
+
   test('a saved profile round-trips its type and severity', () async {
     const profile = CvdProfile(type: CvdType.tritan, severity: 0.42);
 

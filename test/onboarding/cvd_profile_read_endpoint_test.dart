@@ -25,6 +25,37 @@ void main() {
     expect(identical(seen, store), isTrue);
   });
 
+  testWidgets('maybeOf returns the store when present and null when absent',
+      (tester) async {
+    final store = _store();
+    final seen = <CvdProfileStore?>[];
+    await tester.pumpWidget(
+      CvdProfileReadEndpoint(
+        store: store,
+        child: Builder(
+          builder: (context) {
+            // Present: a descendant below the endpoint sees the store.
+            seen.add(CvdProfileReadEndpoint.maybeOf(context));
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    // Absent: no endpoint above the context → null (not an assertion throw,
+    // unlike of()), so the daltonization control falls back to showing no
+    // prompt (bs-10 AC-10).
+    await tester.pumpWidget(
+      Builder(
+        builder: (context) {
+          seen.add(CvdProfileReadEndpoint.maybeOf(context));
+          return const SizedBox();
+        },
+      ),
+    );
+    expect(identical(seen[0], store), isTrue);
+    expect(seen[1], isNull);
+  });
+
   testWidgets('is findable by its stable endpoint key', (tester) async {
     await tester.pumpWidget(
       CvdProfileReadEndpoint(
