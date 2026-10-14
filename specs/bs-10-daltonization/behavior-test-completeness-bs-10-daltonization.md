@@ -88,3 +88,41 @@ Unchanged from the prior grids and re-confirmed. AC-7's rejection of "daltonize 
 | A | 10 | AC-1 (un-pended), AC-2 (un-pended), AC-3 (un-pended), AC-4 (un-pended), AC-5 (un-pended), AC-6 (un-pended), AC-7 (un-pended), AC-8 (un-pended), AC-9 (un-pended), AC-10 (un-pended) |
 
 **10 AC tests: 10 A / 0 B.** No AC test graded below A. **All ten ACs are un-pended and run on shipped behaviour** in the default run; the pending map is **empty**. Supporting guards, smoke, harness and the DALT-4/5/6/7/8 chokepoint/screen units plus the DALT-9 `ColorChip` and DALT-10 `ProvenanceIcon` units all A. **Diff vs the DALT-11 grid: one row changed status** — AC-10 moved **A pending CONTROL-2 → A un-pended** (`TestAC10_NoProfileNeedsAssessment` now runs on shipped behaviour: it drives the no-profile region through the shipped `_NoSavedProfileRegion`, which consults `CvdProfileStore.hasSavedProfile` via the app-root `CvdProfileReadEndpoint` rather than the injected const-default profile, and discriminates against "always prompt", "never prompt" and "key off the injected default" with a saved-profile control). The pending map shrank from one AC to zero (`unpended` now all ten, length `10 − 10 = 0`); no new test file was added; the `lib/` change (a pure store read + an unkeyed root endpoint + a self-contained prompt region) added no circular swatch, altered no scope, and preserved the AC-6 recompute path, so no neighbour regressed. **Tally: 10 A / 0 B, suite complete.**
+
+---
+
+## SIGNOFF-1 whole-suite re-grade (2026-10-14, fresh independent grader)
+
+A fresh-context adversarial grader (given this grid for diff, having written none of the tests, editing
+nothing) re-graded the whole suite at the sign-off code state against G1–G6. It traced every Given/When/Then
+to the shipped `lib/` surfaces each Then is aimed at and confirmed each AC rejects a named wrong
+implementation, nothing passing vacuously. **Result: 10 A / 0 B — PASS. No row changed grade or status vs the
+CONTROL-2 grid.**
+
+**Per-AC rejections it confirmed (named wrong-impl each test defeats):** AC-1 identity-shell / type-blind
+remap (fails ≥2 of 3 types); AC-2 the DALT-2 identity stub (on would still show the original); AC-3 a remap
+that drops the text label; AC-4 tint-left-unremapped / icon-stripped badge; AC-5 an impl that ignores stored
+**severity** (hardcoded default renders the moderate remap, fails the strong scenario); AC-6 a build-time
+capture that never re-reads on a saved change; AC-7 "daltonize by simulating" (lands on the dichromat
+projection); AC-8 a remap that writes the transformed colour back to storage; AC-9 a remap wired into one
+screen only; AC-10 "always prompt" / "never prompt / silently remap against the const default" / "key off the
+injected `cvdProfile`" (deutan default in **both** branches → cannot separate → must fail one assertion).
+
+**Adversarial checks it performed (findings):** (1) `pendingACs` literally `{}`; the scaffold guard asserts
+isEmpty + every AC-1..10 has a null skip reason in **both** default and run-pending modes. (2) AC-1/5/9 grade
+the shipped remap against the **independent** `referenceDaltonize` oracle (`_remapOf`/`_expectKnownSwatchRemapped`),
+never the shipped `daltonize`. (3) AC-7 distinctness oracle is the independent `referenceProjectDichromat` —
+non-circular (asserts distinct + moved; correctness pinned by AC-1/AC-5). (4) AC-10 reads
+`CvdProfileReadEndpoint.maybeOf(context)?.hasSavedProfile()` = `count()>0` off the store, not the injected
+profile (D-4). (5) AC-6 reactive path exercised end-to-end: real store write → `_AppState` listens
+`_profileStore.changes` → `withCvdProfile` re-injection; harness and app share one backing store. (6) AC-8
+asserts `storedValuesText` unchanged after the remapped render settles, with a control that the swatch
+demonstrably moved and restores. (7) Vacuous-pass hunt: none — `_expectKnownSwatchRemapped`'s "no swatch is
+still the original" clause fails any identity/no-op remap.
+
+**Standing honest caveats it recorded (A-with-caveat, not sub-A, no augmentation owed):** AC-7's Then proves
+distinctness + that the colour moved, not equality-to-the-correct-remap (that correctness is proved at the AC
+grain by AC-1/AC-5; for the spec's "not shown as perceived" the grain is right). The two widget units
+(DALT-9 `ColorChip`, DALT-10 `ProvenanceIcon`) grade against the shipped `daltonizeColor`, so they assert the
+widget-routing contract (swatch == chokepoint output; label/glyph survive), not remap correctness — which is
+proved independently only at the AC grain via `referenceDaltonize`. A legitimate division of labour.

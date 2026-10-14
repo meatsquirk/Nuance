@@ -1,7 +1,7 @@
 # Master Plan — Daltonization and colour-distinction aids (bs-10)
 
 **Spec:** [bs-10-daltonization.feature](../bs-10-daltonization.feature)
-**Status:** In progress — **all 10 ACs delivered** (CONTROL-2 ✅ AC-10: no saved profile → self-assessment prompt; DALT + CONTROL modules complete). Suite 222 pass / 0 fail, grade 10 A / 0 B, pending map empty. Next **SIGNOFF-1** (the only phase left). All gates G-1/G-2/G-3/G-4 ✅
+**Status:** ⏸ Awaiting sign-off — all 10 ACs delivered; SIGNOFF-1 packet assembled ([signoff/round-1.md](signoff/round-1.md)). Full verification green (unit 1279 · coverage 100%/19 · full regression 222/0/0 · bs-10 25/0/0 default==run-pending · grade 10 A/0 B). All gates G-1/G-2/G-3/G-4 ✅. Human records the decision via `/feature-next-phase --signoff bs10 approved | changes "<items>"`
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (the CVD pipeline applies simulation, the **optional daltonization remap**, grayscale and confusion detection, injected into every screen) + §"Architecture overview" (accessibility services apply to every layer); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5.4 (daltonization), §5.1 (meaning never in colour alone), §4.5 (profile); SI D9 (display-only, stored values unchanged), D10 (on-device CVD model). Extends **bs-08**'s display pipeline (`DisplayController`/`DisplaySettings`/`DisplayScope`/`ColorChip` display-transform/`DisplayReadEndpoint`) and **bs-07**'s stored profile (`CvdProfileStore`/`CvdProfileReadEndpoint`/`AppDependencies.cvdProfile`); reuses `projectDichromat` + `CvdProfile` (`lib/a11y/cvd/`). Not drawn in the wireframe (scope-only, proposed ahead of any mock).
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` · **extends** bs-01..bs-09 **plus bs-07 and bs-08 once merged** (confirmed by sibling *Code home* lines + Matt Quirk across bs-01..bs-09)
 
@@ -188,36 +188,32 @@ not as flakes.
 | 14 | DALT-10 | AC-4 provenance badge readable (+ control) | ✅ Done | 11.75M | 18m 38s | added `ProvenanceIcon` (per-tier glyph + remappable tint via the one chokepoint) to the Readout region + palette badge; un-pended AC-4, closed TestAC04 augmentation (off→on tint-remap control, glyph+label stay); +harness remapColor/provenanceIcon; +provenance_icon unit test; unit 1264/cov 100% 15 files/default +23~2/grid 10 A/0 B (AC-4 B→A, last B cleared) |
 | 15 | DALT-11 | AC-6 profile change recomputes (live) | ✅ Done | 13.74M | 27m 16s | store made reactive (`PersistentStore.changes`, both impls notify on put/delete; `CvdProfileStore.changes` forward); `_AppState` listens + re-reads profile → `withCvdProfile` re-inject → ColorChip re-renders. Un-pended AC-6; unit 1272/cov 100% 18 files/default 221·0·~1/run-pending AC-6 green (only AC-10 red); grid 10 A/0 B |
 | 16 | CONTROL-2 | AC-10 no saved profile → self-assessment needed | ✅ Done | 16.05M | 31m 51s | AC-10 un-pended green; `_NoSavedProfileRegion` reads `CvdProfileStore.hasSavedProfile` via app-root (unkeyed) `CvdProfileReadEndpoint`; pending map now EMPTY; unit 1279/cov 100% 19 files/full integ **222/0**/grade **10 A/0 B** |
-| 17 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ⬜ Next | | | |
+| 17 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ✅ Done | 6.76M | 18m 35s | packet + summary + fresh whole-suite re-grade; analyze clean · unit 1279 · coverage 100%/19 · full regression 222/0/0 · bs-10 default==run-pending 25/0/0 · grade 10 A/0 B; ⏸ awaiting human `--signoff` decision |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled
 when the row is marked done.
 
 ## Next phase
 
-**CONTROL-2 done — all 10 ACs delivered; only SIGNOFF-1 remains.** AC-10 ("without a stored profile,
-daltonization offers no remap") is settled: the no-profile region is now `_NoSavedProfileRegion`, which
-consults **`CvdProfileStore.hasSavedProfile`** (new: `count > 0`) through the **app-root `CvdProfileReadEndpoint`**
-(mounted in `buildApp` when a store is wired, **unkeyed** so the self-assessment suite's keyed-endpoint finder
-is unaffected) and prompts for a self-assessment when nothing is saved — consulting the *store* (D-4), not the
-const-default injected `cvdProfile`. Un-pended AC-10; `bs10/pending.dart` map is now **empty** (every AC
-delivered), and the scaffold guards assert that (`unpended` = all ten, the skip-mode guard asserts `isEmpty` +
-all run in both modes). Unit **1279** (+7) / cov **100% on 19 touched files** / full `integration_test/`
-**222 / 0** on booted iPhone 17 (`TestAC10` green, all ACs un-pended in the default run) / grade **10 A / 0 B**
-(fresh adversarial re-grade; AC-10 A un-pended, no regression). Fix passes 0/3.
+**SIGNOFF-1 assembled — feature is ⏸ Awaiting sign-off. No agent phase remains.** The sign-off packet
+([signoff/round-1.md](signoff/round-1.md)), cost report ([signoff/cost-per-ac-round-1.md](signoff/cost-per-ac-round-1.md))
+and summary page are written; the whole-suite re-grade was re-run fresh. Full verification from the worktree on
+`feat/bs-10` @ `8442885`: `flutter analyze` clean · unit **1279** · coverage gate **PASS** (100% on all 19
+touched `lib/` files) · full cross-feature `integration_test/` **222 / 0 / 0** on booted iPhone 17
+(`done.success=true`) · bs-10 `daltonization_test.dart` **25 / 0 / 0**, default == run-pending (pending map
+empty) · grade **10 A / 0 B** (fresh independent adversarial re-grade). Fix passes 0/3.
 
-Next is **SIGNOFF-1** — the only phase left: assemble the sign-off packet + summary page + a fresh
-whole-suite re-grade, set `⏸ Awaiting sign-off`, STOP; a human records the decision via
-`/feature-next-phase --signoff bs10 approved`. The packet carries the one known gap: the **D-8 sim/dalt
-interaction** (out of bs-10 scope). On sign-off, merge `feat/bs-10` → `main`.
+**The only thing left is the human decision** — there is no further agent phase. Record it via
+`/feature-next-phase --signoff bs10 approved | changes "<items>"`. On **Approved**: SIGNOFF-1 ✅, feature
+`Done`, then merge `feat/bs-10` → `main` (throwaway worktree on `main` — the primary checkout on `feat/bs-04`
+has stale untracked specs that abort `checkout main`; `git merge -F <file>`, not stdin). The packet carries
+the one known gap: the **D-8 sim × dalt interaction** (out of bs-10 scope, D-5).
 
-Carried: `colorNear`'s default is **0.05** (do not loosen); `integration_test/bs10/pending.dart` map is
-**empty**; AC-10's affordance is `CvdProfileStore.hasSavedProfile` + the app-root **unkeyed**
-`CvdProfileReadEndpoint` + `_NoSavedProfileRegion` (keep it unkeyed — a keyed one collides with the
-onboarding host's endpoint). Work in worktree `/Users/matthew.quirk/Nuance-bs10` on `feat/bs-10`; booted sim
-mandatory (device lane contended by bs-11/bs-12 — the lock serialises); a full-suite device run exceeds 120s →
-background it, redirect to a file, don't tail. Two untracked `ios/**/swiftpm/` dirs appear after a sim run
-(build artifacts) — don't stage them.
+Carried: `colorNear` default **0.05** (do not loosen); `bs10/pending.dart` map **empty**; AC-10's affordance
+is `CvdProfileStore.hasSavedProfile` + the app-root **unkeyed** `CvdProfileReadEndpoint` + `_NoSavedProfileRegion`
+(keep unkeyed). Work in worktree `/Users/matthew.quirk/Nuance-bs10`; booted sim mandatory (device lane
+contended by bs-11/bs-12 — the lock serialises); a full-suite device run exceeds 120s → background + redirect.
+Two untracked `ios/**/swiftpm/` dirs appear after a sim run (build artifacts) — don't stage them.
 
 ## Token usage
 
@@ -244,10 +240,11 @@ background it, redirect to a file, don't tail. Two untracked `ios/**/swiftpm/` d
 | DALT-10 | b43a41ec | 2026-10-14 09:44 EDT | 10:03 | 18m 38s | 18m 38s | claude-opus-4-8 | 188 | 256,858 | 11,435,527 | 57,614 | 11,750,187 | AC-4 un-pended green (provenance badge: label + per-tier icon, tint remapped via the one chokepoint); default +23~2, run-pending +24-1 (only AC-10 red); unit 1264/cov 100% 15 files; grade 10 A/0 B (AC-4 B->A, last B cleared); all gates green |
 | DALT-11 | d5a48119 | 2026-10-14 10:49 EDT | 11:16 | 27m 16s | 27m 16s | claude-opus-4-8 | 180 | 332,823 | 13,343,700 | 64,074 | 13,740,777 | AC-6 un-pended green: store made reactive (PersistentStore.changes both impls; CvdProfileStore forward; _AppState listens + re-reads profile -> withCvdProfile re-inject -> ColorChip re-renders); unit 1272/cov 100% 18 files; default 221/0/~1, run-pending AC-6 green (only AC-10 red); grade 10 A/0 B; all gates green |
 | CONTROL-2 | d3c8862e | 2026-10-14 12:10 EDT | 12:42 | 31m 51s | 31m 51s | claude-opus-4-8 | 204 | 349,273 | 15,635,473 | 69,137 | 16,054,087 | AC-10 un-pended green; _NoSavedProfileRegion reads CvdProfileStore.hasSavedProfile via app-root unkeyed CvdProfileReadEndpoint; pending map empty (all 10 ACs delivered); unit 1279/cov 100% 19 files/full integ 222/0/grade 10 A/0 B; 0/3 fix passes |
-| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 12:42** | **7h 11m** | **6h 36m** |  | **2,372** | **3,658,791** | **144,925,734** | **930,036** | **149,516,933** |  |
+| SIGNOFF-1 | 697ad31d | 2026-10-14 13:01 EDT | 13:20 | 18m 35s | 18m 35s | claude-opus-4-8 | 124 | 264,165 | 6,460,266 | 33,747 | 6,758,302 | sign-off packet + summary + fresh whole-suite re-grade; analyze clean, unit 1279, coverage 100%/19, full regression 222/0/0, bs-10 25/0/0 default==run-pending, grade 10 A/0 B; awaiting human --signoff |
+| **Feature total** |  | **2026-10-12 22:32 EDT** | **2026-10-14 13:20** | **7h 30m** | **6h 54m** |  | **2,496** | **3,922,956** | **151,386,000** | **963,783** | **156,275,235** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | — | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `8442885` | 10 A / 0 B | ⏸ Awaiting |

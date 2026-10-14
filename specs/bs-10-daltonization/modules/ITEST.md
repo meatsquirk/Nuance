@@ -342,6 +342,6 @@ harness/compile errors). Default run **+15 / 10 pending** (suite green). Grid:
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
 | TestAC02 | Off == original holds at the shell (identity remap), so it can't yet show a *real* remap differs | DALT-6 | control: turning daltonization on remaps the swatch (changes from original) | ✅ Closed (DALT-6) |
-| TestAC03 | Label + value always render, so the test can't yet show they survive a *real* colour change | DALT-9 | assert the swatch colour changed while the label + numeric value stayed | ⬜ Open |
-| TestAC04 | Badge label + icon always render, so the test can't yet show they survive a *real* colour change | DALT-10 | assert the badge colour is remapped while its label + icon stayed | ⬜ Open |
+| TestAC03 | Label + value always render, so the test can't yet show they survive a *real* colour change | DALT-9 | assert the swatch colour changed while the label + numeric value stayed | ✅ Closed (DALT-9) |
+| TestAC04 | Badge label + icon always render, so the test can't yet show they survive a *real* colour change | DALT-10 | assert the badge colour is remapped while its label + icon stayed | ✅ Closed (DALT-10) |
 | TestAC08 | Display-only holds trivially while the remap is identity | DALT-7 | control: the displayed swatch did change while the stored value did not | ✅ Closed (DALT-7) |
