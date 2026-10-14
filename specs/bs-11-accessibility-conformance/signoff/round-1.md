@@ -67,3 +67,12 @@ See [`signoff/cost-per-ac-round-1.md`](cost-per-ac-round-1.md).
 
 ## Recommendation
 On the automated axis the feature is clear: all 10 automated ACs delivered and graded A, full regression green, 100% coverage on touched code. The only items outstanding are the two **inherently human/device** gates (G-3 AC-10, G-4 AC-12). The reviewer performs those two walkthroughs and records the decision with `/feature-next-phase --signoff bs-11 approved` (or `changes "<items>"`).
+
+## Decision — round 1
+**APPROVED.** Reviewer: **Matt Quirk**. Date: **2026-10-14**. At code: `254d366`.
+
+The reviewer performed and accepted the two pure-manual gates at sign-off (D-2):
+- **G-3 / AC-10** — manual eyes-free walkthrough under a live screen reader: **passed**.
+- **G-4 / AC-12** — on-device VoiceOver-vs-TalkBack parity on iOS reference hardware: **parity confirmed**.
+
+All 12 ACs accepted (10 automated graded A + G-3/G-4). Feature `Status: Done`. Next action: merge `feat/bs-11` → main (throwaway worktree on main; `git merge -F <file>`), rebasing in-flight feat/bs-07 and feat/bs-10 onto the shared `lib/app/theme.dart` + `lib/widgets/`. Known gaps carried per the packet (no device/VoiceOver CI — D-8; optional AC-9 hardening).
