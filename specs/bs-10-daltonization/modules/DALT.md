@@ -1,6 +1,6 @@
 # Module DALT — daltonization remap engine + display injection
 
-**Status:** In progress — DALT-3 (AC-1 keystone) done; the real error-redistribution remap ships at the one chokepoint. DALT-4..11 (serial behind DALT-3) and CONTROL-2 (other module, AC-10) are now startable.
+**Status:** In progress — DALT-4 (AC-5) done; the chokepoint drives the remap from the stored profile's type + severity (not a default), verified at the unit level + by the AC-5 severity control. DALT-5..11 (serial behind DALT-3) and CONTROL-2 (other module, AC-10) are startable; DALT-5 is next.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/cvd/daltonize.dart` (+ `test/a11y/cvd/daltonize_test.dart`); the daltonization
 additions to bs-08's display pipeline (`lib/display/display_settings.dart`, `display_controller.dart`,
@@ -15,8 +15,8 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
 | DALT-1 | scaffold | — | ✅ Done | 4.07M | 21m 20s |
 | DALT-2 | shell | — | ✅ Done | 9.32M | 23m 50s |
 | DALT-3 | behavior | AC-1 | ✅ Done | 8.76M | 29m 28s |
-| DALT-4 | behavior | AC-5 | ⬜ Next | | |
-| DALT-5 | behavior | AC-7 | ⬜ Todo | | |
+| DALT-4 | behavior | AC-5 | ✅ Done | 7.12M | 25m 17s |
+| DALT-5 | behavior | AC-7 | ⬜ Next | | |
 | DALT-6 | behavior | AC-2 | ⬜ Todo | | |
 | DALT-7 | behavior | AC-8 | ⬜ Todo | | |
 | DALT-8 | behavior | AC-9 | ⬜ Todo | | |
@@ -352,3 +352,56 @@ the daltonization branch of the shared `lib/widgets/color_chip.dart` display-tra
   profile change — wired, unverified until DALT-11. AC-2..AC-8 pass at the keystone but stay **pending** until
   their phases un-pend them and add their controls/augmentations. Carries the D-8 sim/dalt gap as context only
   (out of bs-10 scope, D-5).
+
+### Result — DALT-4  <!-- 2026-10-13 -->
+
+- **Verification phase — no `lib/` body changed (D-3).** DALT-4's AC (AC-5) was already satisfied by DALT-3's
+  keystone: the one chokepoint `displayedSwatchColor` is fed the painter's stored profile via
+  `AppScope.maybeOf(context)?.cvdProfile` (`lib/widgets/color_chip.dart`) and passes it **whole** to
+  `daltonizeColor(original, profile)`, so the remap already uses the stored **type and severity**, never a
+  default. DALT-4 confirms this and un-pends AC-5; it touches no product code.
+- **AC-5 un-pended** (deleted its row in `integration_test/bs10/pending.dart`; the scaffold guard's `unpended`
+  set in `daltonization_test.dart` is now `{'AC-1', 'AC-5'}`, length `10 − 2 = 8`). `TestAC05_UsesStoredProfile`
+  (with its stronger-severity control, already written at ITEST-2) runs green in the default suite.
+- **Unit tests added** (`test/display/color_simulation_test.dart`, chokepoint group): the chokepoint forwards
+  the stored profile **type** (protan ≠ deutan remap; each == `daltonizeColor` for that profile) and the stored
+  **severity** (severity 0 → the original; stronger severity remaps **further** from the original than mild — so
+  the severity is read and scales the shift, rejecting a hard-coded default). These strengthen the suite at the
+  unit grain without touching the chokepoint body.
+- **Gates:** `flutter analyze` clean · `flutter test --coverage` **1248 unit pass** (+2 vs DALT-3) ·
+  `dart run tool/coverage_gate.dart main` → **100% on all 8 touched files**. Acceptance (booted iPhone 17
+  `5AB9D06D…`, under `coord.sh with-lock`): default `daltonization_test.dart` → **+17 / ~8 pending / 0 fail**
+  (AC-5 now runs green, up from DALT-3's +16/~9); run-pending (`--dart-define=BS10_RUN_PENDING=true`) →
+  **+23 / −2** — unchanged from DALT-3's red baseline (only AC-9/DALT-8 and AC-10/CONTROL-2 fail, as designed);
+  full `integration_test/` → **+214 / ~8 / 0** (vs DALT-3's +213/~9 — one more pass, one fewer skip, from
+  un-pending AC-5; no regression).
+- **Grade gate** (fresh independent subagent, re-graded the whole suite against the previous ITEST-3 grid; grid
+  rewritten at `behavior-test-completeness-bs-10-daltonization.md`): **6 A / 4 B-pending** — A: AC-1, AC-5, AC-6,
+  AC-7, AC-9, AC-10; B-pending: AC-2→DALT-6, AC-3→DALT-9, AC-4→DALT-10, AC-8→DALT-7 (each the planned
+  shell-baseline limitation with its open augmentation row). Supporting guards/smoke/harness all A. No row
+  downgraded for a rubric reason; stale "all ten pending" framing corrected to the shipped AC-1/AC-5 behaviour.
+- Coverage (touched `lib/`): 100% (8 files, vs `main` — unchanged; DALT-4 added no `lib/` line). Fix passes:
+  0/3 (every gate green on the first full run).
+- Tokens/time: see dashboard cell.
+- Closed by: unit + coverage + acceptance (AC-5) + grade gates green; full integration suite green.
+
+### Checkpoint / Handoff — DALT-4
+
+- **Frozen for DALT-5..11 / CONTROL-2:**
+  - The chokepoint contract is unchanged from DALT-3: `displayedSwatchColor(original, settings, profile)` →
+    `daltonizeColor(original, profile)` when `settings.daltonization`, fed `AppScope.cvdProfile`. AC-5 is now a
+    settled fact (stored type + severity drive the remap); later phases rely on it but don't re-assert it.
+  - `integration_test/bs10/pending.dart` now holds **8** ACs (AC-1, AC-5 removed); scaffold guard `unpended`
+    is `{'AC-1', 'AC-5'}`. Each remaining phase deletes its AC's row and adds it to that set.
+  - Unit coverage of the chokepoint's type/severity forwarding lives in `test/display/color_simulation_test.dart`
+    (the two new chokepoint tests) — DALT-5 (AC-7) asserts distinctness from the simulation at the same chokepoint.
+- **Verification commands:** unchanged from DALT-3 — `flutter analyze` · `flutter test --coverage` ·
+  `dart run tool/coverage_gate.dart main` (Flutter at `/Users/matthew.quirk/development/flutter/bin`). Acceptance
+  on the **booted** sim only (`-d 5AB9D06D-AE5D-43A2-A2E8-CBD46ED51685`), under
+  `FNP_COORD_REPO=/Users/matthew.quirk/Nuance coord.sh with-lock bs-10-daltonization <PHASE> --wait 900 -- bash
+  -c 'cd /Users/matthew.quirk/Nuance-bs10 && …'`; macOS has no `timeout`; the full `integration_test/` run
+  exceeds the 120s foreground cap → redirect to a file and background it, don't tail.
+- **Known gaps:** unchanged — AC-9 (every-screen reach) owned by **DALT-8**; AC-10 (no-saved-profile affordance,
+  reads a not-yet-added `CvdProfileReadEndpoint.hasSavedProfile`, not yet mounted) owned by **CONTROL-2**; AC-6
+  live recompute (DALT-11). AC-2/3/4/7/8 pass at the keystone but stay **pending** until their phases un-pend
+  them and add controls/augmentations. Carries the D-8 sim/dalt gap as context only (out of bs-10 scope, D-5).

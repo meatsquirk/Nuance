@@ -122,6 +122,50 @@ void main() {
       expect(displayedSwatchColor(original, settings, profile),
           daltonizeColor(original, profile));
     });
+
+    // AC-5 (D-3): the chokepoint drives the remap from the *stored* profile it
+    // is handed — its type and its severity — never a hard-coded default. These
+    // pin that the `profile` argument is forwarded whole, so when the render
+    // feeds it `AppScope.cvdProfile` the painter's saved values reach the remap.
+    test('daltonization on → the chokepoint forwards the stored profile TYPE', () {
+      const settings = DisplaySettings(daltonization: true);
+      const protan = CvdProfile(type: CvdType.protan);
+      const deutan = CvdProfile(type: CvdType.deutan);
+      // Each result is the remap for exactly the profile handed in…
+      expect(displayedSwatchColor(original, settings, protan),
+          daltonizeColor(original, protan));
+      expect(displayedSwatchColor(original, settings, deutan),
+          daltonizeColor(original, deutan));
+      // …and the two differ, so the type is read from the stored profile, not a
+      // fixed default (an impl ignoring the argument's type could not do this).
+      expect(displayedSwatchColor(original, settings, protan),
+          isNot(displayedSwatchColor(original, settings, deutan)),
+          reason: 'the chokepoint remaps per the stored profile type');
+    });
+
+    test('daltonization on → the chokepoint forwards the stored SEVERITY, which '
+        'scales the remap', () {
+      const settings = DisplaySettings(daltonization: true);
+      const none = CvdProfile(type: CvdType.deutan, severity: 0);
+      const mild = CvdProfile(type: CvdType.deutan, severity: 0.3);
+      const strong = CvdProfile(type: CvdType.deutan, severity: 0.9);
+      // Severity 0 (an unaffected painter) → no remap: the original is shown.
+      expect(displayedSwatchColor(original, settings, none), original,
+          reason: 'severity 0 collapses the remap to the original');
+      // Each result is the remap at exactly the stored severity…
+      expect(displayedSwatchColor(original, settings, mild),
+          daltonizeColor(original, mild));
+      expect(displayedSwatchColor(original, settings, strong),
+          daltonizeColor(original, strong));
+      // …and a stronger stored severity remaps further from the original, so the
+      // severity is read and scales the shift (rejects a hard-coded severity).
+      expect(
+        _channelDistance(displayedSwatchColor(original, settings, strong), original),
+        greaterThan(
+            _channelDistance(displayedSwatchColor(original, settings, mild), original)),
+        reason: 'a stronger stored severity yields a stronger remap',
+      );
+    });
   });
 }
 

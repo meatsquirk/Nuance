@@ -71,9 +71,11 @@ const Map<String, String> pendingACs = {
   // AC-4 un-pended by DALT-10 (a provenance badge stays readable from its label
   // + icon, not colour, under the remap).
   'AC-4': 'DALT-10',
-  // AC-5 un-pended by DALT-4 (the chokepoint drives the remap from the stored
-  // profile's type AND severity, not a default).
-  'AC-5': 'DALT-4',
+  // AC-5 un-pended by DALT-4 — the one chokepoint (`displayedSwatchColor`, fed
+  // `AppScope.cvdProfile`) already drives the remap from the stored profile's
+  // type AND severity, not a default (verified at the unit level and by
+  // `TestAC05_UsesStoredProfile` with its stronger-severity control), so AC-5's
+  // row is removed here.
   // AC-6 un-pended by DALT-11 (the render listens to CvdProfileStore so a saved
   // profile change re-renders with the recomputed remap).
   'AC-6': 'DALT-11',
