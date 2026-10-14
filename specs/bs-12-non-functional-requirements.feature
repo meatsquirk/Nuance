@@ -104,6 +104,14 @@ Feature: Core non-functional requirements
       Then the callers are unchanged
 
     # Spec: SI NFR Maintainability; D4
+    # Note (D-4 re-scoped — owner Matt Quirk, 2026-10-14, GUARD-6): "the one
+    # tested colour-science library" is the GENERAL colorimetric authority
+    # (sRGB<->Lab in lib/color_science/, DeltaE00 in lib/compare/difference.dart).
+    # Two domain pipelines are owner-sanctioned to compute their own Lab<->XYZ
+    # under different reference whites (spectral rendering under illuminant-E in
+    # lib/recipes/engine/subtractive_engine.dart; Vienot dichromat projection
+    # under D65 in lib/a11y/cvd/confusion_check.dart). The AC-16 source guard
+    # still flags any OTHER file computing a conversion or a DeltaE.
     Scenario: Colour-science conversions come from one tested library
       Given a colour-space conversion or a delta-E is needed
       When the conversion is performed

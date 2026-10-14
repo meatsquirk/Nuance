@@ -352,9 +352,23 @@ class CaptureController extends ChangeNotifier {
   /// and the Readout handoff ride on [Sample.justCaptured] through the router's
   /// `toReadout` (D-5), fired by the Capture home screen on an adequate-light
   /// commit.
+  ///
+  /// Reliability (bs-12 AC-9): whenever any [activeDowngradeReasons] holds — poor
+  /// lighting, AE/AWB/AF not locked, or no reference card in view — the committed
+  /// reading's stated accuracy is **forced to [CaptureAccuracy.approximate]**,
+  /// never returned as [CaptureAccuracy.calibrated], so an unsettled or
+  /// uncalibrated reading is not handed back as if trustworthy (plan bs-12 D-5).
+  /// With no reason active the reading keeps the tier it earned (an explicit
+  /// card calibration stays calibrated). The reason is surfaced to the painter
+  /// on the live view (the Capture screen reads [activeDowngradeReasons]).
   void commit() {
     final reading = _state.currentSample;
     if (reading == null) return;
+    // AC-9: a poor-condition reading is downgraded to approximate rather than
+    // returned at its would-be tier; an unqualified reading keeps its tier.
+    final accuracy = activeDowngradeReasons.isEmpty
+        ? _state.accuracy
+        : CaptureAccuracy.approximate;
     final ColorCoordinates coordinates;
     final int framesAveraged;
     if (_photoImported) {
@@ -386,7 +400,7 @@ class CaptureController extends ChangeNotifier {
       lastCommittedSample: Sample(
         coordinates: coordinates,
         provenance: const Provenance(ProvenanceTier.measured),
-        accuracy: _state.accuracy,
+        accuracy: accuracy,
         justCaptured: true,
         // bs-09 (CAPTURE-2): tag the committed reading with the gamut the source
         // captured in, whether the torch lit it, and processed-vs-RAW. Until
@@ -400,6 +414,29 @@ class CaptureController extends ChangeNotifier {
       lowLightWarning: source.lighting == Lighting.low,
     ));
   }
+
+  /// The poor-capture conditions currently in effect at the [source] — the
+  /// AC-9 downgrade *inputs* (plan bs-12 D-5), read-only and side-effect-free.
+  ///
+  /// Exposes, as first-class [AccuracyDowngradeReason]s, the three conditions
+  /// the spec's AC-9 requires be surfaced: low lighting
+  /// ([Lighting.low]), AE/AWB/AF not locked together
+  /// ([CaptureLocks.allLocked] false), and no reference card in view
+  /// ([CaptureSource.referenceCardPresent] false). The set is empty in the
+  /// trustworthy case — well lit, locked and a card present.
+  ///
+  /// **This is the QUALITY-1 seam, not the fix.** Reading it changes nothing: a
+  /// [commit] still states exactly the accuracy it always did, so current
+  /// behaviour is byte-for-byte unchanged. QUALITY-2 consumes this to force a
+  /// committed reading approximate (and surface the reason) whenever it is
+  /// non-empty, closing the gap where only lighting downgraded the reading.
+  Set<AccuracyDowngradeReason> get activeDowngradeReasons => {
+        if (source.lighting == Lighting.low) AccuracyDowngradeReason.lowLight,
+        if (!source.locks.allLocked)
+          AccuracyDowngradeReason.exposureUnlocked,
+        if (!source.referenceCardPresent)
+          AccuracyDowngradeReason.missingReferenceCard,
+      };
 
   /// Replaces the observable state and notifies listeners.
   ///

@@ -178,6 +178,49 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('shows no downgrade-reasons region when nothing is downgraded',
+      (tester) async {
+    await tester.pumpWidget(_host(const CaptureState()));
+
+    expect(find.byKey(CaptureLiveView.downgradeReasonsKey), findsNothing,
+        reason: 'a trustworthy reading surfaces no downgrade reason');
+  });
+
+  testWidgets('surfaces each active downgrade reason in words (bs-12 AC-9)',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CaptureLiveView(
+            state: CaptureState(),
+            downgradeReasons: {
+              AccuracyDowngradeReason.exposureUnlocked,
+              AccuracyDowngradeReason.missingReferenceCard,
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(CaptureLiveView.downgradeReasonsKey), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(CaptureLiveView.downgradeReasonsKey),
+        matching: find.text(AccuracyDowngradeReason.exposureUnlocked.label),
+      ),
+      findsOneWidget,
+      reason: 'the unlocked-exposure reason is named in words',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(CaptureLiveView.downgradeReasonsKey),
+        matching: find.text(AccuracyDowngradeReason.missingReferenceCard.label),
+      ),
+      findsOneWidget,
+      reason: 'the missing-card reason is named in words',
+    );
+  });
+
   test('exposes stable keys', () {
     expect(CaptureLiveView.liveViewKey, const ValueKey('capture-live-view'));
     expect(
@@ -195,6 +238,10 @@ void main() {
     expect(
       CaptureLiveView.warningKey,
       const ValueKey('capture-low-light-warning'),
+    );
+    expect(
+      CaptureLiveView.downgradeReasonsKey,
+      const ValueKey('capture-downgrade-reasons'),
     );
     expect(
       CaptureLiveView.torchWarningKey,

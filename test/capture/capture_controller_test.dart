@@ -660,6 +660,11 @@ void main() {
       final controller = CaptureController(source: source);
       addTearDown(controller.dispose);
       await pumpEventQueue();
+      // bs-12 AC-9: a trustworthy calibrated commit requires the reading to be
+      // settled — AE/AWB/AF locked — else the unsettled reading is downgraded to
+      // approximate (reliability). Lock first so this AC-8 case shows the
+      // calibrated tier it is asserting, not the AC-9 downgrade.
+      controller.lock();
       controller.calibrate();
 
       controller.commit();
@@ -734,6 +739,81 @@ void main() {
           reason: 'the tier upgrades the moment the card is read');
       expect(controller.state.currentSample, isNull,
           reason: 'nothing sampled yet → no reading to normalise');
+    });
+  });
+
+  group('reliability — poor conditions downgrade the committed tier '
+      '(QUALITY-2, bs-12 AC-9)', () {
+    const groundTruth = ColorCoordinates(lightness: 40, a: -8, b: 24);
+
+    // A card scene under adequate light: locked + calibrated it is trustworthy,
+    // so each poor condition below is the one thing that changes.
+    SoftwareCaptureSource cardSource({Lighting lighting = Lighting.adequate}) =>
+        SoftwareCaptureSource(
+          SceneSpec(
+            groundTruth: groundTruth,
+            referenceCardPresent: true,
+            lighting: lighting,
+            frames: [_uniformFrame(const Pixel(200, 60, 60))],
+          ),
+        );
+
+    test('a would-be-calibrated reading committed unlocked is downgraded to '
+        'approximate', () async {
+      final controller = CaptureController(source: cardSource());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      // Calibrate against the card (upgrades the live tier) but never lock, so
+      // AE/AWB/AF are unsettled at commit — the reliability gap AC-9 closes.
+      controller.calibrate();
+      expect(controller.state.accuracy, CaptureAccuracy.calibrated,
+          reason: 'the live tier is calibrated before the commit');
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.exposureUnlocked),
+          reason: 'an unlocked reading reports the exposure-unlocked condition');
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.accuracy,
+          CaptureAccuracy.approximate,
+          reason: 'AC-9: an unsettled reading is downgraded, never returned '
+              'calibrated');
+    });
+
+    test('a would-be-calibrated reading committed in low light is downgraded',
+        () async {
+      final controller =
+          CaptureController(source: cardSource(lighting: Lighting.low));
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      controller.lock();
+      controller.calibrate();
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.lowLight));
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.accuracy,
+          CaptureAccuracy.approximate,
+          reason: 'AC-9: a dim reading is downgraded even when calibrated');
+    });
+
+    test('a trustworthy reading — lit, locked, calibrated — stays calibrated',
+        () async {
+      final controller = CaptureController(source: cardSource());
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      controller.lock();
+      controller.calibrate();
+      expect(controller.activeDowngradeReasons, isEmpty,
+          reason: 'control: no poor condition holds');
+
+      controller.commit();
+
+      expect(controller.state.lastCommittedSample!.accuracy,
+          CaptureAccuracy.calibrated,
+          reason: 'AC-9 control: the downgrade is not a blanket force — a '
+              'trustworthy reading keeps the tier it earned');
     });
   });
 
@@ -1065,6 +1145,91 @@ void main() {
       controller.pump(const CaptureState());
 
       expect(controller.state, const CaptureState());
+      expect(notified, 0);
+      controller.dispose();
+    });
+  });
+
+  group('activeDowngradeReasons (AC-9 seam — bs-12 D-5)', () {
+    SoftwareCaptureSource scene({
+      Lighting lighting = Lighting.adequate,
+      bool referenceCardPresent = false,
+    }) =>
+        SoftwareCaptureSource(SceneSpec(
+          groundTruth: const ColorCoordinates(lightness: 40, a: -8, b: 24),
+          lighting: lighting,
+          referenceCardPresent: referenceCardPresent,
+        ));
+
+    test('is empty only when well lit, locked and a card is present', () {
+      final controller =
+          CaptureController(source: scene(referenceCardPresent: true));
+      controller.lock(); // locks AE · AWB · AF together
+
+      expect(controller.activeDowngradeReasons, isEmpty);
+      controller.dispose();
+    });
+
+    test('reports lowLight when the scene is dimly lit', () {
+      final controller = CaptureController(
+        source: scene(lighting: Lighting.low, referenceCardPresent: true),
+      );
+      controller.lock();
+
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.lowLight));
+      controller.dispose();
+    });
+
+    test('reports exposureUnlocked until AE/AWB/AF are locked together', () {
+      final controller =
+          CaptureController(source: scene(referenceCardPresent: true));
+
+      // Unlocked at first.
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.exposureUnlocked));
+
+      controller.lock();
+      expect(controller.activeDowngradeReasons,
+          isNot(contains(AccuracyDowngradeReason.exposureUnlocked)));
+      controller.dispose();
+    });
+
+    test('reports missingReferenceCard when no card is in view', () {
+      final controller = CaptureController(source: scene());
+      controller.lock();
+
+      expect(controller.activeDowngradeReasons,
+          contains(AccuracyDowngradeReason.missingReferenceCard));
+      controller.dispose();
+    });
+
+    test('reports every poor condition at once', () {
+      final controller = CaptureController(source: scene(lighting: Lighting.low));
+      // Unlocked, card-less, dim: all three.
+
+      expect(controller.activeDowngradeReasons, <AccuracyDowngradeReason>{
+        AccuracyDowngradeReason.lowLight,
+        AccuracyDowngradeReason.exposureUnlocked,
+        AccuracyDowngradeReason.missingReferenceCard,
+      });
+      controller.dispose();
+    });
+
+    test('is purely observational — reading it changes no state (default-wired)',
+        () {
+      // The seam is a read-only report; reading it must not mutate the state or
+      // notify, so current capture behaviour is byte-for-byte unchanged until
+      // QUALITY-2 wires the triggers.
+      final controller = CaptureController(source: scene());
+      final before = controller.state;
+      var notified = 0;
+      controller.addListener(() => notified++);
+
+      final reasons = controller.activeDowngradeReasons;
+
+      expect(reasons, isNotEmpty); // unlocked + card-less here
+      expect(controller.state, same(before));
       expect(notified, 0);
       controller.dispose();
     });

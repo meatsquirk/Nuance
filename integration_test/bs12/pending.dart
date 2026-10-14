@@ -1,0 +1,165 @@
+// BS12 Core non-functional-requirements acceptance-suite pending gate
+// (scaffolded in GUARD-1).
+//
+// This is the bs-12 mirror of bs-09's `integration_test/bs09/pending.dart`
+// (itself a mirror of bs-06/bs-04/bs-03/bs-02 and bs-01's pending mechanism in
+// `integration_test/harness.dart`): the plumbing that lets stage 3 land one
+// *pending* integration test per AC while the suite stays green, then un-pend
+// each AC as its behaviour phase lands.
+//
+// Like bs-09 (and unlike bs-02/bs-04, whose scaffolds left [pendingACs] empty
+// for ITEST-1 to seed), the bs-12 plan seeds all 16 *automatable* ACs here in
+// GUARD-1 (scaffold) — each mapped to the behaviour phase that un-pends it.
+// ITEST-1 builds the bs-12 harness (Given/When/Then vocabulary + real-flow /
+// control / swap fixtures) on top of this; ITEST-2/3 register the per-AC tests
+// via [acTestWidgets] in `integration_test/bs12/nfr_test.dart`; the behaviour
+// phases (GUARD-3..GUARD-6, QUALITY-2..QUALITY-5) un-pend their AC by deleting
+// its row here.
+//
+// **AC-5 (the live-preview frame rate) never enters this gate**: it is
+// pure-manual (D-3), verified on device at SIGNOFF-1 under G-3, so it has no
+// automatable acceptance test. The 16 rows below are exactly the automatable
+// ACs (AC-1..AC-4, AC-6..AC-17).
+//
+// Keyed to `BS12_RUN_PENDING` so a bs-12 run-pending pass is independent of the
+// per-feature run-pending flags bs-01..bs-09 use (`BS0n_RUN_PENDING`).
+//
+// AC ids mirror the plan's `AC-n` names verbatim, so this file opts out of
+// lowerCamelCase for them.
+// ignore_for_file: constant_identifier_names
+
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+// ---------------------------------------------------------------------------
+// Pending gate
+// ---------------------------------------------------------------------------
+
+/// Maps each still-pending AC to the behaviour phase that un-pends it.
+///
+/// An AC is *pending* while its key is present; the named phase un-pends it by
+/// deleting the row. The default
+/// `flutter test integration_test/bs12/nfr_test.dart` skips pending ACs (their
+/// bodies, which assert un-built behaviour, never run); set `BS12_RUN_PENDING=1`
+/// (or `--dart-define=BS12_RUN_PENDING=true` on-device) to execute them (the
+/// red-baseline / un-pend run).
+///
+/// Seeded with all 16 automatable bs-12 ACs in GUARD-1 (scaffold); each
+/// behaviour phase then removes the row it owns as it un-pends that AC. Every
+/// owner must be a member of [behaviorPhases]. The owner is the phase whose
+/// acceptance gate un-pends the AC, matching the master plan's AC-coverage
+/// table. AC-5 (live-preview frame rate) is absent — pure-manual (D-3).
+const Map<String, String> pendingACs = {
+  // Offline (Rule: every core function works offline)
+  // AC-1, AC-2 un-pended by GUARD-3: the network-block sink now records every
+  // attempt, so each core flow sweeps offline (zero attempts) and the counter
+  // control discriminates (a deliberate touch is recorded + refused).
+  // Performance (AC-5 live-preview frame rate is manual — not here)
+  // AC-3, AC-4 un-pended by QUALITY-5: the reading settles to STABLE with the
+  // visible "SETTLING n/12 → STABLE 12/12" indicator and commits within the
+  // generous CI regression budget (AC-3); a recipe search returns 3–5 ranked
+  // candidates (`isTopCandidateCount`) + a solved result within the budget
+  // (AC-4). Both are satisfied by bs-02 (frame-settle) / bs-04 (`topK=5`)
+  // behaviour already on `main` — QUALITY-5 un-pends and guards them (green at
+  // baseline). The literal target-hardware ~1–2 s figures stay owner evidence
+  // at SIGNOFF-1 under G-3 (the CI budget is a regression ceiling, D-3).
+  // Privacy & security — AC-6, AC-7, AC-8 un-pended by GUARD-4: every core flow
+  // runs under the network block with zero attempts + local-only artefacts
+  // (AC-6); the resolved dependency set carries no forbidden package and no
+  // account surface is reachable (AC-7); the real source scan finds no
+  // off-device sender in lib/ (AC-8) — each with a discriminating control.
+  // Reliability — AC-9 un-pended by QUALITY-2: poor lighting, unlocked exposure
+  // or a missing reference card each force the committed reading's stated
+  // accuracy to approximate (never returned calibrated), with the reason
+  // surfaced in words on the live view; the trustworthy control (well lit,
+  // locked, calibrated) stays calibrated.
+  // Accuracy (ΔE00 targets) — AC-10, AC-11, AC-12 un-pended by QUALITY-4: the
+  // full synthetic held-out set (≥3 per condition) is fed through the real
+  // capture / engine pipeline and each produced reading / prediction is graded
+  // against its known truth by the independent referenceDeltaE00 — card +
+  // controlled ≤ 3 (calibrated), card-less daylight ≤ 8 (labelled approximate),
+  // recipe prediction vs the forward-mixed swatch ≤ 5 for an in-gamut target —
+  // each with a perturbation control that exceeds its bound. (Synthetic ≠
+  // physical ground truth, D-2, carried to sign-off.)
+  // AC-13 un-pended by QUALITY-3: the real engine identifies the out-of-gamut
+  // target (`recipeState.outOfGamut` + the shown OUT OF GAMUT banner marker) and
+  // offers no recipe as a match (every returned mix flagged nearest-not-a-match);
+  // the in-gamut control is not flagged and does return recipes. Behaviour exists
+  // (bs-04 ENGINE-5) — QUALITY-3 proves and guards it (green at baseline).
+  // Maintainability (swappable behind interfaces)
+  // AC-14, AC-15 un-pended by GUARD-5: an alternate MixingEngine / ConfusionCheck
+  // injected through AppDependencies drives the recipe / CVD callers correctly
+  // through the interface (dynamic swap), and the concreteTypeReferences source
+  // scan finds no lib/ caller bound to the concrete impl (static), each with a
+  // planted bound-to-concrete control.
+  // AC-16 (one colour-science library) un-pended by GUARD-6: the conversion /
+  // ΔE source scans find no stray colour maths outside the general colorimetric
+  // authority (re-scoped D-4 exempts the two sanctioned domain pipelines), each
+  // with a discriminating planted control.
+  // Portability — AC-17 un-pended by GUARD-6: the platform source scan finds no
+  // Platform.is* / channel / conditional-import construct in lib/ outside the one
+  // native-capture seam, with a planted platform-code control.
+};
+
+/// The behaviour phases allowed to own a pending AC.
+///
+/// Used by the harness's own guard tests to reject a typo'd or stale owner in
+/// [pendingACs]. These are the bs-12 behaviour phases from the master plan.
+const Set<String> behaviorPhases = {
+  'GUARD-3',
+  'GUARD-4',
+  'GUARD-5',
+  'GUARD-6',
+  'QUALITY-2',
+  'QUALITY-3',
+  'QUALITY-4',
+  'QUALITY-5',
+};
+
+/// Run-pending mode requested at build time via `--dart-define`.
+///
+/// `flutter test integration_test/` runs the tests in the app process *on the
+/// device/simulator*, which does not inherit the host shell's environment — so
+/// a `BS12_RUN_PENDING=1` env var set on the host never reaches [runPending]
+/// there. A compile-time `--dart-define=BS12_RUN_PENDING=true` does. (The
+/// `Platform.environment` path below still serves any host-process run.)
+const bool _runPendingDefine =
+    bool.fromEnvironment('BS12_RUN_PENDING', defaultValue: false);
+
+/// Whether pending ACs should execute (the run-pending mode).
+///
+/// On-device: pass `--dart-define=BS12_RUN_PENDING=true`. Host-process runs may
+/// also set the `BS12_RUN_PENDING=1` environment variable.
+bool get runPending =>
+    _runPendingDefine || Platform.environment['BS12_RUN_PENDING'] == '1';
+
+/// The reason to skip [acId] in this run, or null if it should execute.
+///
+/// An un-pended AC (absent from [pendingACs]) always runs; a pending AC runs
+/// only in run-pending mode. Because the result drives `testWidgets`' native
+/// `skip`, a not-yet-built AC's body never executes in the default run — it is
+/// *skipped*, never *failed*. [forceRunPending] overrides the ambient
+/// [runPending] mode so the gate's own tests can assert both modes
+/// deterministically without touching the environment.
+String? pendingSkipReason(String acId, {bool? forceRunPending}) {
+  final owner = pendingACs[acId];
+  if (owner == null) return null;
+  if (forceRunPending ?? runPending) return null;
+  return 'pending $owner — --dart-define=BS12_RUN_PENDING=true to run';
+}
+
+/// Registers an AC acceptance test wired to the pending gate.
+///
+/// Used by ITEST-2/3 for every AC; skipping follows [pendingSkipReason].
+void acTestWidgets(
+  String acId,
+  String description,
+  WidgetTesterCallback body,
+) {
+  final reason = pendingSkipReason(acId);
+  final name = reason == null
+      ? '$acId: $description'
+      : '$acId: $description ($reason)';
+  testWidgets(name, body, skip: reason != null);
+}

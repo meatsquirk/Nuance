@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'capture_accuracy.dart';
 import 'capture_eyedropper.dart';
 import 'capture_state.dart';
 
@@ -20,7 +21,11 @@ import 'capture_state.dart';
 /// marked points (AC-3) drawn at their frame positions (CAPTURE-4). Both are
 /// empty in this shell.
 class CaptureLiveView extends StatelessWidget {
-  const CaptureLiveView({required this.state, super.key});
+  const CaptureLiveView({
+    required this.state,
+    this.downgradeReasons = const <AccuracyDowngradeReason>{},
+    super.key,
+  });
 
   /// Stable anchor for the feed surface.
   static const Key liveViewKey = ValueKey('capture-live-view');
@@ -37,6 +42,11 @@ class CaptureLiveView extends StatelessWidget {
   /// Stable anchor for the low-light warning (E15's subject).
   static const Key warningKey = ValueKey('capture-low-light-warning');
 
+  /// Stable anchor for the reliability downgrade-reasons region (bs-12 AC-9):
+  /// the words naming *why* a reading under poor conditions is downgraded, so no
+  /// honesty signal rests on colour alone. Absent when nothing is downgraded.
+  static const Key downgradeReasonsKey = ValueKey('capture-downgrade-reasons');
+
   /// Stable anchor for the torch colour-temperature warning banner (bs-09 AC-1).
   static const Key torchWarningKey = ValueKey('capture-torch-warning');
 
@@ -47,6 +57,13 @@ class CaptureLiveView extends StatelessWidget {
 
   /// The capture state this viewport reflects.
   final CaptureState state;
+
+  /// The poor-capture conditions currently in effect (bs-12 AC-9), surfaced as
+  /// words over the feed so the painter is told *why* a reading would be
+  /// downgraded (never trusting colour alone). Empty — the trustworthy case —
+  /// renders nothing. Fed by the Capture screen from
+  /// [CaptureController.activeDowngradeReasons].
+  final Set<AccuracyDowngradeReason> downgradeReasons;
 
   /// Saturation-0 (luminance-preserving) colour matrix: maps every channel to
   /// the pixel's luma, so the feed renders as value-only grayscale (AC-10).
@@ -113,6 +130,27 @@ class CaptureLiveView extends StatelessWidget {
             style: const TextStyle(color: Colors.white),
           ),
         ),
+        // bs-12 AC-9: when a reading is under one or more poor conditions, name
+        // each one in words below the accuracy label, so the painter knows the
+        // reading is downgraded and *why* — never returned as if trustworthy.
+        // Empty (the trustworthy reading) renders nothing.
+        if (downgradeReasons.isNotEmpty)
+          Positioned(
+            right: 8,
+            top: 32,
+            child: Column(
+              key: downgradeReasonsKey,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final reason in downgradeReasons)
+                  Text(
+                    reason.label,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+              ],
+            ),
+          ),
         Positioned(
           left: 8,
           bottom: 8,

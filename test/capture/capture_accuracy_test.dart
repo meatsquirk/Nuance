@@ -18,4 +18,23 @@ void main() {
       lessThan(CaptureAccuracy.approximate.maxDeltaE),
     );
   });
+
+  group('AccuracyDowngradeReason (AC-9 seam — bs-12 D-5)', () {
+    test('names exactly the spec\'s three poor conditions', () {
+      expect(AccuracyDowngradeReason.values, <AccuracyDowngradeReason>[
+        AccuracyDowngradeReason.lowLight,
+        AccuracyDowngradeReason.exposureUnlocked,
+        AccuracyDowngradeReason.missingReferenceCard,
+      ]);
+    });
+
+    test('each reason carries a user-facing label (words, not colour)', () {
+      expect(AccuracyDowngradeReason.lowLight.label,
+          'Low light — reading may be approximate');
+      expect(AccuracyDowngradeReason.exposureUnlocked.label,
+          'Exposure not locked — reading may be approximate');
+      expect(AccuracyDowngradeReason.missingReferenceCard.label,
+          'No reference card — reading may be approximate');
+    });
+  });
 }
