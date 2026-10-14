@@ -22,8 +22,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
+import 'package:paint_color_assistant/capture/capture_accuracy.dart';
+import 'package:paint_color_assistant/capture/capture_live_view.dart';
+import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
+import 'package:paint_color_assistant/domain/provenance.dart';
+import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/name_header.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
+import 'package:paint_color_assistant/recipes/gamut_banner.dart';
 
 import 'nfr_harness.dart';
 
@@ -442,6 +448,305 @@ void main() {
           isTrue,
           reason: 'control: the platform rule must flag the planted platform '
               'code (GUARD-6 implements the scan)');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // ITEST-3 — AC tests: the quality targets (pending)
+  //
+  // AC-3/AC-4 (performance — hybrid, D-3) assert the *mechanism* (a reading
+  // settles to STABLE with a visible indicator; a search returns 3–5 ranked
+  // candidates) under the generous CI regression budget — never the
+  // target-hardware ~1–2s figure, which is owner evidence at SIGNOFF (G-3).
+  // AC-9 (reliability) drives a would-be-trustworthy commit under each poor
+  // condition and asserts it is downgraded, never returned trustworthy — red
+  // until QUALITY-2 wires the exposure/card triggers (only lighting downgrades
+  // today), so B pending QUALITY-2. AC-10/11/12 (accuracy, D-2) grade the
+  // synthetic set with the independent reference ΔE — red on a Given precondition
+  // until QUALITY-4 builds the full held-out set + feeds inputs through the real
+  // pipeline, so B pending QUALITY-4. AC-13 (out-of-gamut) drives the real engine
+  // toward the synthetic gamut targets. Every test is registered via
+  // [acTestWidgets]: skipped by default, run under
+  // `--dart-define=BS12_RUN_PENDING=true` (the red baseline).
+  // -------------------------------------------------------------------------
+  group('bs-12 acceptance criteria — quality targets (ITEST-3)', () {
+    acTestWidgets('AC-3',
+        'a committed reading settles within the budget with a visible indicator',
+        (tester) async {
+      // Scenario: A committed reading settles within the budget with a visible
+      // indicator (AC-3; performance is hybrid — mechanism + CI budget, D-3).
+      const perf = PerfHarness();
+      // Given: the capture flow opened through buildApp, the stability indicator
+      // present and reading the real settle mechanism ("SETTLING n/12" before it
+      // settles, "STABLE 12/12" once settled) — not a static placeholder.
+      final probe = await perf.measure(
+        'capture-settle',
+        kCaptureSettleCiBudget,
+        () async {
+          final cap = await givenTheApp(tester, flow: NfrFlow.capture);
+          // Given: the settle indicator is visible on the Capture screen…
+          expect(find.byKey(CaptureLiveView.stabilityKey), findsOneWidget,
+              reason: 'Given: the settle indicator is on the Capture screen');
+          // …and it reflects the real settle mechanism ("SETTLING n/12" while
+          // settling, "STABLE 12/12" once settled) — not a static placeholder.
+          // The indicator's text is the observable [CaptureState.stabilityText].
+          expect(
+            cap.captureState.stabilityText,
+            matches(RegExp(r'^(SETTLING \d+|STABLE 12)/12$')),
+            reason: 'Given: the indicator reflects the real settle progress');
+          // When: the painter settles the reading (locks AE/AWB/AF)…
+          await cap.whenLockCapture();
+          // Then: it reaches STABLE 12/12 (read through the endpoint, which stays
+          // observable after a commit pushes Readout over the Capture screen)…
+          expect(cap.captureState.stabilityText, 'STABLE 12/12',
+              reason: 'the reading must reach STABLE before it commits');
+          // …and committing the averaged frames lands the reading.
+          await cap.whenCommitCapture();
+          expect(cap.captureState.lastCommittedSample, isNotNull,
+              reason: 'the settled reading must commit');
+        },
+      );
+      // Then: the whole settle-and-commit stayed under the generous CI budget (a
+      // regression ceiling on the sim — NOT the target-hardware ~1–2s, which is
+      // owner evidence at SIGNOFF under G-3).
+      expect(probe.withinBudget, isTrue,
+          reason: 'settle+commit overran the CI regression budget: $probe');
+    });
+
+    acTestWidgets('AC-4', 'a recipe search returns 3–5 ranked candidates within '
+        'the budget', (tester) async {
+      // Scenario: Recipe search returns within the budget (AC-4).
+      const perf = PerfHarness();
+      late NfrHarness rec;
+      // Given + When: a recipe search over the real engine for the seeded
+      // reachable target, timed under the generous CI budget.
+      final probe = await perf.measure(
+        'recipe-search',
+        kRecipeSearchCiBudget,
+        () async {
+          rec = await givenTheApp(tester, flow: NfrFlow.recipes);
+        },
+      );
+      final recipes = rec.recipeState.recipes;
+      // Then: 3–5 ranked candidates returned (the engine ranks them best-first
+      // by its own criteria — ΔE00 and prefer-fewer components, bs-04 D-8 — so
+      // this asserts the count the painter is offered, not a re-derived order)…
+      expect(isTopCandidateCount(recipes.length), isTrue,
+          reason: 'a recipe search must return $kMinTopCandidates–'
+              '$kMaxTopCandidates candidates (got ${recipes.length})');
+      // …and the search reports them as a solved result (the state the Recipes
+      // screen renders candidates from).
+      expect(rec.recipeState.hasRecipes, isTrue,
+          reason: 'the search must return a solved candidate set');
+      // …within the generous CI budget (regression ceiling, not the device
+      // figure — owner evidence at SIGNOFF under G-3).
+      expect(probe.withinBudget, isTrue,
+          reason: 'the search overran the CI regression budget: $probe');
+    });
+
+    acTestWidgets('AC-9',
+        'poor conditions downgrade the stated accuracy rather than failing '
+        'quietly', (tester) async {
+      // Scenario: Poor conditions downgrade the stated accuracy rather than
+      // failing quietly (AC-9; D-5 — all three conditions must downgrade, not
+      // just lighting). Each condition is driven to a reading that would
+      // otherwise be trustworthy (calibrated against a card), then committed;
+      // the stated accuracy must be downgraded, never returned as calibrated.
+
+      // Commits a reading under one condition and returns the committed stated
+      // accuracy plus the downgrade reasons the controller reports, then resets
+      // the tree so the pushed Readout route does not bleed into the next launch.
+      Future<({CaptureAccuracy? accuracy, Set<AccuracyDowngradeReason> reasons})>
+          commitUnder(SceneSpec scene, {required bool lock}) async {
+        final cap = await givenTheApp(
+          tester,
+          flow: NfrFlow.capture,
+          captureSource: FakeCaptureSource(scene),
+        );
+        if (lock) await cap.whenLockCapture();
+        // Calibrate against the card when one is in view (a no-op otherwise):
+        // this is what would otherwise make the reading trustworthy.
+        await cap.whenCalibrate();
+        final reasons = cap.activeDowngradeReasons;
+        await cap.whenCommitCapture();
+        final committed = cap.captureState.lastCommittedSample;
+        expect(committed, isNotNull, reason: 'a reading commits under $scene');
+        final result = (accuracy: committed!.accuracy, reasons: reasons);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+        return result;
+      }
+
+      // Low light: card present + calibrated, but the scene is dim — the reading
+      // must be downgraded to approximate, not returned calibrated.
+      final low = await commitUnder(nfrLowLightScene, lock: true);
+      expect(low.reasons, contains(AccuracyDowngradeReason.lowLight),
+          reason: 'low light is a reported downgrade condition');
+      expect(low.accuracy, CaptureAccuracy.approximate,
+          reason: 'a dim reading must be downgraded, never returned calibrated '
+              '(QUALITY-2 wires the trigger)');
+
+      // Unlocked exposure: card present + calibrated, but AE/AWB/AF never locked
+      // — the unsettled reading must be downgraded.
+      final unlocked = await commitUnder(nfrUnlockedScene, lock: false);
+      expect(unlocked.reasons,
+          contains(AccuracyDowngradeReason.exposureUnlocked),
+          reason: 'unlocked exposure is a reported downgrade condition');
+      expect(unlocked.accuracy, CaptureAccuracy.approximate,
+          reason: 'an unsettled reading must be downgraded, never returned '
+              'calibrated (QUALITY-2 wires the trigger)');
+
+      // Missing card: no card to calibrate against — the reading must be
+      // labelled approximate and the reason reported.
+      final missing = await commitUnder(nfrMissingCardScene, lock: true);
+      expect(missing.reasons,
+          contains(AccuracyDowngradeReason.missingReferenceCard),
+          reason: 'a missing reference card is a reported downgrade condition');
+      expect(missing.accuracy, CaptureAccuracy.approximate,
+          reason: 'a card-less reading must be labelled approximate');
+
+      // Control (G5): a trustworthy reading — well lit, locked and calibrated
+      // against a card — has no downgrade condition and must stay calibrated, so
+      // the downgrades above are meaningful (the reading *can* be trustworthy).
+      final trustworthy = await commitUnder(nfrTrustworthyScene, lock: true);
+      expect(trustworthy.reasons, isEmpty,
+          reason: 'control: a trustworthy reading has no downgrade condition');
+      expect(trustworthy.accuracy, CaptureAccuracy.calibrated,
+          reason: 'control: a trustworthy reading stays calibrated — the '
+              'downgrade is not a blanket force-to-approximate');
+    });
+
+    // AC-10/11/12 grade the synthetic accuracy set with the INDEPENDENT
+    // reference ΔE00 (never the product metric against itself, D-2). At this
+    // stage the fixture is QUALITY-1's one-sample-per-condition seed; QUALITY-4
+    // builds the full held-out set (several samples per condition + a
+    // perturbation control that must exceed the bound) and feeds inputs through
+    // the real pipeline. Each test asserts its bound over the condition's
+    // samples AND a Given precondition that the full held-out set exists — which
+    // fails now, naming QUALITY-4 (B pending QUALITY-4).
+    const minSamplesPerCondition = 3;
+
+    acTestWidgets('AC-10',
+        'capture with a reference card in controlled lighting meets ΔE00 ≤ 3',
+        (tester) async {
+      // Scenario: card + controlled lighting → ΔE00 ≤ 3 (AC-10, D-2).
+      const harness = AccuracyHarness();
+      final samples = syntheticAccuracySet
+          .where((s) => s.condition == AccuracyCondition.cardControlled)
+          .toList();
+      // Given precondition: QUALITY-4 builds the full held-out set (≥3
+      // card+controlled samples, incl. a perturbation control that exceeds 3);
+      // the seed set has only one, so the assertion is not yet discriminating.
+      expect(samples.length, greaterThanOrEqualTo(minSamplesPerCondition),
+          reason: 'Given: QUALITY-4 must build the full card+controlled '
+              'held-out set (≥$minSamplesPerCondition samples)');
+      // Then: every card+controlled sample is within ΔE00 3 by the independent
+      // reference metric.
+      for (final grade in harness.gradeAll(samples)) {
+        expect(grade.condition, AccuracyCondition.cardControlled);
+        expect(grade.maxDeltaE, 3);
+        expect(grade.withinBound, isTrue,
+            reason: 'card+controlled must sit within ΔE00 3: $grade');
+      }
+    });
+
+    acTestWidgets('AC-11',
+        'capture without a reference card in daylight meets ΔE00 ≤ 8, labelled '
+        'approximate', (tester) async {
+      // Scenario: card-less daylight → ΔE00 ≤ 8 AND labelled approximate (AC-11).
+      const harness = AccuracyHarness();
+      final samples = syntheticAccuracySet
+          .where((s) => s.condition == AccuracyCondition.cardlessDaylight)
+          .toList();
+      // Given precondition: QUALITY-4 builds the full held-out set.
+      expect(samples.length, greaterThanOrEqualTo(minSamplesPerCondition),
+          reason: 'Given: QUALITY-4 must build the full card-less daylight '
+              'held-out set (≥$minSamplesPerCondition samples)');
+      for (final sample in samples) {
+        // Then: labelled approximate (never calibrated)…
+        expect(sample.expectApproximate, isTrue,
+            reason: 'a card-less daylight reading must be labelled approximate');
+        // …and within ΔE00 8 by the independent reference metric.
+        final grade = harness.grade(sample);
+        expect(grade.maxDeltaE, 8);
+        expect(grade.withinBound, isTrue,
+            reason: 'card-less daylight must sit within ΔE00 8: $grade');
+      }
+    });
+
+    acTestWidgets('AC-12',
+        'a recipe prediction vs a mixed swatch meets ΔE00 ≤ 5 in-gamut',
+        (tester) async {
+      // Scenario: recipe prediction vs mixed swatch → ΔE00 ≤ 5 in-gamut (AC-12).
+      const harness = AccuracyHarness();
+      final samples = syntheticAccuracySet
+          .where((s) => s.condition == AccuracyCondition.recipeVsSwatch)
+          .toList();
+      // Given precondition: QUALITY-4 builds the full held-out set.
+      expect(samples.length, greaterThanOrEqualTo(minSamplesPerCondition),
+          reason: 'Given: QUALITY-4 must build the full recipe-vs-swatch '
+              'held-out set (≥$minSamplesPerCondition samples)');
+      for (final grade in harness.gradeAll(samples)) {
+        expect(grade.condition, AccuracyCondition.recipeVsSwatch);
+        expect(grade.maxDeltaE, 5);
+        expect(grade.withinBound, isTrue,
+            reason: 'an in-gamut recipe prediction must sit within ΔE00 5: '
+                '$grade');
+      }
+    });
+
+    acTestWidgets('AC-13',
+        'an out-of-gamut target is identified and offered no false recipe',
+        (tester) async {
+      // Scenario: An out-of-gamut target is identified, no false recipe (AC-13;
+      // behaviour exists — bs-04 ENGINE-5; QUALITY-3 proves and guards it).
+      final outTarget = syntheticGamutTargets.firstWhere((t) => !t.inGamut);
+      final inTarget = syntheticGamutTargets.firstWhere((t) => t.inGamut);
+
+      // Given + When: the real engine solves toward the out-of-gamut target over
+      // the owned palette.
+      final out = await givenTheApp(
+        tester,
+        flow: NfrFlow.recipes,
+        recipeTarget: Sample(
+          coordinates: outTarget.target,
+          provenance: const Provenance(ProvenanceTier.measured),
+        ),
+      );
+      // Then: the target is identified as out of gamut (state + the shown
+      // banner marker — not just the always-present collapsed anchor)…
+      expect(out.recipeState.outOfGamut, isTrue,
+          reason: 'the out-of-gamut target must be identified');
+      expect(find.text(GamutBanner.markerText), findsOneWidget,
+          reason: 'the out-of-gamut banner marker must be shown');
+      // …and no recipe is offered as a match — every returned mix is flagged the
+      // nearest possible, not a claimed match.
+      expect(out.recipeState.recipes, isNotEmpty,
+          reason: 'the nearest mixes are still offered (as non-matches)');
+      expect(out.recipeState.recipes.every((r) => r.outOfGamut), isTrue,
+          reason: 'no recipe may be presented as a match for an out-of-gamut '
+              'target');
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+
+      // Control (G5): an in-gamut target is NOT flagged and DOES return recipes —
+      // the identification discriminates reachable from unreachable.
+      final inside = await givenTheApp(
+        tester,
+        flow: NfrFlow.recipes,
+        recipeTarget: Sample(
+          coordinates: inTarget.target,
+          provenance: const Provenance(ProvenanceTier.measured),
+        ),
+      );
+      expect(inside.recipeState.outOfGamut, isFalse,
+          reason: 'control: an in-gamut target must not be flagged out of gamut');
+      expect(find.text(GamutBanner.markerText), findsNothing,
+          reason: 'control: no out-of-gamut marker is shown for an in-gamut '
+              'target');
+      expect(inside.recipeState.recipes, isNotEmpty,
+          reason: 'control: an in-gamut target returns recipes');
     });
   });
 

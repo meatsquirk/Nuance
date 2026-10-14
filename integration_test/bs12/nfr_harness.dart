@@ -30,6 +30,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/confusion_check.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
+import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_controller.dart';
 import 'package:paint_color_assistant/capture/capture_controls.dart';
 import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
@@ -97,6 +98,44 @@ const SceneSpec nfrCaptureScene = SceneSpec(
 
 /// Builds the recording [FakeCaptureSource] a capture / correction flow reads.
 FakeCaptureSource nfrCaptureSource() => FakeCaptureSource(nfrCaptureScene);
+
+// --- AC-9 poor-condition scenes (reliability downgrade) ---------------------
+//
+// Each scene isolates one of the three poor conditions AC-9 names, over the
+// same ground truth, so a committed reading can be observed for the honest
+// downgrade. The trustworthy scene is the positive control: well lit, a
+// reference card in view, and (once the painter locks) nothing to downgrade.
+
+/// A well-lit scene with a reference card in view (AC-9 positive control). A
+/// reading taken here — locked, then calibrated against the card — is
+/// trustworthy and must stay calibrated (never downgraded).
+const SceneSpec nfrTrustworthyScene = SceneSpec(
+  groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
+  referenceCardPresent: true,
+);
+
+/// A dimly lit scene (AC-9 low-light condition), card in view so the reading
+/// would otherwise calibrate — the downgrade must come from the lighting.
+const SceneSpec nfrLowLightScene = SceneSpec(
+  groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
+  lighting: Lighting.low,
+  referenceCardPresent: true,
+);
+
+/// A well-lit scene with a reference card (AC-9 unlocked-exposure condition):
+/// the condition is produced by committing *without* locking AE/AWB/AF, so the
+/// reading has not settled and must be downgraded.
+const SceneSpec nfrUnlockedScene = SceneSpec(
+  groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
+  referenceCardPresent: true,
+);
+
+/// A well-lit scene with **no** reference card in view (AC-9 missing-card
+/// condition): the reading cannot be calibrated and must be labelled
+/// approximate, never returned as trustworthy.
+const SceneSpec nfrMissingCardScene = SceneSpec(
+  groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
+);
 
 /// A small owned acrylic palette the recipe solver is constrained to, so a
 /// [NfrFlow.recipes] launch returns real candidates toward [nfrRecipeTarget]
@@ -265,8 +304,18 @@ class NfrHarness {
     await tester.pumpAndSettle();
   }
 
+  /// The poor-capture conditions in effect at the live source (AC-9), read
+  /// through the capture controller — the honest downgrade *inputs* the
+  /// reliability fix (QUALITY-2) acts on. Empty in the trustworthy case.
+  Set<AccuracyDowngradeReason> get activeDowngradeReasons =>
+      captureController.activeDowngradeReasons;
+
   /// Locks AE/AWB/AF on the Capture screen (jumps stability to STABLE 12/12).
   Future<void> whenLockCapture() => _tap(CaptureControls.lockKey);
+
+  /// Normalises the reading against the reference card and upgrades the stated
+  /// accuracy to calibrated (E17) — a no-op when no card is in view.
+  Future<void> whenCalibrate() => _tap(CaptureControls.calibrateKey);
 
   /// Commits the averaged reading on the Capture screen (E20).
   Future<void> whenCommitCapture() => _tap(CaptureControls.captureKey);
@@ -397,6 +446,7 @@ class RecordingConfusionCheck implements ConfusionCheck {
 Future<NfrHarness> givenTheApp(
   WidgetTester tester, {
   NfrFlow flow = NfrFlow.readout,
+  Sample recipeTarget = nfrRecipeTarget,
   MixingEngine mixingEngine = const SubtractiveMixingEngine(),
   ConfusionCheck confusionCheck = const DichromatConfusionCheck(),
   CaptureSource? captureSource,
@@ -429,7 +479,7 @@ Future<NfrHarness> givenTheApp(
         comparisonEntry:
             flow == NfrFlow.comparison ? const ComparisonEntry() : null,
         recipesEntry: flow == NfrFlow.recipes
-            ? const RecipesEntry(target: nfrRecipeTarget)
+            ? RecipesEntry(target: recipeTarget)
             : null,
         paletteEntry: flow == NfrFlow.palette ? const PaletteEntry() : null,
       ),

@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — next ITEST-3 (ITEST-1 + ITEST-2 ✅ done; stage-3 under way)
+**Status:** In progress — next ITEST-4 (test review = G-2); ITEST-1/2/3 ✅ done, stage-3 tests complete
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -131,7 +131,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its gua
 |---|---|---|---|---|
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | The invariant guards (reusable test-support, no product change): offline/network-block, privacy/telemetry, interface-swap, one-colour-library, platform | — | 🔄 In progress |
 | QUALITY | [modules/QUALITY.md](modules/QUALITY.md) | The measured/behavioural targets: synthetic accuracy (D-2), performance mechanism + CI budget (D-3), out-of-gamut, and the one `lib/` change — the AC-9 reliability downgrade fix (D-5) | GUARD (shells) | 🔄 In progress |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real flows + controls: one pending test per automated AC, and its review | GUARD-2, QUALITY-1 | 🔄 In progress (ITEST-1 done) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real flows + controls: one pending test per automated AC, and its review | GUARD-2, QUALITY-1 | 🔄 In progress (ITEST-1/2/3 done; next ITEST-4 = G-2) |
 
 ## Dependency graph
 
@@ -173,8 +173,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | QUALITY-1 | shell: `integration_test/nfr/quality/` scaffolds — accuracy harness + `syntheticAccuracySet`, perf harness (stubs) + the `lib/capture` AC-9 downgrade seam (behaviour unchanged) | ✅ Done | 9.16M | 20m 33s | analyze clean, unit 1228 (+8), coverage 100%/2 lib files, acceptance 197/0; AC-9 seam `AccuracyDowngradeReason`+`activeDowngradeReasons` (no trigger) |
 | 4 | ITEST-1 | acceptance-tests: harness, real-flow + control + swap fixtures, pending gate (16 ACs), smoke test | ✅ Done | 7.3M | 17m 59s | grade 15 A/0; analyze clean, unit 1228, acceptance 15 pass/exit 0 (16 ACs pending); `nfr_harness.dart`+`nfr_test.dart` |
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,6,7,8,14,15,16,17 (pending) + red baseline | ✅ Done | 27.1M | 1h 00m (3h 13m) | 9 pending AC tests; default +15/~9/exit 0; run-pending +15/−9 (clean red baseline); grade 3 A / 6 B pending / 0 ordinary B |
-| 6 | ITEST-3 | acceptance-tests: AC-3,4,9,10,11,12,13 (pending) + red baseline | ⬜ Next | | | shares test file w/ ITEST-2 (done) |
-| 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 6 | ITEST-3 | acceptance-tests: AC-3,4,9,10,11,12,13 (pending) + red baseline | ✅ Done | 19.0M | 47m 22s | grade 3 A / 4 B pending / 0 ordinary B; default +15/~16/exit 0; run-pending +18/−13; AC-3/4/13 green at baseline (bs-02/bs-04), AC-9→QUALITY-2, AC-10/11/12→QUALITY-4 |
+| 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | all 16 ACs pending; whole-suite grid + G-2 awaiting human |
 | 8 | GUARD-3 | AC-1+AC-2 offline: network-block guard over every core flow | ⬜ Todo | | | |
 | 9 | GUARD-4 | AC-6+AC-7+AC-8 privacy: nothing-leaves + no-telemetry + no-off-device-path guards | ⬜ Todo | | | |
 | 10 | GUARD-5 | AC-14+AC-15 swappable: inject alt engine + alt CVD, callers unchanged | ⬜ Todo | | | |
@@ -189,9 +189,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-2 (acceptance-tests) is **done** on `feat/bs-12-non-functional-requirements` (worktree `../Nuance-bs12`): nine *pending* AC tests (`acTestWidgets('AC-n', …)`) for the invariant guards **AC-1, AC-2, AC-6, AC-7, AC-8, AC-14, AC-15, AC-16, AC-17** in `nfr_test.dart`, each asserting its invariant over the real app/source **and** discriminated by a control that fails at baseline. Harness extended (ITEST-owned): `givenTheApp` pass-throughs + read-endpoint getters + when-actions + recording swap doubles + `nfrPalette`/`nfrSeededProject`. Per the user's **"B-pending via fixtures"** decision, the GUARD-owned source scans gained optional planted-input args (kept stubbed) + planted-offender fixtures under `integration_test/nfr/fixtures/controls/`. analyze clean; unit 1228; coverage gate 100% (no new `lib/`); acceptance default **+15/~9/exit 0**, run-pending **+15/−9** (clean red baseline — each fails on its control/limit Then); grade **3 A / 6 B pending / 0 ordinary B — PASS** (A: AC-1/2/6; B pending GUARD-4: AC-7/8; GUARD-5: AC-14/15; GUARD-6: AC-16/17).
+ITEST-3 (acceptance-tests) is **done** on `feat/bs-12-non-functional-requirements` (worktree `../Nuance-bs12`): seven *pending* AC tests (`acTestWidgets('AC-n', …)`) for the quality targets **AC-3, AC-4, AC-9, AC-10, AC-11, AC-12, AC-13** in `nfr_test.dart`. Harness extended (ITEST-owned): `givenTheApp(recipeTarget:)`, the AC-9 condition scenes, `whenCalibrate`, `activeDowngradeReasons`. analyze clean; unit 1228; coverage gate 100% (no new `lib/`); acceptance default **+15/~16/exit 0**, run-pending **+18/−13**; grade **3 A / 4 B pending / 0 ordinary B — PASS**. **AC-3, AC-4, AC-13 are green at baseline** — bs-02 (frame-settle + indicator), bs-04 (`topK=5` search) and bs-04 ENGINE-5 (out-of-gamut) already satisfy them, so QUALITY-5 (AC-3/4) and QUALITY-3 (AC-13) become **un-pend + guard/confirm** phases, not new behaviour. AC-9 → B pending QUALITY-2 (`commit` must consume `activeDowngradeReasons`); AC-10/11/12 → B pending QUALITY-4 (full held-out set + real-pipeline feed). All 16 ACs stay pending (no un-pend in ITEST-3).
 
-**Next: ITEST-3** (acceptance-tests) — write the pending AC tests **AC-3, AC-4, AC-9, AC-10, AC-11, AC-12, AC-13** in the **same** `nfr_test.dart` (AC-3/4 perf mechanism + CI budget via `PerfHarness`; AC-9 three poor conditions; AC-10/11/12 over `syntheticAccuracySet` with the independent reference ΔE; AC-13 out-of-gamut + in-gamut control), run run-pending, record the red baseline + grade. **ITEST-2 and ITEST-3 share `nfr_test.dart` → ITEST-3 runs now that ITEST-2 is done.** Then ITEST-4 (test review = **G-2**). All behaviour phases (GUARD-3..6, QUALITY-2..5) stay blocked on G-2; G-3 (AC-5 device frame rate + AC-3/4 timings) at SIGNOFF-1.
+**Next: ITEST-4** (test review = **G-2**) — assemble the review packet (the catalogue, the red baseline incl. the 3 green-at-baseline ACs + the recommendation to reduce QUALITY-3/5 to un-pend+guard, the controls + augmentations, the D-2 synthetic / D-3 performance gaps), the whole-suite grade grid, set the phase `⏸ Awaiting review` and **G-2 awaiting a human decision** (`/feature-next-phase --gate bs12 G-2 approved | "<changes>"`), stop. All behaviour phases (GUARD-3..6, QUALITY-2..5) stay blocked on G-2; G-3 (AC-5 device frame rate + AC-3/4 target-hardware timings) is a SIGNOFF-1 manual gate.
 
 ## Token usage
 
@@ -205,7 +205,8 @@ ITEST-2 (acceptance-tests) is **done** on `feat/bs-12-non-functional-requirement
 | QUALITY-1 | 0d43da2b | 2026-10-13 16:32 EDT | 16:52 | 20m 33s | 20m 33s | claude-opus-4-8 | 134 | 151,736 | 8,959,060 | 48,618 | 9,159,548 | shell done: quality scaffolds (accuracy+perf+synthetic set) + AC-9 lib seam (AccuracyDowngradeReason + activeDowngradeReasons, no trigger); analyze clean, unit 1228, coverage 100%/2, acceptance 197/0 |
 | ITEST-1 | 18db4951 | 2026-10-13 17:24 EDT | 17:42 | 17m 59s | 17m 59s | claude-opus-4-8 | 116 | 256,738 | 6,981,519 | 54,729 | 7,293,102 | harness + smoke done: 15 scaffold tests (5 flow-launch + 6 guard/harness-wired + 2 pending-gate + 2 fakes); analyze clean, unit 1228, coverage 100%, acceptance 15 pass/exit 0 (16 ACs pending); grade 15 A/0 |
 | ITEST-2 | 9af4cb2a | 2026-10-13 17:59 EDT | 21:12 | 3h 13m | 1h 00m | claude-opus-4-8 | 276 | 875,261 | 26,027,948 | 186,170 | 27,089,655 | 9 pending AC tests (AC-1,2,6,7,8,14,15,16,17); default +15/~9/exit 0, run-pending +15/-9 clean red baseline; grade 3 A / 6 B pending / 0 ordinary B — PASS |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-13 21:12** | **6h 42m** | **2h 44m** |  | **820** | **1,793,501** | **55,689,308** | **446,879** | **57,930,508** |  |
+| ITEST-3 | df303f4e | 2026-10-13 21:31 EDT | 22:19 | 47m 22s | 47m 22s | claude-opus-4-8 | 192 | 378,184 | 18,468,216 | 114,747 | 18,961,339 | 7 pending AC tests (AC-3,4,9,10,11,12,13); default +15/~16/exit 0, run-pending +18/-13; grade 3 A / 4 B pending / 0 ordinary B — PASS; AC-3/4/13 green at baseline (bs-02/bs-04), AC-9->QUALITY-2, AC-10/11/12->QUALITY-4 |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-13 22:19** | **7h 29m** | **3h 31m** |  | **1,012** | **2,171,685** | **74,157,524** | **561,626** | **76,891,847** |  |
 
 ## Sign-off
 
