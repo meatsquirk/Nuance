@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1/2/3 ✅ done; ITEST-4 packet assembled, ⏸ G-2 awaiting human decision
+**Status:** ✅ Done — ITEST-1/2/3/4 all done; G-2 approved 2026-10-14 by Matt Quirk (behaviour stage un-blocked)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs12/nfr_harness.dart`, `integration_test/bs12/nfr_test.dart`. Consumes (does not own) the reusable guards in `integration_test/nfr/` (GUARD + QUALITY) and the `integration_test/bs12/pending.dart` gate (created by GUARD-1).
 **Depends on:** GUARD-2, QUALITY-1 (the shells) · **Blocks:** every behavior phase (via the test review G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness + smoke) | ✅ Done | 7.3M | 17m 59s |
 | ITEST-2 | acceptance-tests | AC-1,2,6,7,8,14,15,16,17 (pending) | ✅ Done | 27.1M | 1h 00m (3h 13m) |
 | ITEST-3 | acceptance-tests | AC-3,4,9,10,11,12,13 (pending) | ✅ Done | 19.0M | 47m 22s |
-| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1.89M | 4m 22s |
+| ITEST-4 | test-review | — (G-2) | ✅ Done | 1.89M | 4m 22s |
 
 ## Interface reconciliation
 
@@ -209,7 +209,8 @@ grid § ITEST-3 + roll-up.)
 `/feature-next-phase --gate bs12 G-2 approved | "<changes>"`. Approval un-blocks every behaviour phase
 (GUARD-3..6, QUALITY-2..5). Changes requested → each item becomes an ITEST change phase + a fresh review.
 
-- **Result (⏸ Awaiting review 2026-10-14):**
+- **G-2 decision:** ✅ **Approved 2026-10-14 07:41 EDT by Matt Quirk** — the 16-AC acceptance suite + whole-suite grid (6 A / 10 B pending / 0 ordinary B) accepted, incl. retargeting QUALITY-3 (AC-13) & QUALITY-5 (AC-3/4) to un-pend+guard and carrying D-2/D-3 to sign-off. Behaviour stage un-blocked.
+- **Result (✅ Done 2026-10-14):**
   - **Packet assembled** (above): the per-AC roster (16 tests → grade + control + closing phase), the recorded red
     baseline (default 15 pass/16 skip/exit 0; run-pending clean), real-vs-faked, the 10 augmentation rows + their
     closing phases, the whole-suite grid path + counts, and the three review decisions surfaced first (green-at-baseline
