@@ -1,7 +1,7 @@
 # Master Plan — Paint dataset integrity and provenance
 
 **Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
-**Status:** Not started — next SEED-1 (⛔ blocked on G-1 spec approval)
+**Status:** Not started — next SEED-1 (startable; G-1 resolved 2026-10-14)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
 
@@ -131,7 +131,7 @@ graph LR
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | SEED-1 | Open |
+| G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | SEED-1 | ✅ Resolved 2026-10-14 16:06: approved — spec banner flipped to approval line — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 | G-3 | decision | Confirm the shipped seed's optical values + validation manifest reflect **real reviewed Phase-0.5 evidence** (owner), or accept the named gap — the bs-13 automated tests prove only the schema/ship-logic over a representative manifest (D-5) | SIGNOFF-1 (AC-5/AC-6 real-world fidelity) | Open |
 
@@ -148,7 +148,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | SEED-1 | scaffold: branch off `main`, baseline run, coverage-gate + acceptance-runner self-check, record baseline | ⬜ Next | | | ⛔ G-1 |
+| 1 | SEED-1 | scaffold: branch off `main`, baseline run, coverage-gate + acceptance-runner self-check, record baseline | ⬜ Next | | | G-1 ✅ |
 | 2 | SEED-2 | shell: `lib/dataset/` types + `SeedLoader`/`AssetSeedLoader` + `SeededPaletteSource` + `DatasetReadEndpoint` + wiring | ⬜ Todo | | | ∥ PROV-1, GUARD-1 |
 | 3 | PROV-1 | shell: `EvidenceKind` + tier-derivation seam + append-only add stub + `ProvenanceReadEndpoint` | ⬜ Todo | | | ∥ SEED-2, GUARD-1 |
 | 4 | GUARD-1 | shell: reusable guard harness (source-scan + schema-check scaffolding) | ⬜ Todo | | | ∥ SEED-2, PROV-1 |
@@ -168,7 +168,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**SEED-1 (scaffold)** is next but ⛔ **blocked on G-1** (approve the draft spec). To unblock: `/feature-next-phase --gate bs13 G-1 approved` (and record the approval as the spec's first line). Once G-1 is resolved, SEED-1 branches `feat/bs-13-paint-dataset-integrity` off `main` @ `7015390`, runs the baseline, and self-checks the coverage gate + acceptance runner. After SEED-1, the three shells SEED-2 ∥ PROV-1 ∥ GUARD-1 can run concurrently in separate sessions.
+**SEED-1 (scaffold)** is startable — G-1 resolved 2026-10-14 (spec approved). Run: `/feature-next-phase bs13 SEED-1`. It branches `feat/bs-13-paint-dataset-integrity` off `main` @ `7015390`, runs the baseline (analyze + unit + full acceptance), and self-checks the coverage gate + acceptance runner. After SEED-1, the three shells SEED-2 ∥ PROV-1 ∥ GUARD-1 can run concurrently in separate sessions. G-2 (ITEST-4 test review) still blocks every behavior phase; G-3 is a SIGNOFF-1 decision.
 
 ## Token usage
 
@@ -177,7 +177,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | c8a994a2 | 2026-10-14 14:16 EDT | 15:14 | 57m 41s | 17m 23s | claude-opus-4-8 | 66 | 192,330 | 2,696,529 | 74,952 | 2,963,877 | plan written |
-| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-14 15:14** | **57m 41s** | **17m 23s** |  | **66** | **192,330** | **2,696,529** | **74,952** | **2,963,877** |  |
+| GATE-DECISION | 9322eaed | 2026-10-14 16:06 EDT | 16:07 | 1m 29s | 1m 29s | claude-opus-4-8 | 32 | 38,265 | 958,072 | 5,144 | 1,001,513 | G-1 approved — bs-13 spec approved by Matt Quirk; SEED-1 unblocked |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-14 16:07** | **59m 10s** | **18m 52s** |  | **98** | **230,595** | **3,654,601** | **80,096** | **3,965,390** |  |
 
 ## Sign-off
 

@@ -24,7 +24,7 @@
 
 ## Open gates
 
-- **G-1** (approve the spec) blocks SEED-1.
+- **G-1** (approve the spec) — ✅ Resolved 2026-10-14 16:06: approved — Matt Quirk (spec banner flipped to approval line). SEED-1 unblocked.
 - **G-3** (owner confirms real Phase-0.5 evidence, or accepts the gap) is a SIGNOFF-1 decision over SEED-5's manifest (D-5).
 
 ## Phase 1 — Scaffold

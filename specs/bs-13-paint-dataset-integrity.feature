@@ -1,4 +1,4 @@
-# Draft: awaiting owner approval (derived 2026-10-05 by /wireframe-behavior-specs)
+# Approved 2026-10-14 by Matt Quirk (G-1) — derived 2026-10-05 by /wireframe-behavior-specs
 # Mixed build-time and runtime integrity rules; some are pipeline acceptance criteria, not app UX.
 Feature: Paint dataset integrity and provenance
   The rules that keep the shipped paint data honest: the dataset stores per-paint
