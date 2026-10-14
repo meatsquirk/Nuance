@@ -2,7 +2,7 @@
 
 **Feature:** bs-12-non-functional-requirements · **Spec:** [bs-12-non-functional-requirements.feature](../../bs-12-non-functional-requirements.feature)
 **Prepared:** 2026-10-14 (SIGNOFF-1) · **At code:** `feat/bs-12-non-functional-requirements` @ `3e6164a` (QUALITY-5; sign-off commit stamped on the decision)
-**Decision:** ⏸ **Awaiting sign-off** — a human records the decision via `/feature-next-phase --signoff bs12 approved | changes "<items>"`. The agent does not approve.
+**Decision:** ✅ **Approved** — 2026-10-14 by Matt Quirk (SIGNOFF-1, round 1) at code `3e6164a`. **G-3 resolved** on owner on-device evidence: AC-5 live-preview frame rate + AC-3/AC-4 ~1–2 s target-hardware timings accepted. Gaps carried as named: **D-2** (synthetic ≠ physical accuracy ground truth) + **D-3** (device timings/fps).
 
 bs-12 is a cross-cutting *verify + fix* feature (D-1): it ships reusable NFR guards as acceptance mechanism over every feature merged on `main` at the branch point (bs-01…09 + bs-07 + bs-08) and fixes the one gap they revealed (the AC-9 reliability trigger). All 16 automatable acceptance criteria are coded, un-pended and green by default (pending map empty); AC-5 (live-preview frame rate) is pure-manual and closed at **G-3** with owner on-device evidence. A fresh independent whole-suite re-grade is **16 A / 0 below A**. This packet is the evidence for the decision.
 
