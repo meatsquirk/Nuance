@@ -64,8 +64,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// AC-10 and AC-12 are **not** here — pure-manual gates (D-2), closed at
 /// SIGNOFF-1 (G-3/G-4).
 const Map<String, String> pendingACs = {
-  'AC-1': 'A11Y-5',
-  'AC-2': 'A11Y-5',
+  // AC-1 (colour cue) un-pended by A11Y-5.
+  // AC-2 (no bare colour dot) un-pended by A11Y-5.
   // AC-3 (200% font scaling) un-pended by A11Y-4.
   // AC-4 (48dp tap targets) un-pended by A11Y-3.
   // AC-5 (AA contrast floor) un-pended by A11Y-2.

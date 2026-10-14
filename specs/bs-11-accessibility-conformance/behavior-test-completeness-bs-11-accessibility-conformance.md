@@ -1,5 +1,74 @@
 # bs-11 Accessibility conformance — behaviour-test completeness
 
+**Phase graded: A11Y-5 (un-pended AC tests AC-1,2,3,4,5).** Independent,
+adversarial re-grade of **every currently un-pended automated AC test** against
+the code as it now stands on `feat/bs-11-accessibility-conformance` (worktree
+`/Users/matthew.quirk/Nuance-bs11`). **What A11Y-5 changed:** it implemented the
+two colour-vocabulary rules in the new `integration_test/conformance/checks/colour_cue.dart`
+— `checkColourCue` (`ConformanceRuleId.colourCue`, AC-1: every colour-coded
+element carries a non-colour cue) and `checkNoBareDot` (`ConformanceRuleId.noBareDot`,
+AC-2: no status is a bare colour dot) — which share one render-tree traversal
+(`_bareColourDots`): a **filled circular** `BoxDecoration` (`Container`/`DecoratedBox`
+with `shape: BoxShape.circle` and non-null `color`) that has **no labelled
+`Semantics` ancestor within the checked subtree** is a *bare* dot and fails both
+rules. It wired both into the aggregate `runConformanceCheck` beside
+`contrastAA`/`tapTarget48`/`fontScale200`, and dropped AC-1 + AC-2 from
+`bs11/pending.dart` (the scaffold-guard now expects the other five —
+`{AC-6,AC-7,AC-8,AC-9,AC-11}` — and asserts `!containsKey('AC-1')` /
+`!containsKey('AC-2')`). The behaviour phase must re-grade every un-pended AC test:
+**AC-1, AC-2, AC-3, AC-4, AC-5**. The grader ran nothing and edited nothing but
+this file.
+
+**AC-3/AC-4/AC-5 are unchanged by A11Y-5** — their rules (`checkFontScale200`,
+`checkTapTarget48`, `checkContrastAA`) and test bodies are untouched; they are
+re-confirmed against the now five-rule aggregate. Adding `colourCue`/`noBareDot`
+to the result does not disturb them: each AC test reads only its own
+`outcomeFor(itsId)` and `failing.contains(itsId)` (not equality), and none of
+their controls (`control_overflow200`, `control_smallTarget`, `control_lowContrast`
+— all `ColoredBox`/text, not `Container`/`DecoratedBox` **circles**) trips the new
+dot rule, so no new failing id leaks into their `contains` legs.
+
+**Special attention — the two NEW tests (AC-1, AC-2) genuinely discriminate (verified):**
+- **control_bareDot** = `Container(16×16, BoxDecoration(color: 0xFFC62828, shape: circle))` with **no `Semantics` wrapper**. Walking element ancestors from the dot up to the checked-subtree root finds no labelled `Semantics` → it is **bare → fails both `colourCue` and `noBareDot`** (`failing` contains each). So an always-pass rule would leave `failing` empty and fail both control legs.
+- **ColorChip** (AC-1's positive) and **StatusBadge** (AC-2's positive) each wrap their swatch in `Semantics(label: …, excludeSemantics: true)`; the rule walks the **widget/element** tree (not the semantics tree), so `excludeSemantics` does **not** hide the labelled node → the swatch is **not bare → passes**. The rule is therefore neither vacuous (it fails the bare dot) nor over-eager (it does not wrongly fail a labelled swatch).
+- **Reusing `control_bareDot` for both AC-1 and AC-2 is legitimate**: a bare coloured dot genuinely violates *both* "colour carries meaning with no cue" (AC-1) and "a status drawn as a bare dot" (AC-2). Each test still pins its **own** positive Given (AC-1 ⇒ a descendant `ColorChip` present; AC-2 ⇒ a descendant `StatusBadge` present) and asserts its **own** `ConformanceRuleId` (G6), so the two are not duplicates.
+
+| Test | What it checks | Grade | Rule notes |
+|---|---|---|---|
+| **AC-1** `every colour-coded element carries a non-colour cue` (owner A11Y-5), un-pended; rule = **real** `checkColourCue` (flag a filled circular colour dot with no labelled `Semantics` ancestor) | Sweep: for each of the 6 `realScreens`, `givenScreen` opens it (Given `screen findsOneWidget`), the check runs, `outcomeFor(colourCue).pass isTrue`. Reference: Given a descendant `ColorChip findsOneWidget` (a real colour-coded element present), then passes `colourCue`. Control: `control_bareDot` (Given subtree `findsOneWidget`) has `colourCue` in `failing`. | **A** | **G5 genuine discriminator (the keystone concern), satisfied:** the real rule passes on all 6 `buildApp` screens **and** the reference, and **fails on `control_bareDot`** (a bare 16dp circle with no labelled `Semantics` ancestor) — verified the rule is not vacuous (control truly fails) nor over-eager (ColorChip's circle, wrapped in `Semantics(label, excludeSemantics:true)`, passes because the walk is over the widget tree, unaffected by `excludeSemantics`). An always-pass rule would leave `failing` empty and fail the control leg; a real screen leaking a bare circle would fail the sweep. **G1** every discriminating Given checked through the public surface before the When — each swept screen's home finder, the reference's `ColorChip` descendant (non-vacuous positive), the control's keyed subtree. **G2** the colour-cue behaviour under test comes from the real shipped `ColorChip`/`StatusBadge` primitives rendered on the real screens via `buildApp` and in the reference, not a test-injected structure. **G4** asserts the exact `ConformanceRuleId.colourCue` outcome `.pass isTrue` (not non-null) at step grain, on **every** of the six `realScreens` (size/identity pinned by ITEST-1's fixture guard), and `failing` **contains** `colourCue` on the control. **G6** exactly one AC — only `colourCue` is read/asserted (extra failing ids on the control don't affect `contains`). **G3** N/A (no negative-after-settle Then). Deterministic (`buildApp` launchers + `pumpAndSettle`, no sleeps); comments match the real rule. |
+| **AC-2** `a status is never rendered as a bare colour dot` (owner A11Y-5), un-pended; rule = **real** `checkNoBareDot` (same traversal, own outcome id) | Sweep: each real screen opened and `outcomeFor(noBareDot).pass isTrue`. Reference: Given a descendant `StatusBadge findsOneWidget` (status rendered as text+icon, not a dot), then passes `noBareDot`. Control: `control_bareDot` has `noBareDot` in `failing`. | **A** | **G1** the reference Given specifically asserts the status is a `StatusBadge` (the "status = text/icon" primitive, D-7), not merely that something rendered — the configured positive that answers this scenario, distinct from AC-1's `ColorChip`. **G5** discriminating against the real rule: passes on real screens + the `StatusBadge` reference, **fails on the bare-dot control** — rejects a rule that accepts a coloured circle with no text/icon. Reusing `control_bareDot` is correct (it violates AC-2 as a bare status dot) while the AC-2-specific positive (`StatusBadge`) is pinned separately. **G4** exact `noBareDot` id `.pass isTrue`, every swept screen; `failing` **contains** `noBareDot` on the control. **G6** exactly one AC (only `noBareDot`, asserted independently of `colourCue` though they share one traversal). **G2** real `StatusBadge`/`ColorChip` source; **G3** N/A. Deterministic; honest comments. |
+| **AC-3** `the layout survives 200% font scaling without breaking` (owner A11Y-4), un-pended; rule = `checkFontScale200` (re-render at `textScaler 2.0`, measure first `RenderFlex` overflow) | Sweep: each of the 6 `realScreens` opened (Given `screen findsOneWidget`) and `outcomeFor(fontScale200).pass isTrue`. Reference passes `fontScale200`. Control: `control_overflow200` (100dp column of three `textScaler`-sized rows → 180dp at 200%; Given subtree `findsOneWidget`) has `fontScale200` in `failing`. | **A** | Unchanged by A11Y-5 (body + rule untouched); re-confirmed against the five-rule aggregate — the new `colourCue`/`noBareDot` do not flag `control_overflow200` (text rows in a `SizedBox`, no circle `Container`), so `failing contains fontScale200` is undisturbed. **G5** genuine discriminator: passes on all 6 real screens + reference, fails on `control_overflow200` (children 180 > box 100 ⇒ `over=80>0.5`); an overflow-ignoring rule leaves `failing` empty and fails the control. **G4** exact `fontScale200` `.pass isTrue`, every screen. **G6** one AC. **G3** N/A (200% pump + restore live inside the rule). **G1** discriminating Givens (every swept finder + control subtree) checked before the When; reference-leg omitted `findsOneWidget` is non-blocking (the rule's `tester.renderObject(screen)` throws on a missing finder ⇒ no vacuous pass). **G2** real screens via `buildApp`. No downgrade. |
+| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = `checkTapTarget48` (android 48×48 `&&` iOS 44×44 → 48dp floor) | Sweep: each real screen opened (Given `screen findsOneWidget`) and `outcomeFor(tapTarget48).pass isTrue`. Reference: descendant `IconButton findsOneWidget` (Given), passes `tapTarget48`. Control: `control_smallTarget` (24dp, Given subtree `findsOneWidget`) has `tapTarget48` in `failing`. | **A** | Unchanged by A11Y-5 (body + rule untouched); re-confirmed — `control_smallTarget` is a `ColoredBox` tappable (no circle `Container`), so the new dot rules add no failing id to its `failing`, and AC-4 uses `contains(tapTarget48)` (not equality), so no interference. **G1** every Given (six finders, reference `IconButton` descendant, control subtree) checked before the When. **G2** sweep drives the shipped `buildApp` assembly carrying the padded `AppTheme`/`materialTapTargetSize`. **G4** exact `tapTarget48` `.pass isTrue`, every screen; control `failing` **contains** `tapTarget48`. **G5** passes on the 48dp reference + six real padded screens, fails on the 24dp control. **G6** one AC. **G3** N/A. No downgrade. |
+| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = `checkContrastAA` over `textContrastGuideline` at the AA floor | Sweep: each real screen opened; **G2 Given** asserts `Theme.of(element).colorScheme == AppTheme.light().colorScheme`, then `outcomeFor(contrastAA).pass isTrue`. Reference: same theme asserted, passes `contrastAA`. Control: `control_lowContrast` (~1.6:1 grey-on-white) has `contrastAA` in `failing`. | **A** | Unchanged by A11Y-5 (body + rule untouched); re-confirmed — `control_lowContrast` is a `ColoredBox`+`Text` (no circle `Container`), so the new dot rules add no failing id; AC-5 uses `contains(contrastAA)`, no interference. **G2 (decisive, satisfied)** — contrast pinned to the shipped `AppTheme.light().colorScheme` (content-equal `ColorScheme`) on every swept screen and the reference, not a test-injected theme; `tester.element(finder)` fails unless the finder resolves, so the reference leg is non-vacuous. **G1** screen-open + theme-source Givens before the When. **G4** exact `contrastAA` `.pass isTrue`, every screen; control `failing` **contains** `contrastAA`. **G5** passes on AA reference + six real screens, fails on `control_lowContrast` (below 4.5:1). **G6** one AC. **G3** N/A. No downgrade. |
+
+## Verdict
+
+**5 A / 0 B — PASS (all A).** Every currently un-pended automated AC test meets
+the bar against the code as it now stands. **The two NEW A11Y-5 tests are A —
+earned, not nominal:** `checkColourCue`/`checkNoBareDot` genuinely discriminate —
+`control_bareDot` (a filled 16dp circle with no labelled `Semantics` ancestor)
+**fails both rules**, while the real `ColorChip`/`StatusBadge` primitives (which
+wrap their swatch in `Semantics(label, excludeSemantics: true)`, visible to the
+widget-tree walk) **pass** on the reference and across the 6-screen `buildApp`
+sweep. The rule is neither vacuous (it flags the bare dot) nor over-eager (it does
+not flag a labelled swatch, and ignores non-circle `ColoredBox`/banner/card
+surfaces by construction). AC-1 asserts `colourCue` and AC-2 asserts `noBareDot`
+independently (G6) despite sharing one traversal, and each pins its own positive
+Given (`ColorChip` vs `StatusBadge`), so reusing `control_bareDot` as the shared
+negative is legitimate. **AC-3/AC-4/AC-5 hold their prior A, un-weakened and
+un-interfered-with** by the two new aggregate rules: their controls are not circle
+`Container`s, and their `failing.contains(itsId)` / `outcomeFor(itsId).pass` legs
+read only their own id. G1/G2/G4/G6 met across all five, G3 N/A (no
+negative-after-settle Then in this set; that is AC-8's, still pending).
+
+**No B rows — nothing must change for this phase to pass.**
+
+---
+
+<!-- Historical context: prior grade grids, most recent first. -->
+
+# bs-11 Accessibility conformance — behaviour-test completeness (prior grids)
+
 **Phase graded: ITEST-2 (acceptance-suite AC tests: AC-1,2,4,5,6).** Independent,
 adversarial grade of the five *pending* `acTestWidgets` ITEST-2 added to the new
 `group('bs-11 acceptance criteria — structural rules (ITEST-2)', …)` in
