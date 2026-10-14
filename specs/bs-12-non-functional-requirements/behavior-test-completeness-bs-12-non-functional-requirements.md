@@ -187,3 +187,22 @@ AC tests: **15 A delivered-or-green** (AC-1/2 + AC-6/7/8 + AC-14/15 + **AC-16/17
 ### Whole-suite state after QUALITY-2
 
 AC tests: **16 A delivered-or-green** (AC-1/2, AC-6/7/8, AC-14/15, AC-16/17, **AC-9 now delivered**, + AC-3/4/13 green-at-baseline). Remaining **3 B-pending** rows: **AC-10/11/12 → QUALITY-4** (AC-13 green-at-baseline, un-pended/guarded by QUALITY-3; AC-3/4 by QUALITY-5). AC-5 remains the sole manual AC for sign-off. No ordinary B outstanding.
+
+---
+
+## QUALITY-3 § — AC-13 (out-of-gamut, no false recipe)
+
+**Phase graded:** QUALITY-3 (behaviour — the one AC test it un-pended: `AC-13` in `integration_test/bs12/nfr_test.dart:787-839`), now un-pended and running in the DEFAULT suite. **What was graded:** exactly `AC-13`, judged against the real engine (`lib/recipes/recipe_state.dart` `outOfGamut`/`recipes`, `lib/recipes/engine/mixing_engine.dart` `Recipe.outOfGamut`, the default `SubtractiveMixingEngine`), the shown banner (`lib/recipes/gamut_banner.dart` — `markerText` rendered only in the shown `Container`, not the collapsed `SizedBox.shrink`), the synthetic gamut fixtures (`integration_test/nfr/quality/synthetic_accuracy_set.dart` — `neon-cyan` out-of-gamut vs `warm-earth` in-gamut control) and the harness `givenTheApp(recipeTarget:)` pass-through. Graded by a **fresh independent subagent** (not the author), given the prior grid as context and asked to justify any downgrade against a named rule (G1–G6). QUALITY-3 is an **un-pend + guard** phase — the AC-13 test body is byte-identical to the A-graded ITEST-3 version (only `pending.dart` + the gate guard changed). **Grade key:** A = discriminates today with no later-behaviour dependency.
+
+| AC test | Then + control | Grade | Why |
+|---|---|---|---|
+| `AC-13` out-of-gamut identified, no false recipe | `givenTheApp(recipes, recipeTarget: neon-cyan)`: `recipeState.outOfGamut isTrue`, `find.text(GamutBanner.markerText) findsOneWidget`, `recipes isNotEmpty`, `recipes.every((r) => r.outOfGamut) isTrue` | A | G1/G2 through the real engine (default `SubtractiveMixingEngine`, no override); G4 asserts the raw observables (state flag + rendered marker + every recipe's `outOfGamut`); G5 the marker-text assertion kills a "flags state but renders no banner" impl (collapsed branch has no Text) and `every outOfGamut` kills a false-match impl. |
+| `AC-13` control: in-gamut not flagged, returns recipes | `givenTheApp(recipes, recipeTarget: warm-earth)`: `outOfGamut isFalse`, `find.text(markerText) findsNothing`, `recipes isNotEmpty` | A | **G3/G5 control** after `pumpAndSettle` between launches — a real positive/negative pair proving the identification separates reachable from unreachable; the negative `findsNothing` is settled and paired with the positive case. |
+
+### Verdict
+
+**1 A / 0 B — PASS.** AC-13 stays **A** (was green-at-baseline A at ITEST-3). Un-pending altered no assertion — the test is byte-identical to the A-graded ITEST-3 body, which already carried the in-phase banner-marker fix (`find.text(GamutBanner.markerText)` not `find.byKey(regionKey)`, so a collapsed banner no longer passes). The fresh grader confirmed G1–G6 all ✓: the real engine computes `outOfGamut` (not an injected stub), the marker Text renders only in the shown state, and the in-gamut control is a genuine positive/negative pair. No augmentation owed (ITEST *Test augmentations* carries no AC-13 row). No AC test was weakened.
+
+### Whole-suite state after QUALITY-3
+
+AC tests: **16 A delivered-or-green** (AC-1/2, AC-6/7/8, AC-14/15, AC-16/17, AC-9, + AC-3/4 green-at-baseline, **AC-13 now delivered/un-pended**). Remaining **3 B-pending** rows: **AC-10/11/12 → QUALITY-4** (AC-3/4 → QUALITY-5 are green-at-baseline, un-pend+guard). The default suite is **28 pass / 5 pending-skip**; the 5 pending are AC-3/4 (QUALITY-5) + AC-10/11/12 (QUALITY-4). AC-5 remains the sole manual AC for sign-off. No ordinary B outstanding.

@@ -846,27 +846,29 @@ sdks:
     // (offline); GUARD-4 un-pended AC-6 + AC-7 + AC-8 (privacy); GUARD-5 un-pended
     // AC-14 + AC-15 (swappable interfaces); GUARD-6 un-pended AC-16 + AC-17 (one
     // colour library + portability); QUALITY-2 un-pended AC-9 (reliability
-    // downgrade), so the gate now holds the 6 ACs still owed to the QUALITY phases.
+    // downgrade); QUALITY-3 un-pended AC-13 (out-of-gamut), so the gate now holds
+    // the 5 ACs still owed to QUALITY-4 (AC-10/11/12) and QUALITY-5 (AC-3/4).
     final expectedPending = <String>{
       'AC-3', 'AC-4', // AC-1/AC-2 (GUARD-3), AC-6/7/8 (GUARD-4),
-      // AC-14/AC-15 (GUARD-5), AC-16/AC-17 (GUARD-6), AC-9 (QUALITY-2) un-pended;
-      // AC-5 manual — absent
-      'AC-10', 'AC-11', 'AC-12', 'AC-13',
+      // AC-14/AC-15 (GUARD-5), AC-16/AC-17 (GUARD-6), AC-9 (QUALITY-2),
+      // AC-13 (QUALITY-3) un-pended; AC-5 manual — absent
+      'AC-10', 'AC-11', 'AC-12',
     };
 
     test('the pending map is exactly the still-pending automatable ACs, each '
         'owned by a real behaviour phase', () {
       expect(pendingACs.keys.toSet(), expectedPending);
-      expect(pendingACs.length, 6);
+      expect(pendingACs.length, 5);
       // AC-1 + AC-2 (GUARD-3), AC-6 + AC-7 + AC-8 (GUARD-4), AC-14 + AC-15
-      // (GUARD-5), AC-16 + AC-17 (GUARD-6) and AC-9 (QUALITY-2) were un-pended and
-      // must not reappear.
+      // (GUARD-5), AC-16 + AC-17 (GUARD-6), AC-9 (QUALITY-2) and AC-13 (QUALITY-3)
+      // were un-pended and must not reappear.
       expect(pendingACs.containsKey('AC-1'), isFalse);
       expect(pendingACs.containsKey('AC-2'), isFalse);
       expect(pendingACs.containsKey('AC-6'), isFalse);
       expect(pendingACs.containsKey('AC-7'), isFalse);
       expect(pendingACs.containsKey('AC-8'), isFalse);
       expect(pendingACs.containsKey('AC-9'), isFalse);
+      expect(pendingACs.containsKey('AC-13'), isFalse);
       expect(pendingACs.containsKey('AC-14'), isFalse);
       expect(pendingACs.containsKey('AC-15'), isFalse);
       expect(pendingACs.containsKey('AC-16'), isFalse);

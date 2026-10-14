@@ -1,6 +1,6 @@
 # Module QUALITY — measured & behavioural targets (accuracy, performance, reliability)
 
-**Status:** In progress — QUALITY-1 + QUALITY-2 done (AC-9 delivered); next QUALITY-3/4/5 (behaviour, startable)
+**Status:** In progress — QUALITY-1 + QUALITY-2 + QUALITY-3 done (AC-9, AC-13 delivered); next QUALITY-4 (AC-10/11/12) then QUALITY-5 (AC-3/4) — sequence (shared `nfr_test.dart`)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/quality/` (accuracy harness + `syntheticAccuracySet`, performance harness — reusable test-support), and the **one `lib/` product change**: the AC-9 downgrade seam/triggers in `lib/capture/` (`capture_accuracy.dart`, `capture_controller.dart`, and the live-view label surface). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart`.
 **Depends on:** GUARD (shells) · **Blocks:** SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | QUALITY-1 | shell | — | ✅ Done | 9.16M | 20m 33s |
 | QUALITY-2 | behavior | AC-9 | ✅ Done | 14.38M | 24m 36s |
-| QUALITY-3 | behavior | AC-13 | ⬜ Todo | | |
+| QUALITY-3 | behavior | AC-13 | ✅ Done | 6.08M | 11m 42s |
 | QUALITY-4 | behavior | AC-10, AC-11, AC-12 | ⬜ Todo | | |
 | QUALITY-5 | behavior | AC-3, AC-4 | ⬜ Todo | | |
 
@@ -113,3 +113,20 @@
 - **Verification commands:** `cd /Users/matthew.quirk/Nuance-bs12`; `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test --coverage`; `dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/bs12/nfr_test.dart -d flutter-tester` (default) / `--dart-define=BS12_RUN_PENDING=true` (run-pending). **bs-12 nfr runs on `-d flutter-tester` (host), no device lane.**
 - **Frozen for QUALITY-3/4/5:** `lib/capture` AC-9 behaviour is final — `CaptureController.commit()` downgrades on `activeDowngradeReasons`; `CaptureLiveView.downgradeReasons` + `downgradeReasonsKey`. The remaining QUALITY phases touch only `integration_test/nfr/quality/*` + `nfr_test.dart` (no further `lib/` change).
 - **Known gaps / next:** QUALITY-3 (AC-13 out-of-gamut — un-pend+guard, green at baseline), QUALITY-4 (AC-10/11/12 accuracy, synthetic set — carries the "synthetic ≠ physical ground truth" D-2 gap), QUALITY-5 (AC-3/4 performance — un-pend+guard; CI budget is a regression ceiling, not the target-hardware ~1–2s, D-3). All three remain; **they share `nfr_test.dart` + `pending.dart` → sequence (one/session, `/clear` between)**. AC-5 is manual-only (G-3 at SIGNOFF-1). Then SIGNOFF-1.
+
+## QUALITY-3 — AC-13 out-of-gamut (un-pend + guard)
+
+### Result (✅ Done 2026-10-14)
+
+- **Un-pend + guard only — no `lib/` change.** AC-13 (out-of-gamut target identified, no false recipe) is satisfied by bs-04 ENGINE-5 already on `main`; QUALITY-3 un-pends its ITEST-3 test and keeps it green. The AC-13 test body is unchanged (the ITEST-3 in-phase banner-marker fix stands): the real engine solves the `neon-cyan` out-of-gamut target via `givenTheApp(flow: NfrFlow.recipes, recipeTarget:)`, asserts `recipeState.outOfGamut` + the shown `GamutBanner.markerText` + every returned `Recipe.outOfGamut` (nearest-not-a-match); the in-gamut `warm-earth` control is not flagged, shows no marker, and returns recipes.
+- **AC-13 un-pended** (`integration_test/bs12/pending.dart`); pending map 6→5. Pending-gate guard updated (`expectedPending` drops AC-13, length 6→5, AC-13 `containsKey` false added).
+- **Verification.** `flutter analyze` → No issues. Unit `flutter test --coverage` → **1233 pass** (unchanged — integration-test-only phase). Coverage gate `dart run tool/coverage_gate.dart main` → **100% on all touched files, PASS** (no `lib/` touched this phase; the branch's merged-lib coverage holds). Acceptance `-d flutter-tester`: AC-13 un-pended + **green**, full bs-12 nfr suite **28 pass / 5 pending-skip / exit 0** (was 27/6); run-pending `--dart-define=BS12_RUN_PENDING=true` → **30 pass / 3 fail** — the 3 fails are exactly AC-10/11/12 (QUALITY-4's clean red baseline); AC-3/4 (QUALITY-5, green at baseline) and AC-13 pass green.
+- **Grade gate:** fresh independent grader (prior grid as context) → **1 A / 0 B — PASS**. AC-13 stays **A**: un-pending altered no assertion (byte-identical to the A-graded ITEST-3 body); G1–G6 all ✓ — the marker-text assertion discriminates a "flags state but renders no banner" impl (the collapsed `SizedBox.shrink` carries no Text), the `every outOfGamut` assertion kills a false-match impl, and the in-gamut control is a real positive/negative pair. Grid appended to `behavior-test-completeness-…md` (QUALITY-3 §).
+- **Augmentations:** none owed — AC-13 was green-at-baseline A with no augmentation row (ITEST *Test augmentations* carries no AC-13 entry).
+- **Fix passes:** 0/3 (analyze + unit + coverage + acceptance + grade all green first pass).
+
+### Checkpoint / Handoff
+
+- **Verification commands:** unchanged from QUALITY-2 (above).
+- **Frozen:** AC-13 delivered + un-pended; `integration_test/nfr/quality/*` untouched this phase (the AC-13 test drives the engine directly via the harness, not `accuracy_harness`).
+- **Known gaps / next:** **QUALITY-4 (AC-10/11/12 accuracy)** then **QUALITY-5 (AC-3/4 performance)** remain — both un-pend in the shared `integration_test/bs12/pending.dart` and edit the shared `nfr_test.dart` → **sequence (one/session, `/clear` between)**. QUALITY-5 is un-pend+guard (AC-3/4 green at baseline); QUALITY-4 builds the full synthetic held-out set (carries the "synthetic ≠ physical ground truth" D-2 gap). Then SIGNOFF-1 (G-3 manual AC-5 + AC-3/4 device evidence). Pending map now holds AC-3/4/10/11/12 (5 ACs).

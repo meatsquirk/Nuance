@@ -72,7 +72,11 @@ const Map<String, String> pendingACs = {
   'AC-10': 'QUALITY-4', // card + controlled lighting: ΔE00 ≤ 3
   'AC-11': 'QUALITY-4', // cardless daylight: ΔE00 ≤ 8, labelled approximate
   'AC-12': 'QUALITY-4', // recipe prediction vs swatch: ΔE00 ≤ 5 in-gamut
-  'AC-13': 'QUALITY-3', // out-of-gamut target identified, no false recipe
+  // AC-13 un-pended by QUALITY-3: the real engine identifies the out-of-gamut
+  // target (`recipeState.outOfGamut` + the shown OUT OF GAMUT banner marker) and
+  // offers no recipe as a match (every returned mix flagged nearest-not-a-match);
+  // the in-gamut control is not flagged and does return recipes. Behaviour exists
+  // (bs-04 ENGINE-5) — QUALITY-3 proves and guards it (green at baseline).
   // Maintainability (swappable behind interfaces)
   // AC-14, AC-15 un-pended by GUARD-5: an alternate MixingEngine / ConfusionCheck
   // injected through AppDependencies drives the recipe / CVD callers correctly
