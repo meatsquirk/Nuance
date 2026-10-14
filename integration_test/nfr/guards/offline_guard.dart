@@ -5,12 +5,14 @@
 // that will count the refused attempts, and [runUnderNetworkBlock] to run a body
 // with the block installed.
 //
-// GUARD-2 lays the wiring: [runUnderNetworkBlock] installs the override (a body
-// that touches the network fails fast), and the sink exists but is not yet
-// incremented. GUARD-3 makes [NetworkBlockingOverrides] record each attempt on
-// the sink before refusing, then drives every core flow (capture, readout,
-// compare, recipe search, save project, export) through [runUnderNetworkBlock]
-// and asserts both a terminal state and zero recorded attempts.
+// GUARD-2 laid the wiring: [runUnderNetworkBlock] installs the override (a body
+// that touches the network fails fast) and the sink existed but was inert.
+// GUARD-3 wires the increment — [NetworkBlockingOverrides.createHttpClient]
+// records each attempt on the sink before refusing — so the offline / privacy
+// ACs can sweep every core flow (capture, readout, compare, recipe search, save
+// project, export) through [runUnderNetworkBlock] and assert both a terminal
+// state and *zero recorded attempts*, while a deliberate network touch is
+// recorded and refused (proving the counter counts).
 //
 // This is test-support only — no `lib/` product code (D-7).
 
@@ -30,8 +32,8 @@ class NetworkAttemptSink {
 
   /// Records one outbound connection attempt.
   ///
-  /// Wired into [NetworkBlockingOverrides] in GUARD-3; unused by the GUARD-2
-  /// stub, which refuses connections without recording.
+  /// Called by [NetworkBlockingOverrides.createHttpClient] (GUARD-3) on every
+  /// connection attempt, just before it refuses.
   void record() => _attempts++;
 
   /// Forgets all recorded attempts.
@@ -52,18 +54,21 @@ class NetworkBlockedException implements Exception {
 /// An [HttpOverrides] whose client creation is refused, blocking every outbound
 /// HTTP connection for code running under it.
 ///
-/// GUARD-2 refuses by throwing [NetworkBlockedException] from
-/// [createHttpClient]; GUARD-3 records the attempt on [sink] before refusing so
-/// the offline / privacy ACs can assert zero attempts.
+/// Records the attempt on [sink] before refusing it with
+/// [NetworkBlockedException], so the offline / privacy ACs can assert both that
+/// no core function touched the network (attempts stay 0 across a flow) and
+/// that the counter genuinely counts (a deliberate touch is recorded + refused).
 class NetworkBlockingOverrides extends HttpOverrides {
   NetworkBlockingOverrides(this.sink);
 
-  /// Where refused attempts are counted (GUARD-3 wires the increment).
+  /// Where every refused attempt is counted.
   final NetworkAttemptSink sink;
 
   @override
   HttpClient createHttpClient(SecurityContext? context) {
-    // GUARD-3: `sink.record()` here before refusing.
+    // Count the attempt, then refuse it — the block is impassable, but the
+    // attempt is observable.
+    sink.record();
     throw const NetworkBlockedException();
   }
 }

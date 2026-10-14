@@ -52,8 +52,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// table. AC-5 (live-preview frame rate) is absent — pure-manual (D-3).
 const Map<String, String> pendingACs = {
   // Offline (Rule: every core function works offline)
-  'AC-1': 'GUARD-3', // offline: every core function still works
-  'AC-2': 'GUARD-3', // offline: no core function blocks on connectivity
+  // AC-1, AC-2 un-pended by GUARD-3: the network-block sink now records every
+  // attempt, so each core flow sweeps offline (zero attempts) and the counter
+  // control discriminates (a deliberate touch is recorded + refused).
   // Performance (AC-5 live-preview frame rate is manual — not here)
   'AC-3': 'QUALITY-5', // reading settles within budget + visible indicator
   'AC-4': 'QUALITY-5', // recipe search returns top 3–5 within budget

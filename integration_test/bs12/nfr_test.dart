@@ -85,9 +85,10 @@ void main() {
         throwsA(isA<NetworkBlockedException>()),
       );
 
-      // The GUARD-2 sink is inert (GUARD-3 wires the increment); until then no
-      // attempt is recorded even though one was refused.
-      expect(sink.attempts, 0);
+      // GUARD-3 wired the increment: the refused attempt was recorded on the
+      // sink before it threw, so "zero attempts" across a flow is a meaningful
+      // claim (the counter counts).
+      expect(sink.attempts, 1);
     });
 
     test('source guard exposes every rule scan over populated authorities', () {
@@ -751,19 +752,23 @@ void main() {
   });
 
   group('pending gate', () {
-    // The 16 automatable ACs (AC-5 is pure-manual, D-3, never in the gate). All
-    // 16 are pending at ITEST-1; each behaviour phase deletes its row in
-    // `bs12/pending.dart` as it un-pends that AC.
+    // The 16 automatable ACs (AC-5 is pure-manual, D-3, never in the gate) were
+    // all pending at ITEST-1; each behaviour phase deletes its row in
+    // `bs12/pending.dart` as it un-pends that AC. GUARD-3 un-pended AC-1 + AC-2
+    // (offline), so the gate now holds the 14 ACs still owed to later phases.
     final expectedPending = <String>{
-      'AC-1', 'AC-2', 'AC-3', 'AC-4', // AC-5 is manual — absent
+      'AC-3', 'AC-4', // AC-1/AC-2 un-pended (GUARD-3); AC-5 is manual — absent
       'AC-6', 'AC-7', 'AC-8', 'AC-9', 'AC-10', 'AC-11', 'AC-12', 'AC-13',
       'AC-14', 'AC-15', 'AC-16', 'AC-17',
     };
 
-    test('the pending map is exactly the 16 automatable ACs, each owned by a '
-        'real behaviour phase', () {
+    test('the pending map is exactly the still-pending automatable ACs, each '
+        'owned by a real behaviour phase', () {
       expect(pendingACs.keys.toSet(), expectedPending);
-      expect(pendingACs.length, 16);
+      expect(pendingACs.length, 14);
+      // AC-1 + AC-2 were un-pended by GUARD-3 and must not reappear in the gate.
+      expect(pendingACs.containsKey('AC-1'), isFalse);
+      expect(pendingACs.containsKey('AC-2'), isFalse);
 
       // AC-5 (live-preview frame rate) is pure-manual and must never enter the
       // gate.
@@ -798,9 +803,11 @@ void main() {
       expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
       // The ambient path (used by acTestWidgets) agrees with the current mode.
+      // AC-3 is still pending (AC-1/AC-2 were un-pended by GUARD-3), so this
+      // exercises the ambient path on a genuinely-pending AC.
       expect(
-        pendingSkipReason('AC-1'),
-        pendingSkipReason('AC-1', forceRunPending: runPending),
+        pendingSkipReason('AC-3'),
+        pendingSkipReason('AC-3', forceRunPending: runPending),
       );
     });
   });

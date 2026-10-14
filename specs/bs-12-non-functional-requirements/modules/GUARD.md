@@ -1,6 +1,6 @@
 # Module GUARD — invariant guards (offline, privacy, swappable, portability)
 
-**Status:** In progress — GUARD-1, GUARD-2 done; next GUARD-3 (behaviour, blocked on G-2 / ITEST-4)
+**Status:** In progress — GUARD-1/2/3 done (AC-1/AC-2 delivered); next GUARD-4 (AC-6/7/8 privacy)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/nfr/guards/` (source-scan, swap-harness, network-block/offline harness — reusable test-support), `integration_test/bs12/pending.dart` (created at GUARD-1). Shares `integration_test/bs12/nfr_harness.dart` + `nfr_test.dart` with ITEST/QUALITY. **No `lib/` product change** (D-7).
 **Depends on:** — · **Blocks:** ITEST (via GUARD-2), QUALITY (shells)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | GUARD-1 | scaffold | — | ✅ Done | 7.84M | 32m 51s |
 | GUARD-2 | shell | — | ✅ Done | 3.72M | 17m 40s |
-| GUARD-3 | behavior | AC-1, AC-2 | ⬜ Todo | | |
+| GUARD-3 | behavior | AC-1, AC-2 | ✅ Done | 7.42M | 9m 39s |
 | GUARD-4 | behavior | AC-6, AC-7, AC-8 | ⬜ Todo | | |
 | GUARD-5 | behavior | AC-14, AC-15 | ⬜ Todo | | |
 | GUARD-6 | behavior | AC-16, AC-17 | ⬜ Todo | | |
@@ -92,6 +92,19 @@
 - **Tasks:** implement `runUnderNetworkBlock` + the attempt sink; drive every core flow (capture, readout, compare, recipe search, save project, export) through `buildApp` under the block; assert each reaches its terminal state via its read endpoint **and** zero attempts recorded; prove the `control_networkTouch` fixture throws under the block.
 - **Exit criteria (gates):** unit + coverage (touched files 100%); acceptance — `BS12_RUN_PENDING` run shows `TestAC01_*` + `TestAC02_*` green and discriminating (controls fail); grade gate.
 - **Acceptance gate:** un-pend AC-1, AC-2; `nfr_test.dart` green (`TestAC01_OfflineCoreFunctionsWork`, `TestAC02_NoFunctionBlocksOnConnectivity`, and all earlier ACs).
+- **Result (✅ Done 2026-10-14):**
+  - **The one change is the sink increment** (D-7 honoured — no `lib/` product code): `NetworkBlockingOverrides.createHttpClient` (`integration_test/nfr/guards/offline_guard.dart`) now calls `sink.record()` *before* throwing `NetworkBlockedException`, so the block is still impassable but every refused attempt is observable. The GUARD-2 doc-comments were updated to state the increment landed. `runUnderNetworkBlock` + `NetworkAttemptSink` were already in place (GUARD-2); no new flow-driving code was needed — ITEST-2 already wrote AC-1/AC-2 to sweep every core flow under the block and assert the terminal state + zero attempts, with the deliberate-`HttpClient()` control.
+  - **Un-pended** AC-1, AC-2 — deleted their rows from `integration_test/bs12/pending.dart` (gate now holds 14 ACs).
+  - **Two dependent non-AC tests updated** (recorded here per the test-change rule — both were written against the GUARD-2 *inert-sink* contract that GUARD-3 deliberately ends): (a) the ITEST-1 wiring test `offline guard runs a body and refuses any network touch` flipped its final assertion from `sink.attempts == 0` to `== 1` (the refused touch is now recorded) — reason: GUARD-2's comment explicitly scheduled the increment for GUARD-3; (b) the `pending gate` test's `expectedPending` set dropped AC-1/AC-2 and its count `16 → 14`, with added `containsKey` negatives, and its ambient-path example switched from the now-un-pended `AC-1` to the still-pending `AC-3`. No AC test was weakened.
+  - **Verification:** `flutter analyze` → No issues. Unit `flutter test` → **1228 passed** (no regression). Acceptance `flutter test integration_test/bs12/nfr_test.dart -d <iPhone 17 sim>` under `coord.sh with-lock`, **default mode** → **17 passed / 14 skipped / exit 0** (AC-1 + AC-2 now run and pass; AC-3..AC-17 skip as pending; the wiring test + the 14-AC pending-gate test pass). The teardown flake did not recur.
+  - **Coverage gate:** N/A — no `lib/**.dart` touched (only `integration_test/` files: `offline_guard.dart`, `pending.dart`, `nfr_test.dart`).
+  - **Grade gate:** a fresh independent grader re-graded the two newly un-pended tests (AC-1, AC-2) against G1–G6 with the ITEST-2 grid as prior → **2 A / 0 B pending / 0 ordinary B**. AC-1/AC-2 hold A for the *stronger* reason now: the `sink.attempts > 0` control is live within this phase (GUARD-3 is their own owner), so no augmentation is owed — the live block + the counting control discriminate today. Grid appended to `behavior-test-completeness-bs-12-non-functional-requirements.md` (GUARD-3 §).
+  - **Fix passes:** 0/3 (analyze + unit + acceptance + grade all green first pass).
+  - **Tokens / Time:** see Dashboard / master ledger (GUARD-3 row).
+- **Checkpoint / Handoff:**
+  - **Verification commands:** unchanged — `cd /Users/matthew.quirk/Nuance-bs12` + `export PATH=$PATH:/Users/matthew.quirk/development/flutter/bin`; `flutter analyze`; `flutter test` (unit); acceptance via `FNP_COORD_REPO=/Users/matthew.quirk/Nuance coord.sh with-lock bs-12-non-functional-requirements <PHASE> --wait N -- bash -c 'cd …/Nuance-bs12 && flutter test integration_test/bs12/nfr_test.dart -d <booted-udid>'` (shared device lane → lock mandatory; booted `-d` mandatory; full-suite runs may hit the teardown flake → run the affected file alone).
+  - **Frozen for later phases:** `offline_guard.dart`'s public surface is final — `NetworkBlockingOverrides.createHttpClient` now records-then-refuses, so **GUARD-4 (AC-6) inherits a live counting sink** (its `sink.attempts > 0` control already greens; GUARD-4 only un-pends AC-6 + adds the AC-7/AC-8 source-scan privacy work). In run-pending mode AC-6 now passes early too (the sink increment was its remaining red assertion), but AC-6 stays pending until GUARD-4 un-pends it with AC-7/AC-8.
+  - **Known gaps / next:** GUARD-4/5/6 + QUALITY-2/3/4/5 remain. GUARD-4/5/6 share `source_guard.dart` + `nfr_test.dart` → sequence them (one phase/session, `/clear` between). QUALITY-2 (`lib/capture` only) may run ∥ a GUARD phase in a `--parallel` worktree session. No `lib/` change in GUARD-3, so no cross-feature regression was owed.
 
 ## Phase GUARD-4 — AC-6 + AC-7 + AC-8 privacy
 

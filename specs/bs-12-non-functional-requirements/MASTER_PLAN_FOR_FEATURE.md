@@ -1,7 +1,7 @@
 # Master Plan — Core non-functional requirements
 
 **Spec:** [bs-12-non-functional-requirements.feature](../bs-12-non-functional-requirements.feature)
-**Status:** In progress — G-2 approved (2026-10-14); stage 3 done, behaviour stage open — next GUARD-3 (GUARD-3/4/5/6 + QUALITY-2/3/4/5 all startable)
+**Status:** In progress — GUARD-3 done (AC-1/AC-2 ✅ offline); next GUARD-4 (GUARD-4/5/6 + QUALITY-2/3/4/5 all startable)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Non-functional requirements and accuracy targets", §"Cross-platform strategy / Parity acceptance", §"Decisions" (D1/D2/D3/D4/D5/D10); [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §8 (accuracy targets) + §10 (non-goals). Cross-cutting over every feature merged on `main` at the branch point — `lib/capture`, `lib/readout`, `lib/compare`, `lib/recipes`, `lib/projects`, `lib/palette`, `lib/correction`, `lib/display`, `lib/onboarding`, `lib/color_science`, `lib/store` — all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `ecd3a9e`, bs-07 merged — carries bs-01..09 + bs-07 + bs-08) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines, 2026-10-13)
 
@@ -43,8 +43,8 @@
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | With networking disabled, every core function still works | ITEST-2 `TestAC01_OfflineCoreFunctionsWork` | GUARD-3 | ⬜ Todo |
-| AC-2 | No core function blocks on connectivity | ITEST-2 `TestAC02_NoFunctionBlocksOnConnectivity` | GUARD-3 | ⬜ Todo |
+| AC-1 | With networking disabled, every core function still works | ITEST-2 `TestAC01_OfflineCoreFunctionsWork` | GUARD-3 | ✅ Done (GUARD-3 2026-10-14; A) |
+| AC-2 | No core function blocks on connectivity | ITEST-2 `TestAC02_NoFunctionBlocksOnConnectivity` | GUARD-3 | ✅ Done (GUARD-3 2026-10-14; A) |
 | AC-3 | A committed reading settles within the budget with a visible indicator | ITEST-3 `TestAC03_ReadingSettlesWithIndicator` | QUALITY-5 | ⬜ Todo |
 | AC-4 | Recipe search returns within the budget | ITEST-3 `TestAC04_RecipeSearchReturnsTopCandidates` | QUALITY-5 | ⬜ Todo |
 | AC-5 | Live capture holds a usable preview frame rate | **manual gate (SIGNOFF-1, G-3)** — no automated test (D-3) | SIGNOFF-1 (user acceptance) | ⬜ Todo |
@@ -175,8 +175,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-2 | acceptance-tests: AC-1,2,6,7,8,14,15,16,17 (pending) + red baseline | ✅ Done | 27.1M | 1h 00m (3h 13m) | 9 pending AC tests; default +15/~9/exit 0; run-pending +15/−9 (clean red baseline); grade 3 A / 6 B pending / 0 ordinary B |
 | 6 | ITEST-3 | acceptance-tests: AC-3,4,9,10,11,12,13 (pending) + red baseline | ✅ Done | 19.0M | 47m 22s | grade 3 A / 4 B pending / 0 ordinary B; default +15/~16/exit 0; run-pending +18/−13; AC-3/4/13 green at baseline (bs-02/bs-04), AC-9→QUALITY-2, AC-10/11/12→QUALITY-4 |
 | 7 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1.89M | 4m 22s | packet + whole-suite grid 6 A / 10 B pending / 0 ordinary B (+15 A smoke); **G-2 approved 2026-10-14 by Matt Quirk** → behaviour stage un-blocked |
-| 8 | GUARD-3 | AC-1+AC-2 offline: network-block guard over every core flow | ⬜ Next | | | behaviour stage open; GUARD-3/4/5/6 + QUALITY-2/3/4/5 all startable (sequence shared `nfr_test.dart`/guard-file writers) |
-| 9 | GUARD-4 | AC-6+AC-7+AC-8 privacy: nothing-leaves + no-telemetry + no-off-device-path guards | ⬜ Todo | | | |
+| 8 | GUARD-3 | AC-1+AC-2 offline: network-block guard over every core flow | ✅ Done | 7.42M | 9m 39s | sink.record() wired (no lib change); un-pended AC-1/AC-2; analyze clean, unit 1228, acceptance default 17 pass/14 skip/exit 0; grade 2 A/0 |
+| 9 | GUARD-4 | AC-6+AC-7+AC-8 privacy: nothing-leaves + no-telemetry + no-off-device-path guards | ⬜ Next | | | startable; inherits GUARD-3's live counting sink (AC-6 control already greens); also GUARD-5/6 + QUALITY-2/3/4/5 startable (sequence shared `nfr_test.dart`/guard-file writers) |
 | 10 | GUARD-5 | AC-14+AC-15 swappable: inject alt engine + alt CVD, callers unchanged | ⬜ Todo | | | |
 | 11 | GUARD-6 | AC-16+AC-17 one-colour-lib + portability: source-scan guard rules | ⬜ Todo | | | |
 | 12 | QUALITY-2 | AC-9 reliability fix: unlocked-exposure + missing-card downgrade triggers (`lib/capture`) | ⬜ Todo | | | ∥ one GUARD phase |
@@ -189,11 +189,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**G-2 approved 2026-10-14 by Matt Quirk** — stage 3 complete, the behaviour stage is open. The 16-AC suite + whole-suite grid (6 A / 10 B pending / 0 ordinary B) are accepted, with QUALITY-3 (AC-13) & QUALITY-5 (AC-3/4) **retargeted to un-pend+guard** (green at baseline) and D-2/D-3 carried to sign-off.
+**GUARD-3 done 2026-10-14 (AC-1/AC-2 ✅ offline).** The network-block sink now records each refused attempt, so the offline sweep + counting control discriminate within the phase. 8 behaviour ACs remain, across 5 phases.
 
-**Startable now (each depends only on ITEST-4):** GUARD-3 (AC-1/2 offline), GUARD-4 (AC-6/7/8 privacy), GUARD-5 (AC-14/15 swap), GUARD-6 (AC-16/17 one-lib+portability), QUALITY-2 (AC-9 downgrade — the only `lib/capture` change), QUALITY-4 (AC-10/11/12 accuracy), QUALITY-3 (AC-13 — un-pend+guard), QUALITY-5 (AC-3/4 — un-pend+guard).
-- **Merge-risk:** every behaviour phase un-pends in the shared `integration_test/bs12/pending.dart` and most edit the shared `nfr_test.dart`; GUARD-4/5/6 also share the guard-module files → **sequence these** (one phase per session, `/clear` between). QUALITY-2 (`lib/capture` only) may run ∥ one GUARD phase in a separate `--parallel` session with a worktree claim.
-- **Recommended order:** start GUARD-3 (simplest, A-graded AC-1/2), then the un-pend+guard QUALITY-3 / QUALITY-5 (low risk, green at baseline), then the heavier GUARD-4/5/6 + QUALITY-2/4.
+**Startable now (each depends only on ITEST-4):** GUARD-4 (AC-6/7/8 privacy — inherits GUARD-3's live counting sink, so AC-6's control already greens; adds the AC-7/8 source/dependency scans), GUARD-5 (AC-14/15 swap), GUARD-6 (AC-16/17 one-lib+portability), QUALITY-2 (AC-9 downgrade — the only `lib/capture` change), QUALITY-4 (AC-10/11/12 accuracy), QUALITY-3 (AC-13 — un-pend+guard), QUALITY-5 (AC-3/4 — un-pend+guard).
+- **Merge-risk:** every behaviour phase un-pends in the shared `integration_test/bs12/pending.dart` and most edit the shared `nfr_test.dart`; GUARD-4/5/6 also share `source_guard.dart` → **sequence these** (one phase per session, `/clear` between). QUALITY-2 (`lib/capture` only) may run ∥ one GUARD phase in a separate `--parallel` session with a worktree claim.
+- **Recommended order:** GUARD-4 next (privacy; the AC-6 half is nearly green on GUARD-3's sink), then the un-pend+guard QUALITY-3 / QUALITY-5 (low risk, green at baseline), then the heavier GUARD-5/6 + QUALITY-2/4.
 
 G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1 manual gate (D-3). Gaps carried to sign-off: D-2 (synthetic accuracy set) + D-3 (device timings).
 
@@ -212,7 +212,8 @@ G-3 (AC-5 device frame rate + AC-3/4 target-hardware ~1–2 s) stays a SIGNOFF-1
 | ITEST-3 | df303f4e | 2026-10-13 21:31 EDT | 22:19 | 47m 22s | 47m 22s | claude-opus-4-8 | 192 | 378,184 | 18,468,216 | 114,747 | 18,961,339 | 7 pending AC tests (AC-3,4,9,10,11,12,13); default +15/~16/exit 0, run-pending +18/-13; grade 3 A / 4 B pending / 0 ordinary B — PASS; AC-3/4/13 green at baseline (bs-02/bs-04), AC-9->QUALITY-2, AC-10/11/12->QUALITY-4 |
 | ITEST-4 | e007e168 | 2026-10-14 05:25 EDT | 05:29 | 4m 22s | 4m 22s | claude-opus-4-8 | 40 | 92,054 | 1,782,850 | 19,529 | 1,894,473 | test-review: packet assembled + whole-suite grid 6 A / 10 B pending / 0 ordinary B (+15 A smoke); G-2 awaiting human decision; no code run |
 | SIGNOFF-DECISION | e007e168 | 2026-10-14 07:41 EDT | 07:42 | 1m 18s | 1m 18s | claude-opus-4-8 | 20 | 122,259 | 1,359,042 | 5,368 | 1,486,689 | ITEST-4 approved — G-2 approved 2026-10-14 by Matt Quirk; behaviour stage un-blocked (GUARD-3..6, QUALITY-2..5) |
-| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 07:42** | **7h 35m** | **3h 37m** |  | **1,072** | **2,385,998** | **77,299,416** | **586,523** | **80,273,009** |  |
+| GUARD-3 | 98019302 | 2026-10-14 07:54 EDT | 08:03 | 9m 39s | 9m 39s | claude-opus-4-8 | 130 | 187,002 | 7,199,601 | 36,480 | 7,423,213 | AC-1+AC-2 offline delivered: sink.record() wired (no lib change), un-pended AC-1/AC-2; analyze clean, unit 1228, acceptance default 17 pass/14 skip/exit 0; grade 2 A/0 |
+| **Feature total** |  | **2026-10-13 12:26 EDT** | **2026-10-14 08:03** | **7h 44m** | **3h 47m** |  | **1,202** | **2,573,000** | **84,499,017** | **623,003** | **87,696,222** |  |
 
 ## Sign-off
 

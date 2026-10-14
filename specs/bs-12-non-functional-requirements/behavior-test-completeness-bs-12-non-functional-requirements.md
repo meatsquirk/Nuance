@@ -97,3 +97,20 @@ AC-3 and AC-4 verified at **A**: both are green at baseline (bs-02 settle+indica
 - **Known gaps named for sign-off (not grid defects):** D-2 — AC-10/11/12 against a *synthetic* set, not physical ground truth; D-3 — AC-3/4 device ~1–2 s + AC-5 live-preview fps are owner on-device evidence at SIGNOFF (G-3). All accuracy grading uses the independent `referenceDeltaE00`, never the product metric against itself.
 
 **No changes required by the grader before behaviour.** The human decision at G-2 is whether to accept the B-pending coupling and the green-at-baseline retargeting of QUALITY-3/5 — recorded via `/feature-next-phase --gate bs12 G-2 approved | "<changes>"`.
+
+## GUARD-3 — AC-1 + AC-2 un-pend (behaviour)
+
+**Phase graded:** GUARD-3 (behaviour — the two AC tests it un-pended: `AC-1`, `AC-2` in `integration_test/bs12/nfr_test.dart`). **What was graded:** exactly these two, now un-pended and running in the default suite, judged against the *live* guard wiring (`integration_test/nfr/guards/offline_guard.dart` — `NetworkBlockingOverrides.createHttpClient` now `sink.record()`s before throwing) and the harness (`nfr_harness.dart`). Graded by a **fresh independent subagent** (not the author), given the ITEST-2 grid as prior and asked to justify any downgrade against a named rule. **Rubric:** the acceptance-suite reference (G1–G6). **Grade key:** as above — A = discriminates today with no later-behaviour dependency.
+
+| Test | What it checks | Grade | Rule notes |
+|---|---|---|---|
+| `AC-1` — every core function works with networking disabled | Sweeps all five `NfrFlow`s + an end-to-end capture commit inside `runUnderNetworkBlock`, asserts each reaches its screen/local state, then `sink.attempts == 0`; control: a deliberate `HttpClient()` touch throws + `sink.attempts > 0`. | **A** | **G1/G2 ✓** every flow launched through production `buildApp`, the real override is what answers. **G3 ✓** the `== 0` negative is post-settle (every `givenTheApp` ends in `pumpAndSettle` + the commit settles) and paired with the counter control that can change. **G4 ✓** per-flow grain + deep capture-commit. **G5 ✓ today** — the live block does the discriminating (a socket-opening core function fails the sweep *now*); the `sink.attempts > 0` control greens **within GUARD-3** (its own owner), so **no augmentation owed** → A, not B-pending. **G6 ✓** one AC; deterministic. |
+| `AC-2` — no core function blocks waiting on connectivity | Each flow's `givenTheApp` (ending in `pumpAndSettle`) completes under the block and reaches its screen (+ `h.flow == flow`), then `sink.attempts == 0`; same touch control. | **A** | **G1/G2 ✓** real flows through `buildApp` under the real override. **G3 ✓** negative post-settle + counter control. **G5 ✓ today** — a flow that awaited a socket would hang (settle times out) or throw under the live block; the block + settle discriminate now, the counter control greens at GUARD-3 (own owner). **G4/G6 ✓** per-flow grain, one AC; deterministic — no fixed sleeps. |
+
+### Verdict
+
+**2 A / 0 B pending / 0 ordinary B — PASS.** AC-1 and AC-2 were A at ITEST-2 (with the counter control flagged as greening when GUARD-3 wired the increment); GUARD-3 wired it, so the A now holds for the *stronger* reason — the discriminating control is live, not projected, with no later-behaviour dependency. Two non-AC tests were updated to match the now-live sink (ITEST-1 wiring test `attempts 0 → 1`; pending-gate count `16 → 14` dropping AC-1/AC-2) — neither is an AC test and neither was weakened. No changes required.
+
+### Whole-suite state after GUARD-3
+
+AC tests: **8 A delivered-or-green** (AC-1, AC-2 now delivered + AC-3/4/13 green-at-baseline + AC-6 still-A-pending-its-un-pend + …) — tracked precisely in the master AC-coverage table. Grid delta: AC-1, AC-2 move from *A (pending GUARD-3)* to *A (delivered)*; the 10 B-pending rows and 15 A smoke/harness rows are unchanged.
