@@ -39,10 +39,19 @@ class PaletteSelectorRegion extends StatelessWidget {
             InkWell(
               key: optionKeyFor(palette.name),
               onTap: () => controller.selectPalette(palette),
-              child: Text(
-                palette.name == selected?.name
-                    ? '${palette.name} (active)'
-                    : palette.name,
+              // A11Y-3 (AC-4): a bare-text option's tap target is only as tall
+              // as the glyphs (~20dp); reserve the 48dp minimum interactive
+              // height so the whole row is a conformant target.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    palette.name == selected?.name
+                        ? '${palette.name} (active)'
+                        : palette.name,
+                  ),
+                ),
               ),
             ),
       ],

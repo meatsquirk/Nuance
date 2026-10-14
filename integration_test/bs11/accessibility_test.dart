@@ -41,17 +41,20 @@ void main() {
       // Seeded with the 10 automated ACs in CONF-1; each behaviour phase
       // deletes its AC's row in `bs11/pending.dart` as it un-pends it, so this
       // set shrinks by one per delivered AC. **A11Y-2 un-pended AC-5** (AA
-      // contrast), so the still-pending set is now the other nine. AC-10 and
-      // AC-12 are pure-manual gates (D-2) and never enter the gate.
+      // contrast) and **A11Y-3 un-pended AC-4** (48dp tap targets), so the
+      // still-pending set is now the other eight. AC-10 and AC-12 are
+      // pure-manual gates (D-2) and never enter the gate.
       const expected = {
-        'AC-1', 'AC-2', 'AC-3', 'AC-4',
+        'AC-1', 'AC-2', 'AC-3',
         'AC-6', 'AC-7', 'AC-8', 'AC-9', 'AC-11',
       };
       expect(pendingACs.keys.toSet(), expected);
-      expect(pendingACs, hasLength(9));
-      // AC-5 is delivered — it must no longer be pending.
+      expect(pendingACs, hasLength(8));
+      // AC-5 and AC-4 are delivered — they must no longer be pending.
       expect(pendingACs.containsKey('AC-5'), isFalse,
           reason: 'AC-5 was un-pended by A11Y-2');
+      expect(pendingACs.containsKey('AC-4'), isFalse,
+          reason: 'AC-4 was un-pended by A11Y-3');
     });
 
     test('the two manual ACs are absent from the automated gate (D-2)', () {

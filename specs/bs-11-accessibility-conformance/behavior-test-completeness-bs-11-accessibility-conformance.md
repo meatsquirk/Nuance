@@ -147,3 +147,48 @@ the reference, not a test-tuned theme — and the real `checkContrastAA`
 (`.pass isTrue`, not non-null) and the `control_lowContrast` leg a true
 discriminator (`failing` contains `contrastAA` because the rule genuinely flags
 sub-4.5:1 text). G1/G4/G6 met, G3 N/A. No downgrade; no fix required.
+
+## A11Y-3 re-grade (un-pended AC tests: AC-4, AC-5)
+
+Independent, adversarial re-grade of the two currently un-pended automated AC
+tests — **AC-4** (`'interactive targets meet the 48dp minimum'`) and **AC-5**
+(`'text meets the WCAG 2.2 AA contrast floor'`) — against the code as it now
+exists. **What changed since the prior grade:** A11Y-3 implemented the **AC-4
+tap-target rule** in the new `integration_test/conformance/checks/target.dart`
+(`checkTapTarget48`), which combines Flutter's `androidTapTargetGuideline`
+(48×48) and `iOSTapTargetGuideline` (44×44) with `Evaluation.operator +`
+(`passed` is `&&`) so the stricter Android 48dp bound is the effective floor on
+every platform (D-5); `conformance_check.dart` now composes that rule into the
+aggregate beside `contrastAA`, and `pending.dart` drops AC-4 (the scaffold-guard
+now expects the other eight and asserts `!containsKey('AC-4')`). Product code was
+padded to clear the floor (`lib/app/theme.dart` `materialTapTargetSize.padded`,
+`palette_selector_region.dart`, `projects_region.dart`). **AC-5 is unchanged**
+(its rule `checkContrastAA`/`textContrastGuideline` already landed at A11Y-2).
+**Neither AC-4 nor AC-5 test body changed in A11Y-3** — the working-tree diff to
+`accessibility_test.dart` touches *only* the pending-gate guard test (it now
+drops AC-4 and asserts `!containsKey('AC-4')`); the `acTestWidgets('AC-4', …)`
+and `acTestWidgets('AC-5', …)` bodies are byte-for-byte identical to the versions
+previously graded A (AC-4 at the ITEST-2 red baseline, AC-5 at the A11Y-2
+re-grade). A11Y-3 changed only product code, the rule file, the pending gate and
+the pending-gate guard test. The grader ran nothing and edited nothing but this
+file.
+
+| Test | Grade | Rule notes |
+|---|---|---|
+| **AC-4** `interactive targets meet the 48dp minimum` (owner A11Y-3), un-pended; rule = real `checkTapTarget48` (`androidTapTargetGuideline` 48×48 `&&` `iOSTapTargetGuideline` 44×44 → 48dp floor) | **A** | **G1** every Given checked through the public surface before the When — each of the six `realScreens`' home finder `findsOneWidget`, the reference's descendant `IconButton` `findsOneWidget` (an actual interactive target present, so a "pass" can't be vacuous on a target-free subtree), and `control_smallTarget`'s keyed subtree `findsOneWidget`. **G2 (satisfied):** the configured Given answers — the sweep opens every screen through the real feature `buildApp` launchers (the shipped assembly carrying the padded `AppTheme`/`materialTapTargetSize`), so the 48dp behaviour under test comes from the real shipped config, not a test-injected override; the reference's 48dp target is an in-harness positive control over the same `AppTheme`. **G3** N/A — a structural size check has no negative-after-settle Then. **G4** asserts the exact `ConformanceRuleId.tapTarget48` outcome `.pass isTrue` (not merely non-null) at step grain, on **every** real screen (loop over all six `realScreens`, whose size/identity ITEST-1's fixture guard pins) and on the reference, and the control's `failing` **contains** `tapTarget48`. **G5** genuine discriminator against the **real** rule: passes on the 48dp `compliantReference` and all six real (padded) screens, and **fails on `control_smallTarget`** (a 24dp tappable, below both guidelines) — the real `checkTapTarget48` returns a failing outcome for that control, so a rule that never applied the 48dp guideline (an always-pass stub) would leave `failing` empty and fail this leg. **G6** exactly one AC (only `tapTarget48`). Deterministic (`buildApp` launchers + `pumpAndSettle`, no fixed sleeps). Body unchanged from the ITEST-2 version graded A; un-pending weakened no assertion. No downgrade. |
+| **AC-5** `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2), un-pended; rule = `checkContrastAA` over `textContrastGuideline` at the AA floor | **A** | Unchanged by A11Y-3 (body and rule both untouched). Holds its prior A. **G2 (decisive, satisfied)** — contrast is pinned to the shipped `AppTheme.light().colorScheme` (content-equal `ColorScheme`) on every swept screen and the reference, not a test-injected theme. **G1** screen-open + theme-source Givens via the public surface before the When; **G4** exact `contrastAA` `.pass isTrue`, every screen; **G5** passes on the AA reference + six real screens, fails on `control_lowContrast` (~1.6:1); **G6** one AC; **G3** N/A. No downgrade; no fix required. |
+
+### Verdict
+
+**2 A / 0 B — PASS.** Both un-pended automated AC tests meet the bar against the
+code as it now stands. AC-4 is **A**: now that A11Y-3 has made its rule real
+(`checkTapTarget48` enforcing the 48dp floor via the combined android+iOS
+guidelines) and padded the shipped targets, the sweep is a true positive sweep
+(`.pass isTrue`) over all six real `buildApp` screens plus the 48dp reference,
+and `control_smallTarget` (24dp) is a true discriminator (`failing` contains
+`tapTarget48` because the real rule genuinely flags the sub-48dp target); G1/G2/
+G4/G5/G6 met, G3 N/A. AC-5 is **A**, unchanged and un-weakened (G2 pinned to the
+shipped theme). Neither test body changed in A11Y-3 — only product code, the rule
+file (`checks/target.dart`), the pending gate and the pending-gate guard test
+moved — so neither is a downgrade from its prior A. **Nothing must change for the
+phase to pass.**

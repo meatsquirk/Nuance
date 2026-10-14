@@ -13,7 +13,8 @@ import 'package:flutter/material.dart';
 /// recolouring the app — and pins that guarantee with a contrast unit test
 /// (`test/app/theme_test.dart`), so a future token edit that drops any pairing
 /// below AA fails the build. Screens read these tokens via `Theme.of(context)`
-/// instead of hardcoding colours; A11Y-3 adds the 48dp tap-target size here.
+/// instead of hardcoding colours; A11Y-3 added the 48dp tap-target size
+/// ([MaterialTapTargetSize.padded]) here as the single tap-target chokepoint.
 class AppTheme {
   const AppTheme._(this.colorScheme, this.textTheme);
 
@@ -47,9 +48,18 @@ class AppTheme {
   final TextTheme textTheme;
 
   /// The assembled [ThemeData] `buildApp` installs on the [MaterialApp].
+  ///
+  /// **A11Y-3** pins [MaterialTapTargetSize.padded] here — the single
+  /// tap-target chokepoint — so every Material control (`IconButton`,
+  /// `TextButton`, `Checkbox`, …) reserves a ≥48dp interactive area regardless
+  /// of the host platform's default, satisfying AC-4's 48dp floor (D-5). The
+  /// on-device tap-target rule (`checks/target.dart`) enforces the same floor
+  /// over the real screens; custom (non-Material) targets are sized ≥48dp at
+  /// their call site in the A11Y-3 sweep.
   ThemeData get themeData => ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,
         textTheme: textTheme,
+        materialTapTargetSize: MaterialTapTargetSize.padded,
       );
 }

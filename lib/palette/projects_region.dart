@@ -123,15 +123,23 @@ class _ProjectRow extends StatelessWidget {
       key: ProjectsRegion.projectRowKey(summary.id),
       behavior: HitTestBehavior.opaque,
       onTap: onOpen,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(summary.name),
-            Text(detail),
-            if (summary.lastEditedLabel != null) Text(summary.lastEditedLabel!),
-          ],
+      // A11Y-3 (AC-4): a short one/two-line project row can fall below the
+      // 48dp tap-target floor; reserve the 48dp minimum interactive height so
+      // the whole row is a conformant target.
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(summary.name),
+              Text(detail),
+              if (summary.lastEditedLabel != null)
+                Text(summary.lastEditedLabel!),
+            ],
+          ),
         ),
       ),
     );

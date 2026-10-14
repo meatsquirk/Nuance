@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/conformance/conformance_result.dart';
 
 import 'checks/contrast.dart';
+import 'checks/target.dart';
 
 /// Runs every automated conformance rule landed so far over the screen found by
 /// [screen] in the tree [tester] is pumping, and returns the aggregate
@@ -23,7 +24,8 @@ import 'checks/contrast.dart';
 ///
 /// The result grows one rule per behaviour phase:
 ///   * A11Y-2 — [ConformanceRuleId.contrastAA] (text meets the WCAG 2.2 AA floor)
-///   * A11Y-3..7 / GATE-2 add their rules here as they land
+///   * A11Y-3 — [ConformanceRuleId.tapTarget48] (targets meet the 48dp floor)
+///   * A11Y-4..7 / GATE-2 add their rules here as they land
 ///
 /// GATE-3 then asserts the map holds every [ConformanceRuleId] (so a partial or
 /// empty aggregate reads as *not* `passed`). Until then `passed` is false for
@@ -36,6 +38,8 @@ Future<ConformanceResult> runConformanceCheck(
   final outcomes = <ConformanceRuleId, ConformanceRuleOutcome>{
     // A11Y-2 — AC-5: WCAG 2.2 AA text contrast (textContrastGuideline).
     ConformanceRuleId.contrastAA: await checkContrastAA(tester, screen),
+    // A11Y-3 — AC-4: 48dp tap targets (android + iOS tap-target guidelines).
+    ConformanceRuleId.tapTarget48: await checkTapTarget48(tester, screen),
   };
   return ConformanceResult(outcomes);
 }

@@ -62,6 +62,18 @@ void main() {
     expect(AppTheme.light().colorScheme, isNot(AppTheme.dark().colorScheme));
   });
 
+  // AC-4 enforcement (A11Y-3): the shipped theme pins a 48dp padded tap target
+  // as the single chokepoint, so every Material control reserves a ≥48dp
+  // interactive area regardless of the host platform's default. Pinning it here
+  // fails a future edit that drops the floor in the fast unit lane, before the
+  // on-device tap-target rule (checks/target.dart) would catch it on a screen.
+  test('themeData pins the 48dp padded tap-target size (AC-4 floor)', () {
+    expect(
+      AppTheme.light().themeData.materialTapTargetSize,
+      MaterialTapTargetSize.padded,
+    );
+  });
+
   // AC-5 enforcement (A11Y-2): the shipped light scheme is the single source
   // the on-device contrast rule (textContrastGuideline) evaluates. Pin the AA
   // floor for every meaningful text-on-surface pairing so a future token edit
