@@ -17,6 +17,7 @@ import 'package:paint_color_assistant/a11y/conformance/conformance_result.dart';
 
 import 'checks/colour_cue.dart';
 import 'checks/contrast.dart';
+import 'checks/eyes_free_rule.dart';
 import 'checks/labels.dart';
 import 'checks/no_timeout.dart';
 import 'checks/scaling.dart';
@@ -36,12 +37,16 @@ import 'checks/target.dart';
 ///     carries a non-empty screen-reader label)
 ///   * A11Y-7 — [ConformanceRuleId.noTimeout] (nothing auto-dismisses / imposes
 ///     a time limit)
-///   * GATE-2 adds its rule here as it lands
+///   * GATE-3 — [ConformanceRuleId.eyesFree] (the screen offers a control
+///     operable eyes-free: labelled + a `SemanticsAction.tap`), the 8th and
+///     last id
 ///
-/// GATE-3 then asserts the map holds every [ConformanceRuleId] (so a partial or
-/// empty aggregate reads as *not* `passed`). Until then `passed` is false for
-/// any screen — but a per-rule AC test reads only `outcomeFor(itsRuleId)`, so
-/// each AC un-pends independently as its rule lands.
+/// With GATE-3's rule composed, the map now holds **every**
+/// [ConformanceRuleId], so [ConformanceResult.passed] can finally be true (it
+/// requires every id present and passing) and the aggregate gate discriminates:
+/// a screen that leaks any violation reads as *not* `passed`. A per-rule AC test
+/// reads only `outcomeFor(itsRuleId)`, so each AC un-pended independently as its
+/// rule landed.
 Future<ConformanceResult> runConformanceCheck(
   WidgetTester tester,
   Finder screen,
@@ -61,6 +66,9 @@ Future<ConformanceResult> runConformanceCheck(
     ConformanceRuleId.meaningfulLabel: await checkMeaningfulLabel(tester, screen),
     // A11Y-7 — AC-8: nothing auto-dismisses / imposes a time limit.
     ConformanceRuleId.noTimeout: await checkNoTimeout(tester, screen),
+    // GATE-3 — AC-7: the screen offers a control operable eyes-free (labelled +
+    // SemanticsAction.tap), the 8th and last id so `passed` can be true (D-6).
+    ConformanceRuleId.eyesFree: await checkEyesFree(tester, screen),
   };
   return ConformanceResult(outcomes);
 }

@@ -4,11 +4,10 @@
 /// and recorded level are testable without a widget tree and reusable by any
 /// feature (D-3).
 ///
-/// GATE-1 lands the **signatures only**: both functions throw
-/// [UnimplementedError] until their behaviour phases implement them —
-/// [acceptanceDecision] at GATE-3 (AC-9), [recordedLevel] at GATE-4 (AC-11).
-/// Keeping them present-but-stubbed lets the acceptance tests compile against
-/// the frozen signatures and fail on their Then at the red baseline.
+/// GATE-1 landed the **signatures only** (both threw [UnimplementedError]).
+/// GATE-3 implements [acceptanceDecision] (AC-9); [recordedLevel] (AC-11) stays
+/// stubbed until GATE-4 — keeping its frozen signature lets the AC-11 test
+/// compile and fail on its Then at the red baseline.
 library;
 
 import 'conformance_result.dart';
@@ -34,9 +33,14 @@ enum WcagLevel {
 /// The acceptance verdict for [result] (AC-9): `accepted` iff
 /// `result.passed`, else `notAccepted`.
 ///
-/// Stubbed in GATE-1 — implemented in GATE-3.
+/// A build is accepted only when the automated check passed — every
+/// [ConformanceRuleId] ran and held ([ConformanceResult.passed]). Any failing
+/// rule, or a result that did not run every rule (a partial or empty result),
+/// is `notAccepted`: the gate never accepts a feature that failed the check
+/// (AC-9). The whole verdict rides on [ConformanceResult.passed], so it inspects
+/// the complete result, never a single rule.
 AcceptanceDecision acceptanceDecision(ConformanceResult result) =>
-    throw UnimplementedError('acceptanceDecision lands in GATE-3 (AC-9)');
+    result.passed ? AcceptanceDecision.accepted : AcceptanceDecision.notAccepted;
 
 /// The WCAG level [result] records (AC-11): `aa22` iff `result.passed`, else
 /// `below`. The check's thresholds are the WCAG 2.2 AA constants (D-5); this

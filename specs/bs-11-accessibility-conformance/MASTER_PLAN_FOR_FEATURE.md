@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** In progress — behaviour stage underway; A11Y module ✅ complete + GATE-2 (AC-7 eyes-free) ✅ done, 8/10 automated ACs delivered; next GATE-3 (AC-9 barrier)
+**Status:** In progress — behaviour stage underway; A11Y module ✅ complete + GATE-2 (AC-7) + GATE-3 (AC-9 automated-gate) ✅ done, 9/10 automated ACs delivered; next GATE-4 (AC-11 WCAG floor)
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -44,7 +44,7 @@
 | AC-6 | Every control exposes a meaningful screen-reader label | ITEST-2 `TestAC06_ControlHasMeaningfulLabel` | A11Y-6 | ✅ Done |
 | AC-7 | An eyes-free walkthrough completes under the screen reader | ITEST-3 `TestAC07_EyesFreeWalkthroughCompletes` | GATE-2 | ✅ Done |
 | AC-8 | No interaction imposes a time limit and nothing auto-dismisses | ITEST-3 `TestAC08_NothingAutoDismisses` | A11Y-7 | ✅ Done |
-| AC-9 | A feature failing the automated check is not accepted | ITEST-3 `TestAC09_FailedAutomatedCheckNotAccepted` | GATE-3 | ⬜ Todo |
+| AC-9 | A feature failing the automated check is not accepted | ITEST-3 `TestAC09_FailedAutomatedCheckNotAccepted` | GATE-3 | ✅ Done |
 | AC-10 | A feature failing the manual eyes-free walkthrough is not accepted | **manual gate (SIGNOFF-1, G-3)** — no automated test (D-2) | SIGNOFF-1 (user acceptance) | ⬜ Todo |
 | AC-11 | WCAG 2.2 AA is the accepted floor | ITEST-3 `TestAC11_RecordedFloorIsWcag22AA` | GATE-4 | ⬜ Todo |
 | AC-12 | The eyes-free walkthrough passes under VoiceOver as under TalkBack | **manual gate (SIGNOFF-1, G-4)** — no automated test (D-2) | SIGNOFF-1 (user acceptance) | ⬜ Todo |
@@ -112,7 +112,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its che
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | Scaffold + the compliant-by-construction layer: `AppTheme` (AA contrast), 48dp targets, 200% scaling, `StatusBadge`/colour-cue, semantic labels, `AccessibleNotice`; the per-rule check rules; and the sweep of every real screen | — | ✅ Done (CONF-1, A11Y-1..A11Y-7 all done; 7 of 8 conformance rules live) |
-| GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ◐ In progress (GATE-1, GATE-2 done; GATE-3/4 left) |
+| GATE | [modules/GATE.md](modules/GATE.md) | The conformance gate: the aggregate `ConformanceResult` + `acceptanceDecision` + `recordedLevel` (pure domain) and the eyes-free semantics-only driver | A11Y | ◐ In progress (GATE-1, GATE-2, GATE-3 done; GATE-4 left) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over every real screen + controls: one pending test per automated AC, and its review | all shell phases | ✅ Done (ITEST-1/2/3/4; G-2 approved 2026-10-13) |
 
 ## Dependency graph
@@ -165,19 +165,19 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | A11Y-6 | AC-6 semantic labels: meaningful labels + labelled-control check rule + sweep | ✅ Done | 17,920,113 | 40m 35s | `labels.dart` → `labeledTapTargetGuideline` (6th rule); swept 3 icon-only controls (settings entry/close/repeat) via MergeSemantics; AC-6 ✅; unit 1041; default +15 ~4 / run-pending +15 -4 on sim; grade 6 A/0; fix 0/3 |
 | 13 | A11Y-7 | AC-8 no time limit: `AccessibleNotice` (no auto-dismiss) + no-timeout check rule + sweep | ✅ Done | 9,051,921 | 24m 30s | `no_timeout.dart` → `checkNoTimeout` (7th rule); re-render-and-detect-SnackBar (bounded pumps); D-1 sweep clean (no lib change); AC-8 ✅; unit 1041; default +16 ~3 / run-pending +16 -3 on iPhone17 sim; grade 7 A/0; fix 0/3 |
 | 14 | GATE-2 | AC-7 eyes-free: semantics-only driver completes a core task | ✅ Done | 10,094,248 | 23m 31s | `eyesFreeComplete` by label + `SemanticsAction.tap` (no coords, D-6); AC-7 ✅; unit 1041; cov vacuous (no lib); default 17 pass / 2 skip on iPhone17 sim; grade 8 A/0; fixed AC-7 test handle disposal (explicit); fix 1/3 |
-| 15 | GATE-3 | AC-9 automated gate: aggregate result + `acceptanceDecision` (fail any ⇒ not accepted) | ⬜ Next | | | barrier (needs all 8 rules; must populate `eyesFree` in the aggregate) |
-| 16 | GATE-4 | AC-11 WCAG floor: `recordedLevel` == AA when passed; thresholds pinned to WCAG 2.2 AA | ⬜ Todo | | | |
+| 15 | GATE-3 | AC-9 automated gate: aggregate result + `acceptanceDecision` (fail any ⇒ not accepted) | ✅ Done | 14,490,779 | 38m 40s | composed 8th `eyesFree` rule (non-destructive semantics check) + pure `acceptanceDecision`; AC-9 un-pended + strengthened (2nd negative control); unit 1044; cov 100% touched; acceptance 18 pass/1 skip; grade 9 A/0; fix 1/3 |
+| 16 | GATE-4 | AC-11 WCAG floor: `recordedLevel` == AA when passed; thresholds pinned to WCAG 2.2 AA | ⬜ Next | | | reads the same `ConformanceResult.passed`; un-pends the last AC (AC-11) ⇒ pending set empty |
 | 17 | SIGNOFF-1 | sign-off: packet + summary + manual AC-10 (G-3) + manual AC-12 (G-4) + human decision | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**GATE-2 (AC-7 eyes-free) done — AC-7 ✅ delivered; 8/10 automated ACs now in.** `eyesFreeComplete` (`integration_test/conformance/eyes_free.dart`) is now a real semantics-only driver: per step it finds the control by `find.bySemanticsLabel`, requires a `SemanticsAction.tap`, and dispatches that action via `node.owner!.performAction` (never key/type/coordinate — D-6), returning true iff every step is reachable and activated by semantics alone. AC-7's `TestAC07` passes (positive drives the real `'Speak this readout'` control; control leg with a bogus label stays blocked). GATE-2 touched **no `lib/`** and **not** the aggregate — composing the 8th `eyesFree` rule into `runConformanceCheck` is GATE-3's job. unit 1041; coverage vacuous (no lib change); acceptance 17 pass / 2 skip on iPhone17 sim; grade 8 A/0; fix 1/3 (fixed the AC-7 test's `SemanticsHandle` disposal — explicit, repo convention — after the first run flagged a leak).
+**GATE-3 (AC-9 automated-gate acceptance, the barrier) done — AC-9 ✅ delivered; 9/10 automated ACs now in.** Implemented the pure `acceptanceDecision` (`accepted` iff `result.passed`, else `notAccepted`) and composed the **8th and last** rule `ConformanceRuleId.eyesFree` into `runConformanceCheck` via the new `checks/eyes_free_rule.dart` `checkEyesFree` — a non-destructive, semantics-only existence check (a node with an accessible name — label/tooltip/value — **and** a `SemanticsAction.tap`; never dispatches the tap, D-6). The aggregate now populates every id, so `ConformanceResult.passed` is meaningful and the gate discriminates. Un-pended AC-9 (pending set → `{AC-11}`) and **strengthened** the AC-9 test with a 2nd negative control (`control_lowContrast`, disjoint singleton failure set) so no single-rule decision survives. unit 1044; coverage 100% on all 18 touched lib files; acceptance **18 pass / 1 skip** (AC-11 pending GATE-4) on iPhone17 sim; grade **9 A / 0 B** (AC-9 B→A after strengthening); fix 1/3 (first run: `checkEyesFree` read only `label`, so the reference's tooltip-named IconButton failed `passed`; fixed to label/tooltip/value).
 
-**Next — GATE-3 (AC-9 automated-gate acceptance), the barrier.** Implements `runConformanceCheck` to compose **all 8** `ConformanceRuleId`s into a populated `ConformanceResult` (so `passed` can be true) **and** `acceptanceDecision` (accepted iff `result.passed`). **Key design point:** the aggregate must now obtain an **`eyesFree`** outcome (the enum id exists but the 7-rule aggregate never populates it) — e.g. run `eyesFreeComplete` over a core-task flow and map its bool to a `ConformanceRuleOutcome`. Un-pends AC-9, closes TestAC09's *B pending GATE-3*. Needs every A11Y rule (A11Y-2..7, all done) + GATE-2 (done) → startable now. Then **GATE-4** (AC-11; `recordedLevel` + pin WCAG 2.2 AA constants; closes TestAC11) → **SIGNOFF-1** (packet + summary + manual AC-10/AC-12 → G-3/G-4). G-1/G-2 ✅; G-3/G-4 (manual) decided at SIGNOFF-1.
+**Next — GATE-4 (AC-11 recorded WCAG 2.2 AA floor), the last behaviour phase.** Implement `recordedLevel` (`aa22` iff `result.passed`, else `below`) + pin the WCAG 2.2 AA threshold constants (D-5), un-pend AC-11 (pending set → **empty**), close TestAC11's *B pending GATE-4*. It reads the same `ConformanceResult.passed` GATE-3 made meaningful (barrier already satisfied) → startable now. Then **SIGNOFF-1** (packet + summary + manual AC-10/AC-12 → G-3/G-4). G-1/G-2 ✅; G-3/G-4 (manual) decided at SIGNOFF-1. Non-blocking AC-9 hardening (pin `partial.failing` exactly `{tapTarget48}`) can fold into GATE-4.
 
-Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks GATE-3).
+Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks GATE-4).
 
 ## Token usage
 
@@ -203,7 +203,8 @@ Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks GATE-3).
 | A11Y-6 | e102b9f6 | 2026-10-14 07:41 EDT | 08:21 | 40m 35s | 40m 35s | claude-opus-4-8 | 246 | 316,991 | 17,518,918 | 83,958 | 17,920,113 | AC-6 meaningful labels done; grade 6 A/0; unit 1041/1041; coverage 100% on 18 touched lib; acceptance default +15~4, run-pending +15-4 on iPhone17 sim; gates green |
 | A11Y-7 | f6c329e0 | 2026-10-14 08:54 EDT | 09:19 | 24m 30s | 24m 30s | claude-opus-4-8 | 146 | 272,125 | 8,713,708 | 65,942 | 9,051,921 | AC-8 no-timeout rule delivered; grade 7 A/0; default +16 ~3 / run-pending +16 -3 on sim; no lib change (sweep clean); fix 0/3 |
 | GATE-2 | 3f6ee7f3 | 2026-10-14 09:34 EDT | 09:58 | 23m 31s | 23m 31s | claude-opus-4-8 | 158 | 285,103 | 9,743,914 | 65,073 | 10,094,248 | AC-7 eyes-free delivered: semantics-only eyesFreeComplete (find by label + SemanticsAction.tap, no coords D-6); unit 1041; coverage vacuous (no lib); acceptance 17 pass/2 skip on iPhone17 sim; grade 8 A/0; fixed AC-7 test SemanticsHandle disposal; fix 1/3 |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 09:58** | **7h 55m** | **5h 12m** |  | **2,048** | **3,481,629** | **129,892,243** | **896,962** | **134,272,882** |  |
+| GATE-3 | c62f90db | 2026-10-14 10:49 EDT | 11:28 | 38m 40s | 38m 40s | claude-opus-4-8 | 202 | 319,580 | 14,097,606 | 73,391 | 14,490,779 | AC-9 automated-gate acceptance delivered (acceptanceDecision + 8th eyesFree rule); unit 1044; cov 100% touched; acceptance 18 pass/1 skip; grade 9 A/0; fix 1/3 |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 11:28** | **8h 34m** | **5h 51m** |  | **2,250** | **3,801,209** | **143,989,849** | **970,353** | **148,763,661** |  |
 
 ## Sign-off
 

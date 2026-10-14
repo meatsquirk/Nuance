@@ -44,17 +44,18 @@ void main() {
       // contrast), **A11Y-3 un-pended AC-4** (48dp tap targets), **A11Y-4
       // un-pended AC-3** (200% font scaling), **A11Y-5 un-pended AC-1 + AC-2**
       // (colour cue / no bare dot), **A11Y-6 un-pended AC-6** (meaningful
-      // labels) and **A11Y-7 un-pended AC-8** (nothing auto-dismisses), so the
-      // un-pended AC-8** (nothing auto-dismisses) and **GATE-2 un-pended AC-7**
-      // (eyes-free walkthrough), so the still-pending set is now the other two.
-      // AC-10 and AC-12 are pure-manual gates (D-2) and never enter the gate.
+      // labels), **A11Y-7 un-pended AC-8** (nothing auto-dismisses), **GATE-2
+      // un-pended AC-7** (eyes-free walkthrough) and **GATE-3 un-pended AC-9**
+      // (aggregate acceptance decision), so the still-pending set is now AC-11
+      // alone (GATE-4). AC-10 and AC-12 are pure-manual gates (D-2) and never
+      // enter the gate.
       const expected = {
-        'AC-9', 'AC-11',
+        'AC-11',
       };
       expect(pendingACs.keys.toSet(), expected);
-      expect(pendingACs, hasLength(2));
-      // AC-5, AC-4, AC-3, AC-1, AC-2, AC-6, AC-8 and AC-7 are delivered — no
-      // longer pending.
+      expect(pendingACs, hasLength(1));
+      // AC-5, AC-4, AC-3, AC-1, AC-2, AC-6, AC-8, AC-7 and AC-9 are delivered —
+      // no longer pending.
       expect(pendingACs.containsKey('AC-5'), isFalse,
           reason: 'AC-5 was un-pended by A11Y-2');
       expect(pendingACs.containsKey('AC-4'), isFalse,
@@ -71,6 +72,8 @@ void main() {
           reason: 'AC-8 was un-pended by A11Y-7');
       expect(pendingACs.containsKey('AC-7'), isFalse,
           reason: 'AC-7 was un-pended by GATE-2');
+      expect(pendingACs.containsKey('AC-9'), isFalse,
+          reason: 'AC-9 was un-pended by GATE-3');
     });
 
     test('the two manual ACs are absent from the automated gate (D-2)', () {
@@ -601,16 +604,14 @@ void main() {
         'AC-9', 'a feature failing the automated check is not accepted',
         (tester) async {
       // Scenario: A feature failing the automated check is not accepted.
-      // *B pending GATE-3*: the aggregate `acceptanceDecision` cannot
-      // discriminate until every sub-rule exists (A11Y-2..7 + GATE-2) and
-      // GATE-3 composes them — so at this phase the Given below cannot hold
-      // (the stub result is empty). GATE-3 un-pends and closes the augmentation
-      // (ITEST *Test augmentations* → TestAC09).
+      // Closed by GATE-3 (TestAC09 augmentation): GATE-3 composed the 8th
+      // `eyesFree` rule into `runConformanceCheck`, so the aggregate now holds
+      // every sub-rule (A11Y-2..7 + the eyes-free rule) and `acceptanceDecision`
+      // reads a complete result — the Givens below are now satisfiable.
 
       // Given: `control_partialFail` run through the check yields a result with
       // ≥1 FAILING rule and ≥1 PASSING rule (a genuinely partial result) —
-      // asserted through the public check surface. Not satisfiable until GATE-3
-      // populates the aggregate; the reason names it.
+      // asserted through the public check surface.
       await givenControl(tester, control_partialFail);
       final partial =
           await whenCheckedForConformance(tester, control_partialFail.subtree);
@@ -626,9 +627,27 @@ void main() {
       // When: the feature is reviewed for acceptance.
       final decision = acceptanceDecision(partial);
       // Then: a partially-failing result is NOT accepted (rejects a decision
-      // that accepts it, or that inspects only one rule).
+      // that accepts it).
       expect(decision, AcceptanceDecision.notAccepted,
           reason: 'any failing rule ⇒ the build is not accepted');
+
+      // Control (G5): a *second* partial result that fails a DIFFERENT rule —
+      // `control_lowContrast` fails `contrastAA`, not `tapTarget48` — is also
+      // not accepted. Paired with `control_partialFail` (which fails only
+      // `tapTarget48`), this rejects any single-rule decision: one keyed on
+      // `tapTarget48` would wrongly accept this result (it passes that rule),
+      // and one keyed on any other rule would wrongly accept `control_partialFail`
+      // — so no "inspect exactly one rule" implementation survives the pair.
+      await givenControl(tester, control_lowContrast);
+      final otherPartial =
+          await whenCheckedForConformance(tester, control_lowContrast.subtree);
+      expect(otherPartial.failing, contains(ConformanceRuleId.contrastAA),
+          reason: 'control_lowContrast must fail a rule other than tapTarget48');
+      expect(otherPartial.outcomeFor(ConformanceRuleId.tapTarget48)?.pass, isTrue,
+          reason: 'control_lowContrast must PASS tapTarget48, so a single-rule '
+              'decision keyed on it would wrongly accept this failing result');
+      expect(acceptanceDecision(otherPartial), AcceptanceDecision.notAccepted,
+          reason: 'a result failing any rule ⇒ not accepted, whichever rule');
 
       // Control (G5): a fully-passing result (the compliant reference) ⇒
       // accepted — so the decision is not a constant "notAccepted".

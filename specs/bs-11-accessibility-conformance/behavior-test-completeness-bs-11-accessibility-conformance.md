@@ -1,5 +1,75 @@
 # bs-11 Accessibility conformance — behaviour-test completeness
 
+**Phase graded: GATE-3 (un-pended AC tests AC-1,2,3,4,5,6,7,8,9).** Independent,
+adversarial re-grade of **every currently un-pended automated AC test** against the
+code as it now stands on `feat/bs-11-accessibility-conformance` (worktree
+`/Users/matthew.quirk/Nuance-bs11`). **What GATE-3 changed:** it delivered **AC-9**
+(the aggregate automated-acceptance gate) by (1) implementing the pure-domain
+`acceptanceDecision` (`lib/a11y/conformance/acceptance.dart`) as **`accepted` iff
+`result.passed`, else `notAccepted`** — riding on the complete result, not one
+rule; and (2) composing the **8th and last** `ConformanceRuleId.eyesFree` into
+`runConformanceCheck` via the new `integration_test/conformance/checks/eyes_free_rule.dart`
+`checkEyesFree` — a **non-destructive, semantics-only** existence check (passes iff
+some node at/below the screen carries an accessible name — `label`/`tooltip`/`value`
+— **and** reports `SemanticsAction.tap`; never dispatches the tap, never uses a
+key/type/coordinate, D-6). With all 8 ids now populated, `ConformanceResult.passed`
+(which requires every id present and passing) can finally be true, so the aggregate
+gate can discriminate. GATE-3 un-pended **AC-9** (deleted its row in
+`bs11/pending.dart`; pending set is now **`{AC-11}`**, length 1), updated the
+scaffold-guard in `accessibility_test.dart` (`expected` → `{AC-11}`, `hasLength(1)`,
+`!containsKey('AC-9')`), and **strengthened the AC-9 test** with a *second* negative
+control (`control_lowContrast`, which fails `contrastAA` not `tapTarget48`) so that
+no single-rule decision survives the pair. The behaviour phase re-grades **AC-1..9**.
+The grader ran nothing and edited nothing but this file.
+
+**AC-1..8 are untouched by GATE-3 at the test and rule level — and structurally
+cannot be disturbed by it (verified):** GATE-3 added one new rule file + the pure
+`acceptanceDecision` + the AC-9 test edits; it changed **no** AC-1..8 test body and
+**no** existing per-rule check. AC-1..8 each read only their own
+`outcomeFor(itsId)` / `failing.contains(itsId)`, so the newly-added `eyesFree`
+outcome in the aggregate cannot mask or alter any of their assertions. Only AC-9
+(and still-pending AC-11) read `.passed`/`.failing` broadly — intended, and now
+meaningful.
+
+| AC | Test | Grade | Justification (failing G-rule if below A) |
+|---|---|---|---|
+| **AC-9** | `a feature failing the automated check is not accepted` (owner GATE-3), un-pended; `acceptanceDecision` = `accepted` iff `result.passed`, over the aggregate now holding all 8 rules | **A** | **G1** both Givens asserted through the public surface — the partial result proven genuinely partial (`partial.failing isNotEmpty` **and** some id passes) before the When, and the reference's `full.passed isTrue` before its When. **G4** asserts the real verdict (`notAccepted`/`accepted`) on the pure-domain output. **G5 (decisive)** rejects every degenerate impl: constant-`accepted` (fails the two notAccepted legs), constant-`notAccepted` (fails the reference leg), and — closed by the strengthening — **any single-rule decision**: two negative controls fail **disjoint singleton** rule-sets (`control_partialFail` fails only `tapTarget48`; `control_lowContrast` fails only `contrastAA` and vacuously passes `tapTarget48`), so a decision keyed on any rule X wrongly accepts at least one (X=tapTarget48 ⇒ accepts lowContrast; X=anything else ⇒ accepts partialFail). **G6** AC-9 only. **G3** N/A. **eyesFree rule** composed into the aggregate is real/discriminating (`control_unlabelled` would fail it) and non-destructive. Non-blocking residual: `partial.failing` is pinned only as non-empty, not exactly `{tapTarget48}`, so single-rule closure rests on fixture construction rather than an asserted invariant — a belt-and-braces hardening, not a downgrade. |
+| **AC-1** | `every colour-coded element carries a non-colour cue` (owner A11Y-5); rule `checkColourCue` | **A** | Untouched by GATE-3; reads only `failing.contains(colourCue)`. Sweep on 6 real screens + `ColorChip` reference pass; `control_bareDot` fails. **G1/G2/G4/G5/G6** met; **G3** N/A. |
+| **AC-2** | `a status is never rendered as a bare colour dot` (owner A11Y-5); rule `checkNoBareDot` | **A** | Untouched; reads only `noBareDot`. Sweep + `StatusBadge` reference pass; `control_bareDot` fails. **G1/G2/G4/G5/G6** met. |
+| **AC-3** | `the layout survives 200% font scaling without breaking` (owner A11Y-4); rule `checkFontScale200` | **A** | Untouched; reads only `fontScale200`. Real 200% re-render + overflow measurement; `control_overflow200` fails. **G1/G2/G4/G5/G6** met. |
+| **AC-4** | `interactive targets meet the 48dp minimum` (owner A11Y-3); rule `checkTapTarget48` | **A** | Untouched; reads only `tapTarget48`. Sweep + 48dp reference pass; `control_smallTarget` (24dp) fails. **G1/G2/G4/G5/G6** met. |
+| **AC-5** | `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2); rule `checkContrastAA` | **A** | Untouched; reads only `contrastAA`. **G2 decisive** — pinned to shipped `AppTheme.light().colorScheme`; `control_lowContrast` fails. **G1/G4/G5/G6** met. |
+| **AC-6** | `every control exposes a meaningful screen-reader label` (owner A11Y-6); rule `checkMeaningfulLabel` | **A** | Untouched; reads only `meaningfulLabel`. Sweep + tooltipped reference pass; `control_unlabelled` fails. **G1/G2/G4/G5/G6** met. |
+| **AC-7** | `a core task completes eyes-free under the screen reader` (owner GATE-2); driver `eyesFreeComplete` | **A** | Untouched by GATE-3 (the aggregate's new `checkEyesFree` is a *separate* file; AC-7 still runs through the standalone driver). Positive+control pair rejects always-true/always-false/coordinate-fallback drivers (D-6). **G1/G2/G4/G5/G6** met; **G3** N/A. |
+| **AC-8** | `nothing auto-dismisses or imposes a time limit` (owner A11Y-7); rule `checkNoTimeout` | **A** | Untouched; reads only `noTimeout`. Real 10s fake-clock settle; change-control (`control_autoDismiss` SnackBar gone after the advance) proves the reading can move; `AccessibleNotice` reference persists. **G1/G3/G4/G5/G6** met. |
+
+## Verdict
+
+**9 A / 0 B — PASS (all A).** Every un-pended automated AC test meets the bar
+against the code as it now stands. **The NEW GATE-3 test (AC-9) is A — earned, not
+nominal:** `acceptanceDecision` rides on the complete `result.passed`, and the test
+now carries **two negative controls with disjoint singleton failure sets** plus a
+fully-passing reference, so it rejects constant-accepted, constant-notAccepted, and
+**every single-rule decision** (the gap that held AC-9 at B under the first GATE-3
+grade is closed). The 8th `eyesFree` rule composed into the aggregate is a real,
+discriminating, non-destructive semantics check. **AC-1..8 hold their prior A,
+un-weakened and structurally un-interfered-with** — GATE-3 added a separate rule
+file + the pure verdict + AC-9-only test edits, touching no other AC's rule or
+body, and each reads only its own outcome id. Only AC-11 remains pending (owner
+GATE-4); AC-10/AC-12 are pure-manual gates closed at SIGNOFF-1 (G-3/G-4).
+
+**No B rows — nothing must change for this phase to pass.** (One non-blocking
+hardening noted on AC-9: pin `partial.failing` to exactly `{tapTarget48}` to make
+the single-rule closure an asserted invariant rather than a fixture property.)
+
+---
+
+<!-- Historical context: prior grade grids, most recent first. -->
+
+# bs-11 Accessibility conformance — behaviour-test completeness (prior grids)
+
+## GATE-2 — re-grade of un-pended AC tests (AC-1,2,3,4,5,6,7,8)
+
 **Phase graded: GATE-2 (un-pended AC tests AC-1,2,3,4,5,6,7,8).** Independent,
 adversarial re-grade of **every currently un-pended automated AC test** against
 the code as it now stands on `feat/bs-11-accessibility-conformance` (worktree
@@ -119,12 +189,6 @@ owned by GATE-3/GATE-4). AC-10 and AC-12 are pure-manual gates (no automated tes
 closed at SIGNOFF-1 (G-3/G-4).
 
 **No B rows — nothing must change for this phase to pass.**
-
----
-
-<!-- Historical context: prior grade grids, most recent first. -->
-
-# bs-11 Accessibility conformance — behaviour-test completeness (prior grids)
 
 ## A11Y-7 — re-grade of un-pended AC tests (AC-1,2,3,4,5,6,8)
 

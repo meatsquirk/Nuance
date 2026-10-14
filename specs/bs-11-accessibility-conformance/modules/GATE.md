@@ -1,6 +1,6 @@
 # Module GATE — the conformance gate + eyes-free driver
 
-**Status:** ◐ In progress (GATE-1, GATE-2 done)
+**Status:** ◐ In progress (GATE-1, GATE-2, GATE-3 done; GATE-4 left)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/conformance/conformance_result.dart`, `lib/a11y/conformance/acceptance.dart` (pure domain: `ConformanceResult`, `ConformanceRuleId`, `AcceptanceDecision`, `WcagLevel`, `acceptanceDecision`, `recordedLevel`); `integration_test/conformance/conformance_check.dart` (the aggregate `runConformanceCheck` that composes A11Y's per-rule rules into a `ConformanceResult`); `integration_test/conformance/eyes_free.dart` (the semantics-only driver).
 **Depends on:** A11Y (the per-rule check rules; the aggregate needs all of them) · **Blocks:** SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | GATE-1 | shell | — | ✅ Done | 3,553,802 | 17m 14s |
 | GATE-2 | behavior | AC-7 | ✅ Done | 10,094,248 | 23m 31s |
-| GATE-3 | behavior | AC-9 | ⬜ Todo | | |
+| GATE-3 | behavior | AC-9 | ✅ Done | 14,490,779 | 38m 40s |
 | GATE-4 | behavior | AC-11 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -95,7 +95,25 @@
 - **Gates:** `flutter analyze` clean; unit **1041/1041** (no unit-test change — the driver is test-support; its branches are exercised by the AC-7 positive + control legs); coverage gate **PASS** — GATE-2 adds no `lib/**` code, so the gate is vacuous (all 18 feature-touched lib files remain 100%). Acceptance (default mode, booted iPhone 17 sim via `coord.sh with-lock`): **17 pass / 2 skip** (AC-9 pending GATE-3, AC-11 pending GATE-4), exit 0 — AC-7 green, suite green with only later ACs pending. **Grade gate (fresh adversarial subagent, every un-pended AC test AC-1..8): 8 A / 0 B**, no downgrades; AC-7's positive+control pair rejects always-true/always-false and coordinate-fallback drivers (G5) and every Given is checked (G1). **Fix passes: 1/3** (first full run surfaced the handle-disposal leak; fixed; second run green).
 - **Augmentations:** none (AC-7 was graded A at the ITEST-3 red baseline; no augmentation row).
 
+**GATE-3 — AC-9 automated-gate acceptance (barrier)** (✅ Done, 38m 40s / 14,490,779)
+
+- **`lib/a11y/conformance/acceptance.dart` — `acceptanceDecision` implemented** (was the GATE-1 stub throwing `UnimplementedError`): `result.passed ? AcceptanceDecision.accepted : AcceptanceDecision.notAccepted`. Rides on the *complete* `ConformanceResult.passed` (every id present and passing), so any failing rule, or a partial/empty result, is `notAccepted` — it never inspects a single rule. Pure domain (no `flutter`/`flutter_test`). `recordedLevel` stays stubbed for GATE-4.
+- **`integration_test/conformance/checks/eyes_free_rule.dart` (NEW) — `checkEyesFree`** is the 8th per-rule check: holds a `SemanticsHandle`, walks the semantics subtree from `tester.getSemantics(screen)`, and passes iff some node carries an accessible name (`label`/`tooltip`/`value` non-empty) **and** reports `SemanticsAction.tap` — the same reach+activate predicate as the GATE-2 driver, applied as a **non-destructive existence check** (it never dispatches the tap, so it is safe to run in the aggregate over every subject; never key/type/coordinate, D-6). `control_unlabelled` (tap action, no name) fails it.
+- **`integration_test/conformance/conformance_check.dart` — composed the 8th rule** `ConformanceRuleId.eyesFree: await checkEyesFree(tester, screen)` into `runConformanceCheck`. The aggregate now populates **all 8** ids, so `ConformanceResult.passed` can finally be true and the gate discriminates.
+- **AC-9 un-pended** — deleted its row in `bs11/pending.dart` (pending set now `{AC-11}`, length 1); updated the scaffold guard (`expected` → `{AC-11}`, `hasLength(1)`, `!containsKey('AC-9')`).
+- **AC-9 test strengthened (recorded, non-weakening — closes the GATE-3 augmentation):** the first grade pass found a G5 gap — `control_partialFail` fails only `tapTarget48`, so a degenerate single-rule decision keyed on `tapTarget48` would survive the pair. Added a *second* negative control, `control_lowContrast` (fails `contrastAA`, vacuously passes `tapTarget48`), asserted `notAccepted` — with disjoint singleton failure sets, no single-rule decision survives. No original assertion changed. Also replaced the stale `acceptanceDecision throws` unit test with four real cases (fully-passing ⇒ accepted; one failing rule ⇒ notAccepted; partial/incomplete ⇒ notAccepted; empty ⇒ notAccepted), keeping the `recordedLevel throws` stub test for GATE-4.
+- **Gates:** `flutter analyze` clean; unit **1044/1044** (1041 − 1 stub + 4 new acceptanceDecision cases); coverage gate **100% line on all 18 touched lib files** (both branches of `acceptanceDecision`; `recordedLevel`'s throw still covered by its stub test). Acceptance (default mode, booted iPhone 17 sim via `coord.sh with-lock`): **18 pass / 1 skip** (AC-11 pending GATE-4), exit 0 — AC-1..9 green. **Grade gate (fresh adversarial subagent, AC-1..9): 9 A / 0 B** (AC-9 B→A after the second-control strengthening; AC-1..8 re-confirmed A, structurally un-disturbed). **Fix passes: 1/3** (first full acceptance run failed: `checkEyesFree` only inspected `label`, so the reference's tooltip-named IconButton made `full.passed` false; fixed to accept label/tooltip/value; second run green. The AC-9 strengthening + re-grade followed the green acceptance run, not a gate failure).
+- **Augmentation:** TestAC09 (*B pending GATE-3*) **closed** — the aggregate populates every rule, so `acceptanceDecision` reads a complete result and the test discriminates. One non-blocking hardening noted (pin `partial.failing` to exactly `{tapTarget48}`).
+
 ### Checkpoint / Handoff  <!-- filled on completion -->
+
+**After GATE-3 (branch `feat/bs-11-accessibility-conformance`):**
+
+- **Frozen interfaces:** `acceptanceDecision(ConformanceResult)` (pure, `accepted` iff `result.passed`) is implemented and reusable (D-3). `runConformanceCheck` now composes **all 8** `ConformanceRuleId`s (the 7 structural/timing rules + `checkEyesFree`), so `ConformanceResult.passed` is meaningful. `checkEyesFree` (`checks/eyes_free_rule.dart`) is a non-destructive semantics-only rule — GATE-4 and any reuse read the aggregate, not it directly.
+- **Verification commands** (from `../Nuance-bs11`, `flutter` at `/Users/matthew.quirk/development/flutter/bin`): analyze `flutter analyze`; unit+coverage `flutter test --coverage`; coverage gate `dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/bs11/accessibility_test.dart -d <booted-udid>` under `coord.sh with-lock` (booted `-d` mandatory). Grade via a fresh adversarial subagent against G1–G6, writing `specs/.../behavior-test-completeness-bs-11-accessibility-conformance.md`.
+- **Known gaps / next:** **GATE-4 (AC-11)** is the only remaining behaviour phase — implement `recordedLevel` (`aa22` iff `result.passed`, else `below`) + pin the WCAG 2.2 AA threshold constants (D-5), un-pend AC-11 (pending set → empty), close TestAC11's *B pending GATE-4*. It reads the same `ConformanceResult.passed` GATE-3 made meaningful. Then **SIGNOFF-1** (packet + summary + manual AC-10/AC-12 → G-3/G-4). Non-blocking AC-9 hardening (pin `partial.failing` exactly) may be folded into GATE-4 or SIGNOFF-1.
+
+### GATE-2 Checkpoint / Handoff
 
 **After GATE-2 (branch `feat/bs-11-accessibility-conformance`):**
 
