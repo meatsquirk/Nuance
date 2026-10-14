@@ -1,7 +1,7 @@
 # Master Plan — Paint dataset integrity and provenance
 
 **Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
-**Status:** In progress — SEED-1 ✅ scaffold (baseline recorded); next the three shells SEED-2 ∥ PROV-1 ∥ GUARD-1
+**Status:** In progress — SEED-2 ✅ shell (dataset surface wired, empty-seed-neutral); next the remaining shells PROV-1 ∥ GUARD-1
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
 
@@ -106,7 +106,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its pro
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | 🔄 In progress (SEED-1 ✅) |
+| SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | 🔄 In progress (SEED-2 ✅) |
 | PROV | [modules/PROV.md](modules/PROV.md) | The runtime provenance/evidence model: tier-by-origin derivation, append-only evidence, Estimated→Confirmed promotion rule (product code, `lib/domain/`) | — | ⬜ Todo |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | Reusable integrity guards (no product code): ratios-only-from-solver, no-lookup-table, no-claimed-value-stored | — | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | ⬜ Todo |
@@ -151,8 +151,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | SEED-1 | scaffold: branch off `main`, baseline run, coverage-gate + acceptance-runner self-check, record baseline | ✅ Done | 6,139,369 | 22m 06s | G-1 ✅; baseline unit 1279/0, sim integ 222/0, analyze clean |
-| 2 | SEED-2 | shell: `lib/dataset/` types + `SeedLoader`/`AssetSeedLoader` + `SeededPaletteSource` + `DatasetReadEndpoint` + wiring | ⬜ Next | | | ∥ PROV-1, GUARD-1 |
-| 3 | PROV-1 | shell: `EvidenceKind` + tier-derivation seam + append-only add stub + `ProvenanceReadEndpoint` | ⬜ Todo | | | ∥ SEED-2, GUARD-1 |
+| 2 | SEED-2 | shell: `lib/dataset/` types + `SeedLoader`/`AssetSeedLoader` + `SeededPaletteSource` + `DatasetReadEndpoint` + wiring | ✅ Done | 15,898,272 | 34m 54s | analyze clean; unit 1315/0; coverage 100%/6; integ 222/0 (sim) |
+| 3 | PROV-1 | shell: `EvidenceKind` + tier-derivation seam + append-only add stub + `ProvenanceReadEndpoint` | ⬜ Next | | | ∥ GUARD-1 |
 | 4 | GUARD-1 | shell: reusable guard harness (source-scan + schema-check scaffolding) | ⬜ Todo | | | ∥ SEED-2, PROV-1 |
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke test | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,6,11 (pending) + red baseline | ⬜ Todo | | | seq before ITEST-3 |
@@ -170,9 +170,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-SEED-1 (scaffold) ✅ done — branch confirmed off `7015390`, baseline recorded (unit 1279/0, integ 222/0 on the iPhone 17 sim, analyze clean), coverage gate + acceptance runner self-checked.
+SEED-2 (shell) ✅ done — `lib/dataset/` surface built (`SeedDataset`/`SeedPaintEntry`/`CandidateMapping`/`ValidationManifest`/`SeedLoader`+`AssetSeedLoader`/`SeededPaletteSource`+`CompositePaletteSource`/`DatasetReadEndpoint`) and wired into `build_app` (`AppDependencies.seedDataset` default empty; read endpoint mounted; seed composed into the **solve** path only, write-path persistence untouched). Empty-seed-neutral: analyze clean, unit 1315/0, coverage 100% on all 6 touched files, integ regression 222/0 on the iPhone 17 sim (== baseline).
 
-The three shells are now startable and **run concurrently in separate sessions** (`--parallel`, disjoint ownership): SEED-2 (`lib/dataset/`) ∥ PROV-1 (`lib/domain/`) ∥ GUARD-1 (`integration_test/bs13/guards/`). Run e.g. `/feature-next-phase --parallel bs13 SEED-2`. All three feed ITEST-1. G-2 (ITEST-4 test review) still blocks every behavior phase; G-3 is a SIGNOFF-1 decision. Reminder: full regression runs **per-file**, UI/persistence files on the iPhone 17 sim (see Known flakes).
+The two remaining shells are startable and **run concurrently in separate sessions** (`--parallel`, disjoint ownership): PROV-1 (`lib/domain/`) ∥ GUARD-1 (`integration_test/bs13/guards/`). Run e.g. `/feature-next-phase --parallel bs13 PROV-1`. Both (with SEED-2) feed ITEST-1 — ITEST cannot start until all three shells land. G-2 (ITEST-4 test review) still blocks every behavior phase; G-3 is a SIGNOFF-1 decision. Reminder: full regression runs **per-file** on the host, UI/persistence files on the iPhone 17 sim (see Known flakes); bs-13's own suite is pure-Dart (`flutter-tester`). SEED-3 reconciliation carried in SEED-2's Checkpoint (shippable placeholder, local `SeedOrigin`→`EvidenceKind`).
 
 ## Token usage
 
@@ -183,7 +183,8 @@ The three shells are now startable and **run concurrently in separate sessions**
 | PLAN | c8a994a2 | 2026-10-14 14:16 EDT | 15:14 | 57m 41s | 17m 23s | claude-opus-4-8 | 66 | 192,330 | 2,696,529 | 74,952 | 2,963,877 | plan written |
 | GATE-DECISION | 9322eaed | 2026-10-14 16:06 EDT | 16:07 | 1m 29s | 1m 29s | claude-opus-4-8 | 32 | 38,265 | 958,072 | 5,144 | 1,001,513 | G-1 approved — bs-13 spec approved by Matt Quirk; SEED-1 unblocked |
 | SEED-1 | c8a8789e | 2026-10-14 16:08 EDT | 16:31 | 22m 06s | 22m 06s | claude-opus-4-8 | 124 | 106,263 | 5,995,882 | 37,100 | 6,139,369 | scaffold verify: branch off 7015390 confirmed; baseline unit 1279/0, integ 222/0 (iPhone 17 sim), analyze clean; coverage gate PASS-clean/FAIL-on-gap; no product code |
-| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-14 16:31** | **1h 21m** | **40m 58s** |  | **222** | **336,858** | **9,650,483** | **117,196** | **10,104,759** |  |
+| SEED-2 | 4f988a02 | 2026-10-14 17:46 EDT | 18:21 | 34m 54s | 34m 54s | claude-opus-4-8 | 194 | 197,147 | 15,611,037 | 89,894 | 15,898,272 | shell: lib/dataset surface + build_app wiring; analyze clean, unit 1315/0, coverage 100%/6, integ 222/0 (iPhone 17 sim); behaviour unchanged |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-14 18:21** | **1h 56m** | **1h 15m** |  | **416** | **534,005** | **25,261,520** | **207,090** | **26,003,031** |  |
 
 ## Sign-off
 

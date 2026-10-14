@@ -1,6 +1,6 @@
 # Module SEED — shipped seed dataset, loader, ingest rule and validation manifest
 
-**Status:** In progress — SEED-1 ✅ (scaffold); next SEED-2 (shell)
+**Status:** In progress — SEED-2 ✅ (shell: dataset surface wired, empty-seed-neutral); next the behavior stage (SEED-3, after ITEST + G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/dataset/` (new: `seed_dataset.dart`, `seed_loader.dart`, `validation_manifest.dart`, `seeded_palette_source.dart`, `dataset_read_endpoint.dart`), the shipped asset `assets/paints/<brand>_<medium>_seed.json` (+ `pubspec.yaml` asset entry), and the wiring in `lib/app/build_app.dart` / `AppDependencies`.
 **Depends on:** the bs-04 engine + `Paint`/`PaintPalette`/`PaletteSource` (`lib/recipes/`, `lib/domain/paint.dart`); PROV's `EvidenceKind`/`ProvenanceOrigin` for the per-entry origin (SEED-2 may introduce a local placeholder if PROV-1 lands later, reconciled at SEED-4) · **Blocks:** ITEST-1, GUARD-2
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 6,139,369 | 22m 06s |
-| 2 | shell | — | ⬜ Todo | | |
+| 2 | shell | — | ✅ Done | 15,898,272 | 34m 54s |
 | 3 | behavior | AC-1, AC-11 | ⬜ Todo | | |
 | 4 | behavior | AC-2, AC-4 | ⬜ Todo | | |
 | 5 | behavior | AC-5, AC-6 | ⬜ Todo | | |
@@ -84,6 +84,26 @@ Fix passes: 0/3 (verify only). No `lib/` change → coverage gate not applicable
 - **Exit criteria:** unit gate (100% on touched files); the existing unit + acceptance suites stay green; behavior unchanged (empty seed).
 - **Acceptance gate:** —
 - **Augments:** —
+
+### Result — SEED-2  <!-- 2026-10-14 -->
+
+Shell: the dataset surface is built and wired, behaviour-neutral on the empty seed. New `lib/dataset/`:
+- `validation_manifest.dart` — `ValidationManifest` (heldOutCount, deltaE00Distribution, hybrid/llmAlone means, usableThreshold) + `.empty()`; `shippable` is the **shell placeholder** `false` (real AC-6 decision → SEED-5). Value-equal.
+- `seed_dataset.dart` — `SeedPaintEntry` (id/name/brand/medium/masstone + optional pigmentIndex/opacity/lightfastness + `origin`) with `toPaint()` (drops seed-only lightfastness); `CandidateMapping` (targetDescriptor/ids/origin, default `llmSeed`); `SeedDataset` (brand/medium/entries/mappings/manifest) + `.empty()` + `isEmpty`. All `const`, value-equal. **Local `SeedOrigin{reviewedOptical,llmSeed}` placeholder** (D: PROV-1 not landed) — reconciled to PROV's `EvidenceKind` at SEED-4.
+- `seed_loader.dart` — `SeedLoader` iface + `AssetSeedLoader` (holds `assetPath`); shell `load()` returns `SeedDataset.empty()` (SEED-3 reads the real asset).
+- `seeded_palette_source.dart` — `SeededPaletteSource implements PaletteSource` (empty dataset ⇒ **no** palette; else one `"<brand> <medium>"` palette over `toPaint()`); `CompositePaletteSource` (concatenates sources).
+- `dataset_read_endpoint.dart` — `DatasetReadEndpoint` InheritedWidget (of/maybeOf/`endpointKey`/manifest) — the AC observation seam.
+
+`build_app`: `AppDependencies.seedDataset` (default `const SeedDataset.empty()`, carried in `withCvdProfile`/`_depsWithSpeech`); mounts `DatasetReadEndpoint` above the `MaterialApp`; composes the seed into the **solve** path only via `_solverPaletteSource` = `CompositePaletteSource([SeededPaletteSource(seed), paletteSource])` at RecipesHomeScreen, CorrectionHomeScreen and PaletteHomeScreen's shared `RecipeController` (all read `palettes()` only). The Palette screen's **write** `PaletteController` keeps the unwrapped concrete source, so bs-06 persistence (`source is PersistentPaletteSource`) is unaffected — the pitfall avoided.
+
+**Verification:** `flutter analyze` clean · unit **1315/0** (+36: `test/dataset/dataset_shell_test.dart` + `test/app/build_app_seed_wiring_test.dart`) · coverage gate **100% on all 6 touched files** (`COVERAGE_GATE_BASE=7015390`) · cross-feature integration regression **222/222 on the iPhone 17 sim** (== SEED-1 baseline; whole `integration_test/` dir under the device lock). Behaviour unchanged confirmed. Fix passes: 1/3 (re-scoped the composition off the global `paletteSource` onto the solve path after spotting the `PersistentPaletteSource` type-check; two const-only ctors given runtime invocations for the coverage gate). Tokens 15,898,272 · Time 34m 54s.
+
+### Checkpoint / Handoff — SEED-2
+
+- **Frozen for next phases:** the `lib/dataset/` surface above. `AppDependencies.seedDataset` is the injection seam (ITEST harness injects a `SeedDataset`; production passes `AssetSeedLoader().load()` once before `buildApp`). `DatasetReadEndpoint.endpointKey` / `of` is the AC observation seam. `_solverPaletteSource` composes the seed into the mix path; **SEED-3 need not touch `build_app`** — it fills `AssetSeedLoader.load()` + the asset so a non-empty seed flows to the solver automatically.
+- **SEED-3 reconciliation notes:** (1) `shippable` is a `false` placeholder — SEED-5 implements the real rule. (2) `SeedOrigin` is local — SEED-4 reconciles it to PROV's `EvidenceKind`. (3) `SeededPaletteSource.palettes()` names the palette `"<brand> <medium>"`; adjust if SEED-3's asset wants a different label.
+- **Verification commands:** unchanged from SEED-1 (analyze; `flutter test --coverage`; `COVERAGE_GATE_BASE=7015390 dart run tool/coverage_gate.dart`; integration on the iPhone 17 sim under `coord.sh with-lock bs-13 <PHASE>`). GOTCHA: const-only constructors show as uncovered — invoke them non-const (`// ignore: prefer_const_constructors`) in a test.
+- **Known gaps:** none introduced; behaviour unchanged. The seed is not yet available to the Palette screen's paint **list** (only the mix/solve path) — not a bs-13 AC; revisit if a later AC needs it.
 
 ## Phase 3 — AC-1, AC-11: ship the seed asset + loader; solve from it
 
