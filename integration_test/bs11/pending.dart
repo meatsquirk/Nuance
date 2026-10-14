@@ -73,7 +73,8 @@ const Map<String, String> pendingACs = {
   // AC-7 (eyes-free walkthrough) un-pended by GATE-2.
   // AC-8 (nothing auto-dismisses) un-pended by A11Y-7.
   // AC-9 (failed check not accepted) un-pended by GATE-3.
-  'AC-11': 'GATE-4',
+  // AC-11 (WCAG 2.2 AA floor) un-pended by GATE-4 — the last automated AC, so
+  // the pending set is now empty (AC-10/AC-12 are pure-manual, D-2, never here).
 };
 
 /// The behaviour phases allowed to own a pending AC.

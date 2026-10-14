@@ -1,5 +1,76 @@
 # bs-11 Accessibility conformance — behaviour-test completeness
 
+**Phase graded: GATE-4 (un-pended AC tests AC-1,2,3,4,5,6,7,8,9,11).** Independent,
+adversarial grade of the acceptance tests on `feat/bs-11-accessibility-conformance`
+(worktree `/Users/matthew.quirk/Nuance-bs11`) as the code now stands. **What GATE-4
+changed:** it delivered **AC-11** (the recorded WCAG 2.2 AA floor — the last
+automated AC) by (1) implementing the pure-domain `recordedLevel`
+(`lib/a11y/conformance/acceptance.dart`) as **`WcagLevel.aa22` iff `result.passed`,
+else `WcagLevel.below`** — riding on the complete `ConformanceResult.passed` (every
+rule present and passing), never a single rule, exactly like `acceptanceDecision`;
+(2) pinning the WCAG 2.2 AA threshold constants `WcagThresholds` (pure domain) —
+`minTextContrastRatioNormalText=4.5`, `minTextContrastRatioLargeText=3.0`,
+`minTapTargetDip=48.0`, `minSupportedTextScale=2.0`; (3) wiring
+`integration_test/conformance/checks/scaling.dart` to reference
+`WcagThresholds.minSupportedTextScale` instead of a literal `2.0` (same value — the
+200% re-render is behaviourally unchanged); (4) un-pending **AC-11** in
+`integration_test/bs11/pending.dart` (**the pending set is now empty** — every
+automated AC delivered) and updating the scaffold-guard in `accessibility_test.dart`;
+and (5) strengthening the AC-11 test with a **threshold-pinning leg** that ties the
+recorded `aa22` floor to the real WCAG 2.2 AA numbers AND to the thresholds the
+contrast / tap-target / scaling rules actually enforce. The grader ran nothing and
+edited nothing but this file.
+
+**AC-1..9 are untouched by GATE-4 at the test and rule level — and structurally
+cannot be disturbed by it (verified):** GATE-4 changed only `recordedLevel` +
+`WcagThresholds` (both read solely by the AC-11 test), `scaling.dart`'s threshold
+*reference* (literal `2.0` → `WcagThresholds.minSupportedTextScale`, numerically
+identical, so `checkFontScale200` re-renders at the same 200% and AC-3's
+`fontScale200` outcome is unchanged), the AC-11 test body, and the pending map. It
+touched **no** AC-1..9 test body, **no** per-rule check behaviour, and **not**
+`acceptanceDecision`. Each AC-1..9 test reads only its own `outcomeFor(itsId)` /
+`failing.contains(itsId)` (AC-9 reads `.passed`/`.failing`/`acceptanceDecision`),
+none of which GATE-4 altered — so none can be masked or shifted.
+`recordedLevel`/`WcagThresholds` are read by AC-11 alone.
+
+| AC | Test | Grade | Justification (failing G-rule if below A) |
+|---|---|---|---|
+| **AC-11** | `WCAG 2.2 AA is the recorded accepted floor` (owner GATE-4), un-pended; `recordedLevel` = `aa22` iff `result.passed`, else `below`, over the aggregate now holding all 8 rules; `WcagThresholds` pinned | **A** | **G1** both Givens asserted through the public surface before their When — the compliant reference proven `passing.passed isTrue` before `recordedLevel(passing)`, and `control_partialFail` proven `failing.passed isFalse` before `recordedLevel(failing)`. **G2** the results come from the real `runConformanceCheck` over the real compliant reference / `control_partialFail`, not a fabricated `ConformanceResult`. **G4** asserts the exact pure-domain enum (`WcagLevel.aa22` / `WcagLevel.below`), the raw verdict, at the AC's grain; the pinning leg asserts the exact numeric constants (4.5 / 3.0 / 48.0 / 2.0). **G5 (decisive) — rejects all three degenerate impls.** (a) constant-`aa22`: the `below` control leg — a failing result (`passed==false`) must record `WcagLevel.below`, so an always-`aa22` impl fails. (b) constant-`below`: the passing leg — the fully-passing reference must record `aa22`, so an always-`below` impl fails. (c) a floor NOT equal to the WCAG 2.2 AA numbers: the threshold-pinning leg. **The pinning is genuine, not vacuous** — it does not assert a constant against itself: each `WcagThresholds` constant is pinned both to the literal WCAG number (`4.5`/`3.0`/`48.0`/`2.0`) **and** to the threshold the rule that enforces it actually reads — the contrast rule's `textContrastGuideline` via `MinimumTextContrastGuideline.kMinimumRatioNormalText`/`kMinimumRatioLargeText`, the tap-target rule's `androidTapTargetGuideline` via `(… as MinimumTapTargetGuideline).size == Size(48,48)`, and the scaling rule which references `WcagThresholds.minSupportedTextScale` directly (`scaling.dart`). A drift between the recorded `aa22` floor and either the real AA numbers or what the rules enforce would therefore fail the gate — so `aa22` names a real, enforced bar, not a bare label. **G6** AC-11 only — the pinning legs all serve AC-11's "AA is a real floor" claim, not a second AC. **G3** N/A (no negative-after-settle Then). `recordedLevel` rides on the complete `result.passed`, never a single rule. |
+| **AC-1** | `every colour-coded element carries a non-colour cue` (owner A11Y-5); rule `checkColourCue` | **A** | Carried from GATE-3's A; independently re-confirmed GATE-4 touched neither its body nor rule. Reads only `failing.contains(colourCue)`. Sweep on 6 real screens + `ColorChip` reference pass; `control_bareDot` fails. **G1/G2/G4/G5/G6** met; **G3** N/A. |
+| **AC-2** | `a status is never rendered as a bare colour dot` (owner A11Y-5); rule `checkNoBareDot` | **A** | Carried A; untouched. Reads only `noBareDot`. Sweep + `StatusBadge` reference pass; `control_bareDot` fails. **G1/G2/G4/G5/G6** met. |
+| **AC-3** | `the layout survives 200% font scaling without breaking` (owner A11Y-4); rule `checkFontScale200` | **A** | Carried A; the only GATE-4 touch is the threshold *reference* (`2.0` → `WcagThresholds.minSupportedTextScale`, same value), so the 200% re-render + overflow measurement are behaviourally identical. Reads only `fontScale200`; `control_overflow200` fails. **G1/G2/G4/G5/G6** met. |
+| **AC-4** | `interactive targets meet the 48dp minimum` (owner A11Y-3); rule `checkTapTarget48` | **A** | Carried A; untouched. Reads only `tapTarget48`. Sweep + 48dp reference pass; `control_smallTarget` (24dp) fails. **G1/G2/G4/G5/G6** met. |
+| **AC-5** | `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2); rule `checkContrastAA` | **A** | Carried A; untouched. Reads only `contrastAA`. **G2 decisive** — pinned to shipped `AppTheme.light().colorScheme`; `control_lowContrast` fails. **G1/G4/G5/G6** met. |
+| **AC-6** | `every control exposes a meaningful screen-reader label` (owner A11Y-6); rule `checkMeaningfulLabel` | **A** | Carried A; untouched. Reads only `meaningfulLabel`. Sweep + tooltipped reference pass; `control_unlabelled` fails. **G1/G2/G4/G5/G6** met. |
+| **AC-7** | `a core task completes eyes-free under the screen reader` (owner GATE-2); driver `eyesFreeComplete` | **A** | Carried A; untouched (a separate semantics-only driver, not an aggregate rule). Positive + control pair rejects always-true / always-false / coordinate-fallback drivers (D-6). **G1/G2/G4/G5/G6** met; **G3** N/A. |
+| **AC-8** | `nothing auto-dismisses or imposes a time limit` (owner A11Y-7); rule `checkNoTimeout` | **A** | Carried A; untouched. Reads only `noTimeout`. Real 10s fake-clock settle; change-control (`control_autoDismiss` SnackBar gone after the advance) proves the reading can move; `AccessibleNotice` reference persists. **G1/G3/G4/G5/G6** met. |
+| **AC-9** | `a feature failing the automated check is not accepted` (owner GATE-3); `acceptanceDecision` over the full aggregate | **A** | Carried from GATE-3's A; GATE-4 touched neither `acceptanceDecision`, the AC-9 body, nor any rule. Two negative controls with disjoint singleton failure sets (`control_partialFail`→`tapTarget48`, `control_lowContrast`→`contrastAA`) plus a fully-passing reference reject constant-accepted, constant-notAccepted, and every single-rule decision. **G1/G4/G5/G6** met; **G3** N/A. |
+
+**Grade: 10 A / 0 B.**
+
+**Verdict — PASS (all A).** The NEW GATE-4 test (AC-11) is **A, earned**:
+`recordedLevel` rides on the complete `result.passed`, and the test rejects all
+three degenerate implementations — constant-`aa22` (the `below` control leg),
+constant-`below` (the passing leg), and a floor divorced from the WCAG 2.2 AA
+numbers (the threshold-pinning leg). The pinning is **genuine, not vacuous**: it
+ties each `WcagThresholds` constant both to the literal WCAG number and to the
+threshold the enforcing rule actually reads (`MinimumTextContrastGuideline`'s
+ratios, `androidTapTargetGuideline`'s 48dp size, and `scaling.dart`'s direct
+reference), so the recorded `aa22` floor cannot drift from what the rules enforce
+without failing the gate. **AC-1..9 hold their prior A, un-weakened and
+structurally un-interfered-with** — GATE-4 touched only `recordedLevel` /
+`WcagThresholds` (read by AC-11 alone), a numerically-identical threshold reference
+in `scaling.dart`, the AC-11 body, and the pending map; no AC-1..9 body, no per-rule
+check, and not `acceptanceDecision`. The pending set is now **empty**: every
+automated AC is delivered. AC-10 and AC-12 remain pure-manual gates, closed by user
+acceptance at SIGNOFF-1 (G-3/G-4).
+
+**No B rows — nothing must change for this phase to pass.**
+
+---
+
+## GATE-3 — re-grade of un-pended AC tests (AC-1,2,3,4,5,6,7,8,9)
+
 **Phase graded: GATE-3 (un-pended AC tests AC-1,2,3,4,5,6,7,8,9).** Independent,
 adversarial re-grade of **every currently un-pended automated AC test** against the
 code as it now stands on `feat/bs-11-accessibility-conformance` (worktree

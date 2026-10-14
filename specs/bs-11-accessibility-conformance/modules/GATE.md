@@ -1,6 +1,6 @@
 # Module GATE — the conformance gate + eyes-free driver
 
-**Status:** ◐ In progress (GATE-1, GATE-2, GATE-3 done; GATE-4 left)
+**Status:** ✅ Done (GATE-1, GATE-2, GATE-3, GATE-4 all done)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/a11y/conformance/conformance_result.dart`, `lib/a11y/conformance/acceptance.dart` (pure domain: `ConformanceResult`, `ConformanceRuleId`, `AcceptanceDecision`, `WcagLevel`, `acceptanceDecision`, `recordedLevel`); `integration_test/conformance/conformance_check.dart` (the aggregate `runConformanceCheck` that composes A11Y's per-rule rules into a `ConformanceResult`); `integration_test/conformance/eyes_free.dart` (the semantics-only driver).
 **Depends on:** A11Y (the per-rule check rules; the aggregate needs all of them) · **Blocks:** SIGNOFF-1
@@ -12,7 +12,7 @@
 | GATE-1 | shell | — | ✅ Done | 3,553,802 | 17m 14s |
 | GATE-2 | behavior | AC-7 | ✅ Done | 10,094,248 | 23m 31s |
 | GATE-3 | behavior | AC-9 | ✅ Done | 14,490,779 | 38m 40s |
-| GATE-4 | behavior | AC-11 | ⬜ Todo | | |
+| GATE-4 | behavior | AC-11 | ✅ Done | 6,423,118 | 16m 11s |
 
 ## Interface reconciliation
 
@@ -105,7 +105,27 @@
 - **Gates:** `flutter analyze` clean; unit **1044/1044** (1041 − 1 stub + 4 new acceptanceDecision cases); coverage gate **100% line on all 18 touched lib files** (both branches of `acceptanceDecision`; `recordedLevel`'s throw still covered by its stub test). Acceptance (default mode, booted iPhone 17 sim via `coord.sh with-lock`): **18 pass / 1 skip** (AC-11 pending GATE-4), exit 0 — AC-1..9 green. **Grade gate (fresh adversarial subagent, AC-1..9): 9 A / 0 B** (AC-9 B→A after the second-control strengthening; AC-1..8 re-confirmed A, structurally un-disturbed). **Fix passes: 1/3** (first full acceptance run failed: `checkEyesFree` only inspected `label`, so the reference's tooltip-named IconButton made `full.passed` false; fixed to accept label/tooltip/value; second run green. The AC-9 strengthening + re-grade followed the green acceptance run, not a gate failure).
 - **Augmentation:** TestAC09 (*B pending GATE-3*) **closed** — the aggregate populates every rule, so `acceptanceDecision` reads a complete result and the test discriminates. One non-blocking hardening noted (pin `partial.failing` to exactly `{tapTarget48}`).
 
+**GATE-4 — AC-11 recorded WCAG 2.2 AA floor** (✅ Done, 16m 11s / 6,423,118)
+
+- **`lib/a11y/conformance/acceptance.dart` — `recordedLevel` implemented** (was the GATE-1 stub throwing `UnimplementedError`): `result.passed ? WcagLevel.aa22 : WcagLevel.below`. Rides on the *complete* `ConformanceResult.passed` (every id present and passing), so any failing rule, or a partial/empty result, records `below` — the feature never claims AA for a build that did not clear every rule. Pure domain (no `flutter`/`flutter_test`).
+- **`WcagThresholds` added** (pure-domain, `acceptance.dart`): the pinned WCAG 2.2 AA numeric floor (D-5) — `minTextContrastRatioNormalText 4.5`, `minTextContrastRatioLargeText 3.0`, `minTapTargetDip 48.0`, `minSupportedTextScale 2.0`. One source of truth so the recorded `aa22` floor and the numbers the check rules enforce cannot drift apart.
+- **`integration_test/conformance/checks/scaling.dart` wired to the constant** — the font-scaling rule now sets `textScaleFactorTestValue = WcagThresholds.minSupportedTextScale` instead of a literal `2.0` (numerically identical ⇒ AC-3's `fontScale200` behaviour unchanged; it now references the pinned floor).
+- **AC-11 un-pended** — deleted its row in `bs11/pending.dart` (**pending set now empty** — every automated AC delivered); updated the scaffold guard in `accessibility_test.dart` (`expected` → `<String>{}`, `isEmpty`, `!containsKey('AC-11')`). AC-10/AC-12 remain pure-manual (D-2).
+- **AC-11 test strengthened (recorded, non-weakening — closes the GATE-4 augmentation):** added a threshold-pinning leg asserting the `WcagThresholds` constants equal the WCAG 2.2 AA numbers **and** that the Flutter guidelines the check rules delegate to carry exactly those numbers — `MinimumTextContrastGuideline.kMinimumRatioNormalText/kMinimumRatioLargeText == WcagThresholds.*`, `(androidTapTargetGuideline as MinimumTapTargetGuideline).size == Size(48,48)`. So "records `aa22`" names a real floor, not a bare label; a floor weaker than WCAG 2.2 AA fails the gate. No original assertion changed.
+- **Unit test:** replaced the stale `recordedLevel throws` stub test with four real cases (fully-passing ⇒ `aa22`; one failing rule ⇒ `below`; partial/incomplete ⇒ `below`; empty ⇒ `below`) + a `WcagThresholds` value test fixing the four constants to the WCAG 2.2 AA numbers.
+- **Gates:** `flutter analyze` clean; unit **1048/1048** (1044 − 1 stub + 4 recordedLevel cases + 1 WcagThresholds test); coverage gate **100% line on all 18 touched lib files** (both `recordedLevel` branches; `WcagThresholds` constants referenced). Acceptance (default mode, booted iPhone 17 sim via `coord.sh with-lock`): **19 pass / 0 skip**, exit 0 — AC-1..9 and AC-11 all green, **nothing pending**. **Grade gate (fresh adversarial subagent, AC-1..9 + AC-11): 10 A / 0 B** — AC-11 earned A (G5 rejects constant-`aa22`, constant-`below`, and a floor ≠ the WCAG numbers; the threshold-pinning is genuine, tying the recorded floor to what the rules actually enforce), AC-1..9 re-confirmed A (structurally un-disturbed — GATE-4 touched only `recordedLevel`/`WcagThresholds`/`scaling.dart`'s threshold reference/AC-11 test/`pending.dart`). **Fix passes: 0/3** (green on the first full run). Non-blocking AC-9 hardening (pin `partial.failing` exactly `{tapTarget48}`) deferred to SIGNOFF-1.
+- **Augmentation:** TestAC11 (*B pending GATE-4*) **closed** — `recordedLevel` reads the complete aggregate result and the test pins the thresholds to WCAG 2.2 AA.
+- **Behaviour stage COMPLETE** — all 10 automated ACs delivered; only SIGNOFF-1 (+ manual AC-10/AC-12 → G-3/G-4) remains.
+
 ### Checkpoint / Handoff  <!-- filled on completion -->
+
+**After GATE-4 (branch `feat/bs-11-accessibility-conformance`) — behaviour stage complete:**
+
+- **Frozen interfaces:** `recordedLevel(ConformanceResult)` (pure, `aa22` iff `result.passed`, else `below`) implemented and reusable (D-3), alongside `acceptanceDecision`. `WcagThresholds` (pure domain) pins the WCAG 2.2 AA floor; the per-rule check rules evaluate against exactly it (`checks/scaling.dart` references `minSupportedTextScale`; the contrast/tap-target rules delegate to Flutter guidelines pinned equal to the constants by the AC-11 test). `runConformanceCheck` composes all 8 rules; `ConformanceResult.passed` is meaningful.
+- **Verification commands** (from `../Nuance-bs11`, `flutter` at `/Users/matthew.quirk/development/flutter/bin`): analyze `flutter analyze`; unit+coverage `flutter test --coverage`; coverage gate `dart run tool/coverage_gate.dart main`; acceptance `flutter test integration_test/bs11/accessibility_test.dart -d <booted-udid>` under `coord.sh with-lock` (booted `-d` mandatory). Grade via a fresh adversarial subagent against G1–G6, writing `specs/.../behavior-test-completeness-bs-11-accessibility-conformance.md`.
+- **Known gaps / next:** **SIGNOFF-1** is the only remaining phase — assemble the sign-off packet + summary page + fresh whole-suite re-grade, run the two **pure-manual** gates **G-3** (AC-10 eyes-free walkthrough under a live screen reader) and **G-4** (AC-12 on-device VoiceOver-vs-TalkBack parity), name the manual-gate gap, set `⏸ Awaiting sign-off`, STOP; a human records the decision via `/feature-next-phase --signoff bs-11 approved`. Fold in the non-blocking AC-9 hardening (pin `partial.failing` exactly `{tapTarget48}`) if desired. On sign-off, merge `feat/bs-11` → main (rebasing in-flight features onto the shared theme/widgets) — this feature changes `lib/app/theme.dart` + `lib/widgets/`.
+
+### GATE-3 Checkpoint / Handoff
 
 **After GATE-3 (branch `feat/bs-11-accessibility-conformance`):**
 

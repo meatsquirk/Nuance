@@ -55,14 +55,52 @@ void main() {
     });
   });
 
-  group('GATE-4 stub', () {
-    // recordedLevel is implemented in GATE-4; until then it throws, so the
-    // frozen signature compiles while AC-11 is still pending.
-    test('recordedLevel throws UnimplementedError', () {
-      expect(
-        () => recordedLevel(const ConformanceResult.empty()),
-        throwsUnimplementedError,
-      );
+  group('recordedLevel (GATE-4, AC-11)', () {
+    // A fully-passing result: every rule id present and passing.
+    final fullyPassing = ConformanceResult({
+      for (final id in ConformanceRuleId.values)
+        id: const ConformanceRuleOutcome.ok(),
+    });
+
+    test('records WCAG 2.2 AA for a fully-passing result', () {
+      expect(fullyPassing.passed, isTrue);
+      expect(recordedLevel(fullyPassing), WcagLevel.aa22);
+    });
+
+    test('records below AA when a rule fails', () {
+      final failing = ConformanceResult({
+        for (final id in ConformanceRuleId.values)
+          id: const ConformanceRuleOutcome.ok(),
+        ConformanceRuleId.contrastAA:
+            const ConformanceRuleOutcome.fail('3.1:1 text'),
+      });
+      expect(failing.passed, isFalse);
+      expect(recordedLevel(failing), WcagLevel.below);
+    });
+
+    test('records below AA for a partial result (not every rule ran)', () {
+      final incomplete = ConformanceResult({
+        ConformanceRuleId.contrastAA: const ConformanceRuleOutcome.ok(),
+      });
+      expect(incomplete.passed, isFalse);
+      expect(recordedLevel(incomplete), WcagLevel.below);
+    });
+
+    test('records below AA for the empty result', () {
+      expect(recordedLevel(const ConformanceResult.empty()), WcagLevel.below);
+    });
+  });
+
+  group('WcagThresholds (GATE-4, AC-11, D-5)', () {
+    // The pinned WCAG 2.2 AA numeric floor the `aa22` level names. The AC-11
+    // acceptance test additionally pins Flutter's contrast/tap-target
+    // guidelines (which the check rules delegate to) equal to these values;
+    // here we fix the constants themselves so a silent edit cannot lower them.
+    test('carry exactly the WCAG 2.2 AA values', () {
+      expect(WcagThresholds.minTextContrastRatioNormalText, 4.5);
+      expect(WcagThresholds.minTextContrastRatioLargeText, 3.0);
+      expect(WcagThresholds.minTapTargetDip, 48.0);
+      expect(WcagThresholds.minSupportedTextScale, 2.0);
     });
   });
 }

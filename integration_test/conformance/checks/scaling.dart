@@ -26,6 +26,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/conformance/acceptance.dart';
 import 'package:paint_color_assistant/a11y/conformance/conformance_result.dart';
 
 /// Re-renders the subtree found by [screen] at 200% font scale and returns the
@@ -47,7 +48,8 @@ Future<ConformanceRuleOutcome> checkFontScale200(
   FlutterError.onError = (FlutterErrorDetails _) {};
   String? overflow;
   try {
-    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    tester.platformDispatcher.textScaleFactorTestValue =
+        WcagThresholds.minSupportedTextScale;
     // Two frames so the MediaQuery change rebuilds and the tree re-lays-out at
     // the larger scale before it is measured.
     await tester.pump();

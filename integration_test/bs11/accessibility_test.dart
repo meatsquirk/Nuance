@@ -45,17 +45,17 @@ void main() {
       // un-pended AC-3** (200% font scaling), **A11Y-5 un-pended AC-1 + AC-2**
       // (colour cue / no bare dot), **A11Y-6 un-pended AC-6** (meaningful
       // labels), **A11Y-7 un-pended AC-8** (nothing auto-dismisses), **GATE-2
-      // un-pended AC-7** (eyes-free walkthrough) and **GATE-3 un-pended AC-9**
-      // (aggregate acceptance decision), so the still-pending set is now AC-11
-      // alone (GATE-4). AC-10 and AC-12 are pure-manual gates (D-2) and never
-      // enter the gate.
-      const expected = {
-        'AC-11',
-      };
+      // un-pended AC-7** (eyes-free walkthrough), **GATE-3 un-pended AC-9**
+      // (aggregate acceptance decision) and **GATE-4 un-pended AC-11** (recorded
+      // WCAG 2.2 AA floor — the last automated AC), so the pending set is now
+      // **empty**: every automated AC is delivered. AC-10 and AC-12 are
+      // pure-manual gates (D-2) and never enter the gate.
+      const expected = <String>{};
       expect(pendingACs.keys.toSet(), expected);
-      expect(pendingACs, hasLength(1));
-      // AC-5, AC-4, AC-3, AC-1, AC-2, AC-6, AC-8, AC-7 and AC-9 are delivered —
-      // no longer pending.
+      expect(pendingACs, isEmpty);
+      // Every automated AC — AC-1..9 and AC-11 — is delivered, no longer pending.
+      expect(pendingACs.containsKey('AC-11'), isFalse,
+          reason: 'AC-11 was un-pended by GATE-4');
       expect(pendingACs.containsKey('AC-5'), isFalse,
           reason: 'AC-5 was un-pended by A11Y-2');
       expect(pendingACs.containsKey('AC-4'), isFalse,
@@ -692,6 +692,33 @@ void main() {
           reason: 'Given: control_partialFail does not pass every rule');
       expect(recordedLevel(failing), WcagLevel.below,
           reason: 'a result that fails a rule records below AA, never AA');
+
+      // And (D-5, closes TestAC11): the recorded `aa22` floor is not a bare
+      // label — the thresholds the check rules evaluate against are pinned to
+      // exactly the WCAG 2.2 AA constants, so the level names a real bar.
+      // The domain constants carry the WCAG 2.2 AA numbers…
+      expect(WcagThresholds.minTextContrastRatioNormalText, 4.5,
+          reason: 'WCAG 2.2 AA normal-text contrast floor is 4.5:1');
+      expect(WcagThresholds.minTextContrastRatioLargeText, 3.0,
+          reason: 'WCAG 2.2 AA large-text contrast floor is 3:1');
+      expect(WcagThresholds.minTapTargetDip, 48.0,
+          reason: 'the pinned 48dp tap-target floor (D-5)');
+      expect(WcagThresholds.minSupportedTextScale, 2.0,
+          reason: 'WCAG 2.2 AA resize-text floor is 200%');
+      // …and the check rules evaluate against exactly those numbers: the
+      // contrast and tap-target rules delegate to Flutter's own guidelines,
+      // whose thresholds must equal the pinned constants (the scaling rule
+      // references `WcagThresholds.minSupportedTextScale` directly).
+      expect(MinimumTextContrastGuideline.kMinimumRatioNormalText,
+          WcagThresholds.minTextContrastRatioNormalText,
+          reason: 'the contrast rule enforces the pinned AA normal-text ratio');
+      expect(MinimumTextContrastGuideline.kMinimumRatioLargeText,
+          WcagThresholds.minTextContrastRatioLargeText,
+          reason: 'the contrast rule enforces the pinned AA large-text ratio');
+      expect(
+          (androidTapTargetGuideline as MinimumTapTargetGuideline).size,
+          Size(WcagThresholds.minTapTargetDip, WcagThresholds.minTapTargetDip),
+          reason: 'the tap-target rule enforces the pinned 48dp floor');
     });
   });
 }
