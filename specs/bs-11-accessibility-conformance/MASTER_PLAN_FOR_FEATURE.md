@@ -1,7 +1,7 @@
 # Master Plan — Accessibility conformance
 
 **Spec:** [bs-11-accessibility-conformance.feature](../bs-11-accessibility-conformance.feature)
-**Status:** In progress — behaviour stage ✅ complete (all 10 automated ACs delivered, GATE-4/AC-11 done, grade 10 A/0); next SIGNOFF-1 (packet + summary + manual AC-10/AC-12 gates G-3/G-4)
+**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet assembled ([signoff/round-1.md](signoff/round-1.md)); all 10 automated ACs delivered + graded A (fresh re-grade 10 A/0), analyze clean, unit 1048/1048, coverage 100% on 18 touched files, full regression 192/192 on sim. Remaining: the two pure-manual gates (G-3 AC-10 eyes-free walkthrough, G-4 AC-12 on-device VoiceOver-vs-TalkBack parity) + the human decision via `/feature-next-phase --signoff bs-11 approved | changes "<items>"`.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Accessibility as an architectural concern" (label contract + standing requirements + two test gates) and §"Cross-platform strategy / Parity acceptance"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §5 (5.1/5.7/5.8/5.10). Extends every merged feature's screens (`lib/readout`, `lib/capture`, `lib/compare`, `lib/recipes`, …) assembled through `lib/app/build_app.dart`; reuses the label-contract widgets `lib/widgets/color_chip.dart`, `value_reading.dart`, `provenance_badge.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `0900d44`, bs-08 merged) · extends the bs-01..bs-09 foundation (confirmed by Matt Quirk via sibling *Code home* lines + planning answers, 2026-10-13)
 
@@ -135,8 +135,8 @@ graph LR
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | CONF-1 | ✅ Resolved 2026-10-13 07:59 EDT: approved — Matt Quirk (owner); spec's first line now records the approval |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-13 17:59 EDT: approved — Matt Quirk; no changes requested, behaviour stage un-blocked (A11Y-2..7, GATE-2/3/4) |
-| G-3 | decision | AC-10 — the **manual eyes-free walkthrough** passes (performed under the live screen reader at SIGNOFF-1); a fail blocks acceptance (D-2) | SIGNOFF-1 (AC-10) | Open |
-| G-4 | decision | AC-12 — **on-device VoiceOver-vs-TalkBack parity** verified on iOS reference hardware at SIGNOFF-1 (D-2) | SIGNOFF-1 (AC-12) | Open |
+| G-3 | decision | AC-10 — the **manual eyes-free walkthrough** passes (performed under the live screen reader at SIGNOFF-1); a fail blocks acceptance (D-2) | SIGNOFF-1 (AC-10) | ⏸ Awaiting decision (packet round-1 ready; reviewer performs the walkthrough + records at `--signoff`) |
+| G-4 | decision | AC-12 — **on-device VoiceOver-vs-TalkBack parity** verified on iOS reference hardware at SIGNOFF-1 (D-2) | SIGNOFF-1 (AC-12) | ⏸ Awaiting decision (packet round-1 ready; reviewer performs on-device + records at `--signoff`) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -167,17 +167,17 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 14 | GATE-2 | AC-7 eyes-free: semantics-only driver completes a core task | ✅ Done | 10,094,248 | 23m 31s | `eyesFreeComplete` by label + `SemanticsAction.tap` (no coords, D-6); AC-7 ✅; unit 1041; cov vacuous (no lib); default 17 pass / 2 skip on iPhone17 sim; grade 8 A/0; fixed AC-7 test handle disposal (explicit); fix 1/3 |
 | 15 | GATE-3 | AC-9 automated gate: aggregate result + `acceptanceDecision` (fail any ⇒ not accepted) | ✅ Done | 14,490,779 | 38m 40s | composed 8th `eyesFree` rule (non-destructive semantics check) + pure `acceptanceDecision`; AC-9 un-pended + strengthened (2nd negative control); unit 1044; cov 100% touched; acceptance 18 pass/1 skip; grade 9 A/0; fix 1/3 |
 | 16 | GATE-4 | AC-11 WCAG floor: `recordedLevel` == AA when passed; thresholds pinned to WCAG 2.2 AA | ✅ Done | 6,423,118 | 16m 11s | `recordedLevel` = `aa22` iff `result.passed`; `WcagThresholds` pins 4.5/3.0/48/200%; `scaling.dart` references the const; AC-11 un-pended (**pending set empty**) + threshold-pinning leg (guidelines == constants); unit 1048; cov 100% touched; acceptance **19 pass / 0 skip** on iPhone17 sim; grade **10 A / 0 B**; fix 0/3 |
-| 17 | SIGNOFF-1 | sign-off: packet + summary + manual AC-10 (G-3) + manual AC-12 (G-4) + human decision | ⬜ Next | | | behaviour stage complete — all 10 automated ACs delivered; assemble packet + run the two pure-manual gates |
+| 17 | SIGNOFF-1 | sign-off: packet + summary + manual AC-10 (G-3) + manual AC-12 (G-4) + human decision | ⏸ Awaiting sign-off | 7,989,159 | 22m 36s (22m 36s) | packet [signoff/round-1.md](signoff/round-1.md); fresh re-grade 10 A/0; analyze clean, unit 1048, cov 100%/18, full regression 192/192 + bs11 run-pending 19/19 on sim; G-3/G-4 await human |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**GATE-4 (AC-11 recorded WCAG 2.2 AA floor) done — AC-11 ✅ delivered; the behaviour stage is COMPLETE (all 10 automated ACs in).** Implemented the pure `recordedLevel` (`aa22` iff `result.passed`, else `below`) riding on the complete aggregate result, added the pinned `WcagThresholds` (4.5/3.0/48dp/200%, D-5), and wired `checks/scaling.dart` to reference `minSupportedTextScale`. Un-pended AC-11 (**pending set now empty**) and **strengthened** the AC-11 test with a threshold-pinning leg that ties the recorded `aa22` floor to the exact numbers the check rules enforce (Flutter's contrast/tap-target guidelines pinned equal to the constants). unit 1048; coverage 100% on all 18 touched lib files; acceptance **19 pass / 0 skip** on iPhone17 sim; grade **10 A / 0 B** (AC-11 earned A; AC-1..9 re-confirmed, structurally un-disturbed); fix 0/3. Closes TestAC11's *B pending GATE-4*.
+**SIGNOFF-1 done (packet assembled) — feature is `⏸ Awaiting sign-off`.** Ran the full sign-off verification from the feat/bs-11 worktree: `flutter analyze` clean; unit **1048/1048**; coverage gate **100% on all 18 touched lib files**; **full cross-feature regression 192/192** (exit 0) + **bs-11 run-pending 19/19** (exit 0, identical to default — pending set empty) on a booted iPhone 17 sim via the verify lock. A fresh independent adversarial re-grade of the whole suite scored **10 A / 0 B** (grid overwritten, headed SIGNOFF-1). Wrote the packet ([signoff/round-1.md](signoff/round-1.md)) + cost rollup ([signoff/cost-per-ac-round-1.md](signoff/cost-per-ac-round-1.md)). Reconciled the two ITEST augmentation rows (TestAC09/TestAC11) → ✅ Closed. No product code changed.
 
-**Next — SIGNOFF-1 (the only remaining phase).** Assemble the sign-off packet + summary page + a fresh whole-suite re-grade, then run the two **pure-manual** gates (no code, D-2): **G-3** = AC-10 eyes-free walkthrough under a live screen reader, **G-4** = AC-12 on-device VoiceOver-vs-TalkBack parity — name the manual-gate gap, set `⏸ Awaiting sign-off`, and STOP. A human records the decision via `/feature-next-phase --signoff bs-11 approved` (or `changes "…"`). On sign-off, merge `feat/bs-11` → main, rebasing in-flight features (feat/bs-07, bs-10) onto the shared `lib/app/theme.dart` + `lib/widgets/`. Optional: fold in the non-blocking AC-9 hardening (pin `partial.failing` exactly `{tapTarget48}`). G-1/G-2 ✅.
+**Remaining — the human decision only.** Two **pure-manual** gates (no code, D-2) are performed and recorded by the reviewer at sign-off: **G-3** = AC-10 eyes-free walkthrough under a live screen reader; **G-4** = AC-12 on-device VoiceOver-vs-TalkBack parity on iOS reference hardware. Record with `/feature-next-phase --signoff bs-11 approved` (or `changes "<items>"`). On **Approved**, merge `feat/bs-11` → main, rebasing in-flight features (feat/bs-07, bs-10) onto the shared `lib/app/theme.dart` + `lib/widgets/`. Optional non-blocking: AC-9 hardening (pin `partial.failing` exactly `{tapTarget48}`). G-1/G-2 ✅.
 
-Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks SIGNOFF-1).
+Run next: `/feature-next-phase --signoff bs-11 approved | changes "<items>"` (records the human sign-off decision).
 
 ## Token usage
 
@@ -205,10 +205,11 @@ Run next: `/feature-next-phase bs-11-accessibility-conformance` (picks SIGNOFF-1
 | GATE-2 | 3f6ee7f3 | 2026-10-14 09:34 EDT | 09:58 | 23m 31s | 23m 31s | claude-opus-4-8 | 158 | 285,103 | 9,743,914 | 65,073 | 10,094,248 | AC-7 eyes-free delivered: semantics-only eyesFreeComplete (find by label + SemanticsAction.tap, no coords D-6); unit 1041; coverage vacuous (no lib); acceptance 17 pass/2 skip on iPhone17 sim; grade 8 A/0; fixed AC-7 test SemanticsHandle disposal; fix 1/3 |
 | GATE-3 | c62f90db | 2026-10-14 10:49 EDT | 11:28 | 38m 40s | 38m 40s | claude-opus-4-8 | 202 | 319,580 | 14,097,606 | 73,391 | 14,490,779 | AC-9 automated-gate acceptance delivered (acceptanceDecision + 8th eyesFree rule); unit 1044; cov 100% touched; acceptance 18 pass/1 skip; grade 9 A/0; fix 1/3 |
 | GATE-4 | 062052a1 | 2026-10-14 11:36 EDT | 11:52 | 16m 11s | 16m 11s | claude-opus-4-8 | 108 | 265,249 | 6,121,028 | 36,733 | 6,423,118 | AC-11 recorded WCAG 2.2 AA floor delivered; unit 1048; cov 100% touched; acceptance 19 pass/0 skip on iPhone17 sim; grade 10 A/0; fix 0/3; pending set empty (behaviour stage complete) |
-| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 11:52** | **8h 50m** | **6h 07m** |  | **2,358** | **4,066,458** | **150,110,877** | **1,007,086** | **155,186,779** |  |
+| SIGNOFF-1 | 556baa62 | 2026-10-14 12:11 EDT | 12:33 | 22m 36s | 22m 36s | claude-opus-4-8 | 134 | 285,969 | 7,655,216 | 47,840 | 7,989,159 | sign-off packet assembled: 10 automated ACs delivered + fresh re-grade 10 A/0; analyze clean, unit 1048, cov 100%/18, full regression 192/192 + bs11 run-pending 19/19 on sim; ⏸ awaiting human G-3/G-4 + decision |
+| **Feature total** |  | **2026-10-13 05:14 EDT** | **2026-10-14 12:33** | **9h 13m** | **6h 30m** |  | **2,492** | **4,352,427** | **157,766,093** | **1,054,926** | **163,175,938** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | | ⏸ Not yet created |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `254d366` | 10 A / 0 B | ⏸ Awaiting sign-off (G-3/G-4 manual gates + human decision) |

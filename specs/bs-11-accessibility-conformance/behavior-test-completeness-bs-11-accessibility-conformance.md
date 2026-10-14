@@ -1,5 +1,94 @@
 # bs-11 Accessibility conformance — behaviour-test completeness
 
+**Phase graded: SIGNOFF-1 (fresh whole-suite re-grade).** Independent, adversarial
+re-grade of **every automated AC acceptance test** against the code exactly as it
+stands on `feat/bs-11-accessibility-conformance` (worktree
+`/Users/matthew.quirk/Nuance-bs11`) at sign-off. `/behavior-test-check` is not
+installed, so its G1–G6 rubric is applied by hand. The grader ran nothing, edited
+no code, and touched only this grid file.
+
+**Scope.** The 10 automated AC tests are graded: **AC-1, AC-2, AC-3, AC-4, AC-5,
+AC-6, AC-7, AC-8, AC-9, AC-11** (one `acTestWidgets('AC-n', …)` each in
+`integration_test/bs11/accessibility_test.dart`). **AC-10** (manual eyes-free
+walkthrough) and **AC-12** (on-device VoiceOver-vs-TalkBack parity) are
+**PURE-MANUAL gates (plan D-2)** — no code, no automated test — closed by user
+acceptance at SIGNOFF-1 (gates G-3/G-4); they are **not graded** here. The pending
+set in `bs11/pending.dart` is **empty**: every automated AC is un-pended/delivered.
+
+**Whole-suite verification against the GATE-3/GATE-4 changes (the keystone
+re-check).** Those two phases changed, at the domain level, only:
+`acceptanceDecision` (`lib/a11y/conformance/acceptance.dart`, read by **AC-9**
+alone), `recordedLevel` + the `WcagThresholds` constants (same file, read by
+**AC-11** alone), and the one threshold *reference* in
+`integration_test/conformance/checks/scaling.dart` (literal `2.0` →
+`WcagThresholds.minSupportedTextScale`, **numerically identical**, so
+`checkFontScale200` re-renders at the same 200% and AC-3's `fontScale200` outcome is
+unchanged). Confirmed by reading the files: `acceptanceDecision` and `recordedLevel`
+each ride on the **complete** `ConformanceResult.passed` (every id present and
+passing — `conformance_result.dart` `passed` predicate), never a single rule; the
+aggregate `runConformanceCheck` composes all **8** `ConformanceRuleId`s
+(contrast/tapTarget/fontScale/colourCue/noBareDot/meaningfulLabel/noTimeout/eyesFree),
+and `eyesFree`'s `checkEyesFree` is a **non-destructive** semantics existence check
+(never dispatches an action), so composing it cannot mutate any screen under check.
+Each AC-1..8 test reads **only** its own `outcomeFor(itsId)?.pass` /
+`failing.contains(itsId)`, and every tree/finder assertion is taken **before**
+`whenCheckedForConformance` — so neither the extra `eyesFree` map entry, the pure
+verdicts, nor the identical scaling threshold can mask or shift any AC-1..8
+assertion. **No AC-1..9 test body, no per-rule check, and no `acceptanceDecision`
+were weakened.** The sweep still covers all six `buildApp` screens and the seven
+discriminating control fixtures (harness guard tests assert the exact sets).
+
+| AC | Test | Grade | Justification (failing G-rule if below A) |
+|---|---|---|---|
+| **AC-1** | `every colour-coded element carries a non-colour cue` (owner A11Y-5); rule `checkColourCue` | **A** | **G1** each Given asserted through the public surface before the When — every swept screen `findsOneWidget`, the reference's `ColorChip` descendant present, the control's `subtree findsOneWidget`. **G2** real `checkColourCue` over the real six `buildApp` screens + the `ColorChip` reference. **G4** reads the raw observable `outcomeFor(colourCue)?.pass isTrue` on **every** swept screen and `failing contains colourCue` on the control. **G5** `control_bareDot` (a filled circular dot with no labelled `Semantics` ancestor) is flagged → rejects an always-pass rule; the 6-screen+reference sweep rejects an always-fail rule. **G6** reads only `colourCue`. **G3** N/A. Untouched by GATE-3/4; reads only its own id, so the added `eyesFree` entry cannot mask it. |
+| **AC-2** | `a status is never rendered as a bare colour dot` (owner A11Y-5); rule `checkNoBareDot` | **A** | Shares the `_bareColourDots` traversal but reads **only** `noBareDot` (G6). **G1** sweep screens + `StatusBadge` descendant present + control subtree present, all before their Whens. **G2** real rule / real screens. **G4** exact `noBareDot` pass per screen; `failing contains noBareDot` on `control_bareDot`. **G5** the bare dot is flagged (always-pass rejected); sweep+reference reject always-fail. **G3** N/A. Untouched; reads only its own id. |
+| **AC-3** | `the layout survives 200% font scaling without breaking` (owner A11Y-4); rule `checkFontScale200` | **A** | **The only GATE-4 touch is the threshold *reference*** (`scaling.dart` now reads `WcagThresholds.minSupportedTextScale` = `2.0`, same value), so the 200% re-render + `RenderFlex` main-axis overflow measurement are behaviourally identical. **G1** each swept screen `findsOneWidget`; control subtree present. **G2** real rule re-rendering the real screens at 200%. **G4** exact `fontScale200` pass per screen; `failing contains fontScale200` on the control. **G5** `control_overflow200` (fixed-100dp box, rows sized by `textScaler`, 30→60dp at 200%) genuinely overflows → rejects a rule that never scales; the overflow is **font-independent/deterministic** (box height scaled, not glyph width), the discriminator that holds under both the widget-test and on-device fonts. **G6** reads only `fontScale200`. **G3** N/A. |
+| **AC-4** | `interactive targets meet the 48dp minimum` (owner A11Y-3); rule `checkTapTarget48` | **A** | **G2** real `androidTapTargetGuideline`(48×48) **&&** `iOSTapTargetGuideline`(44×44) — the Android 48dp bound is the binding floor on every platform (D-5). **G1** swept screens + the reference's 48dp `IconButton` descendant present, before the Whens. **G4** exact `tapTarget48` pass per screen; `failing contains tapTarget48` on the control. **G5** `control_smallTarget` (24dp, labelled so it is a real semantic target) is flagged → rejects a rule that never applies the 48dp guideline. **G6** reads only `tapTarget48`. **G3** N/A. Untouched by GATE-3/4. |
+| **AC-5** | `text meets the WCAG 2.2 AA contrast floor` (owner A11Y-2); rule `checkContrastAA` | **A** | **G2 decisive and explicit** — before each When the test pins `Theme.of(screen).colorScheme == AppTheme.light().colorScheme`, so contrast comes from the **shipped** `ColorScheme`, not an ad-hoc `ThemeData` a test could over-tune; the rule delegates to Flutter's `textContrastGuideline` at the real AA ratios. **G1** screen present + theme pinned + reference theme pinned, before the Whens. **G4** exact `contrastAA` pass per screen; `failing contains contrastAA` on the control. **G5** `control_lowContrast` (~1.6:1 grey-on-white) is flagged → rejects a rule that never applies the contrast guideline. **G6** reads only `contrastAA`. **G3** N/A. Untouched. |
+| **AC-6** | `every control exposes a meaningful screen-reader label` (owner A11Y-6); rule `checkMeaningfulLabel` | **A** | **G2** real `labeledTapTargetGuideline` over the real screens + the tooltipped `IconButton` reference. **G1** screens + reference `IconButton` descendant present + control subtree present, before the Whens. **G4** exact `meaningfulLabel` pass per screen; `failing contains meaningfulLabel` on the control. **G5** `control_unlabelled` (an `IconButton` with no tooltip/label) is flagged → rejects a rule that never checks for a label. **G6** reads only `meaningfulLabel`. **G3** N/A. Documented, accepted limit (non-empty label ≠ semantically-meaningful label) is carried by the pure-manual AC-10/AC-12 gates — an inherent limit of the automatable check, not a G-rule failure. Untouched by GATE-3/4. |
+| **AC-7** | `a core task completes eyes-free under the screen reader` (owner GATE-2); driver `eyesFreeComplete` | **A** | Runs the **standalone** `eyesFreeComplete` driver (find each step's control **by semantic label**, require `SemanticsAction.tap`, dispatch via `node.owner!.performAction` — never key/type/coordinate, D-6) — **not** the aggregate's separate `checkEyesFree` rule, so GATE-3's aggregate addition does not touch it. **G1** both discriminating Givens before the When — Readout open (`readout.screen findsOneWidget`) and the entry control present *by label* (`find.bySemanticsLabel('Speak this readout') findsOneWidget`, which also confirms semantics is active under `ensureSemantics()`). **G2** real driver over the real `buildApp` Readout + real `'Speak this readout'` control. **G4** exact booleans at step grain (`completed isTrue`; `blocked isFalse`). **G5 (decisive)** the positive+control pair rejects **all three** plausible wrong drivers: always-true (control leg — a label on no control must block), always-false (positive leg), and **coordinate/position-fallback** (would progress past the bogus-label control ⇒ `blocked` true). **G6** one AC only. **G3** N/A. Handle disposed in-body (repo convention) + driver's own `finally`. |
+| **AC-8** | `nothing auto-dismisses or imposes a time limit` (owner A11Y-7); rule `checkNoTimeout` | **A** | **G3 fully satisfied** — a real settle point (`whenWaited(10s)` fake-clock advance, past the 4s SnackBar default), the negative "still present" Then taken **only after** the advance (reference `AccessibleNotice` persists), **paired with a change-control** proving the reading can move (`control_autoDismiss`'s SnackBar `findsOneWidget` before, `findsNothing` after the identical advance). **G5** the control rejects **both** an always-pass rule **and** a naive current-frame rule: the SnackBar is already gone at check entry, so only a rule that **re-renders** (`markNeedsBuild` + bounded pumps) and flags the re-raised `SnackBar` catches it (`failing contains noTimeout`). **G4** exact `noTimeout` pass per screen; persistence/dismissal via specific finders; failure via `failing contains`. **G1** reference notice present before the settle, control SnackBar present before the advance. **G6** one AC. Documented limit (detection scoped to `SnackBar`-typed, re-render-raised surfaces) carried by manual gates. Untouched by GATE-3/4. |
+| **AC-9** | `a feature failing the automated check is not accepted` (owner GATE-3); pure `acceptanceDecision` over the full 8-rule aggregate | **A** | **G1** both Givens asserted through the public surface before their Whens — `control_partialFail` proven genuinely partial (`partial.failing isNotEmpty` **and** `anyPassing isTrue`), and the reference proven `full.passed isTrue`. **G2** verdict from the real `acceptanceDecision` over real `runConformanceCheck` results, not a fabricated `ConformanceResult`. **G4** asserts the exact pure-domain verdict (`AcceptanceDecision.notAccepted` / `accepted`). **G5 (decisive)** rejects every degenerate impl: constant-`accepted` (two notAccepted legs), constant-`notAccepted` (reference leg), and — via **two disjoint-singleton controls** — **any single-rule decision**: `control_partialFail` fails only `tapTarget48`, while `control_lowContrast` is asserted to **fail `contrastAA`** and **pass `tapTarget48`** (it renders only a `ColoredBox`+`Text`, no tappable node, so the tap-target guideline passes vacuously); so a decision keyed on `tapTarget48` wrongly accepts `control_lowContrast` and one keyed on any other rule wrongly accepts `control_partialFail`. **G6** AC-9 only. **G3** N/A. GATE-4 touched neither `acceptanceDecision`, this body, nor any rule. Non-blocking residual (carried): `control_partialFail.failing` is pinned only non-empty, not exactly `{tapTarget48}` — a belt-and-braces hardening, not a downgrade (the `control_lowContrast` pass/fail assertions already close the single-rule gap). |
+| **AC-11** | `WCAG 2.2 AA is the recorded accepted floor` (owner GATE-4); pure `recordedLevel` over the full 8-rule aggregate + pinned `WcagThresholds` | **A** | **G1** both Givens asserted before their Whens — the passing reference proven `passing.passed isTrue`, the `control_partialFail` proven `failing.passed isFalse`. **G2** levels from the real `recordedLevel` over real `runConformanceCheck` results. **G4** asserts the exact enum (`WcagLevel.aa22` / `WcagLevel.below`) at the AC's grain; the pinning leg asserts the exact constants (4.5 / 3.0 / 48.0 / 2.0). **G5 (decisive) — three degenerate impls killed:** constant-`aa22` (the `below` control leg — a `passed==false` result must record `below`), constant-`below` (the passing leg — a fully-passing reference must record `aa22`), and a floor divorced from the WCAG numbers (the threshold-pinning leg). **The pinning is genuine, not vacuous:** each `WcagThresholds` constant is tied **both** to the literal WCAG number **and** to the threshold the enforcing rule actually reads — `MinimumTextContrastGuideline.kMinimumRatioNormalText/kMinimumRatioLargeText`, `(androidTapTargetGuideline as MinimumTapTargetGuideline).size == Size(48,48)`, and `scaling.dart`'s direct reference to `minSupportedTextScale` — so the recorded `aa22` floor cannot drift from what the rules enforce without failing the gate. **G6** AC-11 only — every pinning leg serves AC-11's "AA is a real, enforced floor" claim. **G3** N/A. `recordedLevel` rides on the complete `result.passed`, never a single rule. |
+
+**Grade: 10 A / 0 B.**
+
+**Verdict — PASS (all A).** Every automated AC acceptance test meets the bar against
+the code as it stands at sign-off. Each of the ten names a concrete wrong
+implementation and an assertion that kills it (G5): the five structural rules
+(AC-1/2/4/5/6) each fail their discriminating control (`control_bareDot` /
+`control_smallTarget` / `control_lowContrast` / `control_unlabelled`) while passing
+the six-screen sweep + compliant reference; AC-3 fails `control_overflow200` with a
+font-independent, deterministic overflow; AC-8 nails G3 with a real fake-clock
+settle and a change-control that rejects both an always-pass and a naive
+current-frame rule; AC-7's semantics-only driver rejects always-true, always-false
+**and** coordinate-fallback drivers; AC-9's two disjoint-singleton controls plus a
+passing reference reject constant-accepted, constant-notAccepted and every
+single-rule decision; and AC-11 rejects constant-`aa22`, constant-`below`, and a
+floor divorced from the real WCAG 2.2 AA numbers, with genuine (non-vacuous)
+threshold pinning.
+
+**AC-1..9 are confirmed un-weakened and un-masked by the GATE-3/GATE-4 changes.**
+`acceptanceDecision`/`recordedLevel`/`WcagThresholds` are read by AC-9/AC-11 alone;
+`scaling.dart`'s literal→constant swap is numerically identical (2.0), so AC-3 is
+behaviourally unchanged; the 8th `eyesFree` aggregate rule is a non-destructive
+existence check; and every AC-1..8 test reads only its own outcome id with all tree
+assertions taken before the check, so the added map entry and the pure verdicts
+cannot shift any of their reads.
+
+**No B rows — nothing must change for this phase to pass.** AC-10 and AC-12 remain
+pure-manual gates (D-2), closed by user acceptance at SIGNOFF-1 (G-3/G-4). One
+non-blocking hardening is carried, not required: pin `control_partialFail.failing`
+to exactly `{tapTarget48}` in AC-9 to make the single-rule closure an asserted
+invariant rather than a fixture property.
+
+---
+
+<!-- Historical context: prior phase grids, most recent first. Superseded by the
+     SIGNOFF-1 whole-suite re-grade above. -->
+
+## GATE-4 — re-grade of un-pended AC tests (AC-1,2,3,4,5,6,7,8,9,11)
+
 **Phase graded: GATE-4 (un-pended AC tests AC-1,2,3,4,5,6,7,8,9,11).** Independent,
 adversarial grade of the acceptance tests on `feat/bs-11-accessibility-conformance`
 (worktree `/Users/matthew.quirk/Nuance-bs11`) as the code now stands. **What GATE-4

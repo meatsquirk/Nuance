@@ -133,8 +133,8 @@ an `ITEST` change phase before behaviour, then a fresh review.
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC09 | the aggregate `acceptanceDecision` cannot discriminate until every sub-rule exists (A11Y-2..7, GATE-2) | GATE-3 | compose all rules; assert a partially-failing result ⇒ notAccepted and a fully-passing one ⇒ accepted | ⬜ Open (confirmed ITEST-3) |
-| TestAC11 | `recordedLevel` is stubbed until the aggregate result exists | GATE-4 | assert a passing result records `aa22`, a failing one `below`, and thresholds equal the WCAG 2.2 AA constants | ⬜ Open (confirmed ITEST-3) |
+| TestAC09 | the aggregate `acceptanceDecision` cannot discriminate until every sub-rule exists (A11Y-2..7, GATE-2) | GATE-3 | compose all rules; assert a partially-failing result ⇒ notAccepted and a fully-passing one ⇒ accepted | ✅ Closed GATE-3 (`c62f90db`): aggregate populates every rule; strengthened with a 2nd disjoint-singleton control (`control_lowContrast`); re-graded A |
+| TestAC11 | `recordedLevel` is stubbed until the aggregate result exists | GATE-4 | assert a passing result records `aa22`, a failing one `below`, and thresholds equal the WCAG 2.2 AA constants | ✅ Closed GATE-4 (`062052a1`→`254d366`): `recordedLevel` reads the complete result; threshold-pinning leg ties the floor to the WCAG 2.2 AA constants; re-graded A |
 
 ### Result  <!-- one block per phase -->
 
