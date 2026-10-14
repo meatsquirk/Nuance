@@ -34,6 +34,26 @@ void main() {
       );
     });
 
+    test('kind defaults to opinion (safe, non-contributing)', () {
+      const point = EvidencePoint(coordinates: coords, source: 'spectro');
+      expect(point.kind, EvidenceKind.opinion);
+    });
+
+    test('unequal when kind differs', () {
+      expect(
+        const EvidencePoint(
+          coordinates: coords,
+          source: 'spectro',
+          kind: EvidenceKind.instrumentMeasured,
+        ),
+        isNot(equals(const EvidencePoint(
+          coordinates: coords,
+          source: 'spectro',
+          kind: EvidenceKind.opinion,
+        ))),
+      );
+    });
+
     test('unequal to a non-EvidencePoint object', () {
       const point = EvidencePoint(coordinates: coords, source: 'spectro');
       // ignore: unrelated_type_equality_checks

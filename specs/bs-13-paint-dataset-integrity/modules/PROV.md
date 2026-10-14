@@ -1,6 +1,6 @@
 # Module PROV — runtime provenance/evidence model
 
-**Status:** Not started
+**Status:** In progress — PROV-1 ✅ shell (derivation/read-endpoint seams wired, behaviour-neutral)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/provenance.dart`, `lib/domain/sample.dart` (extend `EvidencePoint`), new `lib/domain/provenance_derivation.dart` and `lib/domain/provenance_read_endpoint.dart`.
 **Depends on:** the existing `Provenance`/`ProvenanceTier`/`Sample`/`EvidencePoint` (`lib/domain/`) · **Blocks:** ITEST-1
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 4,740,008 | 18m 41s |
 | 2 | behavior | AC-7, AC-8 | ⬜ Todo | | |
 | 3 | behavior | AC-9, AC-10 | ⬜ Todo | | |
 
@@ -68,6 +68,21 @@
 - **Acceptance gate:** un-pend AC-9, AC-10; `TestAC09_PromotedOnlyByMeasuredSwatch` and `TestAC10_OpinionsNeverPromote` green (and all earlier ACs).
 - **Augments:** closes the AC-9 augmentation pre-seeded on the ITEST AC-9 test (promotion exercisable once this rule exists).
 
-### Result  <!-- filled on completion -->
+### Result — PROV-1  <!-- 2026-10-14 -->
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Shell: the runtime provenance seam is wired, behaviour-neutral. Changes:
+- `lib/domain/sample.dart` — new `enum EvidenceKind {instrumentMeasured, solverCalculated, llmSeed, photographedSwatch, opinion}` (the spec's four origins + `opinion`); `EvidencePoint` gains a non-null `kind` with a **safe default `EvidenceKind.opinion`** (non-contributing — keeps every existing call-site compiling unchanged, and never silently promotes). `kind` added to `==`/`hashCode`; `toString` deliberately unchanged (keeps the existing exact-match unit test green).
+- `lib/domain/provenance_derivation.dart` (new) — `ProvenanceDerivation` (const): `tierFor(evidence, {fallback = estimated})` **stub returns `fallback`** so no flow's tier shifts until PROV-2; `appendEvidence(evidence, point)` returns `[...evidence, point]` (append-only, no remove/replace — SI D9). Signatures frozen for PROV-2/PROV-3.
+- `lib/domain/provenance_read_endpoint.dart` (new) — `ProvenanceReadEndpoint(sample)` pure-Dart observation seam: `evidence` + `derivedTier` (derives via `ProvenanceDerivation`, falling back to the stored `Provenance.tier`). Not a widget — the AC-7/8/9/10 facts are pure-domain, so the ITEST harness observes a `Sample` directly.
+
+PROV stays entirely in `lib/domain/` with no `package:flutter` import. No production call-site constructs an explicit kind yet (the own-swatch wiring in `correction_controller` is bs-05's — D-3), so behaviour is unchanged by construction.
+
+**Verification:** `flutter analyze` clean · unit **1322/0** (+7: 2 `EvidencePoint.kind` cases in `test/domain/sample_test.dart` + `test/domain/provenance_shell_test.dart`) · coverage gate **100% on all touched files** (`COVERAGE_GATE_BASE=7015390`; gate also re-confirms SEED-2's files) · cross-feature integration regression **222/222 on the iPhone 17 sim** (== SEED-1/SEED-2 baseline; whole `integration_test/` dir under the device lock — run because `sample.dart` is a shared domain type other features exercise). Behaviour unchanged confirmed. Fix passes: 0/3 (passed on the first full run). Tokens 4,740,008 · Time 18m 41s.
+
+### Checkpoint / Handoff — PROV-1
+
+- **Frozen for PROV-2/PROV-3:** `EvidenceKind` (5 values), `EvidencePoint.kind` (default `opinion`); `ProvenanceDerivation.tierFor(List<EvidencePoint>, {ProvenanceTier fallback})` and `.appendEvidence(List<EvidencePoint>, EvidencePoint)`; `ProvenanceReadEndpoint(sample).{evidence, derivedTier}`.
+- **PROV-2** fills `tierFor` with the origin precedence (`photographedSwatch`→confirmed · `instrumentMeasured`→measured · `solverCalculated`→calculated · `llmSeed`→estimated; `opinion` never contributes → returns `fallback`) and the full Estimated/Confirmed qualifier labels/notes; **PROV-3** adds the promotion wrapper (append a measured/photographed swatch → re-derive to Confirmed) + opinions-never-promote. Both are body-only changes — signatures are stable, so ITEST can bind to them now.
+- **Reconciliation for SEED-4:** SEED's local `SeedOrigin{reviewedOptical, llmSeed}` maps to `EvidenceKind` — `llmSeed`→`EvidenceKind.llmSeed`; `reviewedOptical` is the reviewed representative masstone, so map to `instrumentMeasured` (or a reviewed-optical kind if SEED-4 finds the distinction matters). SEED-4 owns that decision.
+- **Verification commands:** unchanged from SEED-2 (analyze; `flutter test --coverage`; `COVERAGE_GATE_BASE=7015390 dart run tool/coverage_gate.dart`; integration on the iPhone 17 sim under `coord.sh with-lock bs-13 <PHASE>` — FNP_COORD_REPO=main, `cd` into the worktree inside `bash -c`). GOTCHA: const-only/const constructors show uncovered — invoke non-const (`// ignore: prefer_const_constructors`) in a test.
+- **Known gaps:** none introduced; behaviour unchanged (inert default kind, unused seams). GUARD-1 is the last remaining shell — ITEST-1 cannot start until it lands.
