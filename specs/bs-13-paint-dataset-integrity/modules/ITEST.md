@@ -156,9 +156,9 @@ Added one *pending* acceptance test per AC for the four runtime-provenance ACs *
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
 | AC-1 | TestAC01_RecipesSolvedFromOpticalData | FAIL ✓ (empty seed) → **SEED-3 ✅ un-pended, green** | Given precondition `seed carries optical entries (SEED-3)` — `Actual: []` | SEED-3 (+GUARD-2) | A / B pending GUARD-2 |
-| AC-2 | TestAC02_CandidatesFromLlm | FAIL ✓ | Given precondition `candidate combinations (SEED-4)` — `Actual: []` | SEED-4 | A |
+| AC-2 | TestAC02_CandidatesFromLlm | FAIL ✓ → **SEED-4 ✅ un-pended, green** | Given precondition `candidate combinations (SEED-4)` — `Actual: []` | SEED-4 | A |
 | AC-3 | TestAC03_RatiosFromSolverNeverLlm | FAIL ✓ (guard stub) | Then `zero offenders` — stub returns the `not-yet-enforced` sentinel | GUARD-2 | A |
-| AC-4 | TestAC04_MetadataAcceptedClaimedValuesRejected | FAIL ✓ → **PASS after SEED-3** (seed ships metadata-bearing entries; reject-half vacuous, still **pending SEED-4**) | Given precondition `ingested entries (SEED-4)` — `Actual: []` (pre-SEED-3) | SEED-4 (+GUARD-2) | A / B pending GUARD-2 |
+| AC-4 | TestAC04_MetadataAcceptedClaimedValuesRejected | FAIL ✓ → PASS after SEED-3 (metadata-bearing entries) → **SEED-4 ✅ un-pended, core green** (ingest `ingestEntryRecord` strips claimed spectral/ratio; no-claimed-value structural assertion still **pending GUARD-2**) | Given precondition `ingested entries (SEED-4)` — `Actual: []` (pre-SEED-3) | SEED-4 (+GUARD-2) | A / B pending GUARD-2 |
 | AC-5 | TestAC05_HeldOutValidationRecorded | FAIL ✓ | Then `heldOutCount in [50,100]` — `Actual: <0>` (empty manifest) | SEED-5 | A |
 | AC-6 | TestAC06_SeedShipsOnlyOnEvidence | FAIL ✓ | Then `heldOutManifest.shippable == true` — `Actual: <false>` (placeholder) | SEED-5 | A |
 | AC-7 | TestAC07_EnforcedProvenanceTierByOrigin | FAIL ✓ (derivation stub) | Then `tierFor([evInstrument]) == Measured` — `Actual: Estimated` (stub returns fallback; all 4 origins fail, contrasting fallbacks) | PROV-2 | A |

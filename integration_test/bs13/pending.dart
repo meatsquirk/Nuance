@@ -44,9 +44,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// AC, matching the master plan's AC-coverage table and ITEST's red baseline:
 ///   AC-1  → (un-pended at SEED-3 — shipped seed asset + loader; solver mixes
 ///            over its optical data)
-///   AC-2  → SEED-4   (candidate-origin manifest)
+///   AC-2  → (un-pended at SEED-4 — LLM candidate combinations stamped llmSeed)
 ///   AC-3  → GUARD-2  (ratios-from-solver guard)
-///   AC-4  → SEED-4   (ingest accept metadata / reject claimed values)
+///   AC-4  → (un-pended at SEED-4 — ingest accepts metadata / strips claimed
+///            spectral curves and ratios)
 ///   AC-5  → SEED-5   (held-out validation manifest)
 ///   AC-6  → SEED-5   (ship decision: threshold ∧ beats-LLM)
 ///   AC-7  → PROV-2   (tier-by-origin derivation)
@@ -57,9 +58,11 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   // AC-1 (recipes solved from optical data) un-pended at SEED-3 — the shipped
   // seed asset + AssetSeedLoader make the solver mix over real optical data.
-  'AC-2': 'SEED-4',
+  // AC-2 (candidates come from the LLM) un-pended at SEED-4 — the shipped asset
+  // carries candidate combinations and the loader stamps each llmSeed.
   'AC-3': 'GUARD-2',
-  'AC-4': 'SEED-4',
+  // AC-4 (metadata accepted / claimed values rejected) un-pended at SEED-4 — the
+  // ingest rule keeps metadata and strips any claimed spectral curve / ratio.
   'AC-5': 'SEED-5',
   'AC-6': 'SEED-5',
   'AC-7': 'PROV-2',
@@ -94,9 +97,11 @@ const Set<String> behaviorPhases = {
 /// A completed phase legitimately owns no row in [pendingACs] any more, so the
 /// harness's "no dead phase" guard treats a phase as valid when it is still a
 /// pending owner **or** listed here. Each behaviour phase adds itself here as it
-/// un-pends its last AC (SEED-3 un-pended AC-1 and AC-11, its only two).
+/// un-pends its last AC (SEED-3 un-pended AC-1 and AC-11; SEED-4 un-pended AC-2
+/// and AC-4, its only two).
 const Set<String> completedBehaviorPhases = {
   'SEED-3',
+  'SEED-4',
 };
 
 /// Every AC id the bs-13 acceptance suite covers (the master plan's 11 ACs).

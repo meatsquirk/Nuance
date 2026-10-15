@@ -1,6 +1,6 @@
 # Module SEED — shipped seed dataset, loader, ingest rule and validation manifest
 
-**Status:** In progress — SEED-3 ✅ (shipped seed asset + loader; AC-1/AC-11 un-pended, green); next SEED-4 (AC-2, AC-4)
+**Status:** In progress — SEED-4 ✅ (candidate mappings stamped llmSeed + ingest reject rule; AC-2 ✅, AC-4 core green); next SEED-5 (AC-5, AC-6)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/dataset/` (new: `seed_dataset.dart`, `seed_loader.dart`, `validation_manifest.dart`, `seeded_palette_source.dart`, `dataset_read_endpoint.dart`), the shipped asset `assets/paints/<brand>_<medium>_seed.json` (+ `pubspec.yaml` asset entry), and the wiring in `lib/app/build_app.dart` / `AppDependencies`.
 **Depends on:** the bs-04 engine + `Paint`/`PaintPalette`/`PaletteSource` (`lib/recipes/`, `lib/domain/paint.dart`); PROV's `EvidenceKind`/`ProvenanceOrigin` for the per-entry origin (SEED-2 may introduce a local placeholder if PROV-1 lands later, reconciled at SEED-4) · **Blocks:** ITEST-1, GUARD-2
@@ -12,8 +12,8 @@
 | 1 | scaffold | — | ✅ Done | 6,139,369 | 22m 06s |
 | 2 | shell | — | ✅ Done | 15,898,272 | 34m 54s |
 | 3 | behavior | AC-1, AC-11 | ✅ Done | 11,658,368 | 19m 47s |
-| 4 | behavior | AC-2, AC-4 | ⬜ Todo | | |
-| 5 | behavior | AC-5, AC-6 | ⬜ Todo | | |
+| 4 | behavior | AC-2, AC-4 | ✅ Done | 7,016,343 | 12m 36s |
+| 5 | behavior | AC-5, AC-6 | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -152,6 +152,26 @@ Fix passes: 1/3 (the scaffold guard "every behaviour phase owns ≥1 pending AC"
 - **Exit criteria:** unit gate; acceptance gate below.
 - **Acceptance gate:** un-pend AC-2, AC-4; `TestAC02_CandidatesFromLlm` and `TestAC04_MetadataAcceptedClaimedValuesRejected` green (and all earlier ACs).
 - **Augments:** `TestAC04`: once GUARD-2 lands, add the schema guard that no stored entry carries a claimed spectral/ratio field.
+
+### Result — SEED-4  <!-- 2026-10-15 -->
+
+Added the LLM candidate combinations (AC-2) and the ingest accept/reject rule (AC-4); AC-2 un-pended green, AC-4 un-pended core-green.
+
+- **Asset** `assets/paints/winsor_newton_oil_seed.json` — new `candidateMappings` section: **6** combinations (warm grey / cool shadow / foliage green / skin midtone / sky blue / muted violet), each a `targetDescriptor` + a `candidatePaintIds` set of **shipped** entry ids (`pbk9, pw6, pr101, pb29, pbr7_burnt, pg7, py35, po20, py42, pb15, pv19` — all grounded), **no** origin and **no** ratio in the JSON (the loader owns the origin; parts are the solver's, AC-3). `_about` updated.
+- **`lib/dataset/seed_loader.dart`** — `parseSeedDataset` now parses an **optional** `candidateMappings` list (`(json['candidateMappings'] as List?) ?? const []`, both branches covered: shipped asset vs a seed without the section) and **stamps** every `CandidateMapping.origin = SeedOrigin.llmSeed` regardless of the asset — a candidate set is always an unverified LLM proposal (AC-2), never a measured-origin claim. New **ingest rule**: `kRejectedClaimedFields` (spectralCurve/reflectanceCurve/spectral/ratio/ratios/parts/partsFraction) + `ingestEntryRecord(raw)` that returns the record minus every claimed key; `_entryFrom` runs the raw record through it before constructing the entry, so an LLM-claimed spectral curve / ratio on an input record is stripped while the accepted metadata (pigment index, opacity, lightfastness) + measured masstone survive (AC-4). Both sides of the strip `if` covered (clean shipped entries vs a planted claimed record in the unit test).
+- **`CandidateMapping`** (lib/dataset/seed_dataset.dart) already existed from the SEED-2 shell (origin default llmSeed) — unchanged. `build_app` unchanged: the loaded seed (now with mappings) flows through `AppDependencies.seedDataset` → `DatasetReadEndpoint` automatically.
+
+**Verification** (bs-13 suite on `flutter-tester`, cwd worktree): `flutter analyze` clean · unit **1340/0** (+4: `seed_loader_test.dart` gained the shipped-candidate check + a parse-candidate-stamps-llmSeed test + two `ingestEntryRecord` tests — strips every claimed field, and parse-with-claimed == parse-clean with a metadata-difference control; the obsolete shipped `candidateMappings isEmpty` assertion flipped to `isNotEmpty`) · **coverage gate 100% on all 9 touched lib files** (`COVERAGE_GATE_BASE=7015390`), incl. `seed_loader.dart`. **Acceptance — default:** `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` = **13 pass / 6 skip, green** (AC-2, AC-4 now run by default and pass; the 6 skipped are AC-3/5/6/7/9/10). **Run-pending** (`--dart-define=BS13_RUN_PENDING=true`): **13 pass / 6 fail** — AC-1/2/4/8/11 pass; AC-3/5/6/7/9/10 fail cleanly on their Then (owned by GUARD-2 / SEED-5 / PROV-2 / PROV-3). **Grade gate:** fresh independent grader (G1–G6) over every un-pended AC test (AC-1, AC-2, AC-4, AC-8, AC-11) → **3 straight A (AC-2, AC-8, AC-11) + 2 A-core / B-pending-GUARD-2 (AC-1, AC-4), 0 below A** — matches the prior grid, no downgrade, no drift. Grid: `specs/bs-13-paint-dataset-integrity/behavior-test-completeness-bs-13.md`.
+
+**Augmentation note:** TestAC04's no-claimed-value structural proof (schema declares no claimed field; planted `control_claimedSpectral` listed by the guard) stays owned by **GUARD-2** — SEED-4 built the ingest *behaviour* (proved by unit tests over `ingestEntryRecord`) but the acceptance test's structural assertion needs the GUARD-2 scan. Augmentation row unchanged (⬜ Open, → GUARD-2).
+
+Fix passes: 0/3 (green on the first full run). Tokens 7,016,343 · Time 12m 36s (active == wall).
+
+### Checkpoint / Handoff — SEED-4
+
+- **Frozen for SEED-5:** the asset now carries `brand` / `line` / `medium` / `entries[]` / `candidateMappings[]`; **SEED-5** adds a `manifest` section (held-out count + ΔE00 distribution + hybrid/llm means + threshold) and extends `parseSeedDataset` to parse it (replacing the `const ValidationManifest.empty()` the parser currently returns), plus the real `shippable` rule in `lib/dataset/validation_manifest.dart` (clears threshold ∧ hybrid mean < llm-alone mean). `candidateMappings` ids must stay grounded in `entries` (the AC-2 test + the unit test both assert it) — keep them in sync if entries change. `ingestEntryRecord` / `kRejectedClaimedFields` are the AC-4 ingest seam; GUARD-2's no-claimed-value guard is the structural complement.
+- **Verification commands:** unchanged from SEED-1/2/3 (`flutter analyze`; `flutter test --coverage`; `COVERAGE_GATE_BASE=7015390 dart run tool/coverage_gate.dart`; bs-13 acceptance `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` ± `--dart-define=BS13_RUN_PENDING=true`). `-d flutter-tester` mandatory; flutter at `~/development/flutter/bin`; cwd = the worktree root.
+- **Known gaps:** none new. AC-4 remains B-pending-GUARD-2 (structural no-claimed-value proof). The seed still feeds the solve path only, not the Palette list (not a bs-13 AC).
 
 ## Phase 5 — AC-5, AC-6: validation manifest + ship decision
 

@@ -1,5 +1,5 @@
 {
-  "_about": "bs-13 shipped seed dataset (SEED-3). One brand, one medium (AC-11): Winsor & Newton Artists' Oil. Each entry carries a reviewed masstone CIELAB (the optical data the physics solver mixes over, AC-1) plus LLM-trusted metadata (pigment index, opacity, lightfastness) and its origin. These are reviewed, representative optical values (D-5), never RGB->recipe answers. Candidate combinations (AC-2) and the held-out validation manifest (AC-5/AC-6) are added by SEED-4 / SEED-5.",
+  "_about": "bs-13 shipped seed dataset. One brand, one medium (AC-11): Winsor & Newton Artists' Oil. Each entry carries a reviewed masstone CIELAB (the optical data the physics solver mixes over, AC-1) plus LLM-trusted metadata (pigment index, opacity, lightfastness) and its origin. These are reviewed, representative optical values (D-5), never RGB->recipe answers. SEED-4 adds the LLM candidate combinations (target descriptor -> candidate paint-id set; the loader stamps origin llmSeed, AC-2) and the ingest rule (accept metadata, strip any LLM-claimed spectral curve / ratio field, AC-4). A candidate set is a proposal of WHICH paints might mix toward a described target; the parts are the solver's, never the LLM's (AC-3), so no ratio appears here. The held-out validation manifest (AC-5/AC-6) is added by SEED-5.",
   "brand": "Winsor & Newton",
   "line": "Artists' Oil",
   "medium": "oil",
@@ -19,5 +19,13 @@
     {"id": "pbr7", "name": "Raw Umber", "pigmentIndex": "PBr7", "opacity": 0.7, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 32.0, "a": 8.0, "b": 18.0}},
     {"id": "pbr7_burnt", "name": "Burnt Umber", "pigmentIndex": "PBr7", "opacity": 0.72, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 26.0, "a": 14.0, "b": 20.0}},
     {"id": "pbk9", "name": "Ivory Black", "pigmentIndex": "PBk9", "opacity": 0.85, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 12.0, "a": 0.0, "b": 1.0}}
+  ],
+  "candidateMappings": [
+    {"targetDescriptor": "warm grey", "candidatePaintIds": ["pbk9", "pw6", "pr101"]},
+    {"targetDescriptor": "cool shadow", "candidatePaintIds": ["pb29", "pbr7_burnt", "pw6"]},
+    {"targetDescriptor": "foliage green", "candidatePaintIds": ["pg7", "py35", "pbk9"]},
+    {"targetDescriptor": "skin midtone", "candidatePaintIds": ["pw6", "po20", "pr101", "py42"]},
+    {"targetDescriptor": "sky blue", "candidatePaintIds": ["pb15", "pw6"]},
+    {"targetDescriptor": "muted violet", "candidatePaintIds": ["pv19", "pb29", "pw6"]}
   ]
 }

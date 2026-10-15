@@ -39,9 +39,9 @@ void main() {
       expect(white.masstone.a, 0.0);
       expect(white.masstone.b, 2.0);
 
-      // SEED-3 ships optical entries only; candidates (SEED-4) and the ship
-      // manifest (SEED-5) are not in the asset yet.
-      expect(dataset.candidateMappings, isEmpty);
+      // SEED-4 ships the LLM candidate combinations; the ship manifest (SEED-5)
+      // is still absent.
+      expect(dataset.candidateMappings, isNotEmpty);
       expect(dataset.manifest, const ValidationManifest.empty());
       expect(dataset.manifest.shippable, isFalse);
     });
@@ -51,6 +51,25 @@ void main() {
       final dataset = await const AssetSeedLoader().load();
       final ids = dataset.entries.map((e) => e.id).toSet();
       expect(ids.length, dataset.entries.length);
+    });
+
+    test('the shipped candidate combinations are LLM-seeded and grounded in '
+        'shipped entries (AC-2)', () async {
+      final dataset = await const AssetSeedLoader().load();
+      final seedIds = {for (final e in dataset.entries) e.id};
+      // The loader stamps every candidate combination llmSeed regardless of the
+      // asset — a candidate set is an LLM proposal of which paints to mix.
+      expect(
+          dataset.candidateMappings.every((m) => m.origin == SeedOrigin.llmSeed),
+          isTrue);
+      // Every candidate paint id references a real shipped entry (no fabricated
+      // id), and each combination carries a non-empty paint-id set with no
+      // ratio (ratios are the solver's, AC-3).
+      for (final m in dataset.candidateMappings) {
+        expect(m.candidatePaintIds, isNotEmpty);
+        expect(m.candidatePaintIds.every(seedIds.contains), isTrue,
+            reason: '${m.targetDescriptor} references an unknown paint id');
+      }
     });
   });
 
@@ -123,6 +142,120 @@ void main() {
       }
       ''';
       expect(() => parseSeedDataset(source), throwsArgumentError);
+    });
+
+    test('parses candidate combinations, stamping llmSeed regardless of the '
+        'asset origin (AC-2)', () {
+      const source = '''
+      {
+        "brand": "Acme",
+        "medium": "oil",
+        "entries": [],
+        "candidateMappings": [
+          {"targetDescriptor": "warm grey",
+           "candidatePaintIds": ["a", "b"],
+           "origin": "reviewedOptical"}
+        ]
+      }
+      ''';
+      final dataset = parseSeedDataset(source);
+      final mapping = dataset.candidateMappings.single;
+      expect(mapping.targetDescriptor, 'warm grey');
+      expect(mapping.candidatePaintIds, ['a', 'b']);
+      // The asset said reviewedOptical; the loader stamps llmSeed anyway — a
+      // candidate combination is always an LLM proposal (AC-2), never a
+      // measured-origin claim.
+      expect(mapping.origin, SeedOrigin.llmSeed);
+    });
+  });
+
+  group('ingestEntryRecord (the AC-4 accept-metadata / reject-claimed rule)',
+      () {
+    test('keeps accepted metadata + measured masstone and strips every claimed '
+        'spectral curve / ratio field', () {
+      final raw = <String, dynamic>{
+        'id': 'a',
+        'name': 'Alpha',
+        'pigmentIndex': 'PX1',
+        'opacity': 0.5,
+        'lightfastness': 'I',
+        'origin': 'reviewedOptical',
+        'masstone': {'l': 50, 'a': 0, 'b': 0},
+        // LLM-claimed values that must not enter the dataset:
+        'spectralCurve': [0.1, 0.2, 0.3],
+        'reflectanceCurve': [0.4],
+        'spectral': 'bogus',
+        'ratio': 0.42,
+        'ratios': [1, 2],
+        'parts': 3,
+        'partsFraction': 0.25,
+      };
+      final accepted = ingestEntryRecord(raw);
+      // Accepted metadata + optical data retained.
+      expect(accepted['pigmentIndex'], 'PX1');
+      expect(accepted['opacity'], 0.5);
+      expect(accepted['lightfastness'], 'I');
+      expect(accepted['masstone'], {'l': 50, 'a': 0, 'b': 0});
+      // Every claimed field stripped.
+      for (final claimed in kRejectedClaimedFields) {
+        expect(accepted.containsKey(claimed), isFalse,
+            reason: '$claimed must be rejected');
+      }
+    });
+
+    test('parsing a record carrying claimed values yields the same stored entry '
+        'as the clean record (claimed values have no effect)', () {
+      const withClaimed = '''
+      {
+        "brand": "Acme",
+        "medium": "oil",
+        "entries": [
+          {
+            "id": "a", "name": "Alpha", "pigmentIndex": "PX1", "opacity": 0.5,
+            "lightfastness": "I", "origin": "reviewedOptical",
+            "masstone": {"l": 50, "a": 0, "b": 0},
+            "spectralCurve": [0.1, 0.2], "ratio": 0.42
+          }
+        ]
+      }
+      ''';
+      const clean = '''
+      {
+        "brand": "Acme",
+        "medium": "oil",
+        "entries": [
+          {
+            "id": "a", "name": "Alpha", "pigmentIndex": "PX1", "opacity": 0.5,
+            "lightfastness": "I", "origin": "reviewedOptical",
+            "masstone": {"l": 50, "a": 0, "b": 0}
+          }
+        ]
+      }
+      ''';
+      final fromClaimed = parseSeedDataset(withClaimed).entries.single;
+      final fromClean = parseSeedDataset(clean).entries.single;
+      // The claimed spectral curve / ratio made no difference to the stored
+      // entry — the metadata was accepted, the claimed values dropped.
+      expect(fromClaimed, fromClean);
+      expect(fromClaimed.pigmentIndex, 'PX1');
+
+      // Control: a genuine metadata difference DOES change the stored entry, so
+      // the ingest is not vacuously dropping everything.
+      const differentMetadata = '''
+      {
+        "brand": "Acme",
+        "medium": "oil",
+        "entries": [
+          {
+            "id": "a", "name": "Alpha", "pigmentIndex": "PX2", "opacity": 0.5,
+            "lightfastness": "I", "origin": "reviewedOptical",
+            "masstone": {"l": 50, "a": 0, "b": 0}
+          }
+        ]
+      }
+      ''';
+      expect(parseSeedDataset(differentMetadata).entries.single,
+          isNot(fromClean));
     });
   });
 }

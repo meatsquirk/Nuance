@@ -57,11 +57,17 @@ class AssetSeedLoader implements SeedLoader {
 /// — the seed is a reviewed artifact, so a malformed record is a build error,
 /// not a silent default (mirroring `parseReviewedPaints`).
 ///
-/// SEED-3 parses the optical [entries] and the seed's scope only; the candidate
-/// combinations (AC-2, SEED-4) and the held-out validation manifest (AC-5/AC-6,
-/// SEED-5) are not part of the shipped asset yet, so the dataset carries an
-/// empty mapping list and the non-shippable [ValidationManifest.empty]. Those
-/// phases extend both the asset and this parser.
+/// SEED-3 parsed the optical [entries] and the seed's scope only; SEED-4 adds
+/// the LLM `candidateMappings` section (AC-2) and the ingest rule (AC-4). The
+/// held-out validation manifest (AC-5/AC-6, SEED-5) is not part of the shipped
+/// asset yet, so the dataset still carries the non-shippable
+/// [ValidationManifest.empty]; SEED-5 extends both the asset and this parser.
+///
+/// The `candidateMappings` section is optional — a seed with no candidate
+/// combinations yields an empty list — and the loader **stamps** every mapping
+/// with [SeedOrigin.llmSeed] rather than trusting an origin from the asset: a
+/// candidate combination is always an unverified LLM proposal of *which* paints
+/// to mix (AC-2); the parts are the solver's, never the seed's (AC-3).
 SeedDataset parseSeedDataset(String source) {
   final json = jsonDecode(source) as Map<String, dynamic>;
   final brand = json['brand'] as String;
@@ -70,26 +76,65 @@ SeedDataset parseSeedDataset(String source) {
     for (final raw in (json['entries'] as List).cast<Map<String, dynamic>>())
       _entryFrom(raw, brand: brand, medium: medium),
   ];
+  final candidateMappings = <CandidateMapping>[
+    for (final raw in ((json['candidateMappings'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>())
+      CandidateMapping(
+        targetDescriptor: raw['targetDescriptor'] as String,
+        candidatePaintIds: (raw['candidatePaintIds'] as List).cast<String>(),
+        // Stamped, not read: a candidate combination is an LLM proposal (AC-2).
+        origin: SeedOrigin.llmSeed,
+      ),
+  ];
   return SeedDataset(
     brand: brand,
     medium: medium,
     entries: entries,
-    candidateMappings: const [],
+    candidateMappings: candidateMappings,
     manifest: const ValidationManifest.empty(),
   );
 }
 
+/// Input-record field names the ingest **rejects**: an LLM-*claimed* spectral
+/// (reflectance) curve or mix ratio is never stored (bs-13 AC-4). Measured
+/// optical data (the masstone) and the physics solver own these — a claimed
+/// curve or ratio on an input record is stripped before the stored
+/// [SeedPaintEntry] is built, so no LLM-asserted measured value can enter the
+/// dataset through the asset. The accepted LLM metadata (pigment index, opacity,
+/// lightfastness) is retained.
+const Set<String> kRejectedClaimedFields = {
+  'spectralCurve',
+  'reflectanceCurve',
+  'spectral',
+  'ratio',
+  'ratios',
+  'parts',
+  'partsFraction',
+};
+
+/// Applies the AC-4 ingest rule to an entry's JSON [raw]: returns a record
+/// carrying only the non-claimed fields, dropping any [kRejectedClaimedFields]
+/// key. The accepted metadata and the measured masstone survive; an LLM-claimed
+/// spectral curve or ratio does not.
+Map<String, dynamic> ingestEntryRecord(Map<String, dynamic> raw) => {
+      for (final field in raw.entries)
+        if (!kRejectedClaimedFields.contains(field.key)) field.key: field.value,
+    };
+
 /// Builds one [SeedPaintEntry] from its JSON [raw], stamping the seed-wide
-/// [brand] and [medium] onto it (AC-11).
+/// [brand] and [medium] onto it (AC-11). The record first passes through the
+/// [ingestEntryRecord] rule (AC-4) so any LLM-claimed spectral curve or ratio is
+/// stripped before the entry is constructed from its accepted fields.
 SeedPaintEntry _entryFrom(
   Map<String, dynamic> raw, {
   required String brand,
   required PaintMedium medium,
 }) {
-  final masstone = raw['masstone'] as Map<String, dynamic>;
+  final accepted = ingestEntryRecord(raw);
+  final masstone = accepted['masstone'] as Map<String, dynamic>;
   return SeedPaintEntry(
-    id: raw['id'] as String,
-    name: raw['name'] as String,
+    id: accepted['id'] as String,
+    name: accepted['name'] as String,
     brand: brand,
     medium: medium,
     masstone: ColorCoordinates(
@@ -97,9 +142,9 @@ SeedPaintEntry _entryFrom(
       a: (masstone['a'] as num).toDouble(),
       b: (masstone['b'] as num).toDouble(),
     ),
-    pigmentIndex: raw['pigmentIndex'] as String,
-    opacity: (raw['opacity'] as num).toDouble(),
-    lightfastness: raw['lightfastness'] as String,
-    origin: SeedOrigin.values.byName(raw['origin'] as String),
+    pigmentIndex: accepted['pigmentIndex'] as String,
+    opacity: (accepted['opacity'] as num).toDouble(),
+    lightfastness: accepted['lightfastness'] as String,
+    origin: SeedOrigin.values.byName(accepted['origin'] as String),
   );
 }
