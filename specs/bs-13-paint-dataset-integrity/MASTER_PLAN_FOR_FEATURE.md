@@ -1,7 +1,7 @@
 # Master Plan — Paint dataset integrity and provenance
 
 **Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
-**Status:** In progress — ITEST-3 ✅ (AC-7,8,9,10; AC-8 un-pended green-at-baseline; grade 3 A / 1 A-core·B-pending-PROV-3); all 11 AC tests written; next ITEST-4 (test review, G-2)
+**Status:** In progress — ITEST-4 packet assembled, ⏸ awaiting human G-2 decision; behavior stage blocked until G-2 resolved
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
 
@@ -109,7 +109,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its pro
 | SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | 🔄 In progress (SEED-2 ✅) |
 | PROV | [modules/PROV.md](modules/PROV.md) | The runtime provenance/evidence model: tier-by-origin derivation, append-only evidence, Estimated→Confirmed promotion rule (product code, `lib/domain/`) | — | 🔄 In progress (PROV-1 ✅) |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | Reusable integrity guards (no product code): ratios-only-from-solver, no-lookup-table, no-claimed-value-stored | — | 🔄 In progress (GUARD-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | 🔄 In progress (ITEST-3 ✅; next ITEST-4 review) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | 🔄 In progress (ITEST-4 packet ⏸ awaiting G-2) |
 
 ## Dependency graph
 
@@ -132,7 +132,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | SEED-1 | ✅ Resolved 2026-10-14 16:06: approved — spec banner flipped to approval line — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision (packet assembled 2026-10-15, [modules/ITEST.md § Review packet](modules/ITEST.md)) |
 | G-3 | decision | Confirm the shipped seed's optical values + validation manifest reflect **real reviewed Phase-0.5 evidence** (owner), or accept the named gap — the bs-13 automated tests prove only the schema/ship-logic over a representative manifest (D-5) | SIGNOFF-1 (AC-5/AC-6 real-world fidelity) | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -157,7 +157,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke test | ✅ Done | 8,665,269 | 16m 33s | analyze clean; bs13 suite 8/8 (default==run-pending) on flutter-tester; unit 1332/0; no lib/ touched; grade A/A |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,6,11 (pending) + red baseline | ✅ Done | 6,237,768 | 14m 50s | 8 pass/7 skip default; 7 fail clean run-pending; grade 5 A/2 A-core·B-pending-GUARD-2 |
 | 7 | ITEST-3 | acceptance-tests: AC-7,8,9,10 (pending) + red baseline | ✅ Done | 5,013,273 | 17m 12s | 9 pass/10 skip default; 9 pass/10 fail run-pending; AC-8 un-pended green-at-baseline; grade 3 A/1 A-core·B-pending-PROV-3 |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | blocks every behavior phase |
+| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,710,718 | 4m 46s | packet assembled 2026-10-15; G-2 awaiting human decision; blocks every behavior phase |
 | 9 | SEED-3 | AC-1, AC-11: ship the seed asset + loader; solve from it | ⬜ Todo | | | |
 | 10 | SEED-4 | AC-2, AC-4: candidate-origin manifest + ingest accept/reject | ⬜ Todo | | | after SEED-3 |
 | 11 | SEED-5 | AC-5, AC-6: validation manifest + ship decision | ⬜ Todo | | | after SEED-4 |
@@ -170,7 +170,12 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-3 (acceptance-tests) ✅ done — one *pending* `acTest` per AC for **AC-7, AC-8, AC-9, AC-10** added to `integration_test/bs13/dataset_test.dart` (pure-Dart provenance via `sampleWithEvidence` / `derivation` / `provenanceOf`; test-support only, no `lib/`/`test/` touched). **AC-8 (append-only) was green at baseline** — the PROV-1 shell froze a working `appendEvidence` — so it was **un-pended** (recorded green-at-baseline; PROV-2 still owns it). Default `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` = **9 pass / 10 skip** (green); run-pending = **9 pass / 10 fail** (AC-7/9 fail on a Then, AC-10 on its sensitivity control, the 7 ITEST-2 ACs unchanged). Unit **1332/0** unchanged; analyze clean; coverage gate n/a (test-support). Grade (fresh grader, G1–G6): **3 A (AC-7/8/10), 1 A-core / B-pending-PROV-3 (AC-9), 0 below A**. All 11 AC tests now written.
+**ITEST-4 (test review) packet is assembled and ⏸ awaiting the human G-2 decision.** No agent phase is startable until G-2 is recorded — every behavior phase (SEED-3/4/5, PROV-2/3, GUARD-2) is gate-blocked.
+
+- **Review the packet:** [modules/ITEST.md § Review packet (G-2)](modules/ITEST.md). 11 ACs, one test each; suite green by default (**9 pass / 10 skip**), red run-pending (**9 pass / 10 fail**, verified 2026-10-15); whole-suite grade **8 A + 3 A-core·B-pending** (AC-1/AC-4→GUARD-2, AC-9→PROV-3), 0 below A. Reviewer flags: AC-8 green-at-baseline/un-pended (honest); AC-10 red via its sensitivity control by design; the D-5/G-3 physical-measurement gap is named not covered.
+- **Approve:** `/feature-next-phase --gate bs13 G-2 approved` → unblocks the behavior stage; startable next = **SEED-3** (AC-1/AC-11) and **PROV-2** (AC-7/AC-8) in parallel (disjoint `lib/dataset/` vs `lib/domain/`).
+- **Request changes:** `/feature-next-phase --gate bs13 G-2 "<changes>"` → each item becomes an ITEST change phase + a fresh review.
+- Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`). G-3 is a later SIGNOFF-1 decision.
 
 **Next: ITEST-4** (test review, **G-2**) — assemble the review packet in `modules/ITEST.md` (one line per AC: test name, Given checks, When, Then + Rejects; the red-baseline summary; the augmentations and which phase closes each; the grid counts; the named D-5/G-3 gap), set the phase `⏸ Awaiting review` and G-2 to *awaiting decision*, record the ledger row, commit, and **stop** with `/feature-next-phase --gate bs13 G-2 approved | "<changes>"`. A human approves before any behavior phase (SEED-3/4/5, PROV-2/3, GUARD-2) can start. Flag for the reviewer: AC-8 is the one AC with no red baseline (green-at-baseline, un-pended, honest); AC-10's red comes from its sensitivity control by design; AC-9 carries a justified B-pending-PROV-3 augmentation. Run `/feature-next-phase bs13` (auto-selects ITEST-4). Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`). G-3 is a SIGNOFF-1 decision.
 
@@ -189,7 +194,8 @@ ITEST-3 (acceptance-tests) ✅ done — one *pending* `acTest` per AC for **AC-7
 | ITEST-1 | 5a0b5c6c | 2026-10-14 22:20 EDT | 22:36 | 16m 33s | 16m 33s | claude-opus-4-8 | 142 | 227,084 | 8,386,215 | 51,828 | 8,665,269 | acceptance scaffold: harness + fixtures + pending gate (11 ACs) + smoke/scaffold; analyze clean, bs13 suite 8/8 flutter-tester (default==run-pending), unit 1332/0, no lib/ touched, grade A/A; no red baseline yet (ITEST-2/3) |
 | ITEST-2 | 72dfe312 | 2026-10-15 02:42 EDT | 02:57 | 14m 50s | 14m 50s | claude-opus-4-8 | 100 | 242,607 | 5,944,780 | 50,281 | 6,237,768 | acceptance-tests: 7 pending AC tests (AC-1,2,3,4,5,6,11); default 8 pass/7 skip, run-pending red baseline 7 fail clean; unit 1332/0; grade 5 A/2 A-core·B-pending-GUARD-2; no lib/ touched |
 | ITEST-3 | 7649a3f8 | 2026-10-15 03:36 EDT | 03:53 | 17m 12s | 17m 12s | claude-opus-4-8 | 80 | 239,882 | 4,716,624 | 56,687 | 5,013,273 | acceptance-tests: AC-7,8,9,10; AC-8 un-pended green-at-baseline; default 9 pass/10 skip, run-pending 9 pass/10 fail clean; unit 1332/0; grade 3 A/1 A-core·B-pending-PROV-3; no lib/ touched |
-| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 03:53** | **5h 04m** | **4h 24m** |  | **950** | **1,570,255** | **55,329,919** | **446,194** | **57,347,318** |  |
+| ITEST-4 | ea77e907 | 2026-10-15 05:51 EDT | 05:55 | 4m 46s | 4m 46s | claude-opus-4-8 | 42 | 72,174 | 1,625,112 | 13,390 | 1,710,718 | packet assembled; G-2 awaiting human decision |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 05:55** | **5h 09m** | **4h 28m** |  | **992** | **1,642,429** | **56,955,031** | **459,584** | **59,058,036** |  |
 
 ## Sign-off
 

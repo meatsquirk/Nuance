@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-3 ✅ (AC-7,8,9,10; AC-8 un-pended green-at-baseline, grade 3 A / 1 A-core·B-pending-PROV-3); next ITEST-4 (test review, G-2)
+**Status:** ITEST-4 packet assembled — ⏸ Awaiting review (G-2); all 11 AC tests written, suite green by default / red run-pending, whole-suite grade 8 A + 3 A-core·B-pending (GUARD-2×2, PROV-3), 0 below A
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs13/dataset_harness.dart`, `integration_test/bs13/dataset_test.dart`, `integration_test/bs13/pending.dart` (consumes the SEED/PROV surfaces and the GUARD guards; writes no product code).
 **Depends on:** SEED-2, PROV-1, GUARD-1 (all shells wired) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness) | ✅ Done | 8,665,269 | 16m 33s |
 | 2 | acceptance-tests | AC-1,2,3,4,5,6,11 | ✅ Done | 6,237,768 | 14m 50s |
 | 3 | acceptance-tests | AC-7,8,9,10 | ✅ Done | 5,013,273 | 17m 12s |
-| 4 | test-review | — (G-2) | ⬜ Next | | |
+| 4 | test-review | — (G-2) | ⏸ Awaiting review | 1,710,718 | 4m 46s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-- **G-1** (spec) blocks the feature. **G-2** (approve these tests — ITEST-4's packet) blocks every behavior phase (SEED-3..5, PROV-2..3, GUARD-2).
+- **G-1** (spec) blocks the feature. **G-2** (approve these tests — ITEST-4's packet) — *awaiting decision* (packet assembled 2026-10-15); blocks every behavior phase (SEED-3..5, PROV-2..3, GUARD-2).
 
 ## Phase 1 — Harness, fixtures, pending gate, smoke test
 
@@ -114,6 +114,44 @@ Added one *pending* acceptance test per AC for the four runtime-provenance ACs *
 - **Target AC:** — · **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
 - **Tasks:** assemble the review packet — the catalogue, each test's red baseline + grade, the fixtures and controls, the pre-seeded augmentations, and the named D-5/G-3 gap. Set the G-2 gate; a human approves before any behavior phase.
 - **Exit criteria:** packet assembled; G-2 recorded by a human (approved → ITEST-4 done; changes → change phases + a fresh review).
+
+### Review packet (G-2) — ⏸ Awaiting review
+
+**Status:** assembled 2026-10-15; G-2 *awaiting decision*. Approve with
+`/feature-next-phase --gate bs13 G-2 approved` — or request changes with
+`/feature-next-phase --gate bs13 G-2 "<changes>"`. No behavior phase (SEED-3/4/5, PROV-2/3, GUARD-2) may start until this gate is resolved.
+
+**What this packet is:** 11 acceptance criteria, each with one integration test, all written and verified against the wired shells. The suite is **green by default** (pending ACs skipped) and each pending AC **fails cleanly** under `--dart-define=BS13_RUN_PENDING=true` at a documented Then or at a Given precondition naming its owning phase. A behavior phase un-pends its AC and must turn that red green.
+
+**Reviewer: look at these first.**
+1. **AC-8 has no red baseline** — the PROV-1 shell froze a *working* append-only `appendEvidence` (`[...old, new]`), so AC-8 was green at baseline and has been **un-pended** (it runs by default). Recorded honestly as green-at-baseline; PROV-2 still owns it (keeps it green + carries its unit coverage). The test was strengthened at ITEST-3 (exact length growth, first/last position, order equality, source-list-not-mutated, a monotonic second-append control rejecting a ring-buffer/replace impl).
+2. **AC-10's red comes from its sensitivity control, by design** — at the stub the "opinion stays Estimated" Then passes *vacuously* (fallback already == Estimated), so a contrasting control (`tierFor([llmSeed, evInstrument]) == Measured`) is what pins AC-10 red until PROV-3 gives the real derivation. This is deliberate, not a weak test.
+3. **Three A-core / B-pending augmentations** (all with an augmentation row, all scheduled): AC-1 + AC-4 → GUARD-2 (the structural no-lookup / no-claimed-value guards don't exist yet); AC-9 → PROV-3 (promotion can't be exercised until the rule exists). No test is below A.
+4. **The D-5 / G-3 real-world gap** (below) — AC-5/AC-6 prove *shape + ship-decision logic* over a representative manifest, **not** a physical spectrophotometer measurement. This is a known, named gap confirmed (or accepted) by the owner at SIGNOFF-1 (G-3), not something these tests claim to cover.
+
+**Catalogue** — one line per AC (full Given/When/Then/Rejects in [MASTER_PLAN § Test catalogue](../MASTER_PLAN_FOR_FEATURE.md), fixtures + controls in § Fixtures). Owning behavior phase and grade in the tables below.
+
+| AC | Test | Given (checked via) | When | Then — asserts / Rejects |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_RecipesSolvedFromOpticalData` | `shippedSeed` entries carry optical data, no target→recipe answer rows (`DatasetReadEndpoint`) | solve a target via `realEngine.inverse` | components are seed optical paints **and** `predictedColor ≈ forward(components)` (≤1.0 ΔLab) — rejects a retrieved lookup. **+GUARD-2:** no-lookup guard flags `control_lookupTable` |
+| AC-2 | `TestAC02_CandidatesFromLlm` | candidate mappings + origins (`DatasetReadEndpoint`) | candidates read from manifest | every `CandidateMapping.origin == llmSeed`, ids grounded in shipped entries, two loads identical, boot drives no speech — rejects unrecorded/other origin or a runtime LLM call |
+| AC-3 | `TestAC03_RatiosFromSolverNeverLlm` | `lib/` + schema scanned by `ratioProvenanceGuard` | parts for a mix produced | zero offenders (solver is the only ratio producer; no seed ratio field). **control:** re-pointed at `control_llmRatio` it lists the planted file |
+| AC-4 | `TestAC04_MetadataAcceptedClaimedValuesRejected` | `control_claimedSpectral` ingested (`DatasetReadEndpoint`) | data ingested | metadata (pigment index, masstone) retained + survives `toPaint()`; claimed spectral/ratio stripped — rejects storing claimed values or dropping valid metadata. **+GUARD-2:** schema no-claimed-value guard + planted-entry control |
+| AC-5 | `TestAC05_HeldOutValidationRecorded` | `heldOutManifest` (`DatasetReadEndpoint.manifest`) | held-out recipes mixed & measured (recorded) | `heldOutCount ∈ [50,100]`, non-empty ΔE00 distribution, one finite ΔE00 ≥ 0 per recipe — rejects no distribution / count out of range |
+| AC-6 | `TestAC06_SeedShipsOnlyOnEvidence` | passing `heldOutManifest` + two failing controls | ship decision made | `shippable` iff clears threshold **and** hybrid mean ΔE00 < LLM-alone; each single-condition control **not** shippable — rejects a one-condition decision |
+| AC-7 | `TestAC07_EnforcedProvenanceTierByOrigin` | one `EvidencePoint` per origin + `ProvenanceReadEndpoint` | value stored | `evInstrument`→Measured, `evSolver`→Calculated, `evLlmSeed`→Estimated, `evUserSwatch`→Confirmed, each with a **contrasting fallback** so the tier comes from the origin not the fallback — rejects a value with no enforced tier |
+| AC-8 | `TestAC08_EvidenceAppendOnly` | value carrying `evLlmSeed` | append `evUserSwatch` | point appended, prior retained, order preserved, source list not mutated — rejects overwrite/reorder/ring-buffer. **Green at baseline → un-pended** (see flag 1) |
+| AC-9 | `TestAC09_PromotedOnlyByMeasuredSwatch` | Estimated value (`evLlmSeed` only) derives Estimated | append photographed/measured swatch → re-derive | tier Estimated→**Confirmed**, driven only by the swatch — rejects promotion on anything else / no promotion on a valid swatch. **+PROV-3:** the transition through the promotion wrapper |
+| AC-10 | `TestAC10_OpinionsNeverPromote` | Estimated value (`control_opinionOnly`) | append `evOpinion` → re-derive | stays Estimated (opinion contributes nothing). **sensitivity control:** `[llmSeed, evInstrument]`→Measured pins it red (see flag 2) — rejects an opinion raising the tier |
+| AC-11 | `TestAC11_ShippedSeedStaysNarrow` | `shippedSeed` brand/medium/count (`DatasetReadEndpoint`) | scope set | one brand, one medium (every entry checked), ~15 paints (count ∈ [12,18]) — rejects multiple brands/media or a count far from ~15 |
+
+**Red-baseline summary** (verified 2026-10-15; full per-AC rows in the *Red baseline* table below): default `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` = **9 pass / 10 skip** (green); run-pending `--dart-define=BS13_RUN_PENDING=true` = **9 pass / 10 fail** — the ten pending ACs (AC-1,2,3,4,5,6,7,9,10,11) each fail cleanly at a documented Then or Given precondition, AC-8 passes. No compile/harness errors. Unit suite **1332/0** unchanged; all six bs-13 test files are test-support (no `lib/` touched → coverage gate n/a).
+
+**Grade grid** (fresh independent grader per AC-test phase, G1–G6; recorded in the ITEST-2/ITEST-3 Results above). Whole-suite over the 11 AC tests: **8 straight A** (AC-2,3,5,6,7,8,10,11) + **3 A-core / B-pending** (AC-1, AC-4 → GUARD-2; AC-9 → PROV-3), **0 below A**. Every B-pending has an augmentation row in the *Test augmentations* table (precondition for this review).
+
+**Augmentations scheduled** (each closed by its behavior phase; see *Test augmentations* table): TestAC01 no-lookup assertion + `control_lookupTable` → **GUARD-2**; TestAC04 no-claimed-value schema assertion + planted-entry control → **GUARD-2**; TestAC09 Estimated→Confirmed through the promotion wrapper → **PROV-3**.
+
+**Named gap carried to sign-off (D-5 / G-3):** AC-5/AC-6 prove the manifest's **shape** (held-out count 50–100 + ΔE00 distribution) and the **ship-decision logic** (clears threshold ∧ hybrid beats LLM-alone) over a **representative/recorded** manifest — **not** a physical spectrophotometer measurement; the seed's optical values are a reviewed representative set, not instrument-measured. The physical Phase-0.5 validation (a weekend of swatching) is the owner's evidence, confirmed or accepted at **SIGNOFF-1 (G-3)**. These acceptance tests do not and cannot assert it.
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
