@@ -1,6 +1,6 @@
 # Module GUARD — reusable integrity guards
 
-**Status:** Not started
+**Status:** 🔄 In progress — GUARD-1 ✅ (shell harness landed, behaviour-neutral); GUARD-2 (AC-3 + AC-1/AC-4 augments) is the remaining behavior phase (gated on G-2 + SEED-3)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs13/guards/` (reusable test-support — **no product code**): `ratio_provenance_guard.dart`, `no_lookup_table_guard.dart`, `no_claimed_value_guard.dart`, and a small `source_scan.dart`/schema-check helper.
 **Depends on:** the bs-04 engine (`lib/recipes/engine/`) and SEED's `SeedDataset` schema (for the schema checks) · **Blocks:** ITEST-1 (consumes the guards)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 6,687,969 | 2h 01m |
 | 2 | behavior | AC-3 (+ AC-1/AC-4 structural augments) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -35,6 +35,24 @@
 - **Exit criteria:** the guards compile and are importable by the acceptance harness; no product code; existing suites green. (Guards live in `integration_test/`, outside the coverage-gate scope — note any justified exclusion.)
 - **Acceptance gate:** —
 - **Augments:** —
+
+### Result — GUARD-1  <!-- 2026-10-14 -->
+
+Shell: the reusable guard harness is laid under `integration_test/bs13/guards/` (test-support, **no `lib/` product code** — D-4). New files:
+- `source_scan.dart` — the shared machinery: `SourceMatch` (path/line/snippet); `scanDartSources({roots, patterns, isAllowed})` walks `.dart` files under dir-or-file roots, masks comments/strings via the ported `maskCommentsAndStrings`, returns one match per matching line; `scanSchema({schemaFiles, fieldPatterns})` points the same scanner at the SEED definition file; `GuardOffender` (the guard result type, empty list = pass); `ruleNotYetEnforced` + `notYetEnforced(name)` sentinel; `kLibRoots` / `kSeedSchemaFiles` constants.
+- `ratio_provenance_guard.dart` / `no_lookup_table_guard.dart` / `no_claimed_value_guard.dart` — each a **stub returning the `ruleNotYetEnforced` sentinel** (one offender), so a pending AC test's "zero offenders" Then fails as the red baseline (ITEST-2/3); no rule logic yet (lands at GUARD-2). Signatures carry the overridable `roots`/`schemaFiles` the real scans and controls will use.
+
+**Verification:** `flutter analyze` → **No issues found**; full unit suite **1332/0** (+ `test/bs13/guards_shell_test.dart`, 11 cases: each stub returns the sentinel; `maskCommentsAndStrings` blanks a token in a comment/string; `scanDartSources` locates `class SubtractiveMixingEngine` with real path/line, honours `isAllowed`, skips a missing root; `scanSchema` finds `CandidateMapping` and yields nothing for a ratio/spectral field the schema lacks); coverage gate **100% on all touched files** (`COVERAGE_GATE_BASE=7015390`) — GUARD-1 touched **no** `lib/` file, so no new coverage obligation (guards live in `integration_test/`, outside the gate scope — justified exclusion). **Full cross-feature regression (last shell): 222/0 on the iPhone 17 sim** under `coord.sh with-lock` (whole `integration_test/` dir), == the SEED-2/PROV-1 baseline — GUARD-1 adds no `lib/` change and no edit to any existing test, so behaviour is unchanged. Fix passes: 0/3 (clean first run). Tokens 6,687,969 · Time 2h 01m.
+
+### Checkpoint / Handoff — GUARD-1
+
+- **Frozen for ITEST-1 (consumer) and GUARD-2 (filler):**
+  - `source_scan.dart` API: `scanDartSources({Iterable<String> roots = kLibRoots, required List<RegExp> patterns, bool Function(String)? isAllowed}) → List<SourceMatch>`; `scanSchema({Iterable<String> schemaFiles = kSeedSchemaFiles, required List<RegExp> fieldPatterns}) → List<SourceMatch>`; `maskCommentsAndStrings(String)`; `SourceMatch{path,line,snippet}`.
+  - Guard API (what ITEST binds to): `ratioProvenanceGuard({roots, schemaFiles})`, `noLookupTableGuard({schemaFiles})`, `noClaimedValueGuard({schemaFiles})` each → `List<GuardOffender>` (empty = pass). A GUARD-1 stub returns one offender tagged `ruleNotYetEnforced`.
+  - `kLibRoots = ['lib']`, `kSeedSchemaFiles = ['lib/dataset/seed_dataset.dart']`.
+- **GUARD-2 fills** the three stub bodies: `ratioProvenanceGuard` = `partsFraction` producer scan (only `SubtractiveMixingEngine`, line 386 of `lib/recipes/engine/subtractive_engine.dart`) + no-ratio-field schema check; `noLookupTableGuard` = no target→recipe answer-mapping schema check; `noClaimedValueGuard` = no claimed spectral/ratio field (schema + ingested entries). Each then returns empty over `lib/` and lists the planted control fixture. GUARD-2 depends on SEED-3 (needs the shipped seed) and ITEST-4/G-2.
+- **Scans run host-side** (`dart:io`, cwd = repo root). bs-13's own suite is pure-Dart (`flutter-tester`); the guard smoke test is in `test/` and runs with the unit suite.
+- **Known gaps:** none introduced; behaviour unchanged. The stubs deliberately report "not yet enforced" so the ITEST red baseline is red until GUARD-2.
 
 ## Phase 2 — AC-3: ratios-from-solver guard (+ AC-1/AC-4 structural augments)
 

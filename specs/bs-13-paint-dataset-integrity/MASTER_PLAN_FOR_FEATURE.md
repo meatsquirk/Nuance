@@ -1,7 +1,7 @@
 # Master Plan — Paint dataset integrity and provenance
 
 **Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
-**Status:** In progress — PROV-1 ✅ shell (provenance seam wired, behaviour-neutral); GUARD-1 is the last remaining shell, then ITEST
+**Status:** In progress — all three shells done (SEED-2 ✅ PROV-1 ✅ GUARD-1 ✅); next ITEST-1 (acceptance harness) — startable
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
 
@@ -108,7 +108,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its pro
 |---|---|---|---|---|
 | SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | 🔄 In progress (SEED-2 ✅) |
 | PROV | [modules/PROV.md](modules/PROV.md) | The runtime provenance/evidence model: tier-by-origin derivation, append-only evidence, Estimated→Confirmed promotion rule (product code, `lib/domain/`) | — | 🔄 In progress (PROV-1 ✅) |
-| GUARD | [modules/GUARD.md](modules/GUARD.md) | Reusable integrity guards (no product code): ratios-only-from-solver, no-lookup-table, no-claimed-value-stored | — | ⬜ Todo |
+| GUARD | [modules/GUARD.md](modules/GUARD.md) | Reusable integrity guards (no product code): ratios-only-from-solver, no-lookup-table, no-claimed-value-stored | — | 🔄 In progress (GUARD-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | ⬜ Todo |
 
 ## Dependency graph
@@ -153,8 +153,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 1 | SEED-1 | scaffold: branch off `main`, baseline run, coverage-gate + acceptance-runner self-check, record baseline | ✅ Done | 6,139,369 | 22m 06s | G-1 ✅; baseline unit 1279/0, sim integ 222/0, analyze clean |
 | 2 | SEED-2 | shell: `lib/dataset/` types + `SeedLoader`/`AssetSeedLoader` + `SeededPaletteSource` + `DatasetReadEndpoint` + wiring | ✅ Done | 15,898,272 | 34m 54s | analyze clean; unit 1315/0; coverage 100%/6; integ 222/0 (sim) |
 | 3 | PROV-1 | shell: `EvidenceKind` + tier-derivation seam + append-only add stub + `ProvenanceReadEndpoint` | ✅ Done | 4,740,008 | 18m 41s | analyze clean; unit 1322/0; coverage 100%/9; integ 222/0 (sim) |
-| 4 | GUARD-1 | shell: reusable guard harness (source-scan + schema-check scaffolding) | ⬜ Next | | | last shell; disjoint from SEED/PROV |
-| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke test | ⬜ Todo | | | |
+| 4 | GUARD-1 | shell: reusable guard harness (source-scan + schema-check scaffolding) | ✅ Done | 6,687,969 | 2h 01m | analyze clean; unit 1332/0; coverage 100% touched (no lib/ touched); full regression 222/0 (sim) — last shell |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke test | ⬜ Next | | | all shells done → startable |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,6,11 (pending) + red baseline | ⬜ Todo | | | seq before ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-7,8,9,10 (pending) + red baseline | ⬜ Todo | | | shares runner → after ITEST-2 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
@@ -170,9 +170,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-PROV-1 (shell) ✅ done — the runtime provenance seam is wired in `lib/domain/`, behaviour-neutral: `EvidenceKind` (the four origins + `opinion`) + a non-null `EvidencePoint.kind` (safe default `opinion`); `ProvenanceDerivation.tierFor`/`appendEvidence` **stubs** (tier unchanged until PROV-2); `ProvenanceReadEndpoint` pure-Dart observation seam. analyze clean, unit 1322/0, coverage 100% on all touched files, integ regression 222/0 on the iPhone 17 sim (== baseline). Signatures frozen for PROV-2/PROV-3 and for ITEST to bind to.
+GUARD-1 (shell) ✅ done — the reusable guard harness is laid under `integration_test/bs13/guards/` (test-support, no `lib/` product code): `source_scan.dart` (`scanDartSources`/`scanSchema`/`maskCommentsAndStrings`/`SourceMatch`/`GuardOffender`) + three guard stubs (`ratioProvenanceGuard`/`noLookupTableGuard`/`noClaimedValueGuard`) returning a `ruleNotYetEnforced` sentinel so the ITEST red baseline is red until GUARD-2. analyze clean, unit 1332/0 (+11 smoke), coverage 100% on all touched files (no `lib/` touched), full cross-feature regression 222/0 on the iPhone 17 sim (== baseline). The three shells (SEED-2 ✅ PROV-1 ✅ GUARD-1 ✅) are complete.
 
-**Next: GUARD-1** — the last remaining shell (`integration_test/bs13/guards/`, reusable guard harness: source-scan + schema-check scaffolding), disjoint from SEED/PROV. Run `/feature-next-phase bs13` (auto-selects GUARD-1) or `--parallel bs13 GUARD-1`. Once all three shells (SEED-2 ✅, PROV-1 ✅, GUARD-1) land, **ITEST-1** (acceptance harness) can start. G-2 (ITEST-4 test review) still blocks every behavior phase; G-3 is a SIGNOFF-1 decision. Reminders: bs-13's own suite is pure-Dart (`flutter-tester`); cross-feature regression runs on the iPhone 17 sim under `coord.sh with-lock` (whole `integration_test/` dir works on the sim). SEED-4 reconciles SEED's local `SeedOrigin`→`EvidenceKind` (see PROV-1 Checkpoint).
+**Next: ITEST-1** (acceptance-tests) — now **startable** (all shells landed). Build the bs-13 acceptance harness over the wired `DatasetReadEndpoint` / `ProvenanceReadEndpoint` / guards, the fixtures (`shippedSeed`, the `control_*` planted fixtures), the pending gate, and a smoke test. Then ITEST-2 → ITEST-3 (one pending test per AC + red baseline, **run sequentially** — they share `dataset_test.dart` + `pending.dart`), then ITEST-4 (test review, **G-2**). Run `/feature-next-phase bs13` (auto-selects ITEST-1). G-2 (ITEST-4 test review) still blocks every behavior phase; G-3 is a SIGNOFF-1 decision. Reminders: bs-13's own suite is pure-Dart (`flutter-tester`); cross-feature regression runs on the iPhone 17 sim under `coord.sh with-lock` (whole `integration_test/` dir works on the sim). SEED-4 reconciles SEED's local `SeedOrigin`→`EvidenceKind` (see PROV-1 Checkpoint).
 
 ## Token usage
 
@@ -185,7 +185,8 @@ PROV-1 (shell) ✅ done — the runtime provenance seam is wired in `lib/domain/
 | SEED-1 | c8a8789e | 2026-10-14 16:08 EDT | 16:31 | 22m 06s | 22m 06s | claude-opus-4-8 | 124 | 106,263 | 5,995,882 | 37,100 | 6,139,369 | scaffold verify: branch off 7015390 confirmed; baseline unit 1279/0, integ 222/0 (iPhone 17 sim), analyze clean; coverage gate PASS-clean/FAIL-on-gap; no product code |
 | SEED-2 | 4f988a02 | 2026-10-14 17:46 EDT | 18:21 | 34m 54s | 34m 54s | claude-opus-4-8 | 194 | 197,147 | 15,611,037 | 89,894 | 15,898,272 | shell: lib/dataset surface + build_app wiring; analyze clean, unit 1315/0, coverage 100%/6, integ 222/0 (iPhone 17 sim); behaviour unchanged |
 | PROV-1 | b63b2712 | 2026-10-14 18:23 EDT | 18:42 | 18m 42s | 18m 41s | claude-opus-4-8 | 98 | 92,319 | 4,613,172 | 34,419 | 4,740,008 | shell: EvidenceKind + ProvenanceDerivation/ReadEndpoint seams (lib/domain, behaviour-neutral); analyze clean, unit 1322/0, coverage 100%/9, integ 222/0 (iPhone 17 sim); behaviour unchanged |
-| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-14 18:42** | **2h 14m** | **1h 34m** |  | **514** | **626,324** | **29,874,692** | **241,509** | **30,743,039** |  |
+| GUARD-1 | 78f50b35 | 2026-10-14 20:08 EDT | 22:10 | 2h 01m | 2h 01m | claude-opus-4-8 | 114 | 234,358 | 6,407,608 | 45,889 | 6,687,969 | shell: reusable guard harness landed (behaviour-neutral); analyze clean, unit 1332/0, coverage 100% touched, full regression 222/0 (sim) |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-14 22:10** | **4h 15m** | **3h 35m** |  | **628** | **860,682** | **36,282,300** | **287,398** | **37,431,008** |  |
 
 ## Sign-off
 
