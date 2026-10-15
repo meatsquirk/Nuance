@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ITEST-4 packet assembled — ⏸ Awaiting review (G-2); all 11 AC tests written, suite green by default / red run-pending, whole-suite grade 8 A + 3 A-core·B-pending (GUARD-2×2, PROV-3), 0 below A
+**Status:** ✅ Module done — ITEST-4 test review **approved (G-2) 2026-10-15 by Matt Quirk**; all 11 AC tests written, suite green by default / red run-pending, whole-suite grade 8 A + 3 A-core·B-pending (GUARD-2×2, PROV-3), 0 below A. Behavior stage unblocked.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs13/dataset_harness.dart`, `integration_test/bs13/dataset_test.dart`, `integration_test/bs13/pending.dart` (consumes the SEED/PROV surfaces and the GUARD guards; writes no product code).
 **Depends on:** SEED-2, PROV-1, GUARD-1 (all shells wired) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | 1 | acceptance-tests | — (harness) | ✅ Done | 8,665,269 | 16m 33s |
 | 2 | acceptance-tests | AC-1,2,3,4,5,6,11 | ✅ Done | 6,237,768 | 14m 50s |
 | 3 | acceptance-tests | AC-7,8,9,10 | ✅ Done | 5,013,273 | 17m 12s |
-| 4 | test-review | — (G-2) | ⏸ Awaiting review | 1,710,718 | 4m 46s |
+| 4 | test-review | — (G-2) | ✅ Done | 1,710,718 | 4m 46s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-- **G-1** (spec) blocks the feature. **G-2** (approve these tests — ITEST-4's packet) — *awaiting decision* (packet assembled 2026-10-15); blocks every behavior phase (SEED-3..5, PROV-2..3, GUARD-2).
+- **G-1** (spec) blocks the feature. **G-2** (approve these tests — ITEST-4's packet) — ✅ **Resolved 2026-10-15: approved — Matt Quirk**; behavior stage (SEED-3..5, PROV-2..3, GUARD-2) unblocked.
 
 ## Phase 1 — Harness, fixtures, pending gate, smoke test
 
@@ -115,11 +115,9 @@ Added one *pending* acceptance test per AC for the four runtime-provenance ACs *
 - **Tasks:** assemble the review packet — the catalogue, each test's red baseline + grade, the fixtures and controls, the pre-seeded augmentations, and the named D-5/G-3 gap. Set the G-2 gate; a human approves before any behavior phase.
 - **Exit criteria:** packet assembled; G-2 recorded by a human (approved → ITEST-4 done; changes → change phases + a fresh review).
 
-### Review packet (G-2) — ⏸ Awaiting review
+### Review packet (G-2) — ✅ Approved 2026-10-15 by Matt Quirk
 
-**Status:** assembled 2026-10-15; G-2 *awaiting decision*. Approve with
-`/feature-next-phase --gate bs13 G-2 approved` — or request changes with
-`/feature-next-phase --gate bs13 G-2 "<changes>"`. No behavior phase (SEED-3/4/5, PROV-2/3, GUARD-2) may start until this gate is resolved.
+**Status:** assembled 2026-10-15; **G-2 approved 2026-10-15 by Matt Quirk** (round 1). ITEST-4 done; the behavior stage (SEED-3/4/5, PROV-2/3, GUARD-2) is unblocked — SEED-3 ∥ PROV-2 startable in parallel (disjoint `lib/dataset/` vs `lib/domain/`).
 
 **What this packet is:** 11 acceptance criteria, each with one integration test, all written and verified against the wired shells. The suite is **green by default** (pending ACs skipped) and each pending AC **fails cleanly** under `--dart-define=BS13_RUN_PENDING=true` at a documented Then or at a Given precondition naming its owning phase. A behavior phase un-pends its AC and must turn that red green.
 

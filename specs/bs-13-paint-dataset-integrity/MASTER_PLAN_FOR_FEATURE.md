@@ -1,7 +1,7 @@
 # Master Plan — Paint dataset integrity and provenance
 
 **Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
-**Status:** In progress — ITEST-4 packet assembled, ⏸ awaiting human G-2 decision; behavior stage blocked until G-2 resolved
+**Status:** In progress — G-2 approved 2026-10-15; behavior stage unblocked, next SEED-3 ∥ PROV-2
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
 
@@ -109,7 +109,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its pro
 | SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | 🔄 In progress (SEED-2 ✅) |
 | PROV | [modules/PROV.md](modules/PROV.md) | The runtime provenance/evidence model: tier-by-origin derivation, append-only evidence, Estimated→Confirmed promotion rule (product code, `lib/domain/`) | — | 🔄 In progress (PROV-1 ✅) |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | Reusable integrity guards (no product code): ratios-only-from-solver, no-lookup-table, no-claimed-value-stored | — | 🔄 In progress (GUARD-1 ✅) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | 🔄 In progress (ITEST-4 packet ⏸ awaiting G-2) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | ✅ Done (G-2 approved 2026-10-15) |
 
 ## Dependency graph
 
@@ -132,7 +132,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | SEED-1 | ✅ Resolved 2026-10-14 16:06: approved — spec banner flipped to approval line — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision (packet assembled 2026-10-15, [modules/ITEST.md § Review packet](modules/ITEST.md)) |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-15: approved — Matt Quirk (round 1); behavior stage unblocked |
 | G-3 | decision | Confirm the shipped seed's optical values + validation manifest reflect **real reviewed Phase-0.5 evidence** (owner), or accept the named gap — the bs-13 automated tests prove only the schema/ship-logic over a representative manifest (D-5) | SIGNOFF-1 (AC-5/AC-6 real-world fidelity) | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -157,11 +157,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke test | ✅ Done | 8,665,269 | 16m 33s | analyze clean; bs13 suite 8/8 (default==run-pending) on flutter-tester; unit 1332/0; no lib/ touched; grade A/A |
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,6,11 (pending) + red baseline | ✅ Done | 6,237,768 | 14m 50s | 8 pass/7 skip default; 7 fail clean run-pending; grade 5 A/2 A-core·B-pending-GUARD-2 |
 | 7 | ITEST-3 | acceptance-tests: AC-7,8,9,10 (pending) + red baseline | ✅ Done | 5,013,273 | 17m 12s | 9 pass/10 skip default; 9 pass/10 fail run-pending; AC-8 un-pended green-at-baseline; grade 3 A/1 A-core·B-pending-PROV-3 |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,710,718 | 4m 46s | packet assembled 2026-10-15; G-2 awaiting human decision; blocks every behavior phase |
-| 9 | SEED-3 | AC-1, AC-11: ship the seed asset + loader; solve from it | ⬜ Todo | | | |
+| 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,710,718 | 4m 46s | packet assembled 2026-10-15; **G-2 approved 2026-10-15 — Matt Quirk**; behavior stage unblocked |
+| 9 | SEED-3 | AC-1, AC-11: ship the seed asset + loader; solve from it | ⬜ Next | | | startable (G-2 ✅); ∥ PROV-2 |
 | 10 | SEED-4 | AC-2, AC-4: candidate-origin manifest + ingest accept/reject | ⬜ Todo | | | after SEED-3 |
 | 11 | SEED-5 | AC-5, AC-6: validation manifest + ship decision | ⬜ Todo | | | after SEED-4 |
-| 12 | PROV-2 | AC-7, AC-8: tier-by-origin derivation + append-only evidence | ⬜ Todo | | | |
+| 12 | PROV-2 | AC-7, AC-8: tier-by-origin derivation + append-only evidence | ⬜ Todo | | | startable (G-2 ✅); ∥ SEED-3 |
 | 13 | PROV-3 | AC-9, AC-10: promotion on swatch; opinions never promote | ⬜ Todo | | | after PROV-2 |
 | 14 | GUARD-2 | AC-3: ratios-from-solver guard (+ AC-1/AC-4 structural augments) | ⬜ Todo | | | after SEED-3 |
 | 15 | SIGNOFF-1 | sign-off: packet + summary page + manual approval (G-3) | ⬜ Todo | | | |
@@ -170,14 +170,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ITEST-4 (test review) packet is assembled and ⏸ awaiting the human G-2 decision.** No agent phase is startable until G-2 is recorded — every behavior phase (SEED-3/4/5, PROV-2/3, GUARD-2) is gate-blocked.
+**G-2 approved 2026-10-15 by Matt Quirk** (round 1). ITEST-4 done; the behavior stage is unblocked. **Two phases are startable in parallel** — disjoint file ownership (`lib/dataset/` vs `lib/domain/`):
 
-- **Review the packet:** [modules/ITEST.md § Review packet (G-2)](modules/ITEST.md). 11 ACs, one test each; suite green by default (**9 pass / 10 skip**), red run-pending (**9 pass / 10 fail**, verified 2026-10-15); whole-suite grade **8 A + 3 A-core·B-pending** (AC-1/AC-4→GUARD-2, AC-9→PROV-3), 0 below A. Reviewer flags: AC-8 green-at-baseline/un-pended (honest); AC-10 red via its sensitivity control by design; the D-5/G-3 physical-measurement gap is named not covered.
-- **Approve:** `/feature-next-phase --gate bs13 G-2 approved` → unblocks the behavior stage; startable next = **SEED-3** (AC-1/AC-11) and **PROV-2** (AC-7/AC-8) in parallel (disjoint `lib/dataset/` vs `lib/domain/`).
-- **Request changes:** `/feature-next-phase --gate bs13 G-2 "<changes>"` → each item becomes an ITEST change phase + a fresh review.
-- Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`). G-3 is a later SIGNOFF-1 decision.
-
-**Next: ITEST-4** (test review, **G-2**) — assemble the review packet in `modules/ITEST.md` (one line per AC: test name, Given checks, When, Then + Rejects; the red-baseline summary; the augmentations and which phase closes each; the grid counts; the named D-5/G-3 gap), set the phase `⏸ Awaiting review` and G-2 to *awaiting decision*, record the ledger row, commit, and **stop** with `/feature-next-phase --gate bs13 G-2 approved | "<changes>"`. A human approves before any behavior phase (SEED-3/4/5, PROV-2/3, GUARD-2) can start. Flag for the reviewer: AC-8 is the one AC with no red baseline (green-at-baseline, un-pended, honest); AC-10's red comes from its sensitivity control by design; AC-9 carries a justified B-pending-PROV-3 augmentation. Run `/feature-next-phase bs13` (auto-selects ITEST-4). Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`). G-3 is a SIGNOFF-1 decision.
+- **SEED-3** (AC-1, AC-11) — ship the seed asset + loader; solve recipes from the shipped optical data. Owns `lib/dataset/`. Un-pends AC-1/AC-11; AC-1's no-lookup structural augment stays open for GUARD-2.
+- **PROV-2** (AC-7, AC-8) — tier-by-origin derivation + keep append-only evidence green. Owns `lib/domain/` provenance. Un-pends AC-7; keeps AC-8 green and carries its unit coverage.
+- Run one per session (one phase then stop): `/feature-next-phase bs13 SEED-3` or `/feature-next-phase bs13 PROV-2` — or `--parallel` for both in separate worktrees (disjoint, low merge risk).
+- Still gated after these: SEED-4→SEED-5 (after SEED-3), PROV-3 (after PROV-2), GUARD-2 (after SEED-3, closes AC-1/AC-4 augments). **G-3** is the SIGNOFF-1 real-world-fidelity decision (D-5 gap).
+- Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`).
 
 ## Token usage
 
@@ -195,7 +194,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | ITEST-2 | 72dfe312 | 2026-10-15 02:42 EDT | 02:57 | 14m 50s | 14m 50s | claude-opus-4-8 | 100 | 242,607 | 5,944,780 | 50,281 | 6,237,768 | acceptance-tests: 7 pending AC tests (AC-1,2,3,4,5,6,11); default 8 pass/7 skip, run-pending red baseline 7 fail clean; unit 1332/0; grade 5 A/2 A-core·B-pending-GUARD-2; no lib/ touched |
 | ITEST-3 | 7649a3f8 | 2026-10-15 03:36 EDT | 03:53 | 17m 12s | 17m 12s | claude-opus-4-8 | 80 | 239,882 | 4,716,624 | 56,687 | 5,013,273 | acceptance-tests: AC-7,8,9,10; AC-8 un-pended green-at-baseline; default 9 pass/10 skip, run-pending 9 pass/10 fail clean; unit 1332/0; grade 3 A/1 A-core·B-pending-PROV-3; no lib/ touched |
 | ITEST-4 | ea77e907 | 2026-10-15 05:51 EDT | 05:55 | 4m 46s | 4m 46s | claude-opus-4-8 | 42 | 72,174 | 1,625,112 | 13,390 | 1,710,718 | packet assembled; G-2 awaiting human decision |
-| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 05:55** | **5h 09m** | **4h 28m** |  | **992** | **1,642,429** | **56,955,031** | **459,584** | **59,058,036** |  |
+| SIGNOFF-DECISION | 99c90897 | 2026-10-15 06:08 EDT | 06:58 | 49m 47s | 3m 06s | claude-opus-4-8 | 46 | 54,119 | 1,604,078 | 12,459 | 1,670,702 | ITEST-4 approved |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 06:58** | **5h 59m** | **4h 32m** |  | **1,038** | **1,696,548** | **58,559,109** | **472,043** | **60,728,738** |  |
 
 ## Sign-off
 
