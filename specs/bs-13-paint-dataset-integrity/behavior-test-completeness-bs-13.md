@@ -54,3 +54,24 @@ Two minor, non-downgrading observations (neither owed to any phase, since GUARD-
 ## Gate status
 
 **PASS.** No plain-B row exists. Every one of the 11 un-pended ACs grades **straight A**; the two prior "A-core / B pending GUARD-2" rows (AC-1, AC-4) are upgraded to A now that the augmentation has landed and discriminates, and the newly un-pended AC-3 grades A. GUARD-2 was the last behaviour phase and the pending map is empty, so there is no deferred augmentation and no row needs fixing. Whole suite green in both the default and run-pending modes (+19 each).
+
+## SIGNOFF-1 — whole-suite re-grade (round 1, 2026-10-15)
+
+A fresh-context adversarial grader (no access to the author's reasoning) independently re-graded all 11
+un-pended AC tests against G1–G6, reading the spec, the master-plan catalogue, this prior grid, the tests,
+the harness, the three guards + `source_scan.dart`, the three planted controls, and the product code, and
+verifying load-bearing facts by grep + parsing the shipped asset (pending map confirmed EMPTY,
+`allACs.length == 11`, nothing skipped).
+
+**Result: 11 A / 0 below A — concurs with the prior grid**, including its two upgrades (AC-1, AC-4 →
+A) and the newly un-pended AC-3 → A. No downgrade warranted. The grader recorded two transparency notes that
+**do not drop any row below A**: (1) the AC-3 planted control fires through the schema facet (not the
+source-scan facet), so the source-scan allow-list's *upper bound* is not independently controlled — but the
+too-narrow case and the realistic violation (a ratio produced outside the two authorities) are both caught,
+so G5 holds (identical to the prior grid's own AC-3 observation #2); (2) AC-4's "claimed values rejected"
+half is proven structurally (the schema declares no claimed field; `_entryFrom`/ingest read only accepted
+keys; `noClaimedValueGuard` catches any added claimed field), airtight though the active-strip path isn't
+driven by a raw record in the acceptance test. Both are recorded for the reviewer; neither is a defect.
+
+**Gate: PASS.** No plain-B row. Whole suite green in both default and run-pending modes (19/19 each; pending
+map empty). This is the grid referenced by the SIGNOFF-1 packet.

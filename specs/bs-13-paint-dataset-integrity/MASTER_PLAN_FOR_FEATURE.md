@@ -1,7 +1,7 @@
 # Master Plan — Paint dataset integrity and provenance
 
 **Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
-**Status:** In progress — GUARD-2 ✅ 2026-10-15 (AC-3 ratios-from-solver guard un-pended + AC-1/AC-4 structural augments closed); **all behavior complete — 11/11 ACs ✅, whole-suite grade 11 A/0**. Next **SIGNOFF-1** (needs G-3).
+**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet assembled 2026-10-15 (round 1); 11/11 ACs ✅, fresh whole-suite grade **11 A / 0**, verification green (unit 1352/0 · cov 100%/touched · bs-13 19/0 default==run-pending · cross-feature regression 241/0 = 222 sim + 19 flutter-tester); **G-1/G-2/G-3 all ✅** (G-3 D-5 gap accepted). Awaiting the owner's `--signoff` decision.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
 
@@ -133,7 +133,7 @@ graph LR
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | SEED-1 | ✅ Resolved 2026-10-14 16:06: approved — spec banner flipped to approval line — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-15: approved — Matt Quirk (round 1); behavior stage unblocked |
-| G-3 | decision | Confirm the shipped seed's optical values + validation manifest reflect **real reviewed Phase-0.5 evidence** (owner), or accept the named gap — the bs-13 automated tests prove only the schema/ship-logic over a representative manifest (D-5) | SIGNOFF-1 (AC-5/AC-6 real-world fidelity) | Open |
+| G-3 | decision | Confirm the shipped seed's optical values + validation manifest reflect **real reviewed Phase-0.5 evidence** (owner), or accept the named gap — the bs-13 automated tests prove only the schema/ship-logic over a representative manifest (D-5) | SIGNOFF-1 (AC-5/AC-6 real-world fidelity) | ✅ Resolved 2026-10-15: **D-5 gap accepted** — the representative manifest proves schema + ship-logic, not a physical spectrophotometer run; the physical Phase-0.5 validation stays owned by the Phase-0.5 accuracy gate — Matt Quirk |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -164,17 +164,17 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | PROV-2 | AC-7, AC-8: tier-by-origin derivation + append-only evidence | ✅ Done | 7,347,169 | 13m 47s | AC-7 ✅ (tier-by-origin + qualifier), AC-8 kept green; unit 1349/0, cov 100%/touched, default 16/3skip, run-pending 18/1 (only AC-3 red), grade 6A+2 A-core/B-pending-GUARD-2; one unreachable lib change → no cross-feature run |
 | 13 | PROV-3 | AC-9, AC-10: promotion on swatch; opinions never promote | ✅ Done | 8,356,426 | 20m 58s | AC-9 ✅, AC-10 ✅; `promoteWithOwnSwatch` (device-agnostic self-confirmation); unit 1352/0, cov 100%/touched, default 18/1skip, run-pending 18/1 (only AC-3 red), grade 8A+2 A-core/B-pending-GUARD-2; AC-9 augment closed; one unreachable lib change → no cross-feature run; PROV module complete |
 | 14 | GUARD-2 | AC-3: ratios-from-solver guard (+ AC-1/AC-4 structural augments) | ✅ Done | 14,210,323 | 25m 17s | AC-3 ✅ un-pended; AC-1/AC-4 augments closed; 3 real guards; unit 1352/0, cov 100%/9 (no lib/ touched), default==run-pending 19/0, grade 11 A/0; pending map empty; no cross-feature run (no lib/ change) |
-| 15 | SIGNOFF-1 | sign-off: packet + summary page + manual approval (G-3) | ⬜ Next | | | all behavior ✅; needs G-3 (Phase-0.5 fidelity decision) |
+| 15 | SIGNOFF-1 | sign-off: packet + summary page + manual approval (G-3) | ⏸ Awaiting | 7,823,199 | 23m 16s (23m 35s) | packet [signoff/round-1.md](signoff/round-1.md) assembled 2026-10-15; G-3 D-5 gap accepted — Matt Quirk; verification green (unit 1352/0, cov 100%/touched, bs-13 19/0 default==run-pending, cross-feature 241/0); fresh grade 11 A/0; awaiting `--signoff` |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**GUARD-2 ✅ done 2026-10-15** (the three integrity guards enforce their real rule; AC-3 un-pended and graded A; AC-1 + AC-4 structural augments closed). **All behavior is complete — SEED, PROV and GUARD modules all done; 11/11 ACs delivered, whole-suite grade 11 A/0; the bs-13 suite is green by default == run-pending (19/0), the pending map is empty.** No agent behavior/test phase remains.
+**SIGNOFF-1 packet assembled 2026-10-15 — ⏸ Awaiting the owner's sign-off decision.** All behaviour is complete (SEED, PROV, GUARD modules done; 11/11 ACs ✅; pending map empty). This session ran the full verification from the worktree, resolved **G-3** (D-5 gap accepted by Matt Quirk), assembled [signoff/round-1.md](signoff/round-1.md) + the summary scorecard + a fresh whole-suite re-grade (**11 A / 0**), and stopped. **No agent phase remains until the human decides.**
 
-- **SIGNOFF-1** (`/feature-next-phase bs13 SIGNOFF-1`) — the only remaining phase. The agent assembles the sign-off packet + summary page + a fresh whole-suite re-grade, sets `⏸ Awaiting sign-off`, and STOPS; the human records the decision via `/feature-next-phase --signoff bs13 approved`. It is blocked on **G-3** — the owner's real-world Phase-0.5 fidelity decision over the SEED-5 manifest + the seed's optical values (confirm they reflect reviewed Phase-0.5 evidence, or accept the named **D-5** gap: the automated tests prove only the schema/ship-logic over a representative manifest, not a physical spectrophotometer run). The packet carries D-5 as the one known gap; it needs no code change.
-- After sign-off: **merge feat/bs-13 → main** (throwaway worktree on main — the primary checkout on feat/bs-04 has stale untracked specs that abort `checkout main`; `git merge -F <file>`, not stdin).
-- Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`).
+- **Record the decision:** `/feature-next-phase --signoff bs13 approved` (or `--signoff bs13 changes "<items>"`).
+- **On Approved → merge feat/bs-13 → main** via a throwaway worktree checked out on `main` (the primary checkout on feat/bs-04 has stale untracked specs that abort `checkout main`); `git merge -F <file>`, not stdin. Per D-6 the branch is off `main` @ `7015390`; bs-11/bs-12 have since merged — expect to rebase/merge onto shared `lib/domain` / `build_app` changes (bs-13 adds `lib/dataset/` + extends provenance). Re-run the merged-tree verification before pushing.
+- Reminders: bs-13's own suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; cross-feature regression on the iPhone 17 sim via the device lane; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`).
 
 ## Token usage
 
@@ -199,10 +199,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PROV-2 | 1351470e | 2026-10-15 09:58 EDT | 10:12 | 13m 47s | 13m 47s | claude-opus-4-8 | 128 | 218,306 | 7,084,754 | 43,981 | 7,347,169 | AC-7 done (tier-by-origin + qualifier), AC-8 kept green; unit 1349/0, cov 100% touched, default 16/3skip, run-pending 18/1 (only AC-3 red/GUARD-2), grade 6A+2 A-core/B-pending-GUARD-2 |
 | PROV-3 | b999ae51 | 2026-10-15 11:10 EDT | 11:31 | 20m 58s | 20m 58s | claude-opus-4-8 | 124 | 258,201 | 8,036,375 | 61,726 | 8,356,426 | AC-9 + AC-10 delivered; promoteWithOwnSwatch; grade 8A/2 A-core·B-pending-GUARD-2; unit 1352/0; PROV module complete |
 | GUARD-2 | 4b0c9c2e | 2026-10-15 11:35 EDT | 12:01 | 25m 17s | 25m 17s | claude-opus-4-8 | 198 | 325,129 | 13,809,860 | 75,136 | 14,210,323 | AC-3 un-pended (ratios-from-solver guard) + AC-1/AC-4 structural augments closed; 3 real guards; unit 1352/0, cov 100%/9 (no lib/ touched), bs13 default==run-pending 19/0, grade 11 A/0; pending map empty; no cross-feature run (no lib/ change); fix passes 0/3 |
-| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 12:01** | **7h 46m** | **6h 19m** |  | **1,906** | **3,229,408** | **113,976,089** | **803,862** | **118,011,265** |  |
+| SIGNOFF-1 | 5f0126a0 | 2026-10-15 12:21 EDT | 12:44 | 23m 35s | 23m 16s | claude-opus-4-8 | 132 | 262,011 | 7,509,436 | 51,620 | 7,823,199 | sign-off packet + summary scorecard + fresh whole-suite re-grade (11 A/0); G-3 D-5 gap accepted; verification green (unit 1352/0, cov 100%/touched, bs-13 19/0 default==run-pending, cross-feature regression 241/0); awaiting owner decision |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 12:44** | **8h 10m** | **6h 42m** |  | **2,038** | **3,491,419** | **121,485,525** | **855,482** | **125,834,464** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | — | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) · [cost](signoff/cost-per-ac-round-1.md) · [scorecard](https://claude.ai/artifact/AWzjkeB1KGZnxDRDxa5r9n) | `b7b9b26` | 11 A / 0 | ⏸ Awaiting (assembled 2026-10-15; G-3 D-5 accepted) |
