@@ -123,6 +123,44 @@ void main() {
     });
   });
 
+  group('ProvenanceDerivation.promoteWithOwnSwatch — promotion rule (AC-9)', () {
+    const derivation = ProvenanceDerivation();
+
+    test('an own photographed swatch promotes an Estimated value to Confirmed',
+        () {
+      final result = derivation.promoteWithOwnSwatch(const [seed], swatch);
+      expect(result.tier, ProvenanceTier.confirmed);
+      // Append-only: the prior LLM seed is retained, the swatch is appended.
+      expect(result.evidence.first, seed);
+      expect(result.evidence.last.kind, EvidenceKind.photographedSwatch);
+      expect(result.evidence, hasLength(2));
+    });
+
+    test('an own swatch measured by instrument promotes likewise — to Confirmed',
+        () {
+      // The same instrument reading recorded as a generic measurement derives
+      // only Measured…
+      expect(derivation.tierFor(const [seed, measured]),
+          ProvenanceTier.measured);
+      // …but recorded as the painter's own swatch (self-confirmation) it
+      // promotes to Confirmed, just as a photographed one does — the swatch's
+      // measurement/source are kept, its origin recorded as photographedSwatch.
+      final result = derivation.promoteWithOwnSwatch(const [seed], measured);
+      expect(result.tier, ProvenanceTier.confirmed);
+      expect(result.evidence.last.source, measured.source);
+      expect(result.evidence.last.coordinates, measured.coordinates);
+      expect(result.evidence.last.kind, EvidenceKind.photographedSwatch);
+    });
+
+    test('promotion is driven only by the swatch — a non-default fallback is '
+        'never the answer', () {
+      // Even with a contrasting fallback, the swatch drives the result.
+      final result = derivation.promoteWithOwnSwatch(const [seed], swatch,
+          fallback: ProvenanceTier.calculated);
+      expect(result.tier, ProvenanceTier.confirmed);
+    });
+  });
+
   group('ProvenanceReadEndpoint surfaces the derived tier', () {
     test('a value stored Estimated but backed by a measurement reads Measured',
         () {

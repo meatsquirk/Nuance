@@ -1,6 +1,6 @@
 # Module PROV — runtime provenance/evidence model
 
-**Status:** In progress — PROV-2 ✅ (tier-by-origin derivation + qualifier; AC-7 ✅, AC-8 kept green); next PROV-3 (AC-9, AC-10)
+**Status:** ✅ Done — PROV-3 ✅ (promotion on an own swatch + opinions never promote; AC-9 ✅, AC-10 ✅). All PROV ACs (AC-7, AC-8, AC-9, AC-10) delivered; module complete.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/provenance.dart`, `lib/domain/sample.dart` (extend `EvidencePoint`), new `lib/domain/provenance_derivation.dart` and `lib/domain/provenance_read_endpoint.dart`.
 **Depends on:** the existing `Provenance`/`ProvenanceTier`/`Sample`/`EvidencePoint` (`lib/domain/`) · **Blocks:** ITEST-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 4,740,008 | 18m 41s |
 | 2 | behavior | AC-7, AC-8 | ✅ Done | 7,347,169 | 13m 47s |
-| 3 | behavior | AC-9, AC-10 | ⬜ Todo | | |
+| 3 | behavior | AC-9, AC-10 | ✅ Done | 8,356,426 | 20m 58s |
 
 ## Interface reconciliation
 
@@ -24,7 +24,7 @@
 
 ## Open gates
 
-- **G-1** (spec) blocks the feature; **G-2** (tests) blocks PROV-2/PROV-3.
+- **G-1** (spec) ✅ and **G-2** (tests, approved 2026-10-15 @ `2fd5dfe`) ✅ both resolved — the whole PROV module (PROV-1/2/3) is complete. No open gate blocks this module.
 
 ## Phase 1 — Shell: EvidenceKind, derivation seam, append-only add, read endpoint
 
@@ -66,7 +66,27 @@
   2. Opinions: appending an `opinion` point re-derives to the **same** tier — never a promotion (AC-10); assert `control_opinionOnly` stays Estimated.
 - **Exit criteria:** unit gate; acceptance gate below.
 - **Acceptance gate:** un-pend AC-9, AC-10; `TestAC09_PromotedOnlyByMeasuredSwatch` and `TestAC10_OpinionsNeverPromote` green (and all earlier ACs).
-- **Augments:** closes the AC-9 augmentation pre-seeded on the ITEST AC-9 test (promotion exercisable once this rule exists).
+- **Augments:** closes the AC-9 augmentation pre-seeded on the ITEST AC-9 test (promotion exercisable once this rule exists). **✅ Resolved** — the AC-9 test now drives promotion through `promoteWithOwnSwatch` and asserts the instrument-measured own swatch promotes likewise.
+
+### Result — PROV-3  <!-- 2026-10-15 -->
+
+Promotion rule landed; AC-9 and AC-10 un-pended and green. The one `lib/` change is the new `promoteWithOwnSwatch` on `lib/domain/provenance_derivation.dart`:
+- **`promoteWithOwnSwatch(evidence, swatch, {fallback = estimated})`** — records the painter's own measured [swatch] and re-derives the tier. It is a thin compose of the frozen `appendEvidence` + `tierFor`: it appends `swatch` as an `EvidenceKind.photographedSwatch` self-confirmation point (keeping the swatch's measured `coordinates`/`source`) and returns a record `({List<EvidencePoint> evidence, ProvenanceTier tier})`. An Estimated value (LLM seed only) therefore becomes **Confirmed** (AC-9), driven only by the swatch; the earlier evidence is retained (append-only, rides on `tierFor`).
+- **Design decision (self-confirmation is device-agnostic).** The spec's AC-9 promotes an Estimated value on "a photographed **or instrument-measured** swatch for it" → "Confirmed — you measured this". The frozen `tierFor` maps `photographedSwatch`→Confirmed and a *generic* `instrumentMeasured` reading→Measured (AC-7's spectrophotometer row). The reconciliation: recording a swatch of **your own mix** is self-confirmation whatever the capture device, so the wrapper stamps `photographedSwatch` regardless — a photographed or instrument-measured own swatch both promote to Confirmed, while a generic instrument reading recorded as plain evidence stays Measured. This honours AC-9 literally and the frozen `tierFor` without re-deriving the locked kind→tier map. The independent grader confirmed it spec-faithful and A-grade.
+- **No change to `sample.dart`** was needed (the plan listed it as a permitted file); `tierFor`/`appendEvidence`/`qualifier` are unchanged from PROV-2.
+
+**Behaviour unchanged across the app by construction:** `promoteWithOwnSwatch` (like the rest of `ProvenanceDerivation`) has no production call-site — `grep` confirms the only `lib/` references to `ProvenanceDerivation`/`promoteWithOwnSwatch` are doc comments in `sample.dart`; the self-confirmation *flow* that would drive it is bs-05/capture (D-3). So no bs-01..bs-12 flow's tier shifts; no cross-feature regression run is warranted (the only `lib/` change is unreachable from production, same as PROV-2).
+
+**Test changes:** added 3 unit tests to `test/domain/provenance_derivation_test.dart` (the own-photographed-swatch promotion to Confirmed with append-only retention; the instrument-measured own swatch promoting likewise *vs* a raw instrument reading deriving only Measured; promotion driven by the swatch not the fallback). Augmented the AC-9 acceptance test in `integration_test/bs13/dataset_test.dart` to drive the transition through `promoteWithOwnSwatch` and assert the instrument-likewise + the generic-reading contrast (the pre-seeded augmentation). Un-pended AC-9/AC-10 in `pending.dart` (removed their rows; added PROV-3 to `completedBehaviorPhases`; updated the owner-comment map), and kept the harness pending-gate guard tests consistent in `dataset_test.dart` (AC-9/AC-10 → the `unpended` set; the "skips a pending AC" example moved AC-9 → AC-3, still pending). No AC test was weakened; the AC-10 acceptance test is unchanged and now runs by default.
+
+**Verification:** `flutter analyze` clean · unit **1352/0** (+3 promotion tests) · coverage gate **100% on all touched files** (`COVERAGE_GATE_BASE=7015390`; `provenance_derivation.dart` 100%) · bs-13 acceptance **default 18 pass / 1 skip** (AC-9/AC-10 now run; only AC-3 pending) · **run-pending 18 pass / 1 fail** (AC-9 ✅, AC-10 ✅; only AC-3 red, owned by GUARD-2). Grade gate: fresh independent grader (G1–G6) over the 10 un-pended AC tests → **8 straight A (AC-2,5,6,7,8,9,10,11) + 2 A-core/B-pending-GUARD-2 (AC-1,4), 0 below A**; AC-9 and AC-10 graded **A** (no augmentation owed). Fix passes: 0/3 (green on the first full run). Tokens 8,356,426 · Time 20m 58s.
+
+### Checkpoint / Handoff — PROV-3
+
+- **PROV module complete.** All four PROV ACs delivered: AC-7 (tier-by-origin), AC-8 (append-only), AC-9 (promotion on an own swatch), AC-10 (opinions never promote). `ProvenanceDerivation` now exposes `tierFor` · `appendEvidence` · `qualifier` · `promoteWithOwnSwatch`, all stable.
+- **Frozen for GUARD-2 / SIGNOFF-1:** the only remaining pending AC is **AC-3** (GUARD-2, ratios-from-solver guard). SIGNOFF-1 additionally needs **G-3** (the owner's real-world Phase-0.5 fidelity decision over the SEED-5 manifest — D-5 gap). PROV-3 introduced no new gap.
+- **Verification commands:** unchanged — `flutter analyze`; `flutter test --coverage`; `COVERAGE_GATE_BASE=7015390 dart run tool/coverage_gate.dart`; bs-13 acceptance `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` (default) and `--dart-define=BS13_RUN_PENDING=true` (run-pending). bs-13's suite is pure-Dart on `flutter-tester` — no device lane. flutter at `~/development/flutter/bin`; cwd `/Users/matthew.quirk/Nuance-bs13`.
+- **Known gaps:** none introduced by PROV-3. AC-3 (GUARD-2) remains the only red run-pending AC; the SEED-5 manifest D-5 fidelity gap is G-3's to confirm/accept at sign-off.
 
 ### Result — PROV-2  <!-- 2026-10-15 -->
 

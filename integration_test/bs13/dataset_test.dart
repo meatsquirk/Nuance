@@ -109,9 +109,11 @@ void main() {
       // (the shipped seed asset + loader); AC-2 / AC-4 at SEED-4 (candidate
       // combinations + the ingest rule); AC-5 / AC-6 at SEED-5 (the held-out
       // validation manifest + ship decision); AC-7 at PROV-2 (tier-by-origin
-      // derivation).
+      // derivation); AC-9 / AC-10 at PROV-3 (promotion on an own swatch /
+      // opinions never promote). Only AC-3 (GUARD-2) is still pending.
       const unpended = {
         'AC-8', 'AC-1', 'AC-11', 'AC-2', 'AC-4', 'AC-5', 'AC-6', 'AC-7',
+        'AC-9', 'AC-10',
       };
       for (final ac in unpended) {
         expect(pendingACs.containsKey(ac), isFalse,
@@ -150,11 +152,11 @@ void main() {
     });
 
     test('skips a pending AC by default and runs it under run-pending', () {
-      // A pending AC is skipped in the default run… (AC-9 is still pending,
-      // owned by PROV-3 — AC-7 was un-pended at PROV-2, AC-5/AC-6 at SEED-5).
-      expect(pendingSkipReason('AC-9', forceRunPending: false), isNotNull);
+      // A pending AC is skipped in the default run… (AC-3 is still pending,
+      // owned by GUARD-2 — AC-9/AC-10 were un-pended at PROV-3, AC-7 at PROV-2).
+      expect(pendingSkipReason('AC-3', forceRunPending: false), isNotNull);
       // …and executes when run-pending is forced.
-      expect(pendingSkipReason('AC-9', forceRunPending: true), isNull);
+      expect(pendingSkipReason('AC-3', forceRunPending: true), isNull);
       // An AC absent from the pending map always runs (the un-pended path a
       // behaviour phase reaches) — control uses a name not in the map.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
@@ -614,10 +616,36 @@ void main() {
         reason: 'AC-9: a photographed/measured swatch promotes Estimated → '
             'Confirmed (PROV-3)',
       );
-      // Augmentation (PROV-3, B pending): once the promotion rule lands, assert
-      // the Estimated→Confirmed transition through the promotion wrapper and
-      // that an instrument-measured swatch promotes likewise — Test
-      // augmentations table.
+
+      // Augmentation (PROV-3): the Estimated→Confirmed transition is driven
+      // through the promotion rule `promoteWithOwnSwatch`, which appends the
+      // swatch (append-only, prior seed retained) and re-derives.
+      final promoted =
+          derivation.promoteWithOwnSwatch(estimated.evidence, evUserSwatch);
+      expect(promoted.tier, ProvenanceTier.confirmed,
+          reason: 'AC-9: the promotion rule takes Estimated → Confirmed on the '
+              "painter's own swatch");
+      expect(promoted.evidence.first, evLlmSeed,
+          reason: 'AC-9: promotion is append-only — the earlier LLM seed is kept');
+      expect(promoted.evidence.last.kind, EvidenceKind.photographedSwatch,
+          reason: 'AC-9: the recorded swatch is a self-confirmation point');
+
+      // …and the painter measuring their own swatch with an instrument promotes
+      // likewise — to Confirmed. The SAME instrument reading recorded as a plain
+      // measurement derives only Measured (a generic reading, AC-7): it is
+      // recording *your own* swatch that confirms, not the device.
+      expect(
+        derivation.tierFor(
+            derivation.appendEvidence(estimated.evidence, evInstrument),
+            fallback: ProvenanceTier.estimated),
+        ProvenanceTier.measured,
+        reason: 'AC-9: a generic instrument reading alone is only Measured',
+      );
+      final promotedByInstrument =
+          derivation.promoteWithOwnSwatch(estimated.evidence, evInstrument);
+      expect(promotedByInstrument.tier, ProvenanceTier.confirmed,
+          reason: 'AC-9: an instrument-measured own swatch promotes likewise → '
+              'Confirmed');
     });
 
     acTest('AC-10', 'TestAC10_OpinionsNeverPromote', () {

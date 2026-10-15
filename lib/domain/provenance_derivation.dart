@@ -50,6 +50,41 @@ class ProvenanceDerivation {
     return [...evidence, point];
   }
 
+  /// Promotes a value by recording the painter's own measured [swatch], the
+  /// enforced promotion rule (AC-9; SI D9).
+  ///
+  /// With an Estimated value, when the painter records a swatch *of their own
+  /// mix* for it — photographed or read with an instrument, both the same
+  /// self-confirmation — the value may be promoted to "Confirmed — you measured
+  /// this". Recording a swatch of one's own mix is a self-confirmation whatever
+  /// device captured it, so [swatch] is appended as an
+  /// [EvidenceKind.photographedSwatch] point (keeping its measured
+  /// [EvidencePoint.coordinates] and [EvidencePoint.source]) and the tier is
+  /// re-derived with [tierFor]. An Estimated value whose only prior evidence is
+  /// an LLM seed therefore becomes Confirmed; because it rides on [tierFor], the
+  /// earlier evidence is retained (append-only) and never lowers the result.
+  ///
+  /// This is distinct from a generic instrument reading of some reference, which
+  /// derives only Measured ([tierFor], AC-7): it is recording *your own* swatch
+  /// that confirms, which is this method — so an own swatch captured by
+  /// instrument promotes just as a photographed one does. The self-confirmation
+  /// *flow* that captures the swatch is bs-05/capture (D-3); bs-13 owns this
+  /// enforced rule. Opinions are never a swatch, so a value given only opinions
+  /// is never routed here and never promoted (AC-10).
+  ({List<EvidencePoint> evidence, ProvenanceTier tier}) promoteWithOwnSwatch(
+    List<EvidencePoint> evidence,
+    EvidencePoint swatch, {
+    ProvenanceTier fallback = ProvenanceTier.estimated,
+  }) {
+    final confirmation = EvidencePoint(
+      coordinates: swatch.coordinates,
+      source: swatch.source,
+      kind: EvidenceKind.photographedSwatch,
+    );
+    final appended = appendEvidence(evidence, confirmation);
+    return (evidence: appended, tier: tierFor(appended, fallback: fallback));
+  }
+
   /// The full, user-facing qualifier for [tier] — the spec's exact phrasing
   /// ("Estimated — not yet verified", "Confirmed — you measured this"). Measured
   /// and Calculated carry no qualifier, so their plain [Provenance.label]

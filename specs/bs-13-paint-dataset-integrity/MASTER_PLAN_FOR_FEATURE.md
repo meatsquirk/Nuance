@@ -1,7 +1,7 @@
 # Master Plan — Paint dataset integrity and provenance
 
 **Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
-**Status:** In progress — PROV-2 ✅ (tier-by-origin derivation + qualifier; AC-7 ✅, AC-8 kept green); next PROV-3 ∥ GUARD-2
+**Status:** In progress — PROV-3 ✅ (promotion on an own swatch + opinions never promote; AC-9 ✅, AC-10 ✅); PROV module complete. Next **GUARD-2** (the last behavior phase; un-pends AC-3), then SIGNOFF-1.
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
 
@@ -45,8 +45,8 @@
 | AC-6 | The seed ships only if it clears the threshold and beats the LLM alone | ITEST-2 `TestAC06_SeedShipsOnlyOnEvidence` | SEED-5 | ✅ Done (SEED-5) |
 | AC-7 | Every value carries an enforced provenance tier (4 origins) | ITEST-3 `TestAC07_EnforcedProvenanceTierByOrigin` | PROV-2 | ✅ Done (PROV-2) |
 | AC-8 | Evidence behind a value is stored append-only | ITEST-3 `TestAC08_EvidenceAppendOnly` | PROV-2 | ✅ Done (PROV-2 — kept green, unit coverage carried) |
-| AC-9 | An Estimated value is promoted only by a photographed or measured swatch | ITEST-3 `TestAC09_PromotedOnlyByMeasuredSwatch` | PROV-3 | ⬜ Todo |
-| AC-10 | Opinions never promote a value | ITEST-3 `TestAC10_OpinionsNeverPromote` | PROV-3 | ⬜ Todo |
+| AC-9 | An Estimated value is promoted only by a photographed or measured swatch | ITEST-3 `TestAC09_PromotedOnlyByMeasuredSwatch` | PROV-3 | ✅ Done (PROV-3) |
+| AC-10 | Opinions never promote a value | ITEST-3 `TestAC10_OpinionsNeverPromote` | PROV-3 | ✅ Done (PROV-3) |
 | AC-11 | The shipped seed covers one brand, one medium and ~15 paints | ITEST-2 `TestAC11_ShippedSeedStaysNarrow` | SEED-3 | ✅ Done (SEED-3) |
 
 ## Design decisions
@@ -100,14 +100,14 @@ Module plan: [modules/ITEST.md](modules/ITEST.md).
 | AC-11 | `shippedSeed` → `DatasetReadEndpoint` brand/medium/paint count | its scope is set | the seed covers **one brand**, **one medium**, and **~15 paints** (count within 12–18); scope is pinned | a seed spanning multiple brands/media, or a paint count far from ~15 |
 
 **Red baseline** and **test augmentations:** tracked in [modules/ITEST.md](modules/ITEST.md).
-Pre-seeded augmentations: each ACn test is *limited at baseline* because its product/guard is a stub until its behavior phase. AC-1's no-lookup discrimination needs the GUARD-2 guard → *B pending GUARD-2*; AC-4's claimed-value rejection needs both the SEED-4 ingest rule and the GUARD-2 schema guard → *B pending SEED-4/GUARD-2*; AC-9's promotion can't be exercised until the PROV-3 rule exists → *B pending PROV-3*.
+Pre-seeded augmentations: each ACn test is *limited at baseline* because its product/guard is a stub until its behavior phase. AC-1's no-lookup discrimination needs the GUARD-2 guard → *B pending GUARD-2*; AC-4's claimed-value rejection needs both the SEED-4 ingest rule and the GUARD-2 schema guard → *B pending SEED-4/GUARD-2*; AC-9's promotion ~~can't be exercised until the PROV-3 rule exists → *B pending PROV-3*~~ **✅ closed at PROV-3** (`promoteWithOwnSwatch` landed; AC-9 graded A).
 
 ## Modules
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | ✅ Done (SEED-5 ✅; AC-1/2/4/5/6/11) |
-| PROV | [modules/PROV.md](modules/PROV.md) | The runtime provenance/evidence model: tier-by-origin derivation, append-only evidence, Estimated→Confirmed promotion rule (product code, `lib/domain/`) | — | 🔄 In progress (PROV-2 ✅; AC-7/AC-8 done, PROV-3 next) |
+| PROV | [modules/PROV.md](modules/PROV.md) | The runtime provenance/evidence model: tier-by-origin derivation, append-only evidence, Estimated→Confirmed promotion rule (product code, `lib/domain/`) | — | ✅ Done (PROV-3 ✅; AC-7/AC-8/AC-9/AC-10) |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | Reusable integrity guards (no product code): ratios-only-from-solver, no-lookup-table, no-claimed-value-stored | — | 🔄 In progress (GUARD-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | ✅ Done (G-2 approved 2026-10-15) |
 
@@ -162,21 +162,19 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 10 | SEED-4 | AC-2, AC-4: candidate-origin manifest + ingest accept/reject | ✅ Done | 7,016,343 | 12m 36s | AC-2 ✅; AC-4 core green (GUARD-2 augment open); candidate mappings (llmSeed) + ingest reject rule; unit 1340/0, cov 100%/9, default 13/6, grade 3A+2 A-core/B-pending |
 | 11 | SEED-5 | AC-5, AC-6: validation manifest + ship decision | ✅ Done | 8,693,898 | 15m 16s | AC-5 ✅, AC-6 ✅; held-out manifest (56 recipes) + real `shippable` AND-rule; SEED module complete; unit 1341/0, cov 100%/9, default 15/4skip, run-pending AC-5/6 pass, grade 5A+2 A-core/B-pending |
 | 12 | PROV-2 | AC-7, AC-8: tier-by-origin derivation + append-only evidence | ✅ Done | 7,347,169 | 13m 47s | AC-7 ✅ (tier-by-origin + qualifier), AC-8 kept green; unit 1349/0, cov 100%/touched, default 16/3skip, run-pending 18/1 (only AC-3 red), grade 6A+2 A-core/B-pending-GUARD-2; one unreachable lib change → no cross-feature run |
-| 13 | PROV-3 | AC-9, AC-10: promotion on swatch; opinions never promote | ⬜ Next | | | after PROV-2 ✅; ∥ GUARD-2 |
-| 14 | GUARD-2 | AC-3: ratios-from-solver guard (+ AC-1/AC-4 structural augments) | ⬜ Todo | | | startable (SEED-3 ✅); ∥ PROV-3 |
+| 13 | PROV-3 | AC-9, AC-10: promotion on swatch; opinions never promote | ✅ Done | 8,356,426 | 20m 58s | AC-9 ✅, AC-10 ✅; `promoteWithOwnSwatch` (device-agnostic self-confirmation); unit 1352/0, cov 100%/touched, default 18/1skip, run-pending 18/1 (only AC-3 red), grade 8A+2 A-core/B-pending-GUARD-2; AC-9 augment closed; one unreachable lib change → no cross-feature run; PROV module complete |
+| 14 | GUARD-2 | AC-3: ratios-from-solver guard (+ AC-1/AC-4 structural augments) | ⬜ Next | | | startable (SEED-3 ✅); the last behavior phase |
 | 15 | SIGNOFF-1 | sign-off: packet + summary page + manual approval (G-3) | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**PROV-2 ✅ done 2026-10-15** (real `ProvenanceDerivation.tierFor` origin-precedence + `qualifier`; AC-7 ✅ un-pended and graded A, AC-8 kept green). **Two phases are startable in parallel** — disjoint file ownership (`lib/domain/` vs `integration_test/bs13/guards/`):
+**PROV-3 ✅ done 2026-10-15** (`ProvenanceDerivation.promoteWithOwnSwatch` — device-agnostic self-confirmation; AC-9 ✅ + AC-10 ✅ un-pended and graded A; AC-9 augmentation closed). **PROV and SEED modules are complete.** **One behavior phase remains:**
 
-- **PROV-3** (AC-9, AC-10) — add the promotion wrapper (append a measured/photographed swatch → re-derive Confirmed) + opinions-never-promote; un-pend AC-9/AC-10, close AC-9's B-pending augmentation. Owns `lib/domain/` provenance. **Note:** with the real `tierFor` now landed, AC-9/AC-10 already pass under run-pending — PROV-3's job is the wrapper API + un-pend + the AC-9 augmentation + unit coverage.
-- **GUARD-2** (AC-3 + AC-1/AC-4 structural augments) — ratios-from-solver guard over the shipped seed; closes AC-1's no-lookup augmentation (`control_lookupTable`) + AC-4's no-claimed-value augmentation (`control_claimedSpectral`). Owns `integration_test/bs13/guards/`.
-- Run one per session (one phase then stop): `/feature-next-phase bs13 PROV-3` / `GUARD-2` — or `--parallel` for separate worktrees (disjoint files).
-- Still gated: **SIGNOFF-1** needs PROV-3 + GUARD-2 done, plus **G-3** (the owner's real-world Phase-0.5 fidelity decision over the SEED-5 manifest — D-5 gap).
-- Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`). When un-pending AC-9, keep the "skips a pending AC" harness example pointing at a still-pending AC (AC-3).
+- **GUARD-2** (AC-3 + AC-1/AC-4 structural augments) — ratios-from-solver guard over the shipped seed; un-pends AC-3, and closes AC-1's no-lookup augmentation (`control_lookupTable`) + AC-4's no-claimed-value augmentation (`control_claimedSpectral`). Owns `integration_test/bs13/guards/`. The last red run-pending AC. Startable now (SEED-3 ✅). Run it as its own session: `/feature-next-phase bs13 GUARD-2`.
+- After GUARD-2: **SIGNOFF-1** (`/feature-next-phase bs13 SIGNOFF-1`) — needs GUARD-2 done, plus **G-3** (the owner's real-world Phase-0.5 fidelity decision over the SEED-5 manifest — D-5 gap; the agent assembles the packet and sets ⏸ Awaiting sign-off, the human records the decision).
+- Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`).
 
 ## Token usage
 
@@ -199,7 +197,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | SEED-4 | 3a910d95 | 2026-10-15 08:22 EDT | 08:34 | 12m 36s | 12m 36s | claude-opus-4-8 | 112 | 226,846 | 6,748,036 | 41,349 | 7,016,343 | AC-2 ✅ / AC-4 core green (B-pending GUARD-2); candidate mappings + ingest reject rule; unit 1340/0, cov 100%/9, default 13 pass/6 skip, run-pending 13 pass/6 fail, grade 3A+2 A-core/B-pending |
 | SEED-5 | e3b78858 | 2026-10-15 08:56 EDT | 09:11 | 15m 16s | 15m 16s | claude-opus-4-8 | 140 | 237,122 | 8,411,138 | 45,498 | 8,693,898 | AC-5 ✅, AC-6 ✅ — held-out validation manifest (56 recipes) + real shippable AND-rule; SEED module complete; unit 1341/0, cov 100%/9 touched, default 15 pass/4 skip, run-pending AC-5/AC-6 pass (AC-3/7/9/10 red as owned), grade 5A + 2 A-core/B-pending-GUARD-2 |
 | PROV-2 | 1351470e | 2026-10-15 09:58 EDT | 10:12 | 13m 47s | 13m 47s | claude-opus-4-8 | 128 | 218,306 | 7,084,754 | 43,981 | 7,347,169 | AC-7 done (tier-by-origin + qualifier), AC-8 kept green; unit 1349/0, cov 100% touched, default 16/3skip, run-pending 18/1 (only AC-3 red/GUARD-2), grade 6A+2 A-core/B-pending-GUARD-2 |
-| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 10:12** | **7h 00m** | **5h 33m** |  | **1,584** | **2,646,078** | **92,129,854** | **667,000** | **95,444,516** |  |
+| PROV-3 | b999ae51 | 2026-10-15 11:10 EDT | 11:31 | 20m 58s | 20m 58s | claude-opus-4-8 | 124 | 258,201 | 8,036,375 | 61,726 | 8,356,426 | AC-9 + AC-10 delivered; promoteWithOwnSwatch; grade 8A/2 A-core·B-pending-GUARD-2; unit 1352/0; PROV module complete |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 11:31** | **7h 21m** | **5h 54m** |  | **1,708** | **2,904,279** | **100,166,229** | **728,726** | **103,800,942** |  |
 
 ## Sign-off
 

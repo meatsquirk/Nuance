@@ -52,8 +52,8 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-6  → SEED-5   (ship decision: threshold ∧ beats-LLM)
 ///   AC-7  → (un-pended at PROV-2 — tier-by-origin derivation)
 ///   AC-8  → (un-pended at ITEST-3 — green at baseline; PROV-2 still owns it)
-///   AC-9  → PROV-3   (Estimated→Confirmed on a measured swatch)
-///   AC-10 → PROV-3   (opinions never promote)
+///   AC-9  → (un-pended at PROV-3 — Estimated→Confirmed on a measured swatch)
+///   AC-10 → (un-pended at PROV-3 — opinions never promote)
 ///   AC-11 → (un-pended at SEED-3 — shipped seed stays narrow)
 const Map<String, String> pendingACs = {
   // AC-1 (recipes solved from optical data) un-pended at SEED-3 — the shipped
@@ -75,8 +75,11 @@ const Map<String, String> pendingACs = {
   // (ITEST-3, red-baseline rule). PROV-2 still owns AC-8 — it keeps the test
   // green and carries its unit coverage — but the acceptance test runs by
   // default from now on.
-  'AC-9': 'PROV-3',
-  'AC-10': 'PROV-3',
+  // AC-9 (promotion on an own swatch) and AC-10 (opinions never promote)
+  // un-pended at PROV-3 — `promoteWithOwnSwatch` records the painter's own swatch
+  // as a self-confirmation and re-derives Estimated → Confirmed, while an
+  // opinion contributes nothing to the tier so a value given only opinions stays
+  // Estimated.
   // AC-11 (shipped seed stays narrow) un-pended at SEED-3 — the shipped asset
   // covers one brand, one medium, ~15 paints.
 };
@@ -102,12 +105,14 @@ const Set<String> behaviorPhases = {
 /// pending owner **or** listed here. Each behaviour phase adds itself here as it
 /// un-pends its last AC (SEED-3 un-pended AC-1 and AC-11; SEED-4 un-pended AC-2
 /// and AC-4; SEED-5 un-pended AC-5 and AC-6, its only two; PROV-2 un-pended
-/// AC-7, its only pending AC — it also owns AC-8, green at baseline).
+/// AC-7, its only pending AC — it also owns AC-8, green at baseline; PROV-3
+/// un-pended AC-9 and AC-10).
 const Set<String> completedBehaviorPhases = {
   'SEED-3',
   'SEED-4',
   'SEED-5',
   'PROV-2',
+  'PROV-3',
 };
 
 /// Every AC id the bs-13 acceptance suite covers (the master plan's 11 ACs).
