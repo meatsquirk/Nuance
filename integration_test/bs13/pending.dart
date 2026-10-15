@@ -50,7 +50,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///            spectral curves and ratios)
 ///   AC-5  → SEED-5   (held-out validation manifest)
 ///   AC-6  → SEED-5   (ship decision: threshold ∧ beats-LLM)
-///   AC-7  → PROV-2   (tier-by-origin derivation)
+///   AC-7  → (un-pended at PROV-2 — tier-by-origin derivation)
 ///   AC-8  → (un-pended at ITEST-3 — green at baseline; PROV-2 still owns it)
 ///   AC-9  → PROV-3   (Estimated→Confirmed on a measured swatch)
 ///   AC-10 → PROV-3   (opinions never promote)
@@ -66,7 +66,9 @@ const Map<String, String> pendingACs = {
   // AC-5 (held-out validation manifest) and AC-6 (ship decision) un-pended at
   // SEED-5 — the shipped seed carries a recorded 56-recipe manifest and ships
   // only because it clears the usable threshold and beats the LLM alone.
-  'AC-7': 'PROV-2',
+  // AC-7 (tier-by-origin derivation) un-pended at PROV-2 — `tierFor` derives
+  // each origin's spec tier (photographedSwatch→Confirmed, instrumentMeasured→
+  // Measured, solverCalculated→Calculated, llmSeed→Estimated).
   // AC-8 (evidence append-only) is NOT pending: the PROV-1 shell froze a working
   // append-only add (`ProvenanceDerivation.appendEvidence` returns
   // `[...old, new]`), so `TestAC08_EvidenceAppendOnly` is green at baseline
@@ -99,11 +101,13 @@ const Set<String> behaviorPhases = {
 /// harness's "no dead phase" guard treats a phase as valid when it is still a
 /// pending owner **or** listed here. Each behaviour phase adds itself here as it
 /// un-pends its last AC (SEED-3 un-pended AC-1 and AC-11; SEED-4 un-pended AC-2
-/// and AC-4; SEED-5 un-pended AC-5 and AC-6, its only two).
+/// and AC-4; SEED-5 un-pended AC-5 and AC-6, its only two; PROV-2 un-pended
+/// AC-7, its only pending AC — it also owns AC-8, green at baseline).
 const Set<String> completedBehaviorPhases = {
   'SEED-3',
   'SEED-4',
   'SEED-5',
+  'PROV-2',
 };
 
 /// Every AC id the bs-13 acceptance suite covers (the master plan's 11 ACs).

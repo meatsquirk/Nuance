@@ -108,8 +108,11 @@ void main() {
       // pending map and runs by default. AC-1 / AC-11 are un-pended at SEED-3
       // (the shipped seed asset + loader); AC-2 / AC-4 at SEED-4 (candidate
       // combinations + the ingest rule); AC-5 / AC-6 at SEED-5 (the held-out
-      // validation manifest + ship decision).
-      const unpended = {'AC-8', 'AC-1', 'AC-11', 'AC-2', 'AC-4', 'AC-5', 'AC-6'};
+      // validation manifest + ship decision); AC-7 at PROV-2 (tier-by-origin
+      // derivation).
+      const unpended = {
+        'AC-8', 'AC-1', 'AC-11', 'AC-2', 'AC-4', 'AC-5', 'AC-6', 'AC-7',
+      };
       for (final ac in unpended) {
         expect(pendingACs.containsKey(ac), isFalse,
             reason: '$ac is un-pended and runs by default');
@@ -147,11 +150,11 @@ void main() {
     });
 
     test('skips a pending AC by default and runs it under run-pending', () {
-      // A pending AC is skipped in the default run… (AC-7 is still pending —
-      // AC-5/AC-6 were un-pended at SEED-5, AC-2/AC-4 at SEED-4).
-      expect(pendingSkipReason('AC-7', forceRunPending: false), isNotNull);
+      // A pending AC is skipped in the default run… (AC-9 is still pending,
+      // owned by PROV-3 — AC-7 was un-pended at PROV-2, AC-5/AC-6 at SEED-5).
+      expect(pendingSkipReason('AC-9', forceRunPending: false), isNotNull);
       // …and executes when run-pending is forced.
-      expect(pendingSkipReason('AC-7', forceRunPending: true), isNull);
+      expect(pendingSkipReason('AC-9', forceRunPending: true), isNull);
       // An AC absent from the pending map always runs (the un-pended path a
       // behaviour phase reaches) — control uses a name not in the map.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);

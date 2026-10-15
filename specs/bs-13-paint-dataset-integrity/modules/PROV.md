@@ -1,6 +1,6 @@
 # Module PROV — runtime provenance/evidence model
 
-**Status:** In progress — PROV-1 ✅ shell (derivation/read-endpoint seams wired, behaviour-neutral)
+**Status:** In progress — PROV-2 ✅ (tier-by-origin derivation + qualifier; AC-7 ✅, AC-8 kept green); next PROV-3 (AC-9, AC-10)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/domain/provenance.dart`, `lib/domain/sample.dart` (extend `EvidencePoint`), new `lib/domain/provenance_derivation.dart` and `lib/domain/provenance_read_endpoint.dart`.
 **Depends on:** the existing `Provenance`/`ProvenanceTier`/`Sample`/`EvidencePoint` (`lib/domain/`) · **Blocks:** ITEST-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 4,740,008 | 18m 41s |
-| 2 | behavior | AC-7, AC-8 | ⬜ Todo | | |
+| 2 | behavior | AC-7, AC-8 | ✅ Done | 7,347,169 | 13m 47s |
 | 3 | behavior | AC-9, AC-10 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -67,6 +67,27 @@
 - **Exit criteria:** unit gate; acceptance gate below.
 - **Acceptance gate:** un-pend AC-9, AC-10; `TestAC09_PromotedOnlyByMeasuredSwatch` and `TestAC10_OpinionsNeverPromote` green (and all earlier ACs).
 - **Augments:** closes the AC-9 augmentation pre-seeded on the ITEST AC-9 test (promotion exercisable once this rule exists).
+
+### Result — PROV-2  <!-- 2026-10-15 -->
+
+Tier-by-origin derivation landed; AC-7 un-pended and green, AC-8 kept green. The one `lib/` change is `lib/domain/provenance_derivation.dart`:
+- **`tierFor`** now implements the real origin precedence (strongest contributing origin wins): `photographedSwatch` → Confirmed · `instrumentMeasured` → Measured · `solverCalculated` → Calculated · `llmSeed` → Estimated; `opinion` never contributes, and when nothing contributes (empty or opinion-only) the stored tier stands via the `fallback`. A single-origin value derives exactly its spec tier (AC-7); a mixed set derives the best (this is what PROV-3's promotion rides on). Signature unchanged.
+- **`qualifier(tier)`** (new) produces the spec's full user-facing qualifier — "Estimated — not yet verified", "Confirmed — you measured this"; Measured/Calculated carry no qualifier (plain `Provenance.label`). This is the only place the qualifier text lives; `Provenance.label` is unchanged, so the bs-01/bs-06/bs-10 display layer is untouched.
+- **`appendEvidence`** left exactly as the PROV-1 shell froze it (`[...old, new]`) — AC-8 (append-only) stays green and carries its unit coverage here; no API change.
+- **Task 3 (tier never absent):** enforced by construction — `Provenance.tier` is a required non-null field and `tierFor` is total (always returns a `ProvenanceTier`). No change to `sample.dart` was needed; the plan listed it as a permitted file but PROV-2 needed none.
+
+**Behaviour unchanged across the app by construction:** `tierFor`/the read endpoint are called only from `ProvenanceReadEndpoint` (a bs-13 test-observation seam), which no production flow mounts (`grep` confirms no call-site outside `lib/domain/provenance*`), and every existing `EvidencePoint` defaults to `kind: opinion` (non-contributing). So no bs-01..bs-12 flow's tier shifts.
+
+**Test changes:** `test/domain/provenance_shell_test.dart` encoded the PROV-1 *stub* behaviour (`tierFor` returns the fallback) — that contract is now replaced, so it was rewritten as `test/domain/provenance_derivation_test.dart` covering the real precedence (every branch incl. mixed-origin + opinion-inert), the qualifier (all four tiers), the frozen append, and the read endpoint deriving the real tier. Acceptance: un-pended AC-7 in `pending.dart` (removed its row; added PROV-2 to `completedBehaviorPhases`) and kept the harness pending-gate guard tests consistent in `dataset_test.dart` (AC-7 → the `unpended` set; the "skips a pending AC" example moved AC-7 → AC-9). No AC test was weakened; the AC-7 acceptance test is unchanged and now runs by default.
+
+**Verification:** `flutter analyze` clean · unit **1349/0** (−5 shell tests, +12 derivation tests) · coverage gate **100% on all touched files** (`COVERAGE_GATE_BASE=7015390`; `provenance_derivation.dart` 100%) · bs-13 acceptance **default 16 pass / 3 skip** (AC-7 now runs; only AC-9/AC-10 pending) · **run-pending 18 pass / 1 fail** (AC-7 ✅, AC-8 ✅, AC-9/AC-10 green early but still pending→PROV-3 un-pends; only AC-3 red, owned by GUARD-2). Grade gate: fresh independent grader (G1–G6) over the 8 un-pended AC tests → **6 straight A (AC-2,5,6,7,8,11) + 2 A-core/B-pending-GUARD-2 (AC-1,4), 0 below A**; AC-7 graded **A** (no augmentation owed). No cross-feature regression run — the only `lib/` change is unreachable from production (reasoned above), so no other feature's suite exercises it. Fix passes: 0/3 (green on the first full run). Tokens 7,347,169 · Time 13m 47s.
+
+### Checkpoint / Handoff — PROV-2
+
+- **Frozen for PROV-3:** `ProvenanceDerivation.tierFor` real precedence (strongest contributing origin; opinion inert; fallback when none) and `qualifier(tier)` are stable. `appendEvidence` unchanged. The read endpoint's `derivedTier` now reflects the real derivation.
+- **PROV-3** adds the promotion wrapper (append a `photographedSwatch`/`instrumentMeasured` point to an Estimated value, then re-derive → Confirmed — a thin compose of `appendEvidence` + `tierFor`) and keeps opinions inert (AC-10). **Note:** with the real `tierFor` landed, AC-9 and AC-10 already pass under run-pending (promotion = append + derive; opinion-only derives Estimated). PROV-3's job is to add the promotion **wrapper** API, un-pend AC-9/AC-10 (delete their `pending.dart` rows, add PROV-3 to `completedBehaviorPhases`), close the AC-9 B-pending augmentation (assert the transition *through the wrapper* + instrument-swatch promotes likewise), and carry the unit coverage. Keep the "skips a pending AC" harness example pointing at a still-pending AC (AC-3) after un-pending AC-9.
+- **Verification commands:** unchanged — `flutter analyze`; `flutter test --coverage`; `COVERAGE_GATE_BASE=7015390 dart run tool/coverage_gate.dart`; bs-13 acceptance `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` (default) and `--dart-define=BS13_RUN_PENDING=true` (run-pending). bs-13's suite is pure-Dart on `flutter-tester` — no device lane. flutter at `~/development/flutter/bin`; cwd `/Users/matthew.quirk/Nuance-bs13`. GOTCHA: const-only constructors show uncovered — invoke non-const (`// ignore: prefer_const_constructors`) in a test.
+- **Known gaps:** none introduced. AC-3 (GUARD-2) remains the only red run-pending AC.
 
 ### Result — PROV-1  <!-- 2026-10-14 -->
 
