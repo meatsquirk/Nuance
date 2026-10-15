@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 ✅ (harness + fixtures + pending gate + smoke/scaffold green); next ITEST-2
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs13/dataset_harness.dart`, `integration_test/bs13/dataset_test.dart`, `integration_test/bs13/pending.dart` (consumes the SEED/PROV surfaces and the GUARD guards; writes no product code).
 **Depends on:** SEED-2, PROV-1, GUARD-1 (all shells wired) · **Blocks:** every behavior phase (via G-2)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | acceptance-tests | — (harness) | ⬜ Todo | | |
+| 1 | acceptance-tests | — (harness) | ✅ Done | 8,665,269 | 16m 33s |
 | 2 | acceptance-tests | AC-1,2,3,4,5,6,11 | ⬜ Todo | | |
 | 3 | acceptance-tests | AC-7,8,9,10 | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
@@ -33,6 +33,25 @@
   1. Harness vocabulary over `buildApp`: load the seed via `AssetSeedLoader`, reach `DatasetReadEndpoint` + `ProvenanceReadEndpoint`, import the guards, build the fixtures (`shippedSeed`, `realEngine`, `heldOutManifest`, the `ev*` evidence points, and the control fixtures).
   2. Pending-gate mechanism + a smoke test (harness assembles; seed loads — empty in the shell is fine; endpoints reachable).
 - **Exit criteria:** smoke test green by default; `-d flutter-tester` confirmed to run tests (not zero).
+
+### Result (ITEST-1) ✅
+
+Landed the bs-13 acceptance scaffold — **test-support only, no `lib/` product code** (6 new files under `integration_test/bs13/`):
+
+- **`dataset_harness.dart`** — the Given/When/Then vocabulary + fixtures over the real wired model. `givenTheDatasetApp(tester, {seed})` boots the real app through `buildApp` (real `ColorScienceImpl`, faked `FakeSpeech`/`FakeHaptics`) and returns a `DatasetAppHarness` observing the seed through the wired `DatasetReadEndpoint`; `loadShippedSeed()` loads via the real `AssetSeedLoader`; `sampleWithEvidence`/`provenanceOf`/`solveRecipes` reach the provenance model and the real `SubtractiveMixingEngine`. Fixtures: `realEngine`, `AC1_TARGET`/`AC1_OPTIONS`, `heldOutManifest` (count 72, deterministic non-empty ΔE00 distribution, hybrid 2.4 < llm 5.1 & < threshold 3.0), `control_manifestFailThreshold` / `control_manifestFailBeatsLlm`, the five `ev*` evidence points (one per `EvidenceKind`), `control_opinionOnly`, and the three guard-control source-file path consts. Re-exports the pending gate, guards and domain/dataset types so an AC test imports only this file. ΔE00 is the shipped `deltaE00` (no second copy).
+- **`pending.dart`** — the pending gate, **all 11 ACs seeded** → owning phase (AC-1/11→SEED-3, AC-2/4→SEED-4, AC-5/6→SEED-5, AC-7/8→PROV-2, AC-9/10→PROV-3, AC-3→GUARD-2), `behaviorPhases`/`allACs` cross-checks, `pendingSkipReason` (+ `forceRunPending` override), and both `acTestWidgets` (widget-observed ACs) and `acTest` (pure-Dart ACs) registrars. Keyed `BS13_RUN_PENDING` (dart-define + host env).
+- **`dataset_test.dart`** — the runner: a never-pending **smoke test** (the assembled app surfaces an injected non-empty seed through the endpoint; loader resolves; provenance seam + guards reachable — all facts a behaviour phase will change asserted by type/shape so the scaffold is stable), plus non-vacuous gate/fixture/control guard tests (pending map == exactly the 11 ACs each owned by a real phase; fakes actually record; each manifest/evidence control encodes its intended condition; the planted guard-control files exist, size-asserted).
+- **`guards/fixtures/control_{llm_ratio,lookup_table,claimed_spectral}.dart`** — three planted source files each carrying the forbidden construct GUARD-2's real scan targets (a seed-record `partsFraction`; a `targetToRecipe` answer map; a `spectralCurve` beside valid metadata); test-support, outside `kLibRoots`.
+
+**Verification:** `flutter analyze integration_test/bs13` clean; **`flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` = 8/8 green by default** and **8/8 green under `--dart-define=BS13_RUN_PENDING=true`** (run confirmed, not zero tests); unit suite **1332/0** unchanged (no `lib/` touched). **Coverage gate:** no in-scope source files (all six files are test-support) — satisfied, same as GUARD-1. **Grade gate:** fresh independent grader over the scaffold → **A on every row** (9 rows: smoke, both pending-gate tests, fakes-record, four fixture/control guards, harness/gate modules); no behaviour-phase facts pinned; one hardening nit (size-assert the planted-file loop) applied. **Fix passes:** 0/3 (green on the first full run; the grader nit was a strengthening, not a gate failure). No AC tests yet (ITEST-2/3) → no red baseline this phase.
+
+### Checkpoint / Handoff (ITEST-1 → ITEST-2)
+
+- **Frozen for the AC tests:** import only `integration_test/bs13/dataset_harness.dart` (it re-exports the pending gate, guards, ΔE00 and the domain/dataset types). Register AC tests with `acTestWidgets('AC-n', …)` for the widget-observed ACs (AC-1/2/4/5/6/11 — observe via `givenTheDatasetApp(tester).dataset` / `.manifest`) and `acTest('AC-n', …)` for the pure-Dart ACs (AC-3 guard scan; AC-7/8/9/10 via `provenanceOf`/`derivation`/`sampleWithEvidence`). Un-pend = delete the AC's row from `pendingACs`.
+- **Verification commands:** default `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester`; red baseline / run-pending add `--dart-define=BS13_RUN_PENDING=true`. **`-d flutter-tester` is mandatory** (no `-d` ⇒ zero tests, false green). flutter is at `~/development/flutter/bin` (prepend to PATH on non-interactive shells). Guards read the repo tree via `dart:io`, so the cwd must be the repo/worktree root (it is, under `flutter-tester`).
+- **Red-baseline expectation (ITEST-2/3):** each pending AC must fail cleanly under run-pending on a Then (or a Given precondition naming its owning phase) — the shell state makes this natural: the shipped seed is empty (AssetSeedLoader shell), the guards return the `ruleNotYetEnforced` sentinel (not zero offenders), `ValidationManifest.shippable` is the `false` placeholder, and `ProvenanceDerivation.tierFor` returns the fallback (no tier-by-origin yet). Record one row per test in the module's *Red baseline* table and the per-test grade.
+- **Pre-seeded augmentations** (module table) stand: TestAC01 (no-lookup) + TestAC04 (no-claimed-value) → GUARD-2; TestAC09 (promotion) → PROV-3. The AC-test phases confirm or amend them.
+- **ITEST-2 ∥ ITEST-3 share `dataset_test.dart` + `pending.dart` → run sequentially** (ITEST-2 first).
 
 ## Phase 2 — AC-1,2,3,4,5,6,11 (pending) + red baseline
 
