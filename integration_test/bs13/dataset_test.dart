@@ -95,14 +95,21 @@ void main() {
   );
 
   group('pending gate', () {
-    test('covers exactly the 11 bs-13 ACs, each owned by a real behaviour phase',
+    test('pending map is a subset of the 11 ACs, each owned by a real behaviour phase',
         () {
-      // Every AC the suite enumerates is pending at ITEST-1 (no behaviour has
-      // landed yet): the pending map's keys are exactly the 11 ACs.
-      expect(pendingACs.keys.toSet(), allACs.toSet());
+      // The suite enumerates exactly 11 ACs, none duplicated.
       expect(allACs.length, 11);
-      // No AC appears twice and none is unaccounted for.
       expect(allACs.toSet().length, allACs.length);
+      // Every pending key is a real bs-13 AC (pending ⊆ all) — an un-pended AC
+      // is simply absent, never a stray key.
+      expect(allACs.toSet().containsAll(pendingACs.keys), isTrue);
+      // AC-8 (evidence append-only) is un-pended at ITEST-3 — green at baseline
+      // (the PROV-1 shell froze a working append-only add), so it is not in the
+      // pending map and runs by default.
+      expect(pendingACs.containsKey('AC-8'), isFalse,
+          reason: 'AC-8 is un-pended (green at baseline); PROV-2 still owns it');
+      // Every other AC is still pending until its behaviour phase lands.
+      expect(pendingACs.keys.toSet(), allACs.toSet().difference({'AC-8'}));
       // Every owner is a declared behaviour phase (catches a typo'd / stale
       // owner).
       for (final entry in pendingACs.entries) {
@@ -438,6 +445,202 @@ void main() {
           reason: 'AC-11: every entry is the one medium (no multi-medium seed)');
       expect(entries.length, inInclusiveRange(12, 18),
           reason: 'AC-11: ~15 paints (scope pinned narrow)');
+    });
+
+    // -----------------------------------------------------------------------
+    // ITEST-3 — the runtime provenance ACs (AC-7/8/9/10). Pure-Dart `acTest`
+    // over the frozen provenance seam: `sampleWithEvidence` builds the Given as
+    // data, `derivation.tierFor` / `derivation.appendEvidence` is the When, and
+    // `provenanceOf` (the `ProvenanceReadEndpoint`) is an observation point.
+    //
+    // At the PROV-1 shell `ProvenanceDerivation.tierFor` returns the caller's
+    // `fallback` unchanged, so AC-7/9/10 fail cleanly on a Then (the derived
+    // tier is the fallback, not the origin's tier). AC-8 is different: the shell
+    // froze a *working* append (`appendEvidence` already returns
+    // `[...old, new]`), so AC-8 is **green at baseline** and is un-pended here
+    // (recorded "green at baseline"); PROV-2 still owns it (keeps it green + unit
+    // coverage). The user-facing qualifier strings ("… — not yet verified",
+    // "… — you measured this") are the bs-01/bs-06 display layer (this feature's
+    // Boundary); bs-13 enforces the derived *tier*, which is what these assert.
+    acTest('AC-7', 'TestAC07_EnforcedProvenanceTierByOrigin', () {
+      // Given: a value entering the dataset from each of the four spec origins,
+      // built as a single evidence point of that kind (the Scenario Outline's
+      // four rows). Every stored value carries a non-null enforced Provenance
+      // (SI D9) — a value with no tier is impossible by construction, checked.
+      for (final ev in const [evInstrument, evSolver, evLlmSeed, evUserSwatch]) {
+        final s = sampleWithEvidence(
+            stored: ProvenanceTier.estimated, evidence: [ev]);
+        expect(s.provenance.tier, isA<ProvenanceTier>(),
+            reason: 'AC-7 Given: every stored value carries an enforced tier');
+        expect(s.evidence.single, ev,
+            reason: 'AC-7 Given: the value carries exactly its origin evidence');
+      }
+
+      // When: the value is stored (its tier is derived from its evidence
+      // origin). Then: each origin derives its spec tier — a contrasting
+      // `fallback` is passed in every case so the answer must come from the
+      // evidence origin, not the fallback (a stub that ignores evidence returns
+      // the fallback and fails each assertion).
+      expect(
+        derivation.tierFor(const [evInstrument],
+            fallback: ProvenanceTier.estimated),
+        ProvenanceTier.measured,
+        reason: 'AC-7: a spectrophotometer measurement → Measured',
+      );
+      expect(
+        derivation.tierFor(const [evSolver],
+            fallback: ProvenanceTier.estimated),
+        ProvenanceTier.calculated,
+        reason: 'AC-7: the physics solver over measured pigment data → Calculated',
+      );
+      expect(
+        derivation.tierFor(const [evLlmSeed],
+            fallback: ProvenanceTier.measured),
+        ProvenanceTier.estimated,
+        reason: 'AC-7: an unconfirmed LLM seed → Estimated (from the origin, not '
+            'the contrasting fallback)',
+      );
+      expect(
+        derivation.tierFor(const [evUserSwatch],
+            fallback: ProvenanceTier.estimated),
+        ProvenanceTier.confirmed,
+        reason: "AC-7: the user's own measured mix → Confirmed",
+      );
+
+      // And observed through the read endpoint: a value stored Estimated but
+      // backed by an instrument measurement surfaces the derived Measured tier
+      // (the endpoint derives from evidence, falling back to the stored tier
+      // only when nothing contributes) — so the enforced tier is observable, not
+      // just the stored one.
+      final measured = sampleWithEvidence(
+        stored: ProvenanceTier.estimated,
+        evidence: const [evInstrument],
+      );
+      expect(provenanceOf(measured).derivedTier, ProvenanceTier.measured,
+          reason: 'AC-7: ProvenanceReadEndpoint surfaces the enforced derived tier');
+    });
+
+    acTest('AC-8', 'TestAC08_EvidenceAppendOnly', () {
+      // Given: a value already carrying evidence of its origin (an LLM seed).
+      final base = sampleWithEvidence(
+        stored: ProvenanceTier.estimated,
+        evidence: const [evLlmSeed],
+      );
+      expect(provenanceOf(base).evidence, const [evLlmSeed],
+          reason: 'AC-8 Given: the value already carries its origin evidence');
+
+      // When: new evidence for that value is recorded via the append-only add.
+      final appended = derivation.appendEvidence(base.evidence, evUserSwatch);
+
+      // Then: the new point is appended and the earlier point is retained —
+      // length grows by exactly one, the prior point is still first, the new
+      // point is last, order preserved.
+      expect(appended, hasLength(2));
+      expect(appended.first, evLlmSeed,
+          reason: 'AC-8: the earlier evidence is retained, in place');
+      expect(appended.last, evUserSwatch,
+          reason: 'AC-8: the new evidence is appended at the end');
+      expect(appended, const [evLlmSeed, evUserSwatch],
+          reason: 'AC-8: append-only — order preserved, nothing dropped');
+
+      // The append does not mutate the prior evidence (it returns a new list;
+      // history on the original value is never lost or reordered).
+      expect(base.evidence, const [evLlmSeed],
+          reason: 'AC-8: the append leaves the prior evidence unchanged');
+
+      // Control: the API is append-only — a further append keeps growing and
+      // never shrinks or loses an earlier point (there is no remove/replace in
+      // the API; history is monotonic).
+      final again = derivation.appendEvidence(appended, evOpinion);
+      expect(again, hasLength(3));
+      expect(again.take(2), const [evLlmSeed, evUserSwatch],
+          reason: 'AC-8 control: every earlier point survives each append '
+              '(monotonic, append-only)');
+      expect(again.last, evOpinion);
+
+      // Observed through the read endpoint on the rebuilt value.
+      expect(provenanceOf(base.copyWith(evidence: appended)).evidence,
+          const [evLlmSeed, evUserSwatch],
+          reason: 'AC-8: the endpoint surfaces the appended, order-preserved evidence');
+    });
+
+    acTest('AC-9', 'TestAC09_PromotedOnlyByMeasuredSwatch', () {
+      // Given: an Estimated value — its only evidence is an unconfirmed LLM
+      // seed, so its derived tier is Estimated (PROV-2 derives this; checked as
+      // a precondition so the real promotion is the discriminating Then).
+      final estimated = sampleWithEvidence(
+        stored: ProvenanceTier.estimated,
+        evidence: const [evLlmSeed],
+      );
+      expect(
+        derivation.tierFor(estimated.evidence,
+            fallback: ProvenanceTier.estimated),
+        ProvenanceTier.estimated,
+        reason: 'AC-9 Given: the value is "Estimated — not yet verified" (PROV-2)',
+      );
+
+      // When: the painter records a photographed/instrument-measured swatch of
+      // their own mix (appended as a photographedSwatch evidence point).
+      final afterSwatch =
+          derivation.appendEvidence(estimated.evidence, evUserSwatch);
+
+      // Then: the value may be promoted to Confirmed — the derived tier becomes
+      // Confirmed, driven ONLY by the swatch (the LLM seed alone never confirmed
+      // it, asserted in the Given above — so the swatch is what promotes).
+      expect(
+        derivation.tierFor(afterSwatch, fallback: ProvenanceTier.estimated),
+        ProvenanceTier.confirmed,
+        reason: 'AC-9: a photographed/measured swatch promotes Estimated → '
+            'Confirmed (PROV-3)',
+      );
+      // Augmentation (PROV-3, B pending): once the promotion rule lands, assert
+      // the Estimated→Confirmed transition through the promotion wrapper and
+      // that an instrument-measured swatch promotes likewise — Test
+      // augmentations table.
+    });
+
+    acTest('AC-10', 'TestAC10_OpinionsNeverPromote', () {
+      // Given: an Estimated value given only an opinion on top of its LLM seed
+      // (the `control_opinionOnly` fixture). Its stored tier is Estimated and
+      // its evidence is exactly {llmSeed, opinion}.
+      expect(control_opinionOnly.provenance.tier, ProvenanceTier.estimated,
+          reason: 'AC-10 Given: the value is Estimated');
+      expect(
+        control_opinionOnly.evidence.map((e) => e.kind),
+        everyElement(isIn(const [EvidenceKind.llmSeed, EvidenceKind.opinion])),
+        reason: 'AC-10 Given: the value carries only an LLM seed and an opinion',
+      );
+      expect(
+        control_opinionOnly.evidence.any((e) => e.kind == EvidenceKind.opinion),
+        isTrue,
+        reason: 'AC-10 Given: an opinion is present',
+      );
+
+      // When: only votes/opinions are offered. Then: the value is NOT promoted —
+      // it stays Estimated, because an opinion contributes nothing to the tier.
+      // (A pure synchronous derivation — no settle point needed for the negative
+      // Then.)
+      expect(
+        derivation.tierFor(control_opinionOnly.evidence,
+            fallback: ProvenanceTier.estimated),
+        ProvenanceTier.estimated,
+        reason: 'AC-10: an opinion never raises the tier — stays Estimated',
+      );
+
+      // Control: the derivation is NOT merely returning the fallback regardless
+      // of evidence — a real measurement on the same starting value DOES raise
+      // the tier (to Measured). So "stays Estimated" above is because the opinion
+      // is inert, not because the model ignores its evidence. This control fails
+      // at the shell baseline (the stub returns the fallback), pinning the test
+      // red until PROV-3.
+      final withMeasurement =
+          derivation.appendEvidence(const [evLlmSeed], evInstrument);
+      expect(
+        derivation.tierFor(withMeasurement, fallback: ProvenanceTier.estimated),
+        ProvenanceTier.measured,
+        reason: 'AC-10 control: a non-opinion origin (instrument) does raise the '
+            'tier — so the opinion case is real inertness, not a vacuous pass',
+      );
     });
   });
 }

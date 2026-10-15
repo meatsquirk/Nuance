@@ -52,7 +52,7 @@
   2. Implement the append-only add: `appendEvidence(point)` returns a value whose evidence grows by one with every earlier point retained in order; no remove/replace (AC-8).
   3. Enforce the tier is carried on every value (the derived tier, never absent).
 - **Exit criteria:** unit gate; acceptance gate below.
-- **Acceptance gate:** un-pend AC-7, AC-8; `TestAC07_EnforcedProvenanceTierByOrigin` (all four cases) and `TestAC08_EvidenceAppendOnly` green (and all earlier ACs).
+- **Acceptance gate:** un-pend AC-7; `TestAC07_EnforcedProvenanceTierByOrigin` (all four cases) green. **AC-8 is already un-pended** (ITEST-3 found `TestAC08_EvidenceAppendOnly` green at baseline — the PROV-1 shell froze a working append-only add); PROV-2 keeps it green and carries its unit coverage, no un-pend needed. All earlier ACs stay green.
 - **Augments:** —
 
 ## Phase 3 — AC-9, AC-10: promotion on swatch; opinions never promote

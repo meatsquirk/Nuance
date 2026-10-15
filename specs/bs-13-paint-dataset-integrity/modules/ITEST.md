@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-2 ✅ (AC-1,2,3,4,5,6,11 pending + red baseline, grade 5 A / 2 A-core·B-pending-GUARD-2); next ITEST-3 (AC-7,8,9,10)
+**Status:** In progress — ITEST-3 ✅ (AC-7,8,9,10; AC-8 un-pended green-at-baseline, grade 3 A / 1 A-core·B-pending-PROV-3); next ITEST-4 (test review, G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs13/dataset_harness.dart`, `integration_test/bs13/dataset_test.dart`, `integration_test/bs13/pending.dart` (consumes the SEED/PROV surfaces and the GUARD guards; writes no product code).
 **Depends on:** SEED-2, PROV-1, GUARD-1 (all shells wired) · **Blocks:** every behavior phase (via G-2)
@@ -11,8 +11,8 @@
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 8,665,269 | 16m 33s |
 | 2 | acceptance-tests | AC-1,2,3,4,5,6,11 | ✅ Done | 6,237,768 | 14m 50s |
-| 3 | acceptance-tests | AC-7,8,9,10 | ⬜ Todo | | |
-| 4 | test-review | — (G-2) | ⬜ Todo | | |
+| 3 | acceptance-tests | AC-7,8,9,10 | ✅ Done | 5,013,273 | 17m 12s |
+| 4 | test-review | — (G-2) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -90,6 +90,24 @@ Added one *pending* acceptance test per AC for **AC-1, AC-2, AC-3, AC-4, AC-5, A
 - **Tasks:** one pending test per AC per the catalogue; record the red baseline.
 - **Exit criteria:** suite green by default (pending skipped); each fails cleanly under run-pending; grade gate passed.
 
+### Result (ITEST-3) ✅
+
+Added one *pending* acceptance test per AC for the four runtime-provenance ACs **AC-7, AC-8, AC-9, AC-10** to `integration_test/bs13/dataset_test.dart` (same `bs-13 dataset acceptance criteria` group; all pure-Dart `acTest` over the frozen provenance seam — `sampleWithEvidence` / `derivation.tierFor` / `derivation.appendEvidence` / `provenanceOf`; **test-support only, no `lib/` touched**). Each reads only `dataset_harness.dart`. Highlights:
+
+- **AC-7** asserts each of the four spec origins derives its tier — `evInstrument`→Measured, `evSolver`→Calculated, `evLlmSeed`→Estimated, `evUserSwatch`→Confirmed — passing a **contrasting `fallback`** each time so the answer must come from the evidence origin, not the fallback (the llmSeed case uses `fallback: measured`). Plus a `ProvenanceReadEndpoint` observation (stored Estimated + instrument evidence → derived Measured). The user-facing qualifier strings are bs-01/bs-06 (Feature Boundary); bs-13 enforces the tier.
+- **AC-8 is green at baseline → UN-PENDED.** The PROV-1 shell froze a *working* append-only add (`appendEvidence` returns `[...old, new]`), so append-only is already satisfied. Per `acceptance-suite.md` § Red baseline, the test was strengthened (exact length 2→3, first/last position, full-list order equality, source-list not mutated, monotonic second-append control that rejects a ring-buffer/replace impl) and, still green, un-pended (`pending.dart` drops the AC-8 row; the scaffold guard test updated to assert pending ⊆ all + AC-8 specifically absent). PROV-2 still owns AC-8 (keeps it green + carries its unit coverage).
+- **AC-9** asserts promotion Estimated→Confirmed on appending `evUserSwatch` (Given: the llmSeed-only value derives Estimated; Then: after the swatch it derives Confirmed). Carries the pre-seeded **B pending PROV-3** augmentation (the Estimated→Confirmed transition *through the PROV-3 promotion wrapper* + "an instrument-measured swatch promotes likewise" needs the PROV-3 API).
+- **AC-10** asserts an opinion never raises the tier (stays Estimated), with a **sensitivity control** (`[llmSeed, evInstrument]`→Measured) that removes the vacuous pass — at the stub the "stays Estimated" Then passes vacuously (fallback==estimated), so the control is what pins AC-10 red until PROV-3.
+
+**Verification:** `flutter analyze integration_test/bs13` clean. **Default run (pending skipped): `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` = 9 passed / 10 skipped, green** (AC-8 now runs by default; AC-1/2/3/4/5/6/7/9/10/11 skipped). **Run-pending red baseline (`--dart-define=BS13_RUN_PENDING=true`): 9 passed / 10 failed** — AC-7/9 fail cleanly on a Then, AC-10 on its sensitivity control, the seven ITEST-2 ACs unchanged, AC-8 passes; no compile/harness errors (see *Red baseline* table). **Unit suite 1332/0** unchanged (no `lib/`/`test/` touched). **Coverage gate:** no in-scope source files (test-support only) — satisfied, same as ITEST-1/2. **Grade gate:** fresh independent grader (G1–G6) over the 4 tests → **3 A (AC-7, AC-8, AC-10), 1 A-core / B-pending-PROV-3 (AC-9)** — matches the pre-seeded expectation; no downgrade, no fix needed. **Fix passes:** 0/3 (green on the first full run). The pre-seeded AC-9 augmentation (→ PROV-3) stands; TestAC01/TestAC04 → GUARD-2 augmentations unchanged.
+
+### Checkpoint / Handoff (ITEST-3 → ITEST-4)
+
+- **Stage 3 AC tests complete** — all 11 ACs have a test: AC-1/2/4/5/6/11 (ITEST-2, widget-observed) + AC-3 (ITEST-2, guard scan) + AC-7/8/9/10 (ITEST-3, pure-Dart provenance). **ITEST-4 is the test review (G-2)** — assemble the packet (catalogue line per AC, red baseline + grade, fixtures/controls, the pre-seeded augmentations, the named D-5/G-3 gap), set `⏸ Awaiting review`, flip G-2 to *awaiting decision*, stop with the gate command. A human approves before any behavior phase.
+- **Pending set after ITEST-3:** 10 ACs pending (AC-1,2,3,4,5,6,7,9,10,11); **AC-8 is un-pended (green at baseline)** — so the default `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` = **9 pass / 10 skip**, run-pending = **9 pass / 10 fail**.
+- **For the reviewer, flag AC-8 and AC-9/AC-10's controls:** (a) AC-8 is the one AC with no red baseline — the shell already satisfies append-only, honestly recorded as green-at-baseline/un-pended (PROV-2 still runs it); (b) AC-10's red comes from its sensitivity control, not the "stays Estimated" Then (which is vacuous at the stub) — by design; (c) AC-9 carries a justified B-pending-PROV-3 augmentation.
+- **Verification commands (unchanged):** default `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester`; run-pending adds `--dart-define=BS13_RUN_PENDING=true`. `-d flutter-tester` mandatory; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`.
+
 ## Phase 4 — Test review (G-2)
 
 - **Kind:** test-review
@@ -107,10 +125,10 @@ Added one *pending* acceptance test per AC for **AC-1, AC-2, AC-3, AC-4, AC-5, A
 | AC-4 | TestAC04_MetadataAcceptedClaimedValuesRejected | FAIL ✓ | Given precondition `ingested entries (SEED-4)` — `Actual: []` | SEED-4 (+GUARD-2) | A / B pending GUARD-2 |
 | AC-5 | TestAC05_HeldOutValidationRecorded | FAIL ✓ | Then `heldOutCount in [50,100]` — `Actual: <0>` (empty manifest) | SEED-5 | A |
 | AC-6 | TestAC06_SeedShipsOnlyOnEvidence | FAIL ✓ | Then `heldOutManifest.shippable == true` — `Actual: <false>` (placeholder) | SEED-5 | A |
-| AC-7 | TestAC07_EnforcedProvenanceTierByOrigin | FAIL (derivation stub) | Then: each origin → its tier | PROV-2 | A |
-| AC-8 | TestAC08_EvidenceAppendOnly | FAIL | Then: appended + earlier retained | PROV-2 | A |
-| AC-9 | TestAC09_PromotedOnlyByMeasuredSwatch | FAIL | Then: Estimated→Confirmed on swatch | PROV-3 | A / B pending PROV-3 |
-| AC-10 | TestAC10_OpinionsNeverPromote | FAIL | Then: opinion → stays Estimated | PROV-3 | A |
+| AC-7 | TestAC07_EnforcedProvenanceTierByOrigin | FAIL ✓ (derivation stub) | Then `tierFor([evInstrument]) == Measured` — `Actual: Estimated` (stub returns fallback; all 4 origins fail, contrasting fallbacks) | PROV-2 | A |
+| AC-8 | TestAC08_EvidenceAppendOnly | **PASS — green at baseline → UN-PENDED** (ITEST-3) | n/a — the PROV-1 shell froze a working `appendEvidence` `[...old,new]`; runs by default now | PROV-2 (keeps it green + unit cov) | A |
+| AC-9 | TestAC09_PromotedOnlyByMeasuredSwatch | FAIL ✓ | Then `tierFor(afterSwatch) == Confirmed` — `Actual: Estimated` (stub) | PROV-3 | A / B pending PROV-3 |
+| AC-10 | TestAC10_OpinionsNeverPromote | FAIL ✓ | **control** Then `tierFor([llmSeed, evInstrument]) == Measured` — `Actual: Estimated` (the "stays Estimated" Then passes vacuously under the stub; the sensitivity control pins it red) | PROV-3 | A |
 | AC-11 | TestAC11_ShippedSeedStaysNarrow | FAIL ✓ (empty seed) | Given precondition `seed carries entries (SEED-3)` — `Actual: []` | SEED-3 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->

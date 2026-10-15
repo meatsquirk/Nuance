@@ -49,7 +49,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-5  → SEED-5   (held-out validation manifest)
 ///   AC-6  → SEED-5   (ship decision: threshold ∧ beats-LLM)
 ///   AC-7  → PROV-2   (tier-by-origin derivation)
-///   AC-8  → PROV-2   (append-only evidence)
+///   AC-8  → (un-pended at ITEST-3 — green at baseline; PROV-2 still owns it)
 ///   AC-9  → PROV-3   (Estimated→Confirmed on a measured swatch)
 ///   AC-10 → PROV-3   (opinions never promote)
 ///   AC-11 → SEED-3   (shipped seed stays narrow)
@@ -61,7 +61,12 @@ const Map<String, String> pendingACs = {
   'AC-5': 'SEED-5',
   'AC-6': 'SEED-5',
   'AC-7': 'PROV-2',
-  'AC-8': 'PROV-2',
+  // AC-8 (evidence append-only) is NOT pending: the PROV-1 shell froze a working
+  // append-only add (`ProvenanceDerivation.appendEvidence` returns
+  // `[...old, new]`), so `TestAC08_EvidenceAppendOnly` is green at baseline
+  // (ITEST-3, red-baseline rule). PROV-2 still owns AC-8 — it keeps the test
+  // green and carries its unit coverage — but the acceptance test runs by
+  // default from now on.
   'AC-9': 'PROV-3',
   'AC-10': 'PROV-3',
   'AC-11': 'SEED-3',
