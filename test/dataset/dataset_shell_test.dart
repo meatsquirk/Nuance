@@ -173,10 +173,44 @@ void main() {
       expect(empty.shippable, isFalse);
     });
 
-    test('shippable is the shell placeholder (false) even when stats look good',
+    test('shippable iff the hybrid clears the threshold AND beats the LLM alone',
         () {
-      // SEED-5 implements the real decision; the shell never ships.
-      expect(full.shippable, isFalse);
+      // SEED-5's real decision: `full` clears its threshold (1.5 < 2.5) and
+      // beats the LLM alone (1.5 < 4.0) → shippable.
+      expect(full.shippable, isTrue);
+      // Fails the threshold only (hybrid 3.0 > threshold 2.5) → not shippable.
+      expect(
+        const ValidationManifest(
+          heldOutCount: 60,
+          deltaE00Distribution: [3.0],
+          hybridMeanDeltaE00: 3.0,
+          llmAloneMeanDeltaE00: 4.0,
+          usableThreshold: 2.5,
+        ).shippable,
+        isFalse,
+      );
+      // Fails beats-LLM only (hybrid 1.5 not < llm 1.0) → not shippable.
+      expect(
+        const ValidationManifest(
+          heldOutCount: 60,
+          deltaE00Distribution: [1.0],
+          hybridMeanDeltaE00: 1.5,
+          llmAloneMeanDeltaE00: 1.0,
+          usableThreshold: 2.5,
+        ).shippable,
+        isFalse,
+      );
+      // Ties the LLM alone (hybrid == llm) → not shippable (strictly beats).
+      expect(
+        const ValidationManifest(
+          heldOutCount: 60,
+          deltaE00Distribution: [1.5],
+          hybridMeanDeltaE00: 1.5,
+          llmAloneMeanDeltaE00: 1.5,
+          usableThreshold: 2.5,
+        ).shippable,
+        isFalse,
+      );
     });
 
     test('is value-equal and differs on any field', () {
@@ -259,7 +293,8 @@ void main() {
         usableThreshold: 3,
       );
       expect(m.heldOutCount, 1);
-      expect(m.shippable, isFalse);
+      // hybrid 1 < threshold 3 and 1 < llm 2 → shippable (SEED-5 real rule).
+      expect(m.shippable, isTrue);
     });
   });
 

@@ -39,11 +39,24 @@ void main() {
       expect(white.masstone.a, 0.0);
       expect(white.masstone.b, 2.0);
 
-      // SEED-4 ships the LLM candidate combinations; the ship manifest (SEED-5)
-      // is still absent.
+      // SEED-4 ships the LLM candidate combinations.
       expect(dataset.candidateMappings, isNotEmpty);
-      expect(dataset.manifest, const ValidationManifest.empty());
-      expect(dataset.manifest.shippable, isFalse);
+
+      // SEED-5 ships the held-out validation manifest (AC-5/AC-6): a recorded
+      // held-out run (50–100 recipes, one ΔE00 each) whose hybrid clears the
+      // usable threshold and beats the LLM alone, so the seed is shippable.
+      final manifest = dataset.manifest;
+      expect(manifest, isNot(const ValidationManifest.empty()));
+      expect(manifest.heldOutCount, inInclusiveRange(50, 100));
+      expect(manifest.deltaE00Distribution.length, manifest.heldOutCount,
+          reason: 'one recorded ΔE00 per held-out recipe (AC-5)');
+      expect(manifest.deltaE00Distribution.every((d) => d.isFinite && d >= 0),
+          isTrue);
+      expect(manifest.hybridMeanDeltaE00, lessThan(manifest.usableThreshold));
+      expect(manifest.hybridMeanDeltaE00,
+          lessThan(manifest.llmAloneMeanDeltaE00));
+      expect(manifest.shippable, isTrue,
+          reason: 'the shipped seed ships only on its recorded evidence (AC-6)');
     });
 
     test('the shipped-seed ids are unique (a palette keys the solver by id)',
@@ -109,9 +122,49 @@ void main() {
       expect(e.masstone.lightness, 50.0); // integer JSON -> double
       expect(e.masstone.a, -12.5);
       expect(e.masstone.b, 24.0);
-      // SEED-3 parser yields no candidate mappings and an empty manifest.
+      // A seed with no `manifest` section yields the empty (non-shippable)
+      // manifest — the null branch of the manifest parse (AC-6: no run, no ship).
       expect(dataset.candidateMappings, isEmpty);
       expect(dataset.manifest, const ValidationManifest.empty());
+      expect(dataset.manifest.shippable, isFalse);
+    });
+
+    test('parses a held-out validation manifest section verbatim (AC-5/AC-6)',
+        () {
+      const source = '''
+      {
+        "brand": "Acme",
+        "medium": "acrylic",
+        "entries": [
+          {
+            "id": "a",
+            "name": "Alpha",
+            "pigmentIndex": "PX1",
+            "opacity": 0.5,
+            "lightfastness": "II",
+            "origin": "reviewedOptical",
+            "masstone": {"l": 50, "a": -12.5, "b": 24}
+          }
+        ],
+        "manifest": {
+          "heldOutCount": 3,
+          "hybridMeanDeltaE00": 2,
+          "llmAloneMeanDeltaE00": 4.5,
+          "usableThreshold": 3,
+          "deltaE00Distribution": [1.5, 2, 2.5]
+        }
+      }
+      ''';
+      final manifest = parseSeedDataset(source).manifest;
+      // Read verbatim: integer JSON (heldOutCount, hybrid mean, threshold) and
+      // fractional values parse to the recorded fields.
+      expect(manifest.heldOutCount, 3);
+      expect(manifest.deltaE00Distribution, [1.5, 2.0, 2.5]);
+      expect(manifest.hybridMeanDeltaE00, 2.0);
+      expect(manifest.llmAloneMeanDeltaE00, 4.5);
+      expect(manifest.usableThreshold, 3.0);
+      // Clears the threshold (2 < 3) and beats the LLM alone (2 < 4.5) → ships.
+      expect(manifest.shippable, isTrue);
     });
 
     test('an unknown medium name throws (a malformed seed is a build error)',

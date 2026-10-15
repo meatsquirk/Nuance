@@ -11,10 +11,8 @@ import 'package:flutter/foundation.dart';
 /// clear. The [shippable] decision (AC-6) is **both** that the distribution
 /// clears the threshold **and** that the hybrid beats the LLM alone.
 ///
-/// This is the **shell shape only** (SEED-2): the fields and [shippable] exist
-/// so the dataset surface and the acceptance read endpoint can observe a
-/// manifest, but the ship logic is deferred to SEED-5 — [shippable] is a
-/// behaviour-neutral placeholder (`false`) until then. Value-equal and
+/// SEED-5 fills the real ship decision in [shippable]; the empty placeholder
+/// manifest an unshipped dataset carries is never shippable. Value-equal and
 /// `const`-constructible so a dataset compares by content.
 @immutable
 class ValidationManifest {
@@ -55,10 +53,16 @@ class ValidationManifest {
 
   /// Whether the seed may ship on this evidence (AC-6).
   ///
-  /// Shell placeholder: the real decision (distribution clears [usableThreshold]
-  /// **and** [hybridMeanDeltaE00] < [llmAloneMeanDeltaE00]) lands in SEED-5, so
-  /// the shell manifest is never shippable.
-  bool get shippable => false;
+  /// True **iff** both ship conditions hold: the held-out distribution clears
+  /// [usableThreshold] — its recorded mean error [hybridMeanDeltaE00] is below
+  /// the threshold — **and** the hybrid beats the LLM alone
+  /// ([hybridMeanDeltaE00] < [llmAloneMeanDeltaE00]). A manifest failing either
+  /// condition is not shippable, so a seed never ships on mere plausibility; the
+  /// empty placeholder (every statistic zero) fails the threshold condition
+  /// (`0 < 0` is false) and so is never shippable.
+  bool get shippable =>
+      hybridMeanDeltaE00 < usableThreshold &&
+      hybridMeanDeltaE00 < llmAloneMeanDeltaE00;
 
   @override
   bool operator ==(Object other) =>

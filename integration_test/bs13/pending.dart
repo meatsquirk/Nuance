@@ -63,8 +63,9 @@ const Map<String, String> pendingACs = {
   'AC-3': 'GUARD-2',
   // AC-4 (metadata accepted / claimed values rejected) un-pended at SEED-4 — the
   // ingest rule keeps metadata and strips any claimed spectral curve / ratio.
-  'AC-5': 'SEED-5',
-  'AC-6': 'SEED-5',
+  // AC-5 (held-out validation manifest) and AC-6 (ship decision) un-pended at
+  // SEED-5 — the shipped seed carries a recorded 56-recipe manifest and ships
+  // only because it clears the usable threshold and beats the LLM alone.
   'AC-7': 'PROV-2',
   // AC-8 (evidence append-only) is NOT pending: the PROV-1 shell froze a working
   // append-only add (`ProvenanceDerivation.appendEvidence` returns
@@ -98,10 +99,11 @@ const Set<String> behaviorPhases = {
 /// harness's "no dead phase" guard treats a phase as valid when it is still a
 /// pending owner **or** listed here. Each behaviour phase adds itself here as it
 /// un-pends its last AC (SEED-3 un-pended AC-1 and AC-11; SEED-4 un-pended AC-2
-/// and AC-4, its only two).
+/// and AC-4; SEED-5 un-pended AC-5 and AC-6, its only two).
 const Set<String> completedBehaviorPhases = {
   'SEED-3',
   'SEED-4',
+  'SEED-5',
 };
 
 /// Every AC id the bs-13 acceptance suite covers (the master plan's 11 ACs).

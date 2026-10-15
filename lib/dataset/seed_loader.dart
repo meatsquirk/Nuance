@@ -58,10 +58,11 @@ class AssetSeedLoader implements SeedLoader {
 /// not a silent default (mirroring `parseReviewedPaints`).
 ///
 /// SEED-3 parsed the optical [entries] and the seed's scope only; SEED-4 adds
-/// the LLM `candidateMappings` section (AC-2) and the ingest rule (AC-4). The
-/// held-out validation manifest (AC-5/AC-6, SEED-5) is not part of the shipped
-/// asset yet, so the dataset still carries the non-shippable
-/// [ValidationManifest.empty]; SEED-5 extends both the asset and this parser.
+/// the LLM `candidateMappings` section (AC-2) and the ingest rule (AC-4); SEED-5
+/// adds the held-out validation [ValidationManifest] (AC-5/AC-6). The `manifest`
+/// section is optional — a seed without one yields the non-shippable
+/// [ValidationManifest.empty], so a seed that records no held-out run can never
+/// ship (AC-6).
 ///
 /// The `candidateMappings` section is optional — a seed with no candidate
 /// combinations yields an empty list — and the loader **stamps** every mapping
@@ -91,7 +92,29 @@ SeedDataset parseSeedDataset(String source) {
     medium: medium,
     entries: entries,
     candidateMappings: candidateMappings,
-    manifest: const ValidationManifest.empty(),
+    manifest: _manifestFrom(json['manifest'] as Map<String, dynamic>?),
+  );
+}
+
+/// Parses the optional held-out validation `manifest` section (AC-5/AC-6).
+///
+/// A seed that records no held-out run (no `manifest` key) yields the
+/// non-shippable [ValidationManifest.empty] — it can never ship (AC-6). When the
+/// section is present, the recorded held-out count, the per-recipe ΔE00
+/// [ValidationManifest.deltaE00Distribution], the hybrid and LLM-alone mean
+/// errors and the usable threshold are read verbatim; the ship decision is the
+/// manifest's own [ValidationManifest.shippable].
+ValidationManifest _manifestFrom(Map<String, dynamic>? raw) {
+  if (raw == null) return const ValidationManifest.empty();
+  return ValidationManifest(
+    heldOutCount: raw['heldOutCount'] as int,
+    deltaE00Distribution: <double>[
+      for (final value in (raw['deltaE00Distribution'] as List))
+        (value as num).toDouble(),
+    ],
+    hybridMeanDeltaE00: (raw['hybridMeanDeltaE00'] as num).toDouble(),
+    llmAloneMeanDeltaE00: (raw['llmAloneMeanDeltaE00'] as num).toDouble(),
+    usableThreshold: (raw['usableThreshold'] as num).toDouble(),
   );
 }
 
