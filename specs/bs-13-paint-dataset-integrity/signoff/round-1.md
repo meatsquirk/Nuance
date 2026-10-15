@@ -2,7 +2,7 @@
 
 **Feature:** bs-13-paint-dataset-integrity · **Spec:** [bs-13-paint-dataset-integrity.feature](../../bs-13-paint-dataset-integrity.feature)
 **Prepared:** 2026-10-15 (SIGNOFF-1) · **At code:** `feat/bs-13-paint-dataset-integrity` @ `b7b9b26` (GUARD-2; the sign-off commit is stamped on the decision)
-**Decision:** ⏸ **Awaiting** — recorded via `/feature-next-phase --signoff bs13 approved | changes "<items>"`
+**Decision:** ✅ **Approved — 2026-10-15 by Matt Quirk** (round 1), at code `b7b9b26`. The named gap D-5 (recorded/representative manifest, not a physical Phase-0.5 run) is accepted. Next: merge feat/bs-13 → main.
 
 bs-13 keeps the shipped paint data honest. It ships a **read-only seed dataset asset + loader** (`lib/dataset/`: one brand / one medium / 15 paints, each entry carrying per-paint optical data + metadata + a provenance origin), extends the **runtime provenance/evidence model** (`lib/domain/`: an `EvidenceKind` on each evidence point, a tier-by-origin derivation, an append-only add, and the Estimated→Confirmed promotion rule), and adds three **reusable integrity guards** (test-support only, `integration_test/bs13/guards/`: ratios-only-from-the-solver, no-lookup-table, no-claimed-value-stored). All 11 acceptance criteria are automated, coded, un-pended and green by default == run-pending (the pending map is empty). A fresh independent whole-suite re-grade is **11 A / 0 below A**. This packet is the evidence for the decision.
 
