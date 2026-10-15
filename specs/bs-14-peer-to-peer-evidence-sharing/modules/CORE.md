@@ -1,6 +1,6 @@
 # Module CORE — sharing subsystem scaffold, wiring & invisible consent
 
-**Status:** In progress — CORE-1 ✅ done; next CORE-2
+**Status:** In progress — CORE-1 ✅, CORE-2 ✅ done; next RECORD-1 (other module) ∥ MERGE-1. CORE's own behaviour phases CORE-3/CORE-4 blocked on G-2.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/` package root; `lib/sharing/consent/sharing_consent.dart`, `consent_store.dart`; `lib/sharing/sharing_scope.dart`; `SharingConsentReadEndpoint`; wiring into `lib/app/build_app.dart`. Coverage-gate tooling + `integration_test/bs14/` runner (scaffold).
 **Depends on:** bs-13 (G-3) · **Blocks:** RECORD, EXCHANGE, MERGE (all consume the package + wiring)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 6,209,519 | 23m 46s |
-| 2 | shell | — | ⬜ Next | | |
+| 2 | shell | — | ✅ Done | 10,823,845 | 30m 53s |
 | 3 | behavior | AC-1 | ⬜ Todo | | |
 | 4 | behavior | AC-2 | ⬜ Todo | | |
 
@@ -67,6 +67,29 @@
   3. `SharingConsentReadEndpoint` exposing `consented`, `offerCopy`, and `userFacingSharingSurfaces` (an inventory of any user-visible sharing surface — must stay empty of network concepts; the invisibility assertion reads this).
   4. No behavior change: nothing opts in, nothing exchanges; existing suite stays green.
 - **Exit criteria:** unit gate (100% touched) passes; existing suite green; read endpoint observable from a smoke test.
+
+### Result — CORE-2 (shell) ✅
+
+- **Landed:** the `lib/sharing/` package + additive app wiring.
+  - `consent/sharing_consent.dart` — `SharingConsent{consented, offerCopy}` immutable value: default **not opted in**, `copyWith`, value `==`/`hashCode`, and `defaultOfferCopy` frozen to the spec wording *"help improve recipe accuracy by sharing anonymous mix results"* (AC-1), deliberately naming no mechanism.
+  - `consent/consent_store.dart` — `ConsentStore` interface (`changes`/`load`/`save`) + `PersistentConsentStore` over the shared `PersistentStore` seam (own collection `sharing_consent`, doc `current`, `{consented, offerCopy}` body; absent ⇒ the not-consented default; forwards the backing `changes`), mirroring `CvdProfileStore`.
+  - `sharing_scope.dart` — `SharingDependencies{consentStore}` holder (grows: RECORD-1 recordBuilder, EXCHANGE-1 gossipExchange, MERGE-1 evidenceMerge) + `SharingScope` InheritedWidget (`of`/`maybeOf`), symmetric to `AppScope`.
+  - `sharing_read_endpoint.dart` — `SharingConsentReadEndpoint` (keyed `sharing-consent-read-endpoint`; `consented`/`offerCopy` getters + `userFacingSharingSurfaces` — **empty of network concepts**, the invisibility seam AC-1 reads; `of`/`maybeOf`).
+  - `lib/app/build_app.dart` — **additive, store-gated** (mirrors `_profileStore`/`CvdProfileReadEndpoint`): `_AppState` builds `PersistentConsentStore` in `initState` when a store is wired and mounts `SharingScope` + the keyed `SharingConsentReadEndpoint` above the `MaterialApp`; consent is the const not-opted-in default, surface inventory empty ⇒ **behaviour-neutral** (no new route/visible surface). Bare unit trees (no store) mount no scope.
+- **Gates:** `flutter analyze` clean. **Unit 1432/0** (+19: sharing_consent 5, consent_store 5, sharing_scope 3, sharing_read_endpoint 4, build_app sharing-wiring 2). **Coverage 100% line on all 5 touched files** (`build_app.dart` + the 4 `lib/sharing` files) vs `c00422f` — PASS.
+- **Existing suite green (regression):** host `flutter-tester` — bs12 nfr 33 + bs13 dataset 19 = **52/52**; device iPhone 17 sim (under `coord.sh with-lock`) — 11 harness acceptance entry points combined **222/222** + `integration_test/conformance` (bs-11 on-device unit+a11y re-run) **1432/1432**; zero failures, exit 0. The inherited sim baseline (222 harness + bs-11 conformance = CORE-1's 241 tally) is fully covered and green.
+- **No AC:** shell. **Fix passes: 1/3** (first run surfaced a `listEquals` undefined-method — needed `package:flutter/foundation.dart` in the read endpoint — and one `unrelated_type_equality_checks` lint in a `==` test; both fixed, green on the second run). **Tokens** 10,823,845 · **Time** 30m 53s.
+
+### Checkpoint / Handoff — after CORE-2
+
+- **Frozen interfaces (consumed by RECORD/EXCHANGE/MERGE):**
+  - `SharingConsent` (`consented`, `offerCopy`, `copyWith`, `==`; `SharingConsent.defaultOfferCopy`).
+  - `ConsentStore {Listenable changes; Future<SharingConsent> load(); Future<void> save(SharingConsent)}`; `PersistentConsentStore(PersistentStore)` with `collection`/`documentId` statics.
+  - `SharingDependencies{consentStore}` — **add new services as fields here** (do not re-thread wiring); `SharingScope.of(context)`/`maybeOf(context)`.
+  - `SharingConsentReadEndpoint` — `endpointKey`, `consent`, `userFacingSharingSurfaces`, `consented`/`offerCopy` getters, `of`/`maybeOf`.
+- **Wiring:** store-gated in `_AppState` (built in `initState`, mounted above the `MaterialApp`). A tree pumped with no `store` mounts no `SharingScope` — a surface that must read it standalone uses `maybeOf`.
+- **Verification commands:** as the CORE-1 handoff. **Device regression gotcha:** `flutter test <file1> <file2> … integration_test/conformance -d <sim>` **silently drops the trailing `conformance` dir arg** when mixed with file args (it ran 0 conformance tests) — run `integration_test/conformance` in its own `flutter test` invocation. Combined 11-harness-file run = 222; conformance (on-device unit+a11y re-run) = 1432.
+- **Next (RECORD-1, shell):** `MixAccuracyRecord` + content hash + `RecordBuilder` + `RecordInspectEndpoint` — startable now. **MERGE-1 can run in parallel** (disjoint files), but MERGE-1's `EvidenceKind.peerContributed` goes in **`lib/domain/sample.dart`** (not `provenance.dart` — the surface-drift note). G-2 blocks every behaviour phase; G-4 blocks EXCHANGE-2/EXCHANGE-4.
 
 ## Phase 3 — AC-1: opt in once, never shown the mechanism
 

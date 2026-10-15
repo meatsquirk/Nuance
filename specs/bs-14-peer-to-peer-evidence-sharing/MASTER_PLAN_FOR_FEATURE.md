@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — next CORE-2 (shell). G-3 ✅ resolved (bs-13 signed off & merged to main @ `c00422f`); G-4 still open (blocks EXCHANGE phases only).
+**Status:** In progress — CORE-2 ✅ done; next RECORD-1 ∥ MERGE-1 (shells). G-3 ✅ resolved (bs-13 merged @ `c00422f`); G-2 blocks every behaviour phase; G-4 still open (blocks EXCHANGE phases only).
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -159,8 +159,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | CORE-1 | scaffold: branch (off bs-13-merged main), baseline, coverage gate, bs14 integration runner | ✅ Done | 6,209,519 | 23m 46s | G-1 ✅, G-3 ✅ resolved; rebased onto `c00422f`; baseline unit 1413/0, integ 293/293 (241 sim + 52 flutter-tester) |
-| 2 | CORE-2 | shell: `lib/sharing/` package + `SharingConsent`/`ConsentStore` + `SharingScope` wiring + `SharingConsentReadEndpoint` | ⬜ Next | | | startable now (G-3 clear) |
-| 3 | RECORD-1 | shell: `MixAccuracyRecord` + content hash + `RecordBuilder` + `RecordInspectEndpoint` | ⬜ Todo | | | |
+| 2 | CORE-2 | shell: `lib/sharing/` package + `SharingConsent`/`ConsentStore` + `SharingScope` wiring + `SharingConsentReadEndpoint` | ✅ Done | 10,823,845 | 30m 53s | unit 1432/0, cov 100%/5 touched, regression green (host 52 + sim 222 harness + conformance 1432); additive store-gated wiring, behaviour-neutral |
+| 3 | RECORD-1 | shell: `MixAccuracyRecord` + content hash + `RecordBuilder` + `RecordInspectEndpoint` | ⬜ Next | | | ∥ MERGE-1 |
 | 4 | EXCHANGE-1 | shell: `PeerTransport` + `GossipExchange` skeleton + seen-set + fire-and-forget scheduler + `ExchangeOutcomeEndpoint` | ⬜ Todo | | | ∥ MERGE-1 |
 | 5 | MERGE-1 | shell: `EvidenceMerge` + `CrowdRefine` + `SourceRateLimiter` + `EvidenceKind.peerContributed` + `MappingEvidenceEndpoint` | ⬜ Todo | | | ∥ EXCHANGE-1 |
 | 6 | ITEST-1 | acceptance-tests: harness (two-install fake transport), fixtures, pending gate, smoke test | ⬜ Todo | | | |
@@ -185,7 +185,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-CORE-1 ✅ done — branch rebased onto bs-13-merged main (`c00422f`), baseline recorded (unit 1413/0; integration 293/293 = 241 iPhone 17 sim + 52 flutter-tester), coverage gate self-check passed, `integration_test/bs14/` pending-gate skeleton seeded (all 12 ACs pending). **Next: CORE-2** (shell — `lib/sharing/` package + `SharingConsent`/`ConsentStore` + `SharingScope` wiring + `SharingConsentReadEndpoint`); it is startable now (G-1 + G-3 both ✅; G-4 does not block it). After CORE-2: RECORD-1, then EXCHANGE-1 ∥ MERGE-1. Decide **G-4** (sanctioned off-device path / bs-12 guard reconciliation) before the EXCHANGE behavior phases — it blocks EXCHANGE-2/EXCHANGE-4 only, not the scaffold/shells. **G-2** (approve the acceptance tests) still blocks every behavior phase.
+CORE-2 ✅ done — `lib/sharing/` package landed (`SharingConsent`/`ConsentStore`+`PersistentConsentStore`/`SharingScope`+`SharingDependencies`/`SharingConsentReadEndpoint`) and wired **additively, store-gated** into `build_app.dart` (behaviour-neutral: not-opted-in default, empty surface inventory). analyze clean; unit 1432/0 (+19); cov 100% on all 5 touched files; regression green (host flutter-tester 52 + sim 222 harness entry points + bs-11 conformance 1432). **Next: RECORD-1** (shell — `MixAccuracyRecord` + content hash + `RecordBuilder` + `RecordInspectEndpoint`), startable now; **MERGE-1 can run in parallel** (disjoint files; its `EvidenceKind.peerContributed` targets `lib/domain/sample.dart`, the surface-drift note). EXCHANGE-1 follows RECORD-1. Decide **G-4** (sanctioned off-device path / bs-12 guard reconciliation) before the EXCHANGE behaviour phases (blocks EXCHANGE-2/EXCHANGE-4 only). **G-2** (approve the acceptance tests) still blocks every behaviour phase.
 
 ## Token usage
 
@@ -197,7 +197,8 @@ CORE-1 ✅ done — branch rebased onto bs-13-merged main (`c00422f`), baseline 
 | PLAN | 5e34b79c | 2026-10-14 17:46 EDT | 18:07 | 21m 02s | 13m 45s | claude-opus-4-8 | 58 | 171,188 | 1,871,095 | 50,988 | 2,093,329 | plan written |
 | GATE-DECISION | 5e34b79c | 2026-10-14 18:12 EDT | 18:13 | 0m 58s | 0m 58s | claude-opus-4-8 | 18 | 6,316 | 1,231,854 | 3,848 | 1,242,036 | G-1 approved |
 | CORE-1 | b46e8d1e | 2026-10-15 14:21 EDT | 14:45 | 23m 46s | 23m 46s | claude-opus-4-8 | 116 | 120,199 | 6,041,574 | 47,630 | 6,209,519 | scaffold done: rebased onto c00422f (G-3 closed), baseline unit 1413/0 + integration 293/293 (241 sim + 52 flutter-tester), coverage gate self-check pass, bs14 pending-gate skeleton seeded (12 ACs) |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-15 14:45** | **45m 46s** | **38m 29s** |  | **192** | **297,703** | **9,144,523** | **102,466** | **9,544,884** |  |
+| CORE-2 | cb033af6 | 2026-10-15 15:07 EDT | 15:38 | 30m 53s | 30m 53s | claude-opus-4-8 | 142 | 186,599 | 10,578,399 | 58,705 | 10,823,845 | shell done: lib/sharing package (SharingConsent/ConsentStore/SharingScope/SharingConsentReadEndpoint) + additive store-gated build_app wiring; unit 1432/0, cov 100%/5 touched, regression green (host 52 + sim 222 harness + conformance 1432) |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-15 15:38** | **1h 16m** | **1h 09m** |  | **334** | **484,302** | **19,722,922** | **161,171** | **20,368,729** |  |
 
 ## Sign-off
 

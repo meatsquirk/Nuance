@@ -48,6 +48,10 @@ import '../recipes/palette_source.dart';
 import '../recipes/recipe_controller.dart';
 import '../recipes/recipe_read_endpoint.dart';
 import '../recipes/recipes_screen.dart';
+import '../sharing/consent/consent_store.dart';
+import '../sharing/consent/sharing_consent.dart';
+import '../sharing/sharing_read_endpoint.dart';
+import '../sharing/sharing_scope.dart';
 import '../store/cvd_profile_store.dart';
 import '../store/persistent_store.dart';
 import '../store/source_photo_store.dart';
@@ -536,6 +540,11 @@ class _AppState extends State<_App> {
   /// DALT-11, AC-6), or null when no persistence is wired (bare unit trees).
   CvdProfileStore? _profileStore;
 
+  /// The crowd-refinement consent store the sharing subsystem reads/writes
+  /// (bs-14 CORE-2), or null when no persistence is wired (bare unit trees), in
+  /// which case the [SharingScope] is not mounted and sharing stays inactive.
+  ConsentStore? _consentStore;
+
   @override
   void initState() {
     super.initState();
@@ -548,6 +557,11 @@ class _AppState extends State<_App> {
     if (store != null) {
       _profileStore = CvdProfileStore(store);
       _profileStore!.changes.addListener(_handleStoreChanged);
+      // bs-14 CORE-2: build the sharing subsystem's consent store over the same
+      // persistent seam so the [SharingScope] can be mounted. A shell — nothing
+      // reads it yet and the stored default is not opted in — so this adds no
+      // behaviour.
+      _consentStore = PersistentConsentStore(store);
     }
   }
 
@@ -624,6 +638,25 @@ class _AppState extends State<_App> {
       dataset: deps.seedDataset,
       child: tree,
     );
+    // bs-14 CORE-2: mount the crowd-refinement subsystem above the MaterialApp
+    // (so later surfaces read it from any route) — the [SharingScope] holding
+    // the injected sharing dependencies and, beneath it, the
+    // [SharingConsentReadEndpoint] the acceptance suite observes for the consent
+    // state and the user-facing sharing-surface inventory (the invisibility
+    // guarantee, AC-1). A shell: the consent is the not-opted-in default and the
+    // surface inventory is empty, so nothing is shared and the painter sees
+    // nothing new. Absent when no store is wired (bare unit trees).
+    final consentStore = _consentStore;
+    if (consentStore != null) {
+      tree = SharingScope(
+        dependencies: SharingDependencies(consentStore: consentStore),
+        child: SharingConsentReadEndpoint(
+          key: SharingConsentReadEndpoint.endpointKey,
+          consent: const SharingConsent(),
+          child: tree,
+        ),
+      );
+    }
     return AppScope(
       dependencies: deps,
       child: LiveProfileScope(
