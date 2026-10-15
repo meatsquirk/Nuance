@@ -110,7 +110,10 @@ flutter:
     - assets/color/
     # Reviewed paint dataset (bs-06 PALETTE-1). reviewed_paints.csv is the
     # paints the painter may add, mirrored by kReviewedPaints in
-    # lib/palette/paint_dataset.dart. The whole directory is bundled.
+    # lib/palette/paint_dataset.dart. winsor_newton_oil_seed.json is the bs-13
+    # shipped seed (SEED-3) — one brand / one medium of reviewed optical paints
+    # (AC-1/AC-11), parsed at load by lib/dataset/seed_loader.dart. The whole
+    # directory is bundled.
     - assets/paints/
 
   # To add assets to your application, add an assets section, like this:

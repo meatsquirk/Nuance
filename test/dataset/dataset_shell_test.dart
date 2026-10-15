@@ -337,11 +337,9 @@ void main() {
   });
 
   group('AssetSeedLoader', () {
-    test('shell load returns the empty placeholder dataset', () async {
-      const loader = AssetSeedLoader();
-      final loaded = await loader.load();
-      expect(loaded, const SeedDataset.empty());
-    });
+    // SEED-3 replaced the shell's empty-placeholder load with a real parse of
+    // the shipped asset; `load()` / `parseSeedDataset` are exercised in
+    // `test/dataset/seed_loader_test.dart` (they need the asset bundle binding).
 
     test('exposes its asset path (default or overridden)', () {
       expect(const AssetSeedLoader().assetPath,

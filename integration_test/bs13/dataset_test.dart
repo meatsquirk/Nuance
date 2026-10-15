@@ -105,11 +105,15 @@ void main() {
       expect(allACs.toSet().containsAll(pendingACs.keys), isTrue);
       // AC-8 (evidence append-only) is un-pended at ITEST-3 — green at baseline
       // (the PROV-1 shell froze a working append-only add), so it is not in the
-      // pending map and runs by default.
-      expect(pendingACs.containsKey('AC-8'), isFalse,
-          reason: 'AC-8 is un-pended (green at baseline); PROV-2 still owns it');
+      // pending map and runs by default. AC-1 / AC-11 are un-pended at SEED-3
+      // (the shipped seed asset + loader).
+      const unpended = {'AC-8', 'AC-1', 'AC-11'};
+      for (final ac in unpended) {
+        expect(pendingACs.containsKey(ac), isFalse,
+            reason: '$ac is un-pended and runs by default');
+      }
       // Every other AC is still pending until its behaviour phase lands.
-      expect(pendingACs.keys.toSet(), allACs.toSet().difference({'AC-8'}));
+      expect(pendingACs.keys.toSet(), allACs.toSet().difference(unpended));
       // Every owner is a declared behaviour phase (catches a typo'd / stale
       // owner).
       for (final entry in pendingACs.entries) {
@@ -119,21 +123,33 @@ void main() {
           reason: '${entry.key} owner ${entry.value} is not a behaviour phase',
         );
       }
-      // Every behaviour phase owns at least one AC (no dead phase in the set).
+      // Every behaviour phase is either a current pending owner or has
+      // completed (no dead phase in the set): a phase that has un-pended all
+      // its ACs owns none but is recorded in [completedBehaviorPhases].
       for (final phase in behaviorPhases) {
         expect(
-          pendingACs.values.contains(phase),
+          pendingACs.values.contains(phase) ||
+              completedBehaviorPhases.contains(phase),
           isTrue,
-          reason: '$phase owns no pending AC',
+          reason: '$phase owns no pending AC and is not recorded completed',
         );
+      }
+      // The completed set names only real behaviour phases (catches a stale /
+      // typo'd completion marker).
+      expect(behaviorPhases.containsAll(completedBehaviorPhases), isTrue);
+      // A completed phase owns no pending AC (its rows were deleted on un-pend).
+      for (final phase in completedBehaviorPhases) {
+        expect(pendingACs.values.contains(phase), isFalse,
+            reason: '$phase is marked completed but still owns a pending AC');
       }
     });
 
     test('skips a pending AC by default and runs it under run-pending', () {
-      // A pending AC is skipped in the default run…
-      expect(pendingSkipReason('AC-1', forceRunPending: false), isNotNull);
+      // A pending AC is skipped in the default run… (AC-2 is still pending —
+      // AC-1 was un-pended at SEED-3).
+      expect(pendingSkipReason('AC-2', forceRunPending: false), isNotNull);
       // …and executes when run-pending is forced.
-      expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
+      expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
       // An AC absent from the pending map always runs (the un-pended path a
       // behaviour phase reaches) — control uses a name not in the map.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);

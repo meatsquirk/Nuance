@@ -1,7 +1,7 @@
 # Master Plan — Paint dataset integrity and provenance
 
 **Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
-**Status:** In progress — G-2 approved 2026-10-15; behavior stage unblocked, next SEED-3 ∥ PROV-2
+**Status:** In progress — SEED-3 ✅ (shipped seed + loader; AC-1 core/AC-11 done); next SEED-4 ∥ PROV-2 ∥ GUARD-2
 **Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
 **Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
 
@@ -37,7 +37,7 @@
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | Recipes are solved from stored optical data, not retrieved as answers | ITEST-2 `TestAC01_RecipesSolvedFromOpticalData` | SEED-3 (+ GUARD-2 augment) | ⬜ Todo |
+| AC-1 | Recipes are solved from stored optical data, not retrieved as answers | ITEST-2 `TestAC01_RecipesSolvedFromOpticalData` | SEED-3 (+ GUARD-2 augment) | 🟢 Core green (SEED-3 ✅); GUARD-2 no-lookup augment open |
 | AC-2 | Candidate paint combinations come from the LLM | ITEST-2 `TestAC02_CandidatesFromLlm` | SEED-4 | ⬜ Todo |
 | AC-3 | Every shipped ratio comes from the solver, never from the LLM | ITEST-2 `TestAC03_RatiosFromSolverNeverLlm` | GUARD-2 | ⬜ Todo |
 | AC-4 | LLM metadata is accepted while LLM-claimed measured values are rejected | ITEST-2 `TestAC04_MetadataAcceptedClaimedValuesRejected` | SEED-4 (+ GUARD-2 augment) | ⬜ Todo |
@@ -47,7 +47,7 @@
 | AC-8 | Evidence behind a value is stored append-only | ITEST-3 `TestAC08_EvidenceAppendOnly` | PROV-2 | 🟢 Test green at baseline, un-pended (PROV-2 pending) |
 | AC-9 | An Estimated value is promoted only by a photographed or measured swatch | ITEST-3 `TestAC09_PromotedOnlyByMeasuredSwatch` | PROV-3 | ⬜ Todo |
 | AC-10 | Opinions never promote a value | ITEST-3 `TestAC10_OpinionsNeverPromote` | PROV-3 | ⬜ Todo |
-| AC-11 | The shipped seed covers one brand, one medium and ~15 paints | ITEST-2 `TestAC11_ShippedSeedStaysNarrow` | SEED-3 | ⬜ Todo |
+| AC-11 | The shipped seed covers one brand, one medium and ~15 paints | ITEST-2 `TestAC11_ShippedSeedStaysNarrow` | SEED-3 | ✅ Done (SEED-3) |
 
 ## Design decisions
 
@@ -106,7 +106,7 @@ Pre-seeded augmentations: each ACn test is *limited at baseline* because its pro
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | 🔄 In progress (SEED-2 ✅) |
+| SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | 🔄 In progress (SEED-3 ✅) |
 | PROV | [modules/PROV.md](modules/PROV.md) | The runtime provenance/evidence model: tier-by-origin derivation, append-only evidence, Estimated→Confirmed promotion rule (product code, `lib/domain/`) | — | 🔄 In progress (PROV-1 ✅) |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | Reusable integrity guards (no product code): ratios-only-from-solver, no-lookup-table, no-claimed-value-stored | — | 🔄 In progress (GUARD-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | ✅ Done (G-2 approved 2026-10-15) |
@@ -158,24 +158,25 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,6,11 (pending) + red baseline | ✅ Done | 6,237,768 | 14m 50s | 8 pass/7 skip default; 7 fail clean run-pending; grade 5 A/2 A-core·B-pending-GUARD-2 |
 | 7 | ITEST-3 | acceptance-tests: AC-7,8,9,10 (pending) + red baseline | ✅ Done | 5,013,273 | 17m 12s | 9 pass/10 skip default; 9 pass/10 fail run-pending; AC-8 un-pended green-at-baseline; grade 3 A/1 A-core·B-pending-PROV-3 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,710,718 | 4m 46s | packet assembled 2026-10-15; **G-2 approved 2026-10-15 — Matt Quirk**; behavior stage unblocked |
-| 9 | SEED-3 | AC-1, AC-11: ship the seed asset + loader; solve from it | ⬜ Next | | | startable (G-2 ✅); ∥ PROV-2 |
-| 10 | SEED-4 | AC-2, AC-4: candidate-origin manifest + ingest accept/reject | ⬜ Todo | | | after SEED-3 |
+| 9 | SEED-3 | AC-1, AC-11: ship the seed asset + loader; solve from it | ✅ Done | 11,658,368 | 19m 47s | AC-1 core green (GUARD-2 augment open), AC-11 ✅ |
+| 10 | SEED-4 | AC-2, AC-4: candidate-origin manifest + ingest accept/reject | ⬜ Next | | | startable (SEED-3 ✅); ∥ PROV-2 |
 | 11 | SEED-5 | AC-5, AC-6: validation manifest + ship decision | ⬜ Todo | | | after SEED-4 |
-| 12 | PROV-2 | AC-7, AC-8: tier-by-origin derivation + append-only evidence | ⬜ Todo | | | startable (G-2 ✅); ∥ SEED-3 |
+| 12 | PROV-2 | AC-7, AC-8: tier-by-origin derivation + append-only evidence | ⬜ Todo | | | startable (G-2 ✅); ∥ SEED-4 / GUARD-2 |
 | 13 | PROV-3 | AC-9, AC-10: promotion on swatch; opinions never promote | ⬜ Todo | | | after PROV-2 |
-| 14 | GUARD-2 | AC-3: ratios-from-solver guard (+ AC-1/AC-4 structural augments) | ⬜ Todo | | | after SEED-3 |
+| 14 | GUARD-2 | AC-3: ratios-from-solver guard (+ AC-1/AC-4 structural augments) | ⬜ Todo | | | startable (SEED-3 ✅); ∥ a PROV phase |
 | 15 | SIGNOFF-1 | sign-off: packet + summary page + manual approval (G-3) | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**G-2 approved 2026-10-15 by Matt Quirk** (round 1). ITEST-4 done; the behavior stage is unblocked. **Two phases are startable in parallel** — disjoint file ownership (`lib/dataset/` vs `lib/domain/`):
+**SEED-3 ✅ done 2026-10-15** (shipped seed asset + loader; AC-1 core green with its GUARD-2 no-lookup augment still open, AC-11 ✅). **Three phases are now startable in parallel** — disjoint file ownership (`lib/dataset/` vs `lib/domain/` vs `integration_test/bs13/guards/`):
 
-- **SEED-3** (AC-1, AC-11) — ship the seed asset + loader; solve recipes from the shipped optical data. Owns `lib/dataset/`. Un-pends AC-1/AC-11; AC-1's no-lookup structural augment stays open for GUARD-2.
-- **PROV-2** (AC-7, AC-8) — tier-by-origin derivation + keep append-only evidence green. Owns `lib/domain/` provenance. Un-pends AC-7; keeps AC-8 green and carries its unit coverage.
-- Run one per session (one phase then stop): `/feature-next-phase bs13 SEED-3` or `/feature-next-phase bs13 PROV-2` — or `--parallel` for both in separate worktrees (disjoint, low merge risk).
-- Still gated after these: SEED-4→SEED-5 (after SEED-3), PROV-3 (after PROV-2), GUARD-2 (after SEED-3, closes AC-1/AC-4 augments). **G-3** is the SIGNOFF-1 real-world-fidelity decision (D-5 gap).
+- **SEED-4** (AC-2, AC-4) — candidate-origin mappings + ingest accept/reject. Owns `lib/dataset/` + the seed asset. Extends `parseSeedDataset` to parse a new `candidateMappings` section (add branches + coverage). Un-pends AC-2 + formally AC-4 (AC-4's metadata-retention half already passes off the SEED-3 seed; SEED-4 adds the reject behaviour + un-pend).
+- **PROV-2** (AC-7, AC-8) — tier-by-origin derivation + keep append-only evidence green. Owns `lib/domain/` provenance. Un-pends AC-7; keeps AC-8 green.
+- **GUARD-2** (AC-3 + AC-1/AC-4 structural augments) — ratios-from-solver guard over the shipped seed; closes AC-1's no-lookup augmentation (`control_lookupTable`) + AC-4's no-claimed-value augmentation. Owns `integration_test/bs13/guards/`.
+- Run one per session (one phase then stop): `/feature-next-phase bs13 SEED-4` / `PROV-2` / `GUARD-2` — or `--parallel` for separate worktrees (disjoint, low merge risk; SEED-4 and GUARD-2 both read the SEED-3 asset but don't write each other's files).
+- Still gated after these: SEED-5 (after SEED-4), PROV-3 (after PROV-2). **G-3** is the SIGNOFF-1 real-world-fidelity decision (D-5 gap).
 - Reminders: bs-13's suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`).
 
 ## Token usage
@@ -195,7 +196,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | ITEST-3 | 7649a3f8 | 2026-10-15 03:36 EDT | 03:53 | 17m 12s | 17m 12s | claude-opus-4-8 | 80 | 239,882 | 4,716,624 | 56,687 | 5,013,273 | acceptance-tests: AC-7,8,9,10; AC-8 un-pended green-at-baseline; default 9 pass/10 skip, run-pending 9 pass/10 fail clean; unit 1332/0; grade 3 A/1 A-core·B-pending-PROV-3; no lib/ touched |
 | ITEST-4 | ea77e907 | 2026-10-15 05:51 EDT | 05:55 | 4m 46s | 4m 46s | claude-opus-4-8 | 42 | 72,174 | 1,625,112 | 13,390 | 1,710,718 | packet assembled; G-2 awaiting human decision |
 | SIGNOFF-DECISION | 99c90897 | 2026-10-15 06:08 EDT | 06:58 | 49m 47s | 3m 06s | claude-opus-4-8 | 46 | 54,119 | 1,604,078 | 12,459 | 1,670,702 | ITEST-4 approved |
-| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 06:58** | **5h 59m** | **4h 32m** |  | **1,038** | **1,696,548** | **58,559,109** | **472,043** | **60,728,738** |  |
+| SEED-3 | 5e4857f2 | 2026-10-15 07:29 EDT | 07:49 | 19m 47s | 19m 47s | claude-opus-4-8 | 166 | 267,256 | 11,326,817 | 64,129 | 11,658,368 | AC-1 core green (A/B-pending-GUARD-2) + AC-11 A; shipped seed asset+loader; unit 1336/0, coverage 100%/9, default 11/8-skip green, grade no downgrades |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 07:49** | **6h 18m** | **4h 51m** |  | **1,204** | **1,963,804** | **69,885,926** | **536,172** | **72,387,106** |  |
 
 ## Sign-off
 

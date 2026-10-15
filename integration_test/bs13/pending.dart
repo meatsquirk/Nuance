@@ -42,7 +42,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// the row it owns as it un-pends that AC. Every owner must be a member of
 /// [behaviorPhases]. The owner is the phase whose acceptance gate un-pends the
 /// AC, matching the master plan's AC-coverage table and ITEST's red baseline:
-///   AC-1  → SEED-3   (ship the seed asset + loader; solve from it)
+///   AC-1  → (un-pended at SEED-3 — shipped seed asset + loader; solver mixes
+///            over its optical data)
 ///   AC-2  → SEED-4   (candidate-origin manifest)
 ///   AC-3  → GUARD-2  (ratios-from-solver guard)
 ///   AC-4  → SEED-4   (ingest accept metadata / reject claimed values)
@@ -52,9 +53,10 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-8  → (un-pended at ITEST-3 — green at baseline; PROV-2 still owns it)
 ///   AC-9  → PROV-3   (Estimated→Confirmed on a measured swatch)
 ///   AC-10 → PROV-3   (opinions never promote)
-///   AC-11 → SEED-3   (shipped seed stays narrow)
+///   AC-11 → (un-pended at SEED-3 — shipped seed stays narrow)
 const Map<String, String> pendingACs = {
-  'AC-1': 'SEED-3',
+  // AC-1 (recipes solved from optical data) un-pended at SEED-3 — the shipped
+  // seed asset + AssetSeedLoader make the solver mix over real optical data.
   'AC-2': 'SEED-4',
   'AC-3': 'GUARD-2',
   'AC-4': 'SEED-4',
@@ -69,7 +71,8 @@ const Map<String, String> pendingACs = {
   // default from now on.
   'AC-9': 'PROV-3',
   'AC-10': 'PROV-3',
-  'AC-11': 'SEED-3',
+  // AC-11 (shipped seed stays narrow) un-pended at SEED-3 — the shipped asset
+  // covers one brand, one medium, ~15 paints.
 };
 
 /// The behaviour phases allowed to own a pending AC.
@@ -84,6 +87,16 @@ const Set<String> behaviorPhases = {
   'PROV-2',
   'PROV-3',
   'GUARD-2',
+};
+
+/// The behaviour phases that have completed and un-pended every AC they own.
+///
+/// A completed phase legitimately owns no row in [pendingACs] any more, so the
+/// harness's "no dead phase" guard treats a phase as valid when it is still a
+/// pending owner **or** listed here. Each behaviour phase adds itself here as it
+/// un-pends its last AC (SEED-3 un-pended AC-1 and AC-11, its only two).
+const Set<String> completedBehaviorPhases = {
+  'SEED-3',
 };
 
 /// Every AC id the bs-13 acceptance suite covers (the master plan's 11 ACs).

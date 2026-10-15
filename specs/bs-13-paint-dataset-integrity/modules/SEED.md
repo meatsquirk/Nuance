@@ -1,6 +1,6 @@
 # Module SEED — shipped seed dataset, loader, ingest rule and validation manifest
 
-**Status:** In progress — SEED-2 ✅ (shell: dataset surface wired, empty-seed-neutral); next the behavior stage (SEED-3, after ITEST + G-2)
+**Status:** In progress — SEED-3 ✅ (shipped seed asset + loader; AC-1/AC-11 un-pended, green); next SEED-4 (AC-2, AC-4)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/dataset/` (new: `seed_dataset.dart`, `seed_loader.dart`, `validation_manifest.dart`, `seeded_palette_source.dart`, `dataset_read_endpoint.dart`), the shipped asset `assets/paints/<brand>_<medium>_seed.json` (+ `pubspec.yaml` asset entry), and the wiring in `lib/app/build_app.dart` / `AppDependencies`.
 **Depends on:** the bs-04 engine + `Paint`/`PaintPalette`/`PaletteSource` (`lib/recipes/`, `lib/domain/paint.dart`); PROV's `EvidenceKind`/`ProvenanceOrigin` for the per-entry origin (SEED-2 may introduce a local placeholder if PROV-1 lands later, reconciled at SEED-4) · **Blocks:** ITEST-1, GUARD-2
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 6,139,369 | 22m 06s |
 | 2 | shell | — | ✅ Done | 15,898,272 | 34m 54s |
-| 3 | behavior | AC-1, AC-11 | ⬜ Todo | | |
+| 3 | behavior | AC-1, AC-11 | ✅ Done | 11,658,368 | 19m 47s |
 | 4 | behavior | AC-2, AC-4 | ⬜ Todo | | |
 | 5 | behavior | AC-5, AC-6 | ⬜ Todo | | |
 
@@ -118,6 +118,26 @@ Shell: the dataset surface is built and wired, behaviour-neutral on the empty se
 - **Exit criteria:** unit gate; acceptance gate below.
 - **Acceptance gate:** un-pend AC-1, AC-11; `TestAC01_RecipesSolvedFromOpticalData` and `TestAC11_ShippedSeedStaysNarrow` green (and all earlier ACs).
 - **Augments:** `TestAC01`: once GUARD-2 lands, add the no-lookup-table structural assertion + the `control_lookupTable` rejection.
+
+### Result — SEED-3  <!-- 2026-10-15 -->
+
+Shipped the real seed asset + loader; AC-1 and AC-11 un-pended and green.
+
+- **Asset** `assets/paints/winsor_newton_oil_seed.json` — one brand (**Winsor & Newton**), one medium (**oil**), **15** reviewed-optical entries (Artists' Oil: titanium/zinc white, cadmium yellow/orange/red, yellow ochre, light red, permanent rose, ultramarine, Winsor/phthalo blue, phthalo green, viridian, raw/burnt umber, ivory black). Each entry carries a masstone CIELAB (the optical atom the solver mixes over, AC-1) + metadata (pigment index, opacity, lightfastness) + `origin: reviewedOptical`. Reviewed, representative values (D-5). No ratio / no claimed-spectral field, no target→recipe answer rows.
+- **`lib/dataset/seed_loader.dart`** — `parseSeedDataset(json)` (pure; mirrors `parseReviewedPaints`) parses brand/medium + entries, stamping the seed-wide brand & medium onto each `SeedPaintEntry` (AC-11); an unknown medium/origin **throws** (a malformed seed is a build error). `AssetSeedLoader.load()` = `parseSeedDataset(await rootBundle.loadString(assetPath))`; `defaultAssetPath` now the real file. Candidate mappings (SEED-4) and the ship manifest (SEED-5) are not in the asset yet → dataset carries `const []` + `ValidationManifest.empty()`; those phases extend both the asset and the parser.
+- **`pubspec.yaml`** — documented the seed JSON in the already-bundled `assets/paints/` comment (dir bundling unchanged). `seeded_palette_source.dart` needed no change (non-empty branch already correct from SEED-2).
+
+**Verification** (bs-13 suite on `flutter-tester`, cwd worktree): `flutter analyze` clean · unit **1336/0** (`test/dataset/seed_loader_test.dart` added: real-asset load + `parseSeedDataset` incl. int→double CIELAB + malformed-medium/origin throws; the obsolete shell "load returns empty" assertion removed) · **coverage gate 100% on all 9 touched lib files** (`COVERAGE_GATE_BASE=7015390`), incl. `seed_loader.dart`. **Acceptance — default:** `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` = **11 pass / 8 skip, green** (AC-1, AC-11 now run by default and pass; AC-2/3/4/5/6/7/9/10 still pending). **Run-pending** (`--dart-define=BS13_RUN_PENDING=true`): AC-1/AC-8/AC-11 pass; AC-2/3/5/6/7/9/10 fail cleanly (unbuilt). **Grade gate:** fresh independent grader (G1–G6) over every un-pended AC test (AC-1, AC-8, AC-11) → **AC-1 A-core / B-pending-GUARD-2** (no-lookup structural augment owned by GUARD-2), **AC-8 A**, **AC-11 A** — no downgrades, no vacuity introduced by filling the seed.
+
+**AC-4 note (for SEED-4):** AC-4's run-pending baseline flipped FAIL→PASS now that the shipped entries carry pigment-index metadata (its metadata-retention Given/Then is satisfied; the reject-claimed-values half is vacuous with no claimed fields in the seed). AC-4 stays **pending** — SEED-4 owns the ingest accept/reject behaviour and the formal un-pend (+ the GUARD-2 claimed-value augmentation). Recorded in ITEST *Red baseline*.
+
+Fix passes: 1/3 (the scaffold guard "every behaviour phase owns ≥1 pending AC" broke when SEED-3 became the first fully-completed phase owning none → added `completedBehaviorPhases={SEED-3}` and relaxed the guard to "current owner OR completed"; guard intent preserved). Tokens 11,658,368 · Time 19m 47s.
+
+### Checkpoint / Handoff — SEED-3
+
+- **Frozen for next phases:** the seed asset schema (`brand`, `medium`, `entries[{id,name,pigmentIndex,opacity,lightfastness,origin,masstone{l,a,b}}]`) and `parseSeedDataset` / `AssetSeedLoader.load()`. **SEED-4** extends the asset with a `candidateMappings` section (+ origins) and the ingest accept/reject rule, and extends `parseSeedDataset` to parse them (add their branches + coverage); **SEED-5** adds the `manifest` section + parse. The asset path `assets/paints/winsor_newton_oil_seed.json` is frozen (don't rename — `defaultAssetPath`).
+- **Verification commands:** unchanged from SEED-1/2. `rootBundle.loadString` **works under `flutter-tester`** (probed) — a unit test reading the asset must call `TestWidgetsFlutterBinding.ensureInitialized()` first. GOTCHA: write every JSON number the parser reads via `(x as num).toDouble()` so int literals parse; an absent field + `as T?` is branchless (no coverage cost), a `??` default is a branch (cover both sides).
+- **Known gaps:** none new. AC-4 passes early under run-pending (see Result note) — SEED-4's concern. The seed still feeds only the solve path, not the Palette list (not a bs-13 AC, per SEED-2).
 
 ## Phase 4 — AC-2, AC-4: candidate-origin manifest + ingest accept/reject
 
