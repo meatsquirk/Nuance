@@ -1,0 +1,209 @@
+# Master Plan — Paint dataset integrity and provenance
+
+**Spec:** [bs-13-paint-dataset-integrity.feature](../bs-13-paint-dataset-integrity.feature)
+**Status:** Done — signed off 2026-10-15 by Matt Quirk at `b7b9b26` (SIGNOFF-1 round 1 Approved). 11/11 ACs ✅, whole-suite grade **11 A / 0**, verification green (unit 1352/0 · cov 100%/touched · bs-13 19/0 default==run-pending · cross-feature regression 241/0 = 222 sim + 19 flutter-tester); **G-1/G-2/G-3 all ✅** (G-3 D-5 gap accepted). No phase remains. Next: merge feat/bs-13 → main.
+**Architecture:** [docs/paint-color-app-solution-intent.md](../../docs/paint-color-app-solution-intent.md) §"Paint database and data pipeline" (D6/D7/D9), §"Mixing engine" (D3), §"Capabilities and components"; [docs/paint-color-app-scope.md](../../docs/paint-color-app-scope.md) §6.1–6.7. Builds on the bs-04 mixing engine (`lib/recipes/engine/`), the `Paint`/`PaintPalette`/`PaletteSource` seam (`lib/recipes/`, `lib/domain/paint.dart`) and the `Provenance`/`Sample`/`EvidencePoint` model (`lib/domain/`), all assembled through `lib/app/build_app.dart`.
+**Code home:** /Users/matthew.quirk/Nuance · remote https://github.com/meatsquirk/Nuance · base `main` (@ `7015390`, bs-10 merged — carries bs-01..bs-10) · extends existing (confirmed by Matt Quirk via sibling *Code home* lines + cwd, 2026-10-14)
+
+## Gap analysis (against `main` @ `7015390`)
+
+| AC | Exists today | Missing |
+|---|---|---|
+| AC-1 solved from optical data, not looked up | Engine `inverse(Sample, PaintPalette, MixOptions)` genuinely solves recipes from per-paint masstone optical data (`subtractive_engine.dart`); no lookup table anywhere | A **shipped seed dataset** of optical-data entries + a loader, and a test proving a recipe is produced by the solver over stored optical data (not a stored RGB→recipe answer) |
+| AC-2 candidates come from the LLM | Nothing — no candidate-combination record; palettes are in-memory/empty | The seed's **candidate mappings** stamped with a build-time `llmSeed` origin in the manifest; a test that candidate paint-sets carry the LLM origin (and there is no runtime LLM) |
+| AC-3 ratios from the solver, never the LLM | `RecipeComponent.partsFraction` is produced only by the engine's optimiser; no LLM/network code in `lib/` | A **reusable guard** proving ratios originate only from the solver and the seed schema carries **no ratio field** (a planted llm-ratio control is rejected) |
+| AC-4 LLM metadata accepted, claimed values rejected | `Paint` carries metadata (`pigmentIndex`, `opacity`); no ingest path, no spectral/claimed fields | A **seed loader ingest rule**: accept metadata (pigment index, opacity, lightfastness), **reject** any LLM-claimed spectral curves / ratios; a control record with claimed values is stripped |
+| AC-5 held-out set mixed & measured → ΔE00 distribution | Nothing — no validation artefact | A **validation manifest** recording a held-out recipe set (count 50–100) and its ΔE00 distribution; a test asserting the recorded shape (synthetic/recorded, not physical — D-5) |
+| AC-6 ships only on evidence (threshold + beats LLM alone) | Nothing — no ship decision | A **ship-decision** in the manifest: shippable iff the distribution clears a usable threshold **and** hybrid mean ΔE00 < LLM-alone mean; controls failing either are not shippable |
+| AC-7 every value carries an enforced tier by origin | `ProvenanceTier {measured, calculated, estimated, confirmed}` + `Provenance` enforced non-null on `Sample` (`lib/domain/`) | A **tier-by-origin derivation**: spectrophotometer→Measured, solver-over-measured→Calculated, unconfirmed LLM seed→Estimated, user's own measured mix→Confirmed; an `EvidenceKind` on each evidence point |
+| AC-8 evidence stored append-only | `Sample.evidence` is an append-*ready* `List<EvidencePoint>` — **shape only**, nothing appends | An **append-only** operation that adds evidence while retaining every earlier point (prior evidence never dropped/reordered) |
+| AC-9 Estimated promoted only by a measured/photographed swatch | Nothing — no promotion path (self-confirmation *flow* is bs-05) | The enforced **schema rule**: appending a photographed/instrument swatch evidence point promotes an Estimated value to Confirmed |
+| AC-10 opinions never promote | Nothing | The enforced rule: an `opinion`-kind evidence point contributes nothing to the tier and never triggers promotion (single-user app has no voting; D-7) |
+| AC-11 shipped seed stays narrow | Nothing shipped yet (palettes empty by default; persistence is bs-06) | The shipped seed asset constrained to **one brand, one medium, ~15 paints**, with a test pinning the scope |
+
+**11 ACs. All 11 automated** → one integration test → ≥1 behavior phase. **Known gaps carried to sign-off (D-5):** AC-5/AC-6 prove the manifest's **shape and ship-decision logic** over a recorded/representative validation manifest, **not** a physical spectrophotometer measurement; the seed's optical values are a reviewed representative set, not instrument-measured (the *Measured* tier needs the deferred measured-pigment engine, SI). The real Phase-0.5 weekend-of-swatching validation is owner evidence confirmed at SIGNOFF-1 (G-3).
+
+## Build order
+
+| Stage | Phases |
+|---|---|
+| 1 Scaffold | SEED-1 |
+| 2 Component shells | SEED-2, PROV-1, GUARD-1 |
+| 3 Acceptance tests | ITEST-1, ITEST-2, ITEST-3, ITEST-4 (test review, G-2) |
+| 4 Behavior | SEED-3, SEED-4, SEED-5, PROV-2, PROV-3, GUARD-2 |
+| 5 Sign-off | SIGNOFF-1 (confirms G-3 Phase-0.5 evidence gap) |
+
+## Acceptance criteria coverage
+
+| AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
+|---|---|---|---|---|
+| AC-1 | Recipes are solved from stored optical data, not retrieved as answers | ITEST-2 `TestAC01_RecipesSolvedFromOpticalData` | SEED-3 (+ GUARD-2 augment) | ✅ Done (SEED-3 + GUARD-2 no-lookup augment closed; grade A) |
+| AC-2 | Candidate paint combinations come from the LLM | ITEST-2 `TestAC02_CandidatesFromLlm` | SEED-4 | ✅ Done (SEED-4) |
+| AC-3 | Every shipped ratio comes from the solver, never from the LLM | ITEST-2 `TestAC03_RatiosFromSolverNeverLlm` | GUARD-2 | ✅ Done (GUARD-2; grade A) |
+| AC-4 | LLM metadata is accepted while LLM-claimed measured values are rejected | ITEST-2 `TestAC04_MetadataAcceptedClaimedValuesRejected` | SEED-4 (+ GUARD-2 augment) | ✅ Done (SEED-4 + GUARD-2 no-claimed-value augment closed; grade A) |
+| AC-5 | A held-out recipe set is mixed and measured before shipping | ITEST-2 `TestAC05_HeldOutValidationRecorded` | SEED-5 | ✅ Done (SEED-5) |
+| AC-6 | The seed ships only if it clears the threshold and beats the LLM alone | ITEST-2 `TestAC06_SeedShipsOnlyOnEvidence` | SEED-5 | ✅ Done (SEED-5) |
+| AC-7 | Every value carries an enforced provenance tier (4 origins) | ITEST-3 `TestAC07_EnforcedProvenanceTierByOrigin` | PROV-2 | ✅ Done (PROV-2) |
+| AC-8 | Evidence behind a value is stored append-only | ITEST-3 `TestAC08_EvidenceAppendOnly` | PROV-2 | ✅ Done (PROV-2 — kept green, unit coverage carried) |
+| AC-9 | An Estimated value is promoted only by a photographed or measured swatch | ITEST-3 `TestAC09_PromotedOnlyByMeasuredSwatch` | PROV-3 | ✅ Done (PROV-3) |
+| AC-10 | Opinions never promote a value | ITEST-3 `TestAC10_OpinionsNeverPromote` | PROV-3 | ✅ Done (PROV-3) |
+| AC-11 | The shipped seed covers one brand, one medium and ~15 paints | ITEST-2 `TestAC11_ShippedSeedStaysNarrow` | SEED-3 | ✅ Done (SEED-3) |
+
+## Design decisions
+
+| # | Decision | Why |
+|---|---|---|
+| D-1 | **Verify via shipped manifest + guards; no live pipeline.** bs-13 ships no runtime LLM and no in-app network path. The build-time seeding/validation (candidate origins, held-out ΔE00 distribution, ship decision) is carried as a **reviewed shipped manifest**, and bs-13 asserts the integrity invariants hold on what ships via reusable guards | Owner decision (planning Q1, 2026-10-14); matches the SI (offline, single-user, build-time pipeline is dev-tooling not app code); physical swatch measurement can't be automated in-app |
+| D-2 | **Ship the seed as a read-only asset + loader in bs-13.** One brand / one medium / ~15 paints, each entry carrying optical data + metadata + a provenance origin, behind the existing `PaletteSource` seam. bs-13 owns the **shipped default seed**; **bs-06** owns the user's own-palette persistence — they coexist behind `PaletteSource` | Owner decision (planning Q2, 2026-10-14); makes "stores optical data" and "narrow seed" concrete and testable against real shipped data |
+| D-3 | **Provenance tier is derived from append-only evidence, enforced in the domain model** (SI D9), not UI policy. bs-13 adds an `EvidenceKind` to `EvidencePoint`, a tier-by-origin derivation, an append-only add, and the Estimated→Confirmed promotion **rule**. The self-confirmation *flow* (capturing the swatch) stays bs-05/capture; bs-13 owns the enforced **schema rule** | The spec defers the self-confirmation *path* to bs-05 but the honest-provenance **rule** (D9) must be enforced in the model; one model (extends `Sample`/`EvidencePoint`), not a parallel type |
+| D-4 | **Guards are reusable test-support**, no product code (bs-12 D-7 pattern): the AC-3 ratio-provenance guard, the AC-1 no-lookup-table guard, and the AC-4 no-claimed-value guard live in `integration_test/bs13/guards/` and become reusable acceptance mechanism | Keeps the coverage gate scoped to the real product changes (dataset + provenance model); the verification mechanism belongs with the harness |
+| D-5 | **Manifest validation is recorded, not physical.** AC-5/AC-6 prove the manifest's shape (held-out count 50–100 + ΔE00 distribution) and the ship-decision logic (clears threshold **and** hybrid beats LLM-alone), over a recorded/representative manifest — **not** a spectrophotometer measurement. The physical Phase-0.5 validation (SI: a weekend of swatching) is a **known gap** owned by the Phase-0.5 accuracy gate, confirmed by the owner at SIGNOFF-1 (G-3) | The repo has no spectrophotometer / physical held-out fixture; recorded-manifest + logic is the only automatable form; the gap is named honestly at sign-off (mirrors bs-12 D-2) |
+| D-6 | **Branch from `main` @ `7015390`** (bs-01..bs-10). The bs-04 engine, the `Paint`/`PaletteSource` seam and the `Provenance`/`Sample`/`EvidencePoint` model are all present. bs-11/bs-12 are in-flight (not merged) — bs-13 builds its own guards, independent of bs-12's NFR guards | Avoids serialising bs-13 behind two in-flight features; the needed foundation is already on `main` |
+| D-7 | **AC-10 (opinions never promote) is a schema invariant, not a voting feature.** The single-user app has no voting UI; the rule is "an `opinion`-kind evidence point contributes nothing to the tier and never triggers promotion" | Keeps the honest-provenance rule enforced in the model without building the community/voting subsystem the SI scopes out |
+
+## Acceptance integration test plan
+
+Module plan: [modules/ITEST.md](modules/ITEST.md).
+
+**Where it lives and how it runs:** `integration_test/bs13/dataset_harness.dart` (vocabulary + fixtures + the real wired dataset/provenance model via `buildApp(deps)`), `integration_test/bs13/dataset_test.dart` (runner), pending gate `integration_test/bs13/pending.dart`, reusable guards in `integration_test/bs13/guards/`. Default (pending skipped): `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester`. Run-pending / red baseline: add `--dart-define=BS13_RUN_PENDING=true` (or host env `BS13_RUN_PENDING=1`). bs-13 is pure-Dart (dataset/model/guards — no camera), so the host **`flutter-tester`** device is used, **not** an iOS sim — **no device lane**. A `-d` is still mandatory (no `-d` ⇒ zero tests, exit 0, false green — see Known flakes).
+**Where assertions look:** the `DatasetReadEndpoint` (loaded `SeedDataset` entries, their origins, and the `ValidationManifest`) for AC-1/2/4/5/6/11; the guard results over `lib/` + the seed schema for AC-1/3/4; the `ProvenanceReadEndpoint` / the pure `ProvenanceDerivation.tierFor` + the append-only add for AC-7/8/9/10. ΔE00 is the shipped `deltaE00` (`lib/compare/difference.dart`), never a second copy.
+**What is real and what is faked:** the real `AssetSeedLoader` over the real shipped seed asset, the real `SubtractiveMixingEngine` (bs-04) for the solve, the real `ColorScience`/`deltaE00`, and the real provenance/evidence model assembled through `buildApp`. Faked only: deliberate **control** fixtures that prove each guard discriminates (`control_llmRatio`, `control_lookupTable`, `control_claimedSpectral`, `control_manifestFailThreshold`, `control_manifestFailBeatsLlm`, `control_opinionOnly`). No colour math and no provenance logic is faked.
+
+**Fixtures:**
+
+| Fixture | Shape |
+|---|---|
+| `shippedSeed` | The real `SeedDataset` loaded by `AssetSeedLoader` over the shipped asset (one brand / one medium / ~15 paints) — used by AC-1/2/4/5/6/11 |
+| `realEngine` | The bs-04 `SubtractiveMixingEngine`, used to solve a recipe over `shippedSeed` (AC-1) |
+| `heldOutManifest` | A `ValidationManifest` recording 50–100 held-out recipes + a ΔE00 distribution + a passing ship decision (AC-5/6) |
+| `evInstrument` / `evSolver` / `evLlmSeed` / `evUserSwatch` / `evOpinion` | One `EvidencePoint` of each `EvidenceKind`, for the AC-7 tier-by-origin cases and AC-8/9/10 |
+| `control_llmRatio` | A planted seed entry carrying a ratio field (must fail the AC-3 guard) |
+| `control_lookupTable` | A planted target-colour→recipe answer mapping (must fail the AC-1 no-lookup guard) |
+| `control_claimedSpectral` | An ingest record carrying metadata **and** claimed spectral curves/ratios (metadata kept, claimed values stripped — AC-4) |
+| `control_manifestFailThreshold` / `control_manifestFailBeatsLlm` | Manifests failing the usable threshold / the beats-LLM-alone test (must be not-shippable — AC-6) |
+| `control_opinionOnly` | An Estimated value given only an `opinion` evidence point (must stay Estimated — AC-10) |
+
+**Test catalogue:**
+
+| AC | Given: built via public flows → checked by | When | Then: exact assertions (negative Thens: after <settle point>) | Rejects |
+|---|---|---|---|---|
+| AC-1 | `shippedSeed` loaded via `AssetSeedLoader` → `DatasetReadEndpoint` shows entries carrying optical data (masstone), and **no** target→recipe answer rows | a recipe is produced for a target over the seed via `realEngine.inverse` | the returned `Recipe` is produced by the solver from the stored optical data; the seed has **no** stored RGB→recipe answer the result could have been retrieved from; **control:** `control_lookupTable` is flagged by the no-lookup guard (GUARD-2) | a dataset that stores target→recipe answers, or a test that doesn't prove the result came from the solver (not a lookup) |
+| AC-2 | `shippedSeed` → `DatasetReadEndpoint` exposes the candidate mappings and their origins | candidate combinations are generated (read from the manifest) | every candidate paint-set carries origin `llmSeed` (the LLM's qualitative knowledge), recorded in the manifest; and there is no runtime LLM path | candidate sets with no recorded origin, or an origin other than `llmSeed`, or a runtime LLM call |
+| AC-3 | `shippedSeed` + a scan of `lib/` via the ratio-provenance guard → list of ratio producers and seed ratio fields | the parts for a mix are produced | **every** ratio comes from `SubtractiveMixingEngine` (the only producer) and the seed schema carries **no** ratio field — zero offenders; **control:** `control_llmRatio` is listed | a ratio sourced from the seed/LLM rather than the solver, or a guard that checks imports but not where ratios are produced |
+| AC-4 | `control_claimedSpectral` ingested by `AssetSeedLoader` → `DatasetReadEndpoint` shows the resulting entry | the data is ingested | the metadata (pigment index, opacity, lightfastness) is **accepted/retained** and the claimed spectral curves + ratios are **rejected/stripped** (absent from the stored entry); **control:** an entry asserting it kept a claimed spectral curve fails | an ingest that stores LLM-claimed spectral/ratio values, or one that also drops the valid metadata |
+| AC-5 | `heldOutManifest` loaded → `DatasetReadEndpoint.manifest` | the held-out recipes are mixed and measured (recorded) | the manifest records a held-out count in **[50, 100]** and a ΔE00 distribution (summary stats present, non-empty) | a manifest with no distribution, or a count outside 50–100, accepted as validated |
+| AC-6 | `heldOutManifest` (passing) + `control_manifestFailThreshold` + `control_manifestFailBeatsLlm` → the ship-decision logic | the ship decision is made | the passing manifest is **shippable** iff it clears the usable threshold **and** hybrid mean ΔE00 < LLM-alone mean; **controls:** each failing manifest is **not** shippable | a seed that ships without clearing the threshold, or without beating the LLM-alone baseline, or a decision that checks only one condition |
+| AC-7 | A value built from each of `evInstrument` / `evSolver` / `evLlmSeed` / `evUserSwatch` → `ProvenanceDerivation.tierFor` / `ProvenanceReadEndpoint` | the value is stored | the derived tier is **Measured / Calculated / Estimated / Confirmed** respectively, and the shown label matches the spec's qualifier (e.g. "Estimated — not yet verified", "Confirmed — you measured this") | an origin that maps to the wrong tier, or a value stored with no enforced tier |
+| AC-8 | A value already carrying `evLlmSeed` → append `evUserSwatch` via the append-only add → `ProvenanceReadEndpoint` evidence list | new evidence is recorded | the new point is **appended** and the earlier point is **retained** (evidence length grows, prior point still present, order preserved); **control:** an attempt to drop/replace prior evidence is not supported by the API | an append that overwrites/reorders prior evidence, or a mutable list that loses history |
+| AC-9 | An Estimated value (`evLlmSeed` only) → append `evUserSwatch` (photographed/measured) → re-derive | the painter records a photographed/instrument swatch | the value is promoted to **Confirmed** (tier Estimated→Confirmed); the promotion is driven **only** by the swatch evidence | a promotion on anything but a photographed/instrument swatch, or no promotion when a valid swatch is recorded |
+| AC-10 | `control_opinionOnly`: an Estimated value → append `evOpinion` → re-derive | only votes/opinions are offered | the value is **not** promoted — it stays Estimated (the opinion point contributes nothing to the tier) | an opinion promoting (or otherwise raising) a value's tier |
+| AC-11 | `shippedSeed` → `DatasetReadEndpoint` brand/medium/paint count | its scope is set | the seed covers **one brand**, **one medium**, and **~15 paints** (count within 12–18); scope is pinned | a seed spanning multiple brands/media, or a paint count far from ~15 |
+
+**Red baseline** and **test augmentations:** tracked in [modules/ITEST.md](modules/ITEST.md).
+Pre-seeded augmentations: each ACn test is *limited at baseline* because its product/guard is a stub until its behavior phase. **All three are now closed:** AC-1's no-lookup discrimination ~~→ *B pending GUARD-2*~~ **✅ closed at GUARD-2** (`noLookupTableGuard` + `control_lookupTable`; grade A); AC-4's claimed-value rejection ~~→ *B pending SEED-4/GUARD-2*~~ **✅ closed at SEED-4 (ingest) + GUARD-2 (schema guard)** (`noClaimedValueGuard` + `control_claimedSpectral`; grade A); AC-9's promotion ~~→ *B pending PROV-3*~~ **✅ closed at PROV-3** (`promoteWithOwnSwatch`; grade A).
+
+## Modules
+
+| Module | Plan | Purpose | Depends on | Status |
+|---|---|---|---|---|
+| SEED | [modules/SEED.md](modules/SEED.md) | The shipped seed dataset asset + loader + ingest rule + validation/ship manifest (product code, `lib/dataset/`) | — | ✅ Done (SEED-5 ✅; AC-1/2/4/5/6/11) |
+| PROV | [modules/PROV.md](modules/PROV.md) | The runtime provenance/evidence model: tier-by-origin derivation, append-only evidence, Estimated→Confirmed promotion rule (product code, `lib/domain/`) | — | ✅ Done (PROV-3 ✅; AC-7/AC-8/AC-9/AC-10) |
+| GUARD | [modules/GUARD.md](modules/GUARD.md) | Reusable integrity guards (no product code): ratios-only-from-solver, no-lookup-table, no-claimed-value-stored | — | ✅ Done (GUARD-2 ✅; AC-3 + AC-1/AC-4 augments) |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite over the real seed/model + controls: one pending test per AC, and its review | SEED-2, PROV-1, GUARD-1 | ✅ Done (G-2 approved 2026-10-15) |
+
+## Dependency graph
+
+```mermaid
+graph LR
+  SEED-1 --> SEED-2 & PROV-1 & GUARD-1
+  SEED-2 & PROV-1 & GUARD-1 --> ITEST-1 --> ITEST-2 & ITEST-3
+  ITEST-2 & ITEST-3 --> ITEST-4
+  ITEST-4 --> SEED-3 --> SEED-4 --> SEED-5
+  ITEST-4 --> PROV-2 --> PROV-3
+  ITEST-4 --> GUARD-2
+  SEED-3 --> GUARD-2
+  SEED-5 & PROV-3 & GUARD-2 --> SIGNOFF-1
+```
+
+**Parallel windows:** SEED-2 ∥ PROV-1 ∥ GUARD-1 (disjoint: `lib/dataset/` vs `lib/domain/` vs `integration_test/bs13/guards/`). ITEST-2 ∥ ITEST-3 **share `dataset_test.dart` + `pending.dart` → merge-risky; run sequentially**. Behavior: SEED-3→SEED-4→SEED-5 **sequence** (share `lib/dataset/` + the seed asset); PROV-2→PROV-3 **sequence** (share `lib/domain/` provenance); GUARD-2 is disjoint (`integration_test/bs13/guards/`) and **may run ∥ a PROV behavior phase**, but depends on SEED-3 (needs the shipped seed to inspect) so it starts after SEED-3. **Coordination:** bs-13 adds `lib/dataset/` + extends `lib/domain/` provenance + reusable guards; sequence the bs-13 merge after bs-11/bs-12 land so it rebases onto any shared `lib/domain`/`build_app` changes.
+
+## Open gates
+
+| Gate | Kind | Decision needed | Blocks | Status |
+|---|---|---|---|---|
+| G-1 | decision | Approve the spec (record approval as its first line, replacing the `# Draft: awaiting owner approval` banner) | SEED-1 | ✅ Resolved 2026-10-14 16:06: approved — spec banner flipped to approval line — Matt Quirk |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-15: approved — Matt Quirk (round 1); behavior stage unblocked |
+| G-3 | decision | Confirm the shipped seed's optical values + validation manifest reflect **real reviewed Phase-0.5 evidence** (owner), or accept the named gap — the bs-13 automated tests prove only the schema/ship-logic over a representative manifest (D-5) | SIGNOFF-1 (AC-5/AC-6 real-world fidelity) | ✅ Resolved 2026-10-15: **D-5 gap accepted** — the representative manifest proves schema + ship-logic, not a physical spectrophotometer run; the physical Phase-0.5 validation stays owned by the Phase-0.5 accuracy gate — Matt Quirk |
+
+Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
+
+## Known flakes
+
+| Test | Symptom | Rate (runs) | Measured at | Owner | Status |
+|---|---|---|---|---|---|
+| coverage_gate — a `const` constructor line in `lib/**` | Carried from bs-01..bs-12: `flutter test --coverage` can record a const-folded constructor line as uncovered, so the gate may FAIL on a file the phase never touched | not quantified | — | any phase running the coverage gate | open — re-run `flutter test --coverage` once; green on re-run ⇒ ignore |
+| bs13 acceptance — no `-d` | Carried: `flutter test integration_test/…` without a device runs **zero** tests and still exits 0 (false green) | — | — | every phase running the acceptance suite | open — always pass `-d flutter-tester` |
+| cross-feature regression — whole `integration_test/` dir on `flutter-tester` | The host device launches the app only **once** per process; files after the first fail to relaunch (`Unable to start the app on the device` [E]) — not real failures | deterministic | SEED-1 @ `7015390` | any phase running the full regression | open — run the regression **per-file** (one `flutter test <file>` each), sum counts |
+| bs-06/07/08 UI+persistence ITests on `flutter-tester` | `palette_test` AC-3/AC-5, `self_assessment_test` AC-4, `display_test` AC-9 fail on the host (sqlite/path_provider platform channels + real rendering unavailable) — **green on the iPhone 17 sim** (verified 21/0, 23/0, 24/0 under the device lock) | deterministic (host) | SEED-1 @ `7015390` | full-regression phases | open — run these feature suites on the **iPhone 17 sim** via the device lane, not the host; bs-13's own pure-Dart suite stays on `flutter-tester` |
+
+## Session log
+
+| # | Phase | Target | Status | Tokens | Time | Notes |
+|---|---|---|---|---|---|---|
+| 1 | SEED-1 | scaffold: branch off `main`, baseline run, coverage-gate + acceptance-runner self-check, record baseline | ✅ Done | 6,139,369 | 22m 06s | G-1 ✅; baseline unit 1279/0, sim integ 222/0, analyze clean |
+| 2 | SEED-2 | shell: `lib/dataset/` types + `SeedLoader`/`AssetSeedLoader` + `SeededPaletteSource` + `DatasetReadEndpoint` + wiring | ✅ Done | 15,898,272 | 34m 54s | analyze clean; unit 1315/0; coverage 100%/6; integ 222/0 (sim) |
+| 3 | PROV-1 | shell: `EvidenceKind` + tier-derivation seam + append-only add stub + `ProvenanceReadEndpoint` | ✅ Done | 4,740,008 | 18m 41s | analyze clean; unit 1322/0; coverage 100%/9; integ 222/0 (sim) |
+| 4 | GUARD-1 | shell: reusable guard harness (source-scan + schema-check scaffolding) | ✅ Done | 6,687,969 | 2h 01m | analyze clean; unit 1332/0; coverage 100% touched (no lib/ touched); full regression 222/0 (sim) — last shell |
+| 5 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke test | ✅ Done | 8,665,269 | 16m 33s | analyze clean; bs13 suite 8/8 (default==run-pending) on flutter-tester; unit 1332/0; no lib/ touched; grade A/A |
+| 6 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5,6,11 (pending) + red baseline | ✅ Done | 6,237,768 | 14m 50s | 8 pass/7 skip default; 7 fail clean run-pending; grade 5 A/2 A-core·B-pending-GUARD-2 |
+| 7 | ITEST-3 | acceptance-tests: AC-7,8,9,10 (pending) + red baseline | ✅ Done | 5,013,273 | 17m 12s | 9 pass/10 skip default; 9 pass/10 fail run-pending; AC-8 un-pended green-at-baseline; grade 3 A/1 A-core·B-pending-PROV-3 |
+| 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,710,718 | 4m 46s | packet assembled 2026-10-15; **G-2 approved 2026-10-15 — Matt Quirk**; behavior stage unblocked |
+| 9 | SEED-3 | AC-1, AC-11: ship the seed asset + loader; solve from it | ✅ Done | 11,658,368 | 19m 47s | AC-1 core green (GUARD-2 augment open), AC-11 ✅ |
+| 10 | SEED-4 | AC-2, AC-4: candidate-origin manifest + ingest accept/reject | ✅ Done | 7,016,343 | 12m 36s | AC-2 ✅; AC-4 core green (GUARD-2 augment open); candidate mappings (llmSeed) + ingest reject rule; unit 1340/0, cov 100%/9, default 13/6, grade 3A+2 A-core/B-pending |
+| 11 | SEED-5 | AC-5, AC-6: validation manifest + ship decision | ✅ Done | 8,693,898 | 15m 16s | AC-5 ✅, AC-6 ✅; held-out manifest (56 recipes) + real `shippable` AND-rule; SEED module complete; unit 1341/0, cov 100%/9, default 15/4skip, run-pending AC-5/6 pass, grade 5A+2 A-core/B-pending |
+| 12 | PROV-2 | AC-7, AC-8: tier-by-origin derivation + append-only evidence | ✅ Done | 7,347,169 | 13m 47s | AC-7 ✅ (tier-by-origin + qualifier), AC-8 kept green; unit 1349/0, cov 100%/touched, default 16/3skip, run-pending 18/1 (only AC-3 red), grade 6A+2 A-core/B-pending-GUARD-2; one unreachable lib change → no cross-feature run |
+| 13 | PROV-3 | AC-9, AC-10: promotion on swatch; opinions never promote | ✅ Done | 8,356,426 | 20m 58s | AC-9 ✅, AC-10 ✅; `promoteWithOwnSwatch` (device-agnostic self-confirmation); unit 1352/0, cov 100%/touched, default 18/1skip, run-pending 18/1 (only AC-3 red), grade 8A+2 A-core/B-pending-GUARD-2; AC-9 augment closed; one unreachable lib change → no cross-feature run; PROV module complete |
+| 14 | GUARD-2 | AC-3: ratios-from-solver guard (+ AC-1/AC-4 structural augments) | ✅ Done | 14,210,323 | 25m 17s | AC-3 ✅ un-pended; AC-1/AC-4 augments closed; 3 real guards; unit 1352/0, cov 100%/9 (no lib/ touched), default==run-pending 19/0, grade 11 A/0; pending map empty; no cross-feature run (no lib/ change) |
+| 15 | SIGNOFF-1 | sign-off: packet + summary page + manual approval (G-3) | ✅ Done | 7,823,199 | 23m 16s (23m 35s) | packet [signoff/round-1.md](signoff/round-1.md) assembled 2026-10-15; G-3 D-5 gap accepted — Matt Quirk; verification green (unit 1352/0, cov 100%/touched, bs-13 19/0 default==run-pending, cross-feature 241/0); fresh grade 11 A/0; **Approved 2026-10-15 by Matt Quirk at `b7b9b26`** (SIGNOFF-DECISION) |
+
+*Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
+
+## Next phase
+
+**✅ DONE — signed off 2026-10-15 by Matt Quirk (SIGNOFF-1 round 1 Approved) at code `b7b9b26`.** All behaviour is complete (SEED, PROV, GUARD modules done; 11/11 ACs ✅; pending map empty), verification green, whole-suite grade **11 A / 0**, G-1/G-2/G-3 all ✅ (G-3 D-5 gap accepted). **No agent phase remains.**
+
+- **Remaining action (not an agent phase): merge feat/bs-13 → main** via a throwaway worktree checked out on `main` (the primary checkout on feat/bs-04 has stale untracked specs that abort `checkout main`); `git merge -F <file>`, not stdin. Per D-6 the branch is off `main` @ `7015390`; bs-11/bs-12 have since merged — expect to merge onto shared `lib/domain` / `build_app` changes (bs-13 adds `lib/dataset/` + extends provenance). Re-run the merged-tree verification before pushing.
+- Reminders: bs-13's own suite is pure-Dart on `flutter-tester` (always `-d flutter-tester`; cross-feature regression on the iPhone 17 sim via the device lane; flutter at `~/development/flutter/bin`; cwd = `/Users/matthew.quirk/Nuance-bs13`).
+
+## Token usage
+
+<!-- One row per session, appended as that session's last edit (SKILL.md § Token usage). -->
+
+| Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| PLAN | c8a994a2 | 2026-10-14 14:16 EDT | 15:14 | 57m 41s | 17m 23s | claude-opus-4-8 | 66 | 192,330 | 2,696,529 | 74,952 | 2,963,877 | plan written |
+| GATE-DECISION | 9322eaed | 2026-10-14 16:06 EDT | 16:07 | 1m 29s | 1m 29s | claude-opus-4-8 | 32 | 38,265 | 958,072 | 5,144 | 1,001,513 | G-1 approved — bs-13 spec approved by Matt Quirk; SEED-1 unblocked |
+| SEED-1 | c8a8789e | 2026-10-14 16:08 EDT | 16:31 | 22m 06s | 22m 06s | claude-opus-4-8 | 124 | 106,263 | 5,995,882 | 37,100 | 6,139,369 | scaffold verify: branch off 7015390 confirmed; baseline unit 1279/0, integ 222/0 (iPhone 17 sim), analyze clean; coverage gate PASS-clean/FAIL-on-gap; no product code |
+| SEED-2 | 4f988a02 | 2026-10-14 17:46 EDT | 18:21 | 34m 54s | 34m 54s | claude-opus-4-8 | 194 | 197,147 | 15,611,037 | 89,894 | 15,898,272 | shell: lib/dataset surface + build_app wiring; analyze clean, unit 1315/0, coverage 100%/6, integ 222/0 (iPhone 17 sim); behaviour unchanged |
+| PROV-1 | b63b2712 | 2026-10-14 18:23 EDT | 18:42 | 18m 42s | 18m 41s | claude-opus-4-8 | 98 | 92,319 | 4,613,172 | 34,419 | 4,740,008 | shell: EvidenceKind + ProvenanceDerivation/ReadEndpoint seams (lib/domain, behaviour-neutral); analyze clean, unit 1322/0, coverage 100%/9, integ 222/0 (iPhone 17 sim); behaviour unchanged |
+| GUARD-1 | 78f50b35 | 2026-10-14 20:08 EDT | 22:10 | 2h 01m | 2h 01m | claude-opus-4-8 | 114 | 234,358 | 6,407,608 | 45,889 | 6,687,969 | shell: reusable guard harness landed (behaviour-neutral); analyze clean, unit 1332/0, coverage 100% touched, full regression 222/0 (sim) |
+| ITEST-1 | 5a0b5c6c | 2026-10-14 22:20 EDT | 22:36 | 16m 33s | 16m 33s | claude-opus-4-8 | 142 | 227,084 | 8,386,215 | 51,828 | 8,665,269 | acceptance scaffold: harness + fixtures + pending gate (11 ACs) + smoke/scaffold; analyze clean, bs13 suite 8/8 flutter-tester (default==run-pending), unit 1332/0, no lib/ touched, grade A/A; no red baseline yet (ITEST-2/3) |
+| ITEST-2 | 72dfe312 | 2026-10-15 02:42 EDT | 02:57 | 14m 50s | 14m 50s | claude-opus-4-8 | 100 | 242,607 | 5,944,780 | 50,281 | 6,237,768 | acceptance-tests: 7 pending AC tests (AC-1,2,3,4,5,6,11); default 8 pass/7 skip, run-pending red baseline 7 fail clean; unit 1332/0; grade 5 A/2 A-core·B-pending-GUARD-2; no lib/ touched |
+| ITEST-3 | 7649a3f8 | 2026-10-15 03:36 EDT | 03:53 | 17m 12s | 17m 12s | claude-opus-4-8 | 80 | 239,882 | 4,716,624 | 56,687 | 5,013,273 | acceptance-tests: AC-7,8,9,10; AC-8 un-pended green-at-baseline; default 9 pass/10 skip, run-pending 9 pass/10 fail clean; unit 1332/0; grade 3 A/1 A-core·B-pending-PROV-3; no lib/ touched |
+| ITEST-4 | ea77e907 | 2026-10-15 05:51 EDT | 05:55 | 4m 46s | 4m 46s | claude-opus-4-8 | 42 | 72,174 | 1,625,112 | 13,390 | 1,710,718 | packet assembled; G-2 awaiting human decision |
+| SIGNOFF-DECISION | 99c90897 | 2026-10-15 06:08 EDT | 06:58 | 49m 47s | 3m 06s | claude-opus-4-8 | 46 | 54,119 | 1,604,078 | 12,459 | 1,670,702 | ITEST-4 approved |
+| SEED-3 | 5e4857f2 | 2026-10-15 07:29 EDT | 07:49 | 19m 47s | 19m 47s | claude-opus-4-8 | 166 | 267,256 | 11,326,817 | 64,129 | 11,658,368 | AC-1 core green (A/B-pending-GUARD-2) + AC-11 A; shipped seed asset+loader; unit 1336/0, coverage 100%/9, default 11/8-skip green, grade no downgrades |
+| SEED-4 | 3a910d95 | 2026-10-15 08:22 EDT | 08:34 | 12m 36s | 12m 36s | claude-opus-4-8 | 112 | 226,846 | 6,748,036 | 41,349 | 7,016,343 | AC-2 ✅ / AC-4 core green (B-pending GUARD-2); candidate mappings + ingest reject rule; unit 1340/0, cov 100%/9, default 13 pass/6 skip, run-pending 13 pass/6 fail, grade 3A+2 A-core/B-pending |
+| SEED-5 | e3b78858 | 2026-10-15 08:56 EDT | 09:11 | 15m 16s | 15m 16s | claude-opus-4-8 | 140 | 237,122 | 8,411,138 | 45,498 | 8,693,898 | AC-5 ✅, AC-6 ✅ — held-out validation manifest (56 recipes) + real shippable AND-rule; SEED module complete; unit 1341/0, cov 100%/9 touched, default 15 pass/4 skip, run-pending AC-5/AC-6 pass (AC-3/7/9/10 red as owned), grade 5A + 2 A-core/B-pending-GUARD-2 |
+| PROV-2 | 1351470e | 2026-10-15 09:58 EDT | 10:12 | 13m 47s | 13m 47s | claude-opus-4-8 | 128 | 218,306 | 7,084,754 | 43,981 | 7,347,169 | AC-7 done (tier-by-origin + qualifier), AC-8 kept green; unit 1349/0, cov 100% touched, default 16/3skip, run-pending 18/1 (only AC-3 red/GUARD-2), grade 6A+2 A-core/B-pending-GUARD-2 |
+| PROV-3 | b999ae51 | 2026-10-15 11:10 EDT | 11:31 | 20m 58s | 20m 58s | claude-opus-4-8 | 124 | 258,201 | 8,036,375 | 61,726 | 8,356,426 | AC-9 + AC-10 delivered; promoteWithOwnSwatch; grade 8A/2 A-core·B-pending-GUARD-2; unit 1352/0; PROV module complete |
+| GUARD-2 | 4b0c9c2e | 2026-10-15 11:35 EDT | 12:01 | 25m 17s | 25m 17s | claude-opus-4-8 | 198 | 325,129 | 13,809,860 | 75,136 | 14,210,323 | AC-3 un-pended (ratios-from-solver guard) + AC-1/AC-4 structural augments closed; 3 real guards; unit 1352/0, cov 100%/9 (no lib/ touched), bs13 default==run-pending 19/0, grade 11 A/0; pending map empty; no cross-feature run (no lib/ change); fix passes 0/3 |
+| SIGNOFF-1 | 5f0126a0 | 2026-10-15 12:21 EDT | 12:44 | 23m 35s | 23m 16s | claude-opus-4-8 | 132 | 262,011 | 7,509,436 | 51,620 | 7,823,199 | sign-off packet + summary scorecard + fresh whole-suite re-grade (11 A/0); G-3 D-5 gap accepted; verification green (unit 1352/0, cov 100%/touched, bs-13 19/0 default==run-pending, cross-feature regression 241/0); awaiting owner decision |
+| SIGNOFF-DECISION | 86cec4cc | 2026-10-15 13:18 EDT | 13:26 | 7m 30s | 2m 07s | claude-opus-4-8 | 28 | 42,165 | 848,523 | 8,671 | 899,387 | SIGNOFF-1 approved |
+| **Feature total** |  | **2026-10-14 14:16 EDT** | **2026-10-15 13:26** | **8h 17m** | **6h 45m** |  | **2,066** | **3,533,584** | **122,334,048** | **864,153** | **126,733,851** |  |
+
+## Sign-off
+
+| Round | Packet | At code | Grades | Decision |
+|---|---|---|---|---|
+| 1 | [signoff/round-1.md](signoff/round-1.md) · [cost](signoff/cost-per-ac-round-1.md) · [scorecard](https://claude.ai/artifact/AWzjkeB1KGZnxDRDxa5r9n) | `b7b9b26` | 11 A / 0 | ✅ **Approved 2026-10-15 by Matt Quirk** (G-3 D-5 accepted) |

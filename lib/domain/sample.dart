@@ -3,13 +3,43 @@ import '../capture/source/capture_source.dart';
 import 'color_coordinates.dart';
 import 'provenance.dart';
 
+/// How a piece of evidence was obtained — its origin.
+///
+/// bs-13 derives a value's shown provenance tier from the origins of the
+/// evidence behind it (SI D9): see [ProvenanceDerivation]. The precedence,
+/// implemented in PROV-2, is `photographedSwatch` → Confirmed ·
+/// `instrumentMeasured` → Measured · `solverCalculated` → Calculated ·
+/// `llmSeed` → Estimated; [opinion] never contributes to the tier (AC-10).
+enum EvidenceKind {
+  /// Read from an instrument (e.g. a spectrophotometer).
+  instrumentMeasured,
+
+  /// Derived by the mix solver from other measured values.
+  solverCalculated,
+
+  /// Seeded by a model and not yet verified.
+  llmSeed,
+
+  /// A swatch the painter photographed of their own measured mix — the
+  /// self-confirmation that promotes an estimate to Confirmed (AC-9).
+  photographedSwatch,
+
+  /// A stated opinion; carried as evidence but never raises the tier (AC-10).
+  opinion,
+}
+
 /// A single source-tagged colour observation backing a [Sample].
 ///
 /// A sample keeps an append-ready list of these (SI D9) so the future
 /// peer-to-peer layer (bs-14) merges evidence as data rather than as a schema
-/// change. Behaviour is deferred — this is shape only.
+/// change. Each point records both where it came from ([source]) and how it was
+/// obtained ([kind]); the kind is what [ProvenanceDerivation] reads.
 class EvidencePoint {
-  const EvidencePoint({required this.coordinates, required this.source});
+  const EvidencePoint({
+    required this.coordinates,
+    required this.source,
+    this.kind = EvidenceKind.opinion,
+  });
 
   /// The colour this evidence reports, in canonical CIELAB.
   final ColorCoordinates coordinates;
@@ -17,14 +47,23 @@ class EvidencePoint {
   /// Where the evidence came from (instrument id, peer id, model name, …).
   final String source;
 
+  /// How this evidence was obtained — the origin the tier derives from.
+  ///
+  /// Defaults to [EvidenceKind.opinion] — a safe, non-contributing default so
+  /// existing call-sites keep compiling unchanged; every evidence point that
+  /// drives a tier is constructed with an explicit kind (the own-swatch wiring
+  /// in bs-05/capture passes [EvidenceKind.photographedSwatch]).
+  final EvidenceKind kind;
+
   @override
   bool operator ==(Object other) =>
       other is EvidencePoint &&
       other.coordinates == coordinates &&
-      other.source == source;
+      other.source == source &&
+      other.kind == kind;
 
   @override
-  int get hashCode => Object.hash(coordinates, source);
+  int get hashCode => Object.hash(coordinates, source, kind);
 
   @override
   String toString() => 'EvidencePoint($source: $coordinates)';

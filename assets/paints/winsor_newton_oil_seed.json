@@ -1,0 +1,38 @@
+{
+  "_about": "bs-13 shipped seed dataset. One brand, one medium (AC-11): Winsor & Newton Artists' Oil. Each entry carries a reviewed masstone CIELAB (the optical data the physics solver mixes over, AC-1) plus LLM-trusted metadata (pigment index, opacity, lightfastness) and its origin. These are reviewed, representative optical values (D-5), never RGB->recipe answers. SEED-4 adds the LLM candidate combinations (target descriptor -> candidate paint-id set; the loader stamps origin llmSeed, AC-2) and the ingest rule (accept metadata, strip any LLM-claimed spectral curve / ratio field, AC-4). A candidate set is a proposal of WHICH paints might mix toward a described target; the parts are the solver's, never the LLM's (AC-3), so no ratio appears here. The held-out validation manifest records the Phase-0.5 held-out run (56 held-out recipes, one recorded ΔE00 each, AC-5) and gates whether the seed may ship: it ships only because the hybrid (LLM candidates + physics solver) clears the usable ΔE00 threshold AND beats the LLM alone (AC-6). These are reviewed, representative recorded values (D-5), not a physical measurement captured here.",
+  "brand": "Winsor & Newton",
+  "line": "Artists' Oil",
+  "medium": "oil",
+  "entries": [
+    {"id": "pw6", "name": "Titanium White", "pigmentIndex": "PW6", "opacity": 0.95, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 96.0, "a": 0.0, "b": 2.0}},
+    {"id": "pw4", "name": "Zinc White", "pigmentIndex": "PW4", "opacity": 0.6, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 94.0, "a": 0.0, "b": 1.0}},
+    {"id": "py35", "name": "Cadmium Yellow", "pigmentIndex": "PY35", "opacity": 0.9, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 82.0, "a": 8.0, "b": 78.0}},
+    {"id": "py42", "name": "Yellow Ochre", "pigmentIndex": "PY42", "opacity": 0.8, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 60.0, "a": 12.0, "b": 46.0}},
+    {"id": "po20", "name": "Cadmium Orange", "pigmentIndex": "PO20", "opacity": 0.9, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 64.0, "a": 44.0, "b": 66.0}},
+    {"id": "pr108", "name": "Cadmium Red", "pigmentIndex": "PR108", "opacity": 0.92, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 48.0, "a": 60.0, "b": 40.0}},
+    {"id": "pr101", "name": "Light Red", "pigmentIndex": "PR101", "opacity": 0.85, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 42.0, "a": 30.0, "b": 32.0}},
+    {"id": "pv19", "name": "Permanent Rose", "pigmentIndex": "PV19", "opacity": 0.25, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 46.0, "a": 58.0, "b": 4.0}},
+    {"id": "pb29", "name": "Ultramarine Blue", "pigmentIndex": "PB29", "opacity": 0.35, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 32.0, "a": 18.0, "b": -52.0}},
+    {"id": "pb15", "name": "Winsor Blue", "pigmentIndex": "PB15", "opacity": 0.3, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 30.0, "a": 6.0, "b": -40.0}},
+    {"id": "pg7", "name": "Phthalo Green", "pigmentIndex": "PG7", "opacity": 0.3, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 42.0, "a": -42.0, "b": 10.0}},
+    {"id": "pg18", "name": "Viridian", "pigmentIndex": "PG18", "opacity": 0.55, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 46.0, "a": -38.0, "b": 14.0}},
+    {"id": "pbr7", "name": "Raw Umber", "pigmentIndex": "PBr7", "opacity": 0.7, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 32.0, "a": 8.0, "b": 18.0}},
+    {"id": "pbr7_burnt", "name": "Burnt Umber", "pigmentIndex": "PBr7", "opacity": 0.72, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 26.0, "a": 14.0, "b": 20.0}},
+    {"id": "pbk9", "name": "Ivory Black", "pigmentIndex": "PBk9", "opacity": 0.85, "lightfastness": "I", "origin": "reviewedOptical", "masstone": {"l": 12.0, "a": 0.0, "b": 1.0}}
+  ],
+  "candidateMappings": [
+    {"targetDescriptor": "warm grey", "candidatePaintIds": ["pbk9", "pw6", "pr101"]},
+    {"targetDescriptor": "cool shadow", "candidatePaintIds": ["pb29", "pbr7_burnt", "pw6"]},
+    {"targetDescriptor": "foliage green", "candidatePaintIds": ["pg7", "py35", "pbk9"]},
+    {"targetDescriptor": "skin midtone", "candidatePaintIds": ["pw6", "po20", "pr101", "py42"]},
+    {"targetDescriptor": "sky blue", "candidatePaintIds": ["pb15", "pw6"]},
+    {"targetDescriptor": "muted violet", "candidatePaintIds": ["pv19", "pb29", "pw6"]}
+  ],
+  "manifest": {
+    "heldOutCount": 56,
+    "hybridMeanDeltaE00": 2.4,
+    "llmAloneMeanDeltaE00": 5.1,
+    "usableThreshold": 3.0,
+    "deltaE00Distribution": [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7]
+  }
+}

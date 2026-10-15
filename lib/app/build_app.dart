@@ -18,6 +18,9 @@ import '../correction/correction_read_endpoint.dart';
 import '../correction/correction_screen.dart';
 import '../correction/engine/correction_engine.dart';
 import '../correction/engine/correction_engine_impl.dart';
+import '../dataset/dataset_read_endpoint.dart';
+import '../dataset/seed_dataset.dart';
+import '../dataset/seeded_palette_source.dart';
 import '../display/display_controller.dart';
 import '../display/display_read_endpoint.dart';
 import '../display/display_scope.dart';
@@ -180,6 +183,7 @@ class AppDependencies {
     this.sourcePhotoStore,
     this.pdfShareSink,
     this.displayController,
+    this.seedDataset = const SeedDataset.empty(),
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -352,6 +356,17 @@ class AppDependencies {
   /// its injector, not by [buildApp].
   final DisplayController? displayController;
 
+  /// The shipped seed dataset the app always has available to mix from (bs-13
+  /// SEED-2), defaulting to the empty [SeedDataset.empty] placeholder.
+  ///
+  /// [buildApp] exposes it through the [DatasetReadEndpoint] and composes a
+  /// [SeededPaletteSource] over it with [paletteSource], so the shipped seed and
+  /// the painter's own palettes coexist behind the one [PaletteSource] the
+  /// Recipes screen reads. The empty default keeps assembly behaviour-neutral;
+  /// production loads the real asset via `AssetSeedLoader` before assembly
+  /// (SEED-3) and the acceptance harness injects a dataset here.
+  final SeedDataset seedDataset;
+
   /// Returns a copy of these dependencies with only [cvdProfile] replaced
   /// (bs-07 AC-13, D-3).
   ///
@@ -381,6 +396,7 @@ class AppDependencies {
         sourcePhotoStore: sourcePhotoStore,
         pdfShareSink: pdfShareSink,
         displayController: displayController,
+        seedDataset: seedDataset,
       );
 }
 
@@ -456,6 +472,24 @@ Widget buildApp(AppDependencies deps) {
     ownsSpeech: injectedSpeech == null,
   );
 }
+
+/// The palettes a recipe solve may mix from: the always-available shipped seed
+/// composed with the painter's own palettes (bs-13 SEED-2).
+///
+/// The shipped [SeededPaletteSource] over [AppDependencies.seedDataset] is
+/// listed first, the painter's [AppDependencies.paletteSource] after, behind the
+/// one frozen [PaletteSource] seam the solver reads (RecipeController /
+/// CorrectionController read only `palettes()`). This is the seam SEED-3 fills
+/// with the real asset without touching the assembly. The **write** path (the
+/// Palette screen's `PaletteController`, which persists through a concrete
+/// `PersistentPaletteSource`) keeps the unwrapped [AppDependencies.paletteSource]
+/// so persistence is unaffected. An empty shell seed makes this list exactly the
+/// painter's palettes, so wiring it in is behaviour-neutral.
+PaletteSource _solverPaletteSource(AppDependencies deps) =>
+    CompositePaletteSource([
+      SeededPaletteSource(deps.seedDataset),
+      deps.paletteSource,
+    ]);
 
 /// The root widget, holding the live colour-vision profile the app's pipeline
 /// reads so a saved self-assessment can reconfigure it (bs-07 AC-13, D-3).
@@ -581,6 +615,15 @@ class _AppState extends State<_App> {
     if (profileStore != null) {
       tree = CvdProfileReadEndpoint(store: profileStore, child: tree);
     }
+    // bs-13 SEED-2: expose the shipped seed dataset to the whole app (above the
+    // MaterialApp) so the acceptance suite can observe the seed's optical
+    // entries, candidate mappings and ship-gate manifest the UI does not surface
+    // as text. Empty in the shell, so it adds no behaviour.
+    tree = DatasetReadEndpoint(
+      key: DatasetReadEndpoint.endpointKey,
+      dataset: deps.seedDataset,
+      child: tree,
+    );
     return AppScope(
       dependencies: deps,
       child: LiveProfileScope(
@@ -601,7 +644,7 @@ Widget _home(AppDependencies deps) {
           target: deps.correctionEntry!.target,
           currentMix: deps.correctionEntry!.currentMix,
           captureSource: deps.captureSource!,
-          paletteSource: deps.paletteSource,
+          paletteSource: _solverPaletteSource(deps),
           correctionEngine: deps.correctionEngine,
           mixingEngine: deps.mixingEngine,
           sampleSource: deps.sampleSource,
@@ -622,7 +665,7 @@ Widget _home(AppDependencies deps) {
                   ? RecipesHomeScreen(
                       target: deps.recipesEntry!.target,
                       sampleSource: deps.sampleSource,
-                      paletteSource: deps.paletteSource,
+                      paletteSource: _solverPaletteSource(deps),
                       mixingEngine: deps.mixingEngine,
                       speech: deps.speech,
                       router: deps.router,
@@ -691,6 +734,7 @@ AppDependencies _depsWithSpeech(AppDependencies deps, Speech speech) {
     sourcePhotoStore: deps.sourcePhotoStore,
     pdfShareSink: deps.pdfShareSink,
     displayController: deps.displayController,
+    seedDataset: deps.seedDataset,
   );
 }
 
@@ -1220,9 +1264,12 @@ class _PaletteHomeScreenState extends State<PaletteHomeScreen> {
       // there is a solve to constrain; selecting a palette calls its frozen
       // [RecipeController.selectPalette], which re-solves against only that
       // palette. Observed by the acceptance suite through the [RecipeReadEndpoint].
+      // The solve reads the shipped-seed-composed source (bs-13 SEED-2) so the
+      // seed is available to mix; the [PaletteController] keeps the unwrapped
+      // [AppDependencies.paletteSource] so its persistence (bs-06) is unaffected.
       _recipeController = RecipeController(
         sampleSource: deps.sampleSource,
-        paletteSource: deps.paletteSource,
+        paletteSource: _solverPaletteSource(deps),
         mixingEngine: deps.mixingEngine,
         target: deps.initialSample,
         speech: deps.speech,
