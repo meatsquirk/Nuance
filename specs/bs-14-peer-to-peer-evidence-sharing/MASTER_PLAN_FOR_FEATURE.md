@@ -1,11 +1,11 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** Not started — next CORE-1 (G-1 ✅ resolved; still blocked by G-3 bs-13 sign-off & merge)
+**Status:** In progress — next CORE-2 (shell). G-3 ✅ resolved (bs-13 signed off & merged to main @ `c00422f`); G-4 still open (blocks EXCHANGE phases only).
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
-**Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `167c5db` · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
+**Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
-> **FUTURE / post-v1 feature.** The spec is a draft awaiting owner approval (G-1) and is roadmap Phase 3 (SI D8): a serverless peer-to-peer evidence layer, invisible to the painter, limited to anonymous mix-accuracy records that refine the *Estimated* AI mappings only. This plan is written against bs-13's **planned** provenance/dataset surface; it cannot run until bs-13 is signed off and merged to main (G-3), and it introduces the first sanctioned off-device path, which must be reconciled with bs-12's network-block guards (G-4). A plan-upgrade pass is expected once bs-13's real surface lands.
+> **FUTURE / post-v1 feature.** The spec is a draft awaiting owner approval (G-1) and is roadmap Phase 3 (SI D8): a serverless peer-to-peer evidence layer, invisible to the painter, limited to anonymous mix-accuracy records that refine the *Estimated* AI mappings only. This plan is written against bs-13's **planned** provenance/dataset surface; it cannot run until bs-13 is signed off and merged to main (G-3), and it introduces the first sanctioned off-device path, which must be reconciled with bs-12's network-block guards (G-4). A plan-upgrade pass is expected once bs-13's real surface lands. **G-3 resolved 2026-10-15** (bs-13 merged to main @ `c00422f`); CORE-1 confirmed the real surface present — `ProvenanceDerivation`/`appendEvidence`/`promoteWithOwnSwatch`/`tierFor` in `lib/domain/provenance_derivation.dart`, `EvidenceKind` in `lib/domain/sample.dart` (**not** `lib/domain/provenance.dart` as D-2 / the parallel note still say — a surface drift for MERGE-1 / the upgrade pass to reconcile), `CandidateMapping` + declared-palette in `lib/dataset/seed_dataset.dart`.
 
 ## Gap analysis (against `167c5db`)
 
@@ -106,7 +106,7 @@ Pre-seeded augmentations: MERGE-4 strengthens `TestAC09` to assert even an instr
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| CORE | [modules/CORE.md](modules/CORE.md) | Scaffold; `lib/sharing/` package + app wiring; consent state + the invisibility guarantee | bs-13 (G-3) | ⬜ Todo |
+| CORE | [modules/CORE.md](modules/CORE.md) | Scaffold; `lib/sharing/` package + app wiring; consent state + the invisibility guarantee | bs-13 (G-3) | 🔄 In progress |
 | RECORD | [modules/RECORD.md](modules/RECORD.md) | The anonymous mix-accuracy record: type, builder, privacy redaction, declared-palette gate, content hash | CORE | ⬜ Todo |
 | EXCHANGE | [modules/EXCHANGE.md](modules/EXCHANGE.md) | Serverless gossip: transport interface, offer-missing/dedup, no-wait; real platform transport (enabler) | CORE, RECORD | ⬜ Todo |
 | MERGE | [modules/MERGE.md](modules/MERGE.md) | Append-only source-tagged merge, crowd refine, never-promote, rate-limit | CORE, RECORD, bs-13 PROV | ⬜ Todo |
@@ -142,7 +142,7 @@ graph LR
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the draft banner) | CORE-1 | ✅ Resolved 2026-10-14: spec approved; draft banner replaced with approval line (feat/bs-14 spec) — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-5's packet) | every behavior phase | Open |
-| G-3 | dependency | bs-13 signed off & merged to main — its PROV (`EvidenceKind`, append-only add, `ProvenanceDerivation`) and SEED (`CandidateMapping`, declared-palette) surface present on main — closed by the bs-13 sign-off merge | CORE-1 (scaffold branches off a main that contains bs-13) | Open |
+| G-3 | dependency | bs-13 signed off & merged to main — its PROV (`EvidenceKind`, append-only add, `ProvenanceDerivation`) and SEED (`CandidateMapping`, declared-palette) surface present on main — closed by the bs-13 sign-off merge | CORE-1 (scaffold branches off a main that contains bs-13) | ✅ Resolved 2026-10-15: bs-13 signed off (`bcde3be`) & merged to main (`c00422f`); surface verified present at CORE-1 (`provenance_derivation.dart`, `sample.dart` `EvidenceKind`, `seed_dataset.dart` `CandidateMapping`) — Matt Quirk (bs-13 sign-off) |
 | G-4 | decision | Approve the single sanctioned off-device path and how bs-12's network-block / no-off-device-path guards are reconciled to permit only the consented, record-only P2P exchange — routed to the owner | EXCHANGE-2, EXCHANGE-4 | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -158,8 +158,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | CORE-1 | scaffold: branch (off bs-13-merged main), baseline, coverage gate, bs14 integration runner | ⬜ Next | | | G-1 ✅; blocked by G-3 |
-| 2 | CORE-2 | shell: `lib/sharing/` package + `SharingConsent`/`ConsentStore` + `SharingScope` wiring + `SharingConsentReadEndpoint` | ⬜ Todo | | | |
+| 1 | CORE-1 | scaffold: branch (off bs-13-merged main), baseline, coverage gate, bs14 integration runner | ✅ Done | 6,209,519 | 23m 46s | G-1 ✅, G-3 ✅ resolved; rebased onto `c00422f`; baseline unit 1413/0, integ 293/293 (241 sim + 52 flutter-tester) |
+| 2 | CORE-2 | shell: `lib/sharing/` package + `SharingConsent`/`ConsentStore` + `SharingScope` wiring + `SharingConsentReadEndpoint` | ⬜ Next | | | startable now (G-3 clear) |
 | 3 | RECORD-1 | shell: `MixAccuracyRecord` + content hash + `RecordBuilder` + `RecordInspectEndpoint` | ⬜ Todo | | | |
 | 4 | EXCHANGE-1 | shell: `PeerTransport` + `GossipExchange` skeleton + seen-set + fire-and-forget scheduler + `ExchangeOutcomeEndpoint` | ⬜ Todo | | | ∥ MERGE-1 |
 | 5 | MERGE-1 | shell: `EvidenceMerge` + `CrowdRefine` + `SourceRateLimiter` + `EvidenceKind.peerContributed` + `MappingEvidenceEndpoint` | ⬜ Todo | | | ∥ EXCHANGE-1 |
@@ -185,7 +185,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-CORE-1 (scaffold) is first but still **blocked by G-3** — it cannot start until bs-13 is signed off & merged to main. **G-1 ✅ resolved 2026-10-14** (spec approved). Nothing in bs-14 is startable until G-3 clears. When G-3 clears: run CORE-1, then CORE-2, then RECORD-1, then EXCHANGE-1 ∥ MERGE-1. Also decide **G-4** (sanctioned off-device path / bs-12 guard reconciliation) before the EXCHANGE behavior phases; it does not block the scaffold/shells.
+CORE-1 ✅ done — branch rebased onto bs-13-merged main (`c00422f`), baseline recorded (unit 1413/0; integration 293/293 = 241 iPhone 17 sim + 52 flutter-tester), coverage gate self-check passed, `integration_test/bs14/` pending-gate skeleton seeded (all 12 ACs pending). **Next: CORE-2** (shell — `lib/sharing/` package + `SharingConsent`/`ConsentStore` + `SharingScope` wiring + `SharingConsentReadEndpoint`); it is startable now (G-1 + G-3 both ✅; G-4 does not block it). After CORE-2: RECORD-1, then EXCHANGE-1 ∥ MERGE-1. Decide **G-4** (sanctioned off-device path / bs-12 guard reconciliation) before the EXCHANGE behavior phases — it blocks EXCHANGE-2/EXCHANGE-4 only, not the scaffold/shells. **G-2** (approve the acceptance tests) still blocks every behavior phase.
 
 ## Token usage
 
@@ -196,7 +196,8 @@ CORE-1 (scaffold) is first but still **blocked by G-3** — it cannot start unti
 | PLAN | | | | | | | | | | | | plan written |
 | PLAN | 5e34b79c | 2026-10-14 17:46 EDT | 18:07 | 21m 02s | 13m 45s | claude-opus-4-8 | 58 | 171,188 | 1,871,095 | 50,988 | 2,093,329 | plan written |
 | GATE-DECISION | 5e34b79c | 2026-10-14 18:12 EDT | 18:13 | 0m 58s | 0m 58s | claude-opus-4-8 | 18 | 6,316 | 1,231,854 | 3,848 | 1,242,036 | G-1 approved |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-14 18:13** | **22m 00s** | **14m 43s** |  | **76** | **177,504** | **3,102,949** | **54,836** | **3,335,365** |  |
+| CORE-1 | b46e8d1e | 2026-10-15 14:21 EDT | 14:45 | 23m 46s | 23m 46s | claude-opus-4-8 | 116 | 120,199 | 6,041,574 | 47,630 | 6,209,519 | scaffold done: rebased onto c00422f (G-3 closed), baseline unit 1413/0 + integration 293/293 (241 sim + 52 flutter-tester), coverage gate self-check pass, bs14 pending-gate skeleton seeded (12 ACs) |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-15 14:45** | **45m 46s** | **38m 29s** |  | **192** | **297,703** | **9,144,523** | **102,466** | **9,544,884** |  |
 
 ## Sign-off
 
