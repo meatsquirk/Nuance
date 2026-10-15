@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅ (harness + fixtures + pending gate + smoke/scaffold green); next ITEST-2
+**Status:** In progress — ITEST-2 ✅ (AC-1,2,3,4,5,6,11 pending + red baseline, grade 5 A / 2 A-core·B-pending-GUARD-2); next ITEST-3 (AC-7,8,9,10)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs13/dataset_harness.dart`, `integration_test/bs13/dataset_test.dart`, `integration_test/bs13/pending.dart` (consumes the SEED/PROV surfaces and the GUARD guards; writes no product code).
 **Depends on:** SEED-2, PROV-1, GUARD-1 (all shells wired) · **Blocks:** every behavior phase (via G-2)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 8,665,269 | 16m 33s |
-| 2 | acceptance-tests | AC-1,2,3,4,5,6,11 | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1,2,3,4,5,6,11 | ✅ Done | 6,237,768 | 14m 50s |
 | 3 | acceptance-tests | AC-7,8,9,10 | ⬜ Todo | | |
 | 4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -61,6 +61,27 @@ Landed the bs-13 acceptance scaffold — **test-support only, no `lib/` product 
 - **Tasks:** write one pending test per AC per the master catalogue (grade-A: each Given built + checked, the When, each Then's exact assertion, the control). Record the run-pending red baseline in the table below.
 - **Exit criteria:** suite green by default (all seven pending/skipped); each fails cleanly under run-pending at the documented Then/precondition; grade gate passed.
 
+### Result (ITEST-2) ✅
+
+Added one *pending* acceptance test per AC for **AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-11** to `integration_test/bs13/dataset_test.dart` (new group `bs-13 dataset acceptance criteria`; **test-support only, no `lib/` touched**). AC-1/2/4/5/6/11 via `acTestWidgets` (observed through the wired `DatasetReadEndpoint` — `.dataset` / `.manifest`); AC-3 via `acTest` (the `ratioProvenanceGuard` source scan). Each reads only `dataset_harness.dart`. Highlights:
+
+- **AC-1** solves `realEngine.inverse(AC1_TARGET, palette-from-seed-entries)` and asserts every top-recipe component is a seed optical paint **and** `predictedColor ≈ realEngine.forward(components)` (within 1.0 ΔLab) — a stored answer need not be forward-consistent, so this rejects a lookup. The source-level no-lookup guard control is the GUARD-2 augmentation (→ *B pending GUARD-2*).
+- **AC-2** asserts every `CandidateMapping.origin == llmSeed`, each candidate id is grounded in a shipped entry, and (no runtime LLM) two `AssetSeedLoader` loads return identical mappings + boot drives no speech.
+- **AC-3** asserts `ratioProvenanceGuard()` zero offenders over `lib/` + schema; **control:** re-pointed at `control_llmRatio` it lists the planted file.
+- **AC-4** asserts accepted metadata (pigment index, masstone) is retained and survives `toPaint()`; the claimed-value strip + schema guard control is the GUARD-2 augmentation (→ *B pending GUARD-2*).
+- **AC-5** asserts the shipped `manifest.heldOutCount` ∈ [50,100], a non-empty distribution, one ΔE00 per recipe, all finite ≥ 0.
+- **AC-6** asserts the passing `heldOutManifest.shippable` (and the shipped seed) is true and both single-condition controls are not shippable (isolates each half of the threshold ∧ beats-LLM AND).
+- **AC-11** asserts one brand, one medium (every entry checked) and ~15 paints (count ∈ [12,18]).
+
+**Verification:** `flutter analyze integration_test/bs13` clean. **Default run (pending skipped): `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` = 8 passed / 7 skipped, green.** **Run-pending red baseline (`--dart-define=BS13_RUN_PENDING=true`): 8 passed / 7 failed** — each of the seven fails cleanly at the documented Then or at a Given precondition naming its owning phase (no compile/harness errors); see the *Red baseline* table. **Unit suite 1332/0** unchanged (no `lib/` touched). **Coverage gate:** no in-scope source files (test-support only) — satisfied, same as ITEST-1/GUARD-1. **Grade gate:** fresh independent grader over the 7 tests (G1–G6) → **5 A, 2 A-core / B-pending-GUARD-2 (AC-1, AC-4), 0 below A** — matches the pre-seeded expectations; no downgrade, no fix needed. **Fix passes:** 0/3 (green on the first full run). The 3 pre-seeded augmentations (TestAC01 no-lookup → GUARD-2; TestAC04 no-claimed-value → GUARD-2; TestAC09 promotion → PROV-3) stand unchanged.
+
+### Checkpoint / Handoff (ITEST-2 → ITEST-3)
+
+- **ITEST-3 adds AC-7,8,9,10** to the **same `dataset_test.dart`** (append to the `bs-13 dataset acceptance criteria` group, or a sibling group) — all pure-Dart `acTest` over `sampleWithEvidence` / `provenanceOf` / `derivation` (no widget). **ITEST-2 and ITEST-3 share `dataset_test.dart` → run sequentially; ITEST-2 is done, ITEST-3 next.**
+- **Red-baseline expectation (ITEST-3):** at the shell `ProvenanceDerivation.tierFor` returns the fallback and the append-only add is a stub — so AC-7 (each origin → its tier), AC-8 (append + retain), AC-9 (Estimated→Confirmed on swatch, *B pending PROV-3*), AC-10 (opinion stays Estimated) each fail cleanly under run-pending on a Then (or a Given precondition naming PROV-2/PROV-3). Record one row per test in the *Red baseline* table (AC-7..10 rows are pre-seeded) and grade with a fresh grader.
+- **Verification commands (unchanged):** default `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester`; red baseline adds `--dart-define=BS13_RUN_PENDING=true`. **`-d flutter-tester` mandatory** (no `-d` ⇒ zero tests, false green). flutter at `~/development/flutter/bin`; cwd = the worktree root (`/Users/matthew.quirk/Nuance-bs13`).
+- **Pattern to mirror** (grade-A): check every Given through the public surface *before* the When; make the pending test fail at a Then or a Given precondition naming its owning phase; pair a negative Then with a control. AC-3's control (re-point the guard at a planted fixture, assert it lists it) is the reusable template.
+
 ## Phase 3 — AC-7,8,9,10 (pending) + red baseline
 
 - **Kind:** acceptance-tests
@@ -80,17 +101,17 @@ Landed the bs-13 acceptance scaffold — **test-support only, no `lib/` product 
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_RecipesSolvedFromOpticalData | FAIL (empty seed) | Given: seed has entries / Then: solved from optical data | SEED-3 (+GUARD-2) | A / B pending GUARD-2 |
-| AC-2 | TestAC02_CandidatesFromLlm | FAIL | Then: candidate origin = llmSeed | SEED-4 | A |
-| AC-3 | TestAC03_RatiosFromSolverNeverLlm | FAIL (guard stub) | Then: zero offenders + control listed | GUARD-2 | A |
-| AC-4 | TestAC04_MetadataAcceptedClaimedValuesRejected | FAIL | Then: metadata kept, claimed stripped | SEED-4 (+GUARD-2) | A / B pending GUARD-2 |
-| AC-5 | TestAC05_HeldOutValidationRecorded | FAIL | Then: count 50–100 + distribution present | SEED-5 | A |
-| AC-6 | TestAC06_SeedShipsOnlyOnEvidence | FAIL | Then: shippable iff threshold ∧ beats-LLM; controls not shippable | SEED-5 | A |
+| AC-1 | TestAC01_RecipesSolvedFromOpticalData | FAIL ✓ (empty seed) | Given precondition `seed carries optical entries (SEED-3)` — `Actual: []` | SEED-3 (+GUARD-2) | A / B pending GUARD-2 |
+| AC-2 | TestAC02_CandidatesFromLlm | FAIL ✓ | Given precondition `candidate combinations (SEED-4)` — `Actual: []` | SEED-4 | A |
+| AC-3 | TestAC03_RatiosFromSolverNeverLlm | FAIL ✓ (guard stub) | Then `zero offenders` — stub returns the `not-yet-enforced` sentinel | GUARD-2 | A |
+| AC-4 | TestAC04_MetadataAcceptedClaimedValuesRejected | FAIL ✓ | Given precondition `ingested entries (SEED-4)` — `Actual: []` | SEED-4 (+GUARD-2) | A / B pending GUARD-2 |
+| AC-5 | TestAC05_HeldOutValidationRecorded | FAIL ✓ | Then `heldOutCount in [50,100]` — `Actual: <0>` (empty manifest) | SEED-5 | A |
+| AC-6 | TestAC06_SeedShipsOnlyOnEvidence | FAIL ✓ | Then `heldOutManifest.shippable == true` — `Actual: <false>` (placeholder) | SEED-5 | A |
 | AC-7 | TestAC07_EnforcedProvenanceTierByOrigin | FAIL (derivation stub) | Then: each origin → its tier | PROV-2 | A |
 | AC-8 | TestAC08_EvidenceAppendOnly | FAIL | Then: appended + earlier retained | PROV-2 | A |
 | AC-9 | TestAC09_PromotedOnlyByMeasuredSwatch | FAIL | Then: Estimated→Confirmed on swatch | PROV-3 | A / B pending PROV-3 |
 | AC-10 | TestAC10_OpinionsNeverPromote | FAIL | Then: opinion → stays Estimated | PROV-3 | A |
-| AC-11 | TestAC11_ShippedSeedStaysNarrow | FAIL (empty seed) | Then: one brand/medium/~15 paints | SEED-3 | A |
+| AC-11 | TestAC11_ShippedSeedStaysNarrow | FAIL ✓ (empty seed) | Given precondition `seed carries entries (SEED-3)` — `Actual: []` | SEED-3 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 

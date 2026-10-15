@@ -205,4 +205,239 @@ void main() {
       }
     });
   });
+
+  // -------------------------------------------------------------------------
+  // bs-13 dataset acceptance criteria — ITEST-2 (AC-1,2,3,4,5,6,11).
+  //
+  // One *pending* test per AC: each is skipped in the default run and executes
+  // under `--dart-define=BS13_RUN_PENDING=true` (the red-baseline / un-pend
+  // run). At the shell baseline each fails cleanly — the shipped seed is empty
+  // (AssetSeedLoader shell), the shipped manifest is the non-shippable empty
+  // placeholder, and the guards return the `ruleNotYetEnforced` sentinel — so a
+  // test fails on a Then (AC-3/5/6) or on a Given precondition naming its owning
+  // phase (AC-1/2/4/11). Each behaviour phase un-pends its AC by deleting the
+  // row in `pending.dart`. ITEST-3 adds AC-7/8/9/10 to this file.
+  //
+  // AC-1 and AC-4 carry a GUARD-2 augmentation (the structural no-lookup /
+  // no-claimed-value guard control is not assertable until GUARD-2 fills the
+  // real scan) → graded *B pending GUARD-2*; the core behaviour here is
+  // assertable at A once SEED-3/SEED-4 land.
+  group('bs-13 dataset acceptance criteria', () {
+    acTestWidgets('AC-1', 'TestAC01_RecipesSolvedFromOpticalData',
+        (tester) async {
+      final h = await givenTheDatasetApp(tester);
+      final entries = h.dataset.entries;
+      // Given: the shipped seed carries optical entries (masstone), not stored
+      // answers (SEED-3 ships the asset) — checked before solving so an empty
+      // shell seed fails here, naming the owning phase, rather than in the
+      // engine.
+      expect(entries, isNotEmpty,
+          reason: 'AC-1 Given: the shipped seed carries optical entries (SEED-3)');
+      expect(entries.every((e) => e.masstone.lightness.isFinite), isTrue,
+          reason: 'AC-1 Given: each entry carries masstone optical data, not an '
+              'RGB→recipe answer');
+      expect(h.dataset.candidateMappings.every((m) => m.candidatePaintIds.isNotEmpty),
+          isTrue,
+          reason: 'AC-1 Given: candidate mappings carry paint-id sets only, '
+              'never finished recipes or ratios');
+
+      // When: a recipe is produced for the target over the seed via the real
+      // engine's inverse solve (through the shipped optical data).
+      final seedIds = {for (final e in entries) e.id};
+      final palette =
+          PaintPalette(name: h.dataset.brand, paints: [for (final e in entries) e.toPaint()]);
+      final recipes = solveRecipes(AC1_TARGET, palette);
+
+      // Then: the recipe is produced by the solver from the stored optical data
+      // — every component is a seed optical paint, and its predicted colour is
+      // the engine's forward mix of those components (a stored answer need not be
+      // forward-consistent). The seed has no stored target→recipe answer the
+      // result could have been retrieved from (candidate mappings carry no
+      // ratios/answers, asserted above).
+      expect(recipes, isNotEmpty,
+          reason: 'AC-1: the solver produces a recipe over the stored optical data');
+      final top = recipes.first;
+      expect(top.components, isNotEmpty);
+      expect(top.components.every((c) => seedIds.contains(c.paint.id)), isTrue,
+          reason: 'AC-1: every component is a seed optical paint (mixed over the '
+              'stored atoms, not retrieved)');
+      final predicted =
+          realEngine.forward({for (final c in top.components) c.paint: c.partsFraction});
+      expect((predicted.lightness - top.predictedColor.lightness).abs(), lessThan(1.0));
+      expect((predicted.a - top.predictedColor.a).abs(), lessThan(1.0));
+      expect((predicted.b - top.predictedColor.b).abs(), lessThan(1.0),
+          reason: 'AC-1: the recipe\'s predicted colour is the engine\'s forward '
+              'mix of its components — produced by the solver, not a stored answer');
+      // Augmentation (GUARD-2, B pending): the source-level no-lookup-table
+      // guard (zero offenders over lib/ + `control_lookupTable` listed) is added
+      // once GUARD-2 fills the real scan — see TestAC03 for the guard pattern.
+    });
+
+    acTestWidgets('AC-2', 'TestAC02_CandidatesFromLlm', (tester) async {
+      final h = await givenTheDatasetApp(tester);
+      final mappings = h.dataset.candidateMappings;
+      // Given: the shipped seed exposes candidate combinations and their origins
+      // (SEED-4 records them) — checked before the Then so the empty shell seed
+      // fails here, naming the owner.
+      expect(mappings, isNotEmpty,
+          reason: 'AC-2 Given: the shipped seed exposes candidate combinations (SEED-4)');
+      final seedIds = {for (final e in h.dataset.entries) e.id};
+
+      // When: the candidate combinations are read from the seed.
+      // Then: every candidate paint-set carries origin `llmSeed` (the LLM's
+      // qualitative knowledge) and references real shipped paints; and there is
+      // no runtime LLM — the candidates are fixed build-time data (identical
+      // across loads) and booting drives no narration.
+      expect(mappings.every((m) => m.origin == SeedOrigin.llmSeed), isTrue,
+          reason: 'AC-2: every candidate combination is stamped llmSeed');
+      expect(mappings.every((m) => m.candidatePaintIds.every(seedIds.contains)),
+          isTrue,
+          reason: 'AC-2: candidate paint ids reference shipped seed entries '
+              '(grounded, not fabricated at runtime)');
+      final reload = await loadShippedSeed();
+      expect(reload.candidateMappings, mappings,
+          reason: 'AC-2: candidates are static build-time data (identical across '
+              'loads), not generated by a runtime LLM');
+      expect(h.speech.utterances, isEmpty,
+          reason: 'AC-2: booting the app invokes no runtime LLM / narration');
+    });
+
+    acTest('AC-3', 'TestAC03_RatiosFromSolverNeverLlm', () {
+      // Given: the planted control carrying a seed-stored ratio exists on disk,
+      // so the guard's discrimination is exercisable.
+      expect(control_llmRatio, hasLength(1));
+      expect(File(control_llmRatio.single).existsSync(), isTrue,
+          reason: 'AC-3 Given: the planted llm-ratio control source exists');
+
+      // When: a mix's parts are produced — the guard scans lib/ (ratio
+      // producers) and the seed schema (a ratio field).
+      final offenders = ratioProvenanceGuard();
+
+      // Then: zero offenders over the shipped code — every ratio comes from
+      // SubtractiveMixingEngine and the seed schema carries no ratio field.
+      expect(offenders, isEmpty,
+          reason: 'AC-3: no ratio originates from the seed/LLM — only the solver '
+              '(offenders: ${offenders.join(', ')})');
+      // Control: pointed at the planted llm-ratio record, the guard lists it —
+      // proving it catches a real offender, not an empty vacuous pass.
+      final controlOffenders =
+          ratioProvenanceGuard(roots: control_llmRatio, schemaFiles: control_llmRatio);
+      expect(controlOffenders, isNotEmpty,
+          reason: 'AC-3 control: the guard flags the planted seed-stored ratio');
+      expect(controlOffenders.any((o) => (o.path ?? '').endsWith('control_llm_ratio.dart')),
+          isTrue,
+          reason: 'AC-3 control: the offender names the planted control file');
+    });
+
+    acTestWidgets('AC-4', 'TestAC04_MetadataAcceptedClaimedValuesRejected',
+        (tester) async {
+      final h = await givenTheDatasetApp(tester);
+      final entries = h.dataset.entries;
+      // Given: the shipped seed carries ingested entries (SEED-4 ingests them),
+      // at least one bearing accepted LLM metadata (a pigment index) so its
+      // retention is observable — checked first so the empty shell fails here.
+      expect(entries, isNotEmpty,
+          reason: 'AC-4 Given: the shipped seed carries ingested entries (SEED-4)');
+      final withMeta = entries.where((e) => e.pigmentIndex != null).toList();
+      expect(withMeta, isNotEmpty,
+          reason: 'AC-4 Given: SEED-4 keeps accepted metadata (pigment index) on '
+              'ingested entries');
+
+      // When: the data is ingested (the shipped seed is the ingest result).
+      // Then: the accepted metadata (pigment index, and the optical masstone) is
+      // retained on every metadata-bearing entry and survives mapping to the
+      // frozen Paint; the ingest drops no valid metadata.
+      for (final e in withMeta) {
+        expect(e.pigmentIndex, isNotNull, reason: 'AC-4: pigment-index metadata retained');
+        expect(e.masstone.lightness.isFinite, isTrue,
+            reason: 'AC-4: the optical masstone is retained');
+        expect(e.toPaint().pigmentIndex, e.pigmentIndex,
+            reason: 'AC-4: accepted metadata survives the mapping to Paint');
+      }
+      // The claimed values (LLM spectral curves / ratios) are rejected — the
+      // stored SeedPaintEntry carries only accepted metadata fields. The
+      // structural proof (the schema declares no claimed field; a planted
+      // claimed-value entry is listed by the guard) is the GUARD-2 augmentation
+      // (TestAC04 → B pending GUARD-2).
+    });
+
+    acTestWidgets('AC-5', 'TestAC05_HeldOutValidationRecorded', (tester) async {
+      final h = await givenTheDatasetApp(tester);
+      final manifest = h.manifest;
+      // When: the held-out recipes are mixed and measured, recorded in the
+      // shipped seed's validation manifest (SEED-5).
+      // Then: the manifest records a held-out count in [50, 100] and a non-empty
+      // ΔE00 distribution, one value per held-out recipe.
+      expect(manifest.heldOutCount, inInclusiveRange(50, 100),
+          reason: 'AC-5: the shipped manifest records 50–100 held-out recipes (SEED-5)');
+      expect(manifest.deltaE00Distribution, isNotEmpty,
+          reason: 'AC-5: a ΔE00 distribution is recorded');
+      expect(manifest.deltaE00Distribution.length, manifest.heldOutCount,
+          reason: 'AC-5: one recorded ΔE00 per held-out recipe');
+      expect(manifest.deltaE00Distribution.every((d) => d.isFinite && d >= 0), isTrue,
+          reason: 'AC-5: the distribution holds real, non-negative ΔE00 values');
+    });
+
+    acTestWidgets('AC-6', 'TestAC06_SeedShipsOnlyOnEvidence', (tester) async {
+      final h = await givenTheDatasetApp(tester);
+      // Given: the fixtures encode the two ship conditions — the passing manifest
+      // clears the usable threshold AND beats the LLM alone; each control fails
+      // exactly one of the two.
+      expect(heldOutManifest.hybridMeanDeltaE00,
+          lessThan(heldOutManifest.usableThreshold),
+          reason: 'AC-6 Given: passing manifest clears the threshold');
+      expect(heldOutManifest.hybridMeanDeltaE00,
+          lessThan(heldOutManifest.llmAloneMeanDeltaE00),
+          reason: 'AC-6 Given: passing manifest beats the LLM alone');
+      expect(control_manifestFailThreshold.hybridMeanDeltaE00,
+          greaterThan(control_manifestFailThreshold.usableThreshold),
+          reason: 'AC-6 Given: threshold-control fails the threshold');
+      expect(control_manifestFailThreshold.hybridMeanDeltaE00,
+          lessThan(control_manifestFailThreshold.llmAloneMeanDeltaE00),
+          reason: 'AC-6 Given: threshold-control still beats the LLM (fails only the threshold)');
+      expect(control_manifestFailBeatsLlm.hybridMeanDeltaE00,
+          lessThan(control_manifestFailBeatsLlm.usableThreshold),
+          reason: 'AC-6 Given: beats-control clears the threshold');
+      expect(control_manifestFailBeatsLlm.hybridMeanDeltaE00,
+          greaterThanOrEqualTo(control_manifestFailBeatsLlm.llmAloneMeanDeltaE00),
+          reason: 'AC-6 Given: beats-control does not beat the LLM (fails only beats-LLM)');
+
+      // When: the ship decision is made (ValidationManifest.shippable, SEED-5).
+      // Then: a manifest ships iff it clears the threshold AND beats the LLM
+      // alone. The controls — each failing exactly one condition — are NOT
+      // shippable, so a decision that checked only one condition would wrongly
+      // ship one of them (the discriminating rejection).
+      expect(heldOutManifest.shippable, isTrue,
+          reason: 'AC-6: a manifest clearing the threshold and beating the LLM is shippable');
+      expect(control_manifestFailThreshold.shippable, isFalse,
+          reason: 'AC-6 control: fails the threshold → not shippable');
+      expect(control_manifestFailBeatsLlm.shippable, isFalse,
+          reason: 'AC-6 control: does not beat the LLM → not shippable');
+      // The shipped seed itself ships only on this recorded evidence.
+      expect(h.manifest.shippable, isTrue,
+          reason: 'AC-6: the shipped seed ships on its recorded evidence (SEED-5)');
+    });
+
+    acTestWidgets('AC-11', 'TestAC11_ShippedSeedStaysNarrow', (tester) async {
+      final h = await givenTheDatasetApp(tester);
+      final entries = h.dataset.entries;
+      // Given: the shipped seed carries paint entries (SEED-3 ships the asset) —
+      // checked first so the empty shell fails here, naming the owner.
+      expect(entries, isNotEmpty,
+          reason: 'AC-11 Given: the shipped seed carries entries (SEED-3)');
+
+      // When: the seed's scope is set (the shipped asset).
+      // Then: it covers one brand, one medium, and ~15 paints (count 12–18) —
+      // every entry is that one brand and medium, so a multi-brand / multi-medium
+      // seed is rejected.
+      expect(h.dataset.brand, isNotEmpty, reason: 'AC-11: the seed names one brand');
+      expect(h.dataset.medium, isNotNull, reason: 'AC-11: the seed covers one medium');
+      expect(entries.every((e) => e.brand == h.dataset.brand), isTrue,
+          reason: 'AC-11: every entry is the one brand (no multi-brand seed)');
+      expect(entries.every((e) => e.medium == h.dataset.medium), isTrue,
+          reason: 'AC-11: every entry is the one medium (no multi-medium seed)');
+      expect(entries.length, inInclusiveRange(12, 18),
+          reason: 'AC-11: ~15 paints (scope pinned narrow)');
+    });
+  });
 }
