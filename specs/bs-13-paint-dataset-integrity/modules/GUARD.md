@@ -1,6 +1,6 @@
 # Module GUARD — reusable integrity guards
 
-**Status:** 🔄 In progress — GUARD-1 ✅ (shell harness landed, behaviour-neutral); GUARD-2 (AC-3 + AC-1/AC-4 augments) is the remaining behavior phase (gated on G-2 + SEED-3)
+**Status:** ✅ Module done — GUARD-1 ✅ (shell harness); GUARD-2 ✅ 2026-10-15 (AC-3 ratios-from-solver guard un-pended + AC-1/AC-4 structural augments closed; all three guards enforce their real rule). Whole-suite grade 11/11 A.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs13/guards/` (reusable test-support — **no product code**): `ratio_provenance_guard.dart`, `no_lookup_table_guard.dart`, `no_claimed_value_guard.dart`, and a small `source_scan.dart`/schema-check helper.
 **Depends on:** the bs-04 engine (`lib/recipes/engine/`) and SEED's `SeedDataset` schema (for the schema checks) · **Blocks:** ITEST-1 (consumes the guards)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 6,687,969 | 2h 01m |
-| 2 | behavior | AC-3 (+ AC-1/AC-4 structural augments) | ⬜ Todo | | |
+| 2 | behavior | AC-3 (+ AC-1/AC-4 structural augments) | ✅ Done | 14,210,323 | 25m 17s |
 
 ## Interface reconciliation
 
@@ -68,6 +68,21 @@ Shell: the reusable guard harness is laid under `integration_test/bs13/guards/` 
 - **Acceptance gate:** un-pend AC-3; `TestAC03_RatiosFromSolverNeverLlm` green with the `control_llmRatio` discrimination; add the pre-seeded augmentations to `TestAC01` (no-lookup + `control_lookupTable`) and `TestAC04` (no stored claimed value) and keep them green (and all earlier ACs).
 - **Augments made here:** `TestAC01` (no-lookup structural + control), `TestAC04` (schema no-claimed-value + control).
 
-### Result  <!-- filled on completion -->
+### Result  <!-- 2026-10-15 -->
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+The three stub guards now enforce their real integrity rule over the shipped code — **no `lib/` product code** (D-4); all changes are test-support (`integration_test/bs13/guards/`) + the acceptance suite + the unit smoke test.
+
+- **`ratioProvenanceGuard`** (AC-3): facet 1 scans `roots` for a `partsFraction:` named-argument (a ratio *production*) outside `kRatioProducerAuthorities`; facet 2 scans `schemaFiles` for a declared ratio field. The authorities are **`subtractive_engine.dart`** (the solver — originates ratios) and **`project_source.dart`** (bs-06 persistence — rehydrates a solver-produced recipe, never an LLM/seed ratio). Over `lib/` + the seed schema → zero offenders; pointed at `control_llmRatio` → the planted `partsFraction` field is listed (via facet 2). `grep` confirms the only two `partsFraction:` producers in `lib/` are the two authorities.
+- **`noLookupTableGuard`** (AC-1 augment): schema scan for a target→recipe/answer-mapping name (`lookupTable`/`toRecipe`/`answerTable`/…, case-insensitive). Seed schema → zero; `control_lookupTable` (`ControlLookupTable`/`targetToRecipe`) → listed.
+- **`noClaimedValueGuard`** (AC-4 augment): schema scan for a claimed spectral/ratio field (names mirror the loader's `kRejectedClaimedFields`). Seed schema → zero; `control_claimedSpectral` (`spectralCurve`) → listed. Signature unchanged (schema-level; the *ingest* facet of AC-4 is covered by the AC-4 widget test over the shipped seed).
+
+**Acceptance gate:** un-pended **AC-3** in `pending.dart` (map now empty; GUARD-2 added to `completedBehaviorPhases`) and reconciled the two harness pending-gate tests to the completed-state form (mirrors bs-10's final un-pend — the "skips a pending AC" demo becomes "with every AC delivered the gate runs them all in either mode"). Added the GUARD-2 augmentations to `TestAC01` (no-lookup + `control_lookupTable`) and `TestAC04` (no-claimed-value + `control_claimedSpectral`), both discriminating (fail against the GUARD-1 sentinel stub). No AC test weakened.
+
+**Verification:** `flutter analyze` clean · unit **1352/0** (`test/bs13/guards_shell_test.dart` rewritten from the stub-sentinel assertions to the real pass/control behaviour) · coverage gate **100% on all 9 touched `lib/` files** (`COVERAGE_GATE_BASE=7015390`; GUARD-2 touched **no** `lib/` file — guards live in `integration_test/`, outside the gate scope, justified exclusion as GUARD-1) · bs-13 acceptance **default 19 pass / 0 skip** == **run-pending 19 pass / 0 fail** (AC-3 un-pended green; no red baseline remains). **Grade gate:** fresh independent grader (G1–G6) over all 11 un-pended AC tests → **11 straight A, 0 A-core/B-pending, 0 below A** (AC-1 + AC-4 upgraded from A-core/B-pending-GUARD-2 as their augmentations landed and discriminate; AC-3 new A). **No cross-feature regression run** — GUARD-2 changed no `lib/` file and edited no other feature's test, so behaviour is unchanged by construction. **Fix passes: 0/3** (green on the first full run). Tokens 14,210,323 · Time 25m 17s.
+
+### Checkpoint / Handoff  <!-- GUARD-2 -->
+
+- **GUARD module complete.** All three guards enforce their real rule; the AC-3 red baseline is closed and the bs-13 pending map is empty — **every bs-13 AC is delivered and graded A**. No behavior phase remains.
+- **Frozen API (unchanged signatures):** `ratioProvenanceGuard({roots, schemaFiles})`, `noLookupTableGuard({schemaFiles})`, `noClaimedValueGuard({schemaFiles})` → `List<GuardOffender>` (empty = pass). New: `kRatioProducerAuthorities` (the two allow-listed `lib/` ratio sites). `source_scan.dart`'s `ruleNotYetEnforced`/`notYetEnforced` are now unused (left in place as scaffold machinery; test-support, outside the coverage gate).
+- **For SIGNOFF-1:** the only open gate is **G-3** (owner confirms the SEED-5 manifest + the seed's optical values reflect real reviewed Phase-0.5 evidence, or accepts the named **D-5** gap — recorded/representative, not physical). No agent phase precedes it. Two minor non-downgrading guard notes the grader recorded (both unowed, GUARD-2 being last): (1) the source-scan facet exempts `project_source.dart` whole-file, so a *future* ratio site added there would be silently exempt; (2) the AC-3 control fires through the schema facet, so the allow-list's too-broad upper bound isn't control-tested (the too-narrow bound is, via the shipped `isEmpty` over the real solver sites). Both are spec-faithful today.
+- **Verification commands:** unchanged — `flutter analyze`; `flutter test --coverage`; `COVERAGE_GATE_BASE=7015390 dart run tool/coverage_gate.dart`; bs-13 acceptance `flutter test integration_test/bs13/dataset_test.dart -d flutter-tester` (default) == run-pending (`--dart-define=BS13_RUN_PENDING=true`). Pure-Dart on `flutter-tester`, no device lane; flutter at `~/development/flutter/bin`; cwd `/Users/matthew.quirk/Nuance-bs13`.

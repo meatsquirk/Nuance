@@ -1,10 +1,13 @@
-// GUARD-1 shell smoke test — proves the bs-13 guard harness compiles, is
-// importable, and the shared scan machinery works. The real rule behaviour
-// (and its control-discrimination tests) lands at GUARD-2 in the acceptance
-// suite; this only guards the scaffold.
+// bs-13 guard smoke test — proves the guard harness compiles, is importable,
+// and (since GUARD-2) that the three integrity guards enforce their real rule:
+// zero offenders over the shipped `lib/` + seed schema, and the planted control
+// listed. The full AC-1/AC-3/AC-4 acceptance assertions live in the bs-13
+// integration suite; this mirrors them at the unit grain and exercises both
+// guard branches (the shipped pass and the control) in the host `flutter test`
+// run.
 //
 // Runs on the host VM (`flutter test`), where the cwd is the repo root, so the
-// `dart:io` source scans can read `lib/`.
+// `dart:io` source scans can read `lib/` and the planted control fixtures.
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,27 +16,51 @@ import '../../integration_test/bs13/guards/no_lookup_table_guard.dart';
 import '../../integration_test/bs13/guards/ratio_provenance_guard.dart';
 import '../../integration_test/bs13/guards/source_scan.dart';
 
+/// The planted control source files (repo-relative), mirrored from the bs-13
+/// harness so this host unit test needs no `package:flutter`-heavy import.
+const _controlLlmRatio = <String>[
+  'integration_test/bs13/guards/fixtures/control_llm_ratio.dart',
+];
+const _controlLookupTable = <String>[
+  'integration_test/bs13/guards/fixtures/control_lookup_table.dart',
+];
+const _controlClaimedSpectral = <String>[
+  'integration_test/bs13/guards/fixtures/control_claimed_spectral.dart',
+];
+
 void main() {
-  group('GUARD-1 stubs report "not yet enforced"', () {
-    test('ratioProvenanceGuard', () {
-      final offenders = ratioProvenanceGuard();
-      expect(offenders, hasLength(1));
-      expect(offenders.single.rule, ruleNotYetEnforced);
-      expect(offenders.single.detail, contains('ratioProvenanceGuard'));
+  group('the integrity guards pass over the shipped code and flag the control', () {
+    test('ratioProvenanceGuard: clean over lib/, flags the planted llm ratio', () {
+      expect(ratioProvenanceGuard(), isEmpty,
+          reason: 'only the solver (and the project reload authority) produces '
+              'a ratio, and the seed schema carries none');
+      final control = ratioProvenanceGuard(
+        roots: _controlLlmRatio,
+        schemaFiles: _controlLlmRatio,
+      );
+      expect(control, isNotEmpty);
+      expect(control.any((o) => (o.path ?? '').endsWith('control_llm_ratio.dart')),
+          isTrue);
     });
 
-    test('noLookupTableGuard', () {
-      final offenders = noLookupTableGuard();
-      expect(offenders, hasLength(1));
-      expect(offenders.single.rule, ruleNotYetEnforced);
-      expect(offenders.single.detail, contains('noLookupTableGuard'));
+    test('noLookupTableGuard: clean over the seed schema, flags the planted table', () {
+      expect(noLookupTableGuard(), isEmpty,
+          reason: 'the seed carries no target→recipe answer mapping');
+      final control = noLookupTableGuard(schemaFiles: _controlLookupTable);
+      expect(control, isNotEmpty);
+      expect(
+          control.any((o) => (o.path ?? '').endsWith('control_lookup_table.dart')),
+          isTrue);
     });
 
-    test('noClaimedValueGuard', () {
-      final offenders = noClaimedValueGuard();
-      expect(offenders, hasLength(1));
-      expect(offenders.single.rule, ruleNotYetEnforced);
-      expect(offenders.single.detail, contains('noClaimedValueGuard'));
+    test('noClaimedValueGuard: clean over the seed schema, flags the planted field', () {
+      expect(noClaimedValueGuard(), isEmpty,
+          reason: 'no stored seed entry carries a claimed spectral/ratio field');
+      final control = noClaimedValueGuard(schemaFiles: _controlClaimedSpectral);
+      expect(control, isNotEmpty);
+      expect(
+          control.any((o) => (o.path ?? '').endsWith('control_claimed_spectral.dart')),
+          isTrue);
     });
   });
 

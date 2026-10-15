@@ -86,8 +86,8 @@ void main() {
       expect(prov.derivedTier, isA<ProvenanceTier>());
 
       // The reusable guards are reachable and return a result list (the real
-      // zero-offender / control assertions are the pending AC tests, red until
-      // GUARD-2 — this holds whether a guard is still the stub or the real scan).
+      // zero-offender / control assertions live in the AC-1/AC-3/AC-4 tests
+      // below, now that GUARD-2 has filled the scans).
       expect(ratioProvenanceGuard(), isA<List<GuardOffender>>());
       expect(noLookupTableGuard(), isA<List<GuardOffender>>());
       expect(noClaimedValueGuard(), isA<List<GuardOffender>>());
@@ -110,17 +110,21 @@ void main() {
       // combinations + the ingest rule); AC-5 / AC-6 at SEED-5 (the held-out
       // validation manifest + ship decision); AC-7 at PROV-2 (tier-by-origin
       // derivation); AC-9 / AC-10 at PROV-3 (promotion on an own swatch /
-      // opinions never promote). Only AC-3 (GUARD-2) is still pending.
+      // opinions never promote); and AC-3 at GUARD-2 (ratios-from-solver
+      // guard), the last to land — so every AC is now un-pended and the
+      // pending map is empty.
       const unpended = {
         'AC-8', 'AC-1', 'AC-11', 'AC-2', 'AC-4', 'AC-5', 'AC-6', 'AC-7',
-        'AC-9', 'AC-10',
+        'AC-9', 'AC-10', 'AC-3',
       };
       for (final ac in unpended) {
         expect(pendingACs.containsKey(ac), isFalse,
             reason: '$ac is un-pended and runs by default');
       }
-      // Every other AC is still pending until its behaviour phase lands.
+      // Every behaviour phase has now landed, so no AC is left pending.
       expect(pendingACs.keys.toSet(), allACs.toSet().difference(unpended));
+      expect(pendingACs, isEmpty,
+          reason: 'all 11 bs-13 ACs are delivered; none is still pending');
       // Every owner is a declared behaviour phase (catches a typo'd / stale
       // owner).
       for (final entry in pendingACs.entries) {
@@ -151,15 +155,31 @@ void main() {
       }
     });
 
-    test('skips a pending AC by default and runs it under run-pending', () {
-      // A pending AC is skipped in the default run… (AC-3 is still pending,
-      // owned by GUARD-2 — AC-9/AC-10 were un-pended at PROV-3, AC-7 at PROV-2).
-      expect(pendingSkipReason('AC-3', forceRunPending: false), isNotNull);
-      // …and executes when run-pending is forced.
-      expect(pendingSkipReason('AC-3', forceRunPending: true), isNull);
-      // An AC absent from the pending map always runs (the un-pended path a
-      // behaviour phase reaches) — control uses a name not in the map.
+    test('with every AC delivered the gate runs them all in either mode', () {
+      // bs-13 behaviour is complete (GUARD-2 un-pended the last AC, AC-3), so
+      // the pending map is empty and every AC-1..11 runs in both the default
+      // and the run-pending modes — none is skipped. Both directions use the
+      // explicit [forceRunPending] so the guard is deterministic in either
+      // ambient mode. This fails if an AC were silently *re*-pended (its skip
+      // reason would be non-null) or if the gate inverted to skip a delivered
+      // AC.
+      expect(pendingACs, isEmpty,
+          reason: 'all 11 bs-13 ACs are delivered; none is still pending');
+      for (final ac in allACs) {
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is delivered and must run in the default run');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac must run in run-pending mode too');
+      }
+      // An AC absent from the map (un-pended) always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
+      // The ambient path (used by acTestWidgets / acTest) agrees with the
+      // current mode.
+      expect(
+        pendingSkipReason('AC-1'),
+        pendingSkipReason('AC-1', forceRunPending: runPending),
+      );
     });
   });
 
@@ -249,9 +269,10 @@ void main() {
   // row in `pending.dart`. ITEST-3 adds AC-7/8/9/10 to this file.
   //
   // AC-1 and AC-4 carry a GUARD-2 augmentation (the structural no-lookup /
-  // no-claimed-value guard control is not assertable until GUARD-2 fills the
-  // real scan) → graded *B pending GUARD-2*; the core behaviour here is
-  // assertable at A once SEED-3/SEED-4 land.
+  // no-claimed-value guard: zero offenders over the shipped schema + the
+  // planted control listed). GUARD-2 has filled the real scans, so those
+  // augmentations are now asserted below and the B-pending-GUARD-2 grade is
+  // closed.
   group('bs-13 dataset acceptance criteria', () {
     acTestWidgets('AC-1', 'TestAC01_RecipesSolvedFromOpticalData',
         (tester) async {
@@ -298,9 +319,25 @@ void main() {
       expect((predicted.b - top.predictedColor.b).abs(), lessThan(1.0),
           reason: 'AC-1: the recipe\'s predicted colour is the engine\'s forward '
               'mix of its components — produced by the solver, not a stored answer');
-      // Augmentation (GUARD-2, B pending): the source-level no-lookup-table
-      // guard (zero offenders over lib/ + `control_lookupTable` listed) is added
-      // once GUARD-2 fills the real scan — see TestAC03 for the guard pattern.
+      // Augmentation (GUARD-2): the seed stores no target→recipe answer table,
+      // so a recipe can only be solved (above), never retrieved. The no-lookup
+      // guard reports zero offenders over the shipped schema and lists the
+      // planted control — this would fail against the GUARD-1 stub (which
+      // reported the not-yet-enforced sentinel), so it discriminates.
+      expect(File(control_lookupTable.single).existsSync(), isTrue,
+          reason: 'AC-1 Given: the planted lookup-table control source exists');
+      final lookupOffenders = noLookupTableGuard();
+      expect(lookupOffenders, isEmpty,
+          reason: 'AC-1: the seed carries no target→recipe answer mapping — '
+              'recipes are solved, not looked up '
+              '(offenders: ${lookupOffenders.join(', ')})');
+      final lookupControl = noLookupTableGuard(schemaFiles: control_lookupTable);
+      expect(lookupControl, isNotEmpty,
+          reason: 'AC-1 control: the guard flags the planted answer lookup table');
+      expect(
+          lookupControl.any((o) => (o.path ?? '').endsWith('control_lookup_table.dart')),
+          isTrue,
+          reason: 'AC-1 control: the offender names the planted control file');
     });
 
     acTestWidgets('AC-2', 'TestAC02_CandidatesFromLlm', (tester) async {
@@ -384,11 +421,26 @@ void main() {
         expect(e.toPaint().pigmentIndex, e.pigmentIndex,
             reason: 'AC-4: accepted metadata survives the mapping to Paint');
       }
-      // The claimed values (LLM spectral curves / ratios) are rejected — the
-      // stored SeedPaintEntry carries only accepted metadata fields. The
-      // structural proof (the schema declares no claimed field; a planted
-      // claimed-value entry is listed by the guard) is the GUARD-2 augmentation
-      // (TestAC04 → B pending GUARD-2).
+      // Augmentation (GUARD-2): the claimed values (LLM spectral curves /
+      // ratios) are rejected — the stored SeedPaintEntry schema declares no
+      // such field. The no-claimed-value guard reports zero offenders over the
+      // shipped schema and lists the planted claimed-value control — this would
+      // fail against the GUARD-1 stub, so it discriminates.
+      expect(File(control_claimedSpectral.single).existsSync(), isTrue,
+          reason: 'AC-4 Given: the planted claimed-spectral control source exists');
+      final claimedOffenders = noClaimedValueGuard();
+      expect(claimedOffenders, isEmpty,
+          reason: 'AC-4: no stored seed entry carries a claimed spectral curve / '
+              'ratio — only measured optical data and accepted metadata '
+              '(offenders: ${claimedOffenders.join(', ')})');
+      final claimedControl =
+          noClaimedValueGuard(schemaFiles: control_claimedSpectral);
+      expect(claimedControl, isNotEmpty,
+          reason: 'AC-4 control: the guard flags the planted claimed spectral field');
+      expect(
+          claimedControl.any((o) => (o.path ?? '').endsWith('control_claimed_spectral.dart')),
+          isTrue,
+          reason: 'AC-4 control: the offender names the planted control file');
     });
 
     acTestWidgets('AC-5', 'TestAC05_HeldOutValidationRecorded', (tester) async {

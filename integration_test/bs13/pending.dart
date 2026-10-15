@@ -60,7 +60,11 @@ const Map<String, String> pendingACs = {
   // seed asset + AssetSeedLoader make the solver mix over real optical data.
   // AC-2 (candidates come from the LLM) un-pended at SEED-4 — the shipped asset
   // carries candidate combinations and the loader stamps each llmSeed.
-  'AC-3': 'GUARD-2',
+  // AC-3 (ratios from the solver, never the LLM) un-pended at GUARD-2 — the
+  // ratios-from-solver guard enforces that only the solver (and the project
+  // reload authority) produces a `RecipeComponent.partsFraction` and the seed
+  // schema carries no ratio field. It was the last pending AC, so this map is
+  // now empty — every bs-13 AC runs by default.
   // AC-4 (metadata accepted / claimed values rejected) un-pended at SEED-4 — the
   // ingest rule keeps metadata and strips any claimed spectral curve / ratio.
   // AC-5 (held-out validation manifest) and AC-6 (ship decision) un-pended at
@@ -106,13 +110,14 @@ const Set<String> behaviorPhases = {
 /// un-pends its last AC (SEED-3 un-pended AC-1 and AC-11; SEED-4 un-pended AC-2
 /// and AC-4; SEED-5 un-pended AC-5 and AC-6, its only two; PROV-2 un-pended
 /// AC-7, its only pending AC — it also owns AC-8, green at baseline; PROV-3
-/// un-pended AC-9 and AC-10).
+/// un-pended AC-9 and AC-10; GUARD-2 un-pended AC-3, the last pending AC).
 const Set<String> completedBehaviorPhases = {
   'SEED-3',
   'SEED-4',
   'SEED-5',
   'PROV-2',
   'PROV-3',
+  'GUARD-2',
 };
 
 /// Every AC id the bs-13 acceptance suite covers (the master plan's 11 ACs).

@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ✅ Module done — ITEST-4 test review **approved (G-2) 2026-10-15 by Matt Quirk**; all 11 AC tests written, suite green by default / red run-pending, whole-suite grade 8 A + 3 A-core·B-pending (GUARD-2×2, PROV-3), 0 below A. Behavior stage unblocked.
+**Status:** ✅ Module done — ITEST-4 test review **approved (G-2) 2026-10-15 by Matt Quirk**; all 11 AC tests written. All three A-core/B-pending augmentations now closed (GUARD-2×2 for AC-1/AC-4, PROV-3 for AC-9), so the whole-suite grade is **11 straight A, 0 below A** and the suite is green by default == run-pending (behavior stage complete).
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs13/dataset_harness.dart`, `integration_test/bs13/dataset_test.dart`, `integration_test/bs13/pending.dart` (consumes the SEED/PROV surfaces and the GUARD guards; writes no product code).
 **Depends on:** SEED-2, PROV-1, GUARD-1 (all shells wired) · **Blocks:** every behavior phase (via G-2)
@@ -155,10 +155,10 @@ Added one *pending* acceptance test per AC for the four runtime-provenance ACs *
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_RecipesSolvedFromOpticalData | FAIL ✓ (empty seed) → **SEED-3 ✅ un-pended, green** | Given precondition `seed carries optical entries (SEED-3)` — `Actual: []` | SEED-3 (+GUARD-2) | A / B pending GUARD-2 |
+| AC-1 | TestAC01_RecipesSolvedFromOpticalData | FAIL ✓ (empty seed) → **SEED-3 ✅ un-pended, green** → **GUARD-2 ✅ no-lookup augment closed** | Given precondition `seed carries optical entries (SEED-3)` — `Actual: []` | SEED-3 (+GUARD-2) | **A** (was A/B-pending-GUARD-2) |
 | AC-2 | TestAC02_CandidatesFromLlm | FAIL ✓ → **SEED-4 ✅ un-pended, green** | Given precondition `candidate combinations (SEED-4)` — `Actual: []` | SEED-4 | A |
-| AC-3 | TestAC03_RatiosFromSolverNeverLlm | FAIL ✓ (guard stub) | Then `zero offenders` — stub returns the `not-yet-enforced` sentinel | GUARD-2 | A |
-| AC-4 | TestAC04_MetadataAcceptedClaimedValuesRejected | FAIL ✓ → PASS after SEED-3 (metadata-bearing entries) → **SEED-4 ✅ un-pended, core green** (ingest `ingestEntryRecord` strips claimed spectral/ratio; no-claimed-value structural assertion still **pending GUARD-2**) | Given precondition `ingested entries (SEED-4)` — `Actual: []` (pre-SEED-3) | SEED-4 (+GUARD-2) | A / B pending GUARD-2 |
+| AC-3 | TestAC03_RatiosFromSolverNeverLlm | FAIL ✓ (guard stub) → **GUARD-2 ✅ un-pended, green** | Then `zero offenders` — stub returned the `not-yet-enforced` sentinel; GUARD-2's real scan returns `[]` over `lib/` + schema, control lists `control_llm_ratio.dart` | GUARD-2 | A |
+| AC-4 | TestAC04_MetadataAcceptedClaimedValuesRejected | FAIL ✓ → PASS after SEED-3 (metadata-bearing entries) → **SEED-4 ✅ un-pended, core green** (ingest `ingestEntryRecord` strips claimed spectral/ratio) → **GUARD-2 ✅ no-claimed-value augment closed** (schema guard: zero over the seed schema, control lists `control_claimed_spectral.dart`) | Given precondition `ingested entries (SEED-4)` — `Actual: []` (pre-SEED-3) | SEED-4 (+GUARD-2) | **A** (was A/B-pending-GUARD-2) |
 | AC-5 | TestAC05_HeldOutValidationRecorded | FAIL ✓ | Then `heldOutCount in [50,100]` — `Actual: <0>` (empty manifest) | SEED-5 | A |
 | AC-6 | TestAC06_SeedShipsOnlyOnEvidence | FAIL ✓ | Then `heldOutManifest.shippable == true` — `Actual: <false>` (placeholder) | SEED-5 | A |
 | AC-7 | TestAC07_EnforcedProvenanceTierByOrigin | FAIL ✓ (derivation stub) | Then `tierFor([evInstrument]) == Measured` — `Actual: Estimated` (stub returns fallback; all 4 origins fail, contrasting fallbacks) | PROV-2 | A |
@@ -171,6 +171,6 @@ Added one *pending* acceptance test per AC for the four runtime-provenance ACs *
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC01 | the no-lookup-table structural guard doesn't exist until GUARD-2 | GUARD-2 | the no-lookup assertion + `control_lookupTable` is listed | ⬜ Open |
-| TestAC04 | the schema no-claimed-value guard doesn't exist until GUARD-2 | GUARD-2 | assert no stored entry carries a claimed spectral/ratio field + planted-entry control | ⬜ Open |
-| TestAC09 | promotion can't be exercised until the PROV-3 rule exists | PROV-3 | the Estimated→Confirmed transition on a swatch evidence point | ⬜ Open |
+| TestAC01 | the no-lookup-table structural guard doesn't exist until GUARD-2 | GUARD-2 | the no-lookup assertion + `control_lookupTable` is listed | ✅ Closed 2026-10-15 (GUARD-2) |
+| TestAC04 | the schema no-claimed-value guard doesn't exist until GUARD-2 | GUARD-2 | assert no stored entry carries a claimed spectral/ratio field + planted-entry control | ✅ Closed 2026-10-15 (GUARD-2) |
+| TestAC09 | promotion can't be exercised until the PROV-3 rule exists | PROV-3 | the Estimated→Confirmed transition on a swatch evidence point | ✅ Closed 2026-10-15 (PROV-3) |
