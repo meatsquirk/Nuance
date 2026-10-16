@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅ (harness + fixtures + scaffold suite); next ITEST-2 ∥ ITEST-3 ∥ ITEST-4
+**Status:** In progress — ITEST-1 ✅ (harness), ITEST-2 ✅ (AC-1..5 pending + red baseline, 5 A); next ITEST-3 ∥ ITEST-4, then ITEST-5 (test review → G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs14/` — `harness.dart`, `fake_peer_transport.dart`, `pending.dart`, `harness_test.dart` (ITEST-1 scaffold/smoke tests), `consent_and_record_test.dart` (AC-1..5), `exchange_and_merge_test.dart` (AC-6,7,10), `refine_test.dart` (AC-8,9,11,12).
 **Depends on:** all shell phases (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1) · **Blocks:** every behavior phase (via G-2)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 7,810,941 | 20m 38s |
-| 2 | acceptance-tests | AC-1..5 | ⬜ Todo | | |
+| 2 | acceptance-tests | AC-1..5 | ✅ Done | 6,582,231 | 21m 58s |
 | 3 | acceptance-tests | AC-6, AC-7, AC-10 | ⬜ Todo | | |
 | 4 | acceptance-tests | AC-8, AC-9, AC-11, AC-12 | ⬜ Todo | | |
 | 5 | test-review | — (G-2) | ⬜ Todo | | |
@@ -60,6 +60,27 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
 - **Tasks:** author `TestAC01_OptInOnceNeverShown`, `TestAC02_NoPerExchangeAction`, `TestAC03_RecordCarriesOnlyEvidence`, `TestAC04_NothingPersonalLeaves`, `TestAC05_NoPaletteNotShared` per the master catalogue; mark all pending; record the run-pending red baseline + grades.
 - **Exit criteria:** default run green (all pending), run-pending red at the catalogue's Then/Given; grade gate passed.
 
+### Result — ITEST-2 ✅ Done
+
+- **Landed** one file, `integration_test/bs14/consent_and_record_test.dart` (no `lib/` touched) — the five pending acceptance tests for AC-1..AC-5, all through the public surface:
+  - **AC-1 / AC-2** are widget tests (`acTestWidgets`) over the booted real app, reading the wired `SharingConsentReadEndpoint` (`consented` / `offerCopy` / `userFacingSharingSurfaces`) + the `FakeSpeech`/`FakeHaptics` sinks. AC-1 drives the one-time opt-in offer through a public control keyed `sharingOptInKey` (the frozen contract below) and asserts consent recorded + the invisibility invariant (no surface names a mechanism) + the offer shown once; AC-2 pre-seeds opted-in consent via the public `PersistentConsentStore`, settles the silent background exchange, and asserts the only surfaced change is a mechanism-free recipe-improved signal, with no prompt (speech/haptics) and no network wording.
+  - **AC-3 / AC-4 / AC-5** are pure-Dart (`acTest`) over the real `EvidenceRecordBuilder`, observed through `RecordInspectEndpoint` (`recordEndpoint(...)`). AC-3 asserts the prepared record's four fields at grain (declared palette ==, measured CIELAB ==/CIELCh closeTo, tier == referenceCard from the card-calibrated swatch, canonical paint ids); AC-4 asserts the crossing `canonicalForm` carries none of the source mix's personal tokens (name/evidence source) — redaction by construction; AC-5 asserts the share-set excludes `noPaletteRecord` and keeps the interpretable control.
+- **Verification** (`-d flutter-tester`, flutter at `~/development/flutter/bin`): `flutter analyze` clean. **Default run green** — 5 pending ⇒ **5 skipped, 0 failed** (`+0 ~5 All tests skipped`). **Run-pending red baseline** — **5/5 fail**, each at exactly one point that names its owning phase, no harness crash (see the Red baseline table: AC-1 opt-in-offer Given precondition → CORE-3; AC-2 opted-in Given → CORE-3/CORE-4; AC-3/AC-4 record-prepared Given precondition → RECORD-2; AC-5 share-set Then → RECORD-3). The scaffold suite (`harness_test.dart`) stays **12/12** green on its own. (Running two app-booting files in one `flutter test` invocation trips the known flutter-tester app-relaunch limitation — run bs-14 files **one per invocation**; carried as a Known note.) No `lib/` touched ⇒ coverage gate has no touched source (trivially satisfied); unit suite unchanged at 1511/0.
+- **Grades:** fresh independent reviewer against G1–G6 — AC-1/AC-3/AC-5 **A** on the first grid; AC-2 and AC-4 came back **B** on **G3** (vacuous negative Thens: AC-2's empty speech/haptics could pass against a dead sink; AC-4's `isNot(contains(...))` could pass against an empty serialization). Both fixed **in-phase** with the prescribed non-vacuity controls (AC-2: a live-sink probe proving speech/haptics record; AC-4: a positive control that the crossing serialization carries the declared brand) → **5 A / 0**. The controls are additive and run only once the behaviour lands, so the red baseline is unchanged. **Fix passes: 1/3.**
+- **Interface reconciliations surfaced for the test review (ITEST-5) / behaviour phases:**
+  1. **AC-3 paint combination (RECORD-2):** the frozen `RecordBuilder.prepare(Sample, {palette})` gives no paint ids, yet AC-3's record must carry a `paintCombination`. The test asserts the combination is present + canonical; **RECORD-2 must source the ids** (extend the prepared input — a combination arg or a recipe-bearing `Sample`). Flagged, not a blocker for the pending test.
+  2. **AC-5 reason (RECORD-3):** the catalogue's "reason recorded — not interpretable" is not observable through the frozen `selectShareSet → List`; the test asserts the observable exclusion/inclusion. If RECORD-3 exposes a reason channel, a later augmentation can assert it.
+  3. **AC-2 app exchange (CORE-4):** the booted app must run the background exchange over the **fake** transport in the suite and surface the recipe-improved signal; CORE-4 extends `givenTheSharingApp`/`buildApp` wiring to inject it (the sanctioned "behaviour phase wires the app surface" pattern).
+- Tokens 6,582,231 · Time 21m 58s.
+
+### Checkpoint / Handoff — after ITEST-2
+
+- **New frozen contract for CORE-3/CORE-4 (honour these exact strings/keys):**
+  - `sharingOptInKey = const Key('sharing-opt-in-offer')` — CORE-3 presents the one-time opt-in offer control under this key (reachable from the default route on a fresh, not-opted-in install), and removes/hides it once opted in.
+  - The ongoing **recipe-improved signal** CORE-4 surfaces must be a `userFacingSharingSurfaces` item that lower-cased contains both `recipe` and `improve` (e.g. "recipes improve over time") and names **no** mechanism (none of: peer, device, sync, network, wi-fi/wifi, bluetooth, nearby, server, upload, download, cloud — the `_mentionsNetworkConcept` scan).
+- **Run commands:** `flutter test integration_test/bs14/consent_and_record_test.dart -d flutter-tester` (default, green/skipped); add `--dart-define=BS14_RUN_PENDING=true` for the red baseline. One bs-14 app-booting file per `flutter test` invocation.
+- **Next:** **ITEST-3 ∥ ITEST-4** (disjoint files `exchange_and_merge_test.dart` AC-6/7/10 · `refine_test.dart` AC-8/9/11/12; both build only on the ITEST-1 harness, so parallelizable), then **ITEST-5** (test review → G-2). No behaviour phase runs until G-2.
+
 ## Phase 3 — AC-6, AC-7, AC-10 (exchange + append merge), pending + red baseline
 
 - **Kind:** acceptance-tests
@@ -87,11 +108,11 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_OptInOnceNeverShown | pending | Then: surfaces empty of network concepts | CORE-3 | |
-| AC-2 | TestAC02_NoPerExchangeAction | pending | Then: prompt sink empty after exchange | CORE-4 | |
-| AC-3 | TestAC03_RecordCarriesOnlyEvidence | pending | Then: exactly the four fields | RECORD-2 | |
-| AC-4 | TestAC04_NothingPersonalLeaves | pending | Then: no personal field present | RECORD-2 | |
-| AC-5 | TestAC05_NoPaletteNotShared | pending | Then: no-palette record excluded | RECORD-3 | |
+| AC-1 | TestAC01_OptInOnceNeverShown | red | Given precondition: the one-time opt-in offer is presented (`find.byKey(sharingOptInKey)` findsNothing) | CORE-3 | A |
+| AC-2 | TestAC02_NoPerExchangeAction | red | Given: the painter is opted in (live consent; `consented` false at the shell, which shows only the default) | CORE-4 (via CORE-3) | A |
+| AC-3 | TestAC03_RecordCarriesOnlyEvidence | red | Given precondition: a record is prepared (`prepare` returns null at the shell) | RECORD-2 | A |
+| AC-4 | TestAC04_NothingPersonalLeaves | red | Given precondition: a record is prepared (`prepare` returns null at the shell) | RECORD-2 | A |
+| AC-5 | TestAC05_NoPaletteNotShared | red | Then: the interpretable control record is shared (`selectShareSet` returns `[]` at the shell) | RECORD-3 | A |
 | AC-6 | TestAC06_ExchangeOnlyMissing | pending | Then: offers only missing, dedup | EXCHANGE-2 | |
 | AC-7 | TestAC07_NoPeerNoWait | pending | Then: exchanges==0, waited==false | EXCHANGE-3 | |
 | AC-8 | TestAC08_ClusteredRefine | pending | Then: robust central estimate | MERGE-3 | |
