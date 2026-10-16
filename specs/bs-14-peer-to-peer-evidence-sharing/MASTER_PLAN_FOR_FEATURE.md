@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — behaviour stage complete (all 12 ACs ✅ 12 A/0; CORE-4 + EXCHANGE-4 done). Next: **SIGNOFF-1** (sign-off packet + summary page + the D-3 on-device walkthrough). No open gates.
+**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet ready ([signoff/round-1.md](signoff/round-1.md)); all 12 ACs ✅ 12 A, grid 16 A/0, full regression green. One open decision for the owner: D-3 (on-device transport + own-record origination). No open gates.
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -108,9 +108,9 @@ Pre-seeded augmentations: MERGE-4 strengthens `TestAC09` to assert even an instr
 |---|---|---|---|---|
 | CORE | [modules/CORE.md](modules/CORE.md) | Scaffold; `lib/sharing/` package + app wiring; consent state + the invisibility guarantee | bs-13 (G-3) | ✅ Done |
 | RECORD | [modules/RECORD.md](modules/RECORD.md) | The anonymous mix-accuracy record: type, builder, privacy redaction, declared-palette gate, content hash | CORE | ✅ Done |
-| EXCHANGE | [modules/EXCHANGE.md](modules/EXCHANGE.md) | Serverless gossip: transport interface, offer-missing/dedup, no-wait; real platform transport (enabler) | CORE, RECORD | 🔄 In progress |
+| EXCHANGE | [modules/EXCHANGE.md](modules/EXCHANGE.md) | Serverless gossip: transport interface, offer-missing/dedup, no-wait; real platform transport (enabler) | CORE, RECORD | ✅ Done |
 | MERGE | [modules/MERGE.md](modules/MERGE.md) | Append-only source-tagged merge, crowd refine, never-promote, rate-limit | CORE, RECORD, bs-13 PROV | ✅ Done |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done |
 
 ## Dependency graph
 
@@ -180,17 +180,17 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 19 | EXCHANGE-3 | AC-7 no peer ⇒ no exchange, no wait | ✅ Done | 5,300,757 | 14m 22s | AC-7 ✅ un-pended, graded A (10 A/0); `gossip_exchange.dart` no-peer short-circuit + per-reachable-peer conduct count; unit 1545/0, cov 100%/20 touched; fix passes 1/3 (harness guard) |
 | 20 | EXCHANGE-4 | *enabler* real mDNS/socket transport + bs-12 guard amendment & boundary guard (no AC; manual on-device at sign-off) | ✅ Done | 17,428,659 | 30m 56s | real `LocalNetworkTransport` (prod default via `AppDependencies.peerTransport`; owner: injectable-default, real-in-prod) + `record_wire` framing + `local_network_io` (D-3 manual gap); bs-12 AC-8 `offDeviceSenders` exemption (`sanctionedOffDevicePathFiles`) + bs-14 boundary guard; unit 1597/0, cov 100%/23 of 24 touched (24th = `local_network_io.dart` justified exclusion D-3); bs-12 nfr + bs-14 acceptance green; fix passes 2/3 |
 | 21 | CORE-4 | AC-2 no per-exchange action (silent background exchange) | ✅ Done | 14,820,009 | 37m 40s | AC-2 ✅ un-pended, graded A (11 A/0); CORE module complete; silent fire-and-forget exchange over inert `InactivePeerTransport` + `recipesImproveSignal` surface; unit 1553/0, cov 100%/21 touched; regression host 52 + sim 222 + conformance 1553; fix passes 1/3 (const-ctor coverage) |
-| 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | startable — behaviour stage complete (all 12 ACs A, CORE-4 + EXCHANGE-4 ✅) |
+| 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting review | 9,922,948 | 22m 58s (22m 59s) | packet [signoff/round-1.md](signoff/round-1.md); grid 16 A/0; unit 1597/0, cov 23/24 (D-3 excl), bs-14 acc 24/0 (default＝run-pending), regression host 52 + sim 222 harness + 1597 conformance; scorecard https://claude.ai/artifact/WweicVCzsgmUGSYJEPZAMj; **decision pending — D-3 own-record origination** |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**Behaviour stage complete** — all 12 ACs coded and graded A (12 A/0); CORE-4 and EXCHANGE-4 (enabler) both done. One phase remains, startable, no open gates:
+**⏸ Awaiting owner sign-off.** SIGNOFF-1 is complete: packet [signoff/round-1.md](signoff/round-1.md), scorecard https://claude.ai/artifact/WweicVCzsgmUGSYJEPZAMj. Every AC built, suite green in both modes, fresh grid 16 A/0, full cross-feature regression green (host 52 + sim 1819). No open gates.
 
-- **SIGNOFF-1 — next, last.** Assemble the sign-off packet + summary page and record the owner's decision. Carry in the **one named gap, D-3**: the real transport's discovery/socket path (`lib/sharing/exchange/local_network_io.dart`, the coverage gate's single justified exclusion) is verified only by the **on-device walkthrough** — two opted-in installs on one LAN discover each other and a mix recorded on one appears merged on the other, with nothing but the record crossing. The shipped app defaults to the real `LocalNetworkTransport`; feeding the painter's shareable mixes into the live round is the last on-device wiring step, also exercised in the walkthrough.
+**One open decision for the owner — D-3.** The acceptance suite proves the logic over a fake loopback transport; two things are verified only by the on-device manual walkthrough: (1) the real `LocalNetworkTransport` mDNS/socket path (`local_network_io.dart`, the single justified coverage exclusion; framing unit-tested + boundary guard), and (2) **own-record origination is not yet wired into the live round** — `build_app.dart:1055` triggers with `const <MixAccuracyRecord>[]`, so on-device the app receives but offers nothing until the painter's shareable mixes are fed in. That wiring is product code (own coverage + an augmentation), out of scope for sign-off. The owner decides: **approve as-is** (logic layer + receive-capable transport; origination deferred, fitting a post-v1 invisible feature) or **request changes** (a short enabler phase wires the share-set, then SIGNOFF-2).
 
-Run `/feature-next-phase bs14` to pick up SIGNOFF-1.
+Record with `/feature-next-phase --signoff bs14 approved | changes "<items>"`.
 
 ## Token usage
 
@@ -198,7 +198,6 @@ Run `/feature-next-phase bs14` to pick up SIGNOFF-1.
 
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| PLAN | | | | | | | | | | | | plan written |
 | PLAN | 5e34b79c | 2026-10-14 17:46 EDT | 18:07 | 21m 02s | 13m 45s | claude-opus-4-8 | 58 | 171,188 | 1,871,095 | 50,988 | 2,093,329 | plan written |
 | GATE-DECISION | 5e34b79c | 2026-10-14 18:12 EDT | 18:13 | 0m 58s | 0m 58s | claude-opus-4-8 | 18 | 6,316 | 1,231,854 | 3,848 | 1,242,036 | G-1 approved |
 | CORE-1 | b46e8d1e | 2026-10-15 14:21 EDT | 14:45 | 23m 46s | 23m 46s | claude-opus-4-8 | 116 | 120,199 | 6,041,574 | 47,630 | 6,209,519 | scaffold done: rebased onto c00422f (G-3 closed), baseline unit 1413/0 + integration 293/293 (241 sim + 52 flutter-tester), coverage gate self-check pass, bs14 pending-gate skeleton seeded (12 ACs) |
@@ -224,10 +223,11 @@ Run `/feature-next-phase bs14` to pick up SIGNOFF-1.
 | GATE-DECISION | f41d75ca | 2026-10-16 12:58 EDT | 13:00 | 1m 57s | 1m 57s | claude-opus-4-8 | 22 | 19,656 | 3,034,551 | 8,374 | 3,062,603 | G-4 approved (Matt Quirk): local-network-only PeerTransport (mDNS + socket, record-only, consented); bs-12 guards to permit only this path + bs-14 boundary guard; EXCHANGE-2/4 unblocked |
 | EXCHANGE-2 | a4e3a7d6 | 2026-10-16 13:14 EDT | 13:31 | 16m 59s | 16m 59s | claude-opus-4-8 | 136 | 268,740 | 8,787,575 | 52,651 | 9,109,102 | AC-6 un-pended (last pending → map empty) + graded A (12 A/0); gossip mine−theirs offer/receive + SeenSet dedup; unit 1556/0, cov 100%/21 touched; fix passes 0/3 |
 | EXCHANGE-4 | 4b633a97 | 2026-10-16 13:35 EDT | 14:20 | 44m 12s | 30m 56s | claude-opus-4-8 | 194 | 222,475 | 17,095,029 | 110,961 | 17,428,659 | enabler done — real LocalNetworkTransport (prod default) + record_wire framing + local_network_io (D-3 manual gap); bs-12 AC-8 guard exemption + bs-14 boundary guard; unit 1597/0, cov 100%/23 of 24 touched (24th justified exclusion); fix passes 2/3 |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 14:20** | **7h 33m** | **7h 12m** |  | **2,688** | **4,677,429** | **171,721,683** | **1,256,850** | **177,658,650** |  |
+| SIGNOFF-1 | 5df4135b | 2026-10-16 14:58 EDT | 15:21 | 22m 59s | 22m 58s | claude-opus-4-8 | 162 | 304,545 | 9,563,887 | 54,354 | 9,922,948 | sign-off packet + scorecard assembled; all 12 ACs A, grid 16 A/0, unit 1597/0, cov 23/24 (D-3 excl), bs-14 acceptance 24/0 default＝run-pending, regression host 52 + sim 222+1597; decision pending (D-3 own-record origination) — awaiting owner |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 15:21** | **7h 56m** | **7h 35m** |  | **2,850** | **4,981,974** | **181,285,570** | **1,311,204** | **187,581,598** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | | | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `b47b667` | 12 ACs A · grid 16 A/0 | ⏸ Awaiting |
