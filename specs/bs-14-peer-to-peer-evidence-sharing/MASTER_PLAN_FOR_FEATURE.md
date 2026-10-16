@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — shell stage COMPLETE (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1 all ✅); next ITEST-1 (acceptance-tests). G-3 ✅ resolved (bs-13 merged @ `c00422f`); G-2 blocks every behaviour phase (resolved by the ITEST-5 test review); G-4 still open (blocks EXCHANGE behaviour phases only).
+**Status:** In progress — ITEST-1 (harness) ✅; next ITEST-2 ∥ ITEST-3 ∥ ITEST-4 (one pending AC test each + red baseline). G-3 ✅ resolved (bs-13 merged @ `c00422f`); G-2 blocks every behaviour phase (resolved by the ITEST-5 test review); G-4 still open (blocks EXCHANGE behaviour phases only).
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -110,7 +110,7 @@ Pre-seeded augmentations: MERGE-4 strengthens `TestAC09` to assert even an instr
 | RECORD | [modules/RECORD.md](modules/RECORD.md) | The anonymous mix-accuracy record: type, builder, privacy redaction, declared-palette gate, content hash | CORE | 🔄 In progress |
 | EXCHANGE | [modules/EXCHANGE.md](modules/EXCHANGE.md) | Serverless gossip: transport interface, offer-missing/dedup, no-wait; real platform transport (enabler) | CORE, RECORD | 🔄 In progress |
 | MERGE | [modules/MERGE.md](modules/MERGE.md) | Append-only source-tagged merge, crowd refine, never-promote, rate-limit | CORE, RECORD, bs-13 PROV | 🔄 In progress |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
 
 ## Dependency graph
 
@@ -163,8 +163,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | RECORD-1 | shell: `MixAccuracyRecord` + content hash + `RecordBuilder` + `RecordInspectEndpoint` | ✅ Done | 5,181,744 | 12m 49s | unit 1464/0, cov 100%/9 touched; 4 record files, no behaviour; FNV-1a content hash (D-7) |
 | 4 | EXCHANGE-1 | shell: `PeerTransport` + `GossipExchange` skeleton + seen-set + fire-and-forget scheduler + `ExchangeOutcomeEndpoint` | ✅ Done | 4,252,500 | 11m 52s | unit 1488/0, cov 100%/14 touched; 5 files, no behaviour, nothing wired into assembly |
 | 5 | MERGE-1 | shell: `EvidenceMerge` + `CrowdRefine` + `SourceRateLimiter` + `EvidenceKind.peerContributed` + `MappingEvidenceEndpoint` | ✅ Done | 5,237,948 | 11m 08s | last shell done; unit 1511/0, cov 100%/19 touched; shell stage complete |
-| 6 | ITEST-1 | acceptance-tests: harness (two-install fake transport), fixtures, pending gate, smoke test | ⬜ Next | | | shell stage complete |
-| 7 | ITEST-2 | acceptance-tests: AC-1, AC-2, AC-3, AC-4, AC-5 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3/4 |
+| 6 | ITEST-1 | acceptance-tests: harness (two-install fake transport), fixtures, pending gate, smoke test | ✅ Done | 7,810,941 | 20m 38s | scaffold suite 12/12 (default+run-pending); no lib touched |
+| 7 | ITEST-2 | acceptance-tests: AC-1, AC-2, AC-3, AC-4, AC-5 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3/4 |
 | 8 | ITEST-3 | acceptance-tests: AC-6, AC-7, AC-10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2/4 |
 | 9 | ITEST-4 | acceptance-tests: AC-8, AC-9, AC-11, AC-12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2/3 |
 | 10 | ITEST-5 | test-review: packet; G-2 | ⬜ Todo | | | |
@@ -185,12 +185,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-MERGE-1 ✅ done — `lib/sharing/merge/` landed (4 files, no behaviour, nothing wired into assembly): `EvidenceMerge`+`SourcedRecord` (append-only source-tagged ingest skeleton, D9/AC-10), `CrowdRefine`+`RefineResult` (recompute skeleton riding bs-13's `tierFor` so peer evidence never promotes, AC-8/9/11), `SourceRateLimiter` (per-source bound skeleton, AC-12), `MappingEvidenceEndpoint`+`MappingEvidenceView` (the suite's read seam). Additive: `EvidenceKind.peerContributed` in `lib/domain/sample.dart` (the surface-drift corrected — not `provenance.dart`) + its `fromEvidenceKind`→`cardLess` case. analyze clean; unit 1511/0 (+23); cov 100% on all 19 touched files; bs-13 derivation unchanged.
+ITEST-1 ✅ done — the acceptance harness landed under `integration_test/bs14/` (3 test-support files, no `lib/` touched): `fake_peer_transport.dart` (the only fake — a `FakeLocalNetwork` loopback + per-install `FakePeerTransport` implementing the real `discover`/`offer`/`receive` contract, `peersReachable` for the AC-7 no-peer case), `harness.dart` (the fixture table `twoInstalls`/`seedMapping`/`confirmedEvidence`/`peerRecords`/`noPaletteRecord` + real `ColorScience` CIELCh + `givenTheSharingApp` booting the real app + the record/exchange/merge endpoint builders over the real services), `harness_test.dart` (12 scaffold tests: smoke on wiring invariants + pending-gate + fixture/transport guards). analyze clean; scaffold suite 12/12 green in default **and** run-pending modes on `-d flutter-tester`; unit 1511/0; fresh-reviewer graded PASS (1 fix pass). No red baseline (no AC tests written yet).
 
-**The shell stage is COMPLETE** (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1). **Next: the ITEST (acceptance-tests) stage.**
-- **ITEST-1** (startable now) — the two-install fake-transport harness over the wired shells, fixtures, the pending gate, a smoke test.
-- Then **ITEST-2 ∥ ITEST-3 ∥ ITEST-4** — one *pending* integration test per AC + red baseline (disjoint AC sets; parallelizable).
-- **ITEST-5** — the test review; a human approves its packet → resolves **G-2**, unblocking every behaviour phase.
+**Next: ITEST-2 ∥ ITEST-3 ∥ ITEST-4** — one *pending* integration test per AC + the run-pending red baseline + grades, in disjoint files (`consent_and_record_test.dart` AC-1..5 · `exchange_and_merge_test.dart` AC-6/7/10 · `refine_test.dart` AC-8/9/11/12; `TestAC09` carries the MERGE-4 augmentation). They build only on the ITEST-1 harness, so all three are startable now and parallelizable (separate `--parallel` sessions).
+- Then **ITEST-5** — the test review; a human approves its packet → resolves **G-2**, unblocking every behaviour phase.
 
 No behaviour phase can run until **G-2** (ITEST-5). Decide **G-4** before the EXCHANGE behaviour phases (EXCHANGE-2/4).
 
@@ -208,7 +206,8 @@ No behaviour phase can run until **G-2** (ITEST-5). Decide **G-4** before the EX
 | RECORD-1 | b9a0623b | 2026-10-15 21:12 EDT | 21:25 | 12m 49s | 12m 49s | claude-opus-4-8 | 104 | 107,895 | 5,030,224 | 43,521 | 5,181,744 | shell: MixAccuracyRecord + content hash + RecordBuilder + RecordInspectEndpoint; analyze clean, unit 1464/0, cov 100% on 9 touched files |
 | EXCHANGE-1 | 54c45686 | 2026-10-15 21:30 EDT | 21:42 | 11m 52s | 11m 52s | claude-opus-4-8 | 84 | 102,667 | 4,102,419 | 47,330 | 4,252,500 | shell done: 5 files, unit 1488/0, cov 100%/14 touched, suite green |
 | MERGE-1 | 2772e279 | 2026-10-15 21:51 EDT | 22:02 | 11m 08s | 11m 08s | claude-opus-4-8 | 104 | 104,983 | 5,093,636 | 39,225 | 5,237,948 | shell done: EvidenceMerge+CrowdRefine+SourceRateLimiter+MappingEvidenceEndpoint+EvidenceKind.peerContributed; unit 1511/0, cov 100%/19 touched; no behaviour |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-15 22:02** | **1h 52m** | **1h 45m** |  | **626** | **799,847** | **33,949,201** | **291,247** | **35,040,921** |  |
+| ITEST-1 | 5ef25313 | 2026-10-15 22:06 EDT | 22:27 | 20m 38s | 20m 38s | claude-opus-4-8 | 102 | 253,811 | 7,483,311 | 73,717 | 7,810,941 | acceptance-tests harness: fake loopback transport + fixtures + pending gate + scaffold suite 12/12 green (default+run-pending), analyze clean, unit 1511/0, no lib touched |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-15 22:27** | **2h 13m** | **2h 05m** |  | **728** | **1,053,658** | **41,432,512** | **364,964** | **42,851,862** |  |
 
 ## Sign-off
 
