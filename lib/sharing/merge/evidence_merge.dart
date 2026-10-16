@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../domain/provenance_derivation.dart';
 import '../../domain/sample.dart';
 import '../record/mix_accuracy_record.dart';
+import 'source_rate_limiter.dart';
 
 /// A received [MixAccuracyRecord] paired with the id of the source it arrived
 /// from (bs-14 MERGE-1).
@@ -51,11 +52,20 @@ class SourcedRecord {
 /// dropped, reordered or overwritten. MERGE-5 bounds the volume any one source
 /// may contribute via [SourceRateLimiter].
 class EvidenceMerge {
-  /// Creates a merge over bs-13's append-only [derivation].
-  const EvidenceMerge({this.derivation = const ProvenanceDerivation()});
+  /// Creates a merge over bs-13's append-only [derivation], capping each source
+  /// at [maxPerSource] peer-contributed points (AC-12).
+  const EvidenceMerge({
+    this.derivation = const ProvenanceDerivation(),
+    this.maxPerSource = SourceRateLimiter.defaultMaxPerSource,
+  });
 
   /// The frozen bs-13 derivation whose append-only add every merge rides on.
   final ProvenanceDerivation derivation;
+
+  /// The most peer-contributed points any single source may hold in a mapping's
+  /// evidence log; records beyond it from that source are rejected (AC-12;
+  /// scope §6.6).
+  final int maxPerSource;
 
   /// Merges the [incoming] source-tagged records into [existing], returning the
   /// mapping's new evidence log.
@@ -67,12 +77,30 @@ class EvidenceMerge {
   /// prior points stay unchanged and in order, the appended points follow in
   /// arrival order, and nothing is overwritten or deduped — distinct peer
   /// measurements each add a point (AC-10). The result is an unmodifiable view.
+  ///
+  /// The volume any one source contributes is bounded by a [SourceRateLimiter]
+  /// capped at [maxPerSource]: once a source has that many peer-contributed
+  /// points in the log it is rejected, while every other source is admitted
+  /// independently, so a flood from one source cannot dominate the mapping nor
+  /// starve the others (AC-12). The limiter is seeded with the peer points
+  /// already in [existing], so the cap counts a source's whole contribution
+  /// across repeated merges, not just this batch (the log only ever grows).
   List<EvidencePoint> ingest(
     List<EvidencePoint> existing,
     Iterable<SourcedRecord> incoming,
   ) {
+    final SourceRateLimiter limiter =
+        SourceRateLimiter(maxPerSource: maxPerSource);
+    for (final EvidencePoint point in existing) {
+      if (point.kind == EvidenceKind.peerContributed) {
+        limiter.admit(point.source);
+      }
+    }
     var evidence = existing;
     for (final SourcedRecord sourced in incoming) {
+      if (!limiter.admit(sourced.source)) {
+        continue;
+      }
       evidence = derivation.appendEvidence(
         evidence,
         EvidencePoint(

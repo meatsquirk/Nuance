@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/sharing/merge/evidence_merge.dart';
+import 'package:paint_color_assistant/sharing/merge/source_rate_limiter.dart';
 import 'package:paint_color_assistant/sharing/record/mix_accuracy_record.dart';
 
 MixAccuracyRecord _record(String id) => MixAccuracyRecord(
@@ -106,6 +107,80 @@ void main() {
       const merge = EvidenceMerge();
       expect(merge.ingest(const [], const []), isEmpty);
       expect(merge.derivation, isNotNull);
+    });
+  });
+
+  group('EvidenceMerge.ingest (per-source rate limit — AC-12)', () {
+    SourcedRecord sourced(String source, String id) =>
+        SourcedRecord(source: source, record: _record(id));
+
+    test('defaults the per-source cap to the limiter default', () {
+      const merge = EvidenceMerge();
+      expect(merge.maxPerSource, SourceRateLimiter.defaultMaxPerSource);
+    });
+
+    test('caps one source at maxPerSource, rejecting the excess', () {
+      const merge = EvidenceMerge(maxPerSource: 3);
+      final flood = [for (var i = 0; i < 10; i++) sourced('flooder', 'r$i')];
+
+      final merged = merge.ingest(const [], flood);
+
+      // Only the cap's worth of that source's records are admitted.
+      expect(merged, hasLength(3));
+      expect(merged.map((p) => p.source), everyElement('flooder'));
+      expect(merged.map((p) => p.kind),
+          everyElement(EvidenceKind.peerContributed));
+    });
+
+    test('a flood from one source never starves another', () {
+      const merge = EvidenceMerge(maxPerSource: 3);
+      final incoming = [
+        for (var i = 0; i < 10; i++) sourced('flooder', 'f$i'),
+        for (var i = 0; i < 2; i++) sourced('honest', 'h$i'),
+      ];
+
+      final merged = merge.ingest(const [], incoming);
+
+      expect(merged.where((p) => p.source == 'flooder'), hasLength(3));
+      // The honest source keeps its full budget regardless of the flood.
+      expect(merged.where((p) => p.source == 'honest'), hasLength(2));
+    });
+
+    test('the cap counts a source\'s prior peer points in the log, not just '
+        'this batch', () {
+      const merge = EvidenceMerge(maxPerSource: 3);
+      final seeded = merge.ingest(
+        const [],
+        [for (var i = 0; i < 2; i++) sourced('flooder', 's$i')],
+      );
+      expect(seeded, hasLength(2));
+
+      // A second merge: the flooder already has 2 of its 3-point budget used, so
+      // only one more is admitted; a different source is unaffected.
+      final merged = merge.ingest(seeded, [
+        sourced('flooder', 'more-0'),
+        sourced('flooder', 'more-1'),
+        sourced('honest', 'h0'),
+      ]);
+
+      expect(merged.where((p) => p.source == 'flooder'), hasLength(3));
+      expect(merged.where((p) => p.source == 'honest'), hasLength(1));
+    });
+
+    test('non-peer points already in the log do not count toward the cap', () {
+      const merge = EvidenceMerge(maxPerSource: 1);
+      // `instrument`/`solver` are llmSeed points, not peerContributed, so they
+      // are not charged against any source's budget.
+      final existing = [_point('instrument'), _point('solver')];
+
+      final merged = merge.ingest(existing, [sourced('solver', 'a')]);
+
+      // The prior non-peer points stay; the one peer record from 'solver' is
+      // admitted (its budget untouched by the identically-named seed point).
+      expect(merged, hasLength(3));
+      expect(
+          merged.where((p) => p.kind == EvidenceKind.peerContributed),
+          hasLength(1));
     });
   });
 }

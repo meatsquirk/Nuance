@@ -1,6 +1,6 @@
 # Module MERGE — append-only merge, crowd refine, never-promote, rate-limit
 
-**Status:** In progress — MERGE-1, MERGE-2, MERGE-3, MERGE-4 ✅ done (AC-8/9/10/11 ✅); next is MERGE-5 (AC-12)
+**Status:** ✅ Done — MERGE-1..MERGE-5 all done (AC-8/9/10/11/12 ✅, all graded A); module complete
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/merge/evidence_merge.dart`, `crowd_refine.dart`, `source_rate_limiter.dart`, `mapping_evidence_endpoint.dart`; an **additive** edit to bs-13's `lib/domain/sample.dart` (surface-drift: the enum lives there, not `provenance.dart`) to add `EvidenceKind.peerContributed`, plus the matching `MeasurementTier.fromEvidenceKind` case in `mix_accuracy_record.dart`.
 **Depends on:** CORE, RECORD, **bs-13 PROV** (append-only add, `ProvenanceDerivation.tierFor`, clustering rule) · **Blocks:** SIGNOFF-1
@@ -13,7 +13,7 @@
 | 2 | behavior | AC-10 | ✅ Done | 6,290,218 | 11m 35s |
 | 3 | behavior | AC-8 + AC-11 | ✅ Done | 6,284,723 | 15m 51s |
 | 4 | behavior | AC-9 | ✅ Done | 7,077,181 | 14m 53s |
-| 5 | behavior | AC-12 | ⬜ Todo | | |
+| 5 | behavior | AC-12 | ✅ Done | 7,627,140 | 15m 13s |
 
 ## Interface reconciliation
 
@@ -153,3 +153,18 @@
 - **Frozen:** `RefineResult` now carries a third field, `label` (the user-facing provenance qualifier), required in its const ctor and part of `==`/`hashCode`/`toString`. `CrowdRefine.refine` populates it from `derivation.qualifier(tier)`; for crowd/peer evidence that is always "Estimated — not yet verified" (AC-9). Any later consumer constructing a `RefineResult` directly must pass a `label` (only the unit test did; the harness/endpoints build it via `refine`). The never-promote invariant is now covered end-to-end at the value *and* the painter-facing-label grain.
 - **Verification commands:** flutter at `~/development/flutter/bin`. Unit+cov: `flutter test --coverage` then `dart run tool/coverage_gate.dart <phase-base>`. Acceptance (host, one app-booting file per invocation): `flutter test integration_test/bs14/refine_test.dart -d flutter-tester` (+ `--dart-define=BS14_RUN_PENDING=true` for the AC-12 red).
 - **Next:** MERGE-5 (AC-12 per-source rate limit, in `source_rate_limiter.dart` + `evidence_merge.dart`) — needs only MERGE-1, independent of the MERGE-2→3→4 chain; un-pends AC-12 (the last MERGE red). EXCHANGE-3 (AC-7) remains independently startable; EXCHANGE-2/4 still need G-4; CORE-4 (AC-2) needs EXCHANGE-3. SIGNOFF-1 last.
+
+### Result — MERGE-5 (AC-12 per-source rate limit)
+
+- **Landed:** the per-source volume bound is now enforced inside `EvidenceMerge.ingest`. `SourceRateLimiter` became the real stateful counter — `admit(source)` returns true and counts the admission while that source is below `maxPerSource`, false (counting nothing) once it reaches the cap, keeping a separate count per source so one source at its cap never affects another's budget. `EvidenceMerge` gained a `const` `maxPerSource` field (default `SourceRateLimiter.defaultMaxPerSource = 50`) and now, per `ingest` call, builds a fresh limiter, **seeds it with the peer-contributed points already in `existing`** (so the cap bounds a source's whole contribution across the append-only log, not just one batch), then admits each incoming record — appending the source-tagged `peerContributed` point when admitted, skipping it when over cap. AC-10's append-only/source-tagged behaviour is preserved (distinct-source records stay far under the cap). Both `source_rate_limiter.dart` and `evidence_merge.dart` touched in `lib/`.
+- **Design note (const-constructibility forced the shape).** The AC-12 test and the harness construct `const EvidenceMerge()` directly, so `EvidenceMerge` must stay const — it therefore cannot hold a stateful limiter field; it holds only the `maxPerSource` cap and creates the limiter internally per call. Scope §6.6 names no number, so `defaultMaxPerSource = 50` is the fixed bound (the shell's "provisional" note dropped).
+- **Acceptance gate:** AC-12 un-pended (deleted from `bs14/pending.dart`; MERGE-5 added to `completedBehaviorPhases` and `behaviorPhases`; `harness_test` pending-set guard updated: `unpended` += AC-12, `containsAll` += MERGE-5). `TestAC12_RateLimited` runs and passes; whole bs-14 suite green with only AC-2/6/7 skipped. Default: `refine_test` 4 pass/0 skip (AC-8/9/11/12), `harness_test` 12/0, `exchange_and_merge_test` 1 pass/2 skip (AC-10; AC-6/7 pending), `consent_and_record_test` 4 pass/1 skip (AC-1/3/4/5; AC-2 pending).
+- **Grade gate:** fresh independent reviewer (fresh subagent, G1–G6, given the prior grid, re-ran all three files live) — **AC-12 A** (first grade: drives the real `EvidenceMerge.ingest`/`SourceRateLimiter`, both Thens at exact value — flooder capped at exactly 50, honest peer's 5 all accepted — rejecting both no-cap and global-cap-that-starves-others). **AC-9 A** graded fresh in full (closing the *B pending MERGE-4* that MERGE-4's commit never recorded in the grid — see the grid's late MERGE-4 note). AC-10 re-verified carefully (shares `evidence_merge.dart`): distinct-source counts of 1 stay under cap, append-only unchanged, no regression. AC-1/3/4/5/8/11 all remain A. **9 A / 0** over un-pended AC-1,3,4,5,8,9,10,11,12. No downgrades.
+- **Unit:** analyze clean; `source_rate_limiter_test` rewritten shell→behaviour (5 tests: default cap, explicit cap, cap-then-reject, per-source independence, zero-cap); `evidence_merge_test` extended with an AC-12 group (5 tests: default cap, single-source cap, no-starvation, cross-batch seeding from existing peer points, non-peer existing points not charged). Full unit **1544/0** (+7); coverage gate **100% (line)** on both touched lib files (`dart run tool/coverage_gate.dart c9c22b6`). Fix passes **0/3** (all gates passed first run).
+- **Tokens / Time:** 7,627,140 / 15m 13s.
+
+### Checkpoint / Handoff — after MERGE-5
+
+- **Frozen:** `SourceRateLimiter` is now stateful — `admit(source)` counts per source and rejects once a source reaches `maxPerSource` (default 50); a limiter instance bounds a whole stream. `EvidenceMerge` now takes `maxPerSource` (const, default `SourceRateLimiter.defaultMaxPerSource`) and `ingest` enforces the per-source cap over the whole log (existing peer points seed the count), while keeping AC-10's append-only, source-tagged semantics for admitted records. The **MERGE module is complete** (MERGE-1..5 all done; AC-8/9/10/11/12 ✅, all A).
+- **Verification commands:** flutter at `~/development/flutter/bin`. Unit+cov: `flutter test --coverage` then `dart run tool/coverage_gate.dart <phase-base>`. Acceptance (host, one app-booting file per invocation): `flutter test integration_test/bs14/refine_test.dart -d flutter-tester` (+ `--dart-define=BS14_RUN_PENDING=true` for the pending ACs).
+- **Next:** EXCHANGE-3 (AC-7, no peer ⇒ no exchange/no wait) is startable now. CORE-4 (AC-2) needs EXCHANGE-3. EXCHANGE-2 (AC-6) and EXCHANGE-4 (enabler) need **G-4** (still open). SIGNOFF-1 last (needs CORE-4, EXCHANGE-4). All MERGE reds are now closed.
