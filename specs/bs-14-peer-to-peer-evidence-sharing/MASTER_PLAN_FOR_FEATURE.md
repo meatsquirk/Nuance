@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — ITEST-1..4 ✅ (ITEST-4: AC-8/9/11/12, 3 A + AC-9 B-pending-MERGE-4); next ITEST-5 (test review → G-2), the LAST AC-stage phase. G-3 ✅ resolved (bs-13 merged @ `c00422f`); G-2 blocks every behaviour phase (resolved by the ITEST-5 test review); G-4 still open (blocks EXCHANGE behaviour phases only).
+**Status:** In progress — ITEST-1..4 ✅; **ITEST-5 ⏸ Awaiting review** — test-review packet assembled, **G-2 routed to a human** (approve to unblock every behaviour phase). G-3 ✅ resolved (bs-13 merged @ `c00422f`); G-4 still open (blocks EXCHANGE behaviour phases only — decide before EXCHANGE-2/4).
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -141,7 +141,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the draft banner) | CORE-1 | ✅ Resolved 2026-10-14: spec approved; draft banner replaced with approval line (feat/bs-14 spec) — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-5's packet) | every behavior phase | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-5's packet) | every behavior phase | Awaiting decision (ITEST-5 packet ready 2026-10-16: `modules/ITEST.md` § Test-review packet; 11 A + AC-9 B-pending-MERGE-4) — approve via `/feature-next-phase --gate bs14 G-2 approved \| "<changes>"` |
 | G-3 | dependency | bs-13 signed off & merged to main — its PROV (`EvidenceKind`, append-only add, `ProvenanceDerivation`) and SEED (`CandidateMapping`, declared-palette) surface present on main — closed by the bs-13 sign-off merge | CORE-1 (scaffold branches off a main that contains bs-13) | ✅ Resolved 2026-10-15: bs-13 signed off (`bcde3be`) & merged to main (`c00422f`); surface verified present at CORE-1 (`provenance_derivation.dart`, `sample.dart` `EvidenceKind`, `seed_dataset.dart` `CandidateMapping`) — Matt Quirk (bs-13 sign-off) |
 | G-4 | decision | Approve the single sanctioned off-device path and how bs-12's network-block / no-off-device-path guards are reconciled to permit only the consented, record-only P2P exchange — routed to the owner | EXCHANGE-2, EXCHANGE-4 | Open |
 
@@ -167,7 +167,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-2 | acceptance-tests: AC-1, AC-2, AC-3, AC-4, AC-5 (pending) + red baseline | ✅ Done | 6,582,231 | 21m 58s | 5 pending, red baseline clean, 5 A |
 | 8 | ITEST-3 | acceptance-tests: AC-6, AC-7, AC-10 (pending) + red baseline | ✅ Done | 4,609,896 | 12m 39s | 3 A, red baseline 3/3 clean, no lib touched |
 | 9 | ITEST-4 | acceptance-tests: AC-8, AC-9, AC-11, AC-12 (pending) + red baseline | ✅ Done | 6,488,618 | 19m 29s | 3 A + AC-9 B-pending-MERGE-4; baseline 3 red (AC-8/11→MERGE-3, AC-12→MERGE-5) + AC-9 green (limited); no lib touched, unit 1511/0 |
-| 10 | ITEST-5 | test-review: packet; G-2 | ⬜ Next | | | last AC-stage phase; preconditions met (all-A or B-pending-with-augmentation) |
+| 10 | ITEST-5 | test-review: packet; G-2 | ⏸ Awaiting review | 2,005,695 | 6m 07s | packet assembled (modules/ITEST.md § Test-review packet); suite re-verified in documented state (default green/skipped, run-pending 11 red + 1 green); 11 A + AC-9 B-pending-MERGE-4; G-2 routed to a human |
 | 11 | CORE-3 | AC-1 one-time plain-language opt-in + invisibility | ⬜ Todo | | | |
 | 12 | RECORD-2 | AC-3 + AC-4 build record, carry only evidence, nothing personal | ⬜ Todo | | | |
 | 13 | RECORD-3 | AC-5 no declared palette ⇒ not shared | ⬜ Todo | | | |
@@ -185,9 +185,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-4 ✅ done — `integration_test/bs14/refine_test.dart` (no `lib/` touched): the four *pending* acceptance tests AC-8/AC-9/AC-11/AC-12, pure-Dart over the real `EvidenceMerge`/`CrowdRefine`/`SourceRateLimiter` (bs-13 `ProvenanceDerivation`), observed via `MappingEvidenceEndpoint`. AC-8/AC-11 robust central estimate (cluster centroid, outlier discarded, vs a deliberately-offset stale seed) → MERGE-3; AC-12 per-source cap (`defaultMaxPerSource`, others unaffected) → MERGE-5; AC-9 never-promote (own-swatch promote control) → MERGE-4. analyze clean; **default green (4 skipped)**; **run-pending baseline 3 red + 1 green** (AC-8/AC-11→MERGE-3, AC-12→MERGE-5; AC-9 green-at-baseline, *limited* — `tierFor` already excludes `peerContributed`); scaffold 12/12; unit 1511/0. Grades **3 A + AC-9 B-pending-MERGE-4** (fix passes 0/3). Reconciliation surfaced: **MERGE-5 must wire a per-source `SourceRateLimiter` into `EvidenceMerge.ingest`**; AC-8/AC-11 need MERGE-2's append before MERGE-3.
+ITEST-5 ⏸ Awaiting review — the test review (the LAST AC-stage phase). Packet assembled in `modules/ITEST.md` § *Test-review packet — ITEST-5 (G-2)*: all 12 AC tests (Given checks → When → Then/Rejects), the boundary (real app via `buildApp`; the only fake is loopback `PeerTransport`), the four observation endpoints, the red-baseline summary, the one open augmentation (TestAC09 → MERGE-4), the grid location + counts, and the reviewer "look first" callouts (AC-9 the one B; AC-7's reachable-peer control; AC-3/5 reconciliations; the privacy ACs' positive controls). Suite re-verified in its documented state: default **12/12 scaffold green + 12 AC skipped, 0 failed**; run-pending **11 red + 1 green** (AC-9 green-at-baseline, limited). Grid: **11 A + AC-9 B-pending-MERGE-4** (inline in the Red baseline table). No `lib/` touched.
 
-**Next: ITEST-5** — the test review (the LAST AC-stage phase): assemble the packet (all 12 AC tests — Given checks, When, Then/Rejects, red baseline, grades, the AC-9 augmentation), set `⏸ Awaiting review`, route **G-2** to a human; the human approves via `/feature-next-phase --gate bs14 G-2 approved`. Approval resolves **G-2**, unblocking every behaviour phase. Preconditions met: every AC-test phase done; whole-suite grid is all A **or** *B pending <phase>* with an augmentation row (only AC-9).
+**Human decides G-2:** `/feature-next-phase --gate bs14 G-2 approved` (unblocks every behaviour phase) — or `"<changes>"` (each becomes an ITEST change phase, then a fresh review). After G-2 approval, the behaviour stage opens: **CORE-3** (AC-1), **RECORD-2** (AC-3/4), **RECORD-3** (AC-5), **MERGE-2** (AC-10) are startable immediately; MERGE-3 (AC-8/11) needs MERGE-2, MERGE-4 (AC-9) carries the TestAC09 augmentation, CORE-4 (AC-2) needs EXCHANGE-3. **Decide G-4 before the EXCHANGE behaviour phases** (EXCHANGE-2/4 — the single sanctioned off-device path + bs-12 guard reconciliation).
 
 No behaviour phase can run until **G-2** (ITEST-5). Decide **G-4** before the EXCHANGE behaviour phases (EXCHANGE-2/4).
 
@@ -209,7 +209,8 @@ No behaviour phase can run until **G-2** (ITEST-5). Decide **G-4** before the EX
 | ITEST-2 | fefe49ea | 2026-10-16 05:46 EDT | 06:08 | 21m 58s | 21m 58s | claude-opus-4-8 | 88 | 245,812 | 6,262,961 | 73,370 | 6,582,231 | acceptance-tests: AC-1..5 pending + red baseline 5/5 clean, default green, 5 A (AC-2/AC-4 B→A in-phase), no lib touched, unit 1511/0 |
 | ITEST-3 | 24ee30f0 | 2026-10-16 06:15 EDT | 06:27 | 12m 39s | 12m 39s | claude-opus-4-8 | 74 | 231,861 | 4,335,265 | 42,696 | 4,609,896 | acceptance-tests: AC-6/7/10 pending + red baseline 3/3 clean, default green (3 skipped), 3 A/0, fix passes 0/3, no lib touched, unit 1511/0 |
 | ITEST-4 | c90e6526 | 2026-10-16 06:31 EDT | 06:50 | 19m 29s | 19m 29s | claude-opus-4-8 | 92 | 249,816 | 6,162,907 | 75,803 | 6,488,618 | acceptance-tests: AC-8/9/11/12 pending + baseline (3 red + AC-9 green/limited); 3 A + AC-9 B-pending-MERGE-4; fix passes 0/3; no lib touched, unit 1511/0 |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 06:50** | **3h 07m** | **2h 59m** |  | **982** | **1,781,147** | **58,193,645** | **556,833** | **60,532,607** |  |
+| ITEST-5 | eeebdfa2 | 2026-10-16 07:18 EDT | 07:25 | 6m 07s | 6m 07s | claude-opus-4-8 | 48 | 76,326 | 1,913,214 | 16,107 | 2,005,695 | test-review packet assembled; G-2 routed to a human (awaiting decision) |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 07:25** | **3h 13m** | **3h 06m** |  | **1,030** | **1,857,473** | **60,106,859** | **572,940** | **62,538,302** |  |
 
 ## Sign-off
 

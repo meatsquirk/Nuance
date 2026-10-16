@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅ (harness), ITEST-2 ✅ (AC-1..5, 5 A), ITEST-3 ✅ (AC-6/7/10, 3 A), ITEST-4 ✅ (AC-8/9/11/12, 3 A + AC-9 B-pending-MERGE-4); next ITEST-5 (test review → G-2)
+**Status:** In progress — ITEST-1..4 ✅; **ITEST-5 ⏸ Awaiting review** (packet assembled, G-2 routed to a human) — whole-suite grid 11 A + AC-9 B-pending-MERGE-4; suite re-verified in documented state (default 12/12 scaffold green + 12 AC skipped; run-pending 11 red + 1 green)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs14/` — `harness.dart`, `fake_peer_transport.dart`, `pending.dart`, `harness_test.dart` (ITEST-1 scaffold/smoke tests), `consent_and_record_test.dart` (AC-1..5), `exchange_and_merge_test.dart` (AC-6,7,10), `refine_test.dart` (AC-8,9,11,12).
 **Depends on:** all shell phases (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1) · **Blocks:** every behavior phase (via G-2)
@@ -13,7 +13,7 @@
 | 2 | acceptance-tests | AC-1..5 | ✅ Done | 6,582,231 | 21m 58s |
 | 3 | acceptance-tests | AC-6, AC-7, AC-10 | ✅ Done | 4,609,896 | 12m 39s |
 | 4 | acceptance-tests | AC-8, AC-9, AC-11, AC-12 | ✅ Done | 6,488,618 | 19m 29s |
-| 5 | test-review | — (G-2) | ⬜ Next | | |
+| 5 | test-review | — (G-2) | ⏸ Awaiting review | 2,005,695 | 6m 07s |
 
 ## Interface reconciliation
 
@@ -146,6 +146,52 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
 - **Depends on:** ITEST-2, ITEST-3, ITEST-4 · **Blocks:** every behavior phase
 - **Tasks:** assemble the test-review packet (every AC test, its Given construction + assertions, its Rejects, its red baseline and grade); route **G-2** to a human. "Changes requested" → an ITEST change phase per item, then a fresh review.
 - **Exit criteria:** a human records the G-2 decision.
+
+### Result — ITEST-5 ⏸ Awaiting review
+
+Packet assembled (below), **G-2** routed to a human. No code written; the suite was re-run to confirm it is in the documented state before review:
+- **Default mode** (`-d flutter-tester`, no define): scaffold `harness_test.dart` **12/12 green**; all 12 AC tests **skipped** (`consent_and_record` +0 ~5, `exchange_and_merge` +0 ~3, `refine` +0 ~4) — 0 failed.
+- **Run-pending mode** (`--dart-define=BS14_RUN_PENDING=true`): the red baseline reproduces exactly — `consent_and_record` 0 +/5 −, `exchange_and_merge` 0 +/3 −, `refine` 1 +/3 − (AC-9 green-at-baseline) = **11 red + 1 green**, matching the Red baseline table.
+- Grades unchanged: **11 A + AC-9 B-pending-MERGE-4** (one open augmentation row, owned by MERGE-4). Grade grid lives inline in the *Red baseline* table (per-test Grade column) + each AC-test phase Result.
+
+Set phase `⏸ Awaiting review`; G-2 status → *awaiting decision*. Tokens/Time: see ledger (this session). **Stop** — a human decides G-2 via `/feature-next-phase --gate bs14 G-2 approved | "<changes>"`.
+
+### Test-review packet — ITEST-5 (G-2)
+
+**What this packet is.** The full bs-14 acceptance suite (12 AC tests, one per AC) put in front of a human **before any behaviour is coded** — the cheapest point to catch a test that checks the wrong thing. Approving G-2 unblocks every behaviour phase; "changes requested" turns each item into an ITEST change phase, then a fresh review.
+
+**Boundary (how everything is exercised).** Every test runs through the **public surface** of the real app: `buildApp(AppDependencies(...))` with real `ColorScience`, the single shipped `deltaE00`, and bs-13's real provenance/derivation/clustering (`provenance_derivation.dart`, `sample.dart`, `seed_dataset.dart`). The **only** fake is `PeerTransport` — an in-process loopback between two installs; **there is no real network in the suite** (a real mDNS/socket transport is the EXCHANGE-4 enabler, verified manually on-device at sign-off). State is observed only through four read endpoints: `SharingConsentReadEndpoint` (AC-1/2), `RecordInspectEndpoint` (AC-3/4/5), `ExchangeOutcomeEndpoint` (AC-6/7), `MappingEvidenceEndpoint` (AC-8..12). Givens are built only through public flows.
+
+**Files.** `integration_test/bs14/` — `harness.dart`, `fake_peer_transport.dart`, `pending.dart` (ITEST-1 scaffold); `harness_test.dart` (12 scaffold/smoke tests); `consent_and_record_test.dart` (AC-1..5); `exchange_and_merge_test.dart` (AC-6,7,10); `refine_test.dart` (AC-8,9,11,12).
+
+**Grid & counts.** Grades recorded inline in the *Red baseline* table below (Grade column) + each AC-test phase Result (fresh independent subagent per phase, G1–G6). **Whole-suite grid: 11 A + 1 B-pending (AC-9, owned by MERGE-4, one open augmentation row).** No row below A without an augmentation row. Red baseline (run-pending): **11 red + 1 green** (AC-9 green-at-baseline, *limited*).
+
+**Look at these first (reviewer):**
+1. **AC-9 (the one non-A).** It is *green at baseline* because bs-13's `tierFor` already excludes `peerContributed` by fall-through, so "never promote" holds trivially today. Graded **B pending MERGE-4**; the MERGE-4 augmentation (two adds) is the discriminator. Confirm you accept carrying this as an augmentation rather than a stronger test now.
+2. **AC-7 uses a control to redden the baseline.** The no-peer Thens (exchanges==0 / waited==false) pass against the no-op shell, so a *reachable-peer control* (exchange DOES happen, still never waited on) is what discriminates. Confirm the control is legitimate (grader confirmed it asserts only liveness + AC-7's own no-wait invariant — no AC-6 semantics, so no G6 violation).
+3. **AC-3/AC-5 interface reconciliations** flagged for behaviour phases (combination source → RECORD-2; reason channel → RECORD-3) — the pending tests assert the observable; confirm the reconciliations are acceptable.
+4. **Invisibility / no-personal-data** are the privacy-critical ACs (AC-1/2/4) — each has a positive control proving the negative assertion can fail.
+
+**Per-AC detail** (Given checks → When → Then / Rejects):
+
+- **AC-1 `TestAC01_OptInOnceNeverShown`** (widget; CORE-3). *Given:* fresh not-opted-in install; consent default false asserted via `SharingConsentReadEndpoint`. *When:* drive the one-time opt-in through the public control `sharingOptInKey`. *Then:* consent recorded; **no** `userFacingSharingSurfaces` item names a mechanism (peer/device/sync/network/wifi/bluetooth/nearby/server/upload/download/cloud); offer shown exactly once. *Rejects:* mechanism-naming copy, repeated prompts, no-op opt-in.
+- **AC-2 `TestAC02_NoPerExchangeAction`** (widget; CORE-4 via CORE-3). *Given:* opted-in consent pre-seeded via public `PersistentConsentStore` (asserted). *When:* settle the silent background exchange over the fake transport. *Then:* the only surfaced change is a mechanism-free recipe-improved signal (contains `recipe`+`improve`, names no mechanism); **no** speech/haptics prompt; no network wording. *Control:* live speech/haptics sink probe proves the sinks record (negative Then non-vacuous, G3). *Rejects:* any per-exchange prompt, mechanism wording, dead-sink pass.
+- **AC-3 `TestAC03_RecordCarriesOnlyEvidence`** (pure-Dart; RECORD-2). *Given:* a record prepared via the real `EvidenceRecordBuilder`, observed through `RecordInspectEndpoint`. *When:* inspect the prepared record. *Then (at grain):* declared palette ==; measured CIELAB ==/CIELCh closeTo; tier == referenceCard (card-calibrated swatch); canonical paint ids present. *Rejects:* missing/!=  combination, wrong tier, uncanonical ids. *Reconciliation:* RECORD-2 must source the paint ids (combination arg / recipe-bearing `Sample`).
+- **AC-4 `TestAC04_NothingPersonalLeaves`** (pure-Dart; RECORD-2). *Given:* same prepared record. *When:* inspect the crossing `canonicalForm`. *Then:* carries none of the source mix's personal tokens (name / evidence source) — redaction by construction. *Control:* a positive assert that the crossing form **does** carry the declared brand (proves the `isNot(contains)` is non-vacuous, G3). *Rejects:* any personal token crossing, empty-serialization vacuous pass.
+- **AC-5 `TestAC05_NoPaletteNotShared`** (pure-Dart; RECORD-3). *Given:* `noPaletteRecord` + an interpretable control record. *When:* `selectShareSet`. *Then:* share-set excludes the no-palette record, keeps the control. *Rejects:* sharing a palette-less record, excluding a valid one. *Reconciliation:* RECORD-3 may expose a reason channel → later augmentation.
+- **AC-6 `TestAC06_ExchangeOnlyMissing`** (pure-Dart; EXCHANGE-2). *Given:* `twoInstalls` A={r1,r2}, B={r2,r3}; r2 as value-equal but distinct-object (`r2a`/`r2b`) so an identity-keyed diff would re-offer it (all checked). *When:* A and B each `runExchange`. *Then:* via `network.inboxOf` — A offers B only `{r1.contentHash}`, B offers A only `{r3.contentHash}` (r2 dropped by content hash); `exchanges≥1`, `offered==1`; a second `runExchange(a)` leaves B's inbox length 1. *Rejects:* full-set offer, identity-keyed diff, re-offering already-seen.
+- **AC-7 `TestAC07_NoPeerNoWait`** (pure-Dart; EXCHANGE-3). *Given:* `twoInstalls(peersReachable:false)`. *When:* fire-and-forget round triggered; `waitedOnExchange` read synchronously after `trigger` returns. *Then:* round `settled` completes without throwing; `exchanges==0`, `offered==0`, `waitedOnExchange==false`. *Control (G3/G5):* a reachable peer DOES exchange (`exchanges≥1`) while still never waiting — the baseline discriminator. *Rejects:* blocking wait, exchange with no peer.
+- **AC-8 `TestAC08_ClusteredRefine`** (pure-Dart; MERGE-3, needs MERGE-2). *Given:* `peerRecords(7, outlier:true)` (7-tight cluster on `seedMappingValue` + 1 far outlier) merged into empty log; `_staleSeed` (70,-6,16) a deliberately-offset stored Estimated seed; Given checks prove centroid==seed, stale seed >5 away, plain-mean >3 away. *When:* `refine(_staleSeed, merged)`. *Then:* recomputed value within ±1.5 of centroid (62,2,6) **and** >1.5 from plain mean of all 8 (57,7,0.5). *Rejects:* plain-average (outlier-pulled), ignore-crowd (stays at stale seed).
+- **AC-9 `TestAC09_NeverPromotes`** (pure-Dart; MERGE-4). *Given:* Estimated mapping refined by `peerRecords(5)` via real merge; tier/label via real `ProvenanceDerivation`. *When:* read derived tier + `qualifier`. *Then:* tier stays `estimated`, label stays "Estimated — not yet verified". *Control:* the SAME mapping promoted with the painter's own measured swatch (`promoteWithOwnSwatch`) → Confirmed / "Confirmed — you measured this" (derivation CAN change). **Limited — B pending MERGE-4** (see augmentation): green at baseline because `tierFor` already excludes `peerContributed`.
+- **AC-10 `TestAC10_AppendOnlyMerge`** (pure-Dart; MERGE-2). *Given:* one prior `llmSeed` point + `sourcedFromDistinctPeers(peerRecords(3))` (3 distinct sources, 3 distinct colours, all checked). *When:* `EvidenceMerge.ingest`, observed via `MappingEvidenceEndpoint`. *Then:* evidence grows by exactly 3; prior point unchanged and still first (`sublist orderedEquals existing`); each appended point `peerContributed`, carries its source id and the record's measured CIELAB, in arrival order. *Rejects:* dedup of distinct measurements, overwrite/reorder, dropped source tag, wrong kind.
+- **AC-11 `TestAC11_OutlierDiscarded`** (pure-Dart; MERGE-3, needs MERGE-2). *Given:* distinct fixture `peerRecords(6, outlier:true)` (6 tight + 1 far). *When:* same refine path as AC-8 (D-6). *Then:* estimate within ±1.5 of the 6-cluster centroid **and** >1.5 from the all-7 plain mean (56.3,7.7,-0.29) — outlier discarded, not averaged. *Rejects:* averaging the outlier in.
+- **AC-12 `TestAC12_RateLimited`** (pure-Dart; MERGE-5). *Given:* `sourcedFromOnePeer(peerRecords(100), source:'flooder')` + `sourcedFromOnePeer(peerRecords(5), source:'honest-peer')`. *When:* both ingested. *Then:* flooder's accepted `peerContributed` points == `SourceRateLimiter.defaultMaxPerSource` (read symbolically, <100) — excess rejected; honest peer's count == 5 (a flood never starves another source). *Rejects:* no cap (100 accepted), global cap (starves others). *Reconciliation:* MERGE-5 must wire a per-source `SourceRateLimiter` into `ingest` keeping `const EvidenceMerge()` wiring working.
+
+**Red-baseline summary (run-pending).** 11 fail on a Then / a Given precondition naming the owning phase; AC-9 green-at-baseline (limited). No compile errors, panics or harness crashes. Full per-test rows in the *Red baseline* table below.
+
+**Augmentations scheduled.** One open row — **TestAC09 → MERGE-4** (see *Test augmentations* table): after the real `ingest`, assert the log holds exactly 5 `peerContributed` points (realizes the Given; reddens once added); add a peer point declaring an instrument/high tier and assert the tier **still** stays `estimated` (proves active exclusion). Closes AC-9 B→A.
+
+**Decision.** `/feature-next-phase --gate bs14 G-2 approved` — or `"<changes>"` to request changes (each becomes an ITEST change phase, then a fresh review).
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
