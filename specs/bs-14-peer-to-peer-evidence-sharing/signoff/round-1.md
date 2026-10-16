@@ -4,7 +4,7 @@
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature) — approved 2026-10-14 (G-1)
 **At code:** `b47b667` (worktree `Nuance-bs14`, branch `feat/bs-14-peer-to-peer-evidence-sharing`)
 **Phase:** SIGNOFF-1 · **Verified:** 2026-10-16
-**Decision:** ⏸ Awaiting — record with `/feature-next-phase --signoff bs14 approved | changes "<items>"`
+**Decision:** ✅ **Approved (approve as-is)** — Matt Quirk, 2026-10-16. D-3 accepted: bs-14 is signed off as the complete, tested logic layer plus the receive-capable real `LocalNetworkTransport`; own-record origination (feeding the painter's shareable mixes into the live round) is formally **deferred** to a post-v1 wiring phase, fitting this invisible, post-v1 feature. The on-device `local_network_io.dart` manual walkthrough remains a known gap carried into that later phase.
 
 > **This is a FUTURE / post-v1 feature** (SI D8): an invisible, serverless peer-to-peer layer that refines only the *Estimated* AI mappings. All 12 ACs are coded, tested through production wiring, and graded A. **Read "The one open decision (D-3)" below before deciding** — the on-device data-origination wiring is deliberately deferred and affects what the on-device walkthrough can show today.
 

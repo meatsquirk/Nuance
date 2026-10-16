@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet ready ([signoff/round-1.md](signoff/round-1.md)); all 12 ACs ✅ 12 A, grid 16 A/0, full regression green. One open decision for the owner: D-3 (on-device transport + own-record origination). No open gates.
+**Status:** Done — signed off 2026-10-16 by Matt Quirk at `33d0fd0` (SIGNOFF-1 approved, approve-as-is). All 12 ACs ✅ 12 A, grid 16 A/0, full regression green. D-3 accepted: own-record origination + on-device `local_network_io.dart` walkthrough deferred to a post-v1 wiring phase. No open gates.
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -180,17 +180,18 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 19 | EXCHANGE-3 | AC-7 no peer ⇒ no exchange, no wait | ✅ Done | 5,300,757 | 14m 22s | AC-7 ✅ un-pended, graded A (10 A/0); `gossip_exchange.dart` no-peer short-circuit + per-reachable-peer conduct count; unit 1545/0, cov 100%/20 touched; fix passes 1/3 (harness guard) |
 | 20 | EXCHANGE-4 | *enabler* real mDNS/socket transport + bs-12 guard amendment & boundary guard (no AC; manual on-device at sign-off) | ✅ Done | 17,428,659 | 30m 56s | real `LocalNetworkTransport` (prod default via `AppDependencies.peerTransport`; owner: injectable-default, real-in-prod) + `record_wire` framing + `local_network_io` (D-3 manual gap); bs-12 AC-8 `offDeviceSenders` exemption (`sanctionedOffDevicePathFiles`) + bs-14 boundary guard; unit 1597/0, cov 100%/23 of 24 touched (24th = `local_network_io.dart` justified exclusion D-3); bs-12 nfr + bs-14 acceptance green; fix passes 2/3 |
 | 21 | CORE-4 | AC-2 no per-exchange action (silent background exchange) | ✅ Done | 14,820,009 | 37m 40s | AC-2 ✅ un-pended, graded A (11 A/0); CORE module complete; silent fire-and-forget exchange over inert `InactivePeerTransport` + `recipesImproveSignal` surface; unit 1553/0, cov 100%/21 touched; regression host 52 + sim 222 + conformance 1553; fix passes 1/3 (const-ctor coverage) |
-| 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting review | 9,922,948 | 22m 58s (22m 59s) | packet [signoff/round-1.md](signoff/round-1.md); grid 16 A/0; unit 1597/0, cov 23/24 (D-3 excl), bs-14 acc 24/0 (default＝run-pending), regression host 52 + sim 222 harness + 1597 conformance; scorecard https://claude.ai/artifact/WweicVCzsgmUGSYJEPZAMj; **decision pending — D-3 own-record origination** |
+| 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ✅ Done | 9,922,948 | 22m 58s (22m 59s) | packet [signoff/round-1.md](signoff/round-1.md); grid 16 A/0; unit 1597/0, cov 23/24 (D-3 excl), bs-14 acc 24/0 (default＝run-pending), regression host 52 + sim 222 harness + 1597 conformance; scorecard https://claude.ai/artifact/WweicVCzsgmUGSYJEPZAMj; **SIGNOFF-DECISION 2026-10-16: approved (approve-as-is) — Matt Quirk; D-3 deferred** |
+| 23 | SIGNOFF-DECISION | SIGNOFF-1 approved — approve-as-is, D-3 deferred | ✅ Done | — | — | Matt Quirk 2026-10-16; feature Done at `33d0fd0`; own-record origination + on-device walkthrough deferred to a post-v1 wiring phase |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**⏸ Awaiting owner sign-off.** SIGNOFF-1 is complete: packet [signoff/round-1.md](signoff/round-1.md), scorecard https://claude.ai/artifact/WweicVCzsgmUGSYJEPZAMj. Every AC built, suite green in both modes, fresh grid 16 A/0, full cross-feature regression green (host 52 + sim 1819). No open gates.
+**✅ Feature complete — signed off.** SIGNOFF-1 approved (approve-as-is) by Matt Quirk on 2026-10-16 at `33d0fd0`. All 12 ACs built & graded A, suite green in both modes, fresh grid 16 A/0, full cross-feature regression green (host 52 + sim 1819). No open gates. No further phases in this feature.
 
-**One open decision for the owner — D-3.** The acceptance suite proves the logic over a fake loopback transport; two things are verified only by the on-device manual walkthrough: (1) the real `LocalNetworkTransport` mDNS/socket path (`local_network_io.dart`, the single justified coverage exclusion; framing unit-tested + boundary guard), and (2) **own-record origination is not yet wired into the live round** — `build_app.dart:1055` triggers with `const <MixAccuracyRecord>[]`, so on-device the app receives but offers nothing until the painter's shareable mixes are fed in. That wiring is product code (own coverage + an augmentation), out of scope for sign-off. The owner decides: **approve as-is** (logic layer + receive-capable transport; origination deferred, fitting a post-v1 invisible feature) or **request changes** (a short enabler phase wires the share-set, then SIGNOFF-2).
+**D-3 accepted / deferred.** Own-record origination (feeding the painter's shareable mixes into the live round — `build_app.dart:1055` triggers with `const <MixAccuracyRecord>[]`) and the on-device `local_network_io.dart` manual walkthrough are formally deferred to a **post-v1 wiring phase** (a short enabler: wire the share-set + unit coverage + an AC-6/AC-2 augmentation over a booted app). bs-14 ships as the complete, tested logic layer plus a receive-capable real `LocalNetworkTransport`.
 
-Record with `/feature-next-phase --signoff bs14 approved | changes "<items>"`.
+**Remaining for a human (outside a phase session):** the branch `feat/bs-14-peer-to-peer-evidence-sharing` is ahead 46 / behind 2 of origin and needs a human `git push --force-with-lease` (don't force/rebase from a phase session), then merge to main.
 
 ## Token usage
 
@@ -224,10 +225,11 @@ Record with `/feature-next-phase --signoff bs14 approved | changes "<items>"`.
 | EXCHANGE-2 | a4e3a7d6 | 2026-10-16 13:14 EDT | 13:31 | 16m 59s | 16m 59s | claude-opus-4-8 | 136 | 268,740 | 8,787,575 | 52,651 | 9,109,102 | AC-6 un-pended (last pending → map empty) + graded A (12 A/0); gossip mine−theirs offer/receive + SeenSet dedup; unit 1556/0, cov 100%/21 touched; fix passes 0/3 |
 | EXCHANGE-4 | 4b633a97 | 2026-10-16 13:35 EDT | 14:20 | 44m 12s | 30m 56s | claude-opus-4-8 | 194 | 222,475 | 17,095,029 | 110,961 | 17,428,659 | enabler done — real LocalNetworkTransport (prod default) + record_wire framing + local_network_io (D-3 manual gap); bs-12 AC-8 guard exemption + bs-14 boundary guard; unit 1597/0, cov 100%/23 of 24 touched (24th justified exclusion); fix passes 2/3 |
 | SIGNOFF-1 | 5df4135b | 2026-10-16 14:58 EDT | 15:21 | 22m 59s | 22m 58s | claude-opus-4-8 | 162 | 304,545 | 9,563,887 | 54,354 | 9,922,948 | sign-off packet + scorecard assembled; all 12 ACs A, grid 16 A/0, unit 1597/0, cov 23/24 (D-3 excl), bs-14 acceptance 24/0 default＝run-pending, regression host 52 + sim 222+1597; decision pending (D-3 own-record origination) — awaiting owner |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 15:21** | **7h 56m** | **7h 35m** |  | **2,850** | **4,981,974** | **181,285,570** | **1,311,204** | **187,581,598** |  |
+| SIGNOFF-DECISION | 9d99a0df | 2026-10-16 18:11 EDT | 18:14 | 3m 23s | 3m 23s | claude-opus-4-8 | 42 | 52,679 | 1,358,725 | 13,109 | 1,424,555 | SIGNOFF-1 approved (approve-as-is) — Matt Quirk; D-3 deferred; feature Done |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 18:14** | **7h 59m** | **7h 38m** |  | **2,892** | **5,034,653** | **182,644,295** | **1,324,313** | **189,006,153** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `b47b667` | 12 ACs A · grid 16 A/0 | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `b47b667` | 12 ACs A · grid 16 A/0 | ✅ **Approved (approve-as-is)** — Matt Quirk, 2026-10-16; D-3 deferred to a post-v1 wiring phase |
