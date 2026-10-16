@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅ (harness), ITEST-2 ✅ (AC-1..5 pending + red baseline, 5 A); next ITEST-3 ∥ ITEST-4, then ITEST-5 (test review → G-2)
+**Status:** In progress — ITEST-1 ✅ (harness), ITEST-2 ✅ (AC-1..5, 5 A), ITEST-3 ✅ (AC-6/7/10, 3 A); next ITEST-4, then ITEST-5 (test review → G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs14/` — `harness.dart`, `fake_peer_transport.dart`, `pending.dart`, `harness_test.dart` (ITEST-1 scaffold/smoke tests), `consent_and_record_test.dart` (AC-1..5), `exchange_and_merge_test.dart` (AC-6,7,10), `refine_test.dart` (AC-8,9,11,12).
 **Depends on:** all shell phases (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1) · **Blocks:** every behavior phase (via G-2)
@@ -11,8 +11,8 @@
 |---|---|---|---|---|---|
 | 1 | acceptance-tests | — (harness) | ✅ Done | 7,810,941 | 20m 38s |
 | 2 | acceptance-tests | AC-1..5 | ✅ Done | 6,582,231 | 21m 58s |
-| 3 | acceptance-tests | AC-6, AC-7, AC-10 | ⬜ Todo | | |
-| 4 | acceptance-tests | AC-8, AC-9, AC-11, AC-12 | ⬜ Todo | | |
+| 3 | acceptance-tests | AC-6, AC-7, AC-10 | ✅ Done | 4,609,896 | 12m 39s |
+| 4 | acceptance-tests | AC-8, AC-9, AC-11, AC-12 | ⬜ Next | | |
 | 5 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -89,6 +89,26 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
 - **Tasks:** author `TestAC06_ExchangeOnlyMissing`, `TestAC07_NoPeerNoWait`, `TestAC10_AppendOnlyMerge`; mark pending; record red baseline + grades.
 - **Exit criteria:** default green, run-pending red; grade gate passed.
 
+### Result — ITEST-3 ✅ Done
+
+- **Landed** one file, `integration_test/bs14/exchange_and_merge_test.dart` (no `lib/` touched) — the three pending acceptance tests for AC-6/AC-7/AC-10, all pure-Dart (`acTest`) through the public surface over the real gossip/scheduler/merge, the fake loopback transport the only fake (D-3):
+  - **AC-6 (EXCHANGE-2)** — `twoInstalls` with A={r1,r2}, B={r2,r3}; r2 held as a value-equal but **distinct-object** pair (`r2a`/`r2b`) so an identity-keyed diff would re-offer it. After A and B each `runExchange`, reads the transport's **delivered inbox** (`network.inboxOf`): A offers B only `{r1.contentHash}`, B offers A only `{r3.contentHash}` (r2 common, dropped by content hash); the outcome endpoint shows `exchanges≥1`, `offered==1`; a second `runExchange(a)` leaves B's inbox at **length 1** (already-seen not re-offered). Rejects: full-set offer, identity-keyed diff, re-offering already-seen.
+  - **AC-7 (EXCHANGE-3)** — `twoInstalls(peersReachable:false)`; the core flow triggers a fire-and-forget round. `waitedOnExchange` read **synchronously** after `trigger` returns (not blocked); the round `settled` `completes` without throwing (D-5); the outcome endpoint then shows `exchanges==0`, `offered==0`, `waitedOnExchange==false`. Because those no-peer Thens all pass against the no-op shell, a **G3-mandated control** — a reachable peer DOES conduct an exchange (`exchanges≥1`) while still never waiting — is the discriminator that reddens the baseline and goes green when EXCHANGE-2/3 land. The grader confirmed the control is **not** a G6 violation (it asserts only liveness + AC-7's own no-wait invariant, none of AC-6's offer-missing semantics).
+  - **AC-10 (MERGE-2)** — one prior `llmSeed` evidence point + `sourcedFromDistinctPeers(peerRecords(3))` (3 distinct sources, 3 distinct measured colours, all checked as Givens) merged through the real `EvidenceMerge.ingest`, observed via `MappingEvidenceEndpoint`: evidence grows by exactly 3; the prior point is unchanged and still first (`sublist orderedEquals existing`); each appended point is `peerContributed`, carries its source id, and holds the record's measured CIELAB, in arrival order. Rejects: dedup of distinct measurements, overwrite/reorder, dropped source tag, wrong kind.
+- **Verification** (`-d flutter-tester`, flutter at `~/development/flutter/bin`): `flutter analyze exchange_and_merge_test.dart` clean. **Default run green** — 3 pending ⇒ **3 skipped, 0 failed** (`All tests skipped`). **Run-pending red baseline** — **3/3 fail**, each on a Then naming its owner, no harness crash (AC-6 inbox `Set:[]` vs `{r1}` → EXCHANGE-2; AC-7 control `exchanges` 0 vs ≥1 → EXCHANGE-3; AC-10 evidence length 1 vs 4 → MERGE-2 — see Red baseline table). Scaffold `harness_test.dart` stays **12/12**. No `lib/` touched ⇒ coverage gate has no touched source (trivially satisfied); unit suite unchanged at 1511/0.
+- **Grades:** fresh independent reviewer (fresh subagent; `/behavior-test-check` not installed → general grader against G1–G6) — **AC-6 A / AC-7 A / AC-10 A on the first grid, 0 below A**. No downgrades, no in-phase fixes. **Fix passes: 0/3.**
+- **No new interface reconciliations.** The three tests consume only ITEST-1's frozen harness surface (`twoInstalls`/`runExchange`/`exchangeEndpoint`/`mappingEndpoint`/`sourcedFromDistinctPeers`/`peerRecords`). No augmentation rows (the sole pre-seeded one, TestAC09/MERGE-4, belongs to ITEST-4).
+- Tokens 4,609,896 · Time 12m 39s.
+
+### Checkpoint / Handoff — after ITEST-3
+
+- **For the behaviour phases (honour these observable contracts):**
+  - **EXCHANGE-2 (AC-6):** `GossipExchange.exchangeOnce(mine)` must offer each discovered peer `mine − theirs` keyed by `MixAccuracyRecord.contentHash` (not object identity), dedup already-offered/seen via `SeenSet`, and fold into `ExchangeOutcome` so `offered`/`exchanges` reflect the round. The suite reads what crossed via `FakeLocalNetwork.inboxOf(id)` and the counts via `ExchangeOutcomeEndpoint`.
+  - **EXCHANGE-3 (AC-7):** with no reachable peer, `exchanges` stays 0 and nothing is offered; with a reachable peer holding a missing record, `exchanges≥1`. The scheduler stays fire-and-forget (`waitedOnExchange==false`) in both cases — AC-7's control depends on the reachable-peer path working (EXCHANGE-2 precedes EXCHANGE-3 in the graph).
+  - **MERGE-2 (AC-10):** `EvidenceMerge.ingest(existing, incoming)` appends one `EvidencePoint` per `SourcedRecord` — `kind: EvidenceKind.peerContributed`, `source:` the arrival id, `coordinates:` the record's `measuredColour.lab` — through bs-13's append-only `appendEvidence`, preserving prior points and order.
+- **Run commands:** `flutter test integration_test/bs14/exchange_and_merge_test.dart -d flutter-tester` (default, green/skipped); add `--dart-define=BS14_RUN_PENDING=true` for the red baseline. One bs-14 app-booting file per `flutter test` invocation (these three boot no app).
+- **Next:** **ITEST-4** (`refine_test.dart`, AC-8/9/11/12; `TestAC09` carries the pre-seeded MERGE-4 augmentation), then **ITEST-5** (test review → G-2). No behaviour phase runs until G-2.
+
 ## Phase 4 — AC-8, AC-9, AC-11, AC-12 (refine/promote/quality), pending + red baseline
 
 - **Kind:** acceptance-tests
@@ -113,11 +133,11 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
 | AC-3 | TestAC03_RecordCarriesOnlyEvidence | red | Given precondition: a record is prepared (`prepare` returns null at the shell) | RECORD-2 | A |
 | AC-4 | TestAC04_NothingPersonalLeaves | red | Given precondition: a record is prepared (`prepare` returns null at the shell) | RECORD-2 | A |
 | AC-5 | TestAC05_NoPaletteNotShared | red | Then: the interpretable control record is shared (`selectShareSet` returns `[]` at the shell) | RECORD-3 | A |
-| AC-6 | TestAC06_ExchangeOnlyMissing | pending | Then: offers only missing, dedup | EXCHANGE-2 | |
-| AC-7 | TestAC07_NoPeerNoWait | pending | Then: exchanges==0, waited==false | EXCHANGE-3 | |
+| AC-6 | TestAC06_ExchangeOnlyMissing | red | Then: A offers B only the missing r1 (`_hashesOf(inboxOf(b))` == `{}` at the shell, expected `{r1.contentHash}`) | EXCHANGE-2 | A |
+| AC-7 | TestAC07_NoPeerNoWait | red | Then (control): a reachable peer gets an exchange (`exchanges` == 0 at the shell, expected ≥ 1). The no-peer Thens (exchanges==0/waited==false) pass at the shell, so the G3-mandated reachable-peer control is the discriminator that reddens the baseline. | EXCHANGE-3 | A |
 | AC-8 | TestAC08_ClusteredRefine | pending | Then: robust central estimate | MERGE-3 | |
 | AC-9 | TestAC09_NeverPromotes | pending | Then: stays Estimated | MERGE-4 | |
-| AC-10 | TestAC10_AppendOnlyMerge | pending | Then: appended + tagged, none overwritten | MERGE-2 | |
+| AC-10 | TestAC10_AppendOnlyMerge | red | Then: all three appended (evidence length `1` at the shell, expected `4`) | MERGE-2 | A |
 | AC-11 | TestAC11_OutlierDiscarded | pending | Then: outlier excluded | MERGE-3 | |
 | AC-12 | TestAC12_RateLimited | pending | Then: per-source cap enforced | MERGE-5 | |
 

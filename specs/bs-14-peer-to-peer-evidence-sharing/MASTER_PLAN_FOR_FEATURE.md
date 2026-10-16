@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — ITEST-1 (harness) ✅, ITEST-2 (AC-1..5 pending, red baseline, 5 A) ✅; next ITEST-3 ∥ ITEST-4, then ITEST-5 (test review → G-2). G-3 ✅ resolved (bs-13 merged @ `c00422f`); G-2 blocks every behaviour phase (resolved by the ITEST-5 test review); G-4 still open (blocks EXCHANGE behaviour phases only).
+**Status:** In progress — ITEST-1 (harness) ✅, ITEST-2 (AC-1..5, 5 A) ✅, ITEST-3 (AC-6/7/10, 3 A) ✅; next ITEST-4, then ITEST-5 (test review → G-2). G-3 ✅ resolved (bs-13 merged @ `c00422f`); G-2 blocks every behaviour phase (resolved by the ITEST-5 test review); G-4 still open (blocks EXCHANGE behaviour phases only).
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -165,8 +165,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | MERGE-1 | shell: `EvidenceMerge` + `CrowdRefine` + `SourceRateLimiter` + `EvidenceKind.peerContributed` + `MappingEvidenceEndpoint` | ✅ Done | 5,237,948 | 11m 08s | last shell done; unit 1511/0, cov 100%/19 touched; shell stage complete |
 | 6 | ITEST-1 | acceptance-tests: harness (two-install fake transport), fixtures, pending gate, smoke test | ✅ Done | 7,810,941 | 20m 38s | scaffold suite 12/12 (default+run-pending); no lib touched |
 | 7 | ITEST-2 | acceptance-tests: AC-1, AC-2, AC-3, AC-4, AC-5 (pending) + red baseline | ✅ Done | 6,582,231 | 21m 58s | 5 pending, red baseline clean, 5 A |
-| 8 | ITEST-3 | acceptance-tests: AC-6, AC-7, AC-10 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-4 |
-| 9 | ITEST-4 | acceptance-tests: AC-8, AC-9, AC-11, AC-12 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2/3 |
+| 8 | ITEST-3 | acceptance-tests: AC-6, AC-7, AC-10 (pending) + red baseline | ✅ Done | 4,609,896 | 12m 39s | 3 A, red baseline 3/3 clean, no lib touched |
+| 9 | ITEST-4 | acceptance-tests: AC-8, AC-9, AC-11, AC-12 (pending) + red baseline | ⬜ Next | | | last AC-test phase before ITEST-5 |
 | 10 | ITEST-5 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 11 | CORE-3 | AC-1 one-time plain-language opt-in + invisibility | ⬜ Todo | | | |
 | 12 | RECORD-2 | AC-3 + AC-4 build record, carry only evidence, nothing personal | ⬜ Todo | | | |
@@ -185,9 +185,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-2 ✅ done — `integration_test/bs14/consent_and_record_test.dart` (no `lib/` touched): the five *pending* acceptance tests AC-1..AC-5, all through the public surface. AC-1/AC-2 widget tests over the booted app's `SharingConsentReadEndpoint` + speech/haptics sinks (opt-in offer under the frozen `sharingOptInKey`; the mechanism-free recipe-improved signal); AC-3/4/5 pure-Dart over the real `EvidenceRecordBuilder` via `RecordInspectEndpoint`. analyze clean; **default green (5 skipped)**; **run-pending red baseline 5/5**, each failing at one point naming its owner (AC-1 opt-in-offer Given→CORE-3, AC-2 opted-in Given→CORE-3/4, AC-3/4 record-prepared Given→RECORD-2, AC-5 share-set Then→RECORD-3); scaffold `harness_test.dart` still 12/12; unit 1511/0. Grades **5 A/0** (AC-2/AC-4 B→A in-phase with the prescribed G3 non-vacuity controls; fix passes 1/3). Surfaced three interface reconciliations for ITEST-5/behaviour: AC-3 combination source (RECORD-2), AC-5 reason channel (RECORD-3), AC-2 app fake-transport exchange (CORE-4) — see ITEST.md Result.
+ITEST-3 ✅ done — `integration_test/bs14/exchange_and_merge_test.dart` (no `lib/` touched): the three *pending* acceptance tests AC-6/AC-7/AC-10, all pure-Dart through the public surface over the real gossip/scheduler/merge (fake loopback transport the only fake). AC-6 reads the delivered inbox (`network.inboxOf`) — offer-only-missing, content-hash keyed, already-seen not re-offered; AC-7 the no-peer no-wait invariant with a G3-mandated reachable-peer control as the discriminator; AC-10 the real `EvidenceMerge.ingest` append-only source-tagged merge via `MappingEvidenceEndpoint`. analyze clean; **default green (3 skipped)**; **run-pending red baseline 3/3**, each on a Then naming its owner (AC-6→EXCHANGE-2, AC-7→EXCHANGE-3, AC-10→MERGE-2); scaffold `harness_test.dart` still 12/12; unit 1511/0. Grades **3 A/0** (no in-phase fixes; fix passes 0/3). No new reconciliations/augmentations.
 
-**Next: ITEST-3 ∥ ITEST-4** — one *pending* integration test per AC + the run-pending red baseline + grades, in disjoint files (`exchange_and_merge_test.dart` AC-6/7/10 · `refine_test.dart` AC-8/9/11/12; `TestAC09` carries the MERGE-4 augmentation). Both build only on the ITEST-1 harness, so they are parallelizable (separate `--parallel` sessions). One bs-14 app-booting file per `flutter test` invocation (flutter-tester app-relaunch limitation).
+**Next: ITEST-4** — `refine_test.dart` (AC-8/9/11/12; `TestAC09` carries the pre-seeded MERGE-4 augmentation): one *pending* integration test per AC + the run-pending red baseline + grades. Builds only on the ITEST-1 harness. One bs-14 app-booting file per `flutter test` invocation (flutter-tester app-relaunch limitation).
 - Then **ITEST-5** — the test review; a human approves its packet → resolves **G-2**, unblocking every behaviour phase.
 
 No behaviour phase can run until **G-2** (ITEST-5). Decide **G-4** before the EXCHANGE behaviour phases (EXCHANGE-2/4).
@@ -208,7 +208,8 @@ No behaviour phase can run until **G-2** (ITEST-5). Decide **G-4** before the EX
 | MERGE-1 | 2772e279 | 2026-10-15 21:51 EDT | 22:02 | 11m 08s | 11m 08s | claude-opus-4-8 | 104 | 104,983 | 5,093,636 | 39,225 | 5,237,948 | shell done: EvidenceMerge+CrowdRefine+SourceRateLimiter+MappingEvidenceEndpoint+EvidenceKind.peerContributed; unit 1511/0, cov 100%/19 touched; no behaviour |
 | ITEST-1 | 5ef25313 | 2026-10-15 22:06 EDT | 22:27 | 20m 38s | 20m 38s | claude-opus-4-8 | 102 | 253,811 | 7,483,311 | 73,717 | 7,810,941 | acceptance-tests harness: fake loopback transport + fixtures + pending gate + scaffold suite 12/12 green (default+run-pending), analyze clean, unit 1511/0, no lib touched |
 | ITEST-2 | fefe49ea | 2026-10-16 05:46 EDT | 06:08 | 21m 58s | 21m 58s | claude-opus-4-8 | 88 | 245,812 | 6,262,961 | 73,370 | 6,582,231 | acceptance-tests: AC-1..5 pending + red baseline 5/5 clean, default green, 5 A (AC-2/AC-4 B→A in-phase), no lib touched, unit 1511/0 |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 06:08** | **2h 35m** | **2h 27m** |  | **816** | **1,299,470** | **47,695,473** | **438,334** | **49,434,093** |  |
+| ITEST-3 | 24ee30f0 | 2026-10-16 06:15 EDT | 06:27 | 12m 39s | 12m 39s | claude-opus-4-8 | 74 | 231,861 | 4,335,265 | 42,696 | 4,609,896 | acceptance-tests: AC-6/7/10 pending + red baseline 3/3 clean, default green (3 skipped), 3 A/0, fix passes 0/3, no lib touched, unit 1511/0 |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 06:27** | **2h 47m** | **2h 40m** |  | **890** | **1,531,331** | **52,030,738** | **481,030** | **54,043,989** |  |
 
 ## Sign-off
 
