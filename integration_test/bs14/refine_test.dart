@@ -150,15 +150,36 @@ void main() {
       final List<EvidencePoint> refinedEvidence =
           merge.ingest(seedEvidence, peers);
 
+      // Given check (MERGE-4 augmentation 1): the Given "refined by
+      // peer-contributed records" is realized and asserted through the real
+      // merge — the log now holds the prior seed point followed by exactly five
+      // appended `peerContributed` points (none dropped, the seed unchanged and
+      // still first). Before MERGE-2 appended, the merge was a no-op and this
+      // Given could not be asserted at all (it was a comment); now it is a
+      // checked precondition of the never-promote invariant.
+      expect(refinedEvidence, hasLength(6),
+          reason: 'AC-9 Given: the seed point + five appended peer points');
+      expect(refinedEvidence.first, _llmSeedPoint,
+          reason: 'AC-9 Given: the prior llm-seed point is unchanged and first');
+      expect(
+          refinedEvidence
+              .where((EvidencePoint p) =>
+                  p.kind == EvidenceKind.peerContributed)
+              .length,
+          5,
+          reason: 'AC-9 Given: the mapping is refined by exactly five '
+              'peer-contributed records');
+
       // When: the local value is recomputed and its user-facing provenance is
-      // shown (the derived tier and its full qualifier label).
+      // shown (the real refiner's derived tier and its full qualifier label —
+      // product-sourced, never a label the test rebuilds).
       final RefineResult result =
           refine.refine(seedMappingValue, refinedEvidence);
       final MappingEvidenceEndpoint endpoint = mappingEndpoint(
         value: result.value,
         evidence: refinedEvidence,
         tier: result.tier,
-        label: _derivation.qualifier(result.tier),
+        label: result.label,
       );
 
       // Then: it remains Estimated — the derived tier is `estimated` and the
@@ -166,11 +187,42 @@ void main() {
       // evidence refines the value but never promotes the tier (SI D2).
       // (Rejects: promoting to Confirmed/Measured because peer evidence is
       // present or high-tier, or showing "verified".)
+      expect(result.label, 'Estimated — not yet verified',
+          reason: 'AC-9: the refiner itself produces the user-facing provenance '
+              '"Estimated — not yet verified" — MERGE-4');
       expect(endpoint.view!.tier, ProvenanceTier.estimated,
           reason: 'AC-9: crowd evidence leaves the tier Estimated — MERGE-4');
       expect(endpoint.view!.label, 'Estimated — not yet verified',
           reason: 'AC-9: the user-facing provenance stays '
               '"Estimated — not yet verified" — MERGE-4');
+
+      // Then (MERGE-4 augmentation 2 — active exclusion, not mere absence): a
+      // peer record that *declares the highest measurement tier* (an instrument
+      // reading) still never promotes. It is merged like any peer evidence —
+      // tagged `peerContributed`, its declared tier discarded — so the derived
+      // tier and label stay Estimated. This rejects the plausible wrong impl
+      // that honours a record's declared tier (mapping an instrument record to
+      // an `instrumentMeasured` point, which `tierFor` would raise to Measured):
+      // peer evidence is *excluded* from promotion, not merely absent from it.
+      expect(peerRecords(1, tier: MeasurementTier.instrument).single.tier,
+          MeasurementTier.instrument,
+          reason: 'AC-9 Given: the peer record declares the instrument tier');
+      final List<EvidencePoint> withHighTierPeer = merge.ingest(
+        seedEvidence,
+        sourcedFromDistinctPeers(
+            peerRecords(1, tier: MeasurementTier.instrument)),
+      );
+      expect(withHighTierPeer.last.kind, EvidenceKind.peerContributed,
+          reason: 'AC-9: a high-tier peer record is tagged peerContributed, its '
+              'declared instrument tier discarded — MERGE-4');
+      final RefineResult highTierResult =
+          refine.refine(seedMappingValue, withHighTierPeer);
+      expect(highTierResult.tier, ProvenanceTier.estimated,
+          reason: 'AC-9: a peer record claiming an instrument tier still never '
+              'promotes — peerContributed is actively excluded — MERGE-4');
+      expect(highTierResult.label, 'Estimated — not yet verified',
+          reason: 'AC-9: the user-facing provenance stays Estimated even for a '
+              'high-tier peer record — MERGE-4');
 
       // Control (G3/G5 — the reading CAN change): the SAME mapping, when the
       // painter records their OWN measured swatch for it, IS promoted to

@@ -24,35 +24,55 @@ void main() {
   group('RefineResult', () {
     const value = ColorCoordinates(lightness: 50, a: 10, b: -5);
 
-    test('carries its value and tier', () {
-      final result =
-          RefineResult(value: value, tier: ProvenanceTier.estimated);
+    test('carries its value, tier and user-facing label', () {
+      final result = RefineResult(
+        value: value,
+        tier: ProvenanceTier.estimated,
+        label: 'Estimated — not yet verified',
+      );
       expect(result.value, value);
       expect(result.tier, ProvenanceTier.estimated);
+      expect(result.label, 'Estimated — not yet verified');
     });
 
-    test('is value-equal and hashes by value and tier', () {
-      final a = RefineResult(value: value, tier: ProvenanceTier.estimated);
-      final sameAsA =
-          RefineResult(value: value, tier: ProvenanceTier.estimated);
-      final tierChanged =
-          RefineResult(value: value, tier: ProvenanceTier.confirmed);
+    test('is value-equal and hashes by value, tier and label', () {
+      final a = RefineResult(
+          value: value,
+          tier: ProvenanceTier.estimated,
+          label: 'Estimated — not yet verified');
+      final sameAsA = RefineResult(
+          value: value,
+          tier: ProvenanceTier.estimated,
+          label: 'Estimated — not yet verified');
+      final tierChanged = RefineResult(
+          value: value,
+          tier: ProvenanceTier.confirmed,
+          label: 'Estimated — not yet verified');
       final valueChanged = RefineResult(
         value: const ColorCoordinates(lightness: 1, a: 1, b: 1),
         tier: ProvenanceTier.estimated,
+        label: 'Estimated — not yet verified',
       );
+      final labelChanged = RefineResult(
+          value: value,
+          tier: ProvenanceTier.estimated,
+          label: 'Confirmed — you measured this');
       expect(a, sameAsA);
       expect(a.hashCode, sameAsA.hashCode);
       expect(a, isNot(tierChanged));
       expect(a, isNot(valueChanged));
+      expect(a, isNot(labelChanged));
       expect(a, isNot('not a RefineResult'));
     });
 
-    test('toString names its value and tier', () {
-      final result =
-          RefineResult(value: value, tier: ProvenanceTier.estimated);
+    test('toString names its value, tier and label', () {
+      final result = RefineResult(
+          value: value,
+          tier: ProvenanceTier.estimated,
+          label: 'Estimated — not yet verified');
       expect(result.toString(), startsWith('RefineResult('));
       expect(result.toString(), contains('estimated'));
+      expect(result.toString(), contains('Estimated — not yet verified'));
     });
   });
 
@@ -77,13 +97,16 @@ void main() {
           reason: 'only peer-contributed evidence feeds the estimate');
     });
 
-    test('empty evidence keeps the explicit fallback tier', () {
+    test('empty evidence keeps the explicit fallback tier and its label', () {
       final result = refine.refine(
         current,
         const <EvidencePoint>[],
         fallback: ProvenanceTier.calculated,
       );
       expect(result.tier, ProvenanceTier.calculated);
+      // The user-facing label is the derived tier's qualifier from bs-13 — not
+      // a string rebuilt in the refiner (the derivation-glue contract).
+      expect(result.label, refine.derivation.qualifier(ProvenanceTier.calculated));
     });
 
     test('peer-contributed evidence never promotes the tier (stays estimated)',
@@ -92,6 +115,11 @@ void main() {
         _peerAt(const ColorCoordinates(lightness: 42, a: 3, b: -2)),
       ]);
       expect(result.tier, ProvenanceTier.estimated);
+      // The crowd-refined estimate's user-facing provenance is exactly the
+      // Estimated qualifier — "Estimated — not yet verified" (AC-9), sourced
+      // from bs-13's `ProvenanceDerivation.qualifier`.
+      expect(result.label, 'Estimated — not yet verified');
+      expect(result.label, refine.derivation.qualifier(result.tier));
       expect(refine.derivation, isNotNull);
     });
 

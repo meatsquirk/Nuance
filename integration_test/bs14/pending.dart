@@ -61,10 +61,10 @@ const Map<String, String> pendingACs = {
   // AC-5 un-pended by RECORD-3 (no declared palette ⇒ not shared).
   // AC-8, AC-11 un-pended by MERGE-3 (clustered crowd refine + outlier
   // discard).
+  // AC-9 un-pended by MERGE-4 (crowd evidence never promotes to Confirmed).
   'AC-2': 'CORE-4',
   'AC-6': 'EXCHANGE-2',
   'AC-7': 'EXCHANGE-3',
-  'AC-9': 'MERGE-4',
   'AC-12': 'MERGE-5',
 };
 
@@ -99,6 +99,7 @@ const Set<String> completedBehaviorPhases = {
   'RECORD-3',
   'MERGE-2',
   'MERGE-3',
+  'MERGE-4',
 };
 
 /// Every AC id the bs-14 acceptance suite covers (the master plan's 12 ACs).

@@ -9,15 +9,22 @@ import '../../domain/sample.dart';
 
 /// The outcome of a crowd-refinement pass over one mapping (bs-14 MERGE-1).
 ///
-/// Carries the (possibly refined) [value] and the [tier] it derives to. The
-/// tier is read from the mapping's evidence by bs-13's rule, so peer-contributed
-/// evidence — which never contributes to the tier — leaves it at the stored
-/// fallback: a crowd-refined estimate stays Estimated and is never promoted to
-/// Confirmed (AC-9; SI D2).
+/// Carries the (possibly refined) [value], the [tier] it derives to, and the
+/// user-facing [label] that tier reads as. The tier is read from the mapping's
+/// evidence by bs-13's rule, so peer-contributed evidence — which never
+/// contributes to the tier — leaves it at the stored fallback: a crowd-refined
+/// estimate stays Estimated and its user-facing provenance stays
+/// "Estimated — not yet verified"; the crowd never promotes it to Confirmed
+/// (AC-9; SI D2).
 @immutable
 class RefineResult {
-  /// Creates a result from a refined [value] and its derived [tier].
-  const RefineResult({required this.value, required this.tier});
+  /// Creates a result from a refined [value], its derived [tier] and the
+  /// user-facing provenance [label] that tier reads as.
+  const RefineResult({
+    required this.value,
+    required this.tier,
+    required this.label,
+  });
 
   /// The mapping's value after refinement (unchanged in the shell).
   final ColorCoordinates value;
@@ -26,15 +33,28 @@ class RefineResult {
   /// peer-contributed evidence (AC-9).
   final ProvenanceTier tier;
 
+  /// The full user-facing provenance qualifier for [tier] — e.g.
+  /// "Estimated — not yet verified" for a crowd-refined estimate (AC-9).
+  ///
+  /// Derived by [CrowdRefine.refine] from bs-13's
+  /// [ProvenanceDerivation.qualifier], so the painter-facing text comes from
+  /// bs-13's single source of truth and never a string rebuilt here — a
+  /// crowd-refined mapping shows exactly "Estimated — not yet verified" until
+  /// the painter confirms it with their own mix.
+  final String label;
+
   @override
   bool operator ==(Object other) =>
-      other is RefineResult && other.value == value && other.tier == tier;
+      other is RefineResult &&
+      other.value == value &&
+      other.tier == tier &&
+      other.label == label;
 
   @override
-  int get hashCode => Object.hash(value, tier);
+  int get hashCode => Object.hash(value, tier, label);
 
   @override
-  String toString() => 'RefineResult($value, ${tier.name})';
+  String toString() => 'RefineResult($value, ${tier.name}, $label)';
 }
 
 /// Recomputes an Estimated mapping's value from the clustered peer-contributed
@@ -79,6 +99,12 @@ class CrowdRefine {
   /// tier is always derived by the frozen bs-13 rule over the full [evidence] —
   /// peer-contributed points never contribute, so the tier stays at [fallback]
   /// (Estimated), and the crowd never promotes a value (AC-9).
+  ///
+  /// The result's [RefineResult.label] is the derived tier's user-facing
+  /// qualifier ([ProvenanceDerivation.qualifier]) — the painter-facing
+  /// provenance text, "Estimated — not yet verified" for a crowd-refined
+  /// estimate — so the never-promote invariant is surfaced the way the painter
+  /// sees it, not just as an enum (AC-9).
   RefineResult refine(
     ColorCoordinates current,
     List<EvidencePoint> evidence, {
@@ -88,9 +114,12 @@ class CrowdRefine {
       for (final EvidencePoint point in evidence)
         if (point.kind == EvidenceKind.peerContributed) point.coordinates,
     ];
+    final ProvenanceTier tier =
+        derivation.tierFor(evidence, fallback: fallback);
     return RefineResult(
       value: crowd.isEmpty ? current : _robustCentralEstimate(crowd),
-      tier: derivation.tierFor(evidence, fallback: fallback),
+      tier: tier,
+      label: derivation.qualifier(tier),
     );
   }
 

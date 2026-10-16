@@ -1,6 +1,6 @@
 # Module MERGE — append-only merge, crowd refine, never-promote, rate-limit
 
-**Status:** In progress — MERGE-1, MERGE-2, MERGE-3 ✅ done (AC-8/10/11 ✅); next is MERGE-4 (AC-9)
+**Status:** In progress — MERGE-1, MERGE-2, MERGE-3, MERGE-4 ✅ done (AC-8/9/10/11 ✅); next is MERGE-5 (AC-12)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/merge/evidence_merge.dart`, `crowd_refine.dart`, `source_rate_limiter.dart`, `mapping_evidence_endpoint.dart`; an **additive** edit to bs-13's `lib/domain/sample.dart` (surface-drift: the enum lives there, not `provenance.dart`) to add `EvidenceKind.peerContributed`, plus the matching `MeasurementTier.fromEvidenceKind` case in `mix_accuracy_record.dart`.
 **Depends on:** CORE, RECORD, **bs-13 PROV** (append-only add, `ProvenanceDerivation.tierFor`, clustering rule) · **Blocks:** SIGNOFF-1
@@ -12,7 +12,7 @@
 | 1 | shell | — | ✅ Done | 5,237,948 | 11m 08s |
 | 2 | behavior | AC-10 | ✅ Done | 6,290,218 | 11m 35s |
 | 3 | behavior | AC-8 + AC-11 | ✅ Done | 6,284,723 | 15m 51s |
-| 4 | behavior | AC-9 | ⬜ Todo | | |
+| 4 | behavior | AC-9 | ✅ Done | 7,077,181 | 14m 53s |
 | 5 | behavior | AC-12 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -138,3 +138,18 @@
 - **Frozen:** `CrowdRefine.refine(current, evidence, {fallback})` now returns the robust central estimate of the peer-contributed points (outliers discarded) as its `value`, with the tier derived (never promoted) from the full log. With no peer-contributed evidence the stored `current` stands. The private estimator (`_robustCentralEstimate`/`_coordinateWiseMedian`/`_median`/`_mean`/`_distance`) is internal — consumers depend only on `refine`'s contract.
 - **Verification commands:** flutter at `~/development/flutter/bin`. Unit+cov: `flutter test --coverage` then `dart run tool/coverage_gate.dart <phase-base>`. Acceptance (host, one app-booting file per invocation): `flutter test integration_test/bs14/refine_test.dart -d flutter-tester` (+ `--dart-define=BS14_RUN_PENDING=true` for red baseline).
 - **Next:** MERGE-4 (AC-9 never-promote) — depends on MERGE-3 (done) + G-2 (resolved); un-pends AC-9 and makes the carried `TestAC09` augmentation (a peer record declaring an instrument tier still derives `estimated` / "not yet verified"), closing AC-9's *B pending MERGE-4* to A. Then MERGE-5 (AC-12, independent of the MERGE chain — needs only MERGE-1). EXCHANGE-3 (AC-7) remains independently startable; EXCHANGE-2/4 still need G-4.
+
+### Result — MERGE-4 (AC-9 crowd evidence never promotes to Confirmed)
+
+- **Landed:** the never-promote invariant for AC-9 is already structurally enforced by MERGE-1/MERGE-2's design — `EvidenceMerge.ingest` unconditionally stamps every incoming peer record `kind: peerContributed` (its declared `MeasurementTier` discarded), and bs-13's `ProvenanceDerivation.tierFor` has no `peerContributed` branch, so peer evidence falls through to the stored `fallback` (Estimated). MERGE-4 added the **derivation glue** that surfaces this the way the painter sees it: `CrowdRefine.refine` now derives the tier once and sets `RefineResult.label = derivation.qualifier(tier)`, so the refiner itself produces the user-facing provenance text ("Estimated — not yet verified") from bs-13's single source of truth rather than a string rebuilt downstream. Only `crowd_refine.dart` touched in `lib/` (`RefineResult` gains a `label` field in its ctor/`==`/`hashCode`/`toString`; `refine` computes it).
+- **Acceptance gate:** AC-9 un-pended (deleted from `bs14/pending.dart`; MERGE-4 added to `completedBehaviorPhases`; `harness_test` pending-set guard updated: `unpended` += AC-9, `containsAll` += MERGE-4). `TestAC09_NeverPromotes` runs and passes in the default suite; whole bs-14 suite green with only later-phase ACs skipped (AC-2/6/7/12). Default: `refine_test` 3 pass/1 skip (AC-12), `harness_test` 12/0, `consent_and_record_test` 4/0, `exchange_and_merge_test` 1/0 (AC-10). Run-pending `refine_test`: AC-8/9/11 pass, AC-12 red (→ MERGE-5).
+- **Augmentations (both made, `TestAC09`):** **(1)** after the real `merge.ingest`, assert the log holds exactly 5 `peerContributed` points, the prior `llmSeed` point unchanged and first, length 6 — realizing the "refined by peer records" Given through the public surface (G1). **(2)** a peer record **declaring `MeasurementTier.instrument`** is ingested; assert the appended point is still `peerContributed` (declared tier discarded) and the derived tier + label stay Estimated — proving `peerContributed` is *actively excluded*, not merely absent. This rejects the plausible wrong impl that maps a record's declared tier to an `instrumentMeasured` point (which `tierFor` would raise to Measured). The own-swatch control (`promoteWithOwnSwatch` → Confirmed / "Confirmed — you measured this") is retained (G3/G5: the reading CAN change). Label assertions now read `result.label` (product-sourced), not a test-rebuilt qualifier.
+- **Grade gate:** fresh independent reviewer (fresh subagent, G1–G6, given the prior grid) — **AC-9 A** (upgraded from *B pending MERGE-4*; both cited gaps — the unasserted Given and the no-promoting-peer rejection — closed by the two augmentations). AC-1/3/4/5/8/10/11 re-graded, all remain A (AC-8/AC-11 read only `.value`, unaffected by the new `.label`). **8 A / 0** over un-pended AC-1,3,4,5,8,9,10,11. No downgrades.
+- **Unit:** analyze clean; `crowd_refine_test` extended (RefineResult group now covers `label` in ctor/equality/hashCode/toString; two `refine` label assertions); full unit **1537/0**; coverage gate **100% (line)** on the 1 touched lib file (`dart run tool/coverage_gate.dart 18a13f4`). Fix passes **0/3** (all gates passed first run).
+- **Tokens / Time:** 7,077,181 / 14m 53s.
+
+### Checkpoint / Handoff — after MERGE-4
+
+- **Frozen:** `RefineResult` now carries a third field, `label` (the user-facing provenance qualifier), required in its const ctor and part of `==`/`hashCode`/`toString`. `CrowdRefine.refine` populates it from `derivation.qualifier(tier)`; for crowd/peer evidence that is always "Estimated — not yet verified" (AC-9). Any later consumer constructing a `RefineResult` directly must pass a `label` (only the unit test did; the harness/endpoints build it via `refine`). The never-promote invariant is now covered end-to-end at the value *and* the painter-facing-label grain.
+- **Verification commands:** flutter at `~/development/flutter/bin`. Unit+cov: `flutter test --coverage` then `dart run tool/coverage_gate.dart <phase-base>`. Acceptance (host, one app-booting file per invocation): `flutter test integration_test/bs14/refine_test.dart -d flutter-tester` (+ `--dart-define=BS14_RUN_PENDING=true` for the AC-12 red).
+- **Next:** MERGE-5 (AC-12 per-source rate limit, in `source_rate_limiter.dart` + `evidence_merge.dart`) — needs only MERGE-1, independent of the MERGE-2→3→4 chain; un-pends AC-12 (the last MERGE red). EXCHANGE-3 (AC-7) remains independently startable; EXCHANGE-2/4 still need G-4; CORE-4 (AC-2) needs EXCHANGE-3. SIGNOFF-1 last.
