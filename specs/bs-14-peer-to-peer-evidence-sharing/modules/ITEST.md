@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1..4 ✅; **ITEST-5 ⏸ Awaiting review** (packet assembled, G-2 routed to a human) — whole-suite grid 11 A + AC-9 B-pending-MERGE-4; suite re-verified in documented state (default 12/12 scaffold green + 12 AC skipped; run-pending 11 red + 1 green)
+**Status:** ✅ Done — ITEST-1..5 all ✅; **G-2 Approved 2026-10-16 by Matt Quirk** (whole-suite grid 11 A + AC-9 B-pending-MERGE-4 carried to MERGE-4). The AC stage is complete and every behaviour phase is unblocked.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs14/` — `harness.dart`, `fake_peer_transport.dart`, `pending.dart`, `harness_test.dart` (ITEST-1 scaffold/smoke tests), `consent_and_record_test.dart` (AC-1..5), `exchange_and_merge_test.dart` (AC-6,7,10), `refine_test.dart` (AC-8,9,11,12).
 **Depends on:** all shell phases (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1) · **Blocks:** every behavior phase (via G-2)
@@ -13,7 +13,7 @@
 | 2 | acceptance-tests | AC-1..5 | ✅ Done | 6,582,231 | 21m 58s |
 | 3 | acceptance-tests | AC-6, AC-7, AC-10 | ✅ Done | 4,609,896 | 12m 39s |
 | 4 | acceptance-tests | AC-8, AC-9, AC-11, AC-12 | ✅ Done | 6,488,618 | 19m 29s |
-| 5 | test-review | — (G-2) | ⏸ Awaiting review | 2,005,695 | 6m 07s |
+| 5 | test-review | — (G-2) | ✅ Done | 2,005,695 | 6m 07s |
 
 ## Interface reconciliation
 
@@ -147,14 +147,16 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
 - **Tasks:** assemble the test-review packet (every AC test, its Given construction + assertions, its Rejects, its red baseline and grade); route **G-2** to a human. "Changes requested" → an ITEST change phase per item, then a fresh review.
 - **Exit criteria:** a human records the G-2 decision.
 
-### Result — ITEST-5 ⏸ Awaiting review
+### Result — ITEST-5 ✅ Done (G-2 Approved)
+
+**G-2 Approved 2026-10-16 07:37 by Matt Quirk** — the acceptance suite is accepted as-is (11 A + AC-9 B-pending-MERGE-4 augmentation carried to MERGE-4). The AC stage is complete; every behaviour phase is unblocked. Recorded via `/feature-next-phase bs14` (SIGNOFF-DECISION ITEST-5 approved).
 
 Packet assembled (below), **G-2** routed to a human. No code written; the suite was re-run to confirm it is in the documented state before review:
 - **Default mode** (`-d flutter-tester`, no define): scaffold `harness_test.dart` **12/12 green**; all 12 AC tests **skipped** (`consent_and_record` +0 ~5, `exchange_and_merge` +0 ~3, `refine` +0 ~4) — 0 failed.
 - **Run-pending mode** (`--dart-define=BS14_RUN_PENDING=true`): the red baseline reproduces exactly — `consent_and_record` 0 +/5 −, `exchange_and_merge` 0 +/3 −, `refine` 1 +/3 − (AC-9 green-at-baseline) = **11 red + 1 green**, matching the Red baseline table.
 - Grades unchanged: **11 A + AC-9 B-pending-MERGE-4** (one open augmentation row, owned by MERGE-4). Grade grid lives inline in the *Red baseline* table (per-test Grade column) + each AC-test phase Result.
 
-Set phase `⏸ Awaiting review`; G-2 status → *awaiting decision*. Tokens/Time: see ledger (this session). **Stop** — a human decides G-2 via `/feature-next-phase --gate bs14 G-2 approved | "<changes>"`.
+Phase `✅ Done`; **G-2 ✅ Resolved** (Approved, Matt Quirk, 2026-10-16). Tokens/Time above are the packet-assembly session; the G-2 decision is a separate SIGNOFF-DECISION ledger row. The behaviour stage is open — CORE-3 / RECORD-2 / RECORD-3 / MERGE-2 are startable (parallelisable); EXCHANGE-2/4 still need **G-4**.
 
 ### Test-review packet — ITEST-5 (G-2)
 
