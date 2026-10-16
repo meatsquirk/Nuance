@@ -26,6 +26,15 @@ enum EvidenceKind {
 
   /// A stated opinion; carried as evidence but never raises the tier (AC-10).
   opinion,
+
+  /// Received from another painter's install through the bs-14 peer-to-peer
+  /// exchange. Carried as source-tagged evidence that may *refine* an Estimated
+  /// value's coordinates, but it never contributes to the derived tier — only
+  /// the painter's own measured swatch promotes (bs-14 AC-9; SI D2). It is
+  /// default-safe: [ProvenanceDerivation.tierFor] reads only the kinds in its
+  /// promotion precedence, so a peer-contributed point leaves the tier at the
+  /// value's stored fallback.
+  peerContributed,
 }
 
 /// A single source-tagged colour observation backing a [Sample].

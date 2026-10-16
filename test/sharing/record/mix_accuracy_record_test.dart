@@ -139,6 +139,7 @@ void main() {
         EvidenceKind.solverCalculated,
         EvidenceKind.llmSeed,
         EvidenceKind.opinion,
+        EvidenceKind.peerContributed,
       ]) {
         expect(
           MeasurementTier.fromEvidenceKind(kind),

@@ -159,8 +159,8 @@ class MeasuredColour {
 /// * [instrument] — read from an instrument ([EvidenceKind.instrumentMeasured]);
 /// * [referenceCard] — a reference-card-calibrated photograph
 ///   ([EvidenceKind.photographedSwatch]);
-/// * [cardLess] — any lower-confidence origin (solver-calculated, seeded or
-///   stated), the conservative floor.
+/// * [cardLess] — any lower-confidence origin (solver-calculated, seeded,
+///   stated or peer-contributed), the conservative floor.
 enum MeasurementTier {
   /// Instrument-measured — the highest-confidence tier.
   instrument,
@@ -181,6 +181,7 @@ enum MeasurementTier {
       case EvidenceKind.solverCalculated:
       case EvidenceKind.llmSeed:
       case EvidenceKind.opinion:
+      case EvidenceKind.peerContributed:
         return MeasurementTier.cardLess;
     }
   }

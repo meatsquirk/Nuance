@@ -1,15 +1,15 @@
 # Module MERGE — append-only merge, crowd refine, never-promote, rate-limit
 
-**Status:** Not started
+**Status:** In progress — MERGE-1 ✅ done; next is MERGE-2 (behaviour, blocked on G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
-**Owns (files/areas):** `lib/sharing/merge/evidence_merge.dart`, `crowd_refine.dart`, `source_rate_limiter.dart`, `mapping_evidence_endpoint.dart`; an **additive** edit to bs-13's `lib/domain/provenance.dart` to add `EvidenceKind.peerContributed`.
+**Owns (files/areas):** `lib/sharing/merge/evidence_merge.dart`, `crowd_refine.dart`, `source_rate_limiter.dart`, `mapping_evidence_endpoint.dart`; an **additive** edit to bs-13's `lib/domain/sample.dart` (surface-drift: the enum lives there, not `provenance.dart`) to add `EvidenceKind.peerContributed`, plus the matching `MeasurementTier.fromEvidenceKind` case in `mix_accuracy_record.dart`.
 **Depends on:** CORE, RECORD, **bs-13 PROV** (append-only add, `ProvenanceDerivation.tierFor`, clustering rule) · **Blocks:** SIGNOFF-1
 
 ## Dashboard
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 5,237,948 | 11m 08s |
 | 2 | behavior | AC-10 | ⬜ Todo | | |
 | 3 | behavior | AC-8 + AC-11 | ⬜ Todo | | |
 | 4 | behavior | AC-9 | ⬜ Todo | | |
@@ -85,6 +85,27 @@
 - **Exit criteria:** unit + coverage; acceptance gate; grade gate.
 - **Acceptance gate:** un-pend AC-12; `TestAC12_RateLimited` passing (and all earlier ACs).
 
-### Result  <!-- filled on completion -->
+### Result — MERGE-1 (shell)
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed (4 new files in `lib/sharing/merge/`, all skeletons, no behaviour):**
+  - `evidence_merge.dart` — `SourcedRecord({source, record})` value type + `EvidenceMerge({derivation})` whose `ingest(existing, incoming)` returns `existing` unmodified (MERGE-2 appends each as a `peerContributed` point via bs-13's `appendEvidence`).
+  - `crowd_refine.dart` — `RefineResult({value, tier})` + `CrowdRefine({derivation})` whose `refine(current, evidence, {fallback})` returns `current` unchanged with the tier from bs-13's `tierFor` (peer evidence never promotes → stays `fallback`). MERGE-3 computes the robust central estimate; MERGE-4 proves never-promote.
+  - `source_rate_limiter.dart` — `SourceRateLimiter({maxPerSource})` (`defaultMaxPerSource = 50`, provisional) whose `admit(source)` always returns true in the shell. MERGE-5 enforces the per-source bound.
+  - `mapping_evidence_endpoint.dart` — `MappingEvidenceView({value, evidence, tier, label})` + `MappingEvidenceEndpoint` (`InheritedWidget`, `endpointKey`, nullable `view`, `of`/`maybeOf`), the suite's read seam; `view` null in the shell.
+- **Additive edits (default-safe):** `lib/domain/sample.dart` — added `EvidenceKind.peerContributed` (doc: refines only, never contributes to the tier; `tierFor` already ignores kinds outside its precedence, so no derivation change). `lib/sharing/record/mix_accuracy_record.dart` — added the `peerContributed` case to `MeasurementTier.fromEvidenceKind` → `cardLess` (keeps the exhaustive switch complete).
+- **Surface-drift reconciled:** the enum lives in `lib/domain/sample.dart`, not `provenance.dart` (as the plan's D-2 / Files lines predate the bs-13 merge). The edit is additive and merges cleanly.
+- **Verification:** analyze clean; unit **1511/0** (+23: merge 28 new, record +1); coverage gate **100% on all 19 touched lib files** (`dart run tool/coverage_gate.dart c00422f`); whole existing suite green; bs-13 derivation tests unchanged and green. No device/integration run (shell, no AC). Fix passes: 0/3.
+- **Tokens / Time:** 5,237,948 / 11m 08s.
+
+### Checkpoint / Handoff — after MERGE-1
+
+- **Frozen interfaces (consumed by MERGE-2..5, ITEST, the behaviour phases):**
+  - `EvidenceKind.peerContributed` (in `lib/domain/sample.dart`) — refine-only, non-promoting.
+  - `SourcedRecord({required String source, required MixAccuracyRecord record})` — value `==`.
+  - `EvidenceMerge({ProvenanceDerivation derivation})` — `List<EvidencePoint> ingest(List<EvidencePoint> existing, Iterable<SourcedRecord> incoming)` (shell: returns `existing` unmodifiable).
+  - `CrowdRefine({ProvenanceDerivation derivation})` — `RefineResult refine(ColorCoordinates current, List<EvidencePoint> evidence, {ProvenanceTier fallback = estimated})`; `RefineResult({ColorCoordinates value, ProvenanceTier tier})` value `==`.
+  - `SourceRateLimiter({int maxPerSource})` — `bool admit(String source)` (shell: always true); `static const defaultMaxPerSource = 50`.
+  - `MappingEvidenceEndpoint` — `endpointKey`, nullable `view`, `of`/`maybeOf`; `MappingEvidenceView({required ColorCoordinates value, List<EvidencePoint> evidence, ProvenanceTier tier, String label})` value `==`.
+- **Wiring note:** nothing in `lib/sharing/merge/` is yet a `SharingDependencies` field or mounted in `build_app.dart` — behaviour-neutral shell. The ITEST harness mounts `MappingEvidenceEndpoint` directly; MERGE behaviour phases populate its `view`.
+- **Verification commands:** flutter at `~/development/flutter/bin`. Unit: `flutter test`. Coverage: `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f`. Construct value classes non-const in a test or the const-ctor line reads 0.
+- **Next:** MERGE-2 (AC-10 append-only source-tagged merge) — blocked on **G-2** (and the ITEST stage: the AC test must exist). MERGE-3/4/5 follow. The shell stage is now complete (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1 all done) → the ITEST stage (ITEST-1..5) is startable; ITEST-5 is the test review resolving **G-2**.
