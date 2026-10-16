@@ -63,9 +63,9 @@ const Map<String, String> pendingACs = {
   // discard).
   // AC-9 un-pended by MERGE-4 (crowd evidence never promotes to Confirmed).
   // AC-12 un-pended by MERGE-5 (per-source rate limit).
+  // AC-7 un-pended by EXCHANGE-3 (no peer ⇒ no exchange, no wait).
   'AC-2': 'CORE-4',
   'AC-6': 'EXCHANGE-2',
-  'AC-7': 'EXCHANGE-3',
 };
 
 /// The behaviour phases allowed to own a pending AC.
@@ -101,6 +101,7 @@ const Set<String> completedBehaviorPhases = {
   'MERGE-3',
   'MERGE-4',
   'MERGE-5',
+  'EXCHANGE-3',
 };
 
 /// Every AC id the bs-14 acceptance suite covers (the master plan's 12 ACs).

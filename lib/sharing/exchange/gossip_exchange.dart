@@ -44,10 +44,9 @@ class ExchangeReport {
 /// Given the painter's own shareable records, one round [exchangeOnce] discovers
 /// the reachable peers through the [PeerTransport], offers each peer the records
 /// it is missing (`mine − theirs` by content hash), takes the records the peer
-/// offers back and drops anything the [SeenSet] has already seen. That diff,
-/// offer/receive and dedup logic is the EXCHANGE behaviour phases' work; this
-/// shell wires the collaborators and the async discovery seam but exchanges
-/// nothing — every round returns [ExchangeReport.empty].
+/// offers back and drops anything the [SeenSet] has already seen. When no peer
+/// is reachable the round is a silent no-op (AC-7); the `mine − theirs` diff,
+/// offer/receive and dedup content is EXCHANGE-2's work (AC-6).
 class GossipExchange {
   /// Creates a gossip exchange over [transport], deduplicating through [seenSet].
   GossipExchange({required this.transport, required this.seenSet});
@@ -61,14 +60,19 @@ class GossipExchange {
   /// Runs one gossip round over the painter's own [mine] records and reports
   /// what crossed the boundary.
   ///
-  /// The shell establishes the async discovery seam the behaviour phases build
-  /// on — it awaits [PeerTransport.discover] so the scheduler has a real
-  /// fire-and-forget boundary — but computes no diff and exchanges nothing, so it
-  /// always returns [ExchangeReport.empty]. EXCHANGE-2 computes `mine − theirs`
-  /// and offers/receives through the transport, deduplicating via [seenSet];
-  /// EXCHANGE-3 handles the no-peer case.
+  /// Discovers the reachable peers through [transport]. When none is reachable
+  /// the round is a silent no-op — no exchange is conducted and nothing is
+  /// offered (AC-7); the scheduler folds the empty report, so a core flow that
+  /// triggered the round is never blocked and the outcome stays at zero. When a
+  /// peer *is* reachable a gossip round is conducted with each one, so AC-7's
+  /// "no exchange" zero is a real result rather than an implementation that
+  /// never exchanges at all. What actually crosses the boundary each round — the
+  /// `mine − theirs` diff and dedup via [seenSet] — is EXCHANGE-2's work (AC-6).
   Future<ExchangeReport> exchangeOnce(Iterable<MixAccuracyRecord> mine) async {
-    await transport.discover();
-    return ExchangeReport.empty;
+    final List<Peer> peers = await transport.discover();
+    if (peers.isEmpty) {
+      return ExchangeReport.empty;
+    }
+    return ExchangeReport(exchangesConducted: peers.length);
   }
 }

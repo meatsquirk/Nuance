@@ -1,6 +1,6 @@
 # Module EXCHANGE — serverless gossip
 
-**Status:** In progress — EXCHANGE-1 ✅ done; EXCHANGE-2 (AC-6) blocked on G-2 + G-4, EXCHANGE-3 (AC-7) blocked on G-2, EXCHANGE-4 (enabler) blocked on G-4
+**Status:** In progress — EXCHANGE-1 ✅ done, EXCHANGE-3 (AC-7) ✅ done (graded A); EXCHANGE-2 (AC-6) + EXCHANGE-4 (enabler) blocked on G-4
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/exchange/peer_transport.dart`, `gossip_exchange.dart`, `seen_set.dart`, `exchange_scheduler.dart`, `exchange_outcome_endpoint.dart`; the real transport impl `lib/sharing/exchange/local_network_transport.dart` (EXCHANGE-4).
 **Depends on:** CORE, RECORD · **Blocks:** CORE-4 (background exchange), SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 4,252,500 | 11m 52s |
 | 2 | behavior | AC-6 | ⬜ Todo | | |
-| 3 | behavior | AC-7 | ⬜ Todo | | |
+| 3 | behavior | AC-7 | ✅ Done | 5,300,757 | 14m 22s |
 | 4 | behavior (*enabler*) | — | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -97,3 +97,62 @@ Verification: `flutter analyze` clean; unit **1488/0** (+24 new exchange tests);
 - **Wiring note:** nothing in `lib/sharing/exchange/` is yet a `SharingDependencies` field or mounted in `build_app.dart` (behaviour-neutral shell). CORE-4 (AC-2, background exchange) adds the scheduler to `SharingDependencies` + mounts `ExchangeOutcomeEndpoint` when it wires the live exchange; the ITEST harness mounts the endpoint directly over a loopback-fake transport.
 - **Verification commands:** flutter at `~/development/flutter/bin`. Unit: `flutter test`. Coverage: `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f` (full-suite run). Construct value classes non-const in a test or the const-ctor line reads 0.
 - **Next:** EXCHANGE-2 (AC-6, `mine − theirs` diff + dedup) — blocked on **G-2 + G-4**. EXCHANGE-3 (AC-7, no-peer no-wait) — blocked on **G-2**. EXCHANGE-4 (enabler, real mDNS/socket) — blocked on **G-4**. All EXCHANGE behaviour waits on the ITEST test review (G-2); EXCHANGE-2/4 also wait on G-4.
+
+### Result — after EXCHANGE-3
+
+AC-7 ("with no peer reachable, nothing happens and nothing is waited on") coded
+and un-pended. Touched one lib file, `gossip_exchange.dart`:
+
+- `exchangeOnce` now discovers peers and branches: **no peer reachable ⇒
+  `ExchangeReport.empty`** (no exchange conducted, nothing offered) — the AC-7
+  no-op the scheduler folds, so a core flow that triggered the round is never
+  blocked and the outcome stays at zero; **≥1 peer ⇒
+  `ExchangeReport(exchangesConducted: peers.length)`** so a real exchange is
+  conducted per reachable peer. The `mine − theirs` offer/receive diff + dedup
+  content stays with EXCHANGE-2 (AC-6). `exchange_scheduler.dart` needed no
+  change — EXCHANGE-1's fire-and-forget `trigger` already folds the empty report
+  and keeps `waitedOnExchange==false`.
+- Shell unit test rewritten to the EXCHANGE-3 behaviour: no-peer ⇒ empty report;
+  a reachable peer (two peers) ⇒ `exchangesConducted==2`, offered/received still
+  empty (AC-6's content). Discovery seam still asserted.
+
+**Acceptance gate:** un-pended AC-7 in `pending.dart`; `TestAC07_NoPeerNoWait`
+runs and **passes** in the default suite (both the no-peer Thens and the
+reachable-peer control green). `exchange_and_merge_test.dart` default: AC-7 ✅,
+AC-10 ✅, AC-6 skipped (pending EXCHANGE-2). The harness pending-set guard
+(`harness_test.dart`) updated for AC-7's un-pend (+ EXCHANGE-3 in
+`completedBehaviorPhases`) — 12/12 green; `refine_test.dart` 4/0, +1 skip;
+`consent_and_record_test.dart` 4/0, +1 skip. Only AC-2 (CORE-4) and AC-6
+(EXCHANGE-2) remain pending — both later phases.
+
+**Grade gate:** fresh independent reviewer re-graded the full un-pended set
+(10 ACs) against G1–G6 — **AC-7 A on first grade, 10 A / 0** (AC-1,3,4,5,7,8,9,
+10,11,12); no downgrades, one non-A-denying residual noted (the
+`waitedOnExchange` by-contract constant-false flag). Grid:
+`behavior-test-completeness-bs-14.md` § EXCHANGE-3.
+
+**Verification:** flutter at `~/development/flutter/bin`. `flutter analyze` clean;
+unit **1545/0**; coverage **100% on all 20 touched lib files** (`dart run
+tool/coverage_gate.dart c00422f`). Fix passes: **1/3** (the harness pending-set
+guard needed updating after AC-7's un-pend; no implementation change). Tokens
+5,300,757 · Time 14m 22s.
+
+### Checkpoint / Handoff — after EXCHANGE-3
+
+- **Frozen behaviour (consumed by CORE-4, EXCHANGE-2):** `GossipExchange.exchangeOnce`
+  conducts an exchange with each reachable peer (`exchangesConducted ==
+  peers.length`) and is a silent no-op when no peer is reachable. The count is
+  the AC-7 invariant; EXCHANGE-2 will fill the `mine − theirs` offer/receive +
+  dedup content inside the same method (it must keep the no-peer short-circuit
+  and the per-peer conduct count).
+- **CORE-4 (AC-2, next unblocked):** wires the scheduler into `SharingDependencies`
+  and mounts `ExchangeOutcomeEndpoint` when it drives the live background
+  exchange; AC-2 observes "no per-exchange action". Depends on EXCHANGE-3 (now
+  done) — startable.
+- **Verification commands:** unit `flutter test`; coverage `flutter test
+  --coverage` then `dart run tool/coverage_gate.dart c00422f`. Acceptance:
+  `flutter test integration_test/bs14/<file>.dart -d flutter-tester` — run the
+  app-booting bs-14 files **one per invocation** (flutter-tester app-relaunch
+  limitation). `--dart-define=BS14_RUN_PENDING=true` runs pending ACs.
+- **Known gaps:** EXCHANGE-2 (AC-6) and EXCHANGE-4 (enabler) remain blocked on
+  **G-4** (the sanctioned off-device path / bs-12 guard reconciliation).

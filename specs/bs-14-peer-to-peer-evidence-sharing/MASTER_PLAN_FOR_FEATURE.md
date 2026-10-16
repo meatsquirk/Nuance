@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — behaviour stage; **MERGE module complete (MERGE-2/3/4/5) + CORE-3 + RECORD done (AC-1/3/4/5/8/9/10/11/12 ✅); all un-pended ACs graded A (9 A/0)**. Next startable: EXCHANGE-3 (AC-7). G-4 still open (blocks EXCHANGE-2/4 only).
+**Status:** In progress — behaviour stage; **EXCHANGE-3 done (AC-7 ✅); MERGE module + CORE-3 + RECORD done (AC-1/3/4/5/7/8/9/10/11/12 ✅); all un-pended ACs graded A (10 A/0)**. Next startable: CORE-4 (AC-2). G-4 still open (blocks EXCHANGE-2/4 only).
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -44,7 +44,7 @@
 | AC-4 | No photo, project, sample, profile or identifier leaves the device | ITEST-2 `TestAC04_NothingPersonalLeaves` | RECORD-2 | ✅ |
 | AC-5 | A record without a declared palette is not shared | ITEST-2 `TestAC05_NoPaletteNotShared` | RECORD-3 | ✅ |
 | AC-6 | Two reachable installs exchange only the records each is missing | ITEST-3 `TestAC06_ExchangeOnlyMissing` | EXCHANGE-2 | ⬜ Todo |
-| AC-7 | With no peer reachable, nothing happens and nothing is waited on | ITEST-3 `TestAC07_NoPeerNoWait` | EXCHANGE-3 | ⬜ Todo |
+| AC-7 | With no peer reachable, nothing happens and nothing is waited on | ITEST-3 `TestAC07_NoPeerNoWait` | EXCHANGE-3 | ✅ |
 | AC-8 | Clustered crowd records improve an Estimated mapping's value | ITEST-4 `TestAC08_ClusteredRefine` | MERGE-3 | ✅ |
 | AC-9 | Crowd evidence never promotes a value to Confirmed on the painter's screen | ITEST-4 `TestAC09_NeverPromotes` | MERGE-4 | ✅ |
 | AC-10 | Records from many devices merge without overwriting | ITEST-3 `TestAC10_AppendOnlyMerge` | MERGE-2 | ✅ |
@@ -177,24 +177,24 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 16 | MERGE-4 | AC-9 never promote to Confirmed | ✅ Done | 7,077,181 | 14m 53s | AC-9 ✅ un-pended, graded **A** (B→A; 8 A/0); never-promote already enforced by MERGE-1/2 (`ingest` stamps `peerContributed`, `tierFor` excludes it) — MERGE-4 added derivation glue `RefineResult.label = qualifier(tier)` + both `TestAC09` augmentations (5-peer Given realized; high-tier peer still Estimated); unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
 | 17 | MERGE-5 | AC-12 per-source rate limit | ✅ Done | 7,627,140 | 15m 13s | AC-12 ✅ un-pended, graded A (9 A/0); rate limit in `EvidenceMerge.ingest` via stateful `SourceRateLimiter` (per-source cap 50, seeded from existing log); MERGE module complete; unit 1544/0, cov 100%/2 touched; fix passes 0/3 |
 | 18 | EXCHANGE-2 | AC-6 offer-missing, hash-keyed, dedup | ⬜ Todo | | | needs G-4 |
-| 19 | EXCHANGE-3 | AC-7 no peer ⇒ no exchange, no wait | ⬜ Next | | | startable now |
+| 19 | EXCHANGE-3 | AC-7 no peer ⇒ no exchange, no wait | ✅ Done | 5,300,757 | 14m 22s | AC-7 ✅ un-pended, graded A (10 A/0); `gossip_exchange.dart` no-peer short-circuit + per-reachable-peer conduct count; unit 1545/0, cov 100%/20 touched; fix passes 1/3 (harness guard) |
 | 20 | EXCHANGE-4 | *enabler* real mDNS/socket transport (no AC; manual on-device at sign-off) | ⬜ Todo | | | needs G-4 |
-| 21 | CORE-4 | AC-2 no per-exchange action (silent background exchange) | ⬜ Todo | | | needs EXCHANGE-3 |
+| 21 | CORE-4 | AC-2 no per-exchange action (silent background exchange) | ⬜ Next | | | startable now (EXCHANGE-3 done) |
 | 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**MERGE-5 ✅ done — MERGE module complete** (AC-12 un-pended, graded **A**; 9 A/0 over un-pended AC-1,3,4,5,8,9,10,11,12). The per-source rate limit is enforced inside `EvidenceMerge.ingest`: `SourceRateLimiter` is now a stateful per-source counter (cap 50 = `defaultMaxPerSource`, scope §6.6 names no number), and each `ingest` builds a fresh limiter seeded from the existing log's peer points so the bound counts a source's whole contribution. `EvidenceMerge` stays `const` (new `maxPerSource` field) — forced because the test builds `const EvidenceMerge()`. AC-10's append-only/source-tagged behaviour is preserved and re-graded A. Touched `source_rate_limiter.dart` + `evidence_merge.dart`. (The grid's MERGE-4 AC-9 section, which MERGE-4's commit never appended, is recorded here too.)
+**EXCHANGE-3 ✅ done** (AC-7 un-pended, graded **A**; 10 A/0 over un-pended AC-1,3,4,5,7,8,9,10,11,12). `GossipExchange.exchangeOnce` now short-circuits to an empty report when no peer is reachable (the AC-7 no-op the fire-and-forget scheduler folds, so no core flow waits) and conducts an exchange per reachable peer (`exchangesConducted == peers.length`) — the reachable-peer control the AC-7 test needs. The `mine − theirs` offer/receive diff stays with EXCHANGE-2. Touched `gossip_exchange.dart` only; scheduler unchanged. Fix passes 1/3 (harness pending-set guard).
 
 Startable now:
 
-- **EXCHANGE-3** (AC-7) — no peer ⇒ no exchange, no wait. Startable (independent; no open gate).
+- **CORE-4** (AC-2) — no per-exchange action: wire the scheduler into `SharingDependencies` + mount `ExchangeOutcomeEndpoint` for the live silent background exchange. Startable (EXCHANGE-3 done; no open gate).
 
-Then: **CORE-4 (AC-2) needs EXCHANGE-3** (adds its "recipes improve" signal to `_SharingRoot`'s consented surface branch). **EXCHANGE-2 (AC-6) and EXCHANGE-4 (enabler) need G-4** — decide G-4 before them. SIGNOFF-1 last (needs CORE-4, EXCHANGE-4; CORE-3/RECORD-3/the whole MERGE module are done).
+Then: **EXCHANGE-2 (AC-6) and EXCHANGE-4 (enabler) need G-4** — decide G-4 before them. SIGNOFF-1 last (needs CORE-4, EXCHANGE-4; CORE-3/RECORD-3/the whole MERGE module + EXCHANGE-3 are done).
 
-**G-4 still open** — blocks EXCHANGE-2 / EXCHANGE-4 only; EXCHANGE-3 and CORE-4 are clear.
+**G-4 still open** — blocks EXCHANGE-2 / EXCHANGE-4 only; CORE-4 is clear.
 
 ## Token usage
 
@@ -223,7 +223,8 @@ Then: **CORE-4 (AC-2) needs EXCHANGE-3** (adds its "recipes improve" signal to `
 | MERGE-3 | 14e8923c | 2026-10-16 10:25 EDT | 10:41 | 15m 51s | 15m 51s | claude-opus-4-8 | 114 | 230,538 | 6,004,757 | 49,314 | 6,284,723 | AC-8+AC-11 un-pended, graded A (7 A/0); robust central estimate (coord-wise median + modified-z-score MAD outlier discard) in crowd_refine.dart; unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
 | MERGE-4 | ec3a37c7 | 2026-10-16 10:46 EDT | 11:01 | 14m 53s | 14m 53s | claude-opus-4-8 | 110 | 253,956 | 6,774,672 | 48,443 | 7,077,181 | AC-9 un-pended, graded A (B→A; 8 A/0); never-promote enforced by MERGE-1/2 (ingest stamps peerContributed, tierFor excludes it), MERGE-4 adds derivation glue RefineResult.label=qualifier(tier) + both TestAC09 augmentations; unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
 | MERGE-5 | 91efb0ed | 2026-10-16 11:09 EDT | 11:24 | 15m 13s | 15m 13s | claude-opus-4-8 | 124 | 266,710 | 7,314,260 | 46,046 | 7,627,140 | AC-12 un-pended, graded A (9 A/0); per-source rate limit in EvidenceMerge.ingest via stateful SourceRateLimiter (cap 50, seeded from existing log); MERGE module complete; unit 1544/0, cov 100%/2 touched; fix passes 0/3 |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 11:24** | **5h 38m** | **5h 30m** |  | **2,030** | **3,636,026** | **123,332,438** | **967,026** | **127,937,520** |  |
+| EXCHANGE-3 | 1bdd40a9 | 2026-10-16 11:39 EDT | 11:54 | 14m 22s | 14m 22s | claude-opus-4-8 | 104 | 214,181 | 5,051,255 | 35,217 | 5,300,757 | AC-7 un-pended + graded A (10 A/0); unit 1545/0, cov 100%/20 touched; fix passes 1/3 |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 11:54** | **5h 52m** | **5h 44m** |  | **2,134** | **3,850,207** | **128,383,693** | **1,002,243** | **133,238,277** |  |
 
 ## Sign-off
 

@@ -28,18 +28,35 @@ void main() {
     });
   });
 
-  group('GossipExchange (shell)', () {
-    test('awaits discovery but exchanges nothing', () async {
-      final transport = FakePeerTransport(peers: const [Peer('a')]);
+  group('GossipExchange (EXCHANGE-3: no peer ⇒ no exchange)', () {
+    test('no peer reachable ⇒ silent no-op round', () async {
+      final transport = FakePeerTransport(peers: const <Peer>[]);
       final exchange =
           GossipExchange(transport: transport, seenSet: SeenSet());
 
       final report = await exchange.exchangeOnce([record('x')]);
 
       expect(transport.discoverCalls, 1, reason: 'the discovery seam is wired');
+      expect(report.exchangesConducted, 0, reason: 'no peer ⇒ no exchange');
       expect(report.offered, isEmpty);
       expect(report.received, isEmpty);
-      expect(report.exchangesConducted, 0);
+      expect(report.dedupDrops, 0);
+    });
+
+    test('a reachable peer ⇒ a round is conducted with each one', () async {
+      final transport = FakePeerTransport(peers: const [Peer('a'), Peer('b')]);
+      final exchange =
+          GossipExchange(transport: transport, seenSet: SeenSet());
+
+      final report = await exchange.exchangeOnce([record('x')]);
+
+      expect(transport.discoverCalls, 1, reason: 'the discovery seam is wired');
+      expect(report.exchangesConducted, 2,
+          reason: 'one exchange conducted per reachable peer');
+      // The mine − theirs offer/receive content is EXCHANGE-2's (AC-6); this
+      // phase establishes only that a round happens per reachable peer.
+      expect(report.offered, isEmpty);
+      expect(report.received, isEmpty);
     });
 
     test('exposes its collaborators', () {

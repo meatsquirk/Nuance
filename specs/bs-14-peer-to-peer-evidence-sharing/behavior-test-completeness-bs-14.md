@@ -105,3 +105,57 @@ Fresh, independent re-grade of the full un-pended set (AC-1, AC-3, AC-4, AC-5, A
 - **AC-5 — `TestAC05_NoPaletteNotShared` — remains A.** Share-set selection path; no dependence on merge. Green.
 
 **Counts after MERGE-5: 9 A / 0** over the nine un-pended tests (AC-1, AC-3, AC-4, AC-5, AC-8, AC-9, AC-10, AC-11, AC-12). AC-2/AC-6/AC-7 remain pending their phases. AC-9's *B pending MERGE-4* augmentation is now resolved (B→A).
+
+## EXCHANGE-3 grading (AC-7; full re-grade)
+
+Fresh independent reviewer, re-graded the full un-pended set (AC-1, AC-3, AC-4,
+AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12) against G1–G6, grading what the
+code does. EXCHANGE-3 changed only `lib/sharing/exchange/gossip_exchange.dart`
+(`exchangeOnce`: discover → empty peers return `ExchangeReport.empty`; else
+`ExchangeReport(exchangesConducted: peers.length)`); the fire-and-forget
+scheduler is unchanged. AC-7 is the only un-pended test that exercises the
+gossip exchange / scheduler.
+
+- **AC-7 — `TestAC07_NoPeerNoWait` — A (first grade).** Drives the real
+  `GossipExchange.exchangeOnce` over the sanctioned fake loopback transport
+  (D-3) via the real `ExchangeScheduler`, read through the thin
+  `ExchangeOutcomeEndpoint` pass-through.
+  - **G1 pass.** The one Given ("no other install is reachable") is asserted
+    through the public surface before the When two ways — `network.peersReachable
+    isFalse` and `await transport.discover() isEmpty` (checked values, not a
+    comment).
+  - **G2 pass.** The configured `peersReachable: false` answers: the real
+    `discover()` returns `[]` and the real `exchangeOnce` decides "no exchange"
+    (`peers.isEmpty → empty`); the real scheduler folds it. The only fake is the
+    sanctioned transport, driven by the setting — nothing stubs the gossip
+    outcome.
+  - **G3 pass.** The "no exchange occurred" negative (`exchanges==0`,
+    `offered==0`) is read only after a real settle point (`await
+    expectLater(scheduler.settled, completes)`), paired with the reachable-peer
+    control (`exchanges>=1`) proving the reading can be non-zero. The no-wait
+    invariant is read synchronously right after `trigger` returns (the core flow
+    is not blocked) and again post-settle.
+  - **G4 pass.** Raw observables at grain/value: no-peer `exchanges==0` /
+    `offered==0` / `waited isFalse`; control `exchanges>=1` (peer count 1) /
+    `waited isFalse`.
+  - **G5 pass.** The reachable-peer control is the discriminator — it is red at
+    the shell (which exchanged nothing, so `exchanges==0`) and goes green only
+    once EXCHANGE-3's conduct-count lands, rejecting the "never exchanges at all"
+    impl that would make the no-peer zero vacuous. A blocking core flow would
+    hang `await settled` → timeout.
+  - **G6 pass.** The control asserts only AC-7's own liveness/no-wait invariant
+    (`exchanges>=1`, `waited isFalse`) — nothing about `offered` content or which
+    records crossed, so it does not reach into AC-6's `mine − theirs` semantics.
+  - Non-A-denying residual: `waitedOnExchange` is a by-contract constant-false
+    flag with no control that flips it; liveness discrimination rests on the
+    test's synchronous-trigger structure + `await settled completes`, and the
+    primary "no exchange" claim is genuinely controlled. No fix required.
+- **AC-1 / AC-3 / AC-4 / AC-5 / AC-8 / AC-9 / AC-10 / AC-11 / AC-12 — remain A**
+  (no downgrade). None construct or trigger the gossip exchange, so EXCHANGE-3's
+  change to `gossip_exchange.dart` cannot affect them. (AC-10 shares the
+  `exchange_and_merge_test.dart` file with AC-7 but uses only `EvidenceMerge`,
+  never the exchange.)
+
+**Counts after EXCHANGE-3: 10 A / 0** over the ten un-pended tests (AC-1, AC-3,
+AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12). AC-2 (CORE-4) and AC-6
+(EXCHANGE-2) remain pending their phases.
