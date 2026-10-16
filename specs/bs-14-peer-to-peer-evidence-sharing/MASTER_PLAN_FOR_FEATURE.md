@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — behaviour stage; **CORE-3 ✅ (AC-1 done, graded A)**. Next startable (parallelisable): RECORD-2 / RECORD-3 / MERGE-2. G-4 still open (blocks EXCHANGE-2/4 only).
+**Status:** In progress — behaviour stage; **CORE-3 ✅, RECORD-2 ✅ (AC-1/AC-3/AC-4 done, all graded A)**. Next startable (parallelisable): RECORD-3 / MERGE-2. G-4 still open (blocks EXCHANGE-2/4 only).
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -40,8 +40,8 @@
 |---|---|---|---|---|
 | AC-1 | The painter opts in once in plain terms and is never shown the mechanism | ITEST-2 `TestAC01_OptInOnceNeverShown` | CORE-3 | ✅ |
 | AC-2 | No exchange ever asks the painter to do anything | ITEST-2 `TestAC02_NoPerExchangeAction` | CORE-4 | ⬜ Todo |
-| AC-3 | A shared record carries only the mapping evidence | ITEST-2 `TestAC03_RecordCarriesOnlyEvidence` | RECORD-2 | ⬜ Todo |
-| AC-4 | No photo, project, sample, profile or identifier leaves the device | ITEST-2 `TestAC04_NothingPersonalLeaves` | RECORD-2 | ⬜ Todo |
+| AC-3 | A shared record carries only the mapping evidence | ITEST-2 `TestAC03_RecordCarriesOnlyEvidence` | RECORD-2 | ✅ |
+| AC-4 | No photo, project, sample, profile or identifier leaves the device | ITEST-2 `TestAC04_NothingPersonalLeaves` | RECORD-2 | ✅ |
 | AC-5 | A record without a declared palette is not shared | ITEST-2 `TestAC05_NoPaletteNotShared` | RECORD-3 | ⬜ Todo |
 | AC-6 | Two reachable installs exchange only the records each is missing | ITEST-3 `TestAC06_ExchangeOnlyMissing` | EXCHANGE-2 | ⬜ Todo |
 | AC-7 | With no peer reachable, nothing happens and nothing is waited on | ITEST-3 `TestAC07_NoPeerNoWait` | EXCHANGE-3 | ⬜ Todo |
@@ -170,8 +170,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 9 | ITEST-4 | acceptance-tests: AC-8, AC-9, AC-11, AC-12 (pending) + red baseline | ✅ Done | 6,488,618 | 19m 29s | 3 A + AC-9 B-pending-MERGE-4; baseline 3 red (AC-8/11→MERGE-3, AC-12→MERGE-5) + AC-9 green (limited); no lib touched, unit 1511/0 |
 | 10 | ITEST-5 | test-review: packet; G-2 | ✅ Done | 2,005,695 | 6m 07s | packet assembled (modules/ITEST.md § Test-review packet); **G-2 Approved 2026-10-16 by Matt Quirk** (11 A + AC-9 B-pending-MERGE-4 carried to MERGE-4); behaviour stage unblocked |
 | 11 | CORE-3 | AC-1 one-time plain-language opt-in + invisibility | ✅ Done | 18,326,126 | 47m 46s | AC-1 ✅ un-pended + graded A; `SharingOptInOffer` + live-consent `_SharingRoot`; unit 1519/0, cov 100%/20 touched; regression host 52 + sim 241/241 |
-| 12 | RECORD-2 | AC-3 + AC-4 build record, carry only evidence, nothing personal | ⬜ Next | | | startable now (∥ RECORD-3, MERGE-2) |
-| 13 | RECORD-3 | AC-5 no declared palette ⇒ not shared | ⬜ Todo | | | |
+| 12 | RECORD-2 | AC-3 + AC-4 build record, carry only evidence, nothing personal | ✅ Done | 12,296,700 | 24m 58s | AC-3+AC-4 ✅ un-pended, graded A (AC-3 B→A in-phase, value assertion); `Sample.paintIds` recipe source; unit 1527/0, cov 100%/20 touched |
+| 13 | RECORD-3 | AC-5 no declared palette ⇒ not shared | ⬜ Next | | | startable (∥ MERGE-2) |
 | 14 | MERGE-2 | AC-10 append-only source-tagged merge | ⬜ Todo | | | ∥ RECORD-2/3 |
 | 15 | MERGE-3 | AC-8 + AC-11 crowd refine, robust central estimate, outlier discard | ⬜ Todo | | | |
 | 16 | MERGE-4 | AC-9 never promote to Confirmed | ⬜ Todo | | | augments TestAC09 |
@@ -186,10 +186,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CORE-3 ✅ done** (AC-1 un-pended, graded A; `SharingOptInOffer` + live-consent `_SharingRoot` froze the opt-in control + the `userFacingSharingSurfaces` consented branch CORE-4 extends). Startable now, disjoint file ownership (parallelisable via `--parallel`):
+**RECORD-2 ✅ done** (AC-3 + AC-4 un-pended, graded A; `EvidenceRecordBuilder.prepare` builds the 4-field record, redaction by construction; `Sample.paintIds` added as the recipe source for the record's `paintCombination`). Startable now, disjoint file ownership (parallelisable via `--parallel`):
 
-- **RECORD-2** (AC-3 + AC-4) — build record, carry only evidence, nothing personal (resolves the AC-3 combination-source reconciliation).
-- **RECORD-3** (AC-5) — no declared palette ⇒ not shared (resolves the AC-5 reason-channel reconciliation).
+- **RECORD-3** (AC-5) — no declared palette ⇒ not shared; fills `selectShareSet` (resolves the AC-5 reason-channel reconciliation).
 - **MERGE-2** (AC-10) — append-only source-tagged merge.
 
 Then: MERGE-3 (AC-8/11) needs MERGE-2; MERGE-4 (AC-9) un-pends + makes the one carried TestAC09 augmentation (B→A); MERGE-5 (AC-12); EXCHANGE-3 (AC-7); **CORE-4 (AC-2) needs EXCHANGE-3** (adds its "recipes improve" signal to `_SharingRoot`'s consented surface branch). **EXCHANGE-2 and EXCHANGE-4 need G-4** — decide G-4 before them. SIGNOFF-1 last.
@@ -217,7 +216,8 @@ Then: MERGE-3 (AC-8/11) needs MERGE-2; MERGE-4 (AC-9) un-pends + makes the one c
 | ITEST-5 | eeebdfa2 | 2026-10-16 07:18 EDT | 07:25 | 6m 07s | 6m 07s | claude-opus-4-8 | 48 | 76,326 | 1,913,214 | 16,107 | 2,005,695 | test-review packet assembled; G-2 routed to a human (awaiting decision) |
 | SIGNOFF-DECISION | b12df42e | 2026-10-16 07:35 EDT | 07:39 | 4m 20s | 3m 35s | claude-opus-4-8 | 44 | 61,512 | 1,636,629 | 14,823 | 1,713,008 | ITEST-5 approved |
 | CORE-3 | a8dbce2b | 2026-10-16 08:01 EDT | 08:49 | 47m 46s | 47m 46s | claude-opus-4-8 | 190 | 355,826 | 17,868,569 | 101,541 | 18,326,126 | AC-1 done, graded A; unit 1519/0 cov 100%/20; regression host 52 + sim 241/241 |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 08:49** | **4h 05m** | **3h 57m** |  | **1,264** | **2,274,811** | **79,612,057** | **689,304** | **82,577,436** |  |
+| RECORD-2 | 42bf888e | 2026-10-16 09:00 EDT | 09:25 | 24m 58s | 24m 58s | claude-opus-4-8 | 174 | 259,955 | 11,961,569 | 75,002 | 12,296,700 | AC-3+AC-4 un-pended, graded A (3 A/0; AC-3 B->A in-phase); fix passes 1/3 |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 09:25** | **4h 30m** | **4h 22m** |  | **1,438** | **2,534,766** | **91,573,626** | **764,306** | **94,874,136** |  |
 
 ## Sign-off
 

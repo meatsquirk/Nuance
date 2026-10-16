@@ -207,15 +207,16 @@ void main() {
       expect(record.tier, MeasurementTier.referenceCard,
           reason: 'AC-3: the tier reflects how the mix was measured '
               '(card-calibrated photograph ⇒ referenceCard)');
-      // paint combination — canonical (sorted, deduplicated) paint ids, present.
+      // paint combination — the mix's recipe, carried as canonical (sorted,
+      // deduplicated) paint ids. Asserted at VALUE against the fixture's recipe
+      // (`seedCombination` == `PaintCombination.of(seedMapping.candidatePaintIds)`)
+      // so an impl that sourced the combination from the wrong field, or carried
+      // extra/missing ids, is rejected — not just total omission.
       expect(record.paintCombination.paintIds, isNotEmpty,
           reason: 'AC-3: the record carries the paint combination');
-      expect(
-        record.paintCombination.paintIds,
-        orderedEquals(
-            List<String>.of(record.paintCombination.paintIds)..sort()),
-        reason: 'AC-3: the paint ids are canonical (sorted, deduplicated)',
-      );
+      expect(record.paintCombination, seedCombination,
+          reason: 'AC-3: the carried combination is the mix\'s canonical recipe '
+              '(sorted, deduplicated paint ids)');
     });
 
     // -----------------------------------------------------------------------

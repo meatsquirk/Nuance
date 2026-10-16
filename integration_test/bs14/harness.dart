@@ -160,6 +160,11 @@ final Sample confirmedEvidence = Sample(
   coordinates: seedMappingValue,
   provenance: const Provenance(ProvenanceTier.confirmed),
   name: 'my warm grey mix',
+  // The mix's recipe — the paints it was made from (bs-04). RECORD-2 carries
+  // this as the record's anonymous paint combination; it is the one input the
+  // builder sources the combination from (the frozen `prepare(Sample, {palette})`
+  // takes no combination arg), so a shareable record is a recipe-bearing Sample.
+  paintIds: seedMapping.candidatePaintIds,
   evidence: const <EvidencePoint>[
     EvidencePoint(
       coordinates: seedMappingValue,

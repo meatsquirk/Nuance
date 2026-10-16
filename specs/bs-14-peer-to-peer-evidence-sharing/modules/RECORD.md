@@ -1,6 +1,6 @@
 # Module RECORD — the anonymous mix-accuracy record
 
-**Status:** In progress — RECORD-1 ✅ done; RECORD-2/RECORD-3 (behavior) blocked on G-2
+**Status:** In progress — RECORD-1 ✅, RECORD-2 ✅ (AC-3 + AC-4, graded A); RECORD-3 (AC-5) next (G-2 resolved)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/record/mix_accuracy_record.dart`, `record_builder.dart`, `content_hash.dart`, `record_inspect_endpoint.dart`.
 **Depends on:** CORE (package + wiring), bs-13 (SEED declared-palette + PROV evidence) · **Blocks:** EXCHANGE (records to gossip), MERGE (record ⇆ evidence)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 5,181,744 | 12m 49s |
-| 2 | behavior | AC-3 + AC-4 | ⬜ Todo | | |
+| 2 | behavior | AC-3 + AC-4 | ✅ Done | 12,296,700 | 24m 58s |
 | 3 | behavior | AC-5 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -83,3 +83,21 @@
 - **Wiring note:** the record builder is **not** yet a `SharingDependencies` field (RECORD-1 stayed within its own files). RECORD-2 (behaviour) adds `recordBuilder` to `SharingDependencies` in `lib/sharing/sharing_scope.dart` (+ a one-line construction in `build_app.dart`) when it needs the live builder injected; the ITEST harness can mount `RecordInspectEndpoint` directly.
 - **Verification commands:** flutter at `~/development/flutter/bin`. Unit: `flutter test`. Coverage: `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f` (**must be the full-suite coverage run** — a subset run reports CORE-2's files as "NO COVERAGE DATA"). A new value class must be constructed at runtime (non-const) in a test or the `const` constructor line shows 0 coverage.
 - **Next:** RECORD-2 (AC-3+AC-4, behaviour) — **blocked on G-2**. MERGE-1 (shell) is startable in parallel. EXCHANGE-1 (shell) depends on RECORD-1 (now done) and is startable.
+
+### Result — RECORD-2 (behavior, AC-3 + AC-4) ✅
+
+- **Landed** `EvidenceRecordBuilder.prepare` (`lib/sharing/record/record_builder.dart`): builds a `MixAccuracyRecord` from a confirmed/measured `Sample` + declared palette, carrying exactly the four fields — `paintCombination` (canonical from the sample's recipe), `declaredPalette` (as given, absent carried through for RECORD-3 to exclude), `measuredColour` (the sample's CIELAB + a CIELCh from the injected `ColorScience`, default `const ColorScienceImpl()`), and `tier` (the strongest `MeasurementTier` over the sample's evidence kinds; no evidence ⇒ card-less floor). Returns null when the sample declares no paints (no mix to share). Redaction is by construction — the builder reads only `paintIds`, `coordinates`, `evidence`; the record type structurally cannot hold a name/project/profile/source id (AC-4). `selectShareSet` stays a no-op (RECORD-3 owns AC-5).
+- **AC-3 combination-source reconciliation (resolved):** the frozen `prepare(Sample, {palette})` takes no combination arg, so the paints ride on the input — added an optional `Sample.paintIds` field (`lib/domain/sample.dart`, default `const []`, in the type's established optional-field pattern; the selective `sampleToJson` is unchanged, consistent with the other non-serialized tags). The `confirmedEvidence` harness fixture now carries `seedMapping.candidatePaintIds`. No AC-test `prepare(...)` call signature changed.
+- **Acceptance gate:** un-pended **AC-3 + AC-4** (deleted both rows in `pending.dart`; added `RECORD-2` to `completedBehaviorPhases`); `TestAC03_RecordCarriesOnlyEvidence` + `TestAC04_NothingPersonalLeaves` **green** on `-d flutter-tester`, AC-1 still green, AC-2/AC-5..AC-12 still pending. Harness guard (`harness_test.dart`) updated to the new un-pended set `{AC-1,AC-3,AC-4}` → 12/12.
+- **Gates:** `flutter analyze` clean. Unit **1527/0** (+ record_builder behaviour tests, Sample `paintIds` default/copyWith). Coverage **100% line on all 20 touched lib files** vs `c00422f` — PASS (the const default `ColorScienceImpl()` needed a runtime, non-const builder construction in a test to cover it).
+- **Grade:** fresh independent reviewer, G1–G6. AC-4 **A** first pass; AC-1 **A** (no drift). AC-3 came back **B** (G4/G5: the paint combination asserted only as non-empty + already-sorted — vacuous). Fixed in-phase with the prescribed value assertion `expect(record.paintCombination, seedCombination)` (strengthen-only, discriminates wrong/extra/missing ids); re-graded **A**. **3 A / 0** over the un-pended tests. **Fix passes: 1/3.**
+- **Tokens** 12,296,700 · **Time** 24m 58s.
+
+### Checkpoint / Handoff — after RECORD-2
+
+- **Frozen interfaces (consumed by RECORD-3, EXCHANGE, MERGE):**
+  - `EvidenceRecordBuilder({ColorScience colorScience = const ColorScienceImpl()})` — `prepare(Sample, {DeclaredPalette? palette}) → MixAccuracyRecord?` now builds (null iff no declared paints); `selectShareSet` still returns `[]` (RECORD-3).
+  - `Sample.paintIds` (`List<String>`, default `const []`) — the mix's recipe the record's `paintCombination` is sourced from; empty for a non-mix sample. Carried on `copyWith`; not serialized by `sampleToJson` (in-pattern with the other non-persisted tags).
+- **Known gaps:** none new. AC-5 (no-palette exclusion) is still RECORD-3's at `selectShareSet`; RECORD-2 carries an absent palette through unchanged so RECORD-3 can exclude it.
+- **Verification commands:** unchanged from RECORD-1 — flutter at `~/development/flutter/bin`; unit `flutter test`; coverage `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f` (full-suite run); bs-14 acceptance `flutter test integration_test/bs14/consent_and_record_test.dart -d flutter-tester` (run-pending adds `--dart-define=BS14_RUN_PENDING=true`). Construct a new value class non-const in a test or the const-ctor line reads 0.
+- **Next:** RECORD-3 (AC-5, behaviour) — fills `selectShareSet` to exclude absent-palette candidates. Startable now (G-2 resolved); disjoint from the MERGE chain and MERGE-5.

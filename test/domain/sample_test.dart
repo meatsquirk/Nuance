@@ -88,6 +88,11 @@ void main() {
       expect(sample.litByTorch, isFalse);
       expect(sample.captureMode, isNull);
     });
+
+    test('paintIds default to empty (not a mix of known paints — bs-14)', () {
+      const sample = Sample(coordinates: coords, provenance: measured);
+      expect(sample.paintIds, isEmpty);
+    });
   });
 
   group('Sample.copyWith', () {
@@ -97,6 +102,7 @@ void main() {
       name: 'Warm Terracotta',
       justCaptured: true,
       evidence: [EvidencePoint(coordinates: coords, source: 'spectro')],
+      paintIds: ['wn-cadmium-red', 'wn-titanium-white'],
       colorSpace: CaptureColorSpace.srgb,
       litByTorch: true,
       captureMode: CaptureMode.processed,
@@ -109,6 +115,7 @@ void main() {
       expect(copy.name, 'Warm Terracotta');
       expect(copy.justCaptured, isTrue);
       expect(copy.evidence, sample.evidence);
+      expect(copy.paintIds, ['wn-cadmium-red', 'wn-titanium-white']);
       expect(copy.colorSpace, CaptureColorSpace.srgb);
       expect(copy.litByTorch, isTrue);
       expect(copy.captureMode, CaptureMode.processed);
@@ -123,6 +130,7 @@ void main() {
         justCaptured: false,
         accuracy: CaptureAccuracy.calibrated,
         evidence: const [],
+        paintIds: const ['wn-viridian'],
         colorSpace: CaptureColorSpace.displayP3,
         litByTorch: false,
         captureMode: CaptureMode.raw,
@@ -133,6 +141,7 @@ void main() {
       expect(copy.justCaptured, isFalse);
       expect(copy.accuracy, CaptureAccuracy.calibrated);
       expect(copy.evidence, isEmpty);
+      expect(copy.paintIds, const ['wn-viridian']);
       expect(copy.colorSpace, CaptureColorSpace.displayP3);
       expect(copy.litByTorch, isFalse);
       expect(copy.captureMode, CaptureMode.raw);

@@ -100,6 +100,7 @@ class Sample {
     this.justCaptured = false,
     this.accuracy,
     this.evidence = const [],
+    this.paintIds = const <String>[],
     this.colorSpace,
     this.litByTorch = false,
     this.captureMode,
@@ -125,6 +126,15 @@ class Sample {
   /// Source-tagged evidence backing this sample; append-ready for bs-14.
   final List<EvidencePoint> evidence;
 
+  /// The ids of the paints this sample's mix was made from — its recipe (bs-04),
+  /// as the painter declared it.
+  ///
+  /// Empty for a sample that is not a mix of known paints (e.g. a bs-01 single
+  /// reading), so every bs-01..bs-13 caller is unaffected. The bs-14 record
+  /// builder reads these to carry the anonymous paint combination a shared
+  /// mix-accuracy record is about; nothing here identifies the painter.
+  final List<String> paintIds;
+
   /// The colour space the capture measured this reading in (bs-09 AC-6), or null
   /// for a sample that did not come from a bs-09 capture. The CAPTURE commit
   /// stamps the source's current [CaptureSource.colorSpace]; SOURCE-2 makes it
@@ -149,6 +159,7 @@ class Sample {
     bool? justCaptured,
     CaptureAccuracy? accuracy,
     List<EvidencePoint>? evidence,
+    List<String>? paintIds,
     CaptureColorSpace? colorSpace,
     bool? litByTorch,
     CaptureMode? captureMode,
@@ -160,6 +171,7 @@ class Sample {
       justCaptured: justCaptured ?? this.justCaptured,
       accuracy: accuracy ?? this.accuracy,
       evidence: evidence ?? this.evidence,
+      paintIds: paintIds ?? this.paintIds,
       colorSpace: colorSpace ?? this.colorSpace,
       litByTorch: litByTorch ?? this.litByTorch,
       captureMode: captureMode ?? this.captureMode,

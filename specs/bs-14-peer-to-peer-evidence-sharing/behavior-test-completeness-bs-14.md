@@ -1,10 +1,14 @@
 # bs-14 behavior-test completeness grid
 
-Graded at CORE-3, AC-1 un-pended (the opt-in behavior exists and the test runs against it).
+Graded at CORE-3 (AC-1), then RECORD-2 (AC-3, AC-4). Every un-pended AC test is
+re-graded each behaviour phase by a fresh independent reviewer; the remaining ACs
+stay pending until their phases land.
 
 | AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 | Notes |
 |----|------|-------|----|----|----|----|----|----|-------|
 | AC-1 | `TestAC01_OptInOnceNeverShown` | A | pass | pass | pass | pass | pass | pass | Drives the real keyed offer through the live widget surface; checks all Givens before the When; rejects the never-records, re-shown-offer, and mechanism-surface impls. CORE-3 augmentation (below) now also scans the populated pre-opt-in inventory, demonstrating the live `userFacingSharingSurfaces` binding (closes the G3 residual). |
+| AC-3 | `TestAC03_RecordCarriesOnlyEvidence` | A | pass | pass | n/a | pass | pass | pass | Builds a record through the real `EvidenceRecordBuilder` from the recipe-bearing `confirmedEvidence` Sample; asserts all four named fields at value — `declaredPalette == seedPalette`, `measuredColour.lab ==` the mix's CIELAB + `lch` closeTo the real `ColorScience`, `tier == referenceCard` (card-calibrated swatch), and `paintCombination == seedCombination`. Rejects palette-omission, colour-mismatch, wrong-tier, and (after the RECORD-2 strengthening) a wrong/extra/missing paint combination. |
+| AC-4 | `TestAC04_NothingPersonalLeaves` | A | pass | pass | pass | pass | pass | pass | Plants personal tokens (sample name, evidence source id) in the source mix, checks them present through the public `Sample` surface, then asserts the crossing `canonicalForm` carries neither — redaction by construction — with a positive brand control proving the serialization is non-empty (non-vacuous). Rejects a builder that serialized a name/source id into any carried field. |
 
 ## G1 — every Given checked before the When
 Pass. The scenario's Given ("the painter is offered to 'help improve recipe accuracy by sharing anonymous mix results'") is asserted three ways through the public surface before the tap: the offered copy equals the frozen `SharingConsent.defaultOfferCopy` (value-exact, plain-language, mechanism-free), the keyed offer control is present (`findsOneWidget` — also a "no other offer" count check), and the fresh install is `consented == false`. The not-yet-opted-in precondition is the state the "opts in once" When needs, and it is checked.
@@ -26,3 +30,12 @@ Pass. The test asserts only AC-1's behavior — consent recorded, no mechanism s
 
 ## CORE-3 augmentation (applied — closes the G3 residual)
 Before the When, the test now scans the non-empty pre-opt-in `app.userFacingSharingSurfaces` and asserts it (a) is non-empty, (b) contains the offer copy, and (c) passes the no-mechanism scan. This turns the post-opt-in empty scan into a demonstrated populated→empty transition and proves the inventory the loop reads is the live production surface list, not a possibly-dead binding. It discriminates against the pre-CORE-3 code (whose inventory was always empty), so it is a genuine strengthening of AC-1's own invisibility assertion (G6-safe). Grade remains **A**.
+
+## RECORD-2 grading (AC-3, AC-4)
+
+Fresh independent reviewer, re-graded against G1–G6 (grade what the code does).
+
+- **AC-4 — A on first grade.** G1: the configured Given (a mix that also carries a personal name + evidence source id) is verified present through the public `Sample` surface before the When. G2/G4: redaction is observed from the real `prepare` + real `MixAccuracyRecord.canonicalForm` (the content crossing the boundary, D-4). G3: the absence Thens are paired with a positive brand control proving the serialization is populated (non-vacuous). G5: rejects a builder that serialized a sample name or evidence-source id into any carried field. G6: asserts only AC-4's redaction. Residual (not A-denying): only two of the six spec-named categories are plantable — photograph/project/CVD-profile/location have no leak vector on the 4-field record, so there is nothing to plant for them.
+- **AC-3 — came back B, fixed in-phase to A (fix pass 1).** The first grade failed **G4/G5** on the paint combination only: it was asserted as `isNotEmpty` + `orderedEquals(paintIds..sort())` — a self-comparison that is vacuous because `PaintCombination.of` always sorts/dedups, so any non-empty combination passed and a wrong-field/extra/missing-id impl would not be caught. RECORD-2 replaced it with a value assertion `expect(record.paintCombination, seedCombination)` (`seedCombination == PaintCombination.of(seedMapping.candidatePaintIds)`, the fixture's actual recipe). Re-graded by the same reviewer: **G4 now PASS** (all four named fields at value) and **G5 now PASS** (rejects wrong-field, extra-id and missing-id combinations via `PaintCombination.==`'s `listEquals`; reorder/duplicate inputs are correctly not rejected — that is the intended canonicalization). Grade **A**. The other rules were PASS throughout; G3 n/a (no negative Thens).
+
+**Counts after RECORD-2: 3 A / 0** over the un-pended tests (AC-1, AC-3, AC-4). AC-2/AC-5..AC-12 remain pending their phases; AC-9 carries its *B pending MERGE-4* augmentation.
