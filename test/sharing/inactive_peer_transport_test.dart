@@ -5,7 +5,11 @@ import 'package:paint_color_assistant/sharing/record/mix_accuracy_record.dart';
 
 void main() {
   group('InactivePeerTransport (CORE-4)', () {
-    const transport = InactivePeerTransport();
+    // Runtime (non-const) construction so the generative const constructor is
+    // exercised at runtime — EXCHANGE-4 made the real LocalNetworkTransport the
+    // app default (the inert one is injected only by tests), so this is the site
+    // that covers the const-ctor line.
+    final transport = InactivePeerTransport();
 
     test('discover reaches no peer', () async {
       expect(await transport.discover(), isEmpty);

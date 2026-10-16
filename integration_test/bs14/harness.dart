@@ -54,6 +54,7 @@ import 'package:paint_color_assistant/sharing/merge/source_rate_limiter.dart';
 import 'package:paint_color_assistant/sharing/record/mix_accuracy_record.dart';
 import 'package:paint_color_assistant/sharing/record/record_builder.dart';
 import 'package:paint_color_assistant/sharing/record/record_inspect_endpoint.dart';
+import 'package:paint_color_assistant/sharing/inactive_peer_transport.dart';
 import 'package:paint_color_assistant/sharing/sharing_read_endpoint.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
 
@@ -425,6 +426,11 @@ Future<SharingAppHarness> givenTheSharingApp(
     speech: speech,
     haptics: haptics,
     store: store ?? InMemoryPersistentStore(),
+    // The app-boot consent surface (AC-1/AC-2) is observed here; the real
+    // exchange is faked through the twoInstalls loopback path, so pin the inert
+    // transport so an opted-in boot does not start real local-network discovery
+    // (which would open a socket / leave a pending timer under flutter-tester).
+    peerTransport: const InactivePeerTransport(),
   );
   await tester.pumpWidget(buildApp(deps));
   await tester.pumpAndSettle();

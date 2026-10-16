@@ -54,8 +54,9 @@ import '../sharing/consent/sharing_consent.dart';
 import '../sharing/exchange/exchange_outcome_endpoint.dart';
 import '../sharing/exchange/exchange_scheduler.dart';
 import '../sharing/exchange/gossip_exchange.dart';
+import '../sharing/exchange/local_network_transport.dart';
+import '../sharing/exchange/peer_transport.dart';
 import '../sharing/exchange/seen_set.dart';
-import '../sharing/inactive_peer_transport.dart';
 import '../sharing/record/mix_accuracy_record.dart';
 import '../sharing/sharing_read_endpoint.dart';
 import '../sharing/sharing_scope.dart';
@@ -195,6 +196,7 @@ class AppDependencies {
     this.pdfShareSink,
     this.displayController,
     this.seedDataset = const SeedDataset.empty(),
+    this.peerTransport,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -378,6 +380,20 @@ class AppDependencies {
   /// (SEED-3) and the acceptance harness injects a dataset here.
   final SeedDataset seedDataset;
 
+  /// The off-device actor the background gossip exchange runs over once the
+  /// painter opts in (bs-14 EXCHANGE-4, D-4 / G-4), or null to use the shipped
+  /// default.
+  ///
+  /// `_SharingRoot` resolves null to a real [LocalNetworkTransport] — the one
+  /// sanctioned, consented, record-only local-network path — so the shipped app
+  /// exchanges on-device. The acceptance suite mounts its own transport through
+  /// the harness; app-boot widget tests that opt in inject an inert
+  /// `InactivePeerTransport` here so they stay deterministic (the real
+  /// transport's discovery/socket path is verified by the on-device sign-off
+  /// walkthrough, D-3). Construction is cheap and does no I/O; discovery runs
+  /// only once a consented round is fired.
+  final PeerTransport? peerTransport;
+
   /// Returns a copy of these dependencies with only [cvdProfile] replaced
   /// (bs-07 AC-13, D-3).
   ///
@@ -408,6 +424,7 @@ class AppDependencies {
         pdfShareSink: pdfShareSink,
         displayController: displayController,
         seedDataset: seedDataset,
+        peerTransport: peerTransport,
       );
 }
 
@@ -655,7 +672,11 @@ class _AppState extends State<_App> {
     // true (AC-1). Absent when no store is wired (bare unit trees).
     final consentStore = _consentStore;
     if (consentStore != null) {
-      tree = _SharingRoot(consentStore: consentStore, child: tree);
+      tree = _SharingRoot(
+        consentStore: consentStore,
+        peerTransport: deps.peerTransport,
+        child: tree,
+      );
     }
     return AppScope(
       dependencies: deps,
@@ -788,6 +809,7 @@ AppDependencies _depsWithSpeech(AppDependencies deps, Speech speech) {
     pdfShareSink: deps.pdfShareSink,
     displayController: deps.displayController,
     seedDataset: deps.seedDataset,
+    peerTransport: deps.peerTransport,
   );
 }
 
@@ -951,15 +973,23 @@ class _SpokenOutputChrome extends StatelessWidget {
 /// Once opted in it also runs the background gossip exchange silently (CORE-4,
 /// AC-2): a fire-and-forget [ExchangeScheduler] round is triggered when consent
 /// is adopted — never prompting, speaking or buzzing, and never blocking a core
-/// flow. Over the inert default [InactivePeerTransport] the round reaches no
-/// peer and is a no-op until EXCHANGE-4 wires the real local-network transport
-/// (G-4); the scheduler and its [ExchangeOutcomeEndpoint] seam are in place so
-/// that swap needs no re-threading here.
+/// flow. The round runs over [peerTransport] — the real [LocalNetworkTransport]
+/// by default (EXCHANGE-4), so the shipped app exchanges on-device; app-boot
+/// tests inject an inert transport to stay deterministic. The scheduler and its
+/// [ExchangeOutcomeEndpoint] seam are built once here regardless of consent.
 class _SharingRoot extends StatefulWidget {
-  const _SharingRoot({required this.consentStore, required this.child});
+  const _SharingRoot({
+    required this.consentStore,
+    required this.peerTransport,
+    required this.child,
+  });
 
   /// The write/read seam for the painter's opt-in consent (AC-1).
   final ConsentStore consentStore;
+
+  /// The off-device transport the background exchange runs over, or null to use
+  /// the shipped default real [LocalNetworkTransport] (EXCHANGE-4, G-4).
+  final PeerTransport? peerTransport;
 
   /// The app subtree (down to the `MaterialApp`) wrapped in the sharing scope.
   final Widget child;
@@ -975,9 +1005,9 @@ class _SharingRootState extends State<_SharingRoot> {
   SharingConsent _consent = const SharingConsent();
 
   /// The fire-and-forget background gossip scheduler (CORE-4, AC-2). Built once
-  /// over the inert default transport — EXCHANGE-4 swaps in the real one — and
-  /// exposed through the [SharingScope] so a core flow can reach the exchange
-  /// without ever waiting on it.
+  /// over [_SharingRoot.peerTransport] (the real [LocalNetworkTransport] by
+  /// default, EXCHANGE-4) and exposed through the [SharingScope] so a core flow
+  /// can reach the exchange without ever waiting on it.
   late final ExchangeScheduler _scheduler;
 
   @override
@@ -985,7 +1015,7 @@ class _SharingRootState extends State<_SharingRoot> {
     super.initState();
     _scheduler = ExchangeScheduler(
       GossipExchange(
-        transport: const InactivePeerTransport(),
+        transport: widget.peerTransport ?? LocalNetworkTransport(),
         seenSet: SeenSet(),
       ),
     );
@@ -1015,11 +1045,12 @@ class _SharingRootState extends State<_SharingRoot> {
   ///
   /// The exchange runs without prompting, speaking or buzzing, and the caller
   /// does not await it — so no core flow is ever blocked (the "no per-exchange
-  /// action" invariant). Over the inert default transport it reaches no peer and
-  /// is a no-op; the painter is shown only the mechanism-free "recipes improve"
-  /// signal. No own records are offered yet — wiring the painter's shareable
-  /// mixes in is part of making the exchange actually carry data on-device
-  /// (EXCHANGE-4 / the sign-off walkthrough).
+  /// action" invariant). The painter is shown only the mechanism-free "recipes
+  /// improve" signal. No own records are offered yet — wiring the painter's
+  /// shareable mixes into the live round is the last on-device step verified at
+  /// the sign-off walkthrough (EXCHANGE-4, D-3); over the real
+  /// [LocalNetworkTransport] the round discovers peers on the local network,
+  /// over an injected inert transport (tests) it reaches none.
   void _startBackgroundExchange() =>
       _scheduler.trigger(const <MixAccuracyRecord>[]);
 
@@ -1044,9 +1075,10 @@ class _SharingRootState extends State<_SharingRoot> {
         exchangeScheduler: _scheduler,
       ),
       // Expose the running exchange tally through the keyed endpoint the
-      // acceptance suite reads. Over the inert transport the tally stays at
-      // zero / not-waited (the correct current state); EXCHANGE-4 makes it live
-      // when the real exchange carries data.
+      // acceptance suite reads. It reflects whatever the round folded — zero /
+      // not-waited when no peer is reachable (tests' inert transport, or a real
+      // round that found no one), live counts once the on-device exchange
+      // carries data.
       child: ExchangeOutcomeEndpoint(
         key: ExchangeOutcomeEndpoint.endpointKey,
         outcome: _scheduler.outcome,

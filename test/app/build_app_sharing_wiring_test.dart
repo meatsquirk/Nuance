@@ -8,15 +8,19 @@ import 'package:paint_color_assistant/sharing/consent/consent_store.dart';
 import 'package:paint_color_assistant/sharing/consent/opt_in_offer.dart';
 import 'package:paint_color_assistant/sharing/consent/sharing_consent.dart';
 import 'package:paint_color_assistant/sharing/exchange/exchange_outcome_endpoint.dart';
+import 'package:paint_color_assistant/sharing/exchange/peer_transport.dart';
+import 'package:paint_color_assistant/sharing/inactive_peer_transport.dart';
 import 'package:paint_color_assistant/sharing/sharing_read_endpoint.dart';
 import 'package:paint_color_assistant/sharing/sharing_scope.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
 
-AppDependencies _deps({PersistentStore? store}) => AppDependencies(
+AppDependencies _deps({PersistentStore? store, PeerTransport? peerTransport}) =>
+    AppDependencies(
       colorScience: const ColorScienceImpl(),
       speech: const NoopSpeech(),
       haptics: const NoopHaptics(),
       store: store,
+      peerTransport: peerTransport,
     );
 
 SharingConsentReadEndpoint _endpoint(WidgetTester tester) =>
@@ -58,7 +62,12 @@ void main() {
   testWidgets(
       'the home offer opts in once: tapping it records consent live and the '
       'offer is not shown again (CORE-3 AC-1)', (tester) async {
-    await tester.pumpWidget(buildApp(_deps(store: InMemoryPersistentStore())));
+    // Inject the inert transport: opting in fires the background round, and the
+    // real LocalNetworkTransport would start timer-based discovery here.
+    await tester.pumpWidget(buildApp(_deps(
+      store: InMemoryPersistentStore(),
+      peerTransport: const InactivePeerTransport(),
+    )));
     await tester.pumpAndSettle();
 
     // A fresh install is shown the offer and is not opted in.
@@ -85,7 +94,10 @@ void main() {
     await PersistentConsentStore(store)
         .save(const SharingConsent(consented: true));
 
-    await tester.pumpWidget(buildApp(_deps(store: store)));
+    await tester.pumpWidget(buildApp(_deps(
+      store: store,
+      peerTransport: const InactivePeerTransport(),
+    )));
     await tester.pumpAndSettle();
 
     // _SharingRoot adopts the stored consent; the ongoing mechanism-free
@@ -104,7 +116,10 @@ void main() {
     await PersistentConsentStore(store)
         .save(const SharingConsent(consented: true));
 
-    await tester.pumpWidget(buildApp(_deps(store: store)));
+    await tester.pumpWidget(buildApp(_deps(
+      store: store,
+      peerTransport: const InactivePeerTransport(),
+    )));
     await tester.pumpAndSettle();
 
     // The scheduler is wired into the sharing scope, so a core flow can reach
@@ -116,8 +131,10 @@ void main() {
     expect(scheduler!.settled, isNotNull,
         reason: 'opting in fires one background round');
 
-    // It is fire-and-forget (no core flow waited) and, over the inert default
-    // transport, reaches no peer — a silent no-op until EXCHANGE-4.
+    // It is fire-and-forget (no core flow waited) and, over the injected inert
+    // transport, reaches no peer — a silent no-op. (The shipped default is the
+    // real LocalNetworkTransport, EXCHANGE-4; this test pins the inert one so it
+    // stays deterministic.)
     expect(scheduler.outcome.waitedOnExchange, isFalse);
     expect(scheduler.outcome.exchanges, 0);
 
