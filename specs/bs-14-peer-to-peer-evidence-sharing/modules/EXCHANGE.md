@@ -1,6 +1,6 @@
 # Module EXCHANGE — serverless gossip
 
-**Status:** In progress — EXCHANGE-1 ✅ done, EXCHANGE-3 (AC-7) ✅ done (graded A); EXCHANGE-2 (AC-6) + EXCHANGE-4 (enabler) blocked on G-4
+**Status:** In progress — EXCHANGE-1 ✅, EXCHANGE-3 (AC-7) ✅ (graded A); **G-4 approved 2026-10-16 — EXCHANGE-2 (AC-6) now startable**, then EXCHANGE-4 (enabler)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/exchange/peer_transport.dart`, `gossip_exchange.dart`, `seen_set.dart`, `exchange_scheduler.dart`, `exchange_outcome_endpoint.dart`; the real transport impl `lib/sharing/exchange/local_network_transport.dart` (EXCHANGE-4).
 **Depends on:** CORE, RECORD · **Blocks:** CORE-4 (background exchange), SIGNOFF-1
@@ -23,8 +23,8 @@
 
 ## Open gates
 
-- **G-2** blocks all EXCHANGE behavior.
-- **G-4** (sanctioned off-device path / bs-12 reconciliation) blocks **EXCHANGE-2** and **EXCHANGE-4**.
+- **G-2** ✅ resolved 2026-10-16 (acceptance tests approved) — no longer blocks EXCHANGE behavior.
+- **G-4** ✅ **resolved 2026-10-16 12:59 EDT (Matt Quirk): Approved.** The sanctioned off-device path is the local-network-only `PeerTransport` (mDNS/Bonjour + direct socket; no server/account/stored addressing; only `MixAccuracyRecord` serializations cross; consented, record-only). bs-12's network-block / no-off-device-path guards are to be amended to permit exactly this one path, with a bs-14 boundary guard asserting only a `MixAccuracyRecord` serialization crosses `PeerTransport` (implemented in EXCHANGE-2/EXCHANGE-4; on-device path verified by the sign-off walkthrough, D-3). EXCHANGE-2 and EXCHANGE-4 unblocked.
 
 ## Phase 1 — Shell: transport interface, gossip skeleton, scheduler, read endpoint
 

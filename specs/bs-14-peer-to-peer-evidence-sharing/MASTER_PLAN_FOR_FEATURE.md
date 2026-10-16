@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — behaviour stage; **CORE-4 done (AC-2 ✅); CORE module complete. AC-1/2/3/4/5/7/8/9/10/11/12 ✅; all 11 un-pended ACs graded A (11 A/0)**. Only AC-6 pending (EXCHANGE-2). G-4 still open — blocks EXCHANGE-2/4 (and SIGNOFF-1 via EXCHANGE-4).
+**Status:** In progress — behaviour stage; **G-4 approved 2026-10-16 (Matt Quirk). CORE module complete; AC-1/2/3/4/5/7/8/9/10/11/12 ✅ (11 A/0); only AC-6 pending.** Next startable: **EXCHANGE-2 (AC-6)**; then EXCHANGE-4 (enabler), then SIGNOFF-1. No open gates.
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -143,7 +143,7 @@ graph LR
 | G-1 | decision | Approve the spec (record approval as its first line, replacing the draft banner) | CORE-1 | ✅ Resolved 2026-10-14: spec approved; draft banner replaced with approval line (feat/bs-14 spec) — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-5's packet) | every behavior phase | ✅ Resolved 2026-10-16 07:37: **Approved** — Matt Quirk. Acceptance suite accepted as-is (11 A + AC-9 B-pending-MERGE-4 augmentation carried to MERGE-4); behaviour stage unblocked |
 | G-3 | dependency | bs-13 signed off & merged to main — its PROV (`EvidenceKind`, append-only add, `ProvenanceDerivation`) and SEED (`CandidateMapping`, declared-palette) surface present on main — closed by the bs-13 sign-off merge | CORE-1 (scaffold branches off a main that contains bs-13) | ✅ Resolved 2026-10-15: bs-13 signed off (`bcde3be`) & merged to main (`c00422f`); surface verified present at CORE-1 (`provenance_derivation.dart`, `sample.dart` `EvidenceKind`, `seed_dataset.dart` `CandidateMapping`) — Matt Quirk (bs-13 sign-off) |
-| G-4 | decision | Approve the single sanctioned off-device path and how bs-12's network-block / no-off-device-path guards are reconciled to permit only the consented, record-only P2P exchange — routed to the owner | EXCHANGE-2, EXCHANGE-4 | Open |
+| G-4 | decision | Approve the single sanctioned off-device path and how bs-12's network-block / no-off-device-path guards are reconciled to permit only the consented, record-only P2P exchange — routed to the owner | EXCHANGE-2, EXCHANGE-4 | ✅ Resolved 2026-10-16 12:59 EDT: **Approved** — Matt Quirk. The single sanctioned off-device path is the plan's `PeerTransport` as specified (EXCHANGE §bs-12 guard reconciliation): **local-network-only** discovery (mDNS/Bonjour) + a direct socket link — no server, account or stored addressing; **only `MixAccuracyRecord` serializations cross**, nothing personal and no other type; it runs only after the painter's consent (CORE-3). bs-12's network-block / no-off-device-path guards are to be amended to permit **exactly this one path and nothing else**, with a bs-14 boundary guard asserting only a `MixAccuracyRecord` serialization crosses `PeerTransport`. The guard amendment + boundary guard are implemented in EXCHANGE-2/EXCHANGE-4; the on-device discovery/socket path is verified by the sign-off manual walkthrough (D-3). EXCHANGE-2 now startable. |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -176,9 +176,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 15 | MERGE-3 | AC-8 + AC-11 crowd refine, robust central estimate, outlier discard | ✅ Done | 6,284,723 | 15m 51s | AC-8+AC-11 ✅ un-pended, graded A (7 A/0); robust central estimate (coord-wise median → modified z-score MAD, outliers discarded) in `crowd_refine.dart`; unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
 | 16 | MERGE-4 | AC-9 never promote to Confirmed | ✅ Done | 7,077,181 | 14m 53s | AC-9 ✅ un-pended, graded **A** (B→A; 8 A/0); never-promote already enforced by MERGE-1/2 (`ingest` stamps `peerContributed`, `tierFor` excludes it) — MERGE-4 added derivation glue `RefineResult.label = qualifier(tier)` + both `TestAC09` augmentations (5-peer Given realized; high-tier peer still Estimated); unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
 | 17 | MERGE-5 | AC-12 per-source rate limit | ✅ Done | 7,627,140 | 15m 13s | AC-12 ✅ un-pended, graded A (9 A/0); rate limit in `EvidenceMerge.ingest` via stateful `SourceRateLimiter` (per-source cap 50, seeded from existing log); MERGE module complete; unit 1544/0, cov 100%/2 touched; fix passes 0/3 |
-| 18 | EXCHANGE-2 | AC-6 offer-missing, hash-keyed, dedup | ⬜ Todo | | | needs G-4 |
+| 18 | EXCHANGE-2 | AC-6 offer-missing, hash-keyed, dedup (+ bs-12 guard amendment, G-4) | ⬜ Next | | | startable — G-4 ✅ approved 2026-10-16 |
 | 19 | EXCHANGE-3 | AC-7 no peer ⇒ no exchange, no wait | ✅ Done | 5,300,757 | 14m 22s | AC-7 ✅ un-pended, graded A (10 A/0); `gossip_exchange.dart` no-peer short-circuit + per-reachable-peer conduct count; unit 1545/0, cov 100%/20 touched; fix passes 1/3 (harness guard) |
-| 20 | EXCHANGE-4 | *enabler* real mDNS/socket transport (no AC; manual on-device at sign-off) | ⬜ Todo | | | needs G-4 |
+| 20 | EXCHANGE-4 | *enabler* real mDNS/socket transport (no AC; manual on-device at sign-off) | ⬜ Todo | | | needs EXCHANGE-2 (G-4 ✅) |
 | 21 | CORE-4 | AC-2 no per-exchange action (silent background exchange) | ✅ Done | 14,820,009 | 37m 40s | AC-2 ✅ un-pended, graded A (11 A/0); CORE module complete; silent fire-and-forget exchange over inert `InactivePeerTransport` + `recipesImproveSignal` surface; unit 1553/0, cov 100%/21 touched; regression host 52 + sim 222 + conformance 1553; fix passes 1/3 (const-ctor coverage) |
 | 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -186,15 +186,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CORE-4 ✅ done** (AC-2 un-pended, graded **A**; **11 A/0** over un-pended AC-1,2,3,4,5,7,8,9,10,11,12). **CORE module complete.** `_SharingRoot` fires one silent, fire-and-forget `ExchangeScheduler` round on adopting a consented state — over the inert `InactivePeerTransport` (no peer ⇒ no-op until EXCHANGE-4 wires the real transport under G-4), no prompt/speech/haptic — and surfaces only `SharingConsent.recipesImproveSignal`. `exchangeScheduler` added to `SharingDependencies`; `ExchangeOutcomeEndpoint` mounted (snapshot). Only **AC-6** (EXCHANGE-2) remains pending.
+**G-4 approved 2026-10-16 (Matt Quirk)** — the single sanctioned off-device path is the plan's local-network-only `PeerTransport` (mDNS/Bonjour + direct socket; only `MixAccuracyRecord` serializations cross; consented, record-only), and bs-12's network-block guards are to be amended to permit exactly that one path plus a bs-14 boundary guard. **No open gates remain.** The three remaining phases are now ordered, not blocked:
 
-**Nothing is startable without G-4.** The three remaining phases all wait on it:
+- **EXCHANGE-2 (AC-6)** — `mine − theirs` offer/receive + dedup in `gossip_exchange.dart`/`seen_set.dart`; also lands the bs-12 guard amendment + boundary guard (G-4). **Startable now** (RECORD ✅, G-2 ✅, G-4 ✅). Touches the exchange package — don't run concurrently with EXCHANGE-4 (same files / sequential dependency).
+- **EXCHANGE-4 (enabler, no AC)** — real mDNS/socket `LocalNetworkTransport`, swaps `_SharingRoot`'s `InactivePeerTransport`; discovery/socket path verified by the sign-off walkthrough (D-3). Needs **EXCHANGE-2**.
+- **SIGNOFF-1** — last; needs CORE-4 ✅ + EXCHANGE-4.
 
-- **EXCHANGE-2 (AC-6)** — `mine − theirs` offer/receive + dedup. Needs **G-4** (+ RECORD done ✅).
-- **EXCHANGE-4 (enabler, no AC)** — real mDNS/socket transport; swaps `InactivePeerTransport`. Needs **G-4** (+ EXCHANGE-2).
-- **SIGNOFF-1** — last; needs CORE-4 ✅ and EXCHANGE-4 (so transitively G-4).
-
-**Decision gate G-4 blocks the rest of the feature.** Resolve it with `/feature-next-phase --gate bs14 G-4 approved | "<decision>"` — approve the single sanctioned off-device path and the bs-12 network-block/no-off-device-path reconciliation — then EXCHANGE-2 is startable.
+Run `/feature-next-phase bs14` to pick up EXCHANGE-2.
 
 ## Token usage
 
@@ -225,7 +223,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | MERGE-5 | 91efb0ed | 2026-10-16 11:09 EDT | 11:24 | 15m 13s | 15m 13s | claude-opus-4-8 | 124 | 266,710 | 7,314,260 | 46,046 | 7,627,140 | AC-12 un-pended, graded A (9 A/0); per-source rate limit in EvidenceMerge.ingest via stateful SourceRateLimiter (cap 50, seeded from existing log); MERGE module complete; unit 1544/0, cov 100%/2 touched; fix passes 0/3 |
 | EXCHANGE-3 | 1bdd40a9 | 2026-10-16 11:39 EDT | 11:54 | 14m 22s | 14m 22s | claude-opus-4-8 | 104 | 214,181 | 5,051,255 | 35,217 | 5,300,757 | AC-7 un-pended + graded A (10 A/0); unit 1545/0, cov 100%/20 touched; fix passes 1/3 |
 | CORE-4 | f41d75ca | 2026-10-16 12:12 EDT | 12:50 | 37m 40s | 37m 40s | claude-opus-4-8 | 202 | 316,351 | 14,420,835 | 82,621 | 14,820,009 | AC-2 un-pended, graded A (11 A/0); CORE module complete; silent fire-and-forget exchange + recipesImproveSignal; unit 1553/0, cov 100%/21; regression host 52 + sim 222 + conformance 1553; fix passes 1/3 |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 12:50** | **6h 30m** | **6h 22m** |  | **2,336** | **4,166,558** | **142,804,528** | **1,084,864** | **148,058,286** |  |
+| GATE-DECISION | f41d75ca | 2026-10-16 12:58 EDT | 13:00 | 1m 57s | 1m 57s | claude-opus-4-8 | 22 | 19,656 | 3,034,551 | 8,374 | 3,062,603 | G-4 approved (Matt Quirk): local-network-only PeerTransport (mDNS + socket, record-only, consented); bs-12 guards to permit only this path + bs-14 boundary guard; EXCHANGE-2/4 unblocked |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 13:00** | **6h 32m** | **6h 24m** |  | **2,358** | **4,186,214** | **145,839,079** | **1,093,238** | **151,120,889** |  |
 
 ## Sign-off
 
