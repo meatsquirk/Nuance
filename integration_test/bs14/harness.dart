@@ -177,11 +177,16 @@ final Sample confirmedEvidence = Sample(
 /// `noPaletteRecord` — a candidate record whose declared palette is **absent**
 /// (empty brand/line/medium ⇒ [DeclaredPalette.isPresent] false), so it is not
 /// interpretable and must be excluded from the share-set (AC-5).
+///
+/// Its combination, measured colour and `cardLess` tier match the interpretable
+/// control (`peerRecords(1).single`) exactly, so the declared-palette presence
+/// is the *only* axis separating a shared record from an excluded one — the AC-5
+/// exclusion can only be palette-driven, never an accident of tier.
 final MixAccuracyRecord noPaletteRecord = MixAccuracyRecord(
   paintCombination: seedCombination,
   declaredPalette: const DeclaredPalette(),
   measuredColour: measuredColourOf(seedMappingValue),
-  tier: MeasurementTier.referenceCard,
+  tier: MeasurementTier.cardLess,
 );
 
 /// `peerRecords(n, spread, outlier?)` — [n] mix-accuracy records for

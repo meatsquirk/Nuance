@@ -1,6 +1,6 @@
 # Module RECORD — the anonymous mix-accuracy record
 
-**Status:** In progress — RECORD-1 ✅, RECORD-2 ✅ (AC-3 + AC-4, graded A); RECORD-3 (AC-5) next (G-2 resolved)
+**Status:** Done — RECORD-1 ✅, RECORD-2 ✅ (AC-3 + AC-4), RECORD-3 ✅ (AC-5); all un-pended ACs graded A. Module complete.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/record/mix_accuracy_record.dart`, `record_builder.dart`, `content_hash.dart`, `record_inspect_endpoint.dart`.
 **Depends on:** CORE (package + wiring), bs-13 (SEED declared-palette + PROV evidence) · **Blocks:** EXCHANGE (records to gossip), MERGE (record ⇆ evidence)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 5,181,744 | 12m 49s |
 | 2 | behavior | AC-3 + AC-4 | ✅ Done | 12,296,700 | 24m 58s |
-| 3 | behavior | AC-5 | ⬜ Todo | | |
+| 3 | behavior | AC-5 | ✅ Done | 5,784,122 | 10m 21s |
 
 ## Interface reconciliation
 
@@ -101,3 +101,21 @@
 - **Known gaps:** none new. AC-5 (no-palette exclusion) is still RECORD-3's at `selectShareSet`; RECORD-2 carries an absent palette through unchanged so RECORD-3 can exclude it.
 - **Verification commands:** unchanged from RECORD-1 — flutter at `~/development/flutter/bin`; unit `flutter test`; coverage `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f` (full-suite run); bs-14 acceptance `flutter test integration_test/bs14/consent_and_record_test.dart -d flutter-tester` (run-pending adds `--dart-define=BS14_RUN_PENDING=true`). Construct a new value class non-const in a test or the const-ctor line reads 0.
 - **Next:** RECORD-3 (AC-5, behaviour) — fills `selectShareSet` to exclude absent-palette candidates. Startable now (G-2 resolved); disjoint from the MERGE chain and MERGE-5.
+
+### Result — RECORD-3 (behavior, AC-5) ✅
+
+- **Landed** `EvidenceRecordBuilder.selectShareSet` (`lib/sharing/record/record_builder.dart`): now keeps only candidates whose declared palette is present (`DeclaredPalette.isPresent`), in input order, dropping any with an absent palette as not interpretable by a recipient (AC-5, D-8, scope §6.6). The drop reason is named as a public constant `EvidenceRecordBuilder.noPaletteExclusionReason = 'not interpretable — no declared palette'` (the "record the reason" task). The frozen `selectShareSet` signature (`Iterable<MixAccuracyRecord>` → `List<MixAccuracyRecord>`) is unchanged — the AC-5 reason is documentary/by-construction, there is no separate reason channel in the crossing interface (D-4: only the anonymous record crosses).
+- **Acceptance gate:** un-pended **AC-5** (deleted its row in `pending.dart`; added `RECORD-3` to `completedBehaviorPhases`; updated the harness guard's un-pended set to `{AC-1,AC-3,AC-4,AC-5}`). `TestAC05_NoPaletteNotShared` **green** on `-d flutter-tester`; AC-1/AC-3/AC-4 still green; AC-2/AC-6..AC-12 still pending. Harness guards + smoke 12/12.
+- **Gates:** `flutter analyze` clean. Unit **1530/0** (+3 net: the stale "shares nothing" unit test replaced by four RECORD-3 `selectShareSet` tests — exclude absent / keep present in order / empty input / reason-named). Coverage **100% line on the one touched lib file** (`record_builder.dart`) vs `fd98952` — PASS.
+- **Grade:** fresh independent reviewer, G1–G6 over all un-pended tests. **AC-5 A** first pass; AC-1/AC-3/AC-4 remain A (unchanged code paths). **4 A / 0.** **Fix passes: 0/3.**
+- **AC-5 fixture strengthening (adopted):** the reviewer flagged (non-A-denying) that `noPaletteRecord` differed from the interpretable control in both palette *and* `tier` — an incidental confound. `noPaletteRecord.tier` was changed `referenceCard` → `cardLess` (`integration_test/bs14/harness.dart`) so declared-palette presence is the *only* axis separating a shared from an excluded record; the AC-5 exclusion is now provably palette-driven. Safe: no test asserts `noPaletteRecord.tier` (all usages read only `declaredPalette.isPresent` and record membership), and it does not weaken any assertion. Both suites re-run green after the change. (The edit originated from a concurrent `/feature-next-phase bs14` session that raced this phase in the shared worktree; adopted here as a deliberate, verified in-phase strengthening and folded into this phase's single commit + ledger row.)
+- **Tokens** 5,784,122 · **Time** 10m 21s.
+
+### Checkpoint / Handoff — after RECORD-3 (module complete)
+
+- **Frozen interfaces (consumed by EXCHANGE, MERGE):**
+  - `EvidenceRecordBuilder.selectShareSet(Iterable<MixAccuracyRecord>) → List<MixAccuracyRecord>` — drops absent-palette candidates (`!declaredPalette.isPresent`), keeps the rest in order. `EvidenceRecordBuilder.noPaletteExclusionReason` is the documented drop reason.
+  - All RECORD-2 interfaces unchanged (`prepare`, `MixAccuracyRecord`, `Sample.paintIds`).
+- **Known gaps:** none. The RECORD module is complete (all three phases done; AC-3/AC-4/AC-5 ✅).
+- **Verification commands:** unchanged — flutter at `~/development/flutter/bin`; unit `flutter test`; coverage `flutter test --coverage` then `dart run tool/coverage_gate.dart <BASE>` (full-suite run); bs-14 acceptance `flutter test integration_test/bs14/consent_and_record_test.dart -d flutter-tester` (run-pending adds `--dart-define=BS14_RUN_PENDING=true`); harness guards `flutter test integration_test/bs14/harness_test.dart -d flutter-tester`.
+- **Next (RECORD done):** EXCHANGE-2 (AC-6) now has RECORD complete; it needs G-4. MERGE-2 (AC-10) is startable and disjoint. SIGNOFF-1's RECORD dependency is satisfied.

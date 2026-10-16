@@ -111,18 +111,45 @@ void main() {
     });
   });
 
-  test('selectShareSet shares nothing until RECORD-3', () {
-    final candidate = MixAccuracyRecord(
-      paintCombination: PaintCombination.of(['a']),
-      declaredPalette: palette,
-      measuredColour: const MeasuredColour(
-        lab: ColorCoordinates(lightness: 1, a: 2, b: 3),
-        lch: CielchCoordinates(lightness: 1, chroma: 2, hue: 3),
-      ),
-      tier: MeasurementTier.cardLess,
-    );
-    expect(builder.selectShareSet([candidate]), isEmpty);
-    expect(builder.selectShareSet(const []), isEmpty);
+  group('selectShareSet (RECORD-3, AC-5)', () {
+    MixAccuracyRecord recordWith(DeclaredPalette declaredPalette) =>
+        MixAccuracyRecord(
+          paintCombination: PaintCombination.of(['a']),
+          declaredPalette: declaredPalette,
+          measuredColour: const MeasuredColour(
+            lab: ColorCoordinates(lightness: 1, a: 2, b: 3),
+            lch: CielchCoordinates(lightness: 1, chroma: 2, hue: 3),
+          ),
+          tier: MeasurementTier.cardLess,
+        );
+
+    test('excludes a candidate whose declared palette is absent', () {
+      final interpretable = recordWith(palette);
+      final noPalette = recordWith(const DeclaredPalette());
+      expect(noPalette.declaredPalette.isPresent, isFalse);
+
+      final shared = builder.selectShareSet([interpretable, noPalette]);
+
+      expect(shared, contains(interpretable));
+      expect(shared, isNot(contains(noPalette)));
+    });
+
+    test('keeps every interpretable candidate, in order', () {
+      final first = recordWith(palette);
+      final second = recordWith(
+          const DeclaredPalette(brand: 'DS', line: 'Artist', medium: 'water'));
+      expect(builder.selectShareSet([first, second]),
+          orderedEquals(<MixAccuracyRecord>[first, second]));
+    });
+
+    test('an empty candidate set shares nothing', () {
+      expect(builder.selectShareSet(const <MixAccuracyRecord>[]), isEmpty);
+    });
+
+    test('names why a no-palette record is dropped', () {
+      expect(EvidenceRecordBuilder.noPaletteExclusionReason,
+          'not interpretable — no declared palette');
+    });
   });
 
   test('is a RecordBuilder (the DI seam the CORE scope wires)', () {

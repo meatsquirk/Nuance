@@ -58,8 +58,8 @@ const Map<String, String> pendingACs = {
   // AC-1 un-pended by CORE-3 (opt in once, never shown the mechanism).
   // AC-3, AC-4 un-pended by RECORD-2 (record carries only evidence, nothing
   // personal).
+  // AC-5 un-pended by RECORD-3 (no declared palette ⇒ not shared).
   'AC-2': 'CORE-4',
-  'AC-5': 'RECORD-3',
   'AC-6': 'EXCHANGE-2',
   'AC-7': 'EXCHANGE-3',
   'AC-8': 'MERGE-3',
@@ -94,7 +94,7 @@ const Set<String> behaviorPhases = {
 /// pending owner **or** listed here. Each behaviour phase adds itself here as it
 /// un-pends its last AC. CORE-3 (its only AC, AC-1) is the first; RECORD-2
 /// (AC-3 + AC-4, both now un-pended) is the second.
-const Set<String> completedBehaviorPhases = {'CORE-3', 'RECORD-2'};
+const Set<String> completedBehaviorPhases = {'CORE-3', 'RECORD-2', 'RECORD-3'};
 
 /// Every AC id the bs-14 acceptance suite covers (the master plan's 12 ACs).
 ///

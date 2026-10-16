@@ -92,9 +92,23 @@ class EvidenceRecordBuilder implements RecordBuilder {
     return best;
   }
 
+  /// The reason a candidate is dropped from the share-set: without a declared
+  /// palette a record is not interpretable by a recipient, so it is never
+  /// shared (AC-5, D-8, scope §6.6).
+  static const String noPaletteExclusionReason =
+      'not interpretable — no declared palette';
+
   @override
   List<MixAccuracyRecord> selectShareSet(
     Iterable<MixAccuracyRecord> candidates,
-  ) =>
-      const <MixAccuracyRecord>[];
+  ) {
+    // Keep only the records a recipient can interpret: a candidate whose
+    // declared palette is absent is excluded for [noPaletteExclusionReason]
+    // (AC-5). Every other record is carried through unchanged — the only thing
+    // that ever crosses the boundary is an anonymous record (D-4).
+    return <MixAccuracyRecord>[
+      for (final candidate in candidates)
+        if (candidate.declaredPalette.isPresent) candidate,
+    ];
+  }
 }
