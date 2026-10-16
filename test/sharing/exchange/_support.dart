@@ -17,14 +17,27 @@ MixAccuracyRecord record(String id) => MixAccuracyRecord(
     );
 
 /// An in-process [PeerTransport] double that records how it was driven.
+///
+/// [discover] returns [peers]; every peer [offering]s back the same records
+/// (empty by default), and each [offer] appends to [offered] so a test can read
+/// exactly what crossed to peers.
 class FakePeerTransport implements PeerTransport {
-  FakePeerTransport({this.peers = const <Peer>[]});
+  FakePeerTransport({
+    this.peers = const <Peer>[],
+    this.offering = const <MixAccuracyRecord>[],
+  });
 
   /// The peers [discover] returns.
   final List<Peer> peers;
 
+  /// What every peer offers back when [receive]d from.
+  final List<MixAccuracyRecord> offering;
+
   /// How many times [discover] was called.
   int discoverCalls = 0;
+
+  /// Every record [offer]ed to a peer, in call order — what crossed the boundary.
+  final List<MixAccuracyRecord> offered = <MixAccuracyRecord>[];
 
   @override
   Future<List<Peer>> discover() async {
@@ -33,11 +46,12 @@ class FakePeerTransport implements PeerTransport {
   }
 
   @override
-  Future<void> offer(Peer peer, List<MixAccuracyRecord> records) async {}
+  Future<void> offer(Peer peer, List<MixAccuracyRecord> records) async {
+    offered.addAll(records);
+  }
 
   @override
-  Future<List<MixAccuracyRecord>> receive(Peer peer) async =>
-      const <MixAccuracyRecord>[];
+  Future<List<MixAccuracyRecord>> receive(Peer peer) async => offering;
 }
 
 /// A [PeerTransport] whose [discover] only completes when [gate] does, so a test

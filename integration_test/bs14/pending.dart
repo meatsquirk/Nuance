@@ -65,7 +65,8 @@ const Map<String, String> pendingACs = {
   // AC-12 un-pended by MERGE-5 (per-source rate limit).
   // AC-7 un-pended by EXCHANGE-3 (no peer ⇒ no exchange, no wait).
   // AC-2 un-pended by CORE-4 (no per-exchange action).
-  'AC-6': 'EXCHANGE-2',
+  // AC-6 un-pended by EXCHANGE-2 (exchange only the records each is missing) —
+  // the last pending AC; every bs-14 AC is now built, so the map is empty.
 };
 
 /// The behaviour phases allowed to own a pending AC.
@@ -102,6 +103,7 @@ const Set<String> completedBehaviorPhases = {
   'MERGE-3',
   'MERGE-4',
   'MERGE-5',
+  'EXCHANGE-2',
   'EXCHANGE-3',
 };
 

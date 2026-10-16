@@ -1,6 +1,6 @@
 # Module EXCHANGE — serverless gossip
 
-**Status:** In progress — EXCHANGE-1 ✅, EXCHANGE-3 (AC-7) ✅ (graded A); **G-4 approved 2026-10-16 — EXCHANGE-2 (AC-6) now startable**, then EXCHANGE-4 (enabler)
+**Status:** In progress — EXCHANGE-1 ✅, EXCHANGE-2 (AC-6) ✅ (graded A), EXCHANGE-3 (AC-7) ✅ (graded A); **next EXCHANGE-4 (enabler, G-4 ✅)** — lands the real mDNS/socket transport + the bs-12 guard amendment & boundary guard
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/exchange/peer_transport.dart`, `gossip_exchange.dart`, `seen_set.dart`, `exchange_scheduler.dart`, `exchange_outcome_endpoint.dart`; the real transport impl `lib/sharing/exchange/local_network_transport.dart` (EXCHANGE-4).
 **Depends on:** CORE, RECORD · **Blocks:** CORE-4 (background exchange), SIGNOFF-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 4,252,500 | 11m 52s |
-| 2 | behavior | AC-6 | ⬜ Todo | | |
+| 2 | behavior | AC-6 | ✅ Done | 9,109,102 | 16m 59s |
 | 3 | behavior | AC-7 | ✅ Done | 5,300,757 | 14m 22s |
 | 4 | behavior (*enabler*) | — | ⬜ Todo | | |
 
@@ -97,6 +97,78 @@ Verification: `flutter analyze` clean; unit **1488/0** (+24 new exchange tests);
 - **Wiring note:** nothing in `lib/sharing/exchange/` is yet a `SharingDependencies` field or mounted in `build_app.dart` (behaviour-neutral shell). CORE-4 (AC-2, background exchange) adds the scheduler to `SharingDependencies` + mounts `ExchangeOutcomeEndpoint` when it wires the live exchange; the ITEST harness mounts the endpoint directly over a loopback-fake transport.
 - **Verification commands:** flutter at `~/development/flutter/bin`. Unit: `flutter test`. Coverage: `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f` (full-suite run). Construct value classes non-const in a test or the const-ctor line reads 0.
 - **Next:** EXCHANGE-2 (AC-6, `mine − theirs` diff + dedup) — blocked on **G-2 + G-4**. EXCHANGE-3 (AC-7, no-peer no-wait) — blocked on **G-2**. EXCHANGE-4 (enabler, real mDNS/socket) — blocked on **G-4**. All EXCHANGE behaviour waits on the ITEST test review (G-2); EXCHANGE-2/4 also wait on G-4.
+
+### Result — after EXCHANGE-2
+
+AC-6 ("two reachable installs exchange only the records each is missing, keyed by
+content hash; duplicates and already-seen records dropped") coded and un-pended.
+Touched one lib file, `gossip_exchange.dart` (seen_set.dart unchanged — its
+`register`/`contains` already carried the dedup primitive):
+
+- `exchangeOnce` now, for each reachable peer, computes **offered = `mine − theirs`
+  by `contentHash`**: a record the peer already offers back is skipped (it has it,
+  not a dedup drop); of the rest, one the `SeenSet` has already seen (offered or
+  received in an earlier round / to an earlier peer this round) is dropped as a
+  duplicate (`dedupDrops`, D-7) and a genuinely new one is registered and offered.
+  It then **takes what the peer offers back**, dropping already-seen records; the
+  survivors are `ExchangeReport.received` (handed to MERGE). Registering offered
+  and received records is what makes a second round over an unchanged peer a
+  silent no-op. The no-peer short-circuit (`ExchangeReport.empty`) and per-peer
+  conduct count from EXCHANGE-3 are preserved.
+- Gossip unit group rewritten to the EXCHANGE-2 behaviour (shared `_support.dart`
+  fake extended backward-compatibly: a peer `offering` and captured `offered`
+  records): offer-only-missing + take-back, already-seen-not-re-offered across
+  rounds, cross-peer dedup (offered once), received dedup across peers — every
+  new branch of `exchangeOnce` covered.
+
+**Acceptance gate:** un-pended AC-6 (the **last** pending AC) in `pending.dart`
+(map now empty; EXCHANGE-2 added to `completedBehaviorPhases`); the harness
+pending-set guard (`harness_test.dart`) rewritten to pin the empty pending map
+and "no AC skipped in either mode" (12/12 green). `TestAC06_ExchangeOnlyMissing`
+runs and **passes** in the default suite; `exchange_and_merge_test.dart`: AC-6 ✅,
+AC-7 ✅, AC-10 ✅. The whole bs-14 acceptance suite is green with **no pending ACs**
+(consent_and_record 5/0, refine 4/0).
+
+**Grade gate:** fresh independent reviewer graded the full un-pended set (12 ACs)
+against G1–G6 — **AC-6 A on first grade, 12 A / 0**; AC-7 re-confirmed A (its
+reachable-peer control now exercises a real offer/receive), the other ten
+untouched and A. One non-A-denying residual noted (the AC-6 fixture separates
+content-hash keying from identity keying but not from value-equality keying;
+consistent with the suite's prior accepted residuals). Grid:
+`behavior-test-completeness-bs-14.md` § EXCHANGE-2 grading.
+
+**Verification:** flutter at `~/development/flutter/bin`. `flutter analyze` clean;
+unit **1556/0**; coverage **100% on all 21 touched lib files** (`dart run
+tool/coverage_gate.dart c00422f`). Fix passes: **0/3**. Tokens 9,109,102 · Time
+16m 59s.
+
+### Checkpoint / Handoff — after EXCHANGE-2
+
+- **Frozen behaviour (consumed by EXCHANGE-4):** `GossipExchange.exchangeOnce`
+  offers each reachable peer only `mine − theirs` by content hash, dedups via
+  `SeenSet` (offered + received registered), takes back the peer's new records,
+  and stays a silent no-op with no peer. EXCHANGE-4 supplies the real transport
+  under this unchanged contract — it must not re-implement the diff/dedup, only
+  move `MixAccuracyRecord`s over the wire.
+- **EXCHANGE-4 (next, G-4 ✅) owns the G-4 guard reconciliation**, co-located with
+  the real egress it governs: (1) add the real `PeerTransport` over local-network
+  discovery (mDNS/Bonjour) + a direct socket in
+  `lib/sharing/exchange/local_network_transport.dart`, swapping `_SharingRoot`'s
+  `InactivePeerTransport`; (2) **amend bs-12's guards** so the one sanctioned path
+  is exempt — add a sanctioned-off-device-path allow-list to
+  `integration_test/nfr/guards/source_guard.dart`'s `offDeviceSenders` scan (mirror
+  `sanctionedDomainConversionFiles`) exempting exactly that one file, keeping the
+  bs-12 suite green and still flagging any other egress; (3) add a **bs-14 boundary
+  guard** asserting only a `MixAccuracyRecord` serialization crosses `PeerTransport`
+  (the record already exposes `canonicalForm`; EXCHANGE-4's framing round-trips it).
+  The discovery/socket path itself is verified by the sign-off on-device walkthrough
+  (D-3), recorded as the named manual gap.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage`
+  then `dart run tool/coverage_gate.dart c00422f`. Acceptance:
+  `flutter test integration_test/bs14/<file>.dart -d flutter-tester` — bs-14 files
+  one per invocation. `--dart-define=BS14_RUN_PENDING=true` has no effect now (map
+  empty). Construct value classes non-const in a test or the const-ctor line reads 0.
+- **Known gaps:** none new. EXCHANGE-4's discovery/socket path is manual-only (D-3).
 
 ### Result — after EXCHANGE-3
 

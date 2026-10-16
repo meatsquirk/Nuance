@@ -159,10 +159,11 @@ void main() {
         expect(pendingACs.values, isNot(contains(phase)),
             reason: '$phase is marked completed but still owns a pending AC');
       }
-      // CORE-3 (AC-1), CORE-4 (AC-2), RECORD-2 (AC-3, AC-4), RECORD-3 (AC-5),
-      // MERGE-2 (AC-10), MERGE-3 (AC-8, AC-11), MERGE-4 (AC-9), MERGE-5 (AC-12)
-      // and EXCHANGE-3 (AC-7) have landed — each un-pended the AC(s) it owns;
-      // the rest stay pending, so a not-yet-built AC still can't pass vacuously.
+      // All ten+two behaviour phases have landed — CORE-3 (AC-1), CORE-4 (AC-2),
+      // RECORD-2 (AC-3, AC-4), RECORD-3 (AC-5), MERGE-2 (AC-10), MERGE-3 (AC-8,
+      // AC-11), MERGE-4 (AC-9), MERGE-5 (AC-12), EXCHANGE-3 (AC-7) and
+      // EXCHANGE-2 (AC-6) — so every AC is un-pended and the pending map is
+      // empty. The size assertions below keep that from passing vacuously.
       expect(
           completedBehaviorPhases,
           containsAll(<String>[
@@ -174,6 +175,7 @@ void main() {
             'MERGE-3',
             'MERGE-4',
             'MERGE-5',
+            'EXCHANGE-2',
             'EXCHANGE-3',
           ]));
       const Set<String> unpended = <String>{
@@ -182,6 +184,7 @@ void main() {
         'AC-3',
         'AC-4',
         'AC-5',
+        'AC-6',
         'AC-7',
         'AC-8',
         'AC-9',
@@ -189,22 +192,27 @@ void main() {
         'AC-11',
         'AC-12',
       };
+      expect(unpended, allACs.toSet(),
+          reason: 'every AC is accounted for in the un-pended set');
       expect(pendingACs.keys.toSet().intersection(unpended), isEmpty);
+      expect(pendingACs, isEmpty,
+          reason: 'AC-6 was the last pending AC — the map is now empty');
       expect(pendingACs.keys.toSet(), allACs.toSet().difference(unpended));
     });
 
-    test('skips a pending AC by default and runs it under the flag', () {
-      // AC-6 is still pending (owned by EXCHANGE-2), so it is skipped in the
-      // default (not run-pending) mode with a reason naming its owner, and runs
-      // when run-pending is forced. The mode is pinned via forceRunPending so
-      // the assertion is deterministic whichever mode the suite itself runs in.
-      expect(pendingSkipReason('AC-6', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-6', forceRunPending: false), contains('EXCHANGE-2'));
-      expect(pendingSkipReason('AC-6', forceRunPending: true), isNull);
-      // AC-2 is un-pended (CORE-4), so it always runs, in either mode — as does
-      // an AC with no pending row at all.
-      expect(pendingSkipReason('AC-2', forceRunPending: false), isNull);
-      expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
+    test('with every AC un-pended, no AC is skipped in either mode', () {
+      // AC-6 was the final un-pend (EXCHANGE-2), so the pending map is empty and
+      // pendingSkipReason returns null for every AC in both modes — nothing is
+      // skipped. The mode is pinned via forceRunPending so the assertion is
+      // deterministic whichever mode the suite itself runs in. This would fail
+      // if any AC were left pending (its default-mode reason would be non-null).
+      for (final String ac in allACs) {
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is un-pended — not skipped in the default mode');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac runs under the run-pending flag');
+      }
+      // An AC with no row at all is likewise never skipped.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
     });

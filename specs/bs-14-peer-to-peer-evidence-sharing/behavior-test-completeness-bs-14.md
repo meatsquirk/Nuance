@@ -246,3 +246,92 @@ all green, AC-2 now un-pended and passing. `harness_test.dart` also green.
 **Counts after CORE-4: 11 A / 0** over the eleven un-pended tests (AC-1, AC-2,
 AC-3, AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12). AC-6 (EXCHANGE-2)
 remains pending its phase.
+
+## EXCHANGE-2 grading (AC-6)
+
+Fresh independent reviewer (did not write these tests), grading what the code
+actually does against G1–G6. EXCHANGE-2 un-pended AC-6 (the last pending AC, so
+every bs-14 AC is now built) and changed only `lib/sharing/exchange/gossip_exchange.dart`
+(`exchangeOnce`: for each reachable peer, `theirs = receive(peer)`, offer
+`mine − theirs` by `contentHash`, drop any candidate the `SeenSet` has already
+registered, then register+keep the records the peer offers back). Ran
+`flutter test integration_test/bs14/exchange_and_merge_test.dart -d flutter-tester`:
+AC-6/AC-7/AC-10 all green (+3, all passed).
+
+| AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 | Notes |
+|----|------|-------|----|----|----|----|----|----|-------|
+| AC-6 | `TestAC06_ExchangeOnlyMissing` | A | pass | pass | pass | pass | pass | pass | Drives the real `GossipExchange.exchangeOnce` over the sanctioned fake loopback transport (D-3) via the real `ExchangeScheduler`, read through the transport's own delivered inbox (`network.inboxOf`) and the thin `ExchangeOutcomeEndpoint`. Rejects offering the full set (`{r1,r2}` would cross), an identity-keyed diff (the distinct-object `r2a`/`r2b` pair), and re-offering already-seen records every round (second round leaves B's inbox at exactly one r1). Residual (non-A-denying): value-equality keying is not separated from content-hash keying on this fixture (`r2a == r2b` AND same hash), mirroring AC-10's accepted "no sub-tolerance fixture" residual. |
+
+- **G1 — pass.** The scenario Given ("two installs reachable on the same local
+  network") is asserted through the public surface before the When: `network.peersReachable
+  isTrue`, `await a.transport.discover()` **contains** `b.id` (A really discovers B),
+  and each side's holdings pinned with `ownRecords orderedEquals [r1, r2a]` /
+  `[r2b, r3]` (count + identity + order — a genuine "A holds exactly {r1,r2}, no
+  other" check). The discrimination setup is also checked as a precondition:
+  `{r1,r2a,r3}.contentHash` hasLength 3 (three distinct records), `r2a == r2b`
+  with equal `contentHash`, and `identical(r2a, r2b) isFalse` — so the
+  content-hash-vs-identity test below rests on verified facts, not comments.
+- **G2 — pass.** The configured holdings answer. The records each install offers
+  come from the real `network.join(offering:)`, `receive()` returns the peer's
+  real offering, and the `mine − theirs` diff + `SeenSet` dedup are computed by
+  the real `exchangeOnce` reading `MixAccuracyRecord.contentHash`. The only fake
+  is the sanctioned transport (D-3), driven by the fixture; nothing scripts the
+  offered set or the outcome.
+- **G3 — pass (settled + controlled).** The "only the missing record crosses"
+  negative (r2 common ⇒ dropped) is pinned as an exact-set equality
+  (`inboxOf(b) == {r1.contentHash}`) read after the round settles
+  (`runExchange` awaits `scheduler.settled`), and the "already-seen dropped"
+  negative is read after a **second** settled round. Both are controlled by a
+  demonstrated can-change reading: B's inbox goes 0→1 when A has a genuinely
+  missing record to offer, and then stays at 1 on the repeat — so "does not grow"
+  is a real result, not a dead observable.
+- **G4 — pass.** Asserts the truest raw observable ("what crossed" = the
+  transport's delivered inbox) at exact value: `inboxOf(b)` content-hash set
+  `== {r1.contentHash}` and `inboxOf(a) == {r3.contentHash}` (exact sets, not
+  mere counts), plus `offered == 1` (exact), `exchanges >= 1`, and the
+  second-round `hasLength(1)` with the hash set still `{r1.contentHash}`. No
+  tolerance, no derived-only quantity (the endpoint's `offered`/`exchanges` are
+  asserted *in addition to*, not instead of, the raw inbox).
+- **G5 — pass. Rejects:** (a) **offering the full set** — an impl that offered
+  all of `mine` would put `{r1.hash, r2.hash}` in B's inbox, failing the exact-set
+  `== {r1.hash}`; (b) **an identity-keyed diff** — the common r2 is held as two
+  distinct objects (`r2a` at A, `r2b` at B), so a diff keyed on object identity
+  would re-offer r2 and the common record would cross, failing the exact-set
+  equality; the content-hash diff drops it; (c) **re-offering already-seen records
+  every round** — the second round over an unchanged B leaves B's inbox at exactly
+  one r1; a no-`SeenSet` impl would re-offer r1 (B still "misses" it, since B's
+  static offering never carries r1 back) and the inbox would reach length 2. All
+  three are plausible wrong impls separated by the fixture. Residual (non-A-denying):
+  because `r2a == r2b` *and* their content hashes match, a diff keyed by value
+  equality (`==`) would behave identically on this fixture, so the test separates
+  content-hash keying from object-identity keying but **not** from value-equality
+  keying — the two diverge only for sub-rounding-tolerance near-duplicates (D-7),
+  which the fixture does not include. Consistent with the suite's prior accepted
+  residuals (AC-10 "no byte-identical fixture"); a value-equality diff is not a
+  behaviourally-wrong impl on any realistic input here, so this does not deny A.
+- **G6 — pass.** Asserts exactly AC-6's two Then clauses — "each offers only the
+  records the other is missing, keyed by content hash" (the exact inbox sets +
+  `offered == 1`) and "duplicates and already-seen records are dropped" (the
+  second-round dedup). It touches no merge/refine content (AC-10), no consent
+  surface (AC-1/AC-2) and no record-field concern (AC-3/4/5).
+
+- **AC-7 — `TestAC07_NoPeerNoWait` — remains A.** EXCHANGE-2 changed
+  `gossip_exchange.dart`, which AC-7's reachable-peer control also exercises (a
+  reachable peer now conducts a *real* offer/receive instead of only counting the
+  conduct). Re-verified: the no-peer path still returns `ExchangeReport.empty`
+  early on `peers.isEmpty` (unchanged), so `exchanges == 0` / `offered == 0` /
+  `settled completes` still hold; and the control still asserts only
+  `exchanges >= 1` and `waitedOnExchange isFalse` — both still true now that the
+  reachable peer additionally offers its one missing record. Ran green alongside
+  AC-6. No regression.
+- **Others remain A (untouched by EXCHANGE-2).** AC-1/AC-2/AC-3/AC-4/AC-5/AC-8/
+  AC-9/AC-10/AC-11/AC-12 neither construct nor trigger the gossip diff;
+  EXCHANGE-2's change to `exchangeOnce` only runs on the non-empty-peer branch.
+  AC-2's app-level exchange runs over the inert `InactivePeerTransport` (no peer
+  ⇒ early empty return, the new diff never executes); AC-10 shares the
+  `exchange_and_merge_test.dart` file but uses only `EvidenceMerge`. Code paths
+  and tests unchanged.
+
+**Counts after EXCHANGE-2: 12 A / 0 below-A** over the twelve un-pended tests
+(AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12) —
+all 12 ACs are now un-pended.

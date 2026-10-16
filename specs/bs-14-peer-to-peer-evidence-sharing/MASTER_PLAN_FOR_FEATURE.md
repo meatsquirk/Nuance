@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — behaviour stage; **G-4 approved 2026-10-16 (Matt Quirk). CORE module complete; AC-1/2/3/4/5/7/8/9/10/11/12 ✅ (11 A/0); only AC-6 pending.** Next startable: **EXCHANGE-2 (AC-6)**; then EXCHANGE-4 (enabler), then SIGNOFF-1. No open gates.
+**Status:** In progress — behaviour stage; **all 12 ACs ✅ (12 A/0) — EXCHANGE-2 (AC-6) landed 2026-10-16.** Next: **EXCHANGE-4** (enabler — real mDNS/socket transport + the G-4 bs-12 guard amendment & boundary guard), then SIGNOFF-1. No open gates.
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -43,7 +43,7 @@
 | AC-3 | A shared record carries only the mapping evidence | ITEST-2 `TestAC03_RecordCarriesOnlyEvidence` | RECORD-2 | ✅ |
 | AC-4 | No photo, project, sample, profile or identifier leaves the device | ITEST-2 `TestAC04_NothingPersonalLeaves` | RECORD-2 | ✅ |
 | AC-5 | A record without a declared palette is not shared | ITEST-2 `TestAC05_NoPaletteNotShared` | RECORD-3 | ✅ |
-| AC-6 | Two reachable installs exchange only the records each is missing | ITEST-3 `TestAC06_ExchangeOnlyMissing` | EXCHANGE-2 | ⬜ Todo |
+| AC-6 | Two reachable installs exchange only the records each is missing | ITEST-3 `TestAC06_ExchangeOnlyMissing` | EXCHANGE-2 | ✅ |
 | AC-7 | With no peer reachable, nothing happens and nothing is waited on | ITEST-3 `TestAC07_NoPeerNoWait` | EXCHANGE-3 | ✅ |
 | AC-8 | Clustered crowd records improve an Estimated mapping's value | ITEST-4 `TestAC08_ClusteredRefine` | MERGE-3 | ✅ |
 | AC-9 | Crowd evidence never promotes a value to Confirmed on the painter's screen | ITEST-4 `TestAC09_NeverPromotes` | MERGE-4 | ✅ |
@@ -176,9 +176,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 15 | MERGE-3 | AC-8 + AC-11 crowd refine, robust central estimate, outlier discard | ✅ Done | 6,284,723 | 15m 51s | AC-8+AC-11 ✅ un-pended, graded A (7 A/0); robust central estimate (coord-wise median → modified z-score MAD, outliers discarded) in `crowd_refine.dart`; unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
 | 16 | MERGE-4 | AC-9 never promote to Confirmed | ✅ Done | 7,077,181 | 14m 53s | AC-9 ✅ un-pended, graded **A** (B→A; 8 A/0); never-promote already enforced by MERGE-1/2 (`ingest` stamps `peerContributed`, `tierFor` excludes it) — MERGE-4 added derivation glue `RefineResult.label = qualifier(tier)` + both `TestAC09` augmentations (5-peer Given realized; high-tier peer still Estimated); unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
 | 17 | MERGE-5 | AC-12 per-source rate limit | ✅ Done | 7,627,140 | 15m 13s | AC-12 ✅ un-pended, graded A (9 A/0); rate limit in `EvidenceMerge.ingest` via stateful `SourceRateLimiter` (per-source cap 50, seeded from existing log); MERGE module complete; unit 1544/0, cov 100%/2 touched; fix passes 0/3 |
-| 18 | EXCHANGE-2 | AC-6 offer-missing, hash-keyed, dedup (+ bs-12 guard amendment, G-4) | ⬜ Next | | | startable — G-4 ✅ approved 2026-10-16 |
+| 18 | EXCHANGE-2 | AC-6 offer-missing, hash-keyed, dedup | ✅ Done | 9,109,102 | 16m 59s | AC-6 ✅ un-pended (last pending AC → map empty), graded A (12 A/0); `gossip_exchange.dart` mine−theirs offer/receive + SeenSet dedup; unit 1556/0, cov 100%/21 touched; fix passes 0/3. G-4 guard amendment + boundary guard moved to EXCHANGE-4 (co-located with the real egress — module plan drift, see Next phase) |
 | 19 | EXCHANGE-3 | AC-7 no peer ⇒ no exchange, no wait | ✅ Done | 5,300,757 | 14m 22s | AC-7 ✅ un-pended, graded A (10 A/0); `gossip_exchange.dart` no-peer short-circuit + per-reachable-peer conduct count; unit 1545/0, cov 100%/20 touched; fix passes 1/3 (harness guard) |
-| 20 | EXCHANGE-4 | *enabler* real mDNS/socket transport (no AC; manual on-device at sign-off) | ⬜ Todo | | | needs EXCHANGE-2 (G-4 ✅) |
+| 20 | EXCHANGE-4 | *enabler* real mDNS/socket transport + bs-12 guard amendment & boundary guard (no AC; manual on-device at sign-off) | ⬜ Next | | | startable — EXCHANGE-2 ✅, G-4 ✅ |
 | 21 | CORE-4 | AC-2 no per-exchange action (silent background exchange) | ✅ Done | 14,820,009 | 37m 40s | AC-2 ✅ un-pended, graded A (11 A/0); CORE module complete; silent fire-and-forget exchange over inert `InactivePeerTransport` + `recipesImproveSignal` surface; unit 1553/0, cov 100%/21 touched; regression host 52 + sim 222 + conformance 1553; fix passes 1/3 (const-ctor coverage) |
 | 22 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -186,13 +186,12 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**G-4 approved 2026-10-16 (Matt Quirk)** — the single sanctioned off-device path is the plan's local-network-only `PeerTransport` (mDNS/Bonjour + direct socket; only `MixAccuracyRecord` serializations cross; consented, record-only), and bs-12's network-block guards are to be amended to permit exactly that one path plus a bs-14 boundary guard. **No open gates remain.** The three remaining phases are now ordered, not blocked:
+**All 12 ACs are now coded and graded A (12 A/0); EXCHANGE-2 (AC-6) landed 2026-10-16.** Two phases remain, both startable, no open gates:
 
-- **EXCHANGE-2 (AC-6)** — `mine − theirs` offer/receive + dedup in `gossip_exchange.dart`/`seen_set.dart`; also lands the bs-12 guard amendment + boundary guard (G-4). **Startable now** (RECORD ✅, G-2 ✅, G-4 ✅). Touches the exchange package — don't run concurrently with EXCHANGE-4 (same files / sequential dependency).
-- **EXCHANGE-4 (enabler, no AC)** — real mDNS/socket `LocalNetworkTransport`, swaps `_SharingRoot`'s `InactivePeerTransport`; discovery/socket path verified by the sign-off walkthrough (D-3). Needs **EXCHANGE-2**.
+- **EXCHANGE-4 (enabler, no AC) — next.** Real `PeerTransport` over local-network discovery (mDNS/Bonjour) + a direct socket in `lib/sharing/exchange/local_network_transport.dart`, swapping `_SharingRoot`'s `InactivePeerTransport`. It also lands the **G-4 guard reconciliation**, co-located with the egress it governs: amend bs-12's `offDeviceSenders` scan (`integration_test/nfr/guards/source_guard.dart`) to exempt exactly that one sanctioned path, and add the bs-14 boundary guard asserting only a `MixAccuracyRecord` serialization crosses `PeerTransport`. Discovery/socket path verified by the sign-off walkthrough (D-3). (Drift resolved: the guard amendment + boundary guard were tentatively noted on EXCHANGE-2, but the module plan scoped EXCHANGE-2 to the AC-6 behaviour only; the guard work needs the real egress to guard, so it belongs here with EXCHANGE-4 — whose own task 2 already says "honour the bs-12 boundary guard".)
 - **SIGNOFF-1** — last; needs CORE-4 ✅ + EXCHANGE-4.
 
-Run `/feature-next-phase bs14` to pick up EXCHANGE-2.
+Run `/feature-next-phase bs14` to pick up EXCHANGE-4.
 
 ## Token usage
 
@@ -224,7 +223,8 @@ Run `/feature-next-phase bs14` to pick up EXCHANGE-2.
 | EXCHANGE-3 | 1bdd40a9 | 2026-10-16 11:39 EDT | 11:54 | 14m 22s | 14m 22s | claude-opus-4-8 | 104 | 214,181 | 5,051,255 | 35,217 | 5,300,757 | AC-7 un-pended + graded A (10 A/0); unit 1545/0, cov 100%/20 touched; fix passes 1/3 |
 | CORE-4 | f41d75ca | 2026-10-16 12:12 EDT | 12:50 | 37m 40s | 37m 40s | claude-opus-4-8 | 202 | 316,351 | 14,420,835 | 82,621 | 14,820,009 | AC-2 un-pended, graded A (11 A/0); CORE module complete; silent fire-and-forget exchange + recipesImproveSignal; unit 1553/0, cov 100%/21; regression host 52 + sim 222 + conformance 1553; fix passes 1/3 |
 | GATE-DECISION | f41d75ca | 2026-10-16 12:58 EDT | 13:00 | 1m 57s | 1m 57s | claude-opus-4-8 | 22 | 19,656 | 3,034,551 | 8,374 | 3,062,603 | G-4 approved (Matt Quirk): local-network-only PeerTransport (mDNS + socket, record-only, consented); bs-12 guards to permit only this path + bs-14 boundary guard; EXCHANGE-2/4 unblocked |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 13:00** | **6h 32m** | **6h 24m** |  | **2,358** | **4,186,214** | **145,839,079** | **1,093,238** | **151,120,889** |  |
+| EXCHANGE-2 | a4e3a7d6 | 2026-10-16 13:14 EDT | 13:31 | 16m 59s | 16m 59s | claude-opus-4-8 | 136 | 268,740 | 8,787,575 | 52,651 | 9,109,102 | AC-6 un-pended (last pending → map empty) + graded A (12 A/0); gossip mine−theirs offer/receive + SeenSet dedup; unit 1556/0, cov 100%/21 touched; fix passes 0/3 |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 13:31** | **6h 49m** | **6h 41m** |  | **2,494** | **4,454,954** | **154,626,654** | **1,145,889** | **160,229,991** |  |
 
 ## Sign-off
 
