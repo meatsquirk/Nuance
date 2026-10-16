@@ -1,6 +1,6 @@
 # Module EXCHANGE — serverless gossip
 
-**Status:** Not started
+**Status:** In progress — EXCHANGE-1 ✅ done; EXCHANGE-2 (AC-6) blocked on G-2 + G-4, EXCHANGE-3 (AC-7) blocked on G-2, EXCHANGE-4 (enabler) blocked on G-4
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/exchange/peer_transport.dart`, `gossip_exchange.dart`, `seen_set.dart`, `exchange_scheduler.dart`, `exchange_outcome_endpoint.dart`; the real transport impl `lib/sharing/exchange/local_network_transport.dart` (EXCHANGE-4).
 **Depends on:** CORE, RECORD · **Blocks:** CORE-4 (background exchange), SIGNOFF-1
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| 1 | shell | — | ⬜ Todo | | |
+| 1 | shell | — | ✅ Done | 4,252,500 | 11m 52s |
 | 2 | behavior | AC-6 | ⬜ Todo | | |
 | 3 | behavior | AC-7 | ⬜ Todo | | |
 | 4 | behavior (*enabler*) | — | ⬜ Todo | | |
@@ -72,6 +72,28 @@
 - **Exit criteria:** unit + coverage on the parts that are unit-testable (serialization/framing); the discovery/socket path verified by the sign-off on-device walkthrough and recorded as a named manual gap (D-3).
 - **Acceptance gate:** none (no AC). Suite stays green; coverage gate on touched files; any untestable platform path listed as a justified exclusion with the manual walkthrough step.
 
-### Result  <!-- filled on completion -->
+### Result — after EXCHANGE-1
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Landed the EXCHANGE shell under `lib/sharing/exchange/` (5 files, no behaviour, nothing wired into the app assembly — same precedent as RECORD-1):
+
+- `peer_transport.dart` — `Peer` (opaque per-session id, value-equal) + `PeerTransport` interface (`discover`/`offer`/`receive`); the single off-device actor and the one bs-12 exception (D-4, G-4). Only `MixAccuracyRecord` serializations cross it.
+- `seen_set.dart` — `SeenSet` keyed by `MixAccuracyRecord.contentHash`; `register` returns false on an already-seen hash (the dedup drop, D-7), `contains`, `length`.
+- `gossip_exchange.dart` — `GossipExchange{transport, seenSet}` + `ExchangeReport{offered, received, dedupDrops, exchangesConducted}` (`.empty`). Skeleton `exchangeOnce(mine)` **awaits `discover()` (the async seam EXCHANGE-2 builds on) but exchanges nothing** → always `ExchangeReport.empty`.
+- `exchange_scheduler.dart` — `ExchangeScheduler` fire-and-forget: `trigger(mine)` launches `exchangeOnce` **unawaited**, folds the report into `outcome` on completion, swallows any failure silently (D-5); `settled` future for tests; returns synchronously so no core flow ever waits. `ExchangeOutcome{offered, received, dedupDrops, exchanges, waitedOnExchange}` with `fold`/`withWaited`/value `==`.
+- `exchange_outcome_endpoint.dart` — `ExchangeOutcomeEndpoint` InheritedWidget (mirrors `RecordInspectEndpoint`): `endpointKey`, getters `offered`/`received`/`dedupDrops`/`exchanges`/`waitedOnExchange`, `of`/`maybeOf`. The AC-2/AC-6/AC-7 observation seam; zero/false in the shell.
+
+Verification: `flutter analyze` clean; unit **1488/0** (+24 new exchange tests); coverage **100% on all 14 touched lib files** (`dart run tool/coverage_gate.dart c00422f`). Non-blocking proven by a gated-transport smoke test (`trigger` returns, `waitedOnExchange==false`, round still pending). No acceptance/grade gate (shell). Fix passes: 0/3. Tokens 4,252,500 · Time 11m 52s.
+
+### Checkpoint / Handoff — after EXCHANGE-1
+
+- **Frozen interfaces (consumed by EXCHANGE-2/3/4, ITEST, CORE-4):**
+  - `PeerTransport` — `Future<List<Peer>> discover()`, `Future<void> offer(Peer, List<MixAccuracyRecord>)`, `Future<List<MixAccuracyRecord>> receive(Peer)`; `Peer(String id)` value type.
+  - `SeenSet` — `bool register(MixAccuracyRecord)` (false ⇒ dedup drop), `bool contains(...)`, `int length`.
+  - `GossipExchange({required PeerTransport transport, required SeenSet seenSet})` — `Future<ExchangeReport> exchangeOnce(Iterable<MixAccuracyRecord> mine)`.
+  - `ExchangeReport({offered, received, dedupDrops, exchangesConducted})`, `.empty`.
+  - `ExchangeScheduler(GossipExchange)` — `void trigger(Iterable<MixAccuracyRecord>)`, `ExchangeOutcome get outcome`, `Future<void>? get settled`.
+  - `ExchangeOutcome({offered, received, dedupDrops, exchanges, waitedOnExchange})` — `fold(ExchangeReport)`, `withWaited(bool)`, value `==`; `.empty`.
+  - `ExchangeOutcomeEndpoint` — `endpointKey`, `outcome`, getters, `of`/`maybeOf`.
+- **Wiring note:** nothing in `lib/sharing/exchange/` is yet a `SharingDependencies` field or mounted in `build_app.dart` (behaviour-neutral shell). CORE-4 (AC-2, background exchange) adds the scheduler to `SharingDependencies` + mounts `ExchangeOutcomeEndpoint` when it wires the live exchange; the ITEST harness mounts the endpoint directly over a loopback-fake transport.
+- **Verification commands:** flutter at `~/development/flutter/bin`. Unit: `flutter test`. Coverage: `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f` (full-suite run). Construct value classes non-const in a test or the const-ctor line reads 0.
+- **Next:** EXCHANGE-2 (AC-6, `mine − theirs` diff + dedup) — blocked on **G-2 + G-4**. EXCHANGE-3 (AC-7, no-peer no-wait) — blocked on **G-2**. EXCHANGE-4 (enabler, real mDNS/socket) — blocked on **G-4**. All EXCHANGE behaviour waits on the ITEST test review (G-2); EXCHANGE-2/4 also wait on G-4.
