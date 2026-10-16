@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 ✅ (harness), ITEST-2 ✅ (AC-1..5, 5 A), ITEST-3 ✅ (AC-6/7/10, 3 A); next ITEST-4, then ITEST-5 (test review → G-2)
+**Status:** In progress — ITEST-1 ✅ (harness), ITEST-2 ✅ (AC-1..5, 5 A), ITEST-3 ✅ (AC-6/7/10, 3 A), ITEST-4 ✅ (AC-8/9/11/12, 3 A + AC-9 B-pending-MERGE-4); next ITEST-5 (test review → G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/bs14/` — `harness.dart`, `fake_peer_transport.dart`, `pending.dart`, `harness_test.dart` (ITEST-1 scaffold/smoke tests), `consent_and_record_test.dart` (AC-1..5), `exchange_and_merge_test.dart` (AC-6,7,10), `refine_test.dart` (AC-8,9,11,12).
 **Depends on:** all shell phases (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1) · **Blocks:** every behavior phase (via G-2)
@@ -12,8 +12,8 @@
 | 1 | acceptance-tests | — (harness) | ✅ Done | 7,810,941 | 20m 38s |
 | 2 | acceptance-tests | AC-1..5 | ✅ Done | 6,582,231 | 21m 58s |
 | 3 | acceptance-tests | AC-6, AC-7, AC-10 | ✅ Done | 4,609,896 | 12m 39s |
-| 4 | acceptance-tests | AC-8, AC-9, AC-11, AC-12 | ⬜ Next | | |
-| 5 | test-review | — (G-2) | ⬜ Todo | | |
+| 4 | acceptance-tests | AC-8, AC-9, AC-11, AC-12 | ✅ Done | 6,488,618 | 19m 29s |
+| 5 | test-review | — (G-2) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -117,6 +117,29 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
 - **Tasks:** author `TestAC08_ClusteredRefine`, `TestAC09_NeverPromotes`, `TestAC11_OutlierDiscarded`, `TestAC12_RateLimited`; mark pending; record red baseline + grades. Note `TestAC09` carries a pre-seeded augmentation (MERGE-4).
 - **Exit criteria:** default green, run-pending red; grade gate passed.
 
+### Result — ITEST-4 ✅ Done
+
+- **Landed** one file, `integration_test/bs14/refine_test.dart` (no `lib/` touched) — the four pending acceptance tests for AC-8/AC-9/AC-11/AC-12, all pure-Dart (`acTest`) through the public surface over the real `EvidenceMerge`/`CrowdRefine`/`SourceRateLimiter` (riding bs-13's real `ProvenanceDerivation`), observed through `MappingEvidenceEndpoint`:
+  - **AC-8 (MERGE-3)** — `peerRecords(7, outlier: true)` (7-tight-cluster centred on `seedMappingValue` + 1 far outlier = 8) merged into an empty log, then `refine(_staleSeed, merged)`. `_staleSeed` (70,-6,16) is a deliberately-offset stored Estimated seed so an impl that **ignores the crowd** stays there. Then: the recomputed value is within ±1.5 of the cluster centroid (`seedMappingValue`, 62,2,6) **and** >1.5 from the plain mean of all 8 (57,7,0.5) — rejecting both plain-average (pulled by the outlier) and ignore-crowd. Given checks prove the fixture discriminates (centroid==seed; stale seed >5 away; plain-mean >3 away).
+  - **AC-9 (MERGE-4)** — an Estimated mapping (`llmSeed` point) refined by `peerRecords(5)` via the real merge; `refine` → derived tier; label via the real `ProvenanceDerivation.qualifier`. Then: tier stays `estimated`, label stays "Estimated — not yet verified". **Control (G3/G5):** the SAME mapping promoted with the painter's own measured swatch via the real `promoteWithOwnSwatch` → Confirmed / "Confirmed — you measured this", proving the derivation CAN change.
+  - **AC-11 (MERGE-3)** — same path as AC-8 (D-6), distinct fixture `peerRecords(6, outlier: true)` (6 tight + 1 far = 7). Then: the estimate is within ±1.5 of the 6-cluster centroid **and** >1.5 from the all-7 plain mean (56.3,7.7,-0.29) — the outlier is discarded, not averaged in.
+  - **AC-12 (MERGE-5)** — `sourcedFromOnePeer(peerRecords(100), source:'flooder')` + `sourcedFromOnePeer(peerRecords(5), source:'honest-peer')` ingested. Then: the flooder's accepted peer-contributed points == `SourceRateLimiter.defaultMaxPerSource` (read symbolically so it tracks MERGE-5's scope-§6.6 value, <100) — excess rejected — and the honest peer's count == 5 (a flood never starves another source). Rejects "no cap → 100 accepted" and "global cap starves others".
+- **Verification** (`-d flutter-tester`, flutter at `~/development/flutter/bin`): `flutter analyze refine_test.dart` clean. **Default run green** — 4 pending ⇒ **4 skipped, 0 failed** (`All tests skipped`). **Run-pending baseline** — **3 red + 1 green**: AC-8 red (value 70 vs centroid 62 ±1.5 → MERGE-3), AC-11 red (estimate 70 vs centroid 62 → MERGE-3), AC-12 red (flooder accepted 0 vs cap 50 → MERGE-5); **AC-9 green at baseline** — bs-13's `tierFor` already excludes `EvidenceKind.peerContributed` by fall-through, so the never-promote invariant holds trivially (a *limited* test — see the augmentation row). No harness crash. Scaffold `harness_test.dart` stays **12/12**. No `lib/` touched ⇒ coverage gate has no touched source (trivially satisfied); unit suite unchanged at 1511/0.
+- **Grades:** fresh independent reviewer (fresh subagent; `/behavior-test-check` not installed → general grader against G1–G6) — **AC-8 A / AC-11 A / AC-12 A**; **AC-9 B pending MERGE-4** (G1: the "refined by peer records" Given isn't asserted through the surface because the shell merge is a no-op; G5: can't reject a promoting peer record until MERGE-4 formally excludes high-tier peers — both deferred to the MERGE-4 augmentation, the sanctioned limited-test exception). **3 A / 1 B-pending. Fix passes: 0/3** (no in-phase fix — the three reds are intended red baselines; AC-9's B is the deferred-augmentation exception).
+- **Interface reconciliation surfaced for the test review (ITEST-5) / behaviour phases:**
+  1. **AC-12 rate limiter wiring (MERGE-5):** the frozen `EvidenceMerge.ingest(existing, incoming)` takes no limiter, and `SourceRateLimiter.admit` is stateless in the shell. **MERGE-5 must wire a per-source `SourceRateLimiter` into `ingest`** (internal, defaulting to `SourceRateLimiter.defaultMaxPerSource`), capping each source's appended points at the cap while leaving other sources unaffected. The test reads the cap from `SourceRateLimiter.defaultMaxPerSource`, so changing that default stays in sync; MERGE-5 freezes exactly how the limiter is threaded (internal vs constructor-injected — must keep `const EvidenceMerge()` wiring in the harness working, e.g. a fresh per-call limiter).
+  2. **AC-8/AC-11 depend on MERGE-2 first:** the robust-central-estimate value can only be computed once MERGE-2 has appended the peer points, so both go green at MERGE-3 *given* MERGE-2 is done (MERGE-2 precedes MERGE-3 in the graph).
+- Tokens 6,488,618 · Time 19m 29s.
+
+### Checkpoint / Handoff — after ITEST-4
+
+- **For the behaviour phases (honour these observable contracts):**
+  - **MERGE-3 (AC-8/AC-11):** `CrowdRefine.refine(current, evidence)` must recompute `.value` as the **robust central estimate** of the evidence coordinates with **outliers discarded** (reuse bs-13's clustering rule, D-6 — no new estimator), so a tight cluster + a far outlier resolves to the cluster centroid (±1.5), never the plain mean of everything and never the stored `current`. `.tier` stays whatever `tierFor` derives (Estimated for peer-contributed).
+  - **MERGE-4 (AC-9):** a mapping refined by peer-contributed evidence must stay `ProvenanceTier.estimated` / "Estimated — not yet verified" (`ProvenanceDerivation.qualifier`) however much/high-tier the crowd evidence is — only the painter's own measured mix (`promoteWithOwnSwatch`) promotes. See the augmentation below for the two adds MERGE-4 owns.
+  - **MERGE-5 (AC-12):** `EvidenceMerge.ingest` applies a per-source cap of `SourceRateLimiter.defaultMaxPerSource`; appended peer-contributed points per source ≤ cap; other sources unaffected (reconciliation 1 above).
+- **Run commands:** `flutter test integration_test/bs14/refine_test.dart -d flutter-tester` (default, green/skipped); add `--dart-define=BS14_RUN_PENDING=true` for the baseline. One bs-14 app-booting file per `flutter test` invocation (these four boot no app).
+- **Next:** **ITEST-5** — the test review; assemble the packet (all 12 AC tests), route **G-2** to a human → resolves G-2 and unblocks every behaviour phase. Preconditions met: every AC-test phase done; the whole-suite grid is all A **or** *B pending <phase>* with an augmentation row (AC-9). Also decide **G-4** before the EXCHANGE behaviour phases.
+
 ## Phase 5 — Test review (G-2)
 
 - **Kind:** test-review
@@ -135,14 +158,14 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
 | AC-5 | TestAC05_NoPaletteNotShared | red | Then: the interpretable control record is shared (`selectShareSet` returns `[]` at the shell) | RECORD-3 | A |
 | AC-6 | TestAC06_ExchangeOnlyMissing | red | Then: A offers B only the missing r1 (`_hashesOf(inboxOf(b))` == `{}` at the shell, expected `{r1.contentHash}`) | EXCHANGE-2 | A |
 | AC-7 | TestAC07_NoPeerNoWait | red | Then (control): a reachable peer gets an exchange (`exchanges` == 0 at the shell, expected ≥ 1). The no-peer Thens (exchanges==0/waited==false) pass at the shell, so the G3-mandated reachable-peer control is the discriminator that reddens the baseline. | EXCHANGE-3 | A |
-| AC-8 | TestAC08_ClusteredRefine | pending | Then: robust central estimate | MERGE-3 | |
-| AC-9 | TestAC09_NeverPromotes | pending | Then: stays Estimated | MERGE-4 | |
+| AC-8 | TestAC08_ClusteredRefine | red | Then: the recomputed value is the robust central estimate (value `70` = stale seed at the shell, expected within ±1.5 of centroid `62`) | MERGE-3 (needs MERGE-2 append) | A |
+| AC-9 | TestAC09_NeverPromotes | **green at baseline** | *limited* — `tierFor` already excludes `peerContributed` (fall-through), so the never-promote invariant holds trivially; the own-swatch control shows the derivation CAN change; the Given ("refined by peer records") and the promoting-peer rejection are the MERGE-4 augmentation | MERGE-4 | B pending MERGE-4 |
 | AC-10 | TestAC10_AppendOnlyMerge | red | Then: all three appended (evidence length `1` at the shell, expected `4`) | MERGE-2 | A |
-| AC-11 | TestAC11_OutlierDiscarded | pending | Then: outlier excluded | MERGE-3 | |
-| AC-12 | TestAC12_RateLimited | pending | Then: per-source cap enforced | MERGE-5 | |
+| AC-11 | TestAC11_OutlierDiscarded | red | Then: the estimate equals the cluster centroid, outlier discarded (value `70` = stale seed at the shell, expected within ±1.5 of centroid `62`) | MERGE-3 (needs MERGE-2 append) | A |
+| AC-12 | TestAC12_RateLimited | red | Then: per-source cap enforced (flooder accepted `0` at the shell, expected `50` = `defaultMaxPerSource`) | MERGE-5 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC09 | before MERGE-4 the derivation doesn't formally exclude a high-tier peer record from promotion, so the "never Confirms" Then can't discriminate the strongest wrong impl | MERGE-4 | a case where a peer record declares an instrument tier; assert the mapping still derives `estimated` / "not yet verified" | ⬜ Open |
+| TestAC09 | green at baseline — `tierFor` excludes `peerContributed` by fall-through, so the invariant holds trivially; and the shell merge appends nothing, so the "refined by peer records" Given is never realized. Confirmed by the ITEST-4 grader (G1 + G5). | MERGE-4 | **(1)** after the real `ingest`, assert the log holds exactly 5 `EvidenceKind.peerContributed` points — realizing the Given (this reddens it once added, since MERGE-2 must append first); **(2)** add a peer point whose record declares an instrument/high tier (would otherwise promote), and assert the tier *still* stays `estimated` / "Estimated — not yet verified" — proving `peerContributed` is actively *excluded*, not merely absent. Closes AC-9's B→A. | ⬜ Open |
