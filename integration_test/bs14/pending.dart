@@ -64,7 +64,6 @@ const Map<String, String> pendingACs = {
   'AC-7': 'EXCHANGE-3',
   'AC-8': 'MERGE-3',
   'AC-9': 'MERGE-4',
-  'AC-10': 'MERGE-2',
   'AC-11': 'MERGE-3',
   'AC-12': 'MERGE-5',
 };
@@ -94,7 +93,12 @@ const Set<String> behaviorPhases = {
 /// pending owner **or** listed here. Each behaviour phase adds itself here as it
 /// un-pends its last AC. CORE-3 (its only AC, AC-1) is the first; RECORD-2
 /// (AC-3 + AC-4, both now un-pended) is the second.
-const Set<String> completedBehaviorPhases = {'CORE-3', 'RECORD-2', 'RECORD-3'};
+const Set<String> completedBehaviorPhases = {
+  'CORE-3',
+  'RECORD-2',
+  'RECORD-3',
+  'MERGE-2',
+};
 
 /// Every AC id the bs-14 acceptance suite covers (the master plan's 12 ACs).
 ///

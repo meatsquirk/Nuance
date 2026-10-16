@@ -46,10 +46,10 @@ class SourcedRecord {
 /// so prior points are never dropped, reordered or overwritten. bs-14 adds no
 /// new evidence model — it reuses bs-13's (D-6).
 ///
-/// This is the MERGE-1 shell: it wires the collaborator and freezes the
-/// signature but performs no merge — [ingest] returns the existing evidence
-/// unchanged. MERGE-2 appends each incoming record; MERGE-5 bounds the volume
-/// any one source may contribute via [SourceRateLimiter].
+/// MERGE-2 implements the append-only merge: each incoming record is appended
+/// as a source-tagged [EvidenceKind.peerContributed] point and nothing prior is
+/// dropped, reordered or overwritten. MERGE-5 bounds the volume any one source
+/// may contribute via [SourceRateLimiter].
 class EvidenceMerge {
   /// Creates a merge over bs-13's append-only [derivation].
   const EvidenceMerge({this.derivation = const ProvenanceDerivation()});
@@ -60,14 +60,28 @@ class EvidenceMerge {
   /// Merges the [incoming] source-tagged records into [existing], returning the
   /// mapping's new evidence log.
   ///
-  /// Shell: appends nothing, so it returns [existing] unchanged (as an
-  /// unmodifiable view). MERGE-2 appends each [SourcedRecord] as a
-  /// [EvidenceKind.peerContributed] point tagged with its source, preserving
-  /// order and overwriting nothing.
+  /// Each [SourcedRecord] becomes one [EvidencePoint] whose coordinates are the
+  /// record's measured colour, whose [EvidencePoint.source] is the id it arrived
+  /// from, and whose kind is [EvidenceKind.peerContributed]. Each is appended
+  /// through bs-13's append-only [ProvenanceDerivation.appendEvidence], so the
+  /// prior points stay unchanged and in order, the appended points follow in
+  /// arrival order, and nothing is overwritten or deduped — distinct peer
+  /// measurements each add a point (AC-10). The result is an unmodifiable view.
   List<EvidencePoint> ingest(
     List<EvidencePoint> existing,
     Iterable<SourcedRecord> incoming,
   ) {
-    return List<EvidencePoint>.unmodifiable(existing);
+    var evidence = existing;
+    for (final SourcedRecord sourced in incoming) {
+      evidence = derivation.appendEvidence(
+        evidence,
+        EvidencePoint(
+          coordinates: sourced.record.measuredColour.lab,
+          source: sourced.source,
+          kind: EvidenceKind.peerContributed,
+        ),
+      );
+    }
+    return List<EvidencePoint>.unmodifiable(evidence);
   }
 }

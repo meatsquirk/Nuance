@@ -51,9 +51,10 @@ void main() {
     });
   });
 
-  group('EvidenceMerge (shell)', () {
-    test('ingest appends nothing — returns the existing evidence unchanged', () {
-      final merge = EvidenceMerge();
+  group('EvidenceMerge.ingest (append-only, source-tagged — AC-10)', () {
+    test('appends one peer-contributed point per incoming record, tagged '
+        'with its source and the record measured colour, in arrival order', () {
+      const merge = EvidenceMerge();
       final existing = [_point('instrument'), _point('solver')];
       final incoming = [
         SourcedRecord(source: 'peer-1', record: _record('a')),
@@ -62,19 +63,49 @@ void main() {
 
       final merged = merge.ingest(existing, incoming);
 
-      expect(merged, equals(existing));
-      expect(merge.derivation, isNotNull);
+      // The log grew by exactly the two incoming records.
+      expect(merged, hasLength(existing.length + 2));
+      // Prior points unchanged and still first, in order.
+      expect(merged.sublist(0, existing.length), orderedEquals(existing));
+      // Each appended point is peer-contributed, carries its source and the
+      // record's measured colour, in arrival order.
+      for (var i = 0; i < incoming.length; i++) {
+        final appended = merged[existing.length + i];
+        expect(appended.kind, EvidenceKind.peerContributed);
+        expect(appended.source, incoming[i].source);
+        expect(appended.coordinates, incoming[i].record.measuredColour.lab);
+      }
+    });
+
+    test('does not dedup distinct records that share a source', () {
+      const merge = EvidenceMerge();
+      final incoming = [
+        SourcedRecord(source: 'peer-1', record: _record('a')),
+        SourcedRecord(source: 'peer-1', record: _record('b')),
+      ];
+
+      final merged = merge.ingest(const [], incoming);
+
+      expect(merged, hasLength(2));
+      expect(merged.map((p) => p.source), everyElement('peer-1'));
+    });
+
+    test('no incoming leaves the existing log unchanged', () {
+      const merge = EvidenceMerge();
+      final existing = [_point('instrument'), _point('solver')];
+      expect(merge.ingest(existing, const []), orderedEquals(existing));
     });
 
     test('ingest returns an unmodifiable view', () {
-      final merge = EvidenceMerge();
+      const merge = EvidenceMerge();
       final merged = merge.ingest([_point('x')], const []);
       expect(() => merged.add(_point('y')), throwsUnsupportedError);
     });
 
     test('ingest of empty existing with no incoming is empty', () {
-      final merge = EvidenceMerge();
+      const merge = EvidenceMerge();
       expect(merge.ingest(const [], const []), isEmpty);
+      expect(merge.derivation, isNotNull);
     });
   });
 }

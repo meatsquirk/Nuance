@@ -159,12 +159,18 @@ void main() {
         expect(pendingACs.values, isNot(contains(phase)),
             reason: '$phase is marked completed but still owns a pending AC');
       }
-      // CORE-3 (AC-1), RECORD-2 (AC-3, AC-4) and RECORD-3 (AC-5) have landed —
-      // each un-pended the AC(s) it owns; the rest stay pending, so a
-      // not-yet-built AC still can't pass vacuously.
+      // CORE-3 (AC-1), RECORD-2 (AC-3, AC-4), RECORD-3 (AC-5) and MERGE-2
+      // (AC-10) have landed — each un-pended the AC(s) it owns; the rest stay
+      // pending, so a not-yet-built AC still can't pass vacuously.
       expect(completedBehaviorPhases,
-          containsAll(<String>['CORE-3', 'RECORD-2', 'RECORD-3']));
-      const Set<String> unpended = <String>{'AC-1', 'AC-3', 'AC-4', 'AC-5'};
+          containsAll(<String>['CORE-3', 'RECORD-2', 'RECORD-3', 'MERGE-2']));
+      const Set<String> unpended = <String>{
+        'AC-1',
+        'AC-3',
+        'AC-4',
+        'AC-5',
+        'AC-10',
+      };
       expect(pendingACs.keys.toSet().intersection(unpended), isEmpty);
       expect(pendingACs.keys.toSet(), allACs.toSet().difference(unpended));
     });

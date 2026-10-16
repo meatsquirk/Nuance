@@ -1,6 +1,6 @@
 # Module MERGE — append-only merge, crowd refine, never-promote, rate-limit
 
-**Status:** In progress — MERGE-1 ✅ done; next is MERGE-2 (behaviour, blocked on G-2)
+**Status:** In progress — MERGE-1, MERGE-2 ✅ done (AC-10 ✅); next is MERGE-3 (AC-8 + AC-11)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/merge/evidence_merge.dart`, `crowd_refine.dart`, `source_rate_limiter.dart`, `mapping_evidence_endpoint.dart`; an **additive** edit to bs-13's `lib/domain/sample.dart` (surface-drift: the enum lives there, not `provenance.dart`) to add `EvidenceKind.peerContributed`, plus the matching `MeasurementTier.fromEvidenceKind` case in `mix_accuracy_record.dart`.
 **Depends on:** CORE, RECORD, **bs-13 PROV** (append-only add, `ProvenanceDerivation.tierFor`, clustering rule) · **Blocks:** SIGNOFF-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 5,237,948 | 11m 08s |
-| 2 | behavior | AC-10 | ⬜ Todo | | |
+| 2 | behavior | AC-10 | ✅ Done | 6,290,218 | 11m 35s |
 | 3 | behavior | AC-8 + AC-11 | ⬜ Todo | | |
 | 4 | behavior | AC-9 | ⬜ Todo | | |
 | 5 | behavior | AC-12 | ⬜ Todo | | |
@@ -109,3 +109,17 @@
 - **Wiring note:** nothing in `lib/sharing/merge/` is yet a `SharingDependencies` field or mounted in `build_app.dart` — behaviour-neutral shell. The ITEST harness mounts `MappingEvidenceEndpoint` directly; MERGE behaviour phases populate its `view`.
 - **Verification commands:** flutter at `~/development/flutter/bin`. Unit: `flutter test`. Coverage: `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f`. Construct value classes non-const in a test or the const-ctor line reads 0.
 - **Next:** MERGE-2 (AC-10 append-only source-tagged merge) — blocked on **G-2** (and the ITEST stage: the AC test must exist). MERGE-3/4/5 follow. The shell stage is now complete (CORE-2, RECORD-1, EXCHANGE-1, MERGE-1 all done) → the ITEST stage (ITEST-1..5) is startable; ITEST-5 is the test review resolving **G-2**.
+
+### Result — MERGE-2 (AC-10 append-only, source-tagged merge)
+
+- **Landed:** `EvidenceMerge.ingest` now folds each incoming `SourcedRecord` into the evidence log via bs-13's append-only `ProvenanceDerivation.appendEvidence` — each becomes one `EvidencePoint { coordinates: record.measuredColour.lab, source: <arrival id>, kind: peerContributed }`, appended in arrival order after the prior points, returned as an unmodifiable view. Prior points unchanged, order preserved, nothing overwritten or deduped; distinct peer measurements each add a point. No new estimator (D-6); rides bs-13's append-only add. Only `evidence_merge.dart` touched in `lib/`.
+- **Acceptance gate:** AC-10 un-pended (deleted from `bs14/pending.dart`; MERGE-2 added to `completedBehaviorPhases`; harness pending-set guard updated). `TestAC10_AppendOnlyMerge` runs and passes in the default suite; whole bs-14 suite green with only later-phase ACs skipped (AC-2/6/7/8/9/11/12). `exchange_and_merge_test` +1 (AC-10) ~2 (AC-6/7); `harness_test` 12/0; `consent_and_record_test` green; `refine_test` all-skipped green.
+- **Grade gate:** fresh independent reviewer — **AC-10 A** (G1/G2/G4/G5/G6 pass, G3 n/a synchronous; rejects dedup, overwrite, reorder, dropped source, mislabelled kind, wrong coords). AC-1/3/4/5 untouched, remain A. **5 A / 0** over un-pended AC-1,3,4,5,10.
+- **Unit:** analyze clean; `evidence_merge_test` rewritten shell→behaviour (8 tests); full unit **1532/0**; coverage gate **100%** on the 1 touched lib file (`dart run tool/coverage_gate.dart c8738f6`). Fix passes 0/3.
+- **Tokens / Time:** 6,290,218 / 11m 35s.
+
+### Checkpoint / Handoff — after MERGE-2
+
+- **Frozen:** `EvidenceMerge.ingest(existing, incoming)` is now the real append-only merge (above). The returned log is the source-tagged evidence MERGE-3 refines (robust central estimate over the clustered peer points) and MERGE-4 derives the never-promote tier from. `peerContributed` points carry the measured `lab` and source id.
+- **Verification commands:** flutter at `~/development/flutter/bin`. Unit+cov: `flutter test --coverage` then `dart run tool/coverage_gate.dart <phase-base>`. Acceptance (host, one app-booting file per invocation): `flutter test integration_test/bs14/exchange_and_merge_test.dart -d flutter-tester` (+ `--dart-define=BS14_RUN_PENDING=true` for red baseline).
+- **Next:** MERGE-3 (AC-8 + AC-11: clustered crowd refine + outlier discard, in `crowd_refine.dart`) — depends on MERGE-2 (done) + G-2 (resolved). MERGE-4 (AC-9) then MERGE-5 (AC-12). EXCHANGE-3 (AC-7) remains independently startable; EXCHANGE-2/4 still need G-4.
