@@ -1,6 +1,6 @@
 # Module CORE — sharing subsystem scaffold, wiring & invisible consent
 
-**Status:** In progress — CORE-1 ✅, CORE-2 ✅, CORE-3 ✅ (AC-1 un-pended, graded A). Next CORE-4 (AC-2) — needs EXCHANGE-3 (background exchange) + still reads live consent CORE-3 froze.
+**Status:** Done — CORE-1 ✅, CORE-2 ✅, CORE-3 ✅ (AC-1), CORE-4 ✅ (AC-2) un-pended, graded A. Module complete.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/` package root; `lib/sharing/consent/sharing_consent.dart`, `consent_store.dart`; `lib/sharing/sharing_scope.dart`; `SharingConsentReadEndpoint`; wiring into `lib/app/build_app.dart`. Coverage-gate tooling + `integration_test/bs14/` runner (scaffold).
 **Depends on:** bs-13 (G-3) · **Blocks:** RECORD, EXCHANGE, MERGE (all consume the package + wiring)
@@ -12,7 +12,7 @@
 | 1 | scaffold | — | ✅ Done | 6,209,519 | 23m 46s |
 | 2 | shell | — | ✅ Done | 10,823,845 | 30m 53s |
 | 3 | behavior | AC-1 | ✅ Done | 18,326,126 | 47m 46s |
-| 4 | behavior | AC-2 | ⬜ Todo | | |
+| 4 | behavior | AC-2 | ✅ Done | 14,820,009 | 37m 40s |
 
 ## Interface reconciliation
 
@@ -135,6 +135,27 @@
 - **Exit criteria:** unit + coverage; acceptance gate; grade gate.
 - **Acceptance gate:** un-pend AC-2; `TestAC02_NoPerExchangeAction` passing (and all earlier ACs).
 
-### Result  <!-- filled on completion -->
+### Result — CORE-4 (behavior, AC-2) ✅
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+- **Landed:** the silent background exchange + the mechanism-free outcome signal.
+  - `lib/sharing/consent/sharing_consent.dart` — `SharingConsent.recipesImproveSignal = 'Your recipes improve over time.'`: the one ongoing opted-in surface, naming an outcome and no mechanism.
+  - `lib/sharing/inactive_peer_transport.dart` (new) — `InactivePeerTransport implements PeerTransport`: `discover` reaches no peer, `offer`/`receive` inert. The production default the exchange runs over until EXCHANGE-4 wires the real local-network transport under G-4; nothing crosses the device boundary, so bs-12's no-off-device-path guard is honoured while G-4 is unresolved.
+  - `lib/sharing/sharing_scope.dart` — `SharingDependencies` gained an optional `exchangeScheduler` (null in bare unit trees; supplied by `_SharingRoot`).
+  - `lib/app/build_app.dart` — `_SharingRoot` builds one fire-and-forget `ExchangeScheduler`(`GossipExchange` over `InactivePeerTransport` + `SeenSet`) in `initState`; on adopting a consented state (opt-in transition **and** a boot that reads back an already-opted-in consent) it fires exactly one silent round (`_startBackgroundExchange`) — no prompt/speech/haptic, caller never awaits. Consented ⇒ `userFacingSharingSurfaces = [recipesImproveSignal]` (was `[]`); the scheduler is exposed through `SharingScope` and the tree is wrapped in the keyed `ExchangeOutcomeEndpoint` (snapshot of the scheduler outcome — zero/not-waited over the inert transport).
+- **Gates:** `flutter analyze` clean. **Unit 1553/0** (+8: inactive transport 4, sharing_scope 1, sharing_consent 1, build_app sharing-wiring 2). **Coverage 100% line on all 21 touched `lib/` files** vs `c00422f` — PASS.
+- **Acceptance (AC-2):** un-pended AC-2 (`pending.dart`) + added CORE-4 to `completedBehaviorPhases`; `TestAC02_NoPerExchangeAction` **green** on `-d flutter-tester` (`consent_and_record_test.dart` 5/5). Only AC-6 (EXCHANGE-2) remains pending. No augmentation owed or newly enabled by CORE-4 (the AC-2 test already asserts the full no-prompt/no-haptic + recipe-improved-signal contract; AC-1's post-opt-in scan now reads the populated `[recipesImproveSignal]` live surface — a strengthening the reviewer confirmed, not a new row).
+- **Grade:** fresh independent reviewer — AC-2 **A** on G1–G6; AC-1 re-confirmed **A** under the surface change; full set **11 A / 0** (AC-1,2,3,4,5,7,8,9,10,11,12). Grid `behavior-test-completeness-bs-14.md` § CORE-4. One non-A-denying residual noted (the recipe-signal presence proves consent was adopted + the surface swapped, not literally the trigger call; silence Thens stay controlled by the live probe).
+- **Regression (no behaviour change for non-sharing features):** host `-d flutter-tester` bs12 nfr **33** (incl. the no-off-device-path NFR — the inert transport did not trip it) + bs13 dataset **19** = 52. Device iPhone 17 sim under `coord.sh with-lock` — 11 cross-feature entry points **222/222** + `integration_test/conformance` **1553/1553**; the extra `ExchangeOutcomeEndpoint` tree layer broke nothing.
+- **Fix passes: 1/3** — first full run's coverage gate flagged `peer_transport.dart:16` (the `const Peer` ctor read 0 — every unit construction was const; the EXCHANGE-1 "const-ctor reads 0" gotcha); added one runtime `Peer` construction in the new transport test. No implementation change. **Tokens** 14,820,009 · **Time** 37m 40s.
+
+### Checkpoint / Handoff — after CORE-4 (module complete)
+
+- **Frozen interfaces (consumed by EXCHANGE-4, SIGNOFF-1):**
+  - `SharingConsent.recipesImproveSignal` — the sole opted-in user-facing surface; mechanism-free by `SharingConsentReadEndpoint` contract. Keep it the only surface added to the consented branch.
+  - `SharingDependencies.exchangeScheduler` — the fire-and-forget background scheduler, wired by `_SharingRoot`. A core flow reaches the exchange through it and never waits.
+  - `_SharingRoot` (private to `build_app.dart`) owns the exchange lifecycle: one silent round per consented adoption, over `InactivePeerTransport`. **EXCHANGE-4 swaps the transport** — inject the real `LocalNetworkTransport` (e.g. via an `AppDependencies` field read here), leaving the trigger/surface wiring untouched.
+- **Known gaps (for EXCHANGE-4 / the sign-off walkthrough):**
+  - The round offers **no own records yet** (`const <MixAccuracyRecord>[]`): wiring the painter's shareable confirmed mixes (RECORD builder share-set) into the trigger is part of making the exchange carry data on-device — D-3 manual, with EXCHANGE-4's real transport.
+  - `ExchangeOutcomeEndpoint` is mounted as a **build-time snapshot** (correct zero/not-waited over the inert transport). When EXCHANGE-4 makes the exchange live, refresh it on round settle so a booted-app AC can observe a non-zero tally.
+- **Verification commands:** unchanged — flutter at `~/development/flutter/bin`; unit `flutter test`; coverage `flutter test --coverage` then `dart run tool/coverage_gate.dart c00422f`; bs-14 app-booting files one per `flutter test … -d flutter-tester`; sim cross-feature regression under `coord.sh with-lock` (11 `_test.dart` files combined = 222; `integration_test/conformance` separately). Construct a value class non-const at least once or its const-ctor line reads 0.
+- **Next:** CORE module done. Remaining: **EXCHANGE-2 (AC-6)** and **EXCHANGE-4 (enabler)** — both need **G-4**; then **SIGNOFF-1** (needs CORE-4 ✅, EXCHANGE-4).

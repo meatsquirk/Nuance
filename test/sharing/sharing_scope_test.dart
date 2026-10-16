@@ -1,6 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/sharing/consent/consent_store.dart';
+import 'package:paint_color_assistant/sharing/exchange/exchange_scheduler.dart';
+import 'package:paint_color_assistant/sharing/exchange/gossip_exchange.dart';
+import 'package:paint_color_assistant/sharing/exchange/seen_set.dart';
+import 'package:paint_color_assistant/sharing/inactive_peer_transport.dart';
 import 'package:paint_color_assistant/sharing/sharing_scope.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
 
@@ -62,5 +66,22 @@ void main() {
     final d = SharingScope(dependencies: shared, child: const SizedBox());
     expect(a.updateShouldNotify(b), isTrue);
     expect(c.updateShouldNotify(d), isFalse);
+  });
+
+  test('exchangeScheduler is optional, defaulting to null (CORE-4)', () {
+    // Bare dependencies wire no background exchange...
+    expect(_deps().exchangeScheduler, isNull);
+    // ...and a scheduler can be supplied for the assembled app.
+    final scheduler = ExchangeScheduler(
+      GossipExchange(
+        transport: const InactivePeerTransport(),
+        seenSet: SeenSet(),
+      ),
+    );
+    final deps = SharingDependencies(
+      consentStore: PersistentConsentStore(InMemoryPersistentStore()),
+      exchangeScheduler: scheduler,
+    );
+    expect(identical(deps.exchangeScheduler, scheduler), isTrue);
   });
 }

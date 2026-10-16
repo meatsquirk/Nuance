@@ -31,6 +31,16 @@ class SharingConsent {
   static const String defaultOfferCopy =
       'help improve recipe accuracy by sharing anonymous mix results';
 
+  /// The one ongoing, mechanism-free signal the subsystem ever shows the painter
+  /// once they have opted in (AC-2): that their recipes get better over time.
+  ///
+  /// Names an *outcome*, never a mechanism — no peers, devices, syncing or a
+  /// network — so it passes the invisibility guarantee the
+  /// `SharingConsentReadEndpoint.userFacingSharingSurfaces` inventory enforces.
+  /// `_SharingRoot` surfaces exactly this (and nothing else) in the opted-in
+  /// state, in place of the pre-opt-in offer (CORE-4).
+  static const String recipesImproveSignal = 'Your recipes improve over time.';
+
   /// Whether the painter has opted in to crowd-refinement (default `false`).
   final bool consented;
 

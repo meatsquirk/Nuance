@@ -159,14 +159,15 @@ void main() {
         expect(pendingACs.values, isNot(contains(phase)),
             reason: '$phase is marked completed but still owns a pending AC');
       }
-      // CORE-3 (AC-1), RECORD-2 (AC-3, AC-4), RECORD-3 (AC-5), MERGE-2 (AC-10),
-      // MERGE-3 (AC-8, AC-11), MERGE-4 (AC-9), MERGE-5 (AC-12) and EXCHANGE-3
-      // (AC-7) have landed — each un-pended the AC(s) it owns; the rest stay
-      // pending, so a not-yet-built AC still can't pass vacuously.
+      // CORE-3 (AC-1), CORE-4 (AC-2), RECORD-2 (AC-3, AC-4), RECORD-3 (AC-5),
+      // MERGE-2 (AC-10), MERGE-3 (AC-8, AC-11), MERGE-4 (AC-9), MERGE-5 (AC-12)
+      // and EXCHANGE-3 (AC-7) have landed — each un-pended the AC(s) it owns;
+      // the rest stay pending, so a not-yet-built AC still can't pass vacuously.
       expect(
           completedBehaviorPhases,
           containsAll(<String>[
             'CORE-3',
+            'CORE-4',
             'RECORD-2',
             'RECORD-3',
             'MERGE-2',
@@ -177,6 +178,7 @@ void main() {
           ]));
       const Set<String> unpended = <String>{
         'AC-1',
+        'AC-2',
         'AC-3',
         'AC-4',
         'AC-5',
@@ -192,17 +194,17 @@ void main() {
     });
 
     test('skips a pending AC by default and runs it under the flag', () {
-      // AC-2 is still pending (owned by CORE-4), so it is skipped in the default
-      // (not run-pending) mode with a reason naming its owner, and runs when
-      // run-pending is forced. The mode is pinned via forceRunPending so the
-      // assertion is deterministic whichever mode the suite itself runs in.
-      expect(pendingSkipReason('AC-2', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-2', forceRunPending: false), contains('CORE-4'));
-      expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
-      // AC-1 is un-pended (CORE-3), so it always runs, in either mode — as does
+      // AC-6 is still pending (owned by EXCHANGE-2), so it is skipped in the
+      // default (not run-pending) mode with a reason naming its owner, and runs
+      // when run-pending is forced. The mode is pinned via forceRunPending so
+      // the assertion is deterministic whichever mode the suite itself runs in.
+      expect(pendingSkipReason('AC-6', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-6', forceRunPending: false), contains('EXCHANGE-2'));
+      expect(pendingSkipReason('AC-6', forceRunPending: true), isNull);
+      // AC-2 is un-pended (CORE-4), so it always runs, in either mode — as does
       // an AC with no pending row at all.
-      expect(pendingSkipReason('AC-1', forceRunPending: false), isNull);
-      expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
+      expect(pendingSkipReason('AC-2', forceRunPending: false), isNull);
+      expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
     });

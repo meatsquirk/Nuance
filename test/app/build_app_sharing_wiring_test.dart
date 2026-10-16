@@ -7,6 +7,7 @@ import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/sharing/consent/consent_store.dart';
 import 'package:paint_color_assistant/sharing/consent/opt_in_offer.dart';
 import 'package:paint_color_assistant/sharing/consent/sharing_consent.dart';
+import 'package:paint_color_assistant/sharing/exchange/exchange_outcome_endpoint.dart';
 import 'package:paint_color_assistant/sharing/sharing_read_endpoint.dart';
 import 'package:paint_color_assistant/sharing/sharing_scope.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
@@ -68,11 +69,12 @@ void main() {
     await tester.pumpAndSettle();
 
     // _SharingRoot re-read the store, so the endpoint now reads consented, the
-    // surface inventory is empty (the offer is the only pre-opt-in surface) and
-    // the one-time offer is gone.
+    // surface inventory shows only the mechanism-free "recipes improve" signal
+    // (CORE-4) and the one-time offer is gone.
     final after = _endpoint(tester);
     expect(after.consented, isTrue);
-    expect(after.userFacingSharingSurfaces, isEmpty);
+    expect(after.userFacingSharingSurfaces,
+        <String>[SharingConsent.recipesImproveSignal]);
     expect(find.byKey(SharingOptInOffer.offerKey), findsNothing);
   });
 
@@ -86,12 +88,61 @@ void main() {
     await tester.pumpWidget(buildApp(_deps(store: store)));
     await tester.pumpAndSettle();
 
-    // _SharingRoot adopts the stored consent; nothing is offered and no surface
-    // is shown (CORE-4 adds the ongoing "recipes improve" signal).
+    // _SharingRoot adopts the stored consent; the ongoing mechanism-free
+    // "recipes improve" signal is the one surface shown (CORE-4).
     final endpoint = _endpoint(tester);
     expect(endpoint.consented, isTrue);
-    expect(endpoint.userFacingSharingSurfaces, isEmpty);
+    expect(endpoint.userFacingSharingSurfaces,
+        <String>[SharingConsent.recipesImproveSignal]);
     expect(find.byKey(SharingOptInOffer.offerKey), findsNothing);
+  });
+
+  testWidgets(
+      'opting in runs a silent, fire-and-forget background exchange and mounts '
+      'the outcome endpoint (CORE-4 AC-2)', (tester) async {
+    final store = InMemoryPersistentStore();
+    await PersistentConsentStore(store)
+        .save(const SharingConsent(consented: true));
+
+    await tester.pumpWidget(buildApp(_deps(store: store)));
+    await tester.pumpAndSettle();
+
+    // The scheduler is wired into the sharing scope, so a core flow can reach
+    // the exchange — and a round was fired when the opted-in consent was adopted
+    // (settled is non-null only after a trigger).
+    final scope = tester.widget<SharingScope>(find.byType(SharingScope));
+    final scheduler = scope.dependencies.exchangeScheduler;
+    expect(scheduler, isNotNull);
+    expect(scheduler!.settled, isNotNull,
+        reason: 'opting in fires one background round');
+
+    // It is fire-and-forget (no core flow waited) and, over the inert default
+    // transport, reaches no peer — a silent no-op until EXCHANGE-4.
+    expect(scheduler.outcome.waitedOnExchange, isFalse);
+    expect(scheduler.outcome.exchanges, 0);
+
+    // The outcome observation seam is mounted and reflects that zero / not-waited
+    // state.
+    final outcome = tester.widget<ExchangeOutcomeEndpoint>(
+      find.byKey(ExchangeOutcomeEndpoint.endpointKey),
+    );
+    expect(outcome.waitedOnExchange, isFalse);
+    expect(outcome.exchanges, 0);
+  });
+
+  testWidgets(
+      'a fresh, not-opted-in install fires no background round (CORE-4)',
+      (tester) async {
+    await tester.pumpWidget(buildApp(_deps(store: InMemoryPersistentStore())));
+    await tester.pumpAndSettle();
+
+    // Not opted in ⇒ no exchange is started: the scheduler is wired but never
+    // triggered (settled stays null), the control that shows the opt-in gate is
+    // real.
+    final scope = tester.widget<SharingScope>(find.byType(SharingScope));
+    expect(scope.dependencies.exchangeScheduler, isNotNull);
+    expect(scope.dependencies.exchangeScheduler!.settled, isNull,
+        reason: 'no background round runs until the painter opts in');
   });
 
   testWidgets(

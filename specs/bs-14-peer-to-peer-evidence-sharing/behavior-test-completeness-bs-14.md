@@ -6,7 +6,8 @@ stay pending until their phases land.
 
 | AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 | Notes |
 |----|------|-------|----|----|----|----|----|----|-------|
-| AC-1 | `TestAC01_OptInOnceNeverShown` | A | pass | pass | pass | pass | pass | pass | Drives the real keyed offer through the live widget surface; checks all Givens before the When; rejects the never-records, re-shown-offer, and mechanism-surface impls. CORE-3 augmentation (below) now also scans the populated pre-opt-in inventory, demonstrating the live `userFacingSharingSurfaces` binding (closes the G3 residual). |
+| AC-1 | `TestAC01_OptInOnceNeverShown` | A | pass | pass | pass | pass | pass | pass | Drives the real keyed offer through the live widget surface; checks all Givens before the When; rejects the never-records, re-shown-offer, and mechanism-surface impls. CORE-3 augmentation (below) now also scans the populated pre-opt-in inventory, demonstrating the live `userFacingSharingSurfaces` binding (closes the G3 residual). Under CORE-4 its post-opt-in no-mechanism scan now reads a non-empty live surface (`[recipesImproveSignal]`) rather than an empty list — stronger, still A (see CORE-4 section). |
+| AC-2 | `TestAC02_NoPerExchangeAction` | A | pass | pass | pass | pass | pass | pass | Boots the opted-in app (consent written to the real `PersistentConsentStore`, read back live by `_SharingRoot`), settles past the silent fire-and-forget exchange, then asserts the background round asked nothing: `speech.utterances` empty and `haptics.confirmations == 0` (paired with a live probe control proving both sinks record), no `userFacingSharingSurfaces` entry names a mechanism, and the one permitted signal — the mechanism-free "recipes improve over time" — is present (post-settle reading proving the opted-in surface swapped in). Rejects the pre-CORE-4 shell (empty surface ⇒ recipe signal absent), a per-exchange spoken/haptic prompt, and a mechanism-naming surface. |
 | AC-3 | `TestAC03_RecordCarriesOnlyEvidence` | A | pass | pass | n/a | pass | pass | pass | Builds a record through the real `EvidenceRecordBuilder` from the recipe-bearing `confirmedEvidence` Sample; asserts all four named fields at value — `declaredPalette == seedPalette`, `measuredColour.lab ==` the mix's CIELAB + `lch` closeTo the real `ColorScience`, `tier == referenceCard` (card-calibrated swatch), and `paintCombination == seedCombination`. Rejects palette-omission, colour-mismatch, wrong-tier, and (after the RECORD-2 strengthening) a wrong/extra/missing paint combination. |
 | AC-4 | `TestAC04_NothingPersonalLeaves` | A | pass | pass | pass | pass | pass | pass | Plants personal tokens (sample name, evidence source id) in the source mix, checks them present through the public `Sample` surface, then asserts the crossing `canonicalForm` carries neither — redaction by construction — with a positive brand control proving the serialization is non-empty (non-vacuous). Rejects a builder that serialized a name/source id into any carried field. |
 | AC-5 | `TestAC05_NoPaletteNotShared` | A | pass | pass | n/a | pass | pass | pass | Calls the real `EvidenceRecordBuilder.selectShareSet([shareable, noPaletteRecord])` and observes the result through `recordEndpoint(...).shareSet`. Both Givens checked at value (`isPresent` true/false); the positive/negative pair is a genuine two-way control rejecting both "share everything" and "exclude everything"; the two fixtures are value-distinct under `MixAccuracyRecord.==`. G3 n/a (synchronous pure-Dart selection, no settle point). |
@@ -159,3 +160,89 @@ gossip exchange / scheduler.
 **Counts after EXCHANGE-3: 10 A / 0** over the ten un-pended tests (AC-1, AC-3,
 AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12). AC-2 (CORE-4) and AC-6
 (EXCHANGE-2) remain pending their phases.
+
+## CORE-4 grading (AC-2; full re-grade)
+
+Fresh independent reviewer, re-graded the full un-pended set (AC-1, AC-2, AC-3,
+AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12) against G1–G6, grading what
+the code actually does. CORE-4 changed `lib/app/build_app.dart` (`_SharingRoot`:
+opted-in surface list becomes `[SharingConsent.recipesImproveSignal]`; adopting a
+consented state fires one fire-and-forget `ExchangeScheduler.trigger` over the
+inert `InactivePeerTransport`; mounts `ExchangeOutcomeEndpoint`),
+`lib/sharing/consent/sharing_consent.dart` (added the `recipesImproveSignal`
+constant), and `lib/sharing/sharing_scope.dart` (`SharingDependencies` gained an
+optional `exchangeScheduler`). Ran `flutter test
+integration_test/bs14/consent_and_record_test.dart -d flutter-tester`: AC-1..AC-5
+all green, AC-2 now un-pended and passing. `harness_test.dart` also green.
+
+- **AC-2 — `TestAC02_NoPerExchangeAction` — A (first grade).** Boots the real app
+  through `buildApp` with consent pre-written to the real `PersistentConsentStore`
+  (the same contract CORE-3's opt-in action writes); `_SharingRoot._load` reads it
+  back live, adopts the consented state and fires the silent background round over
+  the inert `InactivePeerTransport` (discovers no peer ⇒ no-op). `speech`/`haptics`
+  are the real faked platform sinks wired through `AppDependencies`.
+  - **G1 — pass.** The one Given ("the painter has opted in") is asserted through
+    the public surface before the When — `app.consented isTrue`, read from the live
+    `SharingConsentReadEndpoint` after booting over the consent-bearing store.
+  - **G2 — pass.** The configured Given answers: the opted-in state comes from the
+    real store, not a script override; `_SharingRoot` reads it back through its real
+    reactive `_load`, sets the opted-in surface list and triggers the real
+    `ExchangeScheduler` over the real `GossipExchange`. The only fake is the
+    sanctioned platform speech/haptics sinks; the exchange path is production code.
+  - **G3 — pass.** The negative Thens (`speech.utterances` empty,
+    `haptics.confirmations == 0`, no surface names a mechanism) are read only after
+    `pumpAndSettle()` — the settle point past which a per-exchange prompt, had one
+    been emitted, would have fired. They are paired with a live control: a probe
+    (`speech.speak('probe')` / `haptics.confirm()`) through the same wired sinks is
+    recorded (`hasLength(1)` / `1`), proving the readings CAN change and the
+    empty/zero pass is not a dead-sink accident.
+  - **G4 — pass.** Raw observables at grain/value: `utterances` exactly empty,
+    `confirmations` exactly `0`, each surface scanned against the mechanism
+    vocabulary in a per-item loop, and the permitted signal checked present via
+    `_isRecipeImprovedSignal`. Minor, non-A-denying: the spec's "sees **only**"
+    is asserted as "a recipe-improved signal is present AND no surface is a
+    mechanism" rather than "the sole surface IS the recipe signal" — but the
+    opted-in list is exactly `[recipesImproveSignal]` and the no-mechanism loop
+    covers every entry, so no mechanism can hide; the "only" is not under-asserted
+    in any way that admits a wrong impl.
+  - **G5 — pass. Rejects:** (a) the pre-CORE-4 shell / an impl whose opted-in
+    surface is empty or omits the signal ⇒ `any(_isRecipeImprovedSignal)` is false,
+    the recipe-signal Then fails; (b) a per-exchange spoken or haptic prompt ⇒ the
+    empty/zero Thens fail (and the probe control proves the sinks would have caught
+    it); (c) a surface that names a mechanism post-opt-in ("peers nearby", "last
+    synced", …) ⇒ the no-mechanism loop over the now-populated live list catches it.
+  - **G6 — pass.** Asserts only AC-2's no-per-exchange-action invariant; does not
+    re-assert AC-1's offer-gone / records-consent (it only reads `consented` as its
+    own Given) and touches no record/merge concern.
+  - Non-A-denying residual: the recipe-improved-signal presence check is framed in
+    the test as proving "the exchange actually ran", but the opted-in surface list
+    is set from `_consent.consented` in `build()` independently of whether
+    `_startBackgroundExchange` fired — so it strictly proves consent was adopted and
+    the opted-in surface swapped in (the post-settle reading), not the trigger call
+    itself. The silence Thens are nonetheless genuinely controlled (the probe) and
+    discriminate against every plausible wrong impl above; no fix required.
+
+- **AC-1 — `TestAC01_OptInOnceNeverShown` — remains A (re-verified under CORE-4's
+  surface change).** AC-1's post-opt-in loop scans `after.userFacingSharingSurfaces`
+  for mechanism wording. Before CORE-4 that list was empty once opted in (a
+  semantically-correct but vacuous scan); CORE-4 makes it `[recipesImproveSignal]`
+  = "Your recipes improve over time.", which contains none of the scanned concepts
+  (peer/device/sync/network/…), so the loop now iterates a **non-empty live
+  production surface** and still passes — the no-mechanism assertion is no longer
+  vacuous post-opt-in, and the live binding of `userFacingSharingSurfaces` is now
+  demonstrated both pre- and post-opt-in. The offer-gone Then (`findsNothing`) is
+  unaffected (`SharingOptInOffer` still collapses when `consented`). A strict
+  strengthening of AC-1's own invisibility assertion; grade stays **A**.
+
+- **AC-3 / AC-4 / AC-5 / AC-7 / AC-8 / AC-9 / AC-10 / AC-11 / AC-12 — remain A** (no
+  downgrade). CORE-4 touched only `build_app.dart` (the consented surface + exchange
+  wiring), `sharing_consent.dart` (new constant) and `sharing_scope.dart` (optional
+  field). The record/share-set path (AC-3/4/5), the gossip exchange/scheduler
+  (AC-7), and the merge/refine/rate-limit path (AC-8..AC-12) read none of the
+  changed code; `ExchangeScheduler` itself is unchanged and the new
+  `SharingDependencies.exchangeScheduler` is an additive optional field. Their
+  code paths and tests are unchanged.
+
+**Counts after CORE-4: 11 A / 0** over the eleven un-pended tests (AC-1, AC-2,
+AC-3, AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12). AC-6 (EXCHANGE-2)
+remains pending its phase.

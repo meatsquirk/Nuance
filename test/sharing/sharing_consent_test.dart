@@ -16,6 +16,33 @@ void main() {
       );
     });
 
+    test('the recipes-improve signal names an outcome, not a mechanism (AC-2)',
+        () {
+      final signal = SharingConsent.recipesImproveSignal.toLowerCase();
+      // It is the "recipes improve over time" outcome wording the AC-2 test
+      // recognises...
+      expect(signal, contains('recipe'));
+      expect(signal, contains('improve'));
+      // ...and names no sharing mechanism (peers/devices/syncing/network/etc.).
+      for (final concept in const <String>[
+        'peer',
+        'device',
+        'sync',
+        'network',
+        'wi-fi',
+        'wifi',
+        'bluetooth',
+        'nearby',
+        'server',
+        'upload',
+        'download',
+        'cloud',
+      ]) {
+        expect(signal, isNot(contains(concept)),
+            reason: 'the opted-in signal must not name "$concept"');
+      }
+    });
+
     test('copyWith replaces only the fields it is given', () {
       const base = SharingConsent();
 

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'consent/consent_store.dart';
+import 'exchange/exchange_scheduler.dart';
 
 /// The crowd-refinement subsystem's injected dependencies (bs-14 CORE-2).
 ///
@@ -13,11 +14,24 @@ import 'consent/consent_store.dart';
 /// dependencies reach the tree without re-threading the wiring.
 @immutable
 class SharingDependencies {
-  /// Creates the sharing dependencies over [consentStore].
-  const SharingDependencies({required this.consentStore});
+  /// Creates the sharing dependencies over [consentStore], with an optional
+  /// background [exchangeScheduler].
+  const SharingDependencies({
+    required this.consentStore,
+    this.exchangeScheduler,
+  });
 
   /// The write/read seam for the painter's opt-in consent (AC-1).
   final ConsentStore consentStore;
+
+  /// The fire-and-forget background gossip scheduler driving the silent exchange
+  /// once the painter has opted in (bs-14 CORE-4, AC-2).
+  ///
+  /// Null in trees that wire no background exchange (bare unit trees); the
+  /// assembled app's `_SharingRoot` supplies one so a core flow can reach the
+  /// exchange without ever waiting on it. A triggered round never prompts,
+  /// speaks or buzzes — the "no per-exchange action" invariant.
+  final ExchangeScheduler? exchangeScheduler;
 }
 
 /// Exposes the [SharingDependencies] to descendant widgets (bs-14 CORE-2).

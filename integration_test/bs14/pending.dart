@@ -64,7 +64,7 @@ const Map<String, String> pendingACs = {
   // AC-9 un-pended by MERGE-4 (crowd evidence never promotes to Confirmed).
   // AC-12 un-pended by MERGE-5 (per-source rate limit).
   // AC-7 un-pended by EXCHANGE-3 (no peer ⇒ no exchange, no wait).
-  'AC-2': 'CORE-4',
+  // AC-2 un-pended by CORE-4 (no per-exchange action).
   'AC-6': 'EXCHANGE-2',
 };
 
@@ -95,6 +95,7 @@ const Set<String> behaviorPhases = {
 /// (AC-3 + AC-4, both now un-pended) is the second.
 const Set<String> completedBehaviorPhases = {
   'CORE-3',
+  'CORE-4',
   'RECORD-2',
   'RECORD-3',
   'MERGE-2',

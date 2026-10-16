@@ -51,6 +51,12 @@ import '../recipes/recipes_screen.dart';
 import '../sharing/consent/consent_store.dart';
 import '../sharing/consent/opt_in_offer.dart';
 import '../sharing/consent/sharing_consent.dart';
+import '../sharing/exchange/exchange_outcome_endpoint.dart';
+import '../sharing/exchange/exchange_scheduler.dart';
+import '../sharing/exchange/gossip_exchange.dart';
+import '../sharing/exchange/seen_set.dart';
+import '../sharing/inactive_peer_transport.dart';
+import '../sharing/record/mix_accuracy_record.dart';
 import '../sharing/sharing_read_endpoint.dart';
 import '../sharing/sharing_scope.dart';
 import '../store/cvd_profile_store.dart';
@@ -939,8 +945,16 @@ class _SpokenOutputChrome extends StatelessWidget {
 /// The endpoint's [SharingConsentReadEndpoint.userFacingSharingSurfaces]
 /// inventory — the invisibility guarantee reads it — reflects the one surface
 /// the subsystem shows for the current consent: the plain-language offer while
-/// the painter has not opted in, and nothing once they have (CORE-4 adds the
-/// "recipes improve over time" outcome signal). It never names a mechanism.
+/// the painter has not opted in, and the mechanism-free "recipes improve over
+/// time" outcome signal once they have (CORE-4). It never names a mechanism.
+///
+/// Once opted in it also runs the background gossip exchange silently (CORE-4,
+/// AC-2): a fire-and-forget [ExchangeScheduler] round is triggered when consent
+/// is adopted — never prompting, speaking or buzzing, and never blocking a core
+/// flow. Over the inert default [InactivePeerTransport] the round reaches no
+/// peer and is a no-op until EXCHANGE-4 wires the real local-network transport
+/// (G-4); the scheduler and its [ExchangeOutcomeEndpoint] seam are in place so
+/// that swap needs no re-threading here.
 class _SharingRoot extends StatefulWidget {
   const _SharingRoot({required this.consentStore, required this.child});
 
@@ -960,9 +974,21 @@ class _SharingRootState extends State<_SharingRoot> {
   /// store that already holds a consent replaces it once [_load] completes.
   SharingConsent _consent = const SharingConsent();
 
+  /// The fire-and-forget background gossip scheduler (CORE-4, AC-2). Built once
+  /// over the inert default transport — EXCHANGE-4 swaps in the real one — and
+  /// exposed through the [SharingScope] so a core flow can reach the exchange
+  /// without ever waiting on it.
+  late final ExchangeScheduler _scheduler;
+
   @override
   void initState() {
     super.initState();
+    _scheduler = ExchangeScheduler(
+      GossipExchange(
+        transport: const InactivePeerTransport(),
+        seenSet: SeenSet(),
+      ),
+    );
     widget.consentStore.changes.addListener(_handleStoreChanged);
     unawaited(_load());
   }
@@ -972,11 +998,30 @@ class _SharingRootState extends State<_SharingRoot> {
   void _handleStoreChanged() => unawaited(_load());
 
   /// Loads the stored consent and adopts it when it differs from the live one.
+  ///
+  /// Adopting a consented state starts the silent background exchange (CORE-4):
+  /// the opt-in transition (and a boot that reads back an already-opted-in
+  /// consent) each fire exactly one fire-and-forget round.
   Future<void> _load() async {
     final loaded = await widget.consentStore.load();
     if (!mounted) return;
-    if (loaded != _consent) setState(() => _consent = loaded);
+    if (loaded != _consent) {
+      setState(() => _consent = loaded);
+      if (loaded.consented) _startBackgroundExchange();
+    }
   }
+
+  /// Fires one silent, fire-and-forget background gossip round (CORE-4, AC-2).
+  ///
+  /// The exchange runs without prompting, speaking or buzzing, and the caller
+  /// does not await it — so no core flow is ever blocked (the "no per-exchange
+  /// action" invariant). Over the inert default transport it reaches no peer and
+  /// is a no-op; the painter is shown only the mechanism-free "recipes improve"
+  /// signal. No own records are offered yet — wiring the painter's shareable
+  /// mixes in is part of making the exchange actually carry data on-device
+  /// (EXCHANGE-4 / the sign-off walkthrough).
+  void _startBackgroundExchange() =>
+      _scheduler.trigger(const <MixAccuracyRecord>[]);
 
   @override
   void dispose() {
@@ -986,19 +1031,31 @@ class _SharingRootState extends State<_SharingRoot> {
 
   @override
   Widget build(BuildContext context) {
-    // The subsystem's only user-visible surface pre-opt-in is the plain-language
-    // offer (which names no mechanism); once opted in it shows nothing here
-    // (CORE-4 adds the outcome signal). The invisibility guarantee reads this.
+    // The subsystem's one user-visible surface pre-opt-in is the plain-language
+    // offer; once opted in it shows only the mechanism-free "recipes improve
+    // over time" outcome signal (CORE-4, AC-2). Neither names a mechanism — the
+    // invisibility guarantee reads this inventory.
     final surfaces = _consent.consented
-        ? const <String>[]
+        ? const <String>[SharingConsent.recipesImproveSignal]
         : <String>[_consent.offerCopy];
     return SharingScope(
-      dependencies: SharingDependencies(consentStore: widget.consentStore),
-      child: SharingConsentReadEndpoint(
-        key: SharingConsentReadEndpoint.endpointKey,
-        consent: _consent,
-        userFacingSharingSurfaces: surfaces,
-        child: widget.child,
+      dependencies: SharingDependencies(
+        consentStore: widget.consentStore,
+        exchangeScheduler: _scheduler,
+      ),
+      // Expose the running exchange tally through the keyed endpoint the
+      // acceptance suite reads. Over the inert transport the tally stays at
+      // zero / not-waited (the correct current state); EXCHANGE-4 makes it live
+      // when the real exchange carries data.
+      child: ExchangeOutcomeEndpoint(
+        key: ExchangeOutcomeEndpoint.endpointKey,
+        outcome: _scheduler.outcome,
+        child: SharingConsentReadEndpoint(
+          key: SharingConsentReadEndpoint.endpointKey,
+          consent: _consent,
+          userFacingSharingSurfaces: surfaces,
+          child: widget.child,
+        ),
       ),
     );
   }
