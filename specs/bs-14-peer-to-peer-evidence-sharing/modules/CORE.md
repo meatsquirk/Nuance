@@ -1,6 +1,6 @@
 # Module CORE — sharing subsystem scaffold, wiring & invisible consent
 
-**Status:** In progress — CORE-1 ✅, CORE-2 ✅ done; next RECORD-1 (other module) ∥ MERGE-1. CORE's own behaviour phases CORE-3/CORE-4 blocked on G-2.
+**Status:** In progress — CORE-1 ✅, CORE-2 ✅, CORE-3 ✅ (AC-1 un-pended, graded A). Next CORE-4 (AC-2) — needs EXCHANGE-3 (background exchange) + still reads live consent CORE-3 froze.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/` package root; `lib/sharing/consent/sharing_consent.dart`, `consent_store.dart`; `lib/sharing/sharing_scope.dart`; `SharingConsentReadEndpoint`; wiring into `lib/app/build_app.dart`. Coverage-gate tooling + `integration_test/bs14/` runner (scaffold).
 **Depends on:** bs-13 (G-3) · **Blocks:** RECORD, EXCHANGE, MERGE (all consume the package + wiring)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | scaffold | — | ✅ Done | 6,209,519 | 23m 46s |
 | 2 | shell | — | ✅ Done | 10,823,845 | 30m 53s |
-| 3 | behavior | AC-1 | ⬜ Todo | | |
+| 3 | behavior | AC-1 | ✅ Done | 18,326,126 | 47m 46s |
 | 4 | behavior | AC-2 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -102,6 +102,26 @@
   2. Guarantee the sharing subsystem never exposes peers, devices, syncing or a network in `userFacingSharingSurfaces` (stays empty of those concepts after opt-in).
 - **Exit criteria:** unit + coverage; acceptance gate below; grade gate.
 - **Acceptance gate:** un-pend AC-1; `integration_test/bs14/` green with `TestAC01_OptInOnceNeverShown` passing (and all earlier ACs).
+
+### Result — CORE-3 (behavior, AC-1) ✅
+
+- **Landed:** the one-time plain-language opt-in and the invisibility guarantee.
+  - `lib/sharing/consent/opt_in_offer.dart` — `SharingOptInOffer`: a keyed (`Key('sharing-opt-in-offer')`) `ElevatedButton` labelled with the frozen `SharingConsent.defaultOfferCopy` (names no mechanism). Reads consent from `SharingConsentReadEndpoint.maybeOf` + the store from `SharingScope.maybeOf`; on press writes `consent.copyWith(consented: true)` through the `ConsentStore`. Renders `SizedBox.shrink` outside a sharing tree (no scopes) and once opted in (the one-time guarantee).
+  - `lib/app/build_app.dart` — replaced CORE-2's inline const mount with a stateful **`_SharingRoot`**: loads the stored consent at mount, listens to `store.changes` so an opt-in reconfigures the live consent, and mounts `SharingScope` + the keyed `SharingConsentReadEndpoint` with `userFacingSharingSurfaces = consented ? [] : [offerCopy]` (the one pre-opt-in surface, mechanism-free). The home (Readout) landing now overlays the offer via a `Stack` (bottom-centre `SafeArea`), so a pushed route — e.g. the self-assessment onboarding — covers it.
+- **Gates:** `flutter analyze` clean. **Unit 1519/0.** **Coverage 100% line on all 20 touched `lib/` files** (incl. new `opt_in_offer.dart` + changed `build_app.dart`) vs `c00422f` — PASS. Project gate is line-only (documented); the four offer branches + `_SharingRoot`'s load/reload/unmount-guard/surface branches are each unit-tested.
+- **Acceptance (AC-1):** un-pended AC-1 (`pending.dart`); `TestAC01_OptInOnceNeverShown` **green** on `-d flutter-tester`, AC-2..AC-12 still pending; harness guard tests updated (scaffold-snapshot assertions → completed-phase invariants) and green. **Augmentation:** closed the ITEST-5 reviewer's G3 live-binding note — AC-1 now scans the populated pre-opt-in inventory (demonstrates the live `userFacingSharingSurfaces` binding, discriminates against the always-empty pre-CORE-3 code). Row added to ITEST *Test augmentations*.
+- **Grade:** fresh independent reviewer — AC-1 **A** on G1–G6 (grid `behavior-test-completeness-bs-14.md`); augmentation applied after and keeps A.
+- **Regression:** host `-d flutter-tester` bs12 33 + bs13 19 = **52** (run separately — the combined-invocation load failure reproduces independently of this phase; both pass alone; carried combined-run fragility). Device iPhone 17 sim under `coord.sh with-lock` — 12 cross-feature entry points **241/241** (== CORE-1 baseline), so the shared `build_app` change broke nothing (self-assessment's Readout-then-onboarding boot and bs-11 conformance included).
+- **Fix passes: 0/3** (green on the first full run). **Tokens** 18,326,126 · **Time** 47m 46s.
+
+### Checkpoint / Handoff — after CORE-3
+
+- **Frozen interfaces (consumed by CORE-4):**
+  - `SharingOptInOffer` (`offerKey = Key('sharing-opt-in-offer')`) — the keyed one-time opt-in control, shown on the home landing while not opted in, gone after.
+  - `_SharingRoot` (private to `build_app.dart`) holds the **live** consent: it loads from the store and re-reads on `store.changes`, so a saved opt-in reconfigures the endpoint reactively. **CORE-4 adds its "recipes improve over time" signal to `userFacingSharingSurfaces` here** (the consented branch, currently `[]`), and wires the silent background exchange — do not re-thread the mount.
+  - `SharingConsentReadEndpoint.userFacingSharingSurfaces` now reflects consent state: `[offerCopy]` pre-opt-in, `[]` post-opt-in. The invisibility scan reads this; keep it mechanism-free.
+- **Verification commands:** as the CORE-2 handoff. **Device regression:** the 12 entry points on the iPhone 17 sim (`5AB9D06D-…`) under `coord.sh with-lock` = **241**; host bs12+bs13 = 52 **run one file per `flutter test`** (combining the two loads-fails on this toolchain — not a regression, both pass alone). Un-pend = delete the AC row in `pending.dart` **and** add the phase to `completedBehaviorPhases` when it owns no more pending AC (the harness guard enforces it).
+- **Next (CORE-4, AC-2):** needs EXCHANGE-3 (the background exchange must exist) + G-2 (done). It reads CORE-3's live consent and adds the mechanism-free outcome signal; AC-2's test already pins the no-prompt/no-haptic + recipe-improved-signal contract.
 
 ## Phase 4 — AC-2: no per-exchange action
 

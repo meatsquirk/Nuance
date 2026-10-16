@@ -71,6 +71,8 @@ Three new test-support files under `integration_test/bs14/` (no `lib/` touched):
   1. **AC-3 paint combination (RECORD-2):** the frozen `RecordBuilder.prepare(Sample, {palette})` gives no paint ids, yet AC-3's record must carry a `paintCombination`. The test asserts the combination is present + canonical; **RECORD-2 must source the ids** (extend the prepared input — a combination arg or a recipe-bearing `Sample`). Flagged, not a blocker for the pending test.
   2. **AC-5 reason (RECORD-3):** the catalogue's "reason recorded — not interpretable" is not observable through the frozen `selectShareSet → List`; the test asserts the observable exclusion/inclusion. If RECORD-3 exposes a reason channel, a later augmentation can assert it.
   3. **AC-2 app exchange (CORE-4):** the booted app must run the background exchange over the **fake** transport in the suite and surface the recipe-improved signal; CORE-4 extends `givenTheSharingApp`/`buildApp` wiring to inject it (the sanctioned "behaviour phase wires the app surface" pattern).
+- **Test augmentations (closed by behaviour phases):**
+  - **AC-1 (CORE-3, applied ✅):** strengthen-only — before the When, scan the populated pre-opt-in `app.userFacingSharingSurfaces` and assert it is non-empty, contains the offer copy, and passes the no-mechanism scan. Demonstrates the live `userFacingSharingSurfaces` binding (not relied-on-but-unshown) and discriminates against the always-empty pre-CORE-3 inventory. Closes the ITEST-5 reviewer's G3 note; AC-1 stays **A**.
 - Tokens 6,582,231 · Time 21m 58s.
 
 ### Checkpoint / Handoff — after ITEST-2

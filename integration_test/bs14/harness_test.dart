@@ -151,21 +151,34 @@ void main() {
           reason: '${entry.key} owned by unknown phase ${entry.value}',
         );
       }
-      // Nothing is un-pended yet at the harness phase: all 12 ACs are pending,
-      // and no behaviour phase has completed.
-      expect(pendingACs.keys.toSet(), allACs.toSet());
-      expect(completedBehaviorPhases, isEmpty);
+      // Behaviour phases un-pend their ACs as they land: a completed behaviour
+      // phase is a real behaviour phase that no longer owns any pending AC.
+      for (final String phase in completedBehaviorPhases) {
+        expect(behaviorPhases, contains(phase),
+            reason: '$phase is marked completed but is not a behaviour phase');
+        expect(pendingACs.values, isNot(contains(phase)),
+            reason: '$phase is marked completed but still owns a pending AC');
+      }
+      // CORE-3 has landed — it un-pended its only AC (AC-1); the rest stay
+      // pending, so a not-yet-built AC still can't pass vacuously.
+      expect(completedBehaviorPhases, contains('CORE-3'));
+      expect(pendingACs.keys, isNot(contains('AC-1')));
+      expect(pendingACs.keys.toSet(),
+          allACs.toSet().difference(<String>{'AC-1'}));
     });
 
     test('skips a pending AC by default and runs it under the flag', () {
-      // AC-1 is still pending (owned by CORE-3), so it is skipped in the default
+      // AC-2 is still pending (owned by CORE-4), so it is skipped in the default
       // (not run-pending) mode with a reason naming its owner, and runs when
       // run-pending is forced. The mode is pinned via forceRunPending so the
       // assertion is deterministic whichever mode the suite itself runs in.
-      expect(pendingSkipReason('AC-1', forceRunPending: false), isNotNull);
-      expect(pendingSkipReason('AC-1', forceRunPending: false), contains('CORE-3'));
+      expect(pendingSkipReason('AC-2', forceRunPending: false), isNotNull);
+      expect(pendingSkipReason('AC-2', forceRunPending: false), contains('CORE-4'));
+      expect(pendingSkipReason('AC-2', forceRunPending: true), isNull);
+      // AC-1 is un-pended (CORE-3), so it always runs, in either mode — as does
+      // an AC with no pending row at all.
+      expect(pendingSkipReason('AC-1', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
-      // An AC with no pending row always runs, in either mode.
       expect(pendingSkipReason('AC-999', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-999', forceRunPending: true), isNull);
     });

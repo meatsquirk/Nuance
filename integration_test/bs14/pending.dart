@@ -55,7 +55,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-11 → MERGE-3      (statistical outliers discarded)
 ///   AC-12 → MERGE-5      (per-source rate limit)
 const Map<String, String> pendingACs = {
-  'AC-1': 'CORE-3',
+  // AC-1 un-pended by CORE-3 (opt in once, never shown the mechanism).
   'AC-2': 'CORE-4',
   'AC-3': 'RECORD-2',
   'AC-4': 'RECORD-2',
@@ -92,8 +92,8 @@ const Set<String> behaviorPhases = {
 /// A completed phase legitimately owns no row in [pendingACs] any more, so the
 /// harness's "no dead phase" guard treats a phase as valid when it is still a
 /// pending owner **or** listed here. Each behaviour phase adds itself here as it
-/// un-pends its last AC. Empty at scaffold — nothing is built yet.
-const Set<String> completedBehaviorPhases = {};
+/// un-pends its last AC. CORE-3 (its only AC, AC-1) is the first.
+const Set<String> completedBehaviorPhases = {'CORE-3'};
 
 /// Every AC id the bs-14 acceptance suite covers (the master plan's 12 ACs).
 ///

@@ -1,0 +1,28 @@
+# bs-14 behavior-test completeness grid
+
+Graded at CORE-3, AC-1 un-pended (the opt-in behavior exists and the test runs against it).
+
+| AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 | Notes |
+|----|------|-------|----|----|----|----|----|----|-------|
+| AC-1 | `TestAC01_OptInOnceNeverShown` | A | pass | pass | pass | pass | pass | pass | Drives the real keyed offer through the live widget surface; checks all Givens before the When; rejects the never-records, re-shown-offer, and mechanism-surface impls. CORE-3 augmentation (below) now also scans the populated pre-opt-in inventory, demonstrating the live `userFacingSharingSurfaces` binding (closes the G3 residual). |
+
+## G1 — every Given checked before the When
+Pass. The scenario's Given ("the painter is offered to 'help improve recipe accuracy by sharing anonymous mix results'") is asserted three ways through the public surface before the tap: the offered copy equals the frozen `SharingConsent.defaultOfferCopy` (value-exact, plain-language, mechanism-free), the keyed offer control is present (`findsOneWidget` — also a "no other offer" count check), and the fresh install is `consented == false`. The not-yet-opted-in precondition is the state the "opts in once" When needs, and it is checked.
+
+## G2 — a configured Given answers
+Pass. Nothing is script-overridden. The offer's presence and copy are computed by production code (`SharingOptInOffer` reading the live `SharingConsentReadEndpoint`), and the not-opted-in state is the real default loaded from the wired store. The When taps the actual `ElevatedButton(key: 'sharing-opt-in-offer')` in the booted tree, whose `onPressed` writes the real `ConsentStore`; `_SharingRoot` re-reads the store and rebuilds the endpoint. `after` is re-read from the *live* endpoint by key (not the boot-time capture), so the answer comes from the real reactive wiring, not a fixture.
+
+## G3 — negative Thens settled and controlled
+Pass, with a noted weakness. Both negatives are read after `pumpAndSettle()`, past the opt-in's settle point (consent recorded, offer gone). The "offer not re-shown" negative (`findsNothing`) has a proper demonstrated transition: the same finder returned `findsOneWidget` before the When, so the reading is shown to actually change. The "no mechanism surface" negative scans `after.userFacingSharingSurfaces` and is paired with a predicate control (`_mentionsNetworkConcept('Peers nearby · last synced')` is true) that proves the scan would flag a mechanism-naming surface. Because the real inventory binding is live (a wrong impl that exposed a "peers nearby / last synced" surface post-opt-in would populate the list and be caught by the loop), the empty-list pass is a real result for the correct impl, not a broken-predicate accident. Weakness: the control proves the *predicate*, not that the *observed inventory* can carry a flaggable entry — the test never scans the non-empty pre-opt-in inventory (`[offerCopy]`), so the live binding of `userFacingSharingSurfaces` is relied on but not demonstrated in-test. Not A-denying (the discrimination holds against the real code), but the ideal strengthening is below.
+
+## G4 — grain and value
+Pass. Asserts the raw observables the step names at the right grain: consent is recorded (`after.consented == true`), each user-facing surface is scanned against the four spec-named mechanism concepts plus related network vocabulary (`peer/device/sync/network/...`), and the one-time offer is exactly gone (`findsNothing`). The offer copy is asserted by exact value against the frozen string.
+
+## G5 — names what it rejects
+Pass. Fails an impl that never records consent (`after.consented` would stay false), an impl that re-presents the one-time offer (`findsNothing` would fail — and the pre-When `findsOneWidget` proves the finder is not simply always-empty), and an impl that exposes a mechanism-naming surface after opt-in (the loop catches it, and the predicate control guarantees the catch is live). The only impl it does not reject is an always-empty inventory stub — but that is semantically correct for AC-1 (showing nothing never shows the mechanism), so it is not a wrong implementation of this AC.
+
+## G6 — one AC per test
+Pass. The test asserts only AC-1's behavior — consent recorded, no mechanism shown, offer shown once. It does not touch AC-2's permitted "recipes improve" signal (`_isRecipeImprovedSignal` is defined in the file but used only by the AC-2 test), and it asserts nothing about the record contents (AC-3/4/5).
+
+## CORE-3 augmentation (applied — closes the G3 residual)
+Before the When, the test now scans the non-empty pre-opt-in `app.userFacingSharingSurfaces` and asserts it (a) is non-empty, (b) contains the offer copy, and (c) passes the no-mechanism scan. This turns the post-opt-in empty scan into a demonstrated populated→empty transition and proves the inventory the loop reads is the live production surface list, not a possibly-dead binding. It discriminates against the pre-CORE-3 code (whose inventory was always empty), so it is a genuine strengthening of AC-1's own invisibility assertion (G6-safe). Grade remains **A**.

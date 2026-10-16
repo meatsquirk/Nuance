@@ -49,6 +49,7 @@ import '../recipes/recipe_controller.dart';
 import '../recipes/recipe_read_endpoint.dart';
 import '../recipes/recipes_screen.dart';
 import '../sharing/consent/consent_store.dart';
+import '../sharing/consent/opt_in_offer.dart';
 import '../sharing/consent/sharing_consent.dart';
 import '../sharing/sharing_read_endpoint.dart';
 import '../sharing/sharing_scope.dart';
@@ -638,24 +639,17 @@ class _AppState extends State<_App> {
       dataset: deps.seedDataset,
       child: tree,
     );
-    // bs-14 CORE-2: mount the crowd-refinement subsystem above the MaterialApp
-    // (so later surfaces read it from any route) — the [SharingScope] holding
-    // the injected sharing dependencies and, beneath it, the
-    // [SharingConsentReadEndpoint] the acceptance suite observes for the consent
-    // state and the user-facing sharing-surface inventory (the invisibility
-    // guarantee, AC-1). A shell: the consent is the not-opted-in default and the
-    // surface inventory is empty, so nothing is shared and the painter sees
-    // nothing new. Absent when no store is wired (bare unit trees).
+    // bs-14 CORE-3: mount the crowd-refinement subsystem above the MaterialApp
+    // (so later surfaces read it from any route) through [_SharingRoot], which
+    // holds the painter's live consent read from the store and exposes it (plus
+    // the user-facing sharing-surface inventory the invisibility guarantee reads)
+    // through the [SharingScope] + [SharingConsentReadEndpoint]. Opting in (the
+    // [SharingOptInOffer] on the home screen) writes the store, the root re-reads
+    // it, and the endpoint rebuilds — so the offer disappears and consent reads
+    // true (AC-1). Absent when no store is wired (bare unit trees).
     final consentStore = _consentStore;
     if (consentStore != null) {
-      tree = SharingScope(
-        dependencies: SharingDependencies(consentStore: consentStore),
-        child: SharingConsentReadEndpoint(
-          key: SharingConsentReadEndpoint.endpointKey,
-          consent: const SharingConsent(),
-          child: tree,
-        ),
-      );
+      tree = _SharingRoot(consentStore: consentStore, child: tree);
     }
     return AppScope(
       dependencies: deps,
@@ -705,7 +699,27 @@ Widget _home(AppDependencies deps) {
                     )
                   : deps.paletteEntry != null
                       ? const PaletteHomeScreen()
-                      : ReadoutScreen(sample: deps.initialSample);
+                      : Stack(
+                          children: [
+                            // bs-14 CORE-3: the home landing overlays the
+                            // one-time plain-language opt-in offer. It shows only
+                            // while sharing is active (a store is wired) and the
+                            // painter has not opted in, and renders nothing
+                            // otherwise — so it is a zero-footprint overlay on a
+                            // fresh Readout and gone once opted in (AC-1). On the
+                            // default route only, so a pushed route (e.g. the
+                            // self-assessment onboarding) covers it.
+                            ReadoutScreen(sample: deps.initialSample),
+                            const Positioned.fill(
+                              child: SafeArea(
+                                child: Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: SharingOptInOffer(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
 }
 
 /// Exposes the callback the self-assessment calls after saving a profile, so the
@@ -907,6 +921,85 @@ class _SpokenOutputChrome extends StatelessWidget {
           child: const SafeArea(child: SpokenOutputPanel()),
         ),
       ],
+    );
+  }
+}
+
+/// Holds the painter's live crowd-refinement consent and exposes the sharing
+/// subsystem to the whole tree (bs-14 CORE-3).
+///
+/// A small stateful root, symmetric to [_DisplayRoot] / [_SpeechRoot]: it reads
+/// the stored [SharingConsent] from the [consentStore] at mount and re-reads it
+/// whenever the store changes, so an opt-in written by the [SharingOptInOffer]
+/// reconfigures the live consent immediately. It wraps [child] (the rest of the
+/// app, down to the `MaterialApp`) in the [SharingScope] holding the injected
+/// sharing dependencies and, beneath it, the keyed [SharingConsentReadEndpoint]
+/// the acceptance suite observes.
+///
+/// The endpoint's [SharingConsentReadEndpoint.userFacingSharingSurfaces]
+/// inventory — the invisibility guarantee reads it — reflects the one surface
+/// the subsystem shows for the current consent: the plain-language offer while
+/// the painter has not opted in, and nothing once they have (CORE-4 adds the
+/// "recipes improve over time" outcome signal). It never names a mechanism.
+class _SharingRoot extends StatefulWidget {
+  const _SharingRoot({required this.consentStore, required this.child});
+
+  /// The write/read seam for the painter's opt-in consent (AC-1).
+  final ConsentStore consentStore;
+
+  /// The app subtree (down to the `MaterialApp`) wrapped in the sharing scope.
+  final Widget child;
+
+  @override
+  State<_SharingRoot> createState() => _SharingRootState();
+}
+
+class _SharingRootState extends State<_SharingRoot> {
+  /// The painter's live consent. Seeded with the not-opted-in default so a fresh
+  /// install (empty store) renders the offer before the async load returns; a
+  /// store that already holds a consent replaces it once [_load] completes.
+  SharingConsent _consent = const SharingConsent();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.consentStore.changes.addListener(_handleStoreChanged);
+    unawaited(_load());
+  }
+
+  /// Re-reads the stored consent when the store changes, so an opt-in recorded
+  /// through the store reconfigures the live consent (AC-1).
+  void _handleStoreChanged() => unawaited(_load());
+
+  /// Loads the stored consent and adopts it when it differs from the live one.
+  Future<void> _load() async {
+    final loaded = await widget.consentStore.load();
+    if (!mounted) return;
+    if (loaded != _consent) setState(() => _consent = loaded);
+  }
+
+  @override
+  void dispose() {
+    widget.consentStore.changes.removeListener(_handleStoreChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The subsystem's only user-visible surface pre-opt-in is the plain-language
+    // offer (which names no mechanism); once opted in it shows nothing here
+    // (CORE-4 adds the outcome signal). The invisibility guarantee reads this.
+    final surfaces = _consent.consented
+        ? const <String>[]
+        : <String>[_consent.offerCopy];
+    return SharingScope(
+      dependencies: SharingDependencies(consentStore: widget.consentStore),
+      child: SharingConsentReadEndpoint(
+        key: SharingConsentReadEndpoint.endpointKey,
+        consent: _consent,
+        userFacingSharingSurfaces: surfaces,
+        child: widget.child,
+      ),
     );
   }
 }

@@ -65,6 +65,22 @@ void main() {
       final offer = find.byKey(sharingOptInKey);
       expect(offer, findsOneWidget,
           reason: 'AC-1 Given: CORE-3 presents the one-time opt-in offer');
+      // Given (invisibility, pre-opt-in): the subsystem's one user-facing
+      // surface is the plain-language offer itself — present in the live
+      // inventory and naming no mechanism. Scanning the POPULATED inventory here
+      // proves the post-opt-in no-mechanism scan below reads the real production
+      // surface list (a wrong impl that leaked a mechanism surface would show it
+      // here), not an inventory that is only incidentally empty. CORE-3
+      // augmentation closing the ITEST-5 reviewer's live-binding note.
+      expect(app.userFacingSharingSurfaces, isNotEmpty,
+          reason: 'AC-1: the offer is a real user-facing surface pre-opt-in');
+      expect(app.userFacingSharingSurfaces, contains(app.offerCopy),
+          reason: 'AC-1: the one pre-opt-in surface is the offer itself');
+      for (final surface in app.userFacingSharingSurfaces) {
+        expect(_mentionsNetworkConcept(surface), isFalse,
+            reason: 'AC-1: even the offer names no mechanism '
+                '(offending surface: "$surface")');
+      }
 
       // When: the painter opts in once, through the public offer control.
       await tester.tap(offer);
