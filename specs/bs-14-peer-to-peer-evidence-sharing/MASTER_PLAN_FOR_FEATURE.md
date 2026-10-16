@@ -1,7 +1,7 @@
 # Master Plan — bs-14 Crowd-refinement of the AI mappings (peer-to-peer evidence sharing)
 
 **Spec:** [bs-14-peer-to-peer-evidence-sharing.feature](../bs-14-peer-to-peer-evidence-sharing.feature)
-**Status:** In progress — behaviour stage; **RECORD complete + CORE-3 + MERGE-2 done (AC-1/3/4/5/10 ✅); all un-pended ACs graded A (5 A/0)**. Next startable: MERGE-3 (AC-8/11), EXCHANGE-3 (AC-7). G-4 still open (blocks EXCHANGE-2/4 only).
+**Status:** In progress — behaviour stage; **RECORD complete + CORE-3 + MERGE-2/3 done (AC-1/3/4/5/8/10/11 ✅); all un-pended ACs graded A (7 A/0)**. Next startable: MERGE-4 (AC-9), MERGE-5 (AC-12), EXCHANGE-3 (AC-7). G-4 still open (blocks EXCHANGE-2/4 only).
 **Architecture:** `docs/paint-color-app-solution-intent.md` SI "Quiet crowd-refinement of the AI mappings" (lines ~270–284), decisions D8/D9; `docs/paint-color-app-scope.md` §6.4 (community refinement), §6.6 (abuse & quality controls). Builds on bs-13 provenance+dataset model.
 **Code home:** `/Users/matthew.quirk/Nuance` · git (feature worktrees `Nuance-bsNN`) · base `main` @ `c00422f` (rebased onto the bs-13 merge at CORE-1; plan-time base was `167c5db`) · extends existing Flutter app (confirmed by Matt Quirk via memory + cwd, 2026-10-14)
 
@@ -45,10 +45,10 @@
 | AC-5 | A record without a declared palette is not shared | ITEST-2 `TestAC05_NoPaletteNotShared` | RECORD-3 | ✅ |
 | AC-6 | Two reachable installs exchange only the records each is missing | ITEST-3 `TestAC06_ExchangeOnlyMissing` | EXCHANGE-2 | ⬜ Todo |
 | AC-7 | With no peer reachable, nothing happens and nothing is waited on | ITEST-3 `TestAC07_NoPeerNoWait` | EXCHANGE-3 | ⬜ Todo |
-| AC-8 | Clustered crowd records improve an Estimated mapping's value | ITEST-4 `TestAC08_ClusteredRefine` | MERGE-3 | ⬜ Todo |
+| AC-8 | Clustered crowd records improve an Estimated mapping's value | ITEST-4 `TestAC08_ClusteredRefine` | MERGE-3 | ✅ |
 | AC-9 | Crowd evidence never promotes a value to Confirmed on the painter's screen | ITEST-4 `TestAC09_NeverPromotes` | MERGE-4 | ⬜ Todo |
 | AC-10 | Records from many devices merge without overwriting | ITEST-3 `TestAC10_AppendOnlyMerge` | MERGE-2 | ✅ |
-| AC-11 | Statistical outliers are discarded from the local estimate | ITEST-4 `TestAC11_OutlierDiscarded` | MERGE-3 | ⬜ Todo |
+| AC-11 | Statistical outliers are discarded from the local estimate | ITEST-4 `TestAC11_OutlierDiscarded` | MERGE-3 | ✅ |
 | AC-12 | The volume one source can contribute is bounded | ITEST-4 `TestAC12_RateLimited` | MERGE-5 | ⬜ Todo |
 
 ## Design decisions
@@ -173,8 +173,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | RECORD-2 | AC-3 + AC-4 build record, carry only evidence, nothing personal | ✅ Done | 12,296,700 | 24m 58s | AC-3+AC-4 ✅ un-pended, graded A (AC-3 B→A in-phase, value assertion); `Sample.paintIds` recipe source; unit 1527/0, cov 100%/20 touched |
 | 13 | RECORD-3 | AC-5 no declared palette ⇒ not shared | ✅ Done | 5,784,122 | 10m 21s | AC-5 ✅ un-pended, graded A (4 A/0); `selectShareSet` drops absent-palette candidates; unit 1530/0, cov 100%/1 touched; RECORD module complete; fix passes 0/3 |
 | 14 | MERGE-2 | AC-10 append-only source-tagged merge | ✅ Done | 6,290,218 | 11m 35s | AC-10 ✅ un-pended, graded A (5 A/0); `EvidenceMerge.ingest` appends source-tagged peerContributed points via bs-13 append-only add; unit 1532/0, cov 100%/1 touched; fix passes 0/3 |
-| 15 | MERGE-3 | AC-8 + AC-11 crowd refine, robust central estimate, outlier discard | ⬜ Next | | | startable (MERGE-2 done, G-2 resolved) |
-| 16 | MERGE-4 | AC-9 never promote to Confirmed | ⬜ Todo | | | augments TestAC09 |
+| 15 | MERGE-3 | AC-8 + AC-11 crowd refine, robust central estimate, outlier discard | ✅ Done | 6,284,723 | 15m 51s | AC-8+AC-11 ✅ un-pended, graded A (7 A/0); robust central estimate (coord-wise median → modified z-score MAD, outliers discarded) in `crowd_refine.dart`; unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
+| 16 | MERGE-4 | AC-9 never promote to Confirmed | ⬜ Next | | | augments TestAC09; depends MERGE-3 ✅ |
 | 17 | MERGE-5 | AC-12 per-source rate limit | ⬜ Todo | | | |
 | 18 | EXCHANGE-2 | AC-6 offer-missing, hash-keyed, dedup | ⬜ Todo | | | needs G-4 |
 | 19 | EXCHANGE-3 | AC-7 no peer ⇒ no exchange, no wait | ⬜ Todo | | | |
@@ -186,12 +186,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**MERGE-2 ✅ done** (AC-10 un-pended, graded A — `EvidenceMerge.ingest` appends each incoming record as a source-tagged `peerContributed` point via bs-13's append-only add; 5 A/0 over un-pended AC-1,3,4,5,10). Startable now, disjoint file ownership (parallelisable via `--parallel`):
+**MERGE-3 ✅ done** (AC-8 + AC-11 un-pended, graded A — `CrowdRefine.refine` recomputes an Estimated value as the robust central estimate of its peer-contributed evidence, discarding outliers by a modified-z-score MAD rule over distance from the coordinate-wise median; 7 A/0 over un-pended AC-1,3,4,5,8,10,11). Startable now, disjoint file ownership (parallelisable via `--parallel`):
 
-- **MERGE-3** (AC-8 + AC-11) — clustered crowd refine (robust central estimate) + outlier discard, in `crowd_refine.dart`. Startable (MERGE-2 done, G-2 resolved).
+- **MERGE-4** (AC-9) — crowd evidence never promotes to Confirmed, in `crowd_refine.dart` + derivation glue; un-pends AC-9 and makes the carried `TestAC09` augmentation (peer record declaring an instrument tier still stays Estimated), closing its *B pending MERGE-4* to A. Startable (MERGE-3 done, G-2 resolved).
+- **MERGE-5** (AC-12) — per-source rate limit, in `source_rate_limiter.dart` + `evidence_merge.dart`. Startable (needs only MERGE-1; independent of the MERGE-2→3→4 chain).
 - **EXCHANGE-3** (AC-7) — no peer ⇒ no exchange, no wait. Startable (independent of the MERGE chain).
 
-Then: MERGE-4 (AC-9) needs MERGE-3 + un-pends + makes the carried TestAC09 augmentation (B→A); MERGE-5 (AC-12); **CORE-4 (AC-2) needs EXCHANGE-3** (adds its "recipes improve" signal to `_SharingRoot`'s consented surface branch). **EXCHANGE-2 (AC-6) and EXCHANGE-4 (enabler) need G-4** — decide G-4 before them. SIGNOFF-1 last.
+Then: **CORE-4 (AC-2) needs EXCHANGE-3** (adds its "recipes improve" signal to `_SharingRoot`'s consented surface branch). **EXCHANGE-2 (AC-6) and EXCHANGE-4 (enabler) need G-4** — decide G-4 before them. SIGNOFF-1 last.
 
 **G-4 still open** — blocks EXCHANGE-2 / EXCHANGE-4 only; all other behaviour phases are clear.
 
@@ -219,7 +220,8 @@ Then: MERGE-4 (AC-9) needs MERGE-3 + un-pends + makes the carried TestAC09 augme
 | RECORD-2 | 42bf888e | 2026-10-16 09:00 EDT | 09:25 | 24m 58s | 24m 58s | claude-opus-4-8 | 174 | 259,955 | 11,961,569 | 75,002 | 12,296,700 | AC-3+AC-4 un-pended, graded A (3 A/0; AC-3 B->A in-phase); fix passes 1/3 |
 | RECORD-3 | 3a6034c7 | 2026-10-16 09:36 EDT | 09:46 | 10m 21s | 10m 21s | claude-opus-4-8 | 118 | 158,296 | 5,597,538 | 28,170 | 5,784,122 | AC-5 un-pended, graded A (4 A/0); selectShareSet drops absent-palette candidates; RECORD module complete; fix passes 0/3 |
 | MERGE-2 | 9b12732a | 2026-10-16 10:09 EDT | 10:21 | 11m 35s | 11m 35s | claude-opus-4-8 | 126 | 191,760 | 6,067,585 | 30,747 | 6,290,218 | AC-10 un-pended, graded A (5 A/0); EvidenceMerge.ingest appends source-tagged peerContributed points via bs-13 append-only add; unit 1532/0, cov 100%/1 touched; fix passes 0/3 |
-| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 10:21** | **4h 52m** | **4h 44m** |  | **1,682** | **2,884,822** | **103,238,749** | **823,223** | **106,948,476** |  |
+| MERGE-3 | 14e8923c | 2026-10-16 10:25 EDT | 10:41 | 15m 51s | 15m 51s | claude-opus-4-8 | 114 | 230,538 | 6,004,757 | 49,314 | 6,284,723 | AC-8+AC-11 un-pended, graded A (7 A/0); robust central estimate (coord-wise median + modified-z-score MAD outlier discard) in crowd_refine.dart; unit 1537/0, cov 100%/1 touched; fix passes 0/3 |
+| **Feature total** |  | **2026-10-14 17:46 EDT** | **2026-10-16 10:41** | **5h 08m** | **5h 00m** |  | **1,796** | **3,115,360** | **109,243,506** | **872,537** | **113,233,199** |  |
 
 ## Sign-off
 

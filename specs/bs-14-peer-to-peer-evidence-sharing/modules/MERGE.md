@@ -1,6 +1,6 @@
 # Module MERGE — append-only merge, crowd refine, never-promote, rate-limit
 
-**Status:** In progress — MERGE-1, MERGE-2 ✅ done (AC-10 ✅); next is MERGE-3 (AC-8 + AC-11)
+**Status:** In progress — MERGE-1, MERGE-2, MERGE-3 ✅ done (AC-8/10/11 ✅); next is MERGE-4 (AC-9)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/sharing/merge/evidence_merge.dart`, `crowd_refine.dart`, `source_rate_limiter.dart`, `mapping_evidence_endpoint.dart`; an **additive** edit to bs-13's `lib/domain/sample.dart` (surface-drift: the enum lives there, not `provenance.dart`) to add `EvidenceKind.peerContributed`, plus the matching `MeasurementTier.fromEvidenceKind` case in `mix_accuracy_record.dart`.
 **Depends on:** CORE, RECORD, **bs-13 PROV** (append-only add, `ProvenanceDerivation.tierFor`, clustering rule) · **Blocks:** SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | 1 | shell | — | ✅ Done | 5,237,948 | 11m 08s |
 | 2 | behavior | AC-10 | ✅ Done | 6,290,218 | 11m 35s |
-| 3 | behavior | AC-8 + AC-11 | ⬜ Todo | | |
+| 3 | behavior | AC-8 + AC-11 | ✅ Done | 6,284,723 | 15m 51s |
 | 4 | behavior | AC-9 | ⬜ Todo | | |
 | 5 | behavior | AC-12 | ⬜ Todo | | |
 
@@ -123,3 +123,18 @@
 - **Frozen:** `EvidenceMerge.ingest(existing, incoming)` is now the real append-only merge (above). The returned log is the source-tagged evidence MERGE-3 refines (robust central estimate over the clustered peer points) and MERGE-4 derives the never-promote tier from. `peerContributed` points carry the measured `lab` and source id.
 - **Verification commands:** flutter at `~/development/flutter/bin`. Unit+cov: `flutter test --coverage` then `dart run tool/coverage_gate.dart <phase-base>`. Acceptance (host, one app-booting file per invocation): `flutter test integration_test/bs14/exchange_and_merge_test.dart -d flutter-tester` (+ `--dart-define=BS14_RUN_PENDING=true` for red baseline).
 - **Next:** MERGE-3 (AC-8 + AC-11: clustered crowd refine + outlier discard, in `crowd_refine.dart`) — depends on MERGE-2 (done) + G-2 (resolved). MERGE-4 (AC-9) then MERGE-5 (AC-12). EXCHANGE-3 (AC-7) remains independently startable; EXCHANGE-2/4 still need G-4.
+
+### Result — MERGE-3 (AC-8 + AC-11 crowd refine: robust central estimate, outlier discard)
+
+- **Landed:** `CrowdRefine.refine` now recomputes an Estimated mapping's value as the **robust central estimate** of its peer-contributed evidence when any is present (else the stored `current` stands). The estimator: coordinate-wise median → each point's Euclidean distance from it scored by the Iglewicz–Hoaglin **modified z-score** (`0.6745·(d−median)/MAD`, threshold 3.5), outliers discarded, the estimate is the mean of the survivors. The tier is still derived by bs-13's `tierFor` over the full evidence log (peer-contributed ignored), so a refined value stays Estimated and the crowd never promotes it (AC-9 carried green). Only `crowd_refine.dart` touched in `lib/`.
+- **Surface drift reconciled (D-6).** The plan's D-6 / Gap-analysis said the estimate "reuses bs-13's source-agnostic clustering rule". bs-13's merged surface exposes a *tier* rule (`tierFor`) and append-only add but **no** central-estimate / clustering API, so the robust estimator is implemented here in `crowd_refine.dart`. D-6's intent is still honoured — bs-14 reuses bs-13's **evidence model** (append-only, source-tagged `EvidencePoint`s) and adds no new *evidence* representation; the estimator over that model is new because there was none to reuse. AC-8 and AC-11 share this one code path with distinct fixtures.
+- **Acceptance gate:** AC-8 and AC-11 un-pended (deleted from `bs14/pending.dart`; MERGE-3 added to `completedBehaviorPhases`; `harness_test` pending-set guard updated: `unpended` += AC-8/AC-11, completed += MERGE-3). `TestAC08_ClusteredRefine` and `TestAC11_OutlierDiscarded` run and pass; AC-9/AC-12 still skip (pending). Whole bs-14 suite green: `refine_test` 2 pass/2 skip, `harness_test` 12/0, `exchange_and_merge_test` (AC-10) green, `consent_and_record_test` (AC-3/4/5) green.
+- **Grade gate:** fresh independent reviewer — **AC-8 A, AC-11 A** on first grade; AC-1/3/4/5/10 unchanged, remain A. **7 A / 0** over un-pended AC-1,3,4,5,8,10,11. Reviewer confirmed the fixtures discriminate both named wrong impls (ignore-the-crowd ~15 off; plain-average-all ~9–10 toward the outlier; tolerance band 1.5). Two non-A-denying notes recorded in the grid (tests accept any valid robust estimator — correct, the spec pins none; AC-11 omits the stale-seed-far Given but still rejects ignore-the-crowd).
+- **Unit:** analyze clean; `crowd_refine_test` rewritten shell→behaviour (11 tests, covers the ≤2-point, MAD-0, odd/even-median, outlier-discard and no-crowd branches); full unit **1537/0**; coverage gate **100%** on the 1 touched lib file (`dart run tool/coverage_gate.dart cc36137`). Fix passes **0/3**.
+- **Tokens / Time:** 6,284,723 / 15m 51s.
+
+### Checkpoint / Handoff — after MERGE-3
+
+- **Frozen:** `CrowdRefine.refine(current, evidence, {fallback})` now returns the robust central estimate of the peer-contributed points (outliers discarded) as its `value`, with the tier derived (never promoted) from the full log. With no peer-contributed evidence the stored `current` stands. The private estimator (`_robustCentralEstimate`/`_coordinateWiseMedian`/`_median`/`_mean`/`_distance`) is internal — consumers depend only on `refine`'s contract.
+- **Verification commands:** flutter at `~/development/flutter/bin`. Unit+cov: `flutter test --coverage` then `dart run tool/coverage_gate.dart <phase-base>`. Acceptance (host, one app-booting file per invocation): `flutter test integration_test/bs14/refine_test.dart -d flutter-tester` (+ `--dart-define=BS14_RUN_PENDING=true` for red baseline).
+- **Next:** MERGE-4 (AC-9 never-promote) — depends on MERGE-3 (done) + G-2 (resolved); un-pends AC-9 and makes the carried `TestAC09` augmentation (a peer record declaring an instrument tier still derives `estimated` / "not yet verified"), closing AC-9's *B pending MERGE-4* to A. Then MERGE-5 (AC-12, independent of the MERGE chain — needs only MERGE-1). EXCHANGE-3 (AC-7) remains independently startable; EXCHANGE-2/4 still need G-4.
