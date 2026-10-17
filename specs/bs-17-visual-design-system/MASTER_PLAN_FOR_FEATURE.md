@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — next ITEST-1 (both shells done)
+**Status:** In progress — next ITEST-2 ∥ ITEST-3
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -113,7 +113,7 @@ Pre-seeded augmentations: AC-14 is partially green at baseline (bs-11 already in
 | THEME | [modules/THEME.md](modules/THEME.md) | the warm-paper tokens, Atkinson fonts and shape/border/label styles in the one `AppTheme` chokepoint; scaffold + font bundling | — | 🔄 In progress |
 | COMPONENTS | [modules/COMPONENTS.md](modules/COMPONENTS.md) | the styled widget set (`PillButton`, `SpeakButton`, `SurfaceCard`, `MonoLabel`) + the provenance-badge signature | THEME | 🔄 In progress |
 | APPLY | [modules/APPLY.md](modules/APPLY.md) | wire the screens to the theme + components; remove residual hardcoded palette colours; the shared swatch caption | THEME, COMPONENTS | ⬜ Todo |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | acceptance integration suite: one pending test per AC, and its review | THEME-2, COMPONENTS-1 | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | acceptance integration suite: one pending test per AC, and its review | THEME-2, COMPONENTS-1 | 🔄 In progress |
 
 ## Dependency graph
 
@@ -154,8 +154,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | THEME-1 | scaffold: baseline, coverage gate, bundle Atkinson fonts | ✅ Done | 2,907,678 | 6m 03s | baseline 1413✅; gate proven; 9 TTFs bundled, families declared |
 | 3 | THEME-2 | shell: AppTheme token/shape accessor surface (values unchanged) | ✅ Done | 1,643,747 | 5m 52s | surface added, app byte-identical; suite 1418✅, 100% cov on theme.dart |
 | 4 | COMPONENTS-1 | shell: PillButton/SpeakButton/SurfaceCard/MonoLabel API (stock-styled) | ✅ Done | 4,522,630 | 10m 25s | 4 widgets, final API, app byte-identical; suite 1435✅, 100% cov on 4 touched files |
-| 5 | ITEST-1 | acceptance-tests: harness, pumpApp, pending gate, smoke test | ⬜ Next | | | both shells done → unblocked |
-| 6 | ITEST-2 | acceptance-tests: AC-1..AC-6 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
+| 5 | ITEST-1 | acceptance-tests: harness, pumpApp, pending gate, smoke test | ✅ Done | 9,741,639 | 14m 48s | 11 scaffold tests green (both modes); 15 ACs seeded pending; no lib change |
+| 6 | ITEST-2 | acceptance-tests: AC-1..AC-6 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-7..AC-15 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | THEME-3 | AC-1 + AC-2 + AC-3 + AC-4 (warm-paper ColorScheme + AA proof) | ⬜ Todo | | | |
@@ -173,7 +173,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-COMPONENTS-1 done — both component shells now exist: `lib/widgets/` carries `PillButton`/`SpeakButton`/`SurfaceCard`/`MonoLabel` with their final public API, rendering through the current (stock-derived) theme tokens; the app is byte-identical (nothing renders them yet). With THEME-2 also done, **stage 2 (component shells) is complete**, so **ITEST-1** (the acceptance harness: `pumpApp`, the pending gate, a smoke test) is unblocked and runs next. Then ITEST-2 ∥ ITEST-3 (one pending test per AC + red baseline), then ITEST-4 (test review → G-2). G-2 still blocks every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..).
+ITEST-1 done — the acceptance harness is live (`pumpApp` over the five roster screens, the `BS17_RUN_PENDING` gate with all 15 ACs seeded pending, the AC-14 source-scan helper, and 11 never-pending scaffold tests). **ITEST-2 (AC-1..AC-6) ∥ ITEST-3 (AC-7..AC-15)** run next — one pending test per AC per the catalogue + the run-pending red baseline; they share `design_system_test.dart`, so run them in separate sessions/worktrees or sequentially to avoid a file clash. Then ITEST-4 (test review → **G-2**). G-2 still blocks every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..).
 
 ## Token usage
 
@@ -186,7 +186,8 @@ COMPONENTS-1 done — both component shells now exist: `lib/widgets/` carries `P
 | THEME-1 | 7995f073 | 2026-10-17 04:50 EDT | 04:56 | 6m 03s | 6m 03s | claude-opus-4-8 | 68 | 77,326 | 2,809,502 | 20,782 | 2,907,678 | scaffold: 9 Atkinson TTFs bundled + declared (D-1, no google_fonts); baseline 1413 green; coverage gate proven clean-pass + planted-gap fail; no product code |
 | THEME-2 | c19b50dd | 2026-10-17 07:50 EDT | 07:56 | 5m 52s | 5m 52s | claude-opus-4-8 | 44 | 69,871 | 1,555,790 | 18,042 | 1,643,747 | shell: AppTheme design-token accessor surface (sunkenSurface/inverted/monoLabel/1-2-3px borders) returning stock-derived values; app byte-identical (nothing wired into themeData); suite 1418 green; 100% line coverage on theme.dart; fix passes 0/3 |
 | COMPONENTS-1 | b7a6ff90 | 2026-10-17 08:07 EDT | 08:18 | 10m 25s | 10m 25s | claude-opus-4-8 | 104 | 81,524 | 4,408,646 | 32,356 | 4,522,630 | shell: 4 styled widgets (PillButton/SpeakButton/SurfaceCard/MonoLabel) final API, stock-rendered; app byte-identical; suite 1435 green; 100% line coverage on 4 touched files; fix passes 3/3 (SpeakButton test mechanics only) |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 08:18** | **4h 02m** | **41m 19s** |  | **330** | **618,686** | **13,302,614** | **147,961** | **14,069,591** |  |
+| ITEST-1 | 5e6a723e | 2026-10-17 08:30 EDT | 08:45 | 14m 48s | 14m 48s | claude-opus-4-8 | 120 | 185,650 | 9,497,315 | 58,554 | 9,741,639 | acceptance harness: pumpApp over 5 roster screens + BS17_RUN_PENDING gate (15 ACs seeded pending) + AC-14 source-scan helper + 11 scaffold tests green both modes; unit 1435 green; coverage gate PASS (no lib touched); fix passes 1/3 |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 08:45** | **4h 17m** | **56m 07s** |  | **450** | **804,336** | **22,799,929** | **206,515** | **23,811,230** |  |
 
 ## Sign-off
 
