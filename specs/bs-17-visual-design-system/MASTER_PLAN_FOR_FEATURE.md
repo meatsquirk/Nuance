@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** Not started — next THEME-1 (blocked by G-1)
+**Status:** Not started — next THEME-1 (G-1 resolved; startable)
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -135,7 +135,7 @@ graph LR
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec **and** the scope expansion: bring a visual design system in-bound (presentation was excluded by the original derivation §6/§8) and amend SI §Presentation; confirm D-3 (defer the dark theme) | THEME-1 | Open |
+| G-1 | decision | Approve the spec **and** the scope expansion: bring a visual design system in-bound (presentation was excluded by the original derivation §6/§8) and amend SI §Presentation; confirm D-3 (defer the dark theme) | THEME-1 | ✅ Resolved 2026-10-17: approved — spec + scope expansion (visual design system in-bound) accepted, SI amended (D12), dark theme deferred (D-3) — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..) | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -173,7 +173,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-THEME-1 (scaffold) is next but **blocked by G-1** — the owner must approve the spec and the scope expansion (bringing a visual design system in-bound; amending SI §Presentation) and confirm D-3 (defer the dark theme) before any phase runs. Once G-1 is resolved, THEME-1 runs: bundle the Atkinson fonts, record the baseline, stand up the coverage gate. THEME-2 ∥ COMPONENTS-1 follow.
+THEME-1 (scaffold) is startable — **G-1 resolved 2026-10-17** (spec + scope expansion approved, SI amended D12, dark theme deferred D-3). THEME-1 bundles the Atkinson fonts, records the baseline, stands up the coverage gate. THEME-2 ∥ COMPONENTS-1 follow once THEME-1 is done. G-2 (approve acceptance tests, ITEST-4's packet) still blocks every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..).
 
 ## Token usage
 
@@ -182,7 +182,8 @@ THEME-1 (scaffold) is next but **blocked by G-1** — the owner must approve the
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | b65a3514 | 2026-10-16 19:17 EDT | 22:55 | 3h 38m | 16m 59s | claude-opus-4-8 | 72 | 348,935 | 3,262,969 | 69,138 | 3,681,114 | plan written (full task set: 4 modules, 18 phases, 15 ACs; G-1/G-2 open) |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-16 22:55** | **3h 38m** | **16m 59s** |  | **72** | **348,935** | **3,262,969** | **69,138** | **3,681,114** |  |
+| GATE-DECISION | b6511436 | 2026-10-17 04:35 EDT | 04:37 | 2m 00s | 2m 00s | claude-opus-4-8 | 42 | 41,030 | 1,265,707 | 7,643 | 1,314,422 | G-1 approved: spec + scope expansion (visual design system in-bound), SI amended (D12), dark theme deferred (D-3) — Matt Quirk |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 04:37** | **3h 40m** | **18m 59s** |  | **114** | **389,965** | **4,528,676** | **76,781** | **4,995,536** |  |
 
 ## Sign-off
 

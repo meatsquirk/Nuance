@@ -24,7 +24,7 @@
 
 ## Open gates
 
-- **G-1** (feature-level) blocks THEME-1: owner must approve the spec + scope expansion + D-3 before scaffold runs.
+- **G-1** (feature-level) ✅ Resolved 2026-10-17: approved — spec + scope expansion (visual design system in-bound) accepted, SI amended (D12), dark theme deferred (D-3) — Matt Quirk. THEME-1 is now startable.
 
 ## Phase THEME-1 — scaffold
 
