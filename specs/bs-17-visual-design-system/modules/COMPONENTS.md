@@ -1,6 +1,6 @@
 # Module COMPONENTS — the styled widget set
 
-**Status:** Not started
+**Status:** In progress
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/widgets/pill_button.dart` (new), `lib/widgets/speak_button.dart` (new), `lib/widgets/surface_card.dart` (new), `lib/widgets/mono_label.dart` (new), and the border-style augmentation of `lib/widgets/provenance_badge.dart` / `lib/widgets/provenance_icon.dart` (AC-13 only).
 **Depends on:** THEME · **Blocks:** APPLY
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| COMPONENTS-1 | shell | — | ⬜ Todo | | |
+| COMPONENTS-1 | shell | — | ✅ Done | 4,522,630 | 10m 25s |
 | COMPONENTS-2 | behavior | AC-10 | ⬜ Todo | | |
 | COMPONENTS-3 | behavior | AC-11 | ⬜ Todo | | |
 | COMPONENTS-4 | behavior | AC-12 | ⬜ Todo | | |
@@ -41,7 +41,48 @@
 
 ### Result
 
+Shell complete; the four styled widgets exist with their **final public API**,
+rendering through the current theme so they look ~stock (no screen is rewired;
+nothing renders them yet). New files:
+- `lib/widgets/pill_button.dart` — `PillButton.primary` → `FilledButton`,
+  `.secondary` → `OutlinedButton`; `onPressed`/`child`, no colour args.
+- `lib/widgets/speak_button.dart` — round `RawMaterialButton` (CircleBorder,
+  `shrinkWrap` + tight constraints so the 44px `mini` is exact), accent fill
+  `colorScheme.primary` + `onPrimary` glyph (`Icons.volume_up`); `SpeakButtonSize`
+  enum {standard 64, compact 52, mini 44}; `semanticLabel` on a `MergeSemantics`
+  so a screen reader announces one labelled button.
+- `lib/widgets/surface_card.dart` — `SurfaceCard` (surface fill + hairline
+  `outlineVariant` border), `.emphasis` (2px `onSurface` ink border), `.inverted`
+  (`AppTheme.inverted.paper` fill + `.ink` default text); radius from `cardTheme`
+  (default 16 when unset). Reads the frozen `AppTheme` tokens (D-7).
+- `lib/widgets/mono_label.dart` — upper-cases its text, drawn in `AppTheme.monoLabel`.
+**Verification:** `flutter analyze` on the 8 new files clean; `flutter test`
+**1435/1435** green (1418 baseline + 17 new widget tests); coverage gate **100%
+line on all 4 touched `lib/widgets/*.dart`** vs BASE `969dafb`. App byte-identical
+(no accessor/screen wired). **Fix passes:** 3/3 — all confined to the `SpeakButton`
+test mechanics (ambiguous `SizedBox` finder → assert `RawMaterialButton` size;
+label/tap node merge → `MergeSemantics` + `button: true` + `isSemantics` matcher;
+deprecated `hasFlag`/`containsSemantics`); the other three widgets passed first run.
+**Tokens/Time:** 4,522,630 · 10m 25s.
+
 ### Checkpoint / Handoff
+
+- **Frozen public API (COMPONENTS-2..5 finalise the *look*, not these signatures):**
+  - `PillButton.primary({required VoidCallback? onPressed, required Widget child})` / `.secondary(...)`
+  - `SpeakButton({required VoidCallback? onPressed, required String semanticLabel, SpeakButtonSize size = standard})`; `enum SpeakButtonSize { standard(64), compact(52), mini(44) }` with a `.diameter` getter
+  - `SurfaceCard({required Widget child})` / `.emphasis({...})` / `.inverted({...})`
+  - `MonoLabel(String text)`
+- **Verification commands** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+  unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`.
+- **Known gaps:** none. The widgets read stock-derived theme values until the
+  THEME behavior phases fill the warm-paper tokens; COMPONENTS-2..5 (behavior,
+  blocked by G-2) finalise the exact weights/borders and un-pend AC-10..13.
+  AC-13's provenance-badge signature lands in COMPONENTS-5 on the existing
+  `ProvenanceBadge`/`ProvenanceIcon` (not touched here).
+- **Next:** ITEST-1 (the acceptance harness) — both THEME-2 and this phase (the
+  two shells) are now done, so ITEST-1 is unblocked. THEME-3.. / COMPONENTS-2.. /
+  APPLY-.. remain blocked by G-2.
 
 ## Phase COMPONENTS-2 — behavior: pill buttons (AC-10)
 
