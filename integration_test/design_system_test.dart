@@ -18,6 +18,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/domain/provenance.dart';
+import 'package:paint_color_assistant/widgets/color_chip.dart';
+import 'package:paint_color_assistant/widgets/provenance_icon.dart';
 
 import 'design_system_harness.dart';
 
@@ -47,6 +50,82 @@ double _contrast(Color a, Color b) {
   final hi = math.max(la, lb);
   final lo = math.min(la, lb);
   return (hi + 0.05) / (lo + 0.05);
+}
+
+// ---------------------------------------------------------------------------
+// ITEST-3 helpers (AC-7..AC-13): mount a styled component through the single
+// production theme, and read what it renders.
+//
+// No screen mounts `PillButton`/`SpeakButton`/`SurfaceCard`/`MonoLabel`/the
+// provenance badge until the APPLY phases, so each component AC mounts its
+// widget here through the one `AppTheme.light()` chokepoint (the exact
+// `ThemeData` `buildApp` installs; D-7) and reads the resolved geometry /
+// decoration — exactly what production renders. THEME-3's warm-paper scheme and
+// THEME-5's shape/border themes flow in through `AppTheme.light()`, so these
+// tests go green only once both the theme and the component treatment land
+// (which is why the component behaviour phases depend on THEME-3).
+// ---------------------------------------------------------------------------
+
+/// Wraps [child] in the production app theme (the single `AppTheme.light()`
+/// chokepoint) on a Scaffold, for a component to render through.
+Widget _themed(Widget child) => MaterialApp(
+      theme: AppTheme.light().themeData,
+      home: Scaffold(body: Center(child: child)),
+    );
+
+/// The [Material] a `ButtonStyleButton` ([FilledButton]/[OutlinedButton])
+/// renders: its `color` is the resolved background and its `shape` the resolved
+/// [OutlinedBorder] with the side folded in.
+Material _buttonMaterial(WidgetTester tester, Finder button) =>
+    tester.widget<Material>(
+      find.descendant(of: button, matching: find.byType(Material)),
+    );
+
+/// The [BoxDecoration] of the [Container] a [SurfaceCard] renders.
+BoxDecoration _cardDecoration(WidgetTester tester, Finder card) =>
+    tester
+        .widget<Container>(
+          find.descendant(of: card, matching: find.byType(Container)),
+        )
+        .decoration! as BoxDecoration;
+
+/// A colour-independent descriptor of a provenance badge's visual signature:
+/// whether, beyond the glyph and label, it draws a border, a fill, or a custom
+/// (e.g. dashed) paint. The glyph+text badge carries none of these until
+/// COMPONENTS-5 adds the border-style signature.
+typedef _Signature = ({bool border, bool fill, bool custom});
+
+/// Walks the [badge] subtree and reports its colour-independent [_Signature].
+_Signature _badgeSignature(WidgetTester tester, Finder badge) {
+  var border = false;
+  var fill = false;
+  var custom = false;
+  void visit(Element e) {
+    final w = e.widget;
+    Decoration? dec;
+    if (w is Container) {
+      dec = w.decoration;
+    } else if (w is DecoratedBox) {
+      dec = w.decoration;
+    }
+    if (dec is BoxDecoration) {
+      if (dec.border != null) border = true;
+      if (dec.color != null) fill = true;
+    } else if (dec is ShapeDecoration) {
+      if (dec.color != null) fill = true;
+      final shape = dec.shape;
+      if (shape is OutlinedBorder &&
+          shape.side.style != BorderStyle.none &&
+          shape.side.width > 0) {
+        border = true;
+      }
+    }
+    if (w is CustomPaint && w.painter != null) custom = true;
+    e.visitChildren(visit);
+  }
+
+  visit(tester.element(badge));
+  return (border: border, fill: fill, custom: custom);
 }
 
 void main() {
@@ -386,6 +465,380 @@ void main() {
           reason: 'the mono style must not be the prose Next family');
       expect(AppTheme.monoLabel.fontFamily, isNot(isNull),
           reason: 'must not leave the stock platform-default family');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // AC tests (ITEST-3: AC-7..AC-15) — one pending test per AC, appended to the
+  // same file, registered through `acTestWidgets` (default run skips them;
+  // `--dart-define=BS17_RUN_PENDING=true` runs them for the red baseline).
+  //
+  // AC-7..AC-9 read the one installed theme (shape/border/mono-label, made true
+  // at the ThemeData level by THEME-5; D-7). AC-10..AC-13 mount the real styled
+  // component through the production `AppTheme.light()` chokepoint and read what
+  // it renders (the component behaviour phases finalise the treatment).
+  // AC-14/AC-15 walk the real screens through `pumpApp`. Un-pend = delete the
+  // AC's row in `bs17/pending.dart`.
+  // -------------------------------------------------------------------------
+
+  group('Rule: shape and weight follow the wireframe scale', () {
+    // # UX: pills fully rounded at half-height; cards radius 16–22; frame 44
+    acTestWidgets(
+        'AC-7', 'Buttons render as fully-rounded pills and cards as rounded panels',
+        (tester) async {
+      // Given a screen shows buttons and cards → the one installed theme
+      // resolves (the shape tokens the pill/card components inherit; D-7).
+      final harness = await pumpApp(tester);
+      final installed = harness.installedTheme;
+
+      // When they are rendered → Then each button is a fully-rounded pill and
+      // each card has the rounded-panel corner radius, from the theme's shape
+      // tokens. The pill buttons (FilledButton/OutlinedButton) inherit a
+      // StadiumBorder; the card radius comes from `cardTheme` (16–22).
+      final filledShape = installed.filledButtonTheme.style?.shape
+          ?.resolve(const <WidgetState>{});
+      expect(filledShape, isA<StadiumBorder>(),
+          reason: 'the primary pill must be fully rounded (StadiumBorder) from '
+              'the theme — stock M3 is a RoundedRectangleBorder (~r20)');
+      final outlinedShape = installed.outlinedButtonTheme.style?.shape
+          ?.resolve(const <WidgetState>{});
+      expect(outlinedShape, isA<StadiumBorder>(),
+          reason: 'the secondary pill must be fully rounded (StadiumBorder)');
+
+      final cardShape = installed.cardTheme.shape;
+      expect(cardShape, isA<RoundedRectangleBorder>(),
+          reason: 'cards must be rounded panels from the theme (stock card is '
+              'unset → the default r12)');
+      final radius = (cardShape! as RoundedRectangleBorder)
+          .borderRadius
+          .resolve(TextDirection.ltr)
+          .topLeft
+          .x;
+      expect(radius, inInclusiveRange(16, 22),
+          reason: 'the card corner radius must be in the wireframe 16–22 range, '
+              'was $radius');
+    });
+
+    // # UX: border widths 1px hairline / 2px standard / 3px emphasis
+    acTestWidgets('AC-8', 'Borders follow the weight scale', (tester) async {
+      // Given a screen shows bordered elements → the one installed theme
+      // resolves (THEME-5 wires the weight scale into the component themes).
+      final harness = await pumpApp(tester);
+      final installed = harness.installedTheme;
+
+      // When their borders are rendered → Then hairline dividers are thin,
+      // standard cards and buttons use the medium weight, and emphasis/warning
+      // elements use the heavy weight — the theme wires 1/2/3 where each
+      // applies.
+      expect(installed.dividerTheme.thickness, AppTheme.hairlineBorderWidth,
+          reason: 'hairline dividers must be the 1px weight from the theme '
+              '(stock leaves it unset)');
+      final side = installed.outlinedButtonTheme.style?.side
+          ?.resolve(const <WidgetState>{});
+      expect(side?.width, AppTheme.standardBorderWidth,
+          reason: 'the standard (outlined pill) border must be the 2px medium '
+              'weight from the theme');
+      // The heavy emphasis weight is available as the design token (3px).
+      expect(AppTheme.emphasisBorderWidth, 3.0,
+          reason: 'the emphasis/warning weight must be the 3px heavy weight');
+      // Control: the scale is strictly increasing and distinct (1 < 2 < 3), so
+      // a flat / uniform-width impl is rejected.
+      expect(
+          AppTheme.hairlineBorderWidth < AppTheme.standardBorderWidth, isTrue);
+      expect(
+          AppTheme.standardBorderWidth < AppTheme.emphasisBorderWidth, isTrue);
+    });
+
+    // # UX: mono micro-label — 700, letter-spacing .06em, uppercase
+    acTestWidgets(
+        'AC-9', 'Monospace micro-labels render uppercase with wide letter-spacing',
+        (tester) async {
+      // Given a screen shows a monospace micro-label → mount a MonoLabel
+      // through the production theme (natural-case input; the widget is the
+      // single public surface for the mono micro-label treatment).
+      await tester.pumpWidget(_themed(const MonoLabel('srgb')));
+      await tester.pumpAndSettle();
+
+      // When it is rendered → Then its text is uppercase, bold and widely
+      // letter-spaced. Upper-casing is the widget's own contract (a control
+      // that rejects a mixed-case label); the weight and tracking come from the
+      // mono-label style THEME-5 fills.
+      expect(find.text('SRGB'), findsOneWidget,
+          reason: 'the micro-label must be upper-cased ("srgb" → "SRGB")');
+      expect(find.text('srgb'), findsNothing,
+          reason: 'the natural-case text must not render un-cased');
+      final style = tester.widget<Text>(find.text('SRGB')).style!;
+      expect(style.fontWeight, FontWeight.w700,
+          reason: 'the mono micro-label must be bold (700) — stock labelSmall '
+              'is not');
+      final size = style.fontSize!;
+      expect(style.letterSpacing! / size, closeTo(0.06, 0.012),
+          reason: 'the mono micro-label must be tracked at ≈ .06em·fontSize');
+    });
+  });
+
+  group('Rule: the core components carry the wireframe treatment', () {
+    // # UX: primary = ink-fill pill (weight 800); secondary = outline pill (ink/line)
+    acTestWidgets(
+        'AC-10',
+        'Primary actions render as ink-filled pills and secondary as outline pills',
+        (tester) async {
+      final cs = AppTheme.light().themeData.colorScheme;
+
+      // Given a screen shows a primary action → mount the primary pill.
+      await tester.pumpWidget(
+        _themed(PillButton.primary(onPressed: () {}, child: const Text('Primary'))),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(FilledButton), findsOneWidget);
+
+      // When it is rendered → Then the primary action is an ink-filled pill:
+      // an ink (onSurface) background with a paper (surface) label and no
+      // border. (Stock FilledButton fills with the accent `primary`, so this
+      // fails at baseline.)
+      final primaryMat = _buttonMaterial(tester, find.byType(FilledButton));
+      expect(primaryMat.color, cs.onSurface,
+          reason: 'the primary pill must be ink-filled (onSurface), not the '
+              'accent/primary fill');
+      expect(effectiveTextStyleOf(tester, find.text('Primary')).color,
+          cs.surface,
+          reason: 'the primary pill label must be paper-coloured (surface)');
+      final primaryShape = primaryMat.shape;
+      if (primaryShape is OutlinedBorder) {
+        expect(
+            primaryShape.side.style == BorderStyle.none ||
+                primaryShape.side.width == 0,
+            isTrue,
+            reason: 'the primary (filled) pill carries no border');
+      }
+
+      // Given a screen shows a secondary action → mount the secondary pill.
+      await tester.pumpWidget(
+        _themed(
+            PillButton.secondary(onPressed: () {}, child: const Text('Secondary'))),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(OutlinedButton), findsOneWidget);
+
+      // Then the secondary action is a transparent pill with an ink border and
+      // an ink label.
+      final secondaryMat = _buttonMaterial(tester, find.byType(OutlinedButton));
+      expect(secondaryMat.color == null || secondaryMat.color == Colors.transparent,
+          isTrue,
+          reason: 'the secondary pill must be transparent (no fill)');
+      final secondaryShape = secondaryMat.shape;
+      expect(secondaryShape, isA<OutlinedBorder>());
+      expect((secondaryShape! as OutlinedBorder).side.width,
+          AppTheme.standardBorderWidth,
+          reason: 'the secondary pill carries the 2px standard border');
+      expect((secondaryShape as OutlinedBorder).side.color, cs.onSurface,
+          reason: 'the secondary pill border is ink (onSurface)');
+      expect(effectiveTextStyleOf(tester, find.text('Secondary')).color,
+          cs.onSurface,
+          reason: 'the secondary pill label is ink (onSurface)');
+
+      // Rejects a colour-swapped-only pair: the primary fill (ink) must differ
+      // from the secondary's (transparent) treatment.
+      expect(primaryMat.color, isNot(secondaryMat.color),
+          reason: 'the two pill variants must not render identically');
+    });
+
+    // # UX: round accent FAB with speaker-wave glyph (sizes 64/52/44)
+    acTestWidgets('AC-11', 'The speak action renders as a round accent floating button',
+        (tester) async {
+      final cs = AppTheme.light().themeData.colorScheme;
+
+      // Given a screen offers spoken output → mount its speak control.
+      await tester.pumpWidget(
+        _themed(SpeakButton(onPressed: () {}, semanticLabel: 'Speak')),
+      );
+      await tester.pumpAndSettle();
+
+      // When its speak control is rendered → Then it is a round button filled
+      // with the accent colour, carrying a speaker icon.
+      final button = tester.widget<RawMaterialButton>(
+          find.byType(RawMaterialButton));
+      expect(button.shape, isA<CircleBorder>(),
+          reason: 'the speak control must be round (CircleBorder), not a text '
+              'button');
+      expect(button.fillColor, WarmPaper.accent,
+          reason: 'the speak control must be filled with the cobalt accent '
+              '(ColorScheme.primary), not a stock fill');
+      expect(button.fillColor, cs.primary,
+          reason: 'the accent fill is the theme primary, inherited not hardcoded');
+      expect(find.byIcon(Icons.volume_up), findsOneWidget,
+          reason: 'the speak control carries a speaker glyph');
+      // Control: it is a single labelled button (rejects a bare glyph).
+      expect(find.bySemanticsLabel('Speak'), findsOneWidget,
+          reason: 'the speak control announces its action to screen readers');
+    });
+
+    // # UX: cards var(--sf)+2px var(--ln); emphasis 2px var(--ink); inverted var(--ink) bg
+    acTestWidgets(
+        'AC-12',
+        'Panels render as bordered surface cards with emphasis and inverted variants',
+        (tester) async {
+      final cs = AppTheme.light().themeData.colorScheme;
+
+      // Given a screen shows an ordinary panel → mount it.
+      await tester.pumpWidget(_themed(const SurfaceCard(child: Text('ordinary'))));
+      await tester.pumpAndSettle();
+      final ordinary = _cardDecoration(tester, find.byType(SurfaceCard));
+
+      // Then an ordinary panel is a surface card with a hairline-weight (line
+      // colour) border at the standard 2px width.
+      expect(ordinary.color, cs.surface,
+          reason: 'an ordinary card has a surface fill');
+      final ordinaryBorder = ordinary.border! as Border;
+      expect(ordinaryBorder.top.color, cs.outlineVariant,
+          reason: 'the ordinary card border is the paper hairline (line)');
+      expect(ordinaryBorder.top.width, AppTheme.standardBorderWidth,
+          reason: 'the ordinary card border is the 2px standard width (stock '
+              'shell draws a 1px hairline)');
+
+      // Given an emphasis panel → mount it.
+      await tester
+          .pumpWidget(_themed(const SurfaceCard.emphasis(child: Text('emphasis'))));
+      await tester.pumpAndSettle();
+      final emphasis = _cardDecoration(tester, find.byType(SurfaceCard));
+
+      // Then an emphasis panel has an ink border.
+      expect(emphasis.color, cs.surface);
+      final emphasisBorder = emphasis.border! as Border;
+      expect(emphasisBorder.top.color, cs.onSurface,
+          reason: 'the emphasis card border is ink (onSurface)');
+      expect(emphasisBorder.top.width, AppTheme.standardBorderWidth,
+          reason: 'the emphasis card border is the 2px standard width');
+
+      // Given an inverted panel → mount it.
+      await tester
+          .pumpWidget(_themed(const SurfaceCard.inverted(child: Text('inverted'))));
+      await tester.pumpAndSettle();
+      final inverted = _cardDecoration(tester, find.byType(SurfaceCard));
+
+      // Then an inverted panel is ink-filled with paper-coloured text.
+      expect(inverted.color, AppTheme.inverted.paper,
+          reason: 'an inverted panel is ink-filled (the inverted paper tone)');
+      expect(inverted.border, isNull,
+          reason: 'an inverted panel carries no border (the fill is the cue)');
+      expect(effectiveTextStyleOf(tester, find.text('inverted')).color,
+          AppTheme.inverted.ink,
+          reason: 'inverted-panel text is paper-coloured');
+
+      // Rejects all three rendered the same: the ordinary (line) and emphasis
+      // (ink) borders differ, and the inverted fill is neither surface.
+      expect(ordinaryBorder.top.color, isNot(emphasisBorder.top.color),
+          reason: 'the ordinary and emphasis borders must differ');
+      expect(inverted.color, isNot(cs.surface),
+          reason: 'the inverted fill must not be the surface fill');
+    });
+
+    // # UX: PROV badges — glyph ◉/∑/≈/✓ + solid/fill/dashed border, not hue alone
+    acTestWidgets('AC-13', 'Provenance badges render with the glyph-and-border signature',
+        (tester) async {
+      // Given a provenance badge is shown, for each kind → mount it and read
+      // its glyph and its colour-independent border signature.
+      final glyphs = <IconData>{};
+      final signatures = <_Signature>{};
+      final perKind = <ProvenanceTier, _Signature>{};
+      for (final tier in ProvenanceTier.values) {
+        await tester
+            .pumpWidget(_themed(ProvenanceBadge(provenance: Provenance(tier))));
+        await tester.pumpAndSettle();
+        glyphs.add(ProvenanceIcon.iconFor(tier));
+        final signature = _badgeSignature(tester, find.byType(ProvenanceBadge));
+
+        // When it is rendered → Then its kind is carried by a glyph AND a
+        // border style (not by colour alone): each kind's badge draws a
+        // non-colour signature (a border, a fill, or a dashed/custom paint),
+        // which the glyph+text badge lacks until COMPONENTS-5 adds it.
+        expect(signature.border || signature.fill || signature.custom, isTrue,
+            reason: '${tier.name}: the badge must carry a border-style signature '
+                '(solid/fill/dashed), not colour alone');
+        signatures.add(signature);
+        perKind[tier] = signature;
+      }
+
+      // The glyph channel distinguishes every kind (the colour-independent
+      // carrier that is always present), and the border signature varies across
+      // kinds — so a colour-only differentiation is rejected.
+      expect(glyphs, hasLength(ProvenanceTier.values.length),
+          reason: 'each provenance kind has a distinct glyph');
+      expect(signatures.length, greaterThanOrEqualTo(2),
+          reason: 'the border signature must vary across kinds (measured solid '
+              'vs calculated/confirmed fill vs estimated dashed), not be uniform: '
+              '$perKind');
+    });
+  });
+
+  group('Rule: the design system is applied across every primary screen', () {
+    // # UX: THEMES applied once on the device root; all screens inherit
+    acTestWidgets('AC-14', 'Every screen inherits the one installed theme',
+        (tester) async {
+      // Given the app is assembled → walk every primary screen through the one
+      // `buildApp` entry, recording the theme each resolves.
+      final schemes = <ColorScheme>[];
+      final texts = <TextTheme>[];
+      for (final screen in screenRoster) {
+        final harness = await pumpApp(tester, screen: screen);
+        expect(find.byType(MaterialApp), findsOneWidget,
+            reason: '${screen.label}: exactly one MaterialApp (no nested '
+                'app/theme installed by the screen)');
+        schemes.add(harness.colorScheme);
+        texts.add(harness.textTheme);
+      }
+
+      // When any primary screen is shown → Then it reads its colours and type
+      // from the single installed theme: every screen resolves the one
+      // `AppTheme` chokepoint, none overriding the scheme or type.
+      final chokepoint = AppTheme.light().themeData;
+      for (var i = 0; i < screenRoster.length; i++) {
+        expect(schemes[i], chokepoint.colorScheme,
+            reason: '${screenRoster[i].label} must not override the colour scheme');
+        expect(texts[i], chokepoint.textTheme,
+            reason: '${screenRoster[i].label} must not override the text theme');
+      }
+
+      // … and no screen hardcodes a palette colour: zero residual palette
+      // literals in `lib/` outside the theme authority and the D-4 capture
+      // device files. PARTIAL at baseline — the one-theme part holds, but ~7
+      // residual literals remain until APPLY-1 removes them (which then
+      // augments this to pin the exclusion set).
+      final residual = residualPaletteLiterals(
+        roots: const ['lib'],
+        exempt: {kThemeAuthorityFile, ...kCaptureDeviceLiteralFiles},
+      );
+      expect(residual, isEmpty,
+          reason: 'no screen may hardcode a palette colour; residual literals '
+              'outside the exclusions: '
+              '${residual.map((o) => '${o.path}:${o.line}').join(', ')}');
+    });
+
+    // # UX: "Swatches are screen approximations. Trust the numbers." / "APPROX."
+    acTestWidgets('AC-15', 'A displayed colour swatch carries its approximation caption',
+        (tester) async {
+      // Given a screen renders a colour swatch → walk every primary screen and
+      // count the rendered swatches (a `ColorChip` carrying a colour).
+      var totalSwatches = 0;
+      for (final screen in screenRoster) {
+        await pumpApp(tester, screen: screen);
+        final swatches =
+            find.byWidgetPredicate((w) => w is ColorChip && w.color != null);
+        final count = swatches.evaluate().length;
+        if (count == 0) continue;
+        totalSwatches += count;
+
+        // When the swatch is shown → Then it is accompanied by a caption that
+        // the swatch is an approximation and the numbers are authoritative.
+        final caption = find.byWidgetPredicate(
+            (w) => w is Text && (w.data ?? '').toLowerCase().contains('approx'));
+        expect(caption, findsWidgets,
+            reason: '${screen.label}: a rendered colour swatch must be '
+                'accompanied by an approximation caption');
+      }
+      // The rule is non-vacuous: at least one screen renders a swatch.
+      expect(totalSwatches, greaterThan(0),
+          reason: 'at least one primary screen must render a colour swatch');
     });
   });
 }

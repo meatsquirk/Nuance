@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-2 done; next ITEST-3, then ITEST-4 (G-2)
+**Status:** In progress — ITEST-3 done; next ITEST-4 (test review → G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/design_system_harness.dart` (new), `integration_test/design_system_test.dart` (new), the shared source-scan helper the AC-14 rule uses (under `integration_test/conformance/` or alongside the harness).
 **Depends on:** THEME-2, COMPONENTS-1 (the shells it observes) · **Blocks:** every behavior phase (via G-2)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 9,741,639 | 14m 48s |
 | ITEST-2 | acceptance-tests | AC-1..AC-6 | ✅ Done | 5,081,339 | 15m 37s |
-| ITEST-3 | acceptance-tests | AC-7..AC-15 | ⬜ Todo | | |
+| ITEST-3 | acceptance-tests | AC-7..AC-15 | ✅ Done | 8,124,050 | 28m 38s |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -100,9 +100,34 @@
 - **Tasks:** one pending test per AC-7..AC-15 (shape/border/label, component, AC-14 one-theme+source-scan, AC-15 swatch caption); record the red baseline; note AC-14's partial-green baseline (augmented by APPLY-1); grade each test.
 - **Exit criteria:** suite green by default; run-pending baseline recorded; grade gate passed.
 
-### Result
+### Result — ITEST-3 (2026-10-17)
 
-### Checkpoint / Handoff
+- **Landed (test-only — one file, `integration_test/design_system_test.dart`; no `lib/` change):** nine pending AC tests (AC-7..AC-15) in three groups mirroring the feature Rules, registered through `acTestWidgets` (default run skips; `--dart-define=BS17_RUN_PENDING=true` runs them), plus four ITEST-3 helpers (`_themed` mounts a component through the production `AppTheme.light().themeData`; `_buttonMaterial`; `_cardDecoration`; `_badgeSignature`). Reused the file-top WCAG helpers / `dart:math` (not redeclared); added imports for `domain/provenance.dart`, `widgets/color_chip.dart`, `widgets/provenance_icon.dart`.
+  - **AC-7 Shape (THEME-5):** installed-theme `filledButtonTheme`/`outlinedButtonTheme` shapes resolve `StadiumBorder`; `cardTheme.shape` is a `RoundedRectangleBorder` with radius in [16,22]. Theme-grain (D-7); rendered-instance inheritance deferred to COMPONENTS-2/4 (augmentation).
+  - **AC-8 Borders (THEME-5):** `dividerTheme.thickness == 1` (hairline), `outlinedButtonTheme` side width `== 2` (standard); `AppTheme.emphasisBorderWidth == 3` + strict `1<2<3` scale control.
+  - **AC-9 Mono-label (THEME-5):** mounts a real `MonoLabel('srgb')` → renders `'SRGB'` (upper-case control; `'srgb'` findsNothing), `AppTheme.monoLabel.fontWeight == w700`, `letterSpacing/fontSize ≈ 0.06` (±0.012).
+  - **AC-10 Pills (COMPONENTS-2):** mounts `PillButton.primary`/`.secondary` through the theme → primary `Material.color == onSurface` (ink), paper label, no border; secondary transparent, 2px `onSurface` border, ink label; primary≠secondary fill control.
+  - **AC-11 Speak FAB (COMPONENTS-3):** mounts `SpeakButton` → `CircleBorder`, `fillColor == WarmPaper.accent` (== `cs.primary`), `Icons.volume_up`, `bySemanticsLabel('Speak')` control.
+  - **AC-12 Cards (COMPONENTS-4):** mounts the three `SurfaceCard` variants → ordinary surface fill + 2px line border; emphasis surface fill + 2px ink border; inverted ink fill + no border + paper text; ordinary≠emphasis border + inverted≠surface controls.
+  - **AC-13 Provenance signature (COMPONENTS-5):** per `ProvenanceTier`, mounts `ProvenanceBadge` → each badge carries a colour-independent signature (border/fill/custom); glyph set distinct (4) + signature set ≥2 distinct (rejects colour-only).
+  - **AC-14 One theme + no hardcode (APPLY-1, PARTIAL):** walks `screenRoster` — one `MaterialApp`/screen, every scheme/text `==` the chokepoint; then `residualPaletteLiterals(exempt: {theme authority} ∪ D-4)` `isEmpty`.
+  - **AC-15 Swatch caption (APPLY-2):** walks `screenRoster`, finds every `ColorChip` with a colour; each swatch-bearing screen must show an "approx" caption; `totalSwatches > 0` non-vacuity guard.
+- **Verification** (Flutter on `~/development/flutter/bin`; `flutter-tester` lane; no `timeout` on macOS):
+  - `flutter analyze integration_test/design_system_test.dart` — **No issues found**.
+  - Default `flutter test -d flutter-tester integration_test/design_system_test.dart` — **11 scaffold pass, 15 AC tests skipped** (pending).
+  - Run-pending `--dart-define=BS17_RUN_PENDING=true` — **red baseline: all 9 new AC tests FAIL** at the documented assertion (AC-14 PARTIAL: one-theme passes, no-hardcode fails on **12** residual `lib/` literals). Recorded in the *Red baseline* table below.
+  - Unit `flutter test --coverage` — **1435/1435**; coverage gate vs `bd5b5dd` **PASS** (*no touched `lib/**` — test-only phase*).
+- **Grade gate:** independent fresh-subagent grader (did not author the tests) — **7 straight A** (AC-8/9/10/11/12/13/15), **2 A-core / B pending** (AC-7 → COMPONENTS-2+COMPONENTS-4; AC-14 → APPLY-1) matching the pre-seeded augmentation table, **0 plain-B → PASS**. Grid: [`behavior-test-completeness-bs-17-visual-design-system.md`](../behavior-test-completeness-bs-17-visual-design-system.md) (ITEST-3 section).
+- **Augmentation confirmations:** TestAC07 stays **open** (owner COMPONENTS-2 pill + COMPONENTS-4 card — rendered-instance inheritance). TestAC14 stays **open** (owner APPLY-1 — zero residuals + pin D-4 set). **TestAC10 / TestAC12 → closed**: the ITEST-3 tests already mount both pill variants / all three card variants and assert rendered fill/border/label divergence, so no later augmentation is owed (COMPONENTS-2/4 just un-pend + keep green).
+- **Fix passes: 0/3** — clean on first full run (analyze, default, run-pending, unit all passed first try).
+- **Tokens / Time:** see dashboard row (ledger `ITEST-3`).
+
+### Checkpoint / Handoff — ITEST-3 (→ ITEST-4)
+
+- **Suite complete:** all 15 AC tests + 11 scaffold tests live in `integration_test/design_system_test.dart`. Default run green (15 skipped); run-pending red baseline verified for all 15. ITEST-4 assembles the test-review packet (all 15 ACs) for **G-2**; no test code changes expected there.
+- **Owner note for APPLY-2 (AC-15):** the AC-15 test asserts **screen-grain** co-presence of an `'approx'` caption (faithful to APPLY-2's "shared caption" design + the wireframe's single app-level disclaimer). If APPLY-2 instead goes **per-swatch**, an augmentation asserting each swatch's subtree/semantics association would then be owed — add a row then.
+- **Verification commands:** unchanged from ITEST-2's checkpoint (default + run-pending suite, unit+coverage, gate, analyze).
+- **Known gaps:** none new for AC-7..AC-15. AC-7/AC-14 carry their open augmentations (COMPONENTS-2/4, APPLY-1).
 
 ## Phase ITEST-4 — test-review (G-2)
 
@@ -126,21 +151,21 @@
 | AC-4 | `AC-4: …meets the accessibility contrast floor` | FAIL (expected) | Given-precondition (THEME-3): `cs.surface == WarmPaper.background` | THEME-3 | A |
 | AC-5 | `AC-5: Prose and headings render in…Next` | FAIL (expected) | Then: `tt.*.fontFamily == 'Atkinson Hyperlegible Next'` (stock Roboto) | THEME-4 | A |
 | AC-6 | `AC-6: Micro-labels and numeric readouts…Mono` | FAIL (expected) | Then: `AppTheme.monoLabel.fontFamily == 'Atkinson Hyperlegible Mono'` (stock Roboto) | THEME-4 | A |
-| AC-7 | TestAC07_Shape | FAIL (expected) | Then: StadiumBorder / card 16–22 | THEME-5 | pending |
-| AC-8 | TestAC08_BorderWeights | FAIL (expected) | Then: 1/2/3px scale | THEME-5 | pending |
-| AC-9 | TestAC09_MonoLabel | FAIL (expected) | Then: uppercase/700/tracked | THEME-5 | pending |
-| AC-10 | TestAC10_Pills | FAIL (expected) | Then: primary/secondary pill variants | COMPONENTS-2 | pending |
-| AC-11 | TestAC11_SpeakFab | FAIL (expected) | Then: round accent + speaker icon | COMPONENTS-3 | pending |
-| AC-12 | TestAC12_Cards | FAIL (expected) | Then: surface/emphasis/inverted | COMPONENTS-4 | pending |
-| AC-13 | TestAC13_ProvenanceSignature | FAIL (expected) | Then: glyph + border per kind | COMPONENTS-5 | pending |
-| AC-14 | TestAC14_OneThemeNoHardcode | PARTIAL (one-theme passes; no-hardcode FAILs on residual literals) | Then: zero residual palette literals | APPLY-1 | pending |
-| AC-15 | TestAC15_SwatchCaption | FAIL (expected) | Then: every swatch has a caption | APPLY-2 | pending |
+| AC-7 | `AC-7: Buttons render as fully-rounded pills…` | FAIL (expected) | Then: `filledButtonTheme` shape `null` (expected `StadiumBorder`) | THEME-5 | A-core / B pending COMPONENTS-2, COMPONENTS-4 |
+| AC-8 | `AC-8: Borders follow the weight scale` | FAIL (expected) | Then: `dividerTheme.thickness` `null` (expected 1.0) | THEME-5 | A |
+| AC-9 | `AC-9: Monospace micro-labels…uppercase…` | FAIL (expected) | Then: `AppTheme.monoLabel.fontWeight` `null` (expected w700); upper-case asserts are controls | THEME-5 | A |
+| AC-10 | `AC-10: Primary…ink-filled pills…secondary…outline` | FAIL (expected) | Then: primary `Material.color` == stock primary (expected `onSurface`/ink) | COMPONENTS-2 | A |
+| AC-11 | `AC-11: The speak action…round accent floating button` | FAIL (expected) | Then: `SpeakButton.fillColor` == stock primary (expected `WarmPaper.accent`) | COMPONENTS-3 | A |
+| AC-12 | `AC-12: Panels…surface cards…emphasis…inverted` | FAIL (expected) | Then: ordinary `SurfaceCard` border width 1.0 (expected 2.0 standard) | COMPONENTS-4 | A |
+| AC-13 | `AC-13: Provenance badges…glyph-and-border signature` | FAIL (expected) | Then: measured badge signature border/fill/custom all false (expected a signature) | COMPONENTS-5 | A |
+| AC-14 | `AC-14: Every screen inherits the one installed theme` | PARTIAL (one-theme passes; no-hardcode FAILs on 12 residual literals) | Then: `residualPaletteLiterals` isEmpty (12 found) | APPLY-1 | A-core / B pending APPLY-1 |
+| AC-15 | `AC-15: A displayed colour swatch…approximation caption` | FAIL (expected) | Then: Readout `ColorChip` swatch renders but no `approx` caption | APPLY-2 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC14 | bs-11 already installs one theme and swept most hardcoded colours, so it is partly green at baseline | APPLY-1 | assert **zero** residual palette `Color(0x…)` outside the D-4 exclusions | ⬜ Open |
-| TestAC07 | no `PillButton`/`SurfaceCard` instances render until the component phases exist | COMPONENTS-2, COMPONENTS-4 | assert the rendered pill `StadiumBorder` and card radius on real instances | ⬜ Open |
-| TestAC10 | both pill variants absent until COMPONENTS-2 | COMPONENTS-2 | assert primary-vs-secondary fill/border divergence on rendered buttons | ⬜ Open |
-| TestAC12 | the three card variants absent until COMPONENTS-4 | COMPONENTS-4 | assert surface/emphasis/inverted divergence on rendered cards | ⬜ Open |
+| TestAC14 | bs-11 already installs one theme and swept most hardcoded colours, so it is partly green at baseline | APPLY-1 | assert **zero** residual palette `Color(0x…)` outside the D-4 exclusions (already `isEmpty` at full strength) + pin the D-4 exclusion set | ⬜ Open (confirmed ITEST-3) |
+| TestAC07 | theme-grain test proves the theme *declares* the stadium pill / 16–22 card radius, but not that a rendered `PillButton`/`SurfaceCard` inherits it | COMPONENTS-2, COMPONENTS-4 | assert the rendered pill `StadiumBorder` and card radius on real mounted instances | ⬜ Open (confirmed ITEST-3) |
+| TestAC10 | ~~both pill variants absent until COMPONENTS-2~~ | COMPONENTS-2 | ~~assert primary-vs-secondary fill/border divergence on rendered buttons~~ | ✅ Closed ITEST-3 — the test already mounts both variants and asserts rendered fill/border/label divergence; COMPONENTS-2 only un-pends + keeps green |
+| TestAC12 | ~~the three card variants absent until COMPONENTS-4~~ | COMPONENTS-4 | ~~assert surface/emphasis/inverted divergence on rendered cards~~ | ✅ Closed ITEST-3 — the test already mounts all three variants and asserts rendered divergence; COMPONENTS-4 only un-pends + keeps green |

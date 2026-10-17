@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — next ITEST-3
+**Status:** In progress — next ITEST-4 (test review → G-2)
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -156,8 +156,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | COMPONENTS-1 | shell: PillButton/SpeakButton/SurfaceCard/MonoLabel API (stock-styled) | ✅ Done | 4,522,630 | 10m 25s | 4 widgets, final API, app byte-identical; suite 1435✅, 100% cov on 4 touched files |
 | 5 | ITEST-1 | acceptance-tests: harness, pumpApp, pending gate, smoke test | ✅ Done | 9,741,639 | 14m 48s | 11 scaffold tests green (both modes); 15 ACs seeded pending; no lib change |
 | 6 | ITEST-2 | acceptance-tests: AC-1..AC-6 (pending) + red baseline | ✅ Done | 5,081,339 | 15m 37s | 6 AC tests pending; red baseline 6 FAIL; grades 6A |
-| 7 | ITEST-3 | acceptance-tests: AC-7..AC-15 (pending) + red baseline | ⬜ Next | | | ∥ was ITEST-2 |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 7 | ITEST-3 | acceptance-tests: AC-7..AC-15 (pending) + red baseline | ✅ Done | 8,124,050 | 28m 38s | 9 AC tests pending; red baseline 9 FAIL (AC-14 PARTIAL); grades 7A + 2 A-core/B-pending (AC-7, AC-14) PASS |
+| 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | all 15 AC tests ready for review |
 | 9 | THEME-3 | AC-1 + AC-2 + AC-3 + AC-4 (warm-paper ColorScheme + AA proof) | ⬜ Todo | | | |
 | 10 | THEME-4 | AC-5 + AC-6 (Atkinson Next/Mono in TextTheme) | ⬜ Todo | | | ∥ THEME-5 |
 | 11 | THEME-5 | AC-7 + AC-8 + AC-9 (shape/border/mono-label theme styles) | ⬜ Todo | | | ∥ THEME-4 |
@@ -173,7 +173,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-2 done — AC-1..AC-6 each have a pending test (token roles for AC-1/2/3, bs-11's WCAG contrast floor for AC-4, Atkinson Next/Mono families for AC-5/6); default suite 11 scaffold green + 6 skipped, run-pending red baseline all 6 FAIL at the right assertion (AC-4 on its THEME-3 Given precondition), grades **6A** (PASS). **ITEST-3 (AC-7..AC-15)** runs next — it appends to the **same** `design_system_test.dart` (reuse the file-top WCAG helpers added by ITEST-2; don't redeclare), one pending test per AC + the run-pending baseline (note AC-14 is PARTIAL at baseline, augmented by APPLY-1). Then ITEST-4 (test review → **G-2**). G-2 still blocks every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..).
+ITEST-3 done — the acceptance suite is complete: all 15 AC tests + 11 scaffold tests in `design_system_test.dart`. Default run green (15 skipped); run-pending red baseline all 15 FAIL at the documented assertion (AC-14 PARTIAL: one-theme passes, no-hardcode fails on 12 residual `lib/` literals). ITEST-3 grades **7 straight A + 2 A-core/B-pending** (AC-7 → COMPONENTS-2/4, AC-14 → APPLY-1; matching the pre-seeded augmentation table), 0 plain-B → **PASS**; TestAC10/TestAC12 augmentations closed (tests already mount the real components). **ITEST-4 (test review → G-2)** runs next — assemble the review packet for all 15 ACs and present for the human G-2 decision; it is a `test-review` phase (no behavior code). **G-2 blocks every behavior phase** (THEME-3.. / COMPONENTS-2.. / APPLY-..); nothing else is startable until it is approved.
 
 ## Token usage
 
@@ -188,7 +188,8 @@ ITEST-2 done — AC-1..AC-6 each have a pending test (token roles for AC-1/2/3, 
 | COMPONENTS-1 | b7a6ff90 | 2026-10-17 08:07 EDT | 08:18 | 10m 25s | 10m 25s | claude-opus-4-8 | 104 | 81,524 | 4,408,646 | 32,356 | 4,522,630 | shell: 4 styled widgets (PillButton/SpeakButton/SurfaceCard/MonoLabel) final API, stock-rendered; app byte-identical; suite 1435 green; 100% line coverage on 4 touched files; fix passes 3/3 (SpeakButton test mechanics only) |
 | ITEST-1 | 5e6a723e | 2026-10-17 08:30 EDT | 08:45 | 14m 48s | 14m 48s | claude-opus-4-8 | 120 | 185,650 | 9,497,315 | 58,554 | 9,741,639 | acceptance harness: pumpApp over 5 roster screens + BS17_RUN_PENDING gate (15 ACs seeded pending) + AC-14 source-scan helper + 11 scaffold tests green both modes; unit 1435 green; coverage gate PASS (no lib touched); fix passes 1/3 |
 | ITEST-2 | 92e0b7ed | 2026-10-17 09:24 EDT | 09:39 | 15m 37s | 15m 37s | claude-opus-4-8 | 90 | 231,325 | 4,809,505 | 40,419 | 5,081,339 | acceptance-tests: 6 pending AC tests (AC-1..AC-6) — token roles AC-1/2/3, bs-11 WCAG contrast floor AC-4, Atkinson Next/Mono AC-5/6; default 11 scaffold green + 6 skipped; run-pending red baseline all 6 FAIL at the expected assertion (AC-4 on THEME-3 precondition); unit 1435 green; coverage gate PASS (no lib touched); grades 6A PASS; fix passes 0/3 |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 09:39** | **4h 32m** | **1h 11m** |  | **540** | **1,035,661** | **27,609,434** | **246,934** | **28,892,569** |  |
+| ITEST-3 | 0cf6aa56 | 2026-10-17 18:06 EDT | 18:35 | 28m 38s | 28m 38s | claude-opus-4-8 | 106 | 346,197 | 7,692,082 | 85,665 | 8,124,050 | acceptance-tests: 9 pending AC tests (AC-7..AC-15); default 11 scaffold green + 15 skipped; run-pending red baseline all 9 FAIL at documented assertion (AC-14 PARTIAL, 12 residual literals); unit 1435 green; coverage gate PASS (no lib touched); grades 7A + 2 A-core/B-pending (AC-7→COMPONENTS-2/4, AC-14→APPLY-1) PASS; fix passes 0/3 |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 18:35** | **5h 01m** | **1h 40m** |  | **646** | **1,381,858** | **35,301,516** | **332,599** | **37,016,619** |  |
 
 ## Sign-off
 
