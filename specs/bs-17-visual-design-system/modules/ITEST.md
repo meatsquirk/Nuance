@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-1 done; next ITEST-2 ∥ ITEST-3
+**Status:** In progress — ITEST-2 done; next ITEST-3, then ITEST-4 (G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/design_system_harness.dart` (new), `integration_test/design_system_test.dart` (new), the shared source-scan helper the AC-14 rule uses (under `integration_test/conformance/` or alongside the harness).
 **Depends on:** THEME-2, COMPONENTS-1 (the shells it observes) · **Blocks:** every behavior phase (via G-2)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 9,741,639 | 14m 48s |
-| ITEST-2 | acceptance-tests | AC-1..AC-6 | ⬜ Todo | | |
+| ITEST-2 | acceptance-tests | AC-1..AC-6 | ✅ Done | 5,081,339 | 15m 37s |
 | ITEST-3 | acceptance-tests | AC-7..AC-15 | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -66,9 +66,30 @@
 - **Tasks:** one pending test per AC-1..AC-6 per the catalogue (token + font assertions); record the run-pending red baseline; grade each test.
 - **Exit criteria:** suite green by default (tests pending); run-pending baseline recorded (all FAIL — stock scheme/fonts); grade gate passed.
 
-### Result
+### Result — ITEST-2 (2026-10-17)
 
-### Checkpoint / Handoff
+- **Landed (test-only — one file, `integration_test/design_system_test.dart`; no `lib/` change):** six pending AC tests registered through `acTestWidgets` (so the default run skips them, `--dart-define=BS17_RUN_PENDING=true` runs them), each reading what the real assembled app renders via `pumpApp` and the one installed theme (`Theme.of` — the single D-7 chokepoint):
+  - **AC-1 Surfaces (THEME-3):** `colorScheme.surface == WarmPaper.background` (`--bg`), `surfaceContainerLowest == WarmPaper.surface` (`--sf`), `surfaceContainer == WarmPaper.sunken` (`--sf2`) + `isNot(stock.surface)` control.
+  - **AC-2 Neutrals (THEME-3):** `onSurface == ink`, `onSurfaceVariant == muted`, `outline`/`outlineVariant == line` + `isNot(stock)` controls on onSurface/outline.
+  - **AC-3 Accent (THEME-3):** `primary == accent` (`#2F55C8`), `onPrimary == accentInk` (white) + `isNot(stock.primary)` control.
+  - **AC-4 Contrast floor (THEME-3):** Given-precondition (warm-paper surface/ink/accent installed) **naming THEME-3**; then bs-11's mirrored WCAG math (`_luminance`/`_contrast`, `_aaNormal = 4.5`) over 7 meaningful text-on-surface pairings (ink & muted on background/paper-white/sunken, accentInk on accent) each `≥ 4.5` — discriminates a below-AA warm-paper edit.
+  - **AC-5 Next font (THEME-4):** 8 prose/heading `textTheme` roles each `fontFamily == 'Atkinson Hyperlegible Next'` (mono roles excluded, AC-6's) + `isNot(null)` control.
+  - **AC-6 Mono font (THEME-4):** `AppTheme.monoLabel.fontFamily == 'Atkinson Hyperlegible Mono'` (the D-7 single source MonoLabel renders from; nothing mounts a MonoLabel on a screen until APPLY) + `isNot(Next)`/`isNot(null)` controls.
+- **Verification** (Flutter on `~/development/flutter/bin`; `flutter-tester` lane; no `timeout` on macOS):
+  - `flutter analyze integration_test/design_system_test.dart` — **No issues found**.
+  - Default `flutter test -d flutter-tester integration_test/design_system_test.dart` — **11/11 scaffold pass, 6 AC tests skipped** (pending).
+  - Run-pending `--dart-define=BS17_RUN_PENDING=true` — **red baseline: all 6 AC tests FAIL** at the expected assertion (AC-4 first on its THEME-3 Given precondition). Recorded in the *Red baseline* table below.
+  - Unit `flutter test --coverage` — **1435/1435**; coverage gate vs `53a238a` **PASS** (*no touched `lib/**` — nothing to gate*, test-only phase).
+- **Grade gate:** independent fresh-subagent grader (did not author the tests) — **6/6 straight A, 0 B, PASS**. Grid: [`behavior-test-completeness-bs-17-visual-design-system.md`](../behavior-test-completeness-bs-17-visual-design-system.md). No augmentation owed for AC-1..AC-6 (consistent with the pre-seeded augmentation table scheduling augmentations only for AC-7/AC-10/AC-12/AC-14).
+- **Fix passes: 0/3** — first full run clean in both modes; analyze clean on first write.
+- **Tokens / Time:** see dashboard row (ledger `ITEST-2`).
+
+### Checkpoint / Handoff — ITEST-2 (→ ITEST-3)
+
+- **Shared file clash:** ITEST-3 adds AC-7..AC-15 to the **same** `integration_test/design_system_test.dart`. ITEST-3 appends its two AC groups after the ITEST-2 AC groups (before `main`'s closing `}`); the WCAG helpers (`_luminance`/`_contrast`/`_aaNormal`) and `dart:math` import are already present at file top (added by ITEST-2) — **reuse them, do not redeclare**.
+- **Patterns to reuse:** `acTestWidgets('AC-n', '<scenario>', (tester) async {…})` with a `# UX:` comment per AC; read the installed theme through `pumpApp` + `harness.colorScheme/textTheme/installedTheme`; component finders (`pillButtons`/`speakButtons`/`surfaceCards`/`monoLabels`/`provenanceBadges`) for AC-7/10/11/12/13; `residualPaletteLiterals(...)` + `screenRoster` walk for AC-14; AC-14 is **PARTIAL** at baseline (one-theme passes; no-hardcode FAILs on residual `lib/` literals) → note it in the red baseline (augmented by APPLY-1).
+- **Verification commands:** unchanged from ITEST-1's checkpoint (default + run-pending suite, unit+coverage, gate, analyze).
+- **Known gaps:** none for AC-1..AC-6. After ITEST-3, ITEST-4 assembles the test-review packet for all 15 → **G-2** (blocks every behaviour phase).
 
 ## Phase ITEST-3 — acceptance-tests: AC-7..AC-15 (pending) + red baseline
 
@@ -99,12 +120,12 @@
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_Surfaces | FAIL (expected) | Then: surfaces == warm paper | THEME-3 | pending |
-| AC-2 | TestAC02_Neutrals | FAIL (expected) | Then: ink/muted/line tokens | THEME-3 | pending |
-| AC-3 | TestAC03_Accent | FAIL (expected) | Then: primary == #2F55C8 | THEME-3 | pending |
-| AC-4 | TestAC04_ContrastFloor | FAIL (expected) | Then: AA floor on warm-paper tokens | THEME-3 | pending |
-| AC-5 | TestAC05_NextFont | FAIL (expected) | Then: family == Atkinson Next | THEME-4 | pending |
-| AC-6 | TestAC06_MonoFont | FAIL (expected) | Then: family == Atkinson Mono | THEME-4 | pending |
+| AC-1 | `AC-1: Surfaces use the warm-paper palette` | FAIL (expected) | Then: `cs.surface == WarmPaper.background` (stock M3 surface) | THEME-3 | A |
+| AC-2 | `AC-2: Ink, muted text and hairlines…` | FAIL (expected) | Then: `cs.onSurface == WarmPaper.ink` (stock onSurface) | THEME-3 | A |
+| AC-3 | `AC-3: The primary action colour is the cobalt accent` | FAIL (expected) | Then: `cs.primary == WarmPaper.accent` (stock primary) | THEME-3 | A |
+| AC-4 | `AC-4: …meets the accessibility contrast floor` | FAIL (expected) | Given-precondition (THEME-3): `cs.surface == WarmPaper.background` | THEME-3 | A |
+| AC-5 | `AC-5: Prose and headings render in…Next` | FAIL (expected) | Then: `tt.*.fontFamily == 'Atkinson Hyperlegible Next'` (stock Roboto) | THEME-4 | A |
+| AC-6 | `AC-6: Micro-labels and numeric readouts…Mono` | FAIL (expected) | Then: `AppTheme.monoLabel.fontFamily == 'Atkinson Hyperlegible Mono'` (stock Roboto) | THEME-4 | A |
 | AC-7 | TestAC07_Shape | FAIL (expected) | Then: StadiumBorder / card 16–22 | THEME-5 | pending |
 | AC-8 | TestAC08_BorderWeights | FAIL (expected) | Then: 1/2/3px scale | THEME-5 | pending |
 | AC-9 | TestAC09_MonoLabel | FAIL (expected) | Then: uppercase/700/tracked | THEME-5 | pending |
