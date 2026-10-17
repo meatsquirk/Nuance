@@ -1,6 +1,6 @@
 # Module THEME — the warm-paper tokens, fonts and shape in one chokepoint
 
-**Status:** In progress — THEME-1 done; THEME-2 next (∥ COMPONENTS-1)
+**Status:** In progress — THEME-2 done; COMPONENTS-1 next, then ITEST-1
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/app/theme.dart` (`AppTheme`), `test/app/theme_test.dart`, `pubspec.yaml` (fonts section), `assets/fonts/` (bundled Atkinson `.ttf`). Scaffold tooling for the feature.
 **Depends on:** — · **Blocks:** COMPONENTS, APPLY, ITEST
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | THEME-1 | scaffold | — | ✅ Done | 2,907,678 | 6m 03s |
-| THEME-2 | shell | — | ⬜ Todo | | |
+| THEME-2 | shell | — | ✅ Done | 1,643,747 | 5m 52s |
 | THEME-3 | behavior | AC-1 + AC-2 + AC-3 + AC-4 | ⬜ Todo | | |
 | THEME-4 | behavior | AC-5 + AC-6 | ⬜ Todo | | |
 | THEME-5 | behavior | AC-7 + AC-8 + AC-9 | ⬜ Todo | | |
@@ -67,7 +67,41 @@ Scaffold complete; no product code. **Fonts (D-1):** bundled 9 OFL-1.1 static TT
 
 ### Result
 
+Shell complete; the rendered app is byte-identical. Added the design-system token
+accessor surface to `AppTheme` (`lib/app/theme.dart`) as the single source
+COMPONENTS and the suite will read (D-7): `sunkenSurface` (→ stock
+`surfaceContainer`), `inverted` (a `({Color paper, Color ink})` record → stock
+`inverseSurface`/`onInverseSurface`), `monoLabel` (→ stock `labelSmall!`), and the
+three border-weight constants `hairlineBorderWidth`/`standardBorderWidth`/
+`emphasisBorderWidth` = 1.0/2.0/3.0. All colour/type accessors derive from a
+cached private stock-light `ThemeData` (`_stockLight`), so the values track
+today's look; THEME-3 replaces the colour bodies (and wires the warm-paper scheme
+into `themeData`), THEME-4/5 the type and shape. **No accessor is wired into
+`themeData` this phase** — `AppTheme.light()`/`.dark()`/`.themeData` seams and
+`MaterialTapTargetSize.padded` are untouched, so `buildApp` installs the identical
+stock scheme (pinned by the existing + a new test). **Verification:** `flutter
+analyze` on the two changed files clean; `flutter test` **1418/1418** green (1413
+baseline + 5 new accessor tests); coverage gate **100% line on
+`lib/app/theme.dart`** (the one touched file) vs BASE `47c23a2`. **Fix passes:**
+0/3 (passed first run). **Tokens/Time:** 1,643,747 · 5m 52s.
+
 ### Checkpoint / Handoff
+
+- **Frozen surface (COMPONENTS / suite read these):**
+  - `AppTheme.sunkenSurface` → `Color`
+  - `AppTheme.inverted` → `({Color paper, Color ink})`
+  - `AppTheme.monoLabel` → `TextStyle`
+  - `AppTheme.hairlineBorderWidth` / `.standardBorderWidth` / `.emphasisBorderWidth` → `double` (1.0 / 2.0 / 3.0)
+  Signatures are stable; the behaviour phases change the **values** (and wire the
+  colours into the scheme/theme), never the names/types.
+- **Verification commands** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+  unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>` (BASE = phase-start `HEAD`); `flutter analyze`.
+- **Known gaps:** none. Border-weight accessors are exposed but not yet consumed
+  by `themeData` (THEME-5 wires them); dark theme still deferred (D-3).
+- **Next:** COMPONENTS-1 (`lib/widgets/` stock-styled PillButton/SpeakButton/
+  SurfaceCard/MonoLabel API) — disjoint files, runs independently; both this phase
+  and COMPONENTS-1 must land before ITEST-1. THEME-3 (behavior) is blocked by G-2.
 
 ## Phase THEME-3 — behavior: warm-paper ColorScheme (AC-1, AC-2, AC-3, AC-4)
 

@@ -62,4 +62,47 @@ class AppTheme {
         textTheme: textTheme,
         materialTapTargetSize: MaterialTapTargetSize.padded,
       );
+
+  // --- Design-system token accessors (bs-17) ---
+  //
+  // The visual design system (bs-17) introduces a recessed "sunken" surface, an
+  // inverted ink/paper pair, a mono micro-label style and three border weights.
+  // None map to a clean [ColorScheme] / [TextTheme] slot, so they are exposed
+  // here as the single source COMPONENTS (PillButton/SurfaceCard/MonoLabel) and
+  // the acceptance suite read (D-7).
+  //
+  // **Shell (THEME-2):** every accessor returns the current stock-derived value,
+  // so the rendered app is unchanged and no accessor is wired into [themeData]
+  // yet. The behaviour phases replace these bodies with the warm-paper design
+  // values — THEME-3 the colours (and wires them into the scheme), THEME-4/5 the
+  // type and shape — pinned by their acceptance tests.
+
+  /// The stock Material-3 light theme these shell accessors derive from, so the
+  /// shell values track today's look. THEME-3 supersedes the colour getters.
+  static final ThemeData _stockLight =
+      ThemeData(useMaterial3: true, brightness: Brightness.light);
+
+  /// The recessed surface behind inset/well content (e.g. a readout trough).
+  /// Shell: the stock container tone; THEME-3 → the warm-paper `#E9E6DF`.
+  static Color get sunkenSurface => _stockLight.colorScheme.surfaceContainer;
+
+  /// The inverted ink-on-paper pair for emphasis surfaces (dark paper, light
+  /// ink). Shell: the stock inverse pair; THEME-3 sets the warm-paper values.
+  static ({Color paper, Color ink}) get inverted => (
+        paper: _stockLight.colorScheme.inverseSurface,
+        ink: _stockLight.colorScheme.onInverseSurface,
+      );
+
+  /// The uppercase mono micro-label style (provenance badges, mono captions).
+  /// Shell: the stock `labelSmall`; THEME-4/5 set Mono family, weight and spacing.
+  static TextStyle get monoLabel => _stockLight.textTheme.labelSmall!;
+
+  /// The 1px hairline border weight (dividers). THEME-5 wires it into the theme.
+  static const double hairlineBorderWidth = 1.0;
+
+  /// The 2px standard border weight (card / outlined-button sides).
+  static const double standardBorderWidth = 2.0;
+
+  /// The 3px emphasis border weight (warning / emphasised surfaces).
+  static const double emphasisBorderWidth = 3.0;
 }

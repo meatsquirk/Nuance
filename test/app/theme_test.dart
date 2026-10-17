@@ -132,4 +132,40 @@ void main() {
     expect(_aaNormal, 4.5);
     expect(_aaLarge, 3.0);
   });
+
+  // bs-17 THEME-2 shell: the design-system token accessors exist with stable
+  // signatures and, in this shell, return the current stock-derived values so
+  // the rendered app is unchanged. The behaviour phases (THEME-3/4/5) replace
+  // the bodies with the warm-paper design values; these tests pin the shell
+  // surface (and keep the gate at 100% line coverage on theme.dart).
+  group('bs-17 design-system token accessors (shell — stock-derived)', () {
+    final stock = ThemeData(useMaterial3: true, brightness: Brightness.light);
+
+    test('sunkenSurface is the stock container tone (unchanged look)', () {
+      expect(AppTheme.sunkenSurface, stock.colorScheme.surfaceContainer);
+    });
+
+    test('inverted exposes the stock inverse ink/paper pair', () {
+      final pair = AppTheme.inverted;
+      expect(pair.paper, stock.colorScheme.inverseSurface);
+      expect(pair.ink, stock.colorScheme.onInverseSurface);
+    });
+
+    test('monoLabel is the stock labelSmall style', () {
+      expect(AppTheme.monoLabel, stock.textTheme.labelSmall);
+    });
+
+    test('border weights are the 1/2/3px design ladder', () {
+      expect(AppTheme.hairlineBorderWidth, 1.0);
+      expect(AppTheme.standardBorderWidth, 2.0);
+      expect(AppTheme.emphasisBorderWidth, 3.0);
+    });
+
+    test('the accessors are not yet wired into themeData (look unchanged)', () {
+      // The shell exposes the surface but changes nothing the app renders:
+      // themeData still reassembles the stock scheme buildApp installs today.
+      expect(AppTheme.light().themeData.colorScheme,
+          ThemeData(useMaterial3: true).colorScheme);
+    });
+  });
 }

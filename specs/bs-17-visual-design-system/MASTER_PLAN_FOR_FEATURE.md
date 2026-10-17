@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — next THEME-2 (∥ COMPONENTS-1)
+**Status:** In progress — next COMPONENTS-1, then ITEST-1
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -152,8 +152,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|
 | 1 | PLAN | plan the full task set | ✅ Done | 3,681,114 | 16m 59s (3h 38m) | this session |
 | 2 | THEME-1 | scaffold: baseline, coverage gate, bundle Atkinson fonts | ✅ Done | 2,907,678 | 6m 03s | baseline 1413✅; gate proven; 9 TTFs bundled, families declared |
-| 3 | THEME-2 | shell: AppTheme token/shape accessor surface (values unchanged) | ⬜ Next | | | ∥ COMPONENTS-1 |
-| 4 | COMPONENTS-1 | shell: PillButton/SpeakButton/SurfaceCard/MonoLabel API (stock-styled) | ⬜ Todo | | | ∥ THEME-2 |
+| 3 | THEME-2 | shell: AppTheme token/shape accessor surface (values unchanged) | ✅ Done | 1,643,747 | 5m 52s | surface added, app byte-identical; suite 1418✅, 100% cov on theme.dart |
+| 4 | COMPONENTS-1 | shell: PillButton/SpeakButton/SurfaceCard/MonoLabel API (stock-styled) | ⬜ Next | | | ∥ nothing left in its stage; must land before ITEST-1 |
 | 5 | ITEST-1 | acceptance-tests: harness, pumpApp, pending gate, smoke test | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1..AC-6 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-7..AC-15 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
@@ -173,7 +173,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-THEME-1 done — fonts bundled + declared, baseline 1413✅, coverage gate proven. Two shell phases are now startable and run concurrently (disjoint files): **THEME-2** (`lib/app/theme.dart` — add the token accessor surface, stock values, behaviour unchanged) ∥ **COMPONENTS-1** (`lib/widgets/` — PillButton/SpeakButton/SurfaceCard/MonoLabel stock-styled API). Both must land before ITEST-1. G-2 (approve acceptance tests, ITEST-4's packet) still blocks every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..).
+THEME-2 done — the `AppTheme` design-token accessor surface (`sunkenSurface`, `inverted` record, `monoLabel`, the 1/2/3px border widths) exists, returning stock-derived values; app byte-identical (nothing wired into `themeData` yet). **COMPONENTS-1** (`lib/widgets/` — PillButton/SpeakButton/SurfaceCard/MonoLabel stock-styled API) is the last shell phase; it must land before **ITEST-1** (the acceptance harness). G-2 (approve acceptance tests, ITEST-4's packet) still blocks every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..).
 
 ## Token usage
 
@@ -184,7 +184,8 @@ THEME-1 done — fonts bundled + declared, baseline 1413✅, coverage gate prove
 | PLAN | b65a3514 | 2026-10-16 19:17 EDT | 22:55 | 3h 38m | 16m 59s | claude-opus-4-8 | 72 | 348,935 | 3,262,969 | 69,138 | 3,681,114 | plan written (full task set: 4 modules, 18 phases, 15 ACs; G-1/G-2 open) |
 | GATE-DECISION | b6511436 | 2026-10-17 04:35 EDT | 04:37 | 2m 00s | 2m 00s | claude-opus-4-8 | 42 | 41,030 | 1,265,707 | 7,643 | 1,314,422 | G-1 approved: spec + scope expansion (visual design system in-bound), SI amended (D12), dark theme deferred (D-3) — Matt Quirk |
 | THEME-1 | 7995f073 | 2026-10-17 04:50 EDT | 04:56 | 6m 03s | 6m 03s | claude-opus-4-8 | 68 | 77,326 | 2,809,502 | 20,782 | 2,907,678 | scaffold: 9 Atkinson TTFs bundled + declared (D-1, no google_fonts); baseline 1413 green; coverage gate proven clean-pass + planted-gap fail; no product code |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 04:56** | **3h 46m** | **25m 02s** |  | **182** | **467,291** | **7,338,178** | **97,563** | **7,903,214** |  |
+| THEME-2 | c19b50dd | 2026-10-17 07:50 EDT | 07:56 | 5m 52s | 5m 52s | claude-opus-4-8 | 44 | 69,871 | 1,555,790 | 18,042 | 1,643,747 | shell: AppTheme design-token accessor surface (sunkenSurface/inverted/monoLabel/1-2-3px borders) returning stock-derived values; app byte-identical (nothing wired into themeData); suite 1418 green; 100% line coverage on theme.dart; fix passes 0/3 |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 07:56** | **3h 51m** | **30m 54s** |  | **226** | **537,162** | **8,893,968** | **115,605** | **9,546,961** |  |
 
 ## Sign-off
 
