@@ -1,6 +1,6 @@
 # Module THEME — the warm-paper tokens, fonts and shape in one chokepoint
 
-**Status:** Not started
+**Status:** In progress — THEME-1 done; THEME-2 next (∥ COMPONENTS-1)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/app/theme.dart` (`AppTheme`), `test/app/theme_test.dart`, `pubspec.yaml` (fonts section), `assets/fonts/` (bundled Atkinson `.ttf`). Scaffold tooling for the feature.
 **Depends on:** — · **Blocks:** COMPONENTS, APPLY, ITEST
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| THEME-1 | scaffold | — | ⬜ Todo | | |
+| THEME-1 | scaffold | — | ✅ Done | 2,907,678 | 6m 03s |
 | THEME-2 | shell | — | ⬜ Todo | | |
 | THEME-3 | behavior | AC-1 + AC-2 + AC-3 + AC-4 | ⬜ Todo | | |
 | THEME-4 | behavior | AC-5 + AC-6 | ⬜ Todo | | |
@@ -38,9 +38,21 @@
   3. **Bundle the Atkinson Hyperlegible Next + Mono font files** under `assets/fonts/` and declare both families in `pubspec.yaml` `fonts:` (D-1 — no `google_fonts`, offline-first). No theme value changes yet; the families are only *declared*, not yet referenced by `AppTheme`.
 - **Exit criteria:** `flutter pub get` resolves with the new fonts; the baseline suite stays green; the coverage gate demonstrably passes clean and fails on a planted gap. No product behaviour change.
 
-### Result  <!-- filled on completion -->
+### Result
 
-### Checkpoint / Handoff  <!-- filled on completion -->
+Scaffold complete; no product code. **Fonts (D-1):** bundled 9 OFL-1.1 static TTFs under `assets/fonts/` — Atkinson Hyperlegible **Next** (Regular/Italic/Medium/SemiBold/Bold/BoldItalic → 400/400i/500/600/700/700i) and **Mono** (Regular/Medium/Bold → 400/500/700), plus `OFL.txt`; from `googlefonts/atkinson-hyperlegible-next` and `…-next-mono` (`main`). Both families **declared** in `pubspec.yaml` `fonts:` only — `AppTheme` does **not** yet reference them (that's THEME-4), so the rendered app is byte-for-byte unchanged. No `google_fonts` dependency (offline-first). **Baseline:** `flutter test` green = **1413/1413** at BASE `03961e0`; `flutter analyze` clean after the pubspec edit; `flutter pub get` resolves with the fonts. **Coverage gate:** reused the repo's `tool/coverage_gate.dart` (100% line on touched `lib/`) — demonstrated with a temporary 2-branch probe: full-coverage run → PASS (exit 0); partial-coverage run → FAIL (exit 1, named the uncovered line); probe removed. No touched `lib/**.dart` this phase, so the gate is a no-op PASS on the committed tree. **Fix passes:** 0/3 (passed first run). **Tokens/Time:** 2,907,678 · 6m 03s (active 6m 03s).
+
+### Checkpoint / Handoff
+
+- **Frozen:** `assets/fonts/` family names **"Atkinson Hyperlegible Next"** and **"Atkinson Hyperlegible Mono"** (exact strings the TextTheme and the AC-5/AC-6 tests must match); weight→asset map as declared in `pubspec.yaml`. THEME-4 references these families; it does not re-bundle.
+- **Verification commands** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+  - unit: `flutter test`
+  - coverage gate: `flutter test --coverage` then `dart run tool/coverage_gate.dart $BASE` (BASE = phase-start `HEAD`)
+  - analyze: `flutter analyze`
+  - pub: `flutter pub get`
+  - (acceptance targets land with ITEST: `flutter test -d flutter-tester integration_test/design_system_test.dart`, red baseline `--dart-define=BS17_RUN_PENDING=true`)
+- **Known gaps:** none. Dark theme stays deferred (D-3). The `23 packages have newer versions` notice from `pub get` is informational (constraint-pinned), not an error.
+- **Next (THEME-2):** add the `AppTheme` token accessor surface returning current stock-derived values (behaviour unchanged); it owns `lib/app/theme.dart` and runs ∥ COMPONENTS-1 (`lib/widgets/`).
 
 ## Phase THEME-2 — shell: AppTheme accessor surface
 

@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** Not started — next THEME-1 (G-1 resolved; startable)
+**Status:** In progress — next THEME-2 (∥ COMPONENTS-1)
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -110,7 +110,7 @@ Pre-seeded augmentations: AC-14 is partially green at baseline (bs-11 already in
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| THEME | [modules/THEME.md](modules/THEME.md) | the warm-paper tokens, Atkinson fonts and shape/border/label styles in the one `AppTheme` chokepoint; scaffold + font bundling | — | ⬜ Todo |
+| THEME | [modules/THEME.md](modules/THEME.md) | the warm-paper tokens, Atkinson fonts and shape/border/label styles in the one `AppTheme` chokepoint; scaffold + font bundling | — | 🔄 In progress |
 | COMPONENTS | [modules/COMPONENTS.md](modules/COMPONENTS.md) | the styled widget set (`PillButton`, `SpeakButton`, `SurfaceCard`, `MonoLabel`) + the provenance-badge signature | THEME | ⬜ Todo |
 | APPLY | [modules/APPLY.md](modules/APPLY.md) | wire the screens to the theme + components; remove residual hardcoded palette colours; the shared swatch caption | THEME, COMPONENTS | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | acceptance integration suite: one pending test per AC, and its review | THEME-2, COMPONENTS-1 | ⬜ Todo |
@@ -151,8 +151,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | PLAN | plan the full task set | ✅ Done | 3,681,114 | 16m 59s (3h 38m) | this session |
-| 2 | THEME-1 | scaffold: baseline, coverage gate, bundle Atkinson fonts | ⬜ Next | | | blocked by G-1 |
-| 3 | THEME-2 | shell: AppTheme token/shape accessor surface (values unchanged) | ⬜ Todo | | | ∥ COMPONENTS-1 |
+| 2 | THEME-1 | scaffold: baseline, coverage gate, bundle Atkinson fonts | ✅ Done | 2,907,678 | 6m 03s | baseline 1413✅; gate proven; 9 TTFs bundled, families declared |
+| 3 | THEME-2 | shell: AppTheme token/shape accessor surface (values unchanged) | ⬜ Next | | | ∥ COMPONENTS-1 |
 | 4 | COMPONENTS-1 | shell: PillButton/SpeakButton/SurfaceCard/MonoLabel API (stock-styled) | ⬜ Todo | | | ∥ THEME-2 |
 | 5 | ITEST-1 | acceptance-tests: harness, pumpApp, pending gate, smoke test | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1..AC-6 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
@@ -173,7 +173,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-THEME-1 (scaffold) is startable — **G-1 resolved 2026-10-17** (spec + scope expansion approved, SI amended D12, dark theme deferred D-3). THEME-1 bundles the Atkinson fonts, records the baseline, stands up the coverage gate. THEME-2 ∥ COMPONENTS-1 follow once THEME-1 is done. G-2 (approve acceptance tests, ITEST-4's packet) still blocks every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..).
+THEME-1 done — fonts bundled + declared, baseline 1413✅, coverage gate proven. Two shell phases are now startable and run concurrently (disjoint files): **THEME-2** (`lib/app/theme.dart` — add the token accessor surface, stock values, behaviour unchanged) ∥ **COMPONENTS-1** (`lib/widgets/` — PillButton/SpeakButton/SurfaceCard/MonoLabel stock-styled API). Both must land before ITEST-1. G-2 (approve acceptance tests, ITEST-4's packet) still blocks every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..).
 
 ## Token usage
 
@@ -183,7 +183,8 @@ THEME-1 (scaffold) is startable — **G-1 resolved 2026-10-17** (spec + scope ex
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | b65a3514 | 2026-10-16 19:17 EDT | 22:55 | 3h 38m | 16m 59s | claude-opus-4-8 | 72 | 348,935 | 3,262,969 | 69,138 | 3,681,114 | plan written (full task set: 4 modules, 18 phases, 15 ACs; G-1/G-2 open) |
 | GATE-DECISION | b6511436 | 2026-10-17 04:35 EDT | 04:37 | 2m 00s | 2m 00s | claude-opus-4-8 | 42 | 41,030 | 1,265,707 | 7,643 | 1,314,422 | G-1 approved: spec + scope expansion (visual design system in-bound), SI amended (D12), dark theme deferred (D-3) — Matt Quirk |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 04:37** | **3h 40m** | **18m 59s** |  | **114** | **389,965** | **4,528,676** | **76,781** | **4,995,536** |  |
+| THEME-1 | 7995f073 | 2026-10-17 04:50 EDT | 04:56 | 6m 03s | 6m 03s | claude-opus-4-8 | 68 | 77,326 | 2,809,502 | 20,782 | 2,907,678 | scaffold: 9 Atkinson TTFs bundled + declared (D-1, no google_fonts); baseline 1413 green; coverage gate proven clean-pass + planted-gap fail; no product code |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 04:56** | **3h 46m** | **25m 02s** |  | **182** | **467,291** | **7,338,178** | **97,563** | **7,903,214** |  |
 
 ## Sign-off
 
