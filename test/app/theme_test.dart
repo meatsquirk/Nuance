@@ -219,8 +219,8 @@ void main() {
     });
 
     test('monoLabel is the Mono-family labelSmall style (THEME-4)', () {
-      // THEME-4 sets the Mono family on the micro-label; it is no longer the
-      // stock labelSmall (THEME-5 then sets its weight / letter-spacing).
+      // THEME-4 set the Mono family on the micro-label; it is no longer the
+      // stock labelSmall.
       expect(AppTheme.monoLabel.fontFamily, AppTheme.monoFamily);
       expect(AppTheme.monoLabel.fontFamily, isNot(AppTheme.nextFamily));
       expect(AppTheme.monoLabel, isNot(stock.textTheme.labelSmall));
@@ -232,6 +232,58 @@ void main() {
       expect(AppTheme.hairlineBorderWidth, 1.0);
       expect(AppTheme.standardBorderWidth, 2.0);
       expect(AppTheme.emphasisBorderWidth, 3.0);
+    });
+  });
+
+  // bs-17 THEME-5: the wireframe's shape, border-weight and mono-label styles
+  // wired into the component themes + the micro-label style (AC-7/AC-8/AC-9).
+  // These pin the theme-level values in the fast unit lane; the acceptance
+  // suite reads the same values off the installed theme on the real screens.
+  group('bs-17 shape, border and mono-label (THEME-5)', () {
+    final theme = AppTheme.light().themeData;
+
+    test('monoLabel is bold and tracked at ~.06em (AC-9)', () {
+      // THEME-5 sets w700 and letter-spacing ≈ .06em·fontSize on the mono
+      // micro-label (the single source MonoLabel renders upper-cased).
+      final style = AppTheme.monoLabel;
+      expect(style.fontWeight, FontWeight.w700);
+      expect(style.fontSize, isNotNull);
+      expect(style.letterSpacing! / style.fontSize!, closeTo(0.06, 0.001));
+      // A control: the stock labelSmall is neither bold nor this widely tracked.
+      final stockSmall = ThemeData(useMaterial3: true).textTheme.labelSmall!;
+      expect(style.fontWeight, isNot(stockSmall.fontWeight));
+    });
+
+    test('buttons are fully-rounded pills from the theme (AC-7)', () {
+      final filledShape =
+          theme.filledButtonTheme.style?.shape?.resolve(const <WidgetState>{});
+      expect(filledShape, isA<StadiumBorder>());
+      final outlinedShape = theme.outlinedButtonTheme.style?.shape
+          ?.resolve(const <WidgetState>{});
+      expect(outlinedShape, isA<StadiumBorder>());
+    });
+
+    test('cards are rounded panels at a 16–22 radius from the theme (AC-7)', () {
+      expect(AppTheme.cardCornerRadius, inInclusiveRange(16, 22));
+      final cardShape = theme.cardTheme.shape;
+      expect(cardShape, isA<RoundedRectangleBorder>());
+      final radius = (cardShape! as RoundedRectangleBorder)
+          .borderRadius
+          .resolve(TextDirection.ltr)
+          .topLeft
+          .x;
+      expect(radius, AppTheme.cardCornerRadius);
+    });
+
+    test('dividers are the 1px hairline and the outline pill the 2px side (AC-8)',
+        () {
+      expect(theme.dividerTheme.thickness, AppTheme.hairlineBorderWidth);
+      final side =
+          theme.outlinedButtonTheme.style?.side?.resolve(const <WidgetState>{});
+      expect(side?.width, AppTheme.standardBorderWidth);
+      // The outline side reads the theme's ink so a secondary pill shows a
+      // visible outline (not the default opaque black).
+      expect(side?.color, theme.colorScheme.onSurface);
     });
   });
 }

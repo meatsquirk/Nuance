@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — THEME-4 done (AC-5/6 ✅); next THEME-5 ∥ COMPONENTS-2..5
+**Status:** In progress — THEME module ✅ complete (THEME-5 done, AC-8/9 ✅, AC-7 A-core); next COMPONENTS-2..5 ∥
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -45,9 +45,9 @@
 | AC-4 | The warm-paper palette still meets the accessibility contrast floor | ITEST-2 `TestAC04_ContrastFloor` | THEME-3 | ✅ Done |
 | AC-5 | Prose and headings render in Atkinson Hyperlegible Next | ITEST-2 `TestAC05_NextFont` | THEME-4 | ✅ Done |
 | AC-6 | Micro-labels and numeric readouts render in Atkinson Hyperlegible Mono | ITEST-2 `TestAC06_MonoFont` | THEME-4 | ✅ Done |
-| AC-7 | Buttons render as fully-rounded pills and cards as rounded panels | ITEST-3 `TestAC07_Shape` | THEME-5 | ⬜ Todo |
-| AC-8 | Borders follow the weight scale | ITEST-3 `TestAC08_BorderWeights` | THEME-5 | ⬜ Todo |
-| AC-9 | Monospace micro-labels render uppercase with wide letter-spacing | ITEST-3 `TestAC09_MonoLabel` | THEME-5 | ⬜ Todo |
+| AC-7 | Buttons render as fully-rounded pills and cards as rounded panels | ITEST-3 `TestAC07_Shape` | THEME-5 | 🔄 Theme done (A-core); rendered-instance augmentation owed by COMPONENTS-2/4 |
+| AC-8 | Borders follow the weight scale | ITEST-3 `TestAC08_BorderWeights` | THEME-5 | ✅ Done |
+| AC-9 | Monospace micro-labels render uppercase with wide letter-spacing | ITEST-3 `TestAC09_MonoLabel` | THEME-5 | ✅ Done |
 | AC-10 | Primary actions render as ink-filled pills and secondary as outline pills | ITEST-3 `TestAC10_Pills` | COMPONENTS-2 | ⬜ Todo |
 | AC-11 | The speak action renders as a round accent floating button | ITEST-3 `TestAC11_SpeakFab` | COMPONENTS-3 | ⬜ Todo |
 | AC-12 | Panels render as bordered surface cards with emphasis and inverted variants | ITEST-3 `TestAC12_Cards` | COMPONENTS-4 | ⬜ Todo |
@@ -110,7 +110,7 @@ Pre-seeded augmentations: AC-14 is partially green at baseline (bs-11 already in
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| THEME | [modules/THEME.md](modules/THEME.md) | the warm-paper tokens, Atkinson fonts and shape/border/label styles in the one `AppTheme` chokepoint; scaffold + font bundling | — | 🔄 In progress |
+| THEME | [modules/THEME.md](modules/THEME.md) | the warm-paper tokens, Atkinson fonts and shape/border/label styles in the one `AppTheme` chokepoint; scaffold + font bundling | — | ✅ Complete |
 | COMPONENTS | [modules/COMPONENTS.md](modules/COMPONENTS.md) | the styled widget set (`PillButton`, `SpeakButton`, `SurfaceCard`, `MonoLabel`) + the provenance-badge signature | THEME | 🔄 In progress |
 | APPLY | [modules/APPLY.md](modules/APPLY.md) | wire the screens to the theme + components; remove residual hardcoded palette colours; the shared swatch caption | THEME, COMPONENTS | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | acceptance integration suite: one pending test per AC, and its review | THEME-2, COMPONENTS-1 | 🔄 In progress |
@@ -160,8 +160,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,479,183 | 3m 27s | packet assembled for all 15 ACs; G-2 approved 2026-10-17 (Matt Quirk) |
 | 9 | THEME-3 | AC-1 + AC-2 + AC-3 + AC-4 (warm-paper ColorScheme + AA proof) | ✅ Done | 7,460,317 | 17m 10s | warm-paper scheme wired; unit 1434✅, 100% cov theme.dart; acc AC-1..4✅ (11 skip); bs-11 a11y regression 19✅; grades 4A/0B |
 | 10 | THEME-4 | AC-5 + AC-6 (Atkinson Next/Mono in TextTheme) | ✅ Done | 6,244,445 | 11m 59s | Atkinson Next on prose, Mono on micro-label; unit 1438✅, 100% cov theme.dart; acc AC-1..6✅ (9 skip); bs-11 a11y regression 19✅; grades 6A re-grade (AC-1..6), 0B; guards A |
-| 11 | THEME-5 | AC-7 + AC-8 + AC-9 (shape/border/mono-label theme styles) | ⬜ Next | | | ∥ COMPONENTS-2..5; merge-risky w/ was-THEME-4 (same file, now landed) |
-| 12 | COMPONENTS-2 | AC-10 (PillButton primary/secondary) | ⬜ Todo | | | ∥ THEME-4/5 |
+| 11 | THEME-5 | AC-7 + AC-8 + AC-9 (shape/border/mono-label theme styles) | ✅ Done | 6,172,745 | 14m 30s | shape (stadium pills + r18 card), 1/2/3 border scale, mono label w700/.06em wired into themeData; unit 1442✅, 100% cov theme.dart; acc AC-1..9✅ (6 skip); bs-11 a11y regression 19✅; grades 8A + AC-7 A-core/B-pending (COMPONENTS-2/4); THEME module complete |
+| 12 | COMPONENTS-2 | AC-10 (PillButton primary/secondary) | ⬜ Next | | | ∥ COMPONENTS-3/4/5 (disjoint lib/widgets/) |
 | 13 | COMPONENTS-3 | AC-11 (SpeakButton accent FAB) | ⬜ Todo | | | ∥ |
 | 14 | COMPONENTS-4 | AC-12 (SurfaceCard + emphasis + inverted) | ⬜ Todo | | | ∥ |
 | 15 | COMPONENTS-5 | AC-13 (provenance badge glyph+border signature) | ⬜ Todo | | | ∥ |
@@ -173,14 +173,16 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-THEME-4 landed the Atkinson typeface (AC-5/6 ✅) — `AppTheme.warmPaperTextTheme`: Next on every prose/heading role, Mono on the `labelSmall` micro-label (the `AppTheme.monoLabel` source). Un-pend = delete the AC's row in `bs17/pending.dart`; 9 ACs remain pending.
+THEME-5 landed the shape/border/mono-label styles (AC-8/9 ✅, AC-7 A-core) — `AppTheme.light().themeData` now carries the StadiumBorder pills, the `cardCornerRadius` 18 panel radius, the 1/2/3px border scale (`dividerTheme` 1px, outlined side 2px) and `AppTheme.monoLabel` at w700 + .06em. The **THEME module is complete** and `lib/app/theme.dart` is frozen.
 
-Startable now — all **concurrently** (disjoint `lib/` ownership; separate `--parallel` sessions). Each reads the warm-paper tokens/fonts through `AppTheme.light()`, now live:
-- **THEME-5** (AC-7/8/9 — shape/border/mono-label theme styles) owns `lib/app/theme.dart`. THEME-4 already landed on that file, so a THEME-5 worktree must branch from the THEME-4 commit (no conflict with any phase still to run — COMPONENTS own `lib/widgets/`).
-- **COMPONENTS-2** (AC-10 PillButton) / **COMPONENTS-3** (AC-11 SpeakButton) / **COMPONENTS-4** (AC-12 SurfaceCard, reads `AppTheme.inverted`, warm-paper) / **COMPONENTS-5** (AC-13 provenance badge) — each owns its own `lib/widgets/*.dart`, disjoint from THEME-5 and each other.
-- **APPLY-1** (AC-14, run alone — touches many screens) and **APPLY-2** (AC-15) come after the component phases; **SIGNOFF-1** last.
+Startable now — all four **concurrently** (each owns its own `lib/widgets/*.dart`, disjoint; separate `--parallel` sessions off this commit). Each reads the now-live warm-paper tokens, Atkinson type and shape/border/`monoLabel`:
+- **COMPONENTS-2** (AC-10 PillButton primary/secondary) — closes AC-7's rendered-pill augmentation.
+- **COMPONENTS-3** (AC-11 SpeakButton accent FAB).
+- **COMPONENTS-4** (AC-12 SurfaceCard + emphasis + inverted, reads `AppTheme.inverted`) — closes AC-7's rendered-card augmentation.
+- **COMPONENTS-5** (AC-13 provenance badge glyph+border signature).
+- **APPLY-1** (AC-14, run alone — touches many screens) then **APPLY-2** (AC-15) come after the component phases; **SIGNOFF-1** last.
 
-Augmentations still owed: AC-7 (COMPONENTS-2 + COMPONENTS-4 rendered-instance inheritance), AC-14 (APPLY-1 zero residuals + pin D-4 set). THEME-4 owed none. TestAC10/AC12 augmentations are closed (ITEST-3 already asserts rendered divergence).
+Augmentations still owed: **AC-7** (COMPONENTS-2 pill + COMPONENTS-4 card rendered-instance inheritance), **AC-14** (APPLY-1 zero residuals + pin D-4 set). THEME-5 owed none. TestAC10/AC12 augmentations are closed (ITEST-3 already asserts rendered divergence).
 
 ## Token usage
 
@@ -200,7 +202,8 @@ Augmentations still owed: AC-7 (COMPONENTS-2 + COMPONENTS-4 rendered-instance in
 | SIGNOFF-DECISION | 58d04a62 | 2026-10-17 22:38 EDT | 22:40 | 2m 51s | 2m 26s | claude-opus-4-8 | 38 | 54,235 | 1,346,319 | 10,137 | 1,410,729 | ITEST-4 approved (G-2): all 15 AC tests accepted as-is — Matt Quirk 2026-10-17 |
 | THEME-3 | 4b65cff7 | 2026-10-17 22:42 EDT | 22:59 | 17m 10s | 17m 10s | claude-opus-4-8 | 116 | 249,368 | 7,146,357 | 64,476 | 7,460,317 | behavior: warm-paper ColorScheme (AC-1..4) + D-2 AA proof wired into AppTheme.light(); unit 1434 green, 100% cov theme.dart; acceptance AC-1..4 green (11 later ACs skip); bs-11 a11y regression 19 green; grades 4 straight A, 0 B; fix passes 0/3 |
 | THEME-4 | 941db6f9 | 2026-10-18 07:38 EDT | 07:50 | 11m 59s | 11m 59s | claude-opus-4-8 | 118 | 221,591 | 5,988,568 | 34,168 | 6,244,445 | behavior: Atkinson Next on prose + Mono on micro-label (AC-5/AC-6); unit 1438 green, 100% cov theme.dart; acceptance AC-1..6 green (9 skip); bs-11 a11y regression 19 green; grades 6A re-grade (AC-1..6) 0B; fix passes 0/3 |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 07:50** | **5h 36m** | **2h 15m** |  | **954** | **1,992,402** | **51,160,346** | **457,591** | **53,611,293** |  |
+| THEME-5 | 37cfa4f1 | 2026-10-18 07:57 EDT | 08:12 | 14m 30s | 14m 30s | claude-opus-4-8 | 124 | 222,797 | 5,911,349 | 38,475 | 6,172,745 | behavior: shape (stadium pills + r18 card), 1/2/3 border scale, mono label w700/.06em wired into themeData (AC-7/8/9); unit 1442 green, 100% cov theme.dart; acceptance AC-1..9 green (6 skip); bs-11 a11y regression 19 green; grades 8 straight A + AC-7 A-core/B-pending (COMPONENTS-2/4), 0 plain-B; guards A; fix passes 1/3 |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 08:12** | **5h 51m** | **2h 29m** |  | **1,078** | **2,215,199** | **57,071,695** | **496,066** | **59,784,038** |  |
 
 ## Sign-off
 

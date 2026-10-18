@@ -1,6 +1,6 @@
 # Module THEME — the warm-paper tokens, fonts and shape in one chokepoint
 
-**Status:** In progress — THEME-4 done (Atkinson Next/Mono typeface, AC-5/6 ✅); THEME-5 next
+**Status:** ✅ Complete — all five phases done; THEME-5 landed the shape/border/mono-label styles (AC-7/8/9 ✅). The `lib/app/theme.dart` chokepoint is frozen.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/app/theme.dart` (`AppTheme`), `test/app/theme_test.dart`, `pubspec.yaml` (fonts section), `assets/fonts/` (bundled Atkinson `.ttf`). Scaffold tooling for the feature.
 **Depends on:** — · **Blocks:** COMPONENTS, APPLY, ITEST
@@ -13,7 +13,7 @@
 | THEME-2 | shell | — | ✅ Done | 1,643,747 | 5m 52s |
 | THEME-3 | behavior | AC-1 + AC-2 + AC-3 + AC-4 | ✅ Done | 7,460,317 | 17m 10s |
 | THEME-4 | behavior | AC-5 + AC-6 | ✅ Done | 6,244,445 | 11m 59s |
-| THEME-5 | behavior | AC-7 + AC-8 + AC-9 | ⬜ Todo | | |
+| THEME-5 | behavior | AC-7 + AC-8 + AC-9 | ✅ Done | 6,172,745 | 14m 30s |
 
 ## Interface reconciliation
 
@@ -260,4 +260,69 @@ section). No augmentation owed (per ITEST; AC-5/AC-6 schedule none). **Fix passe
 
 ### Result
 
+The wireframe's shape, border-weight and mono-label styles are now wired into the
+one `AppTheme` chokepoint (D-7). **`lib/app/theme.dart`:** the `themeData` getter
+gained four component themes — `filledButtonTheme`/`outlinedButtonTheme` with a
+`StadiumBorder` (fully-rounded pills, AC-7); `cardTheme` a `RoundedRectangleBorder`
+at the new `cardCornerRadius` = 18.0 token (∈ 16–22, AC-7); `dividerTheme.thickness`
+= `hairlineBorderWidth` (1px, AC-8) and the outlined pill's `side` =
+`BorderSide(colorScheme.onSurface, standardBorderWidth)` (2px, AC-8). The mono
+micro-label style moved into a `_monoMicroLabel` field (the single source
+`warmPaperTextTheme.labelSmall` / `monoLabel` read): Mono family + **`fontWeight
+w700`** + explicit `fontSize` 11.0 + `letterSpacing` = .06·11 = 0.66 (≈ .06em,
+AC-9). The explicit fontSize was required because the stock M3 `labelSmall` carries
+only colour, not geometry (its `fontSize` is null until the text scaler resolves
+it), so `monoLabel.fontSize` would be null and AC-9's `style.fontSize!` read would
+throw. `AppTheme.light()`/the ColorScheme and the Atkinson prose families (THEME-3/4)
+are untouched; `AppTheme.dark()` stays stock (D-3). **Tests:** `test/app/theme_test.dart`
+— augmented the `monoLabel` assertion group and added a "bs-17 shape, border and
+mono-label (THEME-5)" group pinning the w700/.06em mono label, the two StadiumBorder
+button shapes, the 16–22 card radius and the 1px/2px divider+side widths off
+`AppTheme.light().themeData`. Un-pended AC-7/AC-8/AC-9 (deleted their rows in
+`bs17/pending.dart`) and updated the two pending-gate guards (`unpended` →
+`{AC-1..AC-9}`; the "hides a pending AC" exemplar → still-pending AC-10/AC-15,
+AC-7 moved to the un-pended list). **Gates:** `flutter analyze` clean (4 files);
+unit **1442 green** (was 1438, +4 THEME-5 tests); coverage gate **100% line on
+`lib/app/theme.dart`** (only touched `lib/`) vs BASE `ae70866`; acceptance
+`design_system_test.dart` default run **green — AC-1..9 run & pass, 6 later ACs
+(AC-10..15) skipped**. **Regression:** the shape/border/mono-label render app-wide,
+so ran the bs-11 accessibility suite (on-screen WCAG / 200%-scaling authority over
+every real screen) — **19/19 green**. **Grade gate:** fresh independent grader
+re-graded every un-pended AC test (AC-1..AC-9) + the two modified guards —
+**8 straight A (AC-1..6, AC-8, AC-9) + AC-7 A-core / B pending COMPONENTS-2,
+COMPONENTS-4 (rendered-instance inheritance augmentation, a later-only limit —
+PASSES the gate, not a plain B); 0 plain-B; both guards A/non-vacuous**
+([grid](../behavior-test-completeness-bs-17-visual-design-system.md), THEME-5 re-grade
+section). **Augmentations:** THEME-5 owed none; AC-7's rendered-instance limit stays
+owned by COMPONENTS-2 (pill) / COMPONENTS-4 (card) per the pre-seeded TestAC07 row.
+**Fix passes:** 1/3 (first run crashed on the null stock `labelSmall.fontSize`;
+pinned an explicit fontSize, then all gates green). **Tokens/Time:** 6,172,745 · 14m 30s.
+
 ### Checkpoint / Handoff
+
+- **Frozen (COMPONENTS, APPLY read these):**
+  - `AppTheme.light().themeData` now carries the shape + border scale:
+    `filledButtonTheme`/`outlinedButtonTheme` → `StadiumBorder`; `outlinedButtonTheme`
+    side → `BorderSide(onSurface, 2px)`; `cardTheme` → `RoundedRectangleBorder`
+    radius `cardCornerRadius` (18.0, ∈ 16–22); `dividerTheme.thickness` → 1px.
+    The `MaterialTapTargetSize.padded` (bs-11) and ColorScheme/TextTheme are intact.
+  - `AppTheme.monoLabel` = `warmPaperTextTheme.labelSmall!` — Mono family, **w700**,
+    fontSize **11.0**, letterSpacing **0.66** (≈ .06em). `MonoLabel` renders it
+    upper-cased. COMPONENTS/APPLY must not re-set weight/tracking on the micro-label.
+  - `AppTheme.cardCornerRadius` = 18.0 — the single card-radius token.
+  - `AppTheme.hairlineBorderWidth`/`standardBorderWidth`/`emphasisBorderWidth` =
+    1/2/3; the 3px emphasis weight is drawn by the emphasis/warning components.
+- **Verification commands** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+  unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; acceptance `flutter test -d
+  flutter-tester integration_test/design_system_test.dart` (red baseline:
+  `--dart-define=BS17_RUN_PENDING=true`); regression `flutter test -d
+  flutter-tester integration_test/bs11/accessibility_test.dart`.
+- **Known gaps:** AC-7's rendered-instance inheritance (a real `PillButton`/
+  `SurfaceCard` inherits the stadium/radius) is owed by COMPONENTS-2/COMPONENTS-4
+  (pre-seeded TestAC07 augmentation). Dark theme stays stock/deferred (D-3).
+- **Module THEME is complete** — all five phases done. Remaining bs-17 work is in
+  COMPONENTS (`lib/widgets/`) and APPLY; none touch `lib/app/theme.dart`, so the
+  THEME chokepoint is frozen. **Next (COMPONENTS-2..5 ∥, then APPLY-1 alone/APPLY-2,
+  SIGNOFF-1):** the component phases style their own `lib/widgets/*.dart`, reading
+  the now-live warm-paper tokens, Atkinson type, shape/border scale and `monoLabel`.

@@ -65,6 +65,32 @@ class AppTheme {
         colorScheme: colorScheme,
         textTheme: textTheme,
         materialTapTargetSize: MaterialTapTargetSize.padded,
+        // bs-17 THEME-5 (D-7) — the wireframe's shape and border-weight scale,
+        // wired into the component themes so every screen inherits it via
+        // `Theme.of(context)`: buttons are fully-rounded pills ([StadiumBorder],
+        // AC-7); cards are rounded panels at [cardCornerRadius] in the 16–22
+        // range (AC-7); dividers are the 1px [hairlineBorderWidth] and the
+        // outlined (secondary) pill carries the 2px [standardBorderWidth] side
+        // (AC-8). The 3px [emphasisBorderWidth] is drawn by the emphasis/warning
+        // components (COMPONENTS, APPLY) off the same token.
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(shape: const StadiumBorder()),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            shape: const StadiumBorder(),
+            side: BorderSide(
+              color: colorScheme.onSurface,
+              width: standardBorderWidth,
+            ),
+          ),
+        ),
+        cardTheme: CardThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(cardCornerRadius),
+          ),
+        ),
+        dividerTheme: const DividerThemeData(thickness: hairlineBorderWidth),
       );
 
   // --- Warm-paper palette tokens (bs-17 THEME-3, D-2/D-5) ---
@@ -110,16 +136,33 @@ class AppTheme {
   /// The micro-label / numeric-readout family — Atkinson Hyperlegible Mono.
   static const String monoFamily = 'Atkinson Hyperlegible Mono';
 
-  /// The warm-paper light [TextTheme] (bs-17 THEME-4): the stock M3 type scale
+  /// The warm-paper light [TextTheme] (bs-17 THEME-4/5): the stock M3 type scale
   /// rendered in [nextFamily] across every prose/heading/label role, with the
-  /// micro-label role ([TextTheme.labelSmall]) switched to [monoFamily] — the
-  /// single source [monoLabel] reads. (THEME-5 sets the mono label's weight and
-  /// letter-spacing; THEME-4 sets only the families.)
+  /// micro-label role ([TextTheme.labelSmall]) switched to the mono micro-label
+  /// style ([_monoMicroLabel]) — the single source [monoLabel] reads. (THEME-4
+  /// set the families; THEME-5 sets the mono label's weight and letter-spacing.)
   static final TextTheme warmPaperTextTheme =
       _stockLight.textTheme.apply(fontFamily: nextFamily).copyWith(
-            labelSmall: _stockLight.textTheme.labelSmall!
-                .copyWith(fontFamily: monoFamily),
+            labelSmall: _monoMicroLabel,
           );
+
+  /// The micro-label point size (`labelSmall`-scale, the M3 default) — pinned
+  /// explicitly because the stock [TextTheme.labelSmall] carries only colour,
+  /// not geometry (its `fontSize` is null until the text scaler resolves it), so
+  /// [monoLabel] must name the size for its ≈ .06em tracking (and for the
+  /// renderer to report one; AC-9).
+  static const double _monoLabelFontSize = 11.0;
+
+  /// The mono micro-label style (bs-17): stock [TextTheme.labelSmall] in the
+  /// [monoFamily], at [_monoLabelFontSize], **bold (`w700`)** and tracked at
+  /// **≈ .06em·fontSize** (THEME-5, AC-9), consumed uppercase by `MonoLabel`.
+  static final TextStyle _monoMicroLabel =
+      _stockLight.textTheme.labelSmall!.copyWith(
+    fontFamily: monoFamily,
+    fontSize: _monoLabelFontSize,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.06 * _monoLabelFontSize,
+  );
 
   // --- Design-system token accessors (bs-17) ---
   //
@@ -149,9 +192,13 @@ class AppTheme {
   static ({Color paper, Color ink}) get inverted => (paper: _ink, ink: _bg);
 
   /// The uppercase mono micro-label style (provenance badges, mono captions).
-  /// THEME-4 sets the Mono family ([monoFamily]) via [warmPaperTextTheme]'s
-  /// `labelSmall`; THEME-5 sets the weight and letter-spacing.
+  /// THEME-4 set the Mono family ([monoFamily]) via [warmPaperTextTheme]'s
+  /// `labelSmall`; THEME-5 set its weight (`w700`) and letter-spacing (≈ .06em).
   static TextStyle get monoLabel => warmPaperTextTheme.labelSmall!;
+
+  /// The rounded-panel corner radius for cards — the wireframe's 16–22 range
+  /// (bs-17 THEME-5); wired into `cardTheme` so cards inherit it from the theme.
+  static const double cardCornerRadius = 18.0;
 
   /// The 1px hairline border weight (dividers). THEME-5 wires it into the theme.
   static const double hairlineBorderWidth = 1.0;
