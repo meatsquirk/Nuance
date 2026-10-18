@@ -12,6 +12,9 @@ import 'package:flutter/material.dart';
 /// **bs-17 THEME-3** then re-skins the light scheme to the wireframe's
 /// *warm-paper* palette (D-2/D-5): the stock M3 light [ColorScheme] with the
 /// warm-paper surface / neutral / accent roles overlaid (see [warmPaperScheme]).
+/// **bs-17 THEME-4** sets the Atkinson Hyperlegible typeface (see
+/// [warmPaperTextTheme]) — prose/headings in [nextFamily], the micro-label in
+/// [monoFamily].
 /// The AA guarantee is **preserved, not by equality** — `test/app/theme_test.dart`
 /// re-proves the WCAG floor over the warm-paper tokens, so a future token edit
 /// that drops any pairing below AA still fails the build. Screens read these
@@ -23,10 +26,11 @@ class AppTheme {
   const AppTheme._(this.colorScheme, this.textTheme);
 
   /// The light-mode tokens — the warm-paper [ColorScheme] ([warmPaperScheme],
-  /// bs-17 THEME-3) with the stock M3 typography (THEME-4 sets Atkinson). This
-  /// is the scheme `buildApp` installs; the AC-4 contrast rule runs over it.
+  /// bs-17 THEME-3) with the Atkinson Hyperlegible [TextTheme]
+  /// ([warmPaperTextTheme], bs-17 THEME-4). This is the scheme `buildApp`
+  /// installs; the AC-4 contrast rule runs over it.
   factory AppTheme.light() =>
-      AppTheme._(warmPaperScheme, _stockLight.textTheme);
+      AppTheme._(warmPaperScheme, warmPaperTextTheme);
 
   /// The dark-mode tokens. Exposed as API now; `buildApp` still wires only
   /// [AppTheme.light] (the app's current single-theme behaviour), and a later
@@ -94,6 +98,29 @@ class AppTheme {
     onPrimary: _accInk,
   );
 
+  // --- Atkinson Hyperlegible typeface (bs-17 THEME-4, D-1) ---
+  //
+  // The bundled offline font families (declared in `pubspec.yaml`, THEME-1).
+  // These exact strings are what the installed [TextTheme] carries and what the
+  // acceptance suite's AC-5/AC-6 tests match against.
+
+  /// The prose / heading family — Atkinson Hyperlegible Next.
+  static const String nextFamily = 'Atkinson Hyperlegible Next';
+
+  /// The micro-label / numeric-readout family — Atkinson Hyperlegible Mono.
+  static const String monoFamily = 'Atkinson Hyperlegible Mono';
+
+  /// The warm-paper light [TextTheme] (bs-17 THEME-4): the stock M3 type scale
+  /// rendered in [nextFamily] across every prose/heading/label role, with the
+  /// micro-label role ([TextTheme.labelSmall]) switched to [monoFamily] — the
+  /// single source [monoLabel] reads. (THEME-5 sets the mono label's weight and
+  /// letter-spacing; THEME-4 sets only the families.)
+  static final TextTheme warmPaperTextTheme =
+      _stockLight.textTheme.apply(fontFamily: nextFamily).copyWith(
+            labelSmall: _stockLight.textTheme.labelSmall!
+                .copyWith(fontFamily: monoFamily),
+          );
+
   // --- Design-system token accessors (bs-17) ---
   //
   // The visual design system (bs-17) introduces a recessed "sunken" surface, an
@@ -103,8 +130,8 @@ class AppTheme {
   // the acceptance suite read (D-7).
   //
   // **THEME-3** sets the colour accessors ([sunkenSurface], [inverted]) to the
-  // warm-paper values; [monoLabel] stays stock-derived until THEME-4/5 set the
-  // Mono family, weight and spacing.
+  // warm-paper values; **THEME-4** sets [monoLabel] to the Mono family (via
+  // [warmPaperTextTheme]); THEME-5 sets its weight and letter-spacing.
 
   /// The stock Material-3 light theme the type accessor and the dark scheme
   /// derive from (and the base [warmPaperScheme] overlays its warm-paper roles
@@ -122,8 +149,9 @@ class AppTheme {
   static ({Color paper, Color ink}) get inverted => (paper: _ink, ink: _bg);
 
   /// The uppercase mono micro-label style (provenance badges, mono captions).
-  /// Shell: the stock `labelSmall`; THEME-4/5 set Mono family, weight and spacing.
-  static TextStyle get monoLabel => _stockLight.textTheme.labelSmall!;
+  /// THEME-4 sets the Mono family ([monoFamily]) via [warmPaperTextTheme]'s
+  /// `labelSmall`; THEME-5 sets the weight and letter-spacing.
+  static TextStyle get monoLabel => warmPaperTextTheme.labelSmall!;
 
   /// The 1px hairline border weight (dividers). THEME-5 wires it into the theme.
   static const double hairlineBorderWidth = 1.0;

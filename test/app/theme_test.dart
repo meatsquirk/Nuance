@@ -68,8 +68,9 @@ void main() {
     // … but is an overlay: a role THEME-3 does not touch keeps its stock value.
     expect(cs.secondary, stock.colorScheme.secondary);
 
-    // The type is still stock M3 — THEME-4 sets the Atkinson families.
-    expect(theme.textTheme, stock.textTheme);
+    // The type is the Atkinson warm-paper TextTheme (THEME-4), no longer stock.
+    expect(theme.textTheme, AppTheme.warmPaperTextTheme);
+    expect(theme.textTheme, isNot(stock.textTheme));
   });
 
   test('dark() captures the stock Material-3 dark tokens (dark deferred, D-3)',
@@ -144,6 +145,61 @@ void main() {
     expect(_aaLarge, 3.0);
   });
 
+  // bs-17 THEME-4: the Atkinson Hyperlegible typeface. The warm-paper TextTheme
+  // renders every prose/heading role in Atkinson Hyperlegible Next (AC-5) and
+  // the micro-label role in Atkinson Hyperlegible Mono (AC-6) — the single type
+  // source `AppTheme.light()` installs. Pinned here in the fast unit lane so a
+  // regression (a role left in the stock family, or the mono/sans swapped)
+  // fails before the on-device acceptance suite would catch it.
+  group('bs-17 Atkinson typeface (THEME-4)', () {
+    const nextFamily = 'Atkinson Hyperlegible Next';
+    const monoFamily = 'Atkinson Hyperlegible Mono';
+
+    test('the family-name constants are the bundled asset families', () {
+      expect(AppTheme.nextFamily, nextFamily);
+      expect(AppTheme.monoFamily, monoFamily);
+    });
+
+    test('every prose/heading role renders in Atkinson Hyperlegible Next (AC-5)',
+        () {
+      final tt = AppTheme.warmPaperTextTheme;
+      final proseStyles = <String, TextStyle?>{
+        'displayLarge': tt.displayLarge,
+        'headlineMedium': tt.headlineMedium,
+        'headlineSmall': tt.headlineSmall,
+        'titleLarge': tt.titleLarge,
+        'titleMedium': tt.titleMedium,
+        'bodyLarge': tt.bodyLarge,
+        'bodyMedium': tt.bodyMedium,
+        'bodySmall': tt.bodySmall,
+      };
+      proseStyles.forEach((role, style) {
+        expect(style?.fontFamily, nextFamily,
+            reason: 'TextTheme.$role must render in $nextFamily');
+      });
+      // Rejects leaving a prose role in the stock platform-default family.
+      final stock =
+          ThemeData(useMaterial3: true, brightness: Brightness.light).textTheme;
+      expect(tt.bodyLarge?.fontFamily, isNot(stock.bodyLarge?.fontFamily));
+      expect(tt.bodyLarge?.fontFamily, isNotNull);
+    });
+
+    test('the micro-label role is Mono, distinct from the prose family (AC-6)',
+        () {
+      final tt = AppTheme.warmPaperTextTheme;
+      expect(tt.labelSmall?.fontFamily, monoFamily);
+      // The mono source must not be the prose Next family (sans/mono not swapped)
+      // and must not be the stock default.
+      expect(tt.labelSmall?.fontFamily, isNot(nextFamily));
+      expect(tt.labelSmall?.fontFamily, isNotNull);
+    });
+
+    test('light() installs the warm-paper TextTheme (families reach the app)',
+        () {
+      expect(AppTheme.light().textTheme, AppTheme.warmPaperTextTheme);
+    });
+  });
+
   // bs-17 design-system token accessors (THEME-3 sets the colour ones to the
   // warm-paper values; monoLabel stays stock-derived until THEME-4/5 set the
   // Mono family, weight and spacing). These pin the accessor values and keep
@@ -162,8 +218,14 @@ void main() {
       expect(pair.ink, _bg); // paper-toned text --bg
     });
 
-    test('monoLabel is the stock labelSmall style (Mono set by THEME-4/5)', () {
-      expect(AppTheme.monoLabel, stock.textTheme.labelSmall);
+    test('monoLabel is the Mono-family labelSmall style (THEME-4)', () {
+      // THEME-4 sets the Mono family on the micro-label; it is no longer the
+      // stock labelSmall (THEME-5 then sets its weight / letter-spacing).
+      expect(AppTheme.monoLabel.fontFamily, AppTheme.monoFamily);
+      expect(AppTheme.monoLabel.fontFamily, isNot(AppTheme.nextFamily));
+      expect(AppTheme.monoLabel, isNot(stock.textTheme.labelSmall));
+      // It is the single source warmPaperTextTheme.labelSmall (D-7).
+      expect(AppTheme.monoLabel, AppTheme.warmPaperTextTheme.labelSmall);
     });
 
     test('border weights are the 1/2/3px design ladder', () {

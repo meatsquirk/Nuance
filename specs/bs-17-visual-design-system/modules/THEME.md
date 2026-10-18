@@ -1,6 +1,6 @@
 # Module THEME — the warm-paper tokens, fonts and shape in one chokepoint
 
-**Status:** In progress — THEME-3 done (warm-paper ColorScheme + AA proof, AC-1..4 ✅); THEME-4 ∥ THEME-5 next
+**Status:** In progress — THEME-4 done (Atkinson Next/Mono typeface, AC-5/6 ✅); THEME-5 next
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/app/theme.dart` (`AppTheme`), `test/app/theme_test.dart`, `pubspec.yaml` (fonts section), `assets/fonts/` (bundled Atkinson `.ttf`). Scaffold tooling for the feature.
 **Depends on:** — · **Blocks:** COMPONENTS, APPLY, ITEST
@@ -12,7 +12,7 @@
 | THEME-1 | scaffold | — | ✅ Done | 2,907,678 | 6m 03s |
 | THEME-2 | shell | — | ✅ Done | 1,643,747 | 5m 52s |
 | THEME-3 | behavior | AC-1 + AC-2 + AC-3 + AC-4 | ✅ Done | 7,460,317 | 17m 10s |
-| THEME-4 | behavior | AC-5 + AC-6 | ⬜ Todo | | |
+| THEME-4 | behavior | AC-5 + AC-6 | ✅ Done | 6,244,445 | 11m 59s |
 | THEME-5 | behavior | AC-7 + AC-8 + AC-9 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -186,7 +186,65 @@ first run). **Tokens/Time:** 7,460,317 · 17m 10s.
 
 ### Result
 
+Atkinson Hyperlegible typeface is live. **`lib/app/theme.dart`:** added the two
+family-name constants `nextFamily` = "Atkinson Hyperlegible Next" / `monoFamily`
+= "Atkinson Hyperlegible Mono" (the exact bundled-asset strings frozen by
+THEME-1) and a `static final TextTheme warmPaperTextTheme` = the stock M3 text
+theme `.apply(fontFamily: nextFamily)` across every role, `.copyWith` the
+`labelSmall` micro-label role to `monoFamily` (the single source `monoLabel`
+reads, D-7). `AppTheme.light()` now installs `warmPaperTextTheme` (was
+`_stockLight.textTheme`); `monoLabel` now returns `warmPaperTextTheme.labelSmall!`
+(was stock `labelSmall`). THEME-5 sets the mono label's weight/letter-spacing;
+THEME-4 sets only the families. `AppTheme.dark()` stays stock (D-3); the colour
+roles THEME-3 set are untouched. **Tests:** `test/app/theme_test.dart` —
+re-pointed the two THEME-3-stock assertions (`light()` textTheme now
+`warmPaperTextTheme`, no longer stock; `monoLabel` now Mono-family, no longer
+stock `labelSmall`) and added a "bs-17 Atkinson typeface (THEME-4)" group pinning
+the family constants, every prose/heading role = Next (AC-5), the micro-label =
+Mono distinct from Next (AC-6), and `light()` installing the theme. Un-pended
+AC-5/AC-6 (deleted their rows in `bs17/pending.dart`) and updated the two
+pending-gate guards (`unpended` set → `{AC-1..AC-6}`; the "hides a pending AC"
+exemplar → still-pending AC-7, AC-5 moved to the un-pended list).
+**Gates:** `flutter analyze` clean (4 files); unit **1438 green** (was 1434, +4
+typeface tests); coverage gate **100% line on `lib/app/theme.dart`** (only touched
+`lib/`) vs BASE `48e5257`; acceptance `design_system_test.dart` default run **green
+— AC-1..6 run & pass, 9 later ACs skipped**. **Regression:** the Atkinson type
+renders app-wide, so ran the bs-11 accessibility suite (the on-screen WCAG /
+200%-scaling authority over every real screen) — **19/19 green**, incl. AC-3 200%
+font scaling (the font-change-sensitive one). **Grade gate:** fresh independent
+grader re-graded every un-pended AC test (AC-1..AC-6) + the two modified guards —
+**4 straight A re-grade (AC-1..4) + AC-5/AC-6 2 straight A, 0 B; both modified guards A/non-vacuous**
+([grid](../behavior-test-completeness-bs-17-visual-design-system.md), THEME-4
+section). No augmentation owed (per ITEST; AC-5/AC-6 schedule none). **Fix passes:**
+0/3 (all gates passed first run). **Tokens/Time:** 6,244,445 · 11m 59s.
+
 ### Checkpoint / Handoff
+
+- **Frozen (THEME-5, COMPONENTS, APPLY read these):**
+  - `AppTheme.warmPaperTextTheme` — the installed `TextTheme`: Next on every
+    prose/heading role, Mono on `labelSmall`. `AppTheme.light().textTheme` is this.
+    **THEME-5 changes the shape/border/label component themes in `themeData` and
+    the mono label's weight/letter-spacing — it must keep the Mono family on the
+    micro-label and the Next family on prose.**
+  - `AppTheme.nextFamily` / `AppTheme.monoFamily` — the family-name constants
+    (the bundled-asset strings; do not re-spell).
+  - `AppTheme.monoLabel` = `warmPaperTextTheme.labelSmall!` — Mono family, stock
+    weight/spacing until THEME-5 sets w700 + ~.06em tracking (AC-9).
+- **Verification commands** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+  unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; acceptance `flutter test -d
+  flutter-tester integration_test/design_system_test.dart` (red baseline:
+  `--dart-define=BS17_RUN_PENDING=true`); regression `flutter test -d
+  flutter-tester integration_test/bs11/accessibility_test.dart`.
+- **Known gaps:** none. Dark theme stays stock/deferred (D-3). The `23 packages
+  have newer versions` pub notice is informational.
+- **Merge-risk note:** THEME-5 owns `lib/app/theme.dart`, which THEME-4 just
+  landed on — branch a THEME-5 worktree from the THEME-4 commit. COMPONENTS-2..5
+  own `lib/widgets/`, disjoint from THEME-5.
+- **Next (THEME-5 ∥ COMPONENTS-2..5):** THEME-5 wires the StadiumBorder pills,
+  16–22 card radius, 1/2/3px border weights and the w700/.06em uppercase mono
+  label into `themeData`; the COMPONENTS phases style their own `lib/widgets/`
+  widgets, reading the now-live warm-paper tokens, Atkinson type and `monoLabel`.
 
 ## Phase THEME-5 — behavior: shape, border and micro-label styles (AC-7, AC-8, AC-9)
 
