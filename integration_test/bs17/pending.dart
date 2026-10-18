@@ -45,10 +45,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// AC-10 → COMPONENTS-2, AC-11 → COMPONENTS-3, AC-12 → COMPONENTS-4,
 /// AC-13 → COMPONENTS-5, AC-14 → APPLY-1, AC-15 → APPLY-2.
 const Map<String, String> pendingACs = {
-  'AC-1': 'THEME-3',
-  'AC-2': 'THEME-3',
-  'AC-3': 'THEME-3',
-  'AC-4': 'THEME-3',
+  // AC-1..AC-4 un-pended by THEME-3 (warm-paper ColorScheme + AA proof).
   'AC-5': 'THEME-4',
   'AC-6': 'THEME-4',
   'AC-7': 'THEME-5',

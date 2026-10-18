@@ -159,14 +159,22 @@ void main() {
 
   group('pending gate', () {
     test(
-        'covers exactly AC-1..AC-15, each owned by a real behaviour phase, all '
-        'pending at ITEST-1', () {
-      expect(pendingACs, hasLength(15));
-      for (var n = 1; n <= 15; n++) {
-        expect(pendingACs.containsKey('AC-$n'), isTrue,
-            reason: 'AC-$n must be pending at ITEST-1 (no behaviour built yet)');
+        'covers the 15 ACs — AC-1..AC-4 un-pended by THEME-3, the rest pending '
+        'and owned by a real behaviour phase', () {
+      // THEME-3 un-pended AC-1..AC-4 by deleting their rows. Each behaviour
+      // phase extends this set as it lands; when it reaches all 15 the pending
+      // map is empty.
+      const unpended = {'AC-1', 'AC-2', 'AC-3', 'AC-4'};
+      for (final ac in unpended) {
+        expect(pendingACs.containsKey(ac), isFalse,
+            reason: '$ac is un-pended (THEME-3) and must run by default');
       }
-      // No stray keys outside AC-1..AC-15, and every owner is a real phase.
+      // The pending map is exactly AC-1..AC-15 minus the un-pended ACs — a
+      // stray or re-pended key fails here.
+      final allACs = {for (var n = 1; n <= 15; n++) 'AC-$n'};
+      expect(pendingACs.keys.toSet(), allACs.difference(unpended));
+      expect(pendingACs, hasLength(15 - unpended.length));
+      // Every remaining key is a real AC-1..AC-15 owned by a real phase.
       for (final entry in pendingACs.entries) {
         final match = RegExp(r'^AC-(\d+)$').firstMatch(entry.key);
         expect(match, isNotNull, reason: 'unexpected pending key ${entry.key}');
@@ -178,20 +186,23 @@ void main() {
 
     test('hides a pending AC by default and admits it under the run-pending flag',
         () {
-      for (final ac in const ['AC-1', 'AC-15']) {
+      for (final ac in const ['AC-5', 'AC-15']) {
         expect(pendingSkipReason(ac, forceRunPending: false), isNotNull,
             reason: '$ac is pending and must be skipped in the default run');
         expect(pendingSkipReason(ac, forceRunPending: true), isNull,
             reason: '$ac must execute under --dart-define=BS17_RUN_PENDING=true');
       }
-      // An AC absent from the map always runs, in either mode (the un-pended
-      // end state a behaviour phase reaches by deleting the row).
-      expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
-      expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
+      // An un-pended AC (AC-1, THEME-3 deleted its row) always runs, in either
+      // mode — as does an AC that was never in the map.
+      for (final ac in const ['AC-1', 'AC-unmapped']) {
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is un-pended and runs by default');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull);
+      }
       // The ambient path acTestWidgets uses agrees with the current mode.
       expect(
-        pendingSkipReason('AC-1'),
-        pendingSkipReason('AC-1', forceRunPending: runPending),
+        pendingSkipReason('AC-5'),
+        pendingSkipReason('AC-5', forceRunPending: runPending),
       );
     });
   });

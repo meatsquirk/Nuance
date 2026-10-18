@@ -77,3 +77,40 @@
 ## Gate status
 
 **PASS.** No plain-B row exists. Seven of the nine ITEST-3 pending tests (AC-8, AC-9, AC-10, AC-11, AC-12, AC-13, AC-15) grade **straight A** — each checks its Givens through the public surface (mounting the real component for AC-9/10/11/12/13, or dereferencing the installed theme for AC-8), reads behaviour from the real theme or rendered widget (D-7), asserts at exact grain over every item the step implies, and fully discriminates the catalogue's named Rejects at design time. Two grade **A-core / B pending** a later owner, both matching the pre-seeded `modules/ITEST.md` augmentation table: **AC-7 → COMPONENTS-2/COMPONENTS-4** (theme declares the shape; rendered-instance inheritance deferred) and **AC-14 → APPLY-1** (12 residual `lib/` palette literals removed + the D-4 exclusion set pinned; the one-theme half is inherited-green from bs-11). Both are later-only limits that ITEST-3 cannot close, so neither is a plain B. The run-pending red baseline fails each of the nine at the documented assertion (AC-14 partial: one-theme passes, no-hardcode fails on the 12 residuals). No row needs a fix this phase.
+
+---
+
+# bs-17 Visual-design-system — behaviour-test completeness grade (THEME-3 re-grade)
+
+- **Date:** 2026-10-17
+- **Phase:** THEME-3 (warm-paper `ColorScheme` + AA proof) — behaviour BUILT, tests run GREEN (not pending)
+- **Grader:** independent acceptance-test grader (did not author the tests or the implementation)
+- **Scope graded:** the four `acTestWidgets('AC-1'..'AC-4', …)` tests in the group "Rule: the warm-paper palette is the single source of surface and ink" in `integration_test/design_system_test.dart`, now un-pended (rows deleted from `bs17/pending.dart`), PLUS the two modified "pending gate" guard tests near the top of `main()`. Mode: **grade what the code now does** (behaviour built & green), re-checking the ITEST-2 straight-A grades against the now-installed `warmPaperScheme`.
+- **Rubric:** grade A requires ALL of G1–G6. A limit only a LATER phase can close → "A-core / B pending `<phase>`"; a limit fixable NOW → plain B. Per `modules/ITEST.md`, **no augmentation is owed for AC-1..AC-4**.
+- **Verified against the now-built theme (`lib/app/theme.dart`):** `AppTheme.light()` installs `warmPaperScheme` = stock M3 light `copyWith(surface:_bg, surfaceContainerLowest:_sf, surfaceContainer:_sf2, onSurface:_ink, onSurfaceVariant:_mut, outline:_ln, outlineVariant:_ln, primary:_acc, onPrimary:_accInk)`, whose hexes match the `WarmPaper` fixture token-for-token. All four tests pass their positive Thens AND their `isNot(stock)` controls. AC-4's seven WCAG pairings all clear 4.5:1 over the installed tokens (tightest: accentInk/accent ≈ 6.46:1, muted/sunken ≈ 6.08:1), consistent with `test/app/theme_test.dart` re-proving the floor. Discrimination confirmed: flipping any token to stock/wrong fails the exact-equality Then; dropping any pairing below 4.5 fails AC-4.
+
+## Grade grid
+
+| AC | Test | Grade | G1 Given checked | G2 configured answers | G3 settled negatives | G4 grain & value | G5 rejects what | G6 one AC | Rejects (wrong impls caught) |
+|----|------|-------|------------------|-----------------------|----------------------|------------------|-----------------|-----------|------------------------------|
+| AC-1 | `AC-1: Surfaces use the warm-paper palette` | **A** | ✓ `MaterialApp` findsOneWidget, `installedTheme` isNotNull, `Scaffold` findsWidgets before the When | ✓ reads the real installed `ColorScheme` via `harness.colorScheme` — the one `AppTheme.light()` chokepoint now carrying `warmPaperScheme` | n/a (synchronous; `isNot(stock.surface)` paired with positive exact-equality) | ✓ `surface==background`, `surfaceContainerLowest==surface(--sf)`, `surfaceContainer==sunken(--sf2)` — exact, true against the built scheme | ✓ exact-equality + `isNot(stock.surface)` control; flipping any surface role to stock/wrong fails | ✓ surface roles only | stock M3 surfaces; wrong surface/raised/sunken value; a per-screen scheme |
+| AC-2 | `AC-2: Ink, muted text and hairlines use the warm-paper neutrals` | **A** | ✓ `find.byType(Text)` findsWidgets; theme resolved. Soft spot (unchanged): "and dividers" read at the role grain, not off a `Divider` — immaterial | ✓ reads `onSurface/onSurfaceVariant/outline/outlineVariant` from the built `warmPaperScheme` | n/a (synchronous; `isNot(stock)` paired with exact-equality) | ✓ four neutral roles exact: `onSurface==ink`, `onSurfaceVariant==muted`, `outline==line`, `outlineVariant==line` | ✓ exact-equality + two `isNot(stock)` controls; catches `outlineVariant` left stock | ✓ neutrals only | stock onSurface/outline; wrong ink/muted/hairline; divergent outline/outlineVariant |
+| AC-3 | `AC-3: The primary action colour is the cobalt accent` | **A** | ◑ reads `harness.colorScheme`; the getter dereferences `MaterialApp.first` + `theme!` so it throws unless a themed app assembled (transitive). Thinnest G1 — noted, not gate-blocking (as at ITEST-2) | ✓ reads the built scheme's `primary`/`onPrimary` | n/a (synchronous; `isNot(stock.primary)` paired with `== accent`) | ✓ `primary==accent(--acc #2F55C8)`, `onPrimary==accentInk(#FFFFFF)`, exact | ✓ exact-equality + `isNot(stock.primary)` control | ✓ accent pair only | stock M3 primary; wrong accent; non-white accent label |
+| AC-4 | `AC-4: The warm-paper palette still meets the accessibility contrast floor` | **A** | ✓ three preconditions pin the installed scheme IS warm-paper (`surface==background`, `onSurface==ink`, `primary==accent`), reason-tagged `(THEME-3)` — now PASS, so the floor check proceeds | ✓ AA Then measures the installed tokens with bs-11's WCAG ratio math — computed over what THEME-3 ships | n/a (`>= floor` invariant) | ✓ seven pairings each `>= 4.5` (ink×{bg,paper,sunken}, muted×{bg,paper,sunken}, accentInk/accent) + `_aaNormal==4.5` sanity; all clear | ✓ discriminates a below-AA warm-paper edit; preconditions reject a non-warm-paper scheme | ✓ contrast floor only (preconditions are the spec's Given, required by G2) | a warm-paper edit dropping a pairing below AA; a non-warm-paper scheme; a mis-mirrored ratio |
+
+## Pending-gate guard tests (2 modified)
+
+Both pass and are **NOT vacuous**:
+1. **`covers the 15 ACs — AC-1..AC-4 un-pended by THEME-3, …`** — **A (non-vacuous).** Asserts `pendingACs` excludes AC-1..AC-4, then pins exact membership `keys.toSet() == {AC-1..AC-15} ∖ {AC-1..AC-4}` and `hasLength(11)`, every owner a real `behaviorPhases` member. A stray key, a re-pended AC-1..4, or a typo'd owner all fail.
+2. **`hides a pending AC by default and admits it under the run-pending flag`** — **A (non-vacuous).** Pending AC-5/AC-15 skip by default / run under the flag; un-pended AC-1 and never-mapped `AC-unmapped` run in both modes; ambient path agrees with `runPending`. Both skip and admit paths exercised.
+
+## Counts
+
+- **Straight A:** 4 — AC-1, AC-2, AC-3, AC-4
+- **A-core / B pending `<phase>`:** 0
+- **Below A (plain B, must be fixed this phase):** 0
+- (Both pending-gate guard tests: A, non-vacuous.)
+
+## Gate status
+
+**PASS.** Zero plain-B rows. All four un-pended acceptance tests grade **straight A** against the now-built `warmPaperScheme`; each reads behaviour from the real installed theme and would fail if any token were stock or wrong (AC-4 fails if any pairing drops below 4.5:1). The two modified pending-gate guards remain non-vacuous. No augmentation owed for AC-1..AC-4; no row needs a fix this phase.

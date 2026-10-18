@@ -1,6 +1,6 @@
 # Module THEME — the warm-paper tokens, fonts and shape in one chokepoint
 
-**Status:** In progress — THEME-2 done; COMPONENTS-1 next, then ITEST-1
+**Status:** In progress — THEME-3 done (warm-paper ColorScheme + AA proof, AC-1..4 ✅); THEME-4 ∥ THEME-5 next
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/app/theme.dart` (`AppTheme`), `test/app/theme_test.dart`, `pubspec.yaml` (fonts section), `assets/fonts/` (bundled Atkinson `.ttf`). Scaffold tooling for the feature.
 **Depends on:** — · **Blocks:** COMPONENTS, APPLY, ITEST
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | THEME-1 | scaffold | — | ✅ Done | 2,907,678 | 6m 03s |
 | THEME-2 | shell | — | ✅ Done | 1,643,747 | 5m 52s |
-| THEME-3 | behavior | AC-1 + AC-2 + AC-3 + AC-4 | ⬜ Todo | | |
+| THEME-3 | behavior | AC-1 + AC-2 + AC-3 + AC-4 | ✅ Done | 7,460,317 | 17m 10s |
 | THEME-4 | behavior | AC-5 + AC-6 | ⬜ Todo | | |
 | THEME-5 | behavior | AC-7 + AC-8 + AC-9 | ⬜ Todo | | |
 
@@ -116,7 +116,62 @@ baseline + 5 new accessor tests); coverage gate **100% line on
 
 ### Result
 
+Warm-paper light scheme is live. **`lib/app/theme.dart`:** added the 8 warm-paper
+token constants (`_bg`/`_sf`/`_sf2`/`_ink`/`_mut`/`_ln`/`_acc`/`_accInk`, hexes
+mirroring the suite's `WarmPaper` fixture) and a new `static final ColorScheme
+warmPaperScheme` = stock M3 light `copyWith(surface/surfaceContainerLowest/
+surfaceContainer/onSurface/onSurfaceVariant/outline/outlineVariant/primary/
+onPrimary)`. `AppTheme.light()` now builds from `warmPaperScheme` (stock M3
+textTheme retained — THEME-4 sets Atkinson); `AppTheme.dark()` stays stock
+(D-3). The colour accessors are superseded to warm-paper values:
+`sunkenSurface → _sf2 (#E9E6DF)`, `inverted → (paper: _ink #16150F, ink: _bg
+#F3F1EC)` (dark-paper/light-ink — COMPONENTS-4's `SurfaceCard.inverted` reads
+this); `monoLabel` stays stock (THEME-4/5). **Tests:** rewrote
+`test/app/theme_test.dart` per D-2 — `light()` now asserts the 9 warm-paper roles
++ an overlay check (a non-touched role keeps stock) + textTheme still stock, and
+the AA proof is re-established over the 7 warm-paper pairings (AC-4's set), not by
+equality to stock (bs-11's AA guarantee preserved by proof); the "shell—look
+unchanged" test (now false) was removed. Un-pended AC-1..AC-4 (deleted their rows
+in `bs17/pending.dart`) and updated the 2 `design_system_test.dart` pending-gate
+guards to the `unpended`-set pattern (exact 11-row membership; hide/admit over
+still-pending AC-5/15 + un-pended AC-1).
+**Gates:** `flutter analyze` clean; unit **1434 green** (was 1435, −1 removed
+shell test); coverage gate **100% line on `lib/app/theme.dart`** (only touched
+`lib/`) vs BASE `b1e6ac5`; acceptance `design_system_test.dart` default run **green
+— AC-1..4 run & pass, 11 later ACs skipped**. **Regression:** the warm-paper theme
+renders app-wide, so ran the bs-11 accessibility suite (the on-screen WCAG
+`textContrastGuideline` authority over every real screen) — **19/19 green**,
+incl. AC-5 contrast and AC-4 48dp. **Grade gate:** fresh independent grader —
+**AC-1..4 = 4 straight A, 0 B, PASS**; both modified guards A/non-vacuous
+([grid](../behavior-test-completeness-bs-17-visual-design-system.md), THEME-3
+section). No augmentation owed (per ITEST). **Fix passes:** 0/3 (all gates passed
+first run). **Tokens/Time:** 7,460,317 · 17m 10s.
+
 ### Checkpoint / Handoff
+
+- **Frozen (THEME-4/5, COMPONENTS, APPLY read these):**
+  - `AppTheme.light().colorScheme` / `AppTheme.warmPaperScheme` — the warm-paper
+    light scheme; roles pinned by hex in `test/app/theme_test.dart`. **THEME-4
+    changes only the `textTheme`; THEME-5 only the shape/border/label component
+    themes in `themeData` — neither touches these colour roles.**
+  - `AppTheme.sunkenSurface` = `#E9E6DF`; `AppTheme.inverted` = `(paper: #16150F,
+    ink: #F3F1EC)` (the values COMPONENTS-4 renders). `monoLabel` is still stock
+    (THEME-4/5 set Mono family/weight/spacing).
+- **Verification commands** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+  unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; acceptance `flutter test -d
+  flutter-tester integration_test/design_system_test.dart` (red baseline:
+  `--dart-define=BS17_RUN_PENDING=true`); regression `flutter test -d
+  flutter-tester integration_test/bs11/accessibility_test.dart`.
+- **Known gaps:** none. Dark scheme stays stock/deferred (D-3). The `23 packages
+  have newer versions` pub notice is informational.
+- **Merge-risk note:** THEME-4 and THEME-5 both own `lib/app/theme.dart` — run one
+  at a time or coordinate (they are merge-risky with each other, disjoint from the
+  COMPONENTS phases).
+- **Next (THEME-4 ∥ THEME-5 ∥ COMPONENTS-2..5):** THEME-4 sets the Atkinson
+  families on the `TextTheme`; THEME-5 the StadiumBorder/card-radius/border-weight/
+  mono-label theme styles; the COMPONENTS phases style their own `lib/widgets/`
+  widgets, reading the now-live warm-paper tokens through `AppTheme.light()`.
 
 ## Phase THEME-4 — behavior: Atkinson typeface (AC-5, AC-6)
 

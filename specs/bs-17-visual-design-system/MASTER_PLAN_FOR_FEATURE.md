@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — next THEME-3 (G-2 approved 2026-10-17; behavior stage open)
+**Status:** In progress — THEME-3 done (AC-1..4 ✅); next THEME-4 ∥ THEME-5 ∥ COMPONENTS-2..5
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -39,10 +39,10 @@
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | Surfaces use the warm-paper palette | ITEST-2 `TestAC01_Surfaces` | THEME-3 | ⬜ Todo |
-| AC-2 | Ink, muted text and hairlines use the warm-paper neutrals | ITEST-2 `TestAC02_Neutrals` | THEME-3 | ⬜ Todo |
-| AC-3 | The primary action colour is the cobalt accent | ITEST-2 `TestAC03_Accent` | THEME-3 | ⬜ Todo |
-| AC-4 | The warm-paper palette still meets the accessibility contrast floor | ITEST-2 `TestAC04_ContrastFloor` | THEME-3 | ⬜ Todo |
+| AC-1 | Surfaces use the warm-paper palette | ITEST-2 `TestAC01_Surfaces` | THEME-3 | ✅ Done |
+| AC-2 | Ink, muted text and hairlines use the warm-paper neutrals | ITEST-2 `TestAC02_Neutrals` | THEME-3 | ✅ Done |
+| AC-3 | The primary action colour is the cobalt accent | ITEST-2 `TestAC03_Accent` | THEME-3 | ✅ Done |
+| AC-4 | The warm-paper palette still meets the accessibility contrast floor | ITEST-2 `TestAC04_ContrastFloor` | THEME-3 | ✅ Done |
 | AC-5 | Prose and headings render in Atkinson Hyperlegible Next | ITEST-2 `TestAC05_NextFont` | THEME-4 | ⬜ Todo |
 | AC-6 | Micro-labels and numeric readouts render in Atkinson Hyperlegible Mono | ITEST-2 `TestAC06_MonoFont` | THEME-4 | ⬜ Todo |
 | AC-7 | Buttons render as fully-rounded pills and cards as rounded panels | ITEST-3 `TestAC07_Shape` | THEME-5 | ⬜ Todo |
@@ -158,8 +158,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-2 | acceptance-tests: AC-1..AC-6 (pending) + red baseline | ✅ Done | 5,081,339 | 15m 37s | 6 AC tests pending; red baseline 6 FAIL; grades 6A |
 | 7 | ITEST-3 | acceptance-tests: AC-7..AC-15 (pending) + red baseline | ✅ Done | 8,124,050 | 28m 38s | 9 AC tests pending; red baseline 9 FAIL (AC-14 PARTIAL); grades 7A + 2 A-core/B-pending (AC-7, AC-14) PASS |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,479,183 | 3m 27s | packet assembled for all 15 ACs; G-2 approved 2026-10-17 (Matt Quirk) |
-| 9 | THEME-3 | AC-1 + AC-2 + AC-3 + AC-4 (warm-paper ColorScheme + AA proof) | ⬜ Next | | | |
-| 10 | THEME-4 | AC-5 + AC-6 (Atkinson Next/Mono in TextTheme) | ⬜ Todo | | | ∥ THEME-5 |
+| 9 | THEME-3 | AC-1 + AC-2 + AC-3 + AC-4 (warm-paper ColorScheme + AA proof) | ✅ Done | 7,460,317 | 17m 10s | warm-paper scheme wired; unit 1434✅, 100% cov theme.dart; acc AC-1..4✅ (11 skip); bs-11 a11y regression 19✅; grades 4A/0B |
+| 10 | THEME-4 | AC-5 + AC-6 (Atkinson Next/Mono in TextTheme) | ⬜ Next | | | ∥ THEME-5 |
 | 11 | THEME-5 | AC-7 + AC-8 + AC-9 (shape/border/mono-label theme styles) | ⬜ Todo | | | ∥ THEME-4 |
 | 12 | COMPONENTS-2 | AC-10 (PillButton primary/secondary) | ⬜ Todo | | | ∥ THEME-4/5 |
 | 13 | COMPONENTS-3 | AC-11 (SpeakButton accent FAB) | ⬜ Todo | | | ∥ |
@@ -173,14 +173,14 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**G-2 approved 2026-10-17 (Matt Quirk)** — the behavior stage is open. All 15 AC tests are frozen (pending) in `integration_test/design_system_test.dart`; un-pend = delete the AC's row in `bs17/pending.dart`.
+THEME-3 landed the warm-paper `ColorScheme` (AC-1..4 ✅). Un-pend = delete the AC's row in `bs17/pending.dart`; 11 ACs remain pending.
 
-Startable now:
-- **THEME-3** (⬜ Next) — AC-1..4: warm-paper `ColorScheme` + AA contrast proof. The natural first behavior phase; owns `lib/app/theme.dart` ColorScheme.
-- Once THEME-3 lands, these run **concurrently** (disjoint ownership — separate `--parallel` sessions): **THEME-4** (AC-5/6 TextTheme fonts) ∥ **THEME-5** (AC-7/8/9 shape/border/mono-label) ∥ **COMPONENTS-2** (AC-10) / **COMPONENTS-3** (AC-11) / **COMPONENTS-4** (AC-12) / **COMPONENTS-5** (AC-13).
+Startable now — all **concurrently** (disjoint `lib/` ownership; separate `--parallel` sessions). Each reads the warm-paper tokens through `AppTheme.light()`, now live:
+- **THEME-4** (AC-5/6 — Atkinson Next/Mono in `TextTheme`) ∥ **THEME-5** (AC-7/8/9 — shape/border/mono-label theme styles) — both own `lib/app/theme.dart`, so they are **merge-risky with each other**; run one at a time or coordinate.
+- **COMPONENTS-2** (AC-10 PillButton) / **COMPONENTS-3** (AC-11 SpeakButton) / **COMPONENTS-4** (AC-12 SurfaceCard, reads `AppTheme.inverted`, now warm-paper) / **COMPONENTS-5** (AC-13 provenance badge) — each owns its own `lib/widgets/*.dart`, disjoint from the THEME phases and each other.
 - **APPLY-1** (AC-14, run alone — touches many screens) and **APPLY-2** (AC-15) come after the component phases; **SIGNOFF-1** last.
 
-Augmentations still owed: AC-7 (COMPONENTS-2 + COMPONENTS-4 rendered-instance inheritance), AC-14 (APPLY-1 zero residuals + pin D-4 set). TestAC10/AC12 augmentations are closed (ITEST-3 already asserts rendered divergence).
+Augmentations still owed: AC-7 (COMPONENTS-2 + COMPONENTS-4 rendered-instance inheritance), AC-14 (APPLY-1 zero residuals + pin D-4 set). THEME-3 owed none. TestAC10/AC12 augmentations are closed (ITEST-3 already asserts rendered divergence).
 
 ## Token usage
 
@@ -198,7 +198,8 @@ Augmentations still owed: AC-7 (COMPONENTS-2 + COMPONENTS-4 rendered-instance in
 | ITEST-3 | 0cf6aa56 | 2026-10-17 18:06 EDT | 18:35 | 28m 38s | 28m 38s | claude-opus-4-8 | 106 | 346,197 | 7,692,082 | 85,665 | 8,124,050 | acceptance-tests: 9 pending AC tests (AC-7..AC-15); default 11 scaffold green + 15 skipped; run-pending red baseline all 9 FAIL at documented assertion (AC-14 PARTIAL, 12 residual literals); unit 1435 green; coverage gate PASS (no lib touched); grades 7A + 2 A-core/B-pending (AC-7→COMPONENTS-2/4, AC-14→APPLY-1) PASS; fix passes 0/3 |
 | ITEST-4 | 04ac06a6 | 2026-10-17 22:21 EDT | 22:24 | 3m 27s | 3m 27s | claude-opus-4-8 | 36 | 85,350 | 1,377,586 | 16,211 | 1,479,183 | test-review: packet assembled for all 15 ACs (13 straight A, 2 A-core/B-pending AC-7/AC-14, 0 plain-B); phase ⏸ awaiting G-2 decision; no code/test change |
 | SIGNOFF-DECISION | 58d04a62 | 2026-10-17 22:38 EDT | 22:40 | 2m 51s | 2m 26s | claude-opus-4-8 | 38 | 54,235 | 1,346,319 | 10,137 | 1,410,729 | ITEST-4 approved (G-2): all 15 AC tests accepted as-is — Matt Quirk 2026-10-17 |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 22:40** | **5h 07m** | **1h 46m** |  | **720** | **1,521,443** | **38,025,421** | **358,947** | **39,906,531** |  |
+| THEME-3 | 4b65cff7 | 2026-10-17 22:42 EDT | 22:59 | 17m 10s | 17m 10s | claude-opus-4-8 | 116 | 249,368 | 7,146,357 | 64,476 | 7,460,317 | behavior: warm-paper ColorScheme (AC-1..4) + D-2 AA proof wired into AppTheme.light(); unit 1434 green, 100% cov theme.dart; acceptance AC-1..4 green (11 later ACs skip); bs-11 a11y regression 19 green; grades 4 straight A, 0 B; fix passes 0/3 |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 22:59** | **5h 24m** | **2h 03m** |  | **836** | **1,770,811** | **45,171,778** | **423,423** | **47,366,848** |  |
 
 ## Sign-off
 

@@ -29,18 +29,51 @@ double _contrast(Color a, Color b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+// The wireframe's warm-paper THEME tokens (bs-17 THEME-3, D-2/D-5) the light
+// scheme overlays. Mirror the hexes in `lib/app/theme.dart` (and the
+// acceptance suite's `WarmPaper` fixture) verbatim, so a wrong token value in
+// the theme fails here in the fast unit lane.
+const Color _bg = Color(0xFFF3F1EC); // --bg  warm paper background
+const Color _sf = Color(0xFFFFFFFF); // --sf  raised surface (paper white)
+const Color _sf2 = Color(0xFFE9E6DF); // --sf2 sunken surface (muted paper)
+const Color _ink = Color(0xFF16150F); // --ink primary text (near-black)
+const Color _mut = Color(0xFF57544C); // --mut secondary text (warm grey)
+const Color _ln = Color(0xFFCFCAC0); // --ln  hairline / divider
+const Color _acc = Color(0xFF2F55C8); // --acc cobalt accent (CTA)
+const Color _accInk = Color(0xFFFFFFFF); // --accInk label on accent (white)
+
 void main() {
-  test('light() adopts the stock Material-3 light tokens', () {
+  test('light() installs the warm-paper scheme over stock M3 (bs-17 THEME-3)',
+      () {
     final theme = AppTheme.light();
-    final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
-    // A11Y-2 adopts the stock M3 light scheme unchanged — it already meets AA
-    // (asserted below), so there is nothing to recolour.
-    expect(theme.colorScheme, base.colorScheme);
-    expect(theme.colorScheme.brightness, Brightness.light);
-    expect(theme.textTheme, base.textTheme);
+    final cs = theme.colorScheme;
+    expect(cs.brightness, Brightness.light);
+
+    // The warm-paper surface / neutral / accent roles are the wireframe tokens.
+    expect(cs.surface, _bg);
+    expect(cs.surfaceContainerLowest, _sf);
+    expect(cs.surfaceContainer, _sf2);
+    expect(cs.onSurface, _ink);
+    expect(cs.onSurfaceVariant, _mut);
+    expect(cs.outline, _ln);
+    expect(cs.outlineVariant, _ln);
+    expect(cs.primary, _acc);
+    expect(cs.onPrimary, _accInk);
+
+    // It diverged from the stock M3 light scheme it overlays …
+    final stock = ThemeData(useMaterial3: true, brightness: Brightness.light);
+    expect(cs.surface, isNot(stock.colorScheme.surface));
+    expect(cs.primary, isNot(stock.colorScheme.primary));
+    expect(cs.onSurface, isNot(stock.colorScheme.onSurface));
+    // … but is an overlay: a role THEME-3 does not touch keeps its stock value.
+    expect(cs.secondary, stock.colorScheme.secondary);
+
+    // The type is still stock M3 — THEME-4 sets the Atkinson families.
+    expect(theme.textTheme, stock.textTheme);
   });
 
-  test('dark() captures the stock Material-3 dark tokens', () {
+  test('dark() captures the stock Material-3 dark tokens (dark deferred, D-3)',
+      () {
     final theme = AppTheme.dark();
     final base = ThemeData(useMaterial3: true, brightness: Brightness.dark);
     expect(theme.colorScheme, base.colorScheme);
@@ -48,14 +81,16 @@ void main() {
     expect(theme.textTheme, base.textTheme);
   });
 
-  test('themeData reassembles the tokens buildApp installs', () {
+  test('themeData installs the warm-paper scheme buildApp runs over', () {
     final theme = AppTheme.light();
     final data = theme.themeData;
     expect(data.useMaterial3, isTrue);
     expect(data.colorScheme, theme.colorScheme);
-    // The reassembled theme matches the scheme buildApp installs on the
-    // MaterialApp — the same palette the AC-5 contrast rule runs over.
-    expect(data.colorScheme, ThemeData(useMaterial3: true).colorScheme);
+    // The reassembled theme carries the warm-paper scheme buildApp installs on
+    // the MaterialApp — the same palette the AC-4 contrast rule runs over …
+    expect(data.colorScheme, AppTheme.warmPaperScheme);
+    // … no longer the stock M3 scheme adopted before bs-17.
+    expect(data.colorScheme, isNot(ThemeData(useMaterial3: true).colorScheme));
   });
 
   test('light and dark are distinct themes', () {
@@ -74,58 +109,34 @@ void main() {
     );
   });
 
-  // AC-5 enforcement (A11Y-2): the shipped light scheme is the single source
-  // the on-device contrast rule (textContrastGuideline) evaluates. Pin the AA
-  // floor for every meaningful text-on-surface pairing so a future token edit
-  // that drops one below WCAG 2.2 AA fails here, in the fast unit lane, before
-  // it can reach a screen.
-  test('light scheme meets the WCAG 2.2 AA contrast floor on every text pairing',
-      () {
+  // AC-4 enforcement (bs-17 THEME-3): the shipped warm-paper scheme is the
+  // single source the on-device contrast rule (textContrastGuideline) and the
+  // acceptance suite's TestAC04 evaluate. Re-prove the WCAG 2.2 AA floor over
+  // the warm-paper tokens — bs-11's AA guarantee is preserved by this proof,
+  // not by equality to the stock scheme — so a future token edit that drops any
+  // meaningful text-on-surface pairing below AA fails here, in the fast unit
+  // lane, before it can reach a screen.
+  test('the warm-paper scheme meets the WCAG 2.2 AA contrast floor (AC-4)', () {
     final cs = AppTheme.light().colorScheme;
 
-    // Normal-weight body/label text must clear 4.5:1 on its surface.
-    final normal = <String, List<Color>>{
-      'onSurface / surface': [cs.onSurface, cs.surface],
-      'onSurfaceVariant / surface': [cs.onSurfaceVariant, cs.surface],
-      'onSurfaceVariant / surfaceContainerHighest': [
-        cs.onSurfaceVariant,
-        cs.surfaceContainerHighest,
-      ],
-      'onSurface / surfaceContainerHighest': [
-        cs.onSurface,
-        cs.surfaceContainerHighest,
-      ],
-      'onPrimary / primary': [cs.onPrimary, cs.primary],
-      'onPrimaryContainer / primaryContainer': [
-        cs.onPrimaryContainer,
-        cs.primaryContainer,
-      ],
-      'onSecondary / secondary': [cs.onSecondary, cs.secondary],
-      'onSecondaryContainer / secondaryContainer': [
-        cs.onSecondaryContainer,
-        cs.secondaryContainer,
-      ],
-      'onTertiaryContainer / tertiaryContainer': [
-        cs.onTertiaryContainer,
-        cs.tertiaryContainer,
-      ],
-      'onError / error': [cs.onError, cs.error],
-      'onErrorContainer / errorContainer': [
-        cs.onErrorContainer,
-        cs.errorContainer,
-      ],
-      'error / surface': [cs.error, cs.surface],
-      'primary / surface': [cs.primary, cs.surface],
-      'onInverseSurface / inverseSurface': [
-        cs.onInverseSurface,
-        cs.inverseSurface,
-      ],
+    // The meaningful warm-paper text-on-surface pairings (the same set
+    // TestAC04_ContrastFloor measures): ink and muted text on each of the three
+    // surface tones, and the accent label on the accent fill.
+    final pairings = <String, List<Color>>{
+      'ink / background': [cs.onSurface, cs.surface],
+      'ink / paper-white': [cs.onSurface, cs.surfaceContainerLowest],
+      'ink / sunken': [cs.onSurface, cs.surfaceContainer],
+      'muted / background': [cs.onSurfaceVariant, cs.surface],
+      'muted / paper-white': [cs.onSurfaceVariant, cs.surfaceContainerLowest],
+      'muted / sunken': [cs.onSurfaceVariant, cs.surfaceContainer],
+      'accentInk / accent': [cs.onPrimary, cs.primary],
     };
 
-    normal.forEach((label, pair) {
+    pairings.forEach((label, pair) {
       final ratio = _contrast(pair[0], pair[1]);
       expect(ratio, greaterThanOrEqualTo(_aaNormal),
-          reason: '$label is ${ratio.toStringAsFixed(2)}:1 — below AA $_aaNormal:1');
+          reason: '$label is ${ratio.toStringAsFixed(2)}:1 — below AA '
+              '$_aaNormal:1 (a warm-paper edit dropped a pairing)');
     });
 
     // Sanity: the floor constants are the WCAG 2.2 AA values the rule uses.
@@ -133,25 +144,25 @@ void main() {
     expect(_aaLarge, 3.0);
   });
 
-  // bs-17 THEME-2 shell: the design-system token accessors exist with stable
-  // signatures and, in this shell, return the current stock-derived values so
-  // the rendered app is unchanged. The behaviour phases (THEME-3/4/5) replace
-  // the bodies with the warm-paper design values; these tests pin the shell
-  // surface (and keep the gate at 100% line coverage on theme.dart).
-  group('bs-17 design-system token accessors (shell — stock-derived)', () {
+  // bs-17 design-system token accessors (THEME-3 sets the colour ones to the
+  // warm-paper values; monoLabel stays stock-derived until THEME-4/5 set the
+  // Mono family, weight and spacing). These pin the accessor values and keep
+  // the gate at 100% line coverage on theme.dart.
+  group('bs-17 design-system token accessors', () {
     final stock = ThemeData(useMaterial3: true, brightness: Brightness.light);
 
-    test('sunkenSurface is the stock container tone (unchanged look)', () {
-      expect(AppTheme.sunkenSurface, stock.colorScheme.surfaceContainer);
+    test('sunkenSurface is the warm-paper sunken tone --sf2', () {
+      expect(AppTheme.sunkenSurface, _sf2);
+      expect(AppTheme.sunkenSurface, isNot(stock.colorScheme.surfaceContainer));
     });
 
-    test('inverted exposes the stock inverse ink/paper pair', () {
+    test('inverted is the warm-paper dark-paper / light-ink pair', () {
       final pair = AppTheme.inverted;
-      expect(pair.paper, stock.colorScheme.inverseSurface);
-      expect(pair.ink, stock.colorScheme.onInverseSurface);
+      expect(pair.paper, _ink); // ink-toned fill --ink
+      expect(pair.ink, _bg); // paper-toned text --bg
     });
 
-    test('monoLabel is the stock labelSmall style', () {
+    test('monoLabel is the stock labelSmall style (Mono set by THEME-4/5)', () {
       expect(AppTheme.monoLabel, stock.textTheme.labelSmall);
     });
 
@@ -159,13 +170,6 @@ void main() {
       expect(AppTheme.hairlineBorderWidth, 1.0);
       expect(AppTheme.standardBorderWidth, 2.0);
       expect(AppTheme.emphasisBorderWidth, 3.0);
-    });
-
-    test('the accessors are not yet wired into themeData (look unchanged)', () {
-      // The shell exposes the surface but changes nothing the app renders:
-      // themeData still reassembles the stock scheme buildApp installs today.
-      expect(AppTheme.light().themeData.colorScheme,
-          ThemeData(useMaterial3: true).colorScheme);
     });
   });
 }
