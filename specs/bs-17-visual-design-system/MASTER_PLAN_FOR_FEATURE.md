@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — ITEST-4 ⏸ awaiting G-2 decision (test-review packet assembled)
+**Status:** In progress — next THEME-3 (G-2 approved 2026-10-17; behavior stage open)
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -136,7 +136,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec **and** the scope expansion: bring a visual design system in-bound (presentation was excluded by the original derivation §6/§8) and amend SI §Presentation; confirm D-3 (defer the dark theme) | THEME-1 | ✅ Resolved 2026-10-17: approved — spec + scope expansion (visual design system in-bound) accepted, SI amended (D12), dark theme deferred (D-3) — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..) | ⏳ Awaiting decision (2026-10-17) — packet in [modules/ITEST.md](modules/ITEST.md) ITEST-4 Result |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase (THEME-3.. / COMPONENTS-2.. / APPLY-..) | ✅ Resolved 2026-10-17: approved — all 15 AC tests accepted as-is (13 straight A, 2 A-core/B-pending AC-7/AC-14 deferrals accepted, AC-15 screen-grain caption intended) — Matt Quirk |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -157,8 +157,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness, pumpApp, pending gate, smoke test | ✅ Done | 9,741,639 | 14m 48s | 11 scaffold tests green (both modes); 15 ACs seeded pending; no lib change |
 | 6 | ITEST-2 | acceptance-tests: AC-1..AC-6 (pending) + red baseline | ✅ Done | 5,081,339 | 15m 37s | 6 AC tests pending; red baseline 6 FAIL; grades 6A |
 | 7 | ITEST-3 | acceptance-tests: AC-7..AC-15 (pending) + red baseline | ✅ Done | 8,124,050 | 28m 38s | 9 AC tests pending; red baseline 9 FAIL (AC-14 PARTIAL); grades 7A + 2 A-core/B-pending (AC-7, AC-14) PASS |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,479,183 | 3m 27s | packet assembled for all 15 ACs; G-2 awaiting the human decision |
-| 9 | THEME-3 | AC-1 + AC-2 + AC-3 + AC-4 (warm-paper ColorScheme + AA proof) | ⬜ Todo | | | |
+| 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,479,183 | 3m 27s | packet assembled for all 15 ACs; G-2 approved 2026-10-17 (Matt Quirk) |
+| 9 | THEME-3 | AC-1 + AC-2 + AC-3 + AC-4 (warm-paper ColorScheme + AA proof) | ⬜ Next | | | |
 | 10 | THEME-4 | AC-5 + AC-6 (Atkinson Next/Mono in TextTheme) | ⬜ Todo | | | ∥ THEME-5 |
 | 11 | THEME-5 | AC-7 + AC-8 + AC-9 (shape/border/mono-label theme styles) | ⬜ Todo | | | ∥ THEME-4 |
 | 12 | COMPONENTS-2 | AC-10 (PillButton primary/secondary) | ⬜ Todo | | | ∥ THEME-4/5 |
@@ -173,7 +173,14 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-4 done (test-review packet assembled) — **G-2 is now awaiting the human decision**. The packet for all 15 ACs is in [modules/ITEST.md](modules/ITEST.md) ITEST-4 Result (per-AC Given/When/Then/Rejects → owner → grade, red-baseline summary, augmentation plan, grid path). Combined grades across ITEST-2/3: **13 straight A, 2 A-core/B-pending (AC-7→COMPONENTS-2/4, AC-14→APPLY-1), 0 plain-B → PASS**. Record the decision: `/feature-next-phase --gate bs-17-visual-design-system G-2 approved | "<changes requested>"`. **Nothing else is startable until G-2 is approved** — it blocks every behavior phase. On approval, THEME-3 (AC-1..4 warm-paper scheme + AA proof) is the natural first behavior phase; THEME-4/5 and COMPONENTS-2..5 then run concurrently (see graph). On "changes requested", an `ITEST` change phase + fresh review precede the behavior stage.
+**G-2 approved 2026-10-17 (Matt Quirk)** — the behavior stage is open. All 15 AC tests are frozen (pending) in `integration_test/design_system_test.dart`; un-pend = delete the AC's row in `bs17/pending.dart`.
+
+Startable now:
+- **THEME-3** (⬜ Next) — AC-1..4: warm-paper `ColorScheme` + AA contrast proof. The natural first behavior phase; owns `lib/app/theme.dart` ColorScheme.
+- Once THEME-3 lands, these run **concurrently** (disjoint ownership — separate `--parallel` sessions): **THEME-4** (AC-5/6 TextTheme fonts) ∥ **THEME-5** (AC-7/8/9 shape/border/mono-label) ∥ **COMPONENTS-2** (AC-10) / **COMPONENTS-3** (AC-11) / **COMPONENTS-4** (AC-12) / **COMPONENTS-5** (AC-13).
+- **APPLY-1** (AC-14, run alone — touches many screens) and **APPLY-2** (AC-15) come after the component phases; **SIGNOFF-1** last.
+
+Augmentations still owed: AC-7 (COMPONENTS-2 + COMPONENTS-4 rendered-instance inheritance), AC-14 (APPLY-1 zero residuals + pin D-4 set). TestAC10/AC12 augmentations are closed (ITEST-3 already asserts rendered divergence).
 
 ## Token usage
 
@@ -190,7 +197,8 @@ ITEST-4 done (test-review packet assembled) — **G-2 is now awaiting the human 
 | ITEST-2 | 92e0b7ed | 2026-10-17 09:24 EDT | 09:39 | 15m 37s | 15m 37s | claude-opus-4-8 | 90 | 231,325 | 4,809,505 | 40,419 | 5,081,339 | acceptance-tests: 6 pending AC tests (AC-1..AC-6) — token roles AC-1/2/3, bs-11 WCAG contrast floor AC-4, Atkinson Next/Mono AC-5/6; default 11 scaffold green + 6 skipped; run-pending red baseline all 6 FAIL at the expected assertion (AC-4 on THEME-3 precondition); unit 1435 green; coverage gate PASS (no lib touched); grades 6A PASS; fix passes 0/3 |
 | ITEST-3 | 0cf6aa56 | 2026-10-17 18:06 EDT | 18:35 | 28m 38s | 28m 38s | claude-opus-4-8 | 106 | 346,197 | 7,692,082 | 85,665 | 8,124,050 | acceptance-tests: 9 pending AC tests (AC-7..AC-15); default 11 scaffold green + 15 skipped; run-pending red baseline all 9 FAIL at documented assertion (AC-14 PARTIAL, 12 residual literals); unit 1435 green; coverage gate PASS (no lib touched); grades 7A + 2 A-core/B-pending (AC-7→COMPONENTS-2/4, AC-14→APPLY-1) PASS; fix passes 0/3 |
 | ITEST-4 | 04ac06a6 | 2026-10-17 22:21 EDT | 22:24 | 3m 27s | 3m 27s | claude-opus-4-8 | 36 | 85,350 | 1,377,586 | 16,211 | 1,479,183 | test-review: packet assembled for all 15 ACs (13 straight A, 2 A-core/B-pending AC-7/AC-14, 0 plain-B); phase ⏸ awaiting G-2 decision; no code/test change |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 22:24** | **5h 04m** | **1h 43m** |  | **682** | **1,467,208** | **36,679,102** | **348,810** | **38,495,802** |  |
+| SIGNOFF-DECISION | 58d04a62 | 2026-10-17 22:38 EDT | 22:40 | 2m 51s | 2m 26s | claude-opus-4-8 | 38 | 54,235 | 1,346,319 | 10,137 | 1,410,729 | ITEST-4 approved (G-2): all 15 AC tests accepted as-is — Matt Quirk 2026-10-17 |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-17 22:40** | **5h 07m** | **1h 46m** |  | **720** | **1,521,443** | **38,025,421** | **358,947** | **39,906,531** |  |
 
 ## Sign-off
 

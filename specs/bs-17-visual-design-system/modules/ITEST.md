@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ITEST-4 ⏸ awaiting review — test-review packet assembled for all 15 ACs; G-2 awaiting the human decision
+**Status:** ✅ Module done — all 4 ITEST phases complete; G-2 approved 2026-10-17 (Matt Quirk); behavior stage open
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/design_system_harness.dart` (new), `integration_test/design_system_test.dart` (new), the shared source-scan helper the AC-14 rule uses (under `integration_test/conformance/` or alongside the harness).
 **Depends on:** THEME-2, COMPONENTS-1 (the shells it observes) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 9,741,639 | 14m 48s |
 | ITEST-2 | acceptance-tests | AC-1..AC-6 | ✅ Done | 5,081,339 | 15m 37s |
 | ITEST-3 | acceptance-tests | AC-7..AC-15 | ✅ Done | 8,124,050 | 28m 38s |
-| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1,479,183 | 3m 27s |
+| ITEST-4 | test-review | — (G-2) | ✅ Done | 1,479,183 | 3m 27s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-- **G-2:** ITEST-4 is the test review; the owner approves the acceptance tests before any behavior phase runs. **Status: ⏳ awaiting decision (2026-10-17)** — packet assembled (ITEST-4 Result); decision recorded via `/feature-next-phase --gate bs-17-visual-design-system G-2 approved | "<changes>"`.
+- **G-2:** ITEST-4 is the test review; the owner approves the acceptance tests before any behavior phase runs. **Status: ✅ Resolved 2026-10-17: approved — all 15 AC tests accepted as-is (13 straight A, 2 A-core/B-pending AC-7/AC-14 deferrals accepted, AC-15 screen-grain caption intended) — Matt Quirk.** Behavior phases unblocked (THEME-3 next).
 
 ## Phase ITEST-1 — acceptance-tests: harness
 
@@ -181,7 +181,7 @@
 
 ### Checkpoint / Handoff — ITEST-4 (→ behavior stage)
 
-- **Phase state:** `⏸ Awaiting review`; **G-2 awaiting the human decision**. No code or test changes; suite frozen as delivered by ITEST-2/3.
+- **Phase state:** ✅ Done; **G-2 approved 2026-10-17 (Matt Quirk)** — all 15 AC tests accepted as-is. No code or test changes; suite frozen as delivered by ITEST-2/3; behavior stage open.
 - **On G-2 approved:** `--gate` flips ITEST-4 → ✅ Done and opens the behavior stage. Startable immediately (no inter-dependencies among them beyond the shared files noted): **THEME-3** (AC-1..4), **THEME-4** (AC-5/6), **THEME-5** (AC-7/8/9), **COMPONENTS-2** (AC-10), **COMPONENTS-3** (AC-11), **COMPONENTS-4** (AC-12), **COMPONENTS-5** (AC-13). **APPLY-1** (AC-14) and **APPLY-2** (AC-15) depend on their module predecessors — see the master plan graph. THEME-3 is the natural first behavior phase (AC-4's Given precondition + every other AC's palette/scheme sit on it).
 - **On changes requested:** author the named `ITEST` change phase(s) against `integration_test/design_system_test.dart`, re-baseline, re-grade, then a fresh test-review before any behavior phase.
 - **Verification commands** (unchanged; Flutter on `~/development/flutter/bin`, `flutter-tester` lane, no `timeout` on macOS): default `flutter test -d flutter-tester integration_test/design_system_test.dart`; red baseline add `--dart-define=BS17_RUN_PENDING=true`; unit `flutter test --coverage`; gate `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`.
