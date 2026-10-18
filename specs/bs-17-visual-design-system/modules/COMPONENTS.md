@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | COMPONENTS-1 | shell | — | ✅ Done | 4,522,630 | 10m 25s |
-| COMPONENTS-2 | behavior | AC-10 | ⬜ Todo | | |
+| COMPONENTS-2 | behavior | AC-10 | ✅ Done | 6,332,367 | 13m 15s |
 | COMPONENTS-3 | behavior | AC-11 | ⬜ Todo | | |
 | COMPONENTS-4 | behavior | AC-12 | ⬜ Todo | | |
 | COMPONENTS-5 | behavior | AC-13 | ⬜ Todo | | |
@@ -95,7 +95,48 @@ deprecated `hasFlag`/`containsSemantics`); the other three widgets passed first 
 
 ### Result
 
+AC-10 built and un-pended. `PillButton.primary` now wraps a `FilledButton` styled
+ink-filled — `backgroundColor: onSurface`, `foregroundColor: surface` (paper label),
+label weight 800 (`labelLarge.copyWith(fontWeight: w800)`), **no** shape/side set →
+the fully-rounded `StadiumBorder` + no-border are inherited from the frozen theme.
+`PillButton.secondary` wraps an `OutlinedButton` styled `backgroundColor: transparent`,
+`foregroundColor: onSurface` (ink label), **no** shape/side set → the `StadiumBorder`
++ 2px ink (`onSurface`) side come from `outlinedButtonTheme`. The theme is frozen; all
+treatment is at the widget level in `lib/widgets/pill_button.dart` only.
+
+**Un-pend:** deleted the `AC-10` row in `integration_test/bs17/pending.dart`
+(`pendingACs` now `{AC-11..AC-15}`); updated the two pending-gate guard tests
+(`unpended` += AC-10; pending exemplars → AC-11/AC-15).
+**AC-7 augmentation (pill half) CLOSED:** added `expect(primaryShape/secondaryShape,
+isA<StadiumBorder>())` on the mounted `PillButton` instances in the AC-10 test — proves
+a rendered pill inherits the theme stadium (the pill sets no shape). AC-7 → "A-core / B
+pending COMPONENTS-4" (card half only, owed by AC-12).
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+`flutter analyze` on the 4 touched files clean; unit `flutter test` **1444/1444** green
+(1442 baseline + 2 new pill colour/weight tests); coverage gate **100% line on
+`lib/widgets/pill_button.dart`** vs BASE `71e34a6`; acceptance
+`flutter test -d flutter-tester integration_test/design_system_test.dart` **GREEN —
+21 passed / 5 skipped** (AC-1..AC-10 run, AC-11..AC-15 pending). **Grade gate PASS**
+(independent re-grade): 9 straight A (incl. AC-10), 1 A-core/B-pending (AC-7 →
+COMPONENTS-4), 0 plain-B; both guard tests A. **Fix passes:** 0/3 (green first run).
+**Tokens/Time:** 6,332,367 · 13m 15s.
+
 ### Checkpoint / Handoff
+
+- **Frozen for APPLY:** `PillButton.primary`/`.secondary` render their final look
+  (ink-fill/paper-label/w800 primary; transparent/ink-label/2px-ink-border secondary),
+  both fully-rounded via the inherited `StadiumBorder`. Public API unchanged
+  (`primary({onPressed, child})` / `secondary(...)`). APPLY swaps ad-hoc buttons for these.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage`
+  then `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none for the pill. AC-7's card-half rendered-instance augmentation
+  is still owed by COMPONENTS-4 (a mounted `SurfaceCard` must inherit `cardTheme` r18).
+- **Next:** COMPONENTS-3 (AC-11 SpeakButton), COMPONENTS-4 (AC-12 SurfaceCard — closes
+  AC-7's card half), COMPONENTS-5 (AC-13 provenance badge) — all three still startable
+  **concurrently** (each owns its own `lib/widgets/*.dart`, disjoint). Then APPLY-1
+  (alone) / APPLY-2, then SIGNOFF-1.
 
 ## Phase COMPONENTS-3 — behavior: speak FAB (AC-11)
 

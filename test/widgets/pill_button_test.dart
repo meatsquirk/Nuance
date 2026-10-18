@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/app/theme.dart';
 import 'package:paint_color_assistant/widgets/pill_button.dart';
 
 Future<void> _pump(WidgetTester tester, Widget child) {
   return tester.pumpWidget(MaterialApp(home: Scaffold(body: child)));
+}
+
+/// Pumps [child] through the production warm-paper theme, so the pill resolves
+/// the real colour scheme (as the app installs it).
+Future<void> _pumpThemed(WidgetTester tester, Widget child) {
+  return tester.pumpWidget(
+    MaterialApp(theme: AppTheme.light().themeData, home: Scaffold(body: child)),
+  );
 }
 
 void main() {
@@ -46,5 +55,37 @@ void main() {
     );
     await tester.tap(find.byType(FilledButton));
     expect(taps, 1);
+  });
+
+  testWidgets('primary is ink-filled with a paper label at the heavy weight',
+      (tester) async {
+    final cs = AppTheme.light().themeData.colorScheme;
+    await _pumpThemed(
+      tester,
+      PillButton.primary(onPressed: () {}, child: const Text('Save')),
+    );
+    final style = tester.widget<FilledButton>(find.byType(FilledButton)).style!;
+    const states = <WidgetState>{};
+    expect(style.backgroundColor?.resolve(states), cs.onSurface,
+        reason: 'primary fills with ink (onSurface), not the accent');
+    expect(style.foregroundColor?.resolve(states), cs.surface,
+        reason: 'primary label is paper-coloured (surface)');
+    expect(style.textStyle?.resolve(states)?.fontWeight, FontWeight.w800,
+        reason: 'primary label carries the heavy weight 800');
+  });
+
+  testWidgets('secondary is transparent with an ink label', (tester) async {
+    final cs = AppTheme.light().themeData.colorScheme;
+    await _pumpThemed(
+      tester,
+      PillButton.secondary(onPressed: () {}, child: const Text('Cancel')),
+    );
+    final style =
+        tester.widget<OutlinedButton>(find.byType(OutlinedButton)).style!;
+    const states = <WidgetState>{};
+    expect(style.backgroundColor?.resolve(states), Colors.transparent,
+        reason: 'secondary carries no fill');
+    expect(style.foregroundColor?.resolve(states), cs.onSurface,
+        reason: 'secondary label is ink (onSurface)');
   });
 }

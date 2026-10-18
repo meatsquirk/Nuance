@@ -47,8 +47,8 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   // AC-1..AC-4 un-pended by THEME-3 (warm-paper ColorScheme + AA proof);
   // AC-5/AC-6 un-pended by THEME-4 (Atkinson Next/Mono typeface);
-  // AC-7/AC-8/AC-9 un-pended by THEME-5 (shape, border-weight, mono-label).
-  'AC-10': 'COMPONENTS-2',
+  // AC-7/AC-8/AC-9 un-pended by THEME-5 (shape, border-weight, mono-label);
+  // AC-10 un-pended by COMPONENTS-2 (PillButton primary/secondary treatment).
   'AC-11': 'COMPONENTS-3',
   'AC-12': 'COMPONENTS-4',
   'AC-13': 'COMPONENTS-5',

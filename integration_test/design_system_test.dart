@@ -159,13 +159,14 @@ void main() {
 
   group('pending gate', () {
     test(
-        'covers the 15 ACs — AC-1..AC-9 un-pended (THEME-3/4/5), the rest pending '
-        'and owned by a real behaviour phase', () {
-      // THEME-3 un-pended AC-1..AC-4, THEME-4 AC-5..AC-6 and THEME-5
-      // AC-7..AC-9 by deleting their rows. Each behaviour phase extends this set
-      // as it lands; when it reaches all 15 the pending map is empty.
+        'covers the 15 ACs — AC-1..AC-10 un-pended (THEME-3/4/5, COMPONENTS-2), '
+        'the rest pending and owned by a real behaviour phase', () {
+      // THEME-3 un-pended AC-1..AC-4, THEME-4 AC-5..AC-6, THEME-5 AC-7..AC-9 and
+      // COMPONENTS-2 AC-10 by deleting their rows. Each behaviour phase extends
+      // this set as it lands; when it reaches all 15 the pending map is empty.
       const unpended = {
         'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', 'AC-9',
+        'AC-10',
       };
       for (final ac in unpended) {
         expect(pendingACs.containsKey(ac), isFalse,
@@ -188,23 +189,24 @@ void main() {
 
     test('hides a pending AC by default and admits it under the run-pending flag',
         () {
-      for (final ac in const ['AC-10', 'AC-15']) {
+      for (final ac in const ['AC-11', 'AC-15']) {
         expect(pendingSkipReason(ac, forceRunPending: false), isNotNull,
             reason: '$ac is pending and must be skipped in the default run');
         expect(pendingSkipReason(ac, forceRunPending: true), isNull,
             reason: '$ac must execute under --dart-define=BS17_RUN_PENDING=true');
       }
-      // An un-pended AC (AC-1 THEME-3, AC-5 THEME-4, AC-7 THEME-5 deleted their
-      // rows) always runs, in either mode — as does an AC never in the map.
-      for (final ac in const ['AC-1', 'AC-5', 'AC-7', 'AC-unmapped']) {
+      // An un-pended AC (AC-1 THEME-3, AC-5 THEME-4, AC-7 THEME-5, AC-10
+      // COMPONENTS-2 deleted their rows) always runs, in either mode — as does
+      // an AC never in the map.
+      for (final ac in const ['AC-1', 'AC-5', 'AC-7', 'AC-10', 'AC-unmapped']) {
         expect(pendingSkipReason(ac, forceRunPending: false), isNull,
             reason: '$ac is un-pended and runs by default');
         expect(pendingSkipReason(ac, forceRunPending: true), isNull);
       }
       // The ambient path acTestWidgets uses agrees with the current mode.
       expect(
-        pendingSkipReason('AC-10'),
-        pendingSkipReason('AC-10', forceRunPending: runPending),
+        pendingSkipReason('AC-11'),
+        pendingSkipReason('AC-11', forceRunPending: runPending),
       );
     });
   });
@@ -617,6 +619,12 @@ void main() {
           cs.surface,
           reason: 'the primary pill label must be paper-coloured (surface)');
       final primaryShape = primaryMat.shape;
+      // AC-7 augmentation: the *rendered* primary pill inherits the fully-rounded
+      // StadiumBorder from the theme (the AC-7 test only proves the theme
+      // *declares* it; this proves a mounted instance picks it up).
+      expect(primaryShape, isA<StadiumBorder>(),
+          reason: 'the rendered primary pill must inherit the StadiumBorder '
+              'shape from the theme');
       if (primaryShape is OutlinedBorder) {
         expect(
             primaryShape.side.style == BorderStyle.none ||
@@ -640,7 +648,11 @@ void main() {
           isTrue,
           reason: 'the secondary pill must be transparent (no fill)');
       final secondaryShape = secondaryMat.shape;
-      expect(secondaryShape, isA<OutlinedBorder>());
+      // AC-7 augmentation: the rendered secondary pill is likewise a fully-rounded
+      // StadiumBorder (an OutlinedBorder) inherited from the theme.
+      expect(secondaryShape, isA<StadiumBorder>(),
+          reason: 'the rendered secondary pill must inherit the StadiumBorder '
+              'shape from the theme');
       expect((secondaryShape! as OutlinedBorder).side.width,
           AppTheme.standardBorderWidth,
           reason: 'the secondary pill carries the 2px standard border');
