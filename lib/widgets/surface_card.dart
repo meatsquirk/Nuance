@@ -6,8 +6,8 @@ enum _SurfaceCardVariant { ordinary, emphasis, inverted }
 
 /// A rounded "surface card" panel in the wireframe's three weights.
 ///
-/// - default [SurfaceCard]: a surface fill with a hairline-weight border (the
-///   `--ln` line colour);
+/// - default [SurfaceCard]: a surface fill with the `--ln` line-colour border
+///   at the standard 2px weight;
 /// - [SurfaceCard.emphasis]: the same fill with a standard-weight ink border;
 /// - [SurfaceCard.inverted]: an ink fill with paper-coloured text (the
 ///   [AppTheme.inverted] pair), used for the one emphasised panel per screen.
@@ -16,12 +16,13 @@ enum _SurfaceCardVariant { ordinary, emphasis, inverted }
 /// [ColorScheme] and the radius from the card theme, so the card carries no
 /// colour arguments and the "one theme" guarantee holds.
 ///
-/// This is the **COMPONENTS-1 shell**: the final public API, rendering
-/// through the current theme (so the radius and tones look ~stock until
-/// THEME-3/5 fill them). COMPONENTS-4 finalises the exact borders (AC-12);
-/// nothing renders a [SurfaceCard] yet.
+/// COMPONENTS-4 finalised the exact borders (AC-12): the ordinary card draws
+/// the line colour ([ColorScheme.outlineVariant]) at the standard 2px weight,
+/// emphasis the ink colour at 2px, and inverted an ink fill with paper text and
+/// no border; the radius is inherited from `cardTheme` (r18). Nothing renders a
+/// [SurfaceCard] until the APPLY phases swap in the component.
 class SurfaceCard extends StatelessWidget {
-  /// An ordinary panel: surface fill, hairline-weight line border.
+  /// An ordinary panel: surface fill, line-colour border at the standard weight.
   const SurfaceCard({required this.child, super.key})
       : _variant = _SurfaceCardVariant.ordinary;
 
@@ -58,7 +59,7 @@ class SurfaceCard extends StatelessWidget {
         fill = scheme.surface;
         border = Border.all(
           color: scheme.outlineVariant,
-          width: AppTheme.hairlineBorderWidth,
+          width: AppTheme.standardBorderWidth,
         );
         textColor = null;
       case _SurfaceCardVariant.emphasis:

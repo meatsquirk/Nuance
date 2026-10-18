@@ -12,7 +12,7 @@
 | COMPONENTS-1 | shell | — | ✅ Done | 4,522,630 | 10m 25s |
 | COMPONENTS-2 | behavior | AC-10 | ✅ Done | 6,332,367 | 13m 15s |
 | COMPONENTS-3 | behavior | AC-11 | ✅ Done | 4,156,872 | 9m 34s |
-| COMPONENTS-4 | behavior | AC-12 | ⬜ Todo | | |
+| COMPONENTS-4 | behavior | AC-12 | ✅ Done | 6,295,885 | 12m 47s |
 | COMPONENTS-5 | behavior | AC-13 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -205,7 +205,56 @@ both pending-gate guard tests A (non-vacuous). **Fix passes:** 0/3 (green first 
 
 ### Result
 
+AC-12 built and un-pended. `SurfaceCard` finalised in `lib/widgets/surface_card.dart`:
+the only behavioural change was the **ordinary** variant's border width — placeholder
+`AppTheme.hairlineBorderWidth` (1px) → finalised `AppTheme.standardBorderWidth` (2px),
+keeping the line colour `scheme.outlineVariant` (the human-approved AC-12 test asserts
+the 2px standard width — this carried the red). `.emphasis` (`onSurface` ink border,
+2px) and `.inverted` (`AppTheme.inverted.paper` ink fill, no border, `AppTheme.inverted.ink`
+paper text) were already final in the shell. Radius is inherited from `cardTheme.shape`
+(r18); the widget sets no colour arguments and no radius of its own. Doc comment refreshed
+to record the finalised treatment. Unit test `test/widgets/surface_card_test.dart`
+ordinary-case updated to assert 2px (the shell's 1px placeholder became the finalised 2px).
+
+**Un-pend:** deleted the `AC-12` row in `integration_test/bs17/pending.dart` (`pendingACs`
+now `{AC-13, AC-14, AC-15}`); updated the two pending-gate guard tests (`unpended` += AC-12;
+pending/ambient exemplars AC-12 → AC-13).
+**AC-7 augmentation (card half) CLOSED:** added, in the AC-12 test, an assertion that the
+*rendered* ordinary `SurfaceCard` inherits the theme `cardTheme` corner radius (`== r18`,
+in [16,22]) — proves a mounted card picks up the theme radius, not the hardcoded r16
+fallback. With the pill half (closed COMPONENTS-2) and the card half both closed on real
+instances, **AC-7 → straight A** (was A-core / B pending COMPONENTS-4). TestAC12's own
+divergence augmentation was already satisfied by its mounted-instance design (ITEST-3).
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+`flutter analyze` on the 4 touched files clean; unit `flutter test` **1444/1444** green
+(unchanged count — modified one existing unit test, no net add); coverage gate **100% line
+on `lib/widgets/surface_card.dart`** (the one touched lib file) vs BASE `e38d7f1`; acceptance
+`flutter test -d flutter-tester integration_test/design_system_test.dart` **GREEN — 23
+passed / 3 skipped** (AC-1..AC-12 run, AC-13..AC-15 pending). **Grade gate PASS**
+(independent fresh re-grade of AC-1..AC-12, fresh subagent): **12 straight A** (incl. AC-12
+new and AC-7 now fully closed), **0 A-core/B-pending**, 0 plain-B; both pending-gate guard
+tests A (non-vacuous). **Fix passes:** 0/3 (green first run).
+**Tokens/Time:** 6,295,885 · 12m 47s.
+
 ### Checkpoint / Handoff
+
+- **Frozen for APPLY:** `SurfaceCard` renders its final look — ordinary (surface fill +
+  `outlineVariant` line border @2px), `.emphasis` (surface fill + `onSurface` ink border
+  @2px), `.inverted` (ink fill `AppTheme.inverted.paper`, no border, paper text
+  `AppTheme.inverted.ink`), corner radius inherited from `cardTheme` (r18). Public API
+  unchanged (`SurfaceCard({child})` / `.emphasis(...)` / `.inverted(...)`). APPLY swaps
+  ad-hoc panels/cards for these.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none for the surface card. AC-7 is now fully closed (both pill and card
+  rendered-instance inheritance proven). No component-module augmentation remains open.
+- **Next:** COMPONENTS-5 (AC-13 provenance badge glyph+border signature) — last component
+  phase; owns `lib/widgets/provenance_badge.dart` / `provenance_icon.dart`, disjoint from
+  the finalised widgets. Then APPLY-1 (AC-14, run **alone** — touches many screens) → APPLY-2
+  (AC-15), then SIGNOFF-1. Augmentations still owed after COMPONENTS-5: **AC-14** (APPLY-1:
+  zero residual hardcoded palette colours + pin the D-4 set).
 
 ## Phase COMPONENTS-5 — behavior: provenance badge signature (AC-13)
 

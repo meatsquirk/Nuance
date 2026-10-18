@@ -17,14 +17,14 @@ BoxDecoration _decoration(WidgetTester tester) {
 void main() {
   final scheme = ThemeData(useMaterial3: true).colorScheme;
 
-  testWidgets('ordinary: surface fill with a hairline line border',
+  testWidgets('ordinary: surface fill with a line-colour border at the standard weight',
       (tester) async {
     await _pump(tester, const SurfaceCard(child: Text('panel')));
     final d = _decoration(tester);
     expect(d.color, scheme.surface);
     final border = d.border! as Border;
     expect(border.top.color, scheme.outlineVariant);
-    expect(border.top.width, AppTheme.hairlineBorderWidth);
+    expect(border.top.width, AppTheme.standardBorderWidth);
     expect(find.text('panel'), findsOneWidget);
   });
 
