@@ -26,11 +26,15 @@ enum SpeakButtonSize {
 /// names the action for screen readers (bs-11's spoken-output label
 /// contract); the glyph itself is excluded from semantics.
 ///
-/// This is the **COMPONENTS-1 shell**: the final public API — the three
-/// [SpeakButtonSize] diameters (64/52/44), the speaker glyph and the
-/// semantic label — rendering through the current theme. COMPONENTS-3
-/// finalises the accent treatment (AC-11); nothing renders a [SpeakButton]
-/// yet.
+/// Finalised in **COMPONENTS-3** (AC-11): the wireframe speak affordance is a
+/// round, accent-filled FAB, and that look is exactly the theme accent fill —
+/// so, unlike the [PillButton] (which overrides the stock accent fill with an
+/// ink fill), this widget needs no widget-level colour override; the shell's
+/// `fillColor: scheme.primary` already carries the final treatment, now that
+/// the warm-paper `ColorScheme` (THEME-3) makes `primary` the cobalt `--acc`.
+/// The three [SpeakButtonSize] diameters (64/52/44), the speaker glyph and the
+/// semantic label are the frozen public API. APPLY wires it into screens;
+/// nothing renders a [SpeakButton] yet.
 class SpeakButton extends StatelessWidget {
   const SpeakButton({
     required this.onPressed,

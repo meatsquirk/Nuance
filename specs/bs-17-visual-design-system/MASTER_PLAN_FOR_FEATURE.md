@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — THEME ✅ + COMPONENTS-2 done (AC-10 ✅, AC-7 pill half closed); next COMPONENTS-3/4/5 ∥
+**Status:** In progress — THEME ✅ + COMPONENTS-2/3 done (AC-10/AC-11 ✅); next COMPONENTS-4/5 ∥
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -49,7 +49,7 @@
 | AC-8 | Borders follow the weight scale | ITEST-3 `TestAC08_BorderWeights` | THEME-5 | ✅ Done |
 | AC-9 | Monospace micro-labels render uppercase with wide letter-spacing | ITEST-3 `TestAC09_MonoLabel` | THEME-5 | ✅ Done |
 | AC-10 | Primary actions render as ink-filled pills and secondary as outline pills | ITEST-3 `TestAC10_Pills` | COMPONENTS-2 | ✅ Done |
-| AC-11 | The speak action renders as a round accent floating button | ITEST-3 `TestAC11_SpeakFab` | COMPONENTS-3 | ⬜ Todo |
+| AC-11 | The speak action renders as a round accent floating button | ITEST-3 `TestAC11_SpeakFab` | COMPONENTS-3 | ✅ Done |
 | AC-12 | Panels render as bordered surface cards with emphasis and inverted variants | ITEST-3 `TestAC12_Cards` | COMPONENTS-4 | ⬜ Todo |
 | AC-13 | Provenance badges render with the glyph-and-border signature | ITEST-3 `TestAC13_ProvenanceSignature` | COMPONENTS-5 | ⬜ Todo |
 | AC-14 | Every screen inherits the one installed theme | ITEST-3 `TestAC14_OneThemeNoHardcode` | APPLY-1 | ⬜ Todo |
@@ -162,8 +162,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 10 | THEME-4 | AC-5 + AC-6 (Atkinson Next/Mono in TextTheme) | ✅ Done | 6,244,445 | 11m 59s | Atkinson Next on prose, Mono on micro-label; unit 1438✅, 100% cov theme.dart; acc AC-1..6✅ (9 skip); bs-11 a11y regression 19✅; grades 6A re-grade (AC-1..6), 0B; guards A |
 | 11 | THEME-5 | AC-7 + AC-8 + AC-9 (shape/border/mono-label theme styles) | ✅ Done | 6,172,745 | 14m 30s | shape (stadium pills + r18 card), 1/2/3 border scale, mono label w700/.06em wired into themeData; unit 1442✅, 100% cov theme.dart; acc AC-1..9✅ (6 skip); bs-11 a11y regression 19✅; grades 8A + AC-7 A-core/B-pending (COMPONENTS-2/4); THEME module complete |
 | 12 | COMPONENTS-2 | AC-10 (PillButton primary/secondary) | ✅ Done | 6,332,367 | 13m 15s | ink-fill/paper-label/w800 primary + transparent/ink-label/2px-border secondary, StadiumBorder inherited; unit 1444✅, 100% cov pill_button.dart; acc AC-1..10✅ (21/5 skip); grades 9A + AC-7 A-core/B-pending (COMPONENTS-4); closes AC-7 pill half |
-| 13 | COMPONENTS-3 | AC-11 (SpeakButton accent FAB) | ⬜ Next | | | ∥ COMPONENTS-4/5 (disjoint lib/widgets/) |
-| 14 | COMPONENTS-4 | AC-12 (SurfaceCard + emphasis + inverted) | ⬜ Todo | | | ∥ |
+| 13 | COMPONENTS-3 | AC-11 (SpeakButton accent FAB) | ✅ Done | 4,156,872 | 9m 34s | AC-11 un-pended; accent-FAB look already realised by shell+THEME (fill=theme primary, no widget code change); acc 22/4 green; grades 10A + AC-7 A-core/B-pending COMPONENTS-4 |
+| 14 | COMPONENTS-4 | AC-12 (SurfaceCard + emphasis + inverted) | ⬜ Next | | | ∥ COMPONENTS-5 (disjoint lib/widgets/); closes AC-7 card half |
 | 15 | COMPONENTS-5 | AC-13 (provenance badge glyph+border signature) | ⬜ Todo | | | ∥ |
 | 16 | APPLY-1 | AC-14 (one theme; remove residual hardcoded palette colours) | ⬜ Todo | | | run alone (many screens) |
 | 17 | APPLY-2 | AC-15 (shared swatch approximation caption) | ⬜ Todo | | | |
@@ -173,15 +173,14 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-COMPONENTS-2 finalised `PillButton` (AC-10 ✅) — ink-fill/paper-label/w800 primary + transparent/ink-label/2px-ink-border secondary, both fully-rounded via the inherited theme `StadiumBorder` (widget-level colours only; `lib/app/theme.dart` stays frozen). It also closed **AC-7's pill-half** augmentation (the AC-10 test now asserts `isA<StadiumBorder>` on the mounted pills).
+COMPONENTS-3 un-pended `AC-11` (SpeakButton accent FAB). No widget code changed: the FAB's wireframe look **is** the theme accent fill, already rendered by the shell's `fillColor: scheme.primary` once THEME-3 made `primary` the cobalt accent (unlike the pill, which needed an ink-fill override). Doc comment refreshed; `AC-11` test green; the two pending-gate guard exemplars moved AC-11 → un-pended, AC-12 → still-pending.
 
-Startable now — all three **concurrently** (each owns its own `lib/widgets/*.dart`, disjoint; separate `--parallel` sessions off COMPONENTS-2's commit):
-- **COMPONENTS-3** (AC-11 SpeakButton accent FAB).
+Startable now — both **concurrently** (each owns its own `lib/widgets/*.dart`, disjoint; separate `--parallel` sessions off COMPONENTS-3's commit):
 - **COMPONENTS-4** (AC-12 SurfaceCard + emphasis + inverted, reads `AppTheme.inverted`) — closes AC-7's rendered-**card** augmentation.
 - **COMPONENTS-5** (AC-13 provenance badge glyph+border signature).
 - **APPLY-1** (AC-14, run alone — touches many screens) then **APPLY-2** (AC-15) come after the component phases; **SIGNOFF-1** last.
 
-Augmentations still owed: **AC-7 card half** (COMPONENTS-4 — a rendered `SurfaceCard` inheriting `cardTheme` r18), **AC-14** (APPLY-1 zero residuals + pin D-4 set). The AC-7 pill half and TestAC10/AC12 are closed.
+Augmentations still owed: **AC-7 card half** (COMPONENTS-4 — a rendered `SurfaceCard` inheriting `cardTheme` r18), **AC-14** (APPLY-1 zero residuals + pin D-4 set). The AC-7 pill half and TestAC10/AC11/AC12 are closed.
 
 ## Token usage
 
@@ -203,7 +202,8 @@ Augmentations still owed: **AC-7 card half** (COMPONENTS-4 — a rendered `Surfa
 | THEME-4 | 941db6f9 | 2026-10-18 07:38 EDT | 07:50 | 11m 59s | 11m 59s | claude-opus-4-8 | 118 | 221,591 | 5,988,568 | 34,168 | 6,244,445 | behavior: Atkinson Next on prose + Mono on micro-label (AC-5/AC-6); unit 1438 green, 100% cov theme.dart; acceptance AC-1..6 green (9 skip); bs-11 a11y regression 19 green; grades 6A re-grade (AC-1..6) 0B; fix passes 0/3 |
 | THEME-5 | 37cfa4f1 | 2026-10-18 07:57 EDT | 08:12 | 14m 30s | 14m 30s | claude-opus-4-8 | 124 | 222,797 | 5,911,349 | 38,475 | 6,172,745 | behavior: shape (stadium pills + r18 card), 1/2/3 border scale, mono label w700/.06em wired into themeData (AC-7/8/9); unit 1442 green, 100% cov theme.dart; acceptance AC-1..9 green (6 skip); bs-11 a11y regression 19 green; grades 8 straight A + AC-7 A-core/B-pending (COMPONENTS-2/4), 0 plain-B; guards A; fix passes 1/3 |
 | COMPONENTS-2 | fc7d583b | 2026-10-18 08:15 EDT | 08:28 | 13m 15s | 13m 15s | claude-opus-4-8 | 116 | 222,424 | 6,066,310 | 43,517 | 6,332,367 | AC-10 built + un-pended; acc 21/5 green; grade PASS 9A + AC-7 A-core/B-pending COMPONENTS-4; closes AC-7 pill half |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 08:28** | **6h 04m** | **2h 43m** |  | **1,194** | **2,437,623** | **63,138,005** | **539,583** | **66,116,405** |  |
+| COMPONENTS-3 | 665ef0cf | 2026-10-18 08:31 EDT | 08:40 | 9m 34s | 9m 34s | claude-opus-4-8 | 88 | 214,072 | 3,914,263 | 28,449 | 4,156,872 | AC-11 un-pended; accent-FAB look already realised by shell+THEME (fill=theme primary, no widget code change); doc comment + guard exemplars updated; acc 22/4 green; unit 1444 green; 100% cov speak_button.dart; grade PASS 10A + AC-7 A-core/B-pending COMPONENTS-4; fix passes 0/3 |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 08:40** | **6h 14m** | **2h 52m** |  | **1,282** | **2,651,695** | **67,052,268** | **568,032** | **70,273,277** |  |
 
 ## Sign-off
 

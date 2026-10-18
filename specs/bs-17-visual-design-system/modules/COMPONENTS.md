@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | COMPONENTS-1 | shell | — | ✅ Done | 4,522,630 | 10m 25s |
 | COMPONENTS-2 | behavior | AC-10 | ✅ Done | 6,332,367 | 13m 15s |
-| COMPONENTS-3 | behavior | AC-11 | ⬜ Todo | | |
+| COMPONENTS-3 | behavior | AC-11 | ✅ Done | 4,156,872 | 9m 34s |
 | COMPONENTS-4 | behavior | AC-12 | ⬜ Todo | | |
 | COMPONENTS-5 | behavior | AC-13 | ⬜ Todo | | |
 
@@ -149,7 +149,50 @@ COMPONENTS-4), 0 plain-B; both guard tests A. **Fix passes:** 0/3 (green first r
 
 ### Result
 
+AC-11 built and un-pended. **No `SpeakButton` code change was needed:** the FAB's
+wireframe treatment *is* the theme accent fill, and the COMPONENTS-1 shell already
+renders `fillColor: scheme.primary` / `scheme.onPrimary` glyph on a `CircleBorder`
+with the three diameters and the `semanticLabel`. Once THEME-3 made `colorScheme.primary`
+the cobalt accent (`WarmPaper.accent` = `#2F55C8`), the shell *became* the final look —
+unlike the `PillButton` (COMPONENTS-2), which had to override the stock accent fill with
+an ink fill. So the FAB AC was realised by the shell + THEME; this phase finalises it by
+un-pending and confirming, plus a doc-comment refresh in `lib/widgets/speak_button.dart`
+recording that the accent fill is the frozen final treatment.
+
+**Un-pend:** deleted the `AC-11` row in `integration_test/bs17/pending.dart`
+(`pendingACs` now `{AC-12..AC-15}`); updated the two pending-gate guard tests in
+`integration_test/design_system_test.dart` (`unpended` += AC-11; pending exemplars
+`AC-11/AC-15` → `AC-12/AC-15`; ambient-path exemplar `AC-11` → `AC-12`).
+**Augmentations:** none owed by this phase; none newly enabled (no new behaviour was
+built that lets an already-green AC test assert more). The AC-7 **card half** remains
+owed by COMPONENTS-4.
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+`flutter analyze` on the 4 touched files clean; unit `flutter test` **1444/1444** green
+(unchanged — the widget's behaviour is unchanged); coverage gate **100% line on
+`lib/widgets/speak_button.dart`** (the one touched lib file, comment-only) vs BASE
+`5306d28`; acceptance `flutter test -d flutter-tester integration_test/design_system_test.dart`
+**GREEN — 22 passed / 4 skipped** (AC-1..AC-11 run, AC-12..AC-15 pending); run-pending
+pre-un-pend confirmed `AC-11` green. **Grade gate PASS** (independent fresh re-grade of
+AC-1..AC-11): **10 straight A** (incl. AC-11) + **1 A-core / B-pending COMPONENTS-4**
+(AC-7 card half, carried unchanged — not regressed, not closed this phase), 0 plain-B;
+both pending-gate guard tests A (non-vacuous). **Fix passes:** 0/3 (green first run).
+**Tokens/Time:** 4,156,872 · 9m 34s.
+
 ### Checkpoint / Handoff
+
+- **Frozen for APPLY:** `SpeakButton` renders its final look — a round (`CircleBorder`)
+  accent-filled (`colorScheme.primary`) FAB with a paper glyph (`onPrimary`, `Icons.volume_up`)
+  in the three `SpeakButtonSize` diameters (64/52/44), carrying `semanticLabel`. Public API
+  unchanged. APPLY swaps ad-hoc speak controls for this.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none for the speak FAB. AC-7's card-half rendered-instance augmentation
+  is still owed by COMPONENTS-4 (a mounted `SurfaceCard` must inherit `cardTheme` r18).
+- **Next:** COMPONENTS-4 (AC-12 SurfaceCard — closes AC-7's card half), COMPONENTS-5
+  (AC-13 provenance badge) — both still startable **concurrently** (disjoint `lib/widgets/`).
+  Then APPLY-1 (alone) / APPLY-2, then SIGNOFF-1.
 
 ## Phase COMPONENTS-4 — behavior: surface cards and panels (AC-12)
 
