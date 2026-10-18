@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-3 done; next ITEST-4 (test review → G-2)
+**Status:** ITEST-4 ⏸ awaiting review — test-review packet assembled for all 15 ACs; G-2 awaiting the human decision
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/design_system_harness.dart` (new), `integration_test/design_system_test.dart` (new), the shared source-scan helper the AC-14 rule uses (under `integration_test/conformance/` or alongside the harness).
 **Depends on:** THEME-2, COMPONENTS-1 (the shells it observes) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 9,741,639 | 14m 48s |
 | ITEST-2 | acceptance-tests | AC-1..AC-6 | ✅ Done | 5,081,339 | 15m 37s |
 | ITEST-3 | acceptance-tests | AC-7..AC-15 | ✅ Done | 8,124,050 | 28m 38s |
-| ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | 1,479,183 | 3m 27s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-- **G-2:** ITEST-4 is the test review; the owner approves the acceptance tests before any behavior phase runs.
+- **G-2:** ITEST-4 is the test review; the owner approves the acceptance tests before any behavior phase runs. **Status: ⏳ awaiting decision (2026-10-17)** — packet assembled (ITEST-4 Result); decision recorded via `/feature-next-phase --gate bs-17-visual-design-system G-2 approved | "<changes>"`.
 
 ## Phase ITEST-1 — acceptance-tests: harness
 
@@ -137,9 +137,55 @@
 - **Tasks:** assemble the test-review packet (each AC → its test → Given/When/Then assertions → Rejects → grade; the red baseline; the augmentation plan); present for G-2.
 - **Exit criteria:** a human records the G-2 decision. "Changes requested" spawns ITEST change phase(s) + a fresh review.
 
-### Result
+### Result — ITEST-4 (2026-10-17): test-review packet → G-2
 
-### Checkpoint / Handoff
+**Phase kind:** `test-review` — no behavior or test code written; this phase assembles the acceptance-suite review packet for all 15 ACs and presents it for the human **G-2** decision. The suite (`integration_test/design_system_test.dart`) is frozen as delivered by ITEST-2/ITEST-3: 15 AC tests + 11 scaffold tests. Default run green (15 skipped behind `BS17_RUN_PENDING`); run-pending red baseline verified for all 15 (table below).
+
+**Reviewer — look here first:**
+1. **AC-4** — the one AC that *references but does not restate* bs-11's accessibility floor. Confirm it is right that bs-17 re-measures WCAG contrast over the warm-paper tokens (7 text-on-surface pairings ≥ 4.5) rather than owning a new accessibility rule. This is the spec's explicit boundary (feature §Boundary).
+2. **AC-7 & AC-14** — the two **A-core / B pending** rows (not straight A). Each is a *later-only* limit with a named owner, not a weak test: AC-7 proves the theme *declares* the stadium pill / 16–22 card radius but defers rendered-instance inheritance to COMPONENTS-2/4; AC-14's no-hardcode half fails red on 12 residual `lib/` literals that only APPLY-1 can remove. Confirm these deferrals are acceptable to approve now.
+3. **AC-15 grain** — asserts **screen-grain** co-presence of an "approx" caption (faithful to APPLY-2's *shared* caption + the wireframe's single app-level disclaimer), not per-swatch subtree association. Confirm the shared-caption design is intended; if per-swatch is wanted, an augmentation is owed (noted in APPLY-2 handoff).
+4. **TestAC10 / TestAC12** — the plan-mode augmentation table pre-seeded divergence augmentations for these, but the authored tests already mount the real components and assert rendered divergence, so both grade straight A and the augmentation rows are **closed** (COMPONENTS-2/4 just un-pend + keep green).
+
+**Packet — every AC → its test → Given / When / Then / Rejects → owner → grade** (full per-assertion detail in the grade grid; red-baseline failure point per row in the *Red baseline* table below):
+
+| AC | Test | Given (observed) | When | Then (key assertions) | Rejects | Owner | Grade |
+|---|---|---|---|---|---|---|---|
+| AC-1 | `Surfaces use the warm-paper palette` | app assembled: `MaterialApp` findsOne, `installedTheme`≠null, `Scaffold` rendered | surfaces rendered → read installed `ColorScheme` | `surface==WarmPaper.background`(--bg), `surfaceContainerLowest==surface`(--sf), `surfaceContainer==sunken`(--sf2); +`isNot(stock.surface)` | stock M3 surfaces; wrong token values; a per-screen scheme | THEME-3 | **A** |
+| AC-2 | `Ink, muted text and hairlines use the warm-paper neutrals` | `Text` findsWidgets; theme resolved | rendered | `onSurface==ink`, `onSurfaceVariant==muted`, `outline`&`outlineVariant==line`; +`isNot(stock)` controls | stock neutrals; wrong values; `outlineVariant` left stock | THEME-3 | **A** |
+| AC-3 | `The primary action colour is the cobalt accent` | theme installed (transitive via `installedTheme` getter) | read `primary`/`onPrimary` | `primary==accent`(#2F55C8), `onPrimary==accentInk`(#FFFFFF); +`isNot(stock.primary)` | stock primary; wrong accent; non-white label | THEME-3 | **A** |
+| AC-4 | `The warm-paper palette still meets the accessibility contrast floor` | **precondition (THEME-3):** `surface==background`, `onSurface==ink`, `primary==accent` | measure every text-on-surface pairing (bs-11 mirrored WCAG math) | 7 pairings each `≥4.5` (ink×{bg,paper,sunken}, muted×{bg,paper,sunken}, accentInk/accent) + `_aaNormal==4.5` sanity | a below-AA warm-paper edit; a non-warm-paper scheme; a mis-mirrored ratio | THEME-3 | **A** |
+| AC-5 | `Prose and headings render in Atkinson Hyperlegible Next` | `Text` findsWidgets; `textTheme` resolved | read `TextTheme` roles | 8 prose/heading roles each `fontFamily=='Atkinson Hyperlegible Next'` (mono excluded) | stock Roboto/SF (null); non-Atkinson; partial application | THEME-4 | **A** |
+| AC-6 | `Micro-labels and numeric readouts render in Atkinson Hyperlegible Mono` | theme source `AppTheme.monoLabel`; `installedTheme`≠null | read `AppTheme.monoLabel.fontFamily` | `=='Atkinson Hyperlegible Mono'`; +`isNot(Next)`/`isNot(null)` controls | stock (null); left in sans Next; any wrong family | THEME-4 | **A** |
+| AC-7 | `Buttons render as fully-rounded pills and cards as rounded panels` | `installedTheme` deref (theme-shape grain) | read filled/outlined button & card shapes | filled & outlined `isA<StadiumBorder>`; `cardTheme.shape isA<RoundedRectangleBorder>` radius∈[16,22] | stock button radius; stock/unset card radius; radius outside 16–22 (**not yet:** component overriding theme shape → deferred) | THEME-5 | **A-core / B pending COMPONENTS-2, COMPONENTS-4** |
+| AC-8 | `Borders follow the weight scale` | `installedTheme` deref | read divider/outlined-side widths | `dividerTheme.thickness==1` (hairline), outlined side `width==2` (standard); `emphasisBorderWidth==3` + `1<2<3` (const controls) | unset/0 divider; non-2px side; a dropped 1-vs-2 distinction | THEME-5 | **A** |
+| AC-9 | `Monospace micro-labels render uppercase with wide letter-spacing` | mount real `MonoLabel('srgb')`, settle | rendered | renders `'SRGB'` (`find.text('srgb') findsNothing` control), `fontWeight==w700`, `letterSpacing/fontSize≈0.06`(±0.012) | mixed-case; non-bold; un-tracked | THEME-5 | **A** |
+| AC-10 | `Primary actions render as ink-filled pills and secondary as outline pills` | mount real `PillButton.primary` & `.secondary` through theme | rendered | primary `Material.color==onSurface`(ink), label `==surface`(paper), no border; secondary transparent fill + 2px `onSurface` border + ink label; primary≠secondary fill | accent-filled primary; identical/colour-swapped variants; secondary with a fill or no border | COMPONENTS-2 | **A** |
+| AC-11 | `The speak action renders as a round accent floating button` | mount real `SpeakButton`, settle | rendered | `CircleBorder`; `fillColor==WarmPaper.accent` **and** `==cs.primary` (inherited); `Icons.volume_up` present; `bySemanticsLabel('Speak')` control | text/square button; non-accent fill; missing/other glyph; unlabelled | COMPONENTS-3 | **A** |
+| AC-12 | `Panels render as bordered surface cards with emphasis and inverted variants` | mount `SurfaceCard` ordinary/emphasis/inverted through theme | rendered | ordinary `surface` fill + 2px `outlineVariant` border; emphasis `surface` fill + 2px `onSurface` border; inverted ink fill + no border + paper text; + divergence controls | three identical cards; 1px ordinary border; inverted not ink-filled / sunk text | COMPONENTS-4 | **A** |
+| AC-13 | `Provenance badges render with the glyph-and-border signature` | per `ProvenanceTier`, mount real `ProvenanceBadge`, settle | rendered | each tier carries a non-colour signature (`border‖fill‖custom`); glyphs `hasLength 4` (distinct); signatures vary (`≥2`) | colour-only differentiation; no non-colour signature on a kind; a uniform signature across kinds | COMPONENTS-5 | **A** |
+| AC-14 | `Every screen inherits the one installed theme` | walk `screenRoster` via `pumpApp`; `MaterialApp` findsOne per screen | any primary screen shown | each screen scheme/text `==` `AppTheme.light()` chokepoint; `residualPaletteLiterals isEmpty` (names offenders) | a nested theme; an overriding screen; (after APPLY-1) a hardcoded palette literal outside exclusions | APPLY-1 | **A-core / B pending APPLY-1** (PARTIAL at baseline) |
+| AC-15 | `A displayed colour swatch carries its approximation caption` | walk `screenRoster`; count `ColorChip`s with a colour; `totalSwatches>0` control | swatch shown | each swatch-bearing screen shows an `'approx'` caption `Text` (screen-grain co-presence) | a swatch-bearing screen with no caption; a vacuous zero-swatch pass | APPLY-2 | **A** |
+
+**Red baseline (run-pending):** all 15 AC tests FAIL at the documented assertion under `flutter test -d flutter-tester integration_test/design_system_test.dart --dart-define=BS17_RUN_PENDING=true`; AC-14 is PARTIAL (one-theme half passes, no-hardcode half fails on 12 residual `lib/` literals). Default run (no flag): 11 scaffold pass, 15 AC skipped. Per-row failure point in the *Red baseline* table below.
+
+**Augmentation plan** (*Test augmentations* table below): **2 open** — TestAC07 (closed by COMPONENTS-2 pill + COMPONENTS-4 card: rendered-instance `StadiumBorder`/radius inheritance) and TestAC14 (closed by APPLY-1: zero residual literals + pin the D-4 exclusion set). **2 closed at authoring** — TestAC10, TestAC12 (the ITEST-3 tests already mount the real variants and assert rendered divergence). No augmentation owed for AC-1..AC-6, AC-8, AC-9, AC-11, AC-13, AC-15.
+
+**Grade grid:** [`behavior-test-completeness-bs-17-visual-design-system.md`](../behavior-test-completeness-bs-17-visual-design-system.md) — ITEST-2 section (AC-1..AC-6) + ITEST-3 section (AC-7..AC-15). Combined counts: **13 straight A, 2 A-core / B pending (AC-7, AC-14), 0 plain B → gate PASS** at both AC-test phases. Each grade was set by an independent fresh-subagent grader who did not author the tests.
+
+**Decision requested — G-2:** approve the acceptance tests so the behavior stage may begin. Recorded via:
+`/feature-next-phase --gate bs-17-visual-design-system G-2 approved | "<changes requested>"`
+"Changes requested" turns each item into an `ITEST` change phase before the behavior stage, then a fresh review.
+
+**Tokens / Time:** see dashboard row (ledger `ITEST-4`).
+
+### Checkpoint / Handoff — ITEST-4 (→ behavior stage)
+
+- **Phase state:** `⏸ Awaiting review`; **G-2 awaiting the human decision**. No code or test changes; suite frozen as delivered by ITEST-2/3.
+- **On G-2 approved:** `--gate` flips ITEST-4 → ✅ Done and opens the behavior stage. Startable immediately (no inter-dependencies among them beyond the shared files noted): **THEME-3** (AC-1..4), **THEME-4** (AC-5/6), **THEME-5** (AC-7/8/9), **COMPONENTS-2** (AC-10), **COMPONENTS-3** (AC-11), **COMPONENTS-4** (AC-12), **COMPONENTS-5** (AC-13). **APPLY-1** (AC-14) and **APPLY-2** (AC-15) depend on their module predecessors — see the master plan graph. THEME-3 is the natural first behavior phase (AC-4's Given precondition + every other AC's palette/scheme sit on it).
+- **On changes requested:** author the named `ITEST` change phase(s) against `integration_test/design_system_test.dart`, re-baseline, re-grade, then a fresh test-review before any behavior phase.
+- **Verification commands** (unchanged; Flutter on `~/development/flutter/bin`, `flutter-tester` lane, no `timeout` on macOS): default `flutter test -d flutter-tester integration_test/design_system_test.dart`; red baseline add `--dart-define=BS17_RUN_PENDING=true`; unit `flutter test --coverage`; gate `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`.
+- **Un-pend ritual (every behavior phase):** delete that AC's row in `integration_test/bs17/pending.dart`; make its assigned augmentation(s); run default (its AC now green, later ACs still skipped) + unit/coverage gate + acceptance & grade gates.
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
