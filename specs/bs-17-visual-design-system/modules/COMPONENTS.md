@@ -13,7 +13,7 @@
 | COMPONENTS-2 | behavior | AC-10 | ✅ Done | 6,332,367 | 13m 15s |
 | COMPONENTS-3 | behavior | AC-11 | ✅ Done | 4,156,872 | 9m 34s |
 | COMPONENTS-4 | behavior | AC-12 | ✅ Done | 6,295,885 | 12m 47s |
-| COMPONENTS-5 | behavior | AC-13 | ⬜ Todo | | |
+| COMPONENTS-5 | behavior | AC-13 | ✅ Done | 2,589,616 | 5m 36s |
 
 ## Interface reconciliation
 
@@ -267,4 +267,49 @@ tests A (non-vacuous). **Fix passes:** 0/3 (green first run).
 
 ### Result
 
+AC-13 built and un-pended. `ProvenanceBadge.build` now switches on `provenance.tier`
+and wraps the **unchanged** glyph+label content in one of four colour-independent,
+theme-read border-style signatures: `measured` = solid ink border
+(`Border.all(onSurface, standardBorderWidth=2px)`); `calculated` = sunken
+(`AppTheme.sunkenSurface`) fill, no border; `estimated` = dashed ink border drawn by a
+new `CustomPaint(painter: _DashedBorderPainter(...))` (**`painter:`**, not
+`foregroundPainter:` — a foregroundPainter would collapse the signature and fail the
+test); `confirmed` = `AppTheme.inverted.paper` ink fill with the label flipped to
+`inverted.ink`. Glyph (`ProvenanceIcon`) and `Semantics(label, excludeSemantics:true)`
+are byte-for-byte the bs-10/bs-11 wording (D-6) — only `provenance_badge.dart` changed
+(`provenance_icon.dart` untouched). The tier now reads from glyph AND border, never hue
+alone.
+
+**Un-pend:** deleted the `AC-13` row in `integration_test/bs17/pending.dart`
+(`pendingACs` now `{AC-14, AC-15}`); updated the two pending-gate guards (un-pended set
++= AC-13; still-pending/ambient exemplars moved to AC-14/AC-15). **No augmentation
+owed** by AC-13 (the only open augmentation in the feature remains AC-14/APPLY-1).
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+`flutter analyze` on the 2 touched files clean; unit `flutter test` **1450/1450** green
+(1444 baseline + 6 new AC-13 badge tests); coverage gate **100% line on
+`lib/widgets/provenance_badge.dart`** vs BASE `3830764` (incl. `_DashedBorderPainter.paint`
++ `shouldRepaint`); acceptance
+`flutter test -d flutter-tester integration_test/design_system_test.dart` **GREEN —
+24 passed / 2 skipped** (AC-1..AC-13 run, AC-14/AC-15 pending). bs-10/bs-11 provenance
+suites stay green (part of the 1450). **Grade gate PASS** (independent re-grade appended
+to `behavior-test-completeness-…md`): **13 straight A** (AC-1..AC-13), 0 A-core/B-pending,
+0 plain-B; both guard tests A, non-vacuous. **Fix passes:** 0/3 (green first run).
+**Tokens/Time:** 2,589,616 · 5m 36s.
+
 ### Checkpoint / Handoff
+
+- **Frozen for APPLY:** `ProvenanceBadge` renders its final per-tier signature (solid
+  ink border / sunken fill / dashed `CustomPaint.painter` / ink fill) read from the
+  theme tokens; public API unchanged (`ProvenanceBadge({required provenance})`). The
+  `_DashedBorderPainter` is a private helper of the file.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage`
+  then `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none for the badge. All five components (pill, speak, card, mono-label,
+  provenance badge) are now final.
+- **Next:** COMPONENTS module complete (AC-10..AC-13 all ✅; AC-7 fully closed). The
+  APPLY module is unblocked: **APPLY-1** (AC-14 — install the one theme app-wide, remove
+  residual hardcoded palette colours; run **alone**, touches many screens, owes the
+  AC-14 augmentation — zero residual palette literals + pin the D-4 exclusion set) then
+  **APPLY-2** (AC-15 — shared swatch approximation caption), then **SIGNOFF-1**.

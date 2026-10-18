@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — THEME ✅ + COMPONENTS-2/3/4 done (AC-10/AC-11/AC-12 ✅, AC-7 fully closed); next COMPONENTS-5
+**Status:** In progress — THEME ✅ + COMPONENTS ✅ (AC-10..AC-13 ✅, AC-7 fully closed); next APPLY-1
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -51,7 +51,7 @@
 | AC-10 | Primary actions render as ink-filled pills and secondary as outline pills | ITEST-3 `TestAC10_Pills` | COMPONENTS-2 | ✅ Done |
 | AC-11 | The speak action renders as a round accent floating button | ITEST-3 `TestAC11_SpeakFab` | COMPONENTS-3 | ✅ Done |
 | AC-12 | Panels render as bordered surface cards with emphasis and inverted variants | ITEST-3 `TestAC12_Cards` | COMPONENTS-4 | ✅ Done |
-| AC-13 | Provenance badges render with the glyph-and-border signature | ITEST-3 `TestAC13_ProvenanceSignature` | COMPONENTS-5 | ⬜ Todo |
+| AC-13 | Provenance badges render with the glyph-and-border signature | ITEST-3 `TestAC13_ProvenanceSignature` | COMPONENTS-5 | ✅ Done |
 | AC-14 | Every screen inherits the one installed theme | ITEST-3 `TestAC14_OneThemeNoHardcode` | APPLY-1 | ⬜ Todo |
 | AC-15 | A displayed colour swatch carries its approximation caption | ITEST-3 `TestAC15_SwatchCaption` | APPLY-2 | ⬜ Todo |
 
@@ -111,7 +111,7 @@ Pre-seeded augmentations: AC-14 is partially green at baseline (bs-11 already in
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | THEME | [modules/THEME.md](modules/THEME.md) | the warm-paper tokens, Atkinson fonts and shape/border/label styles in the one `AppTheme` chokepoint; scaffold + font bundling | — | ✅ Complete |
-| COMPONENTS | [modules/COMPONENTS.md](modules/COMPONENTS.md) | the styled widget set (`PillButton`, `SpeakButton`, `SurfaceCard`, `MonoLabel`) + the provenance-badge signature | THEME | 🔄 In progress |
+| COMPONENTS | [modules/COMPONENTS.md](modules/COMPONENTS.md) | the styled widget set (`PillButton`, `SpeakButton`, `SurfaceCard`, `MonoLabel`) + the provenance-badge signature | THEME | ✅ Done |
 | APPLY | [modules/APPLY.md](modules/APPLY.md) | wire the screens to the theme + components; remove residual hardcoded palette colours; the shared swatch caption | THEME, COMPONENTS | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | acceptance integration suite: one pending test per AC, and its review | THEME-2, COMPONENTS-1 | 🔄 In progress |
 
@@ -164,8 +164,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | COMPONENTS-2 | AC-10 (PillButton primary/secondary) | ✅ Done | 6,332,367 | 13m 15s | ink-fill/paper-label/w800 primary + transparent/ink-label/2px-border secondary, StadiumBorder inherited; unit 1444✅, 100% cov pill_button.dart; acc AC-1..10✅ (21/5 skip); grades 9A + AC-7 A-core/B-pending (COMPONENTS-4); closes AC-7 pill half |
 | 13 | COMPONENTS-3 | AC-11 (SpeakButton accent FAB) | ✅ Done | 4,156,872 | 9m 34s | AC-11 un-pended; accent-FAB look already realised by shell+THEME (fill=theme primary, no widget code change); acc 22/4 green; grades 10A + AC-7 A-core/B-pending COMPONENTS-4 |
 | 14 | COMPONENTS-4 | AC-12 (SurfaceCard + emphasis + inverted) | ✅ Done | 6,295,885 | 12m 47s | AC-12 un-pended; ordinary border 1px→2px (line colour), emphasis/inverted already final; unit 1444✅, 100% cov surface_card.dart; acc AC-1..12✅ (23/3 skip); grades 12A (AC-12 new, AC-7 fully closed), 0 A-core/B, 0 plain-B; closes AC-7 card half |
-| 15 | COMPONENTS-5 | AC-13 (provenance badge glyph+border signature) | ⬜ Next | | | last component phase; owns provenance_badge/icon |
-| 16 | APPLY-1 | AC-14 (one theme; remove residual hardcoded palette colours) | ⬜ Todo | | | run alone (many screens) |
+| 15 | COMPONENTS-5 | AC-13 (provenance badge glyph+border signature) | ✅ Done | 2,589,616 | 5m 36s | AC-13 un-pended at A; per-tier colour-independent border signature (solid ink / sunken fill / dashed `CustomPaint.painter` / ink fill), glyph+Semantics unchanged (D-6); only provenance_badge.dart changed; unit 1450✅, 100% cov provenance_badge.dart; acc AC-1..13✅ (24/2 skip); grade 13A/0 A-core-B/0 plain-B; fix passes 0/3; COMPONENTS module complete |
+| 16 | APPLY-1 | AC-14 (one theme; remove residual hardcoded palette colours) | ⬜ Next | | | run alone (many screens) |
 | 17 | APPLY-2 | AC-15 (shared swatch approximation caption) | ⬜ Todo | | | |
 | 18 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -173,13 +173,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-COMPONENTS-4 un-pended `AC-12` (SurfaceCard). The only behaviour change was the ordinary variant's border width 1px→2px (`hairlineBorderWidth`→`standardBorderWidth`, keeping the `outlineVariant` line colour); emphasis/inverted were already final in the shell; radius inherited from `cardTheme` (r18). It closed **AC-7's card-half augmentation** (a rendered `SurfaceCard` inherits `cardTheme` r18) → **AC-7 now straight A, fully closed** (pill + card halves both done). Grade 12A, 0 A-core/B, 0 plain-B; acc 23/3.
+COMPONENTS-5 un-pended `AC-13` (ProvenanceBadge). The badge now carries a colour-independent per-tier border signature read from the theme — measured=solid ink border (2px), calculated=sunken fill, estimated=dashed `CustomPaint(painter:)`, confirmed=ink fill with paper-toned label; the glyph + Semantics label are unchanged (D-6, so bs-10/bs-11 intact). Only `provenance_badge.dart` changed. Grade 13A, 0 A-core/B, 0 plain-B; acc 24/2. **COMPONENTS module complete** (all 5 components final; AC-7 closed).
 
 Startable now:
-- **COMPONENTS-5** (AC-13 provenance badge glyph+border signature) — last component phase; owns `lib/widgets/provenance_badge.dart` / `provenance_icon.dart`.
-- **APPLY-1** (AC-14, run **alone** — touches many screens) then **APPLY-2** (AC-15) come after; **SIGNOFF-1** last. APPLY-1 depends on THEME-4/5 + COMPONENTS-2/3/4 (all ✅); COMPONENTS-5 is disjoint and may run in parallel with APPLY-1.
+- **APPLY-1** (AC-14, run **alone** — touches many screen files) — install the one theme app-wide and remove the ~7 residual hardcoded palette literals; owes the AC-14 augmentation. Depends on THEME-4/5 + COMPONENTS-2/3/4 (all ✅).
+- **APPLY-2** (AC-15, shared swatch approximation caption) depends on COMPONENTS-4; it is NOT disjoint from APPLY-1's screen files, so run sequentially after APPLY-1. **SIGNOFF-1** last (needs APPLY-1 + APPLY-2 + COMPONENTS-5 — the last now ✅).
 
-Augmentations still owed: **AC-14** (APPLY-1: zero residual hardcoded palette colours + pin the D-4 set). AC-7 (both halves) and TestAC10/AC11/AC12 are closed.
+Augmentations still owed: **AC-14** (APPLY-1: zero residual hardcoded palette colours + pin the D-4 set). AC-7 (both halves), TestAC10/AC11/AC12 and AC-13 are closed.
 
 ## Token usage
 
@@ -203,7 +203,8 @@ Augmentations still owed: **AC-14** (APPLY-1: zero residual hardcoded palette co
 | COMPONENTS-2 | fc7d583b | 2026-10-18 08:15 EDT | 08:28 | 13m 15s | 13m 15s | claude-opus-4-8 | 116 | 222,424 | 6,066,310 | 43,517 | 6,332,367 | AC-10 built + un-pended; acc 21/5 green; grade PASS 9A + AC-7 A-core/B-pending COMPONENTS-4; closes AC-7 pill half |
 | COMPONENTS-3 | 665ef0cf | 2026-10-18 08:31 EDT | 08:40 | 9m 34s | 9m 34s | claude-opus-4-8 | 88 | 214,072 | 3,914,263 | 28,449 | 4,156,872 | AC-11 un-pended; accent-FAB look already realised by shell+THEME (fill=theme primary, no widget code change); doc comment + guard exemplars updated; acc 22/4 green; unit 1444 green; 100% cov speak_button.dart; grade PASS 10A + AC-7 A-core/B-pending COMPONENTS-4; fix passes 0/3 |
 | COMPONENTS-4 | 01789a32 | 2026-10-18 08:51 EDT | 09:04 | 12m 47s | 12m 47s | claude-opus-4-8 | 120 | 243,245 | 6,010,052 | 42,468 | 6,295,885 | AC-12 un-pended at A; ordinary card border 1px→2px line colour; emphasis/inverted already final; closes AC-7 card half → AC-7 straight A; unit 1444 green, 100% cov surface_card.dart; acc 23/3 green; grade 12A/0 A-core-B/0 plain-B; fix passes 0/3 |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 09:04** | **6h 26m** | **3h 05m** |  | **1,402** | **2,894,940** | **73,062,320** | **610,500** | **76,569,162** |  |
+| COMPONENTS-5 | 97a53f65 | 2026-10-18 15:03 EDT | 15:09 | 5m 36s | 5m 36s | claude-opus-4-8 | 66 | 93,101 | 2,480,781 | 15,668 | 2,589,616 | AC-13 un-pended at A; per-tier colour-independent border signature; unit 1450 green, 100% cov provenance_badge.dart; acc 24/2 green; grade 13A/0 A-core-B/0 plain-B; fix passes 0/3; COMPONENTS module complete |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 15:09** | **6h 32m** | **3h 11m** |  | **1,468** | **2,988,041** | **75,543,101** | **626,168** | **79,158,778** |  |
 
 ## Sign-off
 
