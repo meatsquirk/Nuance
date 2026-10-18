@@ -50,13 +50,24 @@ const Set<String> kCaptureDeviceLiteralFiles = {
 const List<String> kDefaultScanRoots = <String>['lib'];
 
 /// Hardcoded colour literals detected by their constructor signature: a
-/// hex-literal `Color(0x…)`, or a `Color.fromARGB(` / `Color.fromRGBO(` call.
-/// A bare `Color(` taking a named const (e.g. `Color(someToken)`) is *not* a
-/// hardcoded palette literal and is not matched.
+/// hex-literal `Color(0x…)`, or a `Color.fromARGB(…)` / `Color.fromRGBO(…)`
+/// call **whose channel arguments are all numeric literals**.
+///
+/// A *hardcoded palette colour* is a fixed design literal. A bare `Color(`
+/// taking a named const (e.g. `Color(someToken)`) is not one, and neither is a
+/// `Color.fromARGB(255, rgb.red, rgb.green, rgb.blue)` that reconstructs a
+/// Flutter `Color` from a **runtime** measured/computed sRGB value — that is
+/// rendering colour *data*, not hardcoding a palette colour (AC-14 / D-4). So
+/// the `fromARGB`/`fromRGBO` patterns only match when the argument list is
+/// entirely numeric-literal characters (digits, hex `0x…`, `.`, `,`, `_`,
+/// whitespace) up to the closing paren; an identifier argument (a `.red`
+/// member access, a variable) stops the match before `)`, so a data
+/// reconstruction is never flagged. The `fromARGB(255, 1, 2, 3)` /
+/// `fromRGBO(1, 2, 3, 1.0)` literal forms still match.
 final List<RegExp> _paletteLiteralPatterns = <RegExp>[
   RegExp(r'\bColor\s*\(\s*0x[0-9A-Fa-f]+'),
-  RegExp(r'\bColor\s*\.\s*fromARGB\s*\('),
-  RegExp(r'\bColor\s*\.\s*fromRGBO\s*\('),
+  RegExp(r'\bColor\s*\.\s*fromARGB\s*\(\s*[0-9a-fA-FxX.,\s_]*\)'),
+  RegExp(r'\bColor\s*\.\s*fromRGBO\s*\(\s*[0-9a-fA-FxX.,\s_]*\)'),
 ];
 
 /// Normalises a scanned path to forward slashes so the `lib/…` exemptions match

@@ -159,20 +159,21 @@ void main() {
 
   group('pending gate', () {
     test(
-        'covers the 15 ACs — AC-1..AC-13 un-pended (THEME-3/4/5, '
-        'COMPONENTS-2/3/4/5), the rest pending and owned by a real behaviour phase',
+        'covers the 15 ACs — AC-1..AC-14 un-pended (THEME-3/4/5, '
+        'COMPONENTS-2/3/4/5, APPLY-1), only AC-15 pending (APPLY-2)',
         () {
       // THEME-3 un-pended AC-1..AC-4, THEME-4 AC-5..AC-6, THEME-5 AC-7..AC-9,
-      // COMPONENTS-2 AC-10, COMPONENTS-3 AC-11, COMPONENTS-4 AC-12 and
-      // COMPONENTS-5 AC-13 by deleting their rows. Each behaviour phase extends
-      // this set as it lands; when it reaches all 15 the pending map is empty.
+      // COMPONENTS-2 AC-10, COMPONENTS-3 AC-11, COMPONENTS-4 AC-12,
+      // COMPONENTS-5 AC-13 and APPLY-1 AC-14 by deleting their rows. Each
+      // behaviour phase extends this set as it lands; when it reaches all 15
+      // the pending map is empty.
       const unpended = {
         'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', 'AC-9',
-        'AC-10', 'AC-11', 'AC-12', 'AC-13',
+        'AC-10', 'AC-11', 'AC-12', 'AC-13', 'AC-14',
       };
       for (final ac in unpended) {
         expect(pendingACs.containsKey(ac), isFalse,
-            reason: '$ac is un-pended (THEME-3/4/5) and must run by default');
+            reason: '$ac is un-pended and must run by default');
       }
       // The pending map is exactly AC-1..AC-15 minus the un-pended ACs — a
       // stray or re-pended key fails here.
@@ -191,27 +192,29 @@ void main() {
 
     test('hides a pending AC by default and admits it under the run-pending flag',
         () {
-      for (final ac in const ['AC-14', 'AC-15']) {
+      for (final ac in const ['AC-15']) {
         expect(pendingSkipReason(ac, forceRunPending: false), isNotNull,
             reason: '$ac is pending and must be skipped in the default run');
         expect(pendingSkipReason(ac, forceRunPending: true), isNull,
             reason: '$ac must execute under --dart-define=BS17_RUN_PENDING=true');
       }
       // An un-pended AC (AC-1 THEME-3, AC-5 THEME-4, AC-7 THEME-5, AC-10
-      // COMPONENTS-2, AC-11 COMPONENTS-3, AC-12 COMPONENTS-4, AC-13 COMPONENTS-5
-      // deleted their rows) always runs, in either mode — as does an AC never
-      // in the map.
+      // COMPONENTS-2, AC-11 COMPONENTS-3, AC-12 COMPONENTS-4, AC-13 COMPONENTS-5,
+      // AC-14 APPLY-1 deleted their rows) always runs, in either mode — as does
+      // an AC never in the map.
       for (final ac in const [
-        'AC-1', 'AC-5', 'AC-7', 'AC-10', 'AC-11', 'AC-12', 'AC-13', 'AC-unmapped'
+        'AC-1', 'AC-5', 'AC-7', 'AC-10', 'AC-11', 'AC-12', 'AC-13', 'AC-14',
+        'AC-unmapped'
       ]) {
         expect(pendingSkipReason(ac, forceRunPending: false), isNull,
             reason: '$ac is un-pended and runs by default');
         expect(pendingSkipReason(ac, forceRunPending: true), isNull);
       }
-      // The ambient path acTestWidgets uses agrees with the current mode.
+      // The ambient path acTestWidgets uses agrees with the current mode (on a
+      // still-pending AC).
       expect(
-        pendingSkipReason('AC-14'),
-        pendingSkipReason('AC-14', forceRunPending: runPending),
+        pendingSkipReason('AC-15'),
+        pendingSkipReason('AC-15', forceRunPending: runPending),
       );
     });
   });
@@ -280,10 +283,30 @@ void main() {
       try {
         File('${dir.path}/ctors.dart').writeAsStringSync(
           'final a = Color.fromARGB(255, 1, 2, 3);\n'
-          'final b = Color.fromRGBO(1, 2, 3, 1.0);\n',
+          'final b = Color.fromRGBO(1, 2, 3, 1.0);\n'
+          'final c = Color.fromARGB(0xFF, 0x12, 0x34, 0x56);\n',
         );
         final hits = residualPaletteLiterals(roots: [dir.path]);
-        expect(hits.map((h) => h.line), containsAll(const [1, 2]));
+        // All three are hardcoded (literal / hex-literal channel args).
+        expect(hits.map((h) => h.line), containsAll(const [1, 2, 3]));
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('does not flag a runtime data reconstruction (APPLY-1)', () {
+      // A `Color.fromARGB(255, x.red, x.green, x.blue)` turning a runtime
+      // measured/computed sRGB value into a Flutter Color is rendering colour
+      // *data*, not hardcoding a palette colour (AC-14 / D-4) — the identifier
+      // argument must stop the match, so the scan returns no offender.
+      final dir = Directory.systemTemp.createTempSync('bs17_scan_data');
+      try {
+        File('${dir.path}/data.dart').writeAsStringSync(
+          'Color fromReading(c) =>\n'
+          '    Color.fromARGB(255, c.red, c.green, c.blue);\n'
+          'Color fromRgbo(c) => Color.fromRGBO(c.r, c.g, c.b, 1.0);\n',
+        );
+        expect(residualPaletteLiterals(roots: [dir.path]), isEmpty);
       } finally {
         dir.deleteSync(recursive: true);
       }
@@ -849,9 +872,9 @@ void main() {
 
       // … and no screen hardcodes a palette colour: zero residual palette
       // literals in `lib/` outside the theme authority and the D-4 capture
-      // device files. PARTIAL at baseline — the one-theme part holds, but ~7
-      // residual literals remain until APPLY-1 removes them (which then
-      // augments this to pin the exclusion set).
+      // device files. FULL STRENGTH from APPLY-1 — APPLY-1 routed the residual
+      // `Color(0x…)` chrome/semantic literals (the onboarding demo pair, the
+      // provenance tier tints) through `AppTheme` (D-7), so the sweep is empty.
       final residual = residualPaletteLiterals(
         roots: const ['lib'],
         exempt: {kThemeAuthorityFile, ...kCaptureDeviceLiteralFiles},
@@ -860,6 +883,33 @@ void main() {
           reason: 'no screen may hardcode a palette colour; residual literals '
               'outside the exclusions: '
               '${residual.map((o) => '${o.path}:${o.line}').join(', ')}');
+
+      // Augmentation (APPLY-1): pin the D-4 exclusion set. The capture "device"
+      // exemption is the ONLY file-level exemption beyond the theme authority,
+      // and it is both *necessary* and *complete*:
+      expect(kCaptureDeviceLiteralFiles,
+          const {'lib/capture/capture_live_view.dart'},
+          reason: 'the D-4 capture-device exclusion set is pinned; adding a '
+              'file here must be a deliberate, reviewed D-4 decision');
+      // Necessary + complete: dropping the capture exemption re-exposes residual
+      // literals, and every one lies inside the pinned D-4 set (never leaking a
+      // real screen literal). If a screen hardcoded a new palette colour it
+      // would surface here outside the set and fail.
+      final withoutD4 = residualPaletteLiterals(
+        roots: const ['lib'],
+        exempt: {kThemeAuthorityFile},
+      );
+      expect(withoutD4, isNotEmpty,
+          reason: 'the D-4 capture exemption must be load-bearing');
+      expect(
+        withoutD4
+            .map((o) => o.path.replaceAll(r'\', '/'))
+            .every(kCaptureDeviceLiteralFiles.contains),
+        isTrue,
+        reason: 'every literal the D-4 exemption silences must be a pinned '
+            'capture-device file, never a screen chrome literal: '
+            '${withoutD4.map((o) => '${o.path}:${o.line}').join(', ')}',
+      );
     });
 
     // # UX: "Swatches are screen approximations. Trust the numbers." / "APPROX."

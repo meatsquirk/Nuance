@@ -51,8 +51,8 @@ const Map<String, String> pendingACs = {
   // AC-10 un-pended by COMPONENTS-2 (PillButton primary/secondary treatment);
   // AC-11 un-pended by COMPONENTS-3 (SpeakButton accent-FAB treatment);
   // AC-12 un-pended by COMPONENTS-4 (SurfaceCard ordinary/emphasis/inverted);
-  // AC-13 un-pended by COMPONENTS-5 (ProvenanceBadge border-style signature).
-  'AC-14': 'APPLY-1',
+  // AC-13 un-pended by COMPONENTS-5 (ProvenanceBadge border-style signature);
+  // AC-14 un-pended by APPLY-1 (one theme app-wide + no hardcoded palette).
   'AC-15': 'APPLY-2',
 };
 

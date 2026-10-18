@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../domain/provenance.dart';
+
 /// The app's single source of visual tokens — a [ColorScheme], a [TextTheme]
 /// and the assembled [ThemeData] — replacing the inline
 /// `ThemeData(useMaterial3: true)` that `buildApp` constructed before.
@@ -208,4 +210,56 @@ class AppTheme {
 
   /// The 3px emphasis border weight (warning / emphasised surfaces).
   static const double emphasisBorderWidth = 3.0;
+
+  // --- Provenance tier tints (bs-17 APPLY-1, D-7) ---
+  //
+  // The four decorative per-tier provenance tints `ProvenanceIcon.tintFor`
+  // reads. The tier's meaning is carried by the glyph and the border-style
+  // signature, never by colour alone (D-6; bs-10 AC-4), so the tint is
+  // decorative and remapped through the shared display chokepoint. They live
+  // here — the single source of palette colour (D-7) — so no widget hardcodes a
+  // palette literal (AC-14). The exact hexes are unchanged from the pre-APPLY-1
+  // `ProvenanceIcon`, so the bs-10 daltonization / bs-11 contrast behaviour is
+  // byte-for-byte preserved.
+  static const Color _provMeasured = Color(0xFF1B7F3B); // green
+  static const Color _provCalculated = Color(0xFF1565C0); // blue
+  static const Color _provEstimated = Color(0xFFC62828); // red
+  static const Color _provConfirmed = Color(0xFF6A1B9A); // purple
+
+  /// The decorative tint for a provenance [tier] (bs-17 APPLY-1): the single
+  /// palette source `ProvenanceIcon.tintFor` reads (D-7). Decorative only — the
+  /// glyph and the border signature carry the tier (D-6), so this tint is safe
+  /// to remap under daltonization like any other swatch.
+  static Color provenanceTint(ProvenanceTier tier) {
+    switch (tier) {
+      case ProvenanceTier.measured:
+        return _provMeasured;
+      case ProvenanceTier.calculated:
+        return _provCalculated;
+      case ProvenanceTier.estimated:
+        return _provEstimated;
+      case ProvenanceTier.confirmed:
+        return _provConfirmed;
+    }
+  }
+
+  // --- CVD self-assessment illustration colours (bs-17 APPLY-1, D-7) ---
+  //
+  // The illustrative original / neutral pair the onboarding result step (bs-07)
+  // collapses for the self-calibration demo: the simulated swatch blends from
+  // [cvdDemoOriginal] toward [cvdDemoNeutral] as the painter raises the
+  // severity. Illustrative sample colours, not app chrome, but held here as the
+  // single palette source (D-7) so the screen hardcodes no palette literal
+  // (AC-14). Values unchanged from the pre-APPLY-1 `ResultStep`.
+  static const Color _cvdDemoOriginal =
+      Color(0xFF4CAF50); // representative green
+  static const Color _cvdDemoNeutral =
+      Color(0xFF9E9E9E); // neutral grey it collapses toward
+
+  /// The illustrative original colour of the CVD self-calibration pair (bs-07).
+  static Color get cvdDemoOriginal => _cvdDemoOriginal;
+
+  /// The neutral grey the simulated swatch collapses toward as severity rises
+  /// (bs-07).
+  static Color get cvdDemoNeutral => _cvdDemoNeutral;
 }

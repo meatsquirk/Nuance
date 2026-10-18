@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — THEME ✅ + COMPONENTS ✅ (AC-10..AC-13 ✅, AC-7 fully closed); next APPLY-1
+**Status:** In progress — THEME ✅ + COMPONENTS ✅ + APPLY-1 ✅ (AC-1..AC-14 ✅); next APPLY-2
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -52,7 +52,7 @@
 | AC-11 | The speak action renders as a round accent floating button | ITEST-3 `TestAC11_SpeakFab` | COMPONENTS-3 | ✅ Done |
 | AC-12 | Panels render as bordered surface cards with emphasis and inverted variants | ITEST-3 `TestAC12_Cards` | COMPONENTS-4 | ✅ Done |
 | AC-13 | Provenance badges render with the glyph-and-border signature | ITEST-3 `TestAC13_ProvenanceSignature` | COMPONENTS-5 | ✅ Done |
-| AC-14 | Every screen inherits the one installed theme | ITEST-3 `TestAC14_OneThemeNoHardcode` | APPLY-1 | ⬜ Todo |
+| AC-14 | Every screen inherits the one installed theme | ITEST-3 `TestAC14_OneThemeNoHardcode` | APPLY-1 | ✅ Done |
 | AC-15 | A displayed colour swatch carries its approximation caption | ITEST-3 `TestAC15_SwatchCaption` | APPLY-2 | ⬜ Todo |
 
 ## Design decisions
@@ -112,7 +112,7 @@ Pre-seeded augmentations: AC-14 is partially green at baseline (bs-11 already in
 |---|---|---|---|---|
 | THEME | [modules/THEME.md](modules/THEME.md) | the warm-paper tokens, Atkinson fonts and shape/border/label styles in the one `AppTheme` chokepoint; scaffold + font bundling | — | ✅ Complete |
 | COMPONENTS | [modules/COMPONENTS.md](modules/COMPONENTS.md) | the styled widget set (`PillButton`, `SpeakButton`, `SurfaceCard`, `MonoLabel`) + the provenance-badge signature | THEME | ✅ Done |
-| APPLY | [modules/APPLY.md](modules/APPLY.md) | wire the screens to the theme + components; remove residual hardcoded palette colours; the shared swatch caption | THEME, COMPONENTS | ⬜ Todo |
+| APPLY | [modules/APPLY.md](modules/APPLY.md) | wire the screens to the theme + components; remove residual hardcoded palette colours; the shared swatch caption | THEME, COMPONENTS | 🔄 In progress (APPLY-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | acceptance integration suite: one pending test per AC, and its review | THEME-2, COMPONENTS-1 | 🔄 In progress |
 
 ## Dependency graph
@@ -145,6 +145,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | Test | Symptom | Rate (runs) | Measured at | Owner | Status |
 |---|---|---|---|---|---|
 | — | none carried from siblings at plan time | — | `c00422f` | — | — |
+| bs-07 `self_assessment_test.dart` AC-4 | off-screen tap @(94.4,656) on `-d flutter-tester` (800×600): intake "Deutan" button below the viewport → diagnosis not reported, prior null | reproduces at BASE `058283c` (pre-existing) | `058283c` | bs-07 (merged) | open — device-lane viewport artifact, green on booted sim; NOT a bs-17 regression (APPLY-1 touches no intake layout) |
+| bs-08 `display_test.dart` AC-9 | off-screen tap @(281.1,560) on `-d flutter-tester` (800×600) | reproduces at BASE `058283c` (pre-existing) | `058283c` | bs-08 (merged) | open — device-lane viewport artifact, green on booted sim; NOT a bs-17 regression |
 
 ## Session log
 
@@ -165,21 +167,21 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 13 | COMPONENTS-3 | AC-11 (SpeakButton accent FAB) | ✅ Done | 4,156,872 | 9m 34s | AC-11 un-pended; accent-FAB look already realised by shell+THEME (fill=theme primary, no widget code change); acc 22/4 green; grades 10A + AC-7 A-core/B-pending COMPONENTS-4 |
 | 14 | COMPONENTS-4 | AC-12 (SurfaceCard + emphasis + inverted) | ✅ Done | 6,295,885 | 12m 47s | AC-12 un-pended; ordinary border 1px→2px (line colour), emphasis/inverted already final; unit 1444✅, 100% cov surface_card.dart; acc AC-1..12✅ (23/3 skip); grades 12A (AC-12 new, AC-7 fully closed), 0 A-core/B, 0 plain-B; closes AC-7 card half |
 | 15 | COMPONENTS-5 | AC-13 (provenance badge glyph+border signature) | ✅ Done | 2,589,616 | 5m 36s | AC-13 un-pended at A; per-tier colour-independent border signature (solid ink / sunken fill / dashed `CustomPaint.painter` / ink fill), glyph+Semantics unchanged (D-6); only provenance_badge.dart changed; unit 1450✅, 100% cov provenance_badge.dart; acc AC-1..13✅ (24/2 skip); grade 13A/0 A-core-B/0 plain-B; fix passes 0/3; COMPONENTS module complete |
-| 16 | APPLY-1 | AC-14 (one theme; remove residual hardcoded palette colours) | ⬜ Next | | | run alone (many screens) |
-| 17 | APPLY-2 | AC-15 (shared swatch approximation caption) | ⬜ Todo | | | |
+| 16 | APPLY-1 | AC-14 (one theme; remove residual hardcoded palette colours) | ✅ Done | 13,043,220 | 37m 15s | AC-14 un-pended → straight A (augmentation closed: zero residuals full strength + D-4 set pinned); 6 hardcoded `Color(0x…)` routed to `AppTheme`, scan refined so data-reconstructions aren't false-flagged; unit 1450✅, 100% cov 3 lib files; acc AC-1..14✅ (26/1); bs-11 19/19, bs-10 25/25; 0 plain-B; fix 0/3; wrapper swap deferred (AC-14 gate only, user decision) |
+| 17 | APPLY-2 | AC-15 (shared swatch approximation caption) | ⬜ Next | | | |
 | 18 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-COMPONENTS-5 un-pended `AC-13` (ProvenanceBadge). The badge now carries a colour-independent per-tier border signature read from the theme — measured=solid ink border (2px), calculated=sunken fill, estimated=dashed `CustomPaint(painter:)`, confirmed=ink fill with paper-toned label; the glyph + Semantics label are unchanged (D-6, so bs-10/bs-11 intact). Only `provenance_badge.dart` changed. Grade 13A, 0 A-core/B, 0 plain-B; acc 24/2. **COMPONENTS module complete** (all 5 components final; AC-7 closed).
+APPLY-1 un-pended `AC-14` at **straight A** (its pre-seeded augmentation closed). The 6 hardcoded `Color(0x…)` palette literals (onboarding demo pair + the 4 provenance tier tints) now read `AppTheme` accessors (D-7, byte-identical values); the source-scan was refined so runtime `Color.fromARGB(255, x.red, …)` data-reconstructions are no longer false-flagged as hardcoded (6 false positives removed); the AC-14 test now asserts residual `isEmpty` at full strength and pins the D-4 exclusion set. Unit 1450✅, 100% cov on the 3 touched lib files, acc AC-1..14 ✅ (26/1), bs-11 19/19 + bs-10 25/25 sibling regressions green. The wrapper screen-swap (plan task 1) was **deferred** (AC-14 gate only, user decision 2026-10-18) — components stay available but not yet opted into every screen; SIGNOFF-1 to note.
 
 Startable now:
-- **APPLY-1** (AC-14, run **alone** — touches many screen files) — install the one theme app-wide and remove the ~7 residual hardcoded palette literals; owes the AC-14 augmentation. Depends on THEME-4/5 + COMPONENTS-2/3/4 (all ✅).
-- **APPLY-2** (AC-15, shared swatch approximation caption) depends on COMPONENTS-4; it is NOT disjoint from APPLY-1's screen files, so run sequentially after APPLY-1. **SIGNOFF-1** last (needs APPLY-1 + APPLY-2 + COMPONENTS-5 — the last now ✅).
+- **APPLY-2** (AC-15, shared swatch approximation caption) — `lib/widgets/swatch_caption.dart` (new) + swatch call sites. Depends on COMPONENTS-4 (✅); APPLY-1 touched no swatch call site, so no conflict. **Run next.**
+- **SIGNOFF-1** last (needs APPLY-1 ✅ + APPLY-2 + COMPONENTS-5 ✅).
 
-Augmentations still owed: **AC-14** (APPLY-1: zero residual hardcoded palette colours + pin the D-4 set). AC-7 (both halves), TestAC10/AC11/AC12 and AC-13 are closed.
+Carried: two **pre-existing** bs-07/bs-08 `flutter-tester` viewport flakes (reproduce at BASE; green on a booted sim) — see Known flakes; not bs-17 regressions. No augmentations owed (AC-14 closed).
 
 ## Token usage
 
@@ -204,7 +206,8 @@ Augmentations still owed: **AC-14** (APPLY-1: zero residual hardcoded palette co
 | COMPONENTS-3 | 665ef0cf | 2026-10-18 08:31 EDT | 08:40 | 9m 34s | 9m 34s | claude-opus-4-8 | 88 | 214,072 | 3,914,263 | 28,449 | 4,156,872 | AC-11 un-pended; accent-FAB look already realised by shell+THEME (fill=theme primary, no widget code change); doc comment + guard exemplars updated; acc 22/4 green; unit 1444 green; 100% cov speak_button.dart; grade PASS 10A + AC-7 A-core/B-pending COMPONENTS-4; fix passes 0/3 |
 | COMPONENTS-4 | 01789a32 | 2026-10-18 08:51 EDT | 09:04 | 12m 47s | 12m 47s | claude-opus-4-8 | 120 | 243,245 | 6,010,052 | 42,468 | 6,295,885 | AC-12 un-pended at A; ordinary card border 1px→2px line colour; emphasis/inverted already final; closes AC-7 card half → AC-7 straight A; unit 1444 green, 100% cov surface_card.dart; acc 23/3 green; grade 12A/0 A-core-B/0 plain-B; fix passes 0/3 |
 | COMPONENTS-5 | 97a53f65 | 2026-10-18 15:03 EDT | 15:09 | 5m 36s | 5m 36s | claude-opus-4-8 | 66 | 93,101 | 2,480,781 | 15,668 | 2,589,616 | AC-13 un-pended at A; per-tier colour-independent border signature; unit 1450 green, 100% cov provenance_badge.dart; acc 24/2 green; grade 13A/0 A-core-B/0 plain-B; fix passes 0/3; COMPONENTS module complete |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 15:09** | **6h 32m** | **3h 11m** |  | **1,468** | **2,988,041** | **75,543,101** | **626,168** | **79,158,778** |  |
+| APPLY-1 | 736c1bf0 | 2026-10-18 15:17 EDT | 16:11 | 54m 20s | 37m 15s | claude-opus-4-8 | 188 | 311,424 | 12,664,713 | 66,895 | 13,043,220 | AC-14 un-pended → straight A (augmentation closed: zero residuals full strength + D-4 set pinned); 6 hardcoded Color(0x…) routed to AppTheme, scan refined for data-reconstructions; unit 1450, 100% cov 3 lib files, acc 26/1, bs-11 19/19 + bs-10 25/25; 0 plain-B; grade gate PASS; fix 0/3 |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 16:11** | **7h 26m** | **3h 48m** |  | **1,656** | **3,299,465** | **88,207,814** | **693,063** | **92,201,998** |  |
 
 ## Sign-off
 
