@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-2 done (AC-1..5 authored); next ITEST-3/4 (parallel, disjoint AC files) then ITEST-5 (test review, G-2)
+**Status:** In progress — ITEST-3 done (AC-6..10 authored + red baseline + grade PASS); next ITEST-4 (AC-11..14) then ITEST-5 (test review, G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/visual_application/` (harness, fixtures, one pending test per AC); the `BS18_RUN_PENDING` pending mechanism.
 **Depends on:** CHROME-2 (the shell under test) · **Blocks:** every behavior phase (via G-2)
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 5.35M | 13m (13m) |
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 | ✅ Done | 8.78M | 22m (22m) |
-| ITEST-3 | acceptance-tests | AC-6,7,8,9,10 | ⬜ Todo | | |
+| ITEST-3 | acceptance-tests | AC-6,7,8,9,10 | ✅ Done | 11.88M | 35m (35m) |
 | ITEST-4 | acceptance-tests | AC-11,12,13,14 | ⬜ Todo | | |
 | ITEST-5 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -79,6 +79,26 @@ G-2 (ITEST-5's review) blocks every behavior phase.
 - **Tasks:** author `TestAC06_Compare`, `TestAC07_Recipes`, `TestAC08_Palette`, `TestAC09_Projects`, `TestAC10_DisplayOnboarding` per the catalogue; record the red baseline.
 - **Exit criteria:** suite green with the five pending; red baseline recorded; grade gate passed.
 
+### Result — ITEST-3 ✅ Done (2026-10-19)
+
+- **Landed:** `integration_test/visual_application/{compare,recipes,palette,projects,config}_test.dart` — five *pending* `acTestWidgets` tests (AC-6..AC-10) over the ITEST-1 harness + the `expectPill`/`subtreeHas` helpers; **extended `harness.dart`** with the CFG pumps `pumpDisplaySettings` (opens the panel through the real E2 chrome entry, seeded from the fixture's deutan-sim snapshot) and `pumpOnboarding` (pushes the host via `router.toSelfAssessment()`, store + `InactivePeerTransport` wired for determinism), two new `VisualScreen` values, and the shared component assertions. No `lib/` touched (presentation ACs assert structure over the real assembled app).
+- **Default run** (per file — the `flutter-tester` lane flakes relaunching across entrypoints, so each `*_test.dart` runs alone): `smoke` 13✅/1 skip; `compare`/`recipes`/`palette`/`projects`/`config` all skipped (AC-6..10 pending) → **suite green with the five pending**. `dart analyze integration_test/visual_application/` → No issues.
+- **Red baseline** (`--dart-define=BS18_RUN_PENDING=true`, per file) — recorded in the Red baseline table: AC-6 fails at `expectPill(compareAKey)`; AC-7 at the recipe-row `SurfaceCard` ancestor; AC-8 at `expectPill(addPaintKey)`; AC-9 at the project-entry `SurfaceCard` ancestor; AC-10 at `expectPill(simOff)`. Each fails on a Then for its catalogued reason; every GIVEN passes (the CFG pumps, the Projects view-switch and the readout/compare anchors all render). `pumpOnboarding`'s step render verified by a throwaway probe (deleted).
+- **Grade gate PASS** (independent grader, did not author; grid `../behavior-test-completeness-bs-18-apply-visual-components.md`): straight **A** = AC-6, AC-9, AC-10; **A-core / B pending** = AC-7→FLOW-2, AC-8→ORG-1; **plain-B = 0**. Augmentations: TestAC07→FLOW-2 **added**; TestAC08→ORG-1 **confirmed**.
+- **Coverage gate** `dart run tool/coverage_gate.dart e85c4c9` → **PASS** (no touched `lib/**`; integration-test-only phase, unit suite not re-run). **Fix passes: 0/3** (first full red-baseline run failed each test at its intended assertion; four pre-run analyzer fixes: a const-default on the CFG pump + three unused `material` imports).
+- **G-2 review items surfaced (see Checkpoint):** AC-6 cross-screen ownership; AC-6 A/B-outline weight; AC-7 "ranked by" note absence; AC-9 create-vs-export.
+
+### Checkpoint / Handoff — after ITEST-3
+
+- **Authored anchors (behavior phases satisfy these):** AC-6 reads readout `ActionsBar.{compareAKey,compareBKey,recipesKey}` as `PillButton`s (recipes = primary/`FilledButton`) + Compare `DifferenceRegion.regionKey`/`StatementRegion.regionKey` → `SurfaceCard` ancestor + a compare `SpeakButton`. AC-7 reads `RecipeListRegion.{regionKey,cardKey(0)}` → `SurfaceCard` ancestor, no Material `Card` under the region, no ad-hoc `TextButton` in a card, a `SpeakButton`|`PillButton` action. AC-8 reads `PaintListRegion.regionKey` + `PaintRow.rowKeyFor(id)`×3 each with a `ProvenanceBadge`, `expectPill(PaintListRegion.addPaintKey)`. AC-9 switches to the Projects view (`find.text('Projects')` under `PaletteScreen.viewSelectorKey`) → `ProjectsRegion.projectRowKey('proj-harbor')` → `SurfaceCard` ancestor + `expectPill(openProjectKey/exportKey)`. AC-10 `pumpDisplaySettings` → `expectPill(simulationOptionKey(null|deutan))`; `pumpOnboarding` → `LightingStep.regionKey` → `SurfaceCard` ancestor + `expectPill(LightingStep.continueKey/OnboardingScreen.seeResultKey)`.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout`/`gtimeout`; **run each `*_test.dart` individually**): default `flutter test -d flutter-tester integration_test/visual_application/<file>_test.dart`; red baseline add `--dart-define=BS18_RUN_PENDING=true`; analyze `dart analyze integration_test/visual_application/`; gate `dart run tool/coverage_gate.dart <base>`.
+- **G-2 REVIEW ITEMS for ITEST-5 (put these in the packet):**
+  1. **AC-6 cross-screen ownership.** "Compare as A/B" + "Find mixing recipes" physically live in `lib/readout/actions_bar.dart` (READ module), but FLOW-1 (AC-6) owns `lib/compare/**`. No current phase swaps those readout actions. Reviewer decides: expand FLOW-1's file ownership to that file, reassign to READ-3, or add an augmentation — else AC-6 can't be un-pended green by FLOW-1 alone.
+  2. **AC-6 A/B outline weight.** The test asserts A/B are pills + recipes is primary, but not that A/B are specifically *secondary/outline* (spec says outline). Cheap strengthening available (`expect(subtreeHas<FilledButton>(..compareA/B), isFalse)`); grader held AC-6 to A without it.
+  3. **AC-7 "ranked by" note.** No such note exists in `lib/`; whether FLOW-2 introduces one is a scope decision (augmentation row added, owned by FLOW-2).
+  4. **AC-9 create-vs-export.** `projects_region.dart` has Open + Export, no "create project" control; the test asserts the two real actions become pills.
+- **Known gaps / next:** ITEST-4 (AC-11..14) is the last AC-test phase; both it and ITEST-3 block ITEST-5 (the G-2 review). ITEST-4 may find AC-11/AC-14 green at baseline (control-case rows per its tasks).
+
 ## Phase ITEST-4 — acceptance-tests: AC-11..14 (pending) + red baseline
 
 - **Kind:** acceptance-tests · **Target AC:** AC-11, AC-12, AC-13, AC-14 (all pending)
@@ -102,11 +122,11 @@ G-2 (ITEST-5's review) blocks every behavior phase.
 | AC-3 | TestAC03_CaptureControls | FAIL | shutter width 74.3px ≠ ~88 (capture action is the ad-hoc `TextButton`, no `PillButton`) | READ-1 | A-core / B pending READ-1 |
 | AC-4 | TestAC04_CaptureWarnings | FAIL | stability banner `Rect(8,64,179,104)` overlaps lock banner `Rect(8,88,259,128)` @ 200% text scale | READ-2 | A |
 | AC-5 | TestAC05_Readout | FAIL | colour-name region has no `SurfaceCard` ancestor (regions bare Padding/Column; no mono eyebrow; speak is `OutlinedButton`) | READ-3 | A-core / B pending READ-3 |
-| AC-6 | TestAC06_Compare | _tbd_ FAIL | ad-hoc A/B + rows | FLOW-1 | _tbd_ |
-| AC-7 | TestAC07_Recipes | _tbd_ FAIL | recipe rows not carded | FLOW-2 | _tbd_ |
-| AC-8 | TestAC08_Palette | _tbd_ FAIL | add ad-hoc / badges missing | ORG-1 | _tbd_ |
-| AC-9 | TestAC09_Projects | _tbd_ FAIL | entries not carded | ORG-2 | _tbd_ |
-| AC-10 | TestAC10_DisplayOnboarding | _tbd_ FAIL | ad-hoc config controls | CFG-1 | _tbd_ |
+| AC-6 | TestAC06_Compare | FAIL | `expectPill(compareAKey)` false — readout "Compare as A" is a bare `OutlinedButton`, no `PillButton` (GIVENs pass: compareA/B/recipes present on the readout; diff/statement present on Compare) | FLOW-1 | A |
+| AC-7 | TestAC07_Recipes | FAIL | "the recipe row sits inside a SurfaceCard" — 0 `SurfaceCard` ancestors (recipe rows are Material `Card`s today) | FLOW-2 | A-core / B pending FLOW-2 |
+| AC-8 | TestAC08_Palette | FAIL | `expectPill(addPaintKey)` false — add-from-dataset is a bare `TextButton` (rows + per-row `ProvenanceBadge` already present — partly swapped) | ORG-1 | A-core / B pending ORG-1 |
+| AC-9 | TestAC09_Projects | FAIL | "the project entry sits inside a SurfaceCard" — entries are bare `GestureDetector`/`Column` (view-switch to Projects + project row GIVENs pass) | ORG-2 | A |
+| AC-10 | TestAC10_DisplayOnboarding | FAIL | `expectPill(simOff)` false — the simulation options are bare `TextButton`s (Display panel opens via `pumpDisplaySettings`; `pumpOnboarding` step render verified by probe) | CFG-1 | A |
 | AC-11 | TestAC11_SingleTheme | _tbd_ (may pass — control case) | — | GUARD-2 | _tbd_ |
 | AC-12 | TestAC12_SwatchCaption | _tbd_ FAIL | captions only on 3 screens | GUARD-1 | _tbd_ |
 | AC-13 | TestAC13_A11yPreserved | _tbd_ (guards post-swap) | — | GUARD-3 | _tbd_ |
@@ -118,7 +138,8 @@ G-2 (ITEST-5's review) blocks every behavior phase.
 |---|---|---|---|---|
 | TestAC03 | present/size checks catch the named Rejects but don't sweep every capture control (dismiss/lock/calibrate/value-only/radius/sample/send all `TextButton` today) | READ-1 | "superseded ad-hoc widget absent" for every capture control | ⬜ Open (confirmed ITEST-2 — graded A-core / B pending READ-1) |
 | TestAC05 | present-side checks catch the named Rejects but don't assert the superseded `Card`/plain speak `IconButton` ABSENT, so a partial swap carrying both new+old would pass | READ-3 | "old Card / plain speak IconButton absent" for all readout regions | ⬜ Open (confirmed ITEST-2 — graded A-core / B pending READ-3) |
-| TestAC08 | `paint_list_region.dart` is already partly swapped | ORG-1 | per-row `ProvenanceBadge` present + "old add button absent" | ⬜ Open |
+| TestAC07 | no "ranked by" note exists in `lib/` yet (grep-confirmed) and the out-of-gamut note is vacuous on the reachable-target pump, so the scenario's "notes in design-system mono/body style" clause can't discriminate now | FLOW-2 | once the ranked-by note exists + an out-of-gamut target is pumped, assert both the ranked-by and out-of-gamut notes render in `MonoLabel`/body style | ⬜ Open (added ITEST-3 — graded A-core / B pending FLOW-2) |
+| TestAC08 | `paint_list_region.dart` is already partly swapped | ORG-1 | per-row `ProvenanceBadge` present + "old add button absent" | ⬜ Open (confirmed ITEST-3 — graded A-core / B pending ORG-1) |
 | TestAC12 | `SwatchCaption` already on 3 screens | GUARD-1 | enumerate ALL swatch-bearing screens in the sweep | ⬜ Open |
 | TestAC11 | no screen nests a Theme today, so the check may pass before any work | GUARD-2 | a control case (a deliberately-nested Theme fixture the check catches) | ⬜ Open |
 | TestAC14 | source-scan is clean today | GUARD-2 | a control case (a planted literal the scan catches) | ⬜ Open |

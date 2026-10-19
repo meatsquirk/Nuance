@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — next ITEST-3/4 (acceptance-tests, parallel) then ITEST-5 (G-2)
+**Status:** In progress — next ITEST-4 (last acceptance-tests) then ITEST-5 (G-2)
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -175,8 +175,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | CHROME-2 | shell: bottom-nav + top-bar widget shells + 4-destination IndexedStack wiring + active-destination keys | ✅ Done | 19.06M | 52m (1h 04m) | AppDestination/AppShell/AppTopBar + theme tokens; unit 1668✅; cov gate 100% on 5 files; bs-11 19✅ + bs-14 offer✅ (no a11y/behaviour regression); additive fall-through only (G-2 before shell is prod default) |
 | 3 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke | ✅ Done | 5.35M | 13m (13m) | harness+6 fixtures+smoke; default 13✅/1 skip, run-pending 14✅/0 — gate both ways; unit 1668✅; cov gate PASS (no lib touched); folded in CHROME-1 pending_runner_test |
 | 4 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ✅ Done | 8.78M | 22m (22m) | AC-1 green@baseline (A); AC-2/4 A; AC-3→READ-1, AC-5→READ-3 A-core/B-pending; grade PASS 0 plain-B |
-| 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-4; extends harness w/ CFG pump |
-| 6 | ITEST-4 | acceptance-tests: AC-11,12,13,14 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2, ITEST-3 |
+| 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 11.88M | 35m (35m) | AC-6/9/10 A, AC-7→FLOW-2 / AC-8→ORG-1 A-core/B-pending; grade PASS 0 plain-B; harness got CFG pumps; 4 G-2 review items (headline: AC-6 cross-screen ownership) |
+| 6 | ITEST-4 | acceptance-tests: AC-11,12,13,14 (pending) + red baseline | ⬜ Next | | | last AC-test phase; then ITEST-5 (G-2) |
 | 7 | ITEST-5 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 8 | CHROME-3 | AC-1 — bottom navigation | ⬜ Todo | | | run alone (build_app.dart) |
 | 9 | CHROME-4 | AC-2 — top bar | ⬜ Todo | | | run alone (build_app.dart) |
@@ -197,14 +197,16 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-2 done (AC-1..5 authored, red baseline recorded, grade gate PASS). **ITEST-3 (AC-6..10) and ITEST-4
-(AC-11..14) remain startable in parallel** — disjoint `*_test.dart` files over `harness.dart`; ITEST-3 also
-**extends the harness** with the CFG Display/onboarding `pumpScreen` case (none exists yet). Each authors
-*pending* tests, records its red baseline and passes the grade gate; none un-pends. Both block **ITEST-5**
-(the test-review packet, gate **G-2**). Every behavior phase stays gated by G-2 (Open).
+ITEST-3 done (AC-6..10 authored, red baseline recorded, grade gate PASS; harness extended with the CFG
+`pumpDisplaySettings`/`pumpOnboarding` pumps). **ITEST-4 (AC-11..14) is the last AC-test phase** — authors
+four *pending* tests in `guards_test.dart` over `harness.dart` (AC-11/AC-14 may be green at baseline → add a
+control case per its tasks), records its red baseline, passes the grade gate; none un-pends. It then unblocks
+**ITEST-5** (the test-review packet, gate **G-2**), which every behavior phase still waits on.
 Run each `*_test.dart` in its own `flutter test` invocation (the lane flakes relaunching across entrypoints).
-**Review item for ITEST-5:** AC-1 (`TestAC01_BottomNav`) is **green at baseline** — CHROME-2's nav already
-satisfies it — kept pending under owner CHROME-3; the human may instead un-pend it at the review.
+**ITEST-5 (G-2) packet must carry these review items:** AC-1 green at baseline (CHROME-2 nav already
+conformant); **AC-6 cross-screen ownership** (the "Compare as A/B"/"Find recipes" actions live in
+`lib/readout/actions_bar.dart`, but FLOW-1 owns `lib/compare/**` — no phase currently swaps them); AC-6 A/B
+outline weight; AC-7 "ranked by" note absence; AC-9 create-vs-export (see modules/ITEST.md ITEST-3 handoff).
 
 ## Token usage
 
@@ -219,7 +221,8 @@ satisfies it — kept pending under owner CHROME-3; the human may instead un-pen
 | CHROME-2 | c0641155 | 2026-10-19 09:44 EDT | 10:49 | 1h 04m | 52m 35s | claude-opus-4-8 | 206 | 217,878 | 18,751,062 | 94,967 | 19,064,113 | shell done: AppDestination/AppShell/AppTopBar + chrome theme tokens; unit 1668 pass; coverage gate 100% on 5 touched files; bs-11 19 + bs-14 offer green (no regression); additive fall-through only (G-2 gates shell-as-default) |
 | ITEST-1 | 1df2c4ee | 2026-10-19 11:52 EDT | 12:05 | 13m 18s | 13m 18s | claude-opus-4-8 | 66 | 178,518 | 5,113,924 | 53,190 | 5,345,698 | harness + 6 fixtures + smoke; pending gate proven both directions (default 13/1 skip, run-pending 14/0); unit 1668; coverage gate PASS (no lib touched) |
 | ITEST-2 | b4717acb | 2026-10-19 12:36 EDT | 12:58 | 22m 12s | 22m 12s | claude-opus-4-8 | 114 | 324,963 | 8,390,366 | 69,419 | 8,784,862 | AC-1..5 pending tests + red baseline; AC-1 green@baseline(A), AC-2/4 A, AC-3→READ-1/AC-5→READ-3 A-core/B-pending; grade gate PASS 0 plain-B; cov gate PASS (no lib) |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 12:58** | **2h 18m** | **1h 59m** |  | **560** | **948,794** | **43,637,021** | **293,959** | **44,880,334** |  |
+| ITEST-3 | fa1c824b | 2026-10-19 15:46 EDT | 16:22 | 35m 18s | 35m 18s | claude-opus-4-8 | 148 | 473,904 | 11,305,573 | 98,271 | 11,877,896 | AC-6..10 pending tests + red baseline; AC-6/9/10 A, AC-7->FLOW-2 / AC-8->ORG-1 A-core/B-pending; grade gate PASS 0 plain-B; harness extended with CFG pumps; cov gate PASS (no lib) |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 16:22** | **2h 53m** | **2h 35m** |  | **708** | **1,422,698** | **54,942,594** | **392,230** | **56,758,230** |  |
 
 ## Sign-off
 

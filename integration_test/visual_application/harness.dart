@@ -24,14 +24,22 @@
 // Re-exports the pending gate, the fixtures, the fakes, the shell/top-bar types
 // and the bs-17 component widgets so an AC test imports only this harness.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/app/app_destinations.dart';
 import 'package:paint_color_assistant/app/app_shell.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/display/display_controller.dart';
+import 'package:paint_color_assistant/display/display_settings.dart';
+import 'package:paint_color_assistant/display/settings_screen.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
+import 'package:paint_color_assistant/sharing/inactive_peer_transport.dart';
+import 'package:paint_color_assistant/store/persistent_store.dart';
 import 'package:paint_color_assistant/widgets/mono_label.dart';
 import 'package:paint_color_assistant/widgets/pill_button.dart';
 import 'package:paint_color_assistant/widgets/provenance_badge.dart';
@@ -83,7 +91,17 @@ enum VisualScreen {
   recipes('Recipes'),
 
   /// `paletteEntry` — the Palette / Projects screen.
-  palette('Palette');
+  palette('Palette'),
+
+  /// The Display settings panel (AC-10) — opened through the app chrome's E2
+  /// entry on every route; it has no `AppDependencies` entry flag, so
+  /// [pumpDisplaySettings] pumps it, not [_pump].
+  displaySettings('Display settings'),
+
+  /// The onboarding / self-assessment host (AC-10) — pushed onto the running
+  /// app through its production route; no entry flag, so [pumpOnboarding] pumps
+  /// it, not [_pump].
+  onboarding('Onboarding');
 
   const VisualScreen(this.label);
 
@@ -261,5 +279,124 @@ AppDependencies _depsFor(
         paletteSource: aPalette.paletteSource,
         projectSource: aProject.projectSource,
       );
+    case VisualScreen.displaySettings:
+    case VisualScreen.onboarding:
+      throw StateError(
+        '${screen.label} has no AppDependencies entry flag; pump it with '
+        'pumpDisplaySettings / pumpOnboarding, not _pump.',
+      );
   }
+}
+
+// ---------------------------------------------------------------------------
+// CFG pumps (ITEST-3) — the Display settings panel and the onboarding host
+// (AC-10), which have no `AppDependencies` entry flag (ITEST-1 handoff): the
+// Display panel is opened through the app chrome's E2 entry present on every
+// route, and the onboarding host is pushed onto the running app (its production
+// route). Both boot the **real** assembled app through [buildApp] (D-7), so the
+// one installed warm-paper theme is live and the design-system treatment is
+// what the screen actually renders — exactly as the sibling bs-07 / bs-08
+// harnesses reach these two surfaces.
+// ---------------------------------------------------------------------------
+
+/// Boots the app and opens the Display settings panel through its real E2 chrome
+/// entry (AC-10), seeding the injected [DisplayController] from [settings] (the
+/// CFG fixture's moderate-deutan snapshot by default) so the view controls have
+/// a non-default state to render. The injected controller is owned here (an
+/// injected controller is the injector's to dispose), so it is torn down after
+/// the test.
+Future<VisualHarness> pumpDisplaySettings(
+  WidgetTester tester, {
+  DisplaySettings? settings,
+}) async {
+  final resolved = settings ?? anOnboardingStep.displaySettings;
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump();
+  final speech = FakeSpeech();
+  final haptics = FakeHaptics();
+  final controller = DisplayController(
+    defaultSimulationType: resolved.simulationType ?? CvdType.deutan,
+    initialSettings: resolved,
+  );
+  addTearDown(controller.dispose);
+  await tester.pumpWidget(
+    buildApp(
+      AppDependencies(
+        colorScience: const ColorScienceImpl(),
+        speech: speech,
+        haptics: haptics,
+        initialSample: aReading,
+        displayController: controller,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  // Open the panel through the E2 entry the chrome shows on every route.
+  await tester.tap(find.byKey(DisplaySettingsButton.openKey));
+  await tester.pumpAndSettle();
+  return VisualHarness(
+    tester,
+    screen: VisualScreen.displaySettings,
+    speech: speech,
+    haptics: haptics,
+  );
+}
+
+/// Boots the app and pushes the onboarding / self-assessment host onto it
+/// through its production route (AC-10), the way the bs-07 harness does — the
+/// host has no home entry. An in-memory store backs the host's profile store,
+/// and an [InactivePeerTransport] keeps the push deterministic (no real
+/// local-network discovery, bs-14). The route future completes only on pop, so
+/// it is intentionally not awaited.
+Future<VisualHarness> pumpOnboarding(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump();
+  final speech = FakeSpeech();
+  final haptics = FakeHaptics();
+  final deps = AppDependencies(
+    colorScience: const ColorScienceImpl(),
+    speech: speech,
+    haptics: haptics,
+    initialSample: aReading,
+    store: InMemoryPersistentStore(),
+    peerTransport: const InactivePeerTransport(),
+  );
+  await tester.pumpWidget(buildApp(deps));
+  await tester.pumpAndSettle();
+  final navigator = tester.firstState<NavigatorState>(find.byType(Navigator));
+  unawaited(navigator.push<void>(deps.router.toSelfAssessment()));
+  await tester.pumpAndSettle();
+  return VisualHarness(
+    tester,
+    screen: VisualScreen.onboarding,
+    speech: speech,
+    haptics: haptics,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Component assertions (ITEST-3) — the "design-system wrapper present" checks
+// the AC-6..AC-10 pill ACs share. Placement-robust: a swap phase may put the
+// control's key on the wrapper or on the inner button, so these accept the
+// wrapper at, above or below the keyed control.
+// ---------------------------------------------------------------------------
+
+/// Whether [keyed]'s widget is a [T], or has a [T] ancestor or descendant.
+///
+/// [keyed] must resolve to exactly one widget (assert its presence first).
+bool subtreeHas<T extends Widget>(WidgetTester tester, Finder keyed) =>
+    tester.widget(keyed) is T ||
+    find.ancestor(of: keyed, matching: find.byType(T)).evaluate().isNotEmpty ||
+    find.descendant(of: keyed, matching: find.byType(T)).evaluate().isNotEmpty;
+
+/// Asserts the control at [key] renders as a design-system [PillButton] (present
+/// at, above or below the key), failing a control left as an ad-hoc button.
+void expectPill(WidgetTester tester, Key key, {String? reason}) {
+  final keyed = find.byKey(key);
+  expect(keyed, findsOneWidget, reason: 'the $key control renders');
+  expect(
+    subtreeHas<PillButton>(tester, keyed),
+    isTrue,
+    reason: reason ?? 'the $key control renders as a design-system PillButton',
+  );
 }
