@@ -532,3 +532,35 @@ Both pass and are **NOT vacuous** (verified against `bs17/pending.dart`, where `
 ### Gate status
 
 **PASS** — AC-15 un-pends at **straight A** and both modified pending-gate guards grade **A** (non-vacuous against the terminal empty map). All 15 bs-17 ACs now grade straight A; zero "A-core / B pending" rows and **zero plain-B limits** — the gate is **not blocked**. The feature's acceptance suite is complete: every AC runs in the default run, and the pending map is empty.
+
+---
+
+## SIGNOFF-1 — whole-suite re-grade (fresh context)
+
+- 2026-10-18 — independent acceptance-test grader (fresh context; did not author the tests or the implementation). Graded by reading the current `integration_test/design_system_test.dart`, the harness, the source-scan helper, `bs17/pending.dart` (confirmed the `pendingACs` map is **empty** — every AC-1..AC-15 runs by default), and the seven touched `lib/` files. No tests run; grade is of what the code does.
+
+| AC | Test | Grade | Discriminating control |
+|----|------|-------|------------------------|
+| AC-1 | Surfaces use the warm-paper palette | **A** | Reads the real installed `ColorScheme` (one `AppTheme.light()` chokepoint); `surface/surfaceContainerLowest/surfaceContainer` exact-equal `--bg/--sf/--sf2`, plus `isNot(stock.surface)` control. Givens checked (`MaterialApp`/`installedTheme`/`Scaffold`). |
+| AC-2 | Ink/muted/hairlines use warm-paper neutrals | **A** | `onSurface/onSurfaceVariant/outline/outlineVariant` exact-equal `--ink/--mut/--ln`; two `isNot(stock)` controls; catches `outlineVariant` left stock. |
+| AC-3 | Primary action colour is the cobalt accent | **A** | `primary==--acc #2F55C8`, `onPrimary==--accInk`, exact + `isNot(stock.primary)`. G1 transitive (getter dereferences `MaterialApp.first`.`theme!`) — thin but airtight, as prior grids. |
+| AC-4 | Warm-paper palette still meets the AA floor | **A** | Three THEME-3 preconditions pin the installed scheme IS warm-paper; seven text-on-surface pairings each `>=4.5` via bs-11's mirrored WCAG math over the installed tokens; a token edit dropping any pairing fails. |
+| AC-5 | Prose/headings in Atkinson Hyperlegible Next | **A** | Eight prose/heading roles of the installed `TextTheme` each `fontFamily=='Atkinson Hyperlegible Next'`; `isNot(isNull)` control. Family applied uniformly via `.apply`, so the 8-of-15 sample catches every realistic wrong impl. |
+| AC-6 | Micro-labels/readouts in Atkinson Mono | **A** | Reads the D-7 source `AppTheme.monoLabel.fontFamily=='Atkinson Hyperlegible Mono'` + `isNot(nextFamily)` + `isNot(isNull)`. Faithful static-source grain; rendered-consumption is AC-9's concern. |
+| AC-7 | Buttons are pills, cards are rounded panels | **A** (was A-core/B-pending) | Theme half in the AC-7 body (filled/outlined `StadiumBorder`; `cardTheme` radius∈[16,22]); rendered-instance augmentation now closed in the suite: AC-10 asserts the mounted `PillButton` inherits `isA<StadiumBorder>`, AC-12 asserts the mounted `SurfaceCard` inherits the `cardTheme` r18, and the lib widgets set no shape/radius of their own — inheritance proven. |
+| AC-8 | Borders follow the weight scale | **A** | `dividerTheme.thickness==1.0` and outlined side `width==2.0` read from the theme (carry the red); `emphasisBorderWidth==3.0` + `1<2<3` are green-at-baseline controls. |
+| AC-9 | Mono micro-labels uppercase, bold, tracked | **A** | Mounts real `MonoLabel('srgb')`; settled negative `find.text('srgb') findsNothing`; `fontWeight==w700`, `letterSpacing/fontSize closeTo(0.06,.012)` off the rendered `Text`. |
+| AC-10 | Primary ink-fill pill, secondary outline pill | **A** | Mounts both real variants; primary fill `==onSurface`, label `==surface`, no border; secondary transparent, 2px `onSurface` side, ink label; `primaryMat.color isNot secondaryMat.color` divergence. |
+| AC-11 | Speak action is a round accent FAB | **A** | Mounts real `SpeakButton`; `shape isA<CircleBorder>`, `fillColor==WarmPaper.accent` AND `==cs.primary` (inherited not hardcoded), `Icons.volume_up` present, `bySemanticsLabel('Speak')`. |
+| AC-12 | Surface cards: ordinary/emphasis/inverted | **A** | Mounts all three; ordinary fill `surface`+`outlineVariant`@2px; emphasis `onSurface`@2px; inverted `AppTheme.inverted.paper` fill, no border, `inverted.ink` text; two divergence controls (+ the AC-7 radius augmentation). |
+| AC-13 | Provenance badges: glyph-and-border signature | **A** | Mounts all four tiers; each carries a non-colour signature via `_badgeSignature` (measured=border, calculated=fill, estimated=dashed `CustomPaint`, confirmed=fill); glyphs `hasLength 4` distinct; signatures vary (`>=2`). Rejects colour-only differentiation. |
+| AC-14 | Every screen inherits the one theme | **A** (was A-core/B-pending) | One-theme half: every roster screen's scheme/text `==` the chokepoint, one `MaterialApp` each. No-hardcode half now full strength: `residualPaletteLiterals(roots:['lib'], exempt:{authority, capture})` `isEmpty`; the D-4 set pinned to exactly `{'lib/capture/capture_live_view.dart'}`, load-bearing (dropping the capture exemption re-exposes literals, all inside the pinned set). |
+| AC-15 | Displayed swatch carries approximation caption | **A** | Walks every screen, counts `ColorChip`s with a colour, requires a `Text` containing `approx` on each swatch-bearing screen, `totalSwatches>0` non-vacuity. `SwatchCaption` renders `MonoLabel('Approx.')`→`APPROX.` + the message. Screen-grain co-presence (the intended shared-caption design, G-2 accepted). |
+
+### Counts
+- **Straight A:** 15 — AC-1..AC-15
+- **A-core / B pending `<phase>`:** 0 (AC-7 and AC-14 both now resolve to straight A — their deferred augmentations are present in the current suite and passing)
+- **Below A (plain B):** 0
+
+### Gate status
+**PASS.** Zero plain-B and zero A-core/B-pending remaining — the sign-off precondition is met. AC-7's rendered-instance inheritance is asserted on the mounted `PillButton` (AC-10) and `SurfaceCard` (AC-12) and the lib widgets set no shape/radius of their own; AC-14's no-hardcode sweep reads `isEmpty` at full strength with the D-4 exclusion set pinned and load-bearing. Every AC reads behaviour from the real installed theme or the real mounted component (D-7), asserts exact observable values, checks its Givens through the public surface, and discriminates the catalogue's Rejects.

@@ -1,7 +1,7 @@
 # Master Plan — Visual design system
 
 **Spec:** [bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature)
-**Status:** In progress — THEME ✅ + COMPONENTS ✅ + APPLY ✅ (all 15 ACs ✅); next SIGNOFF-1
+**Status:** ⏸ Awaiting sign-off — all 18 phases ✅, all 15 ACs ✅; SIGNOFF-1 packet prepared @ `2f779b1`, round 1 awaiting the human decision
 **Architecture:** the wireframe [docs/Color blindness artist tool.zip → "Paint Color Assistant.dc.html"]; its THEME token object and component treatments; [docs/paint-color-app-solution-intent.md] §Presentation (Flutter UI); existing theme chokepoint `lib/app/theme.dart` (bs-11 A11Y-1/2/3) and `test/app/theme_test.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` (worktree `/Users/matthew.quirk/Nuance-bs17`) · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-16)
 
@@ -113,7 +113,7 @@ Pre-seeded augmentations: AC-14 is partially green at baseline (bs-11 already in
 | THEME | [modules/THEME.md](modules/THEME.md) | the warm-paper tokens, Atkinson fonts and shape/border/label styles in the one `AppTheme` chokepoint; scaffold + font bundling | — | ✅ Complete |
 | COMPONENTS | [modules/COMPONENTS.md](modules/COMPONENTS.md) | the styled widget set (`PillButton`, `SpeakButton`, `SurfaceCard`, `MonoLabel`) + the provenance-badge signature | THEME | ✅ Done |
 | APPLY | [modules/APPLY.md](modules/APPLY.md) | wire the screens to the theme + components; remove residual hardcoded palette colours; the shared swatch caption | THEME, COMPONENTS | ✅ Done (APPLY-1, APPLY-2) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | acceptance integration suite: one pending test per AC, and its review | THEME-2, COMPONENTS-1 | 🔄 In progress |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | acceptance integration suite: one pending test per AC, and its review | THEME-2, COMPONENTS-1 | ✅ Complete |
 
 ## Dependency graph
 
@@ -171,18 +171,19 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 15 | COMPONENTS-5 | AC-13 (provenance badge glyph+border signature) | ✅ Done | 2,589,616 | 5m 36s | AC-13 un-pended at A; per-tier colour-independent border signature (solid ink / sunken fill / dashed `CustomPaint.painter` / ink fill), glyph+Semantics unchanged (D-6); only provenance_badge.dart changed; unit 1450✅, 100% cov provenance_badge.dart; acc AC-1..13✅ (24/2 skip); grade 13A/0 A-core-B/0 plain-B; fix passes 0/3; COMPONENTS module complete |
 | 16 | APPLY-1 | AC-14 (one theme; remove residual hardcoded palette colours) | ✅ Done | 13,043,220 | 37m 15s | AC-14 un-pended → straight A (augmentation closed: zero residuals full strength + D-4 set pinned); 6 hardcoded `Color(0x…)` routed to `AppTheme`, scan refined so data-reconstructions aren't false-flagged; unit 1450✅, 100% cov 3 lib files; acc AC-1..14✅ (26/1); bs-11 19/19, bs-10 25/25; 0 plain-B; fix 0/3; wrapper swap deferred (AC-14 gate only, user decision) |
 | 17 | APPLY-2 | AC-15 (shared swatch approximation caption) | ✅ Done | 18,031,030 | 30m 16s | AC-15 un-pended → A (screen-grain caption, G-2-accepted); `SwatchCaption` once on readout/capture/palette; `pendingACs` now empty; unit 1459✅, 100% cov 4 lib files; acc 27/0 (all 15 run); bs-11 19/19, bs-10 25/25, readout/capture green; palette AC-3/AC-5 pre-existing BASE flakes; 0 plain-B; fix 1/3 |
-| 18 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | |
+| 18 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting decision | 6,978,916 | 1h 10m | packet @ `2f779b1`; preconditions all met (re-grade 15A/0, pending empty, augments closed); verification re-run clean; a human records via `--signoff` |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-APPLY-2 un-pended `AC-15` at **A** — the shared `SwatchCaption` (`APPROX.` eyebrow + "Swatches are screen approximations. Trust the numbers.", folded to read once) now accompanies the colour swatch on every swatch-bearing screen (readout always; capture & palette gated to appear exactly when a swatch does). Compare/recipes render no counted swatch and are skipped. `pendingACs` is now **empty** — all 15 bs-17 ACs run by default (acc 27/0). Unit 1459✅, 100% cov on the 4 touched lib files, bs-11 19/19 (contrast) + bs-10 25/25 + readout 12/12 + capture 19/19 green. All behavior phases are done; the AC coverage table is fully ✅.
+**SIGNOFF-1 packet is prepared and the feature is ⏸ Awaiting the human sign-off decision.** No phase is startable until the decision is recorded.
 
-Startable now:
-- **SIGNOFF-1** — the only remaining phase. Needs APPLY-1 ✅ + APPLY-2 ✅ + COMPONENTS-5 ✅ (all met). The sign-off packet + summary page; a human records the decision via `--signoff`. **Run next.**
+- Packet: [signoff/round-1.md](signoff/round-1.md) @ `2f779b1`. Preconditions all met: whole-suite re-grade **15 A / 0 below A** (both prior A-core/B-pending rows AC-7/AC-14 now straight A), `pendingACs` empty, all ITEST augmentations closed, G-1/G-2 ✅, no G-3.
+- Verification re-run this session: `flutter analyze` clean; unit **1459/0**; bs-17 acceptance **27/0** (default == run-pending); cross-feature regression (flutter-tester, 15 suites) **316 pass / 4 pre-existing flakes** — the 4 reproduce **identically** at the merge-base `c00422f` (zero bs-17 regressions).
+- A human records: `/feature-next-phase --signoff bs-17-visual-design-system approved | changes "<items>"`.
 
-Carried: pre-existing `flutter-tester` viewport flakes — palette AC-3/AC-5 (bs-06), bs-07 AC-4, bs-08 AC-9 — all reproduce at BASE (green on a booted sim); not bs-17 regressions. No augmentations owed (all closed). Deferred from APPLY-1: the wholesale wrapper screen-swap (components available but not opted into every screen) — SIGNOFF-1 to note.
+Carried into sign-off: pre-existing `flutter-tester` viewport flakes — palette AC-3/AC-5 (bs-06), self_assessment AC-4 (bs-07), display AC-9 (bs-08) — all reproduce at BASE `c00422f`; not bs-17 regressions. Deferred (packet §5): APPLY-1 wholesale wrapper screen-swap; D-3 dark theme.
 
 ## Token usage
 
@@ -209,10 +210,11 @@ Carried: pre-existing `flutter-tester` viewport flakes — palette AC-3/AC-5 (bs
 | COMPONENTS-5 | 97a53f65 | 2026-10-18 15:03 EDT | 15:09 | 5m 36s | 5m 36s | claude-opus-4-8 | 66 | 93,101 | 2,480,781 | 15,668 | 2,589,616 | AC-13 un-pended at A; per-tier colour-independent border signature; unit 1450 green, 100% cov provenance_badge.dart; acc 24/2 green; grade 13A/0 A-core-B/0 plain-B; fix passes 0/3; COMPONENTS module complete |
 | APPLY-1 | 736c1bf0 | 2026-10-18 15:17 EDT | 16:11 | 54m 20s | 37m 15s | claude-opus-4-8 | 188 | 311,424 | 12,664,713 | 66,895 | 13,043,220 | AC-14 un-pended → straight A (augmentation closed: zero residuals full strength + D-4 set pinned); 6 hardcoded Color(0x…) routed to AppTheme, scan refined for data-reconstructions; unit 1450, 100% cov 3 lib files, acc 26/1, bs-11 19/19 + bs-10 25/25; 0 plain-B; grade gate PASS; fix 0/3 |
 | APPLY-2 | 0b3f502b | 2026-10-18 20:19 EDT | 20:50 | 30m 16s | 30m 16s | claude-opus-4-8 | 268 | 231,180 | 17,727,706 | 71,876 | 18,031,030 | AC-15 un-pended → straight A (shared SwatchCaption, screen-grain); pendingACs empty; unit 1459, 100% cov 4 lib files, acc 27/0; bs-11 19/19 + bs-10 25/25 + readout/capture green; palette AC-3/AC-5 pre-existing BASE flakes; 0 plain-B; fix 1/3 |
-| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 20:50** | **7h 57m** | **4h 18m** |  | **1,924** | **3,530,645** | **105,935,520** | **764,939** | **110,233,028** |  |
+| SIGNOFF-1 | 627deaf4 | 2026-10-18 21:41 EDT | 22:52 | 1h 10m | 1h 10m | claude-opus-4-8 | 116 | 245,187 | 6,683,286 | 50,327 | 6,978,916 | sign-off packet + summary scorecard + fresh whole-suite re-grade (15 A/0); verification re-run: unit 1459/0, bs-17 acc 27/0 both modes, cross-feature regression 316 pass/4 pre-existing flakes (reproduce at BASE c00422f), analyze clean; ⏸ awaiting decision |
+| **Feature total** |  | **2026-10-16 19:17 EDT** | **2026-10-18 22:52** | **9h 07m** | **5h 28m** |  | **2,040** | **3,775,832** | **112,618,806** | **815,266** | **117,211,944** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `2f779b1` | 15 A / 0 below A | ⏸ Awaiting |
