@@ -158,7 +158,12 @@ void main() {
       isTrue,
     );
 
-    // Acknowledging clears the marker in place.
+    // Acknowledging clears the marker in place. (The AC-15 swatch caption added
+    // to the value region makes the scrollable readout body taller, so the
+    // Acknowledge control — the last item in the ListView — can sit below the
+    // 800px test viewport; scroll it into view before tapping.)
+    await tester.ensureVisible(find.byKey(ActionsBar.acknowledgeKey));
+    await tester.pump();
     await tester.tap(find.byKey(ActionsBar.acknowledgeKey));
     await tester.pump();
     expect(find.byKey(ActionsBar.justCapturedKey), findsNothing);

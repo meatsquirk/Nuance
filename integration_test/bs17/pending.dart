@@ -53,7 +53,9 @@ const Map<String, String> pendingACs = {
   // AC-12 un-pended by COMPONENTS-4 (SurfaceCard ordinary/emphasis/inverted);
   // AC-13 un-pended by COMPONENTS-5 (ProvenanceBadge border-style signature);
   // AC-14 un-pended by APPLY-1 (one theme app-wide + no hardcoded palette).
-  'AC-15': 'APPLY-2',
+  // AC-15 un-pended by APPLY-2 (the shared swatch approximation caption). It was
+  // the last pending AC, so this map is now empty — every bs-17 AC runs by
+  // default.
 };
 
 /// The behaviour phases allowed to own a pending AC.

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/build_app.dart';
+import '../widgets/swatch_caption.dart';
 import 'capture_controller.dart';
 import 'capture_controls.dart';
 import 'capture_current_reading.dart';
@@ -59,6 +61,16 @@ class CaptureScreen extends StatelessWidget {
                       CaptureCurrentReading(
                         sample: controller.state.currentSample,
                       ),
+                      // The swatch approximation caption (bs-17 AC-15), shown
+                      // once whenever the screen renders a colour swatch — i.e.
+                      // when a reading has been sampled AND there is a
+                      // colour-science scope to render it through (the same
+                      // condition [CaptureCurrentReading] draws its live swatch
+                      // under). Otherwise there is no swatch, so no caption and
+                      // the layout is unchanged.
+                      if (controller.state.currentSample != null &&
+                          AppScope.maybeOf(context)?.colorScience != null)
+                        const SwatchCaption(),
                       // bs-09 multi-point readings region (AC-3/AC-4); empty
                       // until points are sampled (CAPTURE-4).
                       CaptureReadingsList(

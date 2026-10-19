@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/color_chip.dart';
+import '../widgets/swatch_caption.dart';
 import '../widgets/value_reading.dart';
 import 'readout_controller.dart';
 
@@ -91,6 +92,10 @@ class ValueRegion extends StatelessWidget {
                   label: 'Displayed colour',
                   color: Color.fromARGB(255, color.red, color.green, color.blue),
                 ),
+                // The one standing reminder that the swatch is a screen
+                // approximation and the numbers are authoritative (bs-17 AC-15);
+                // rendered once beside the region's single swatch.
+                const SwatchCaption(),
               ],
             ),
           ),

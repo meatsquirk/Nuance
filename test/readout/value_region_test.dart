@@ -11,6 +11,7 @@ import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/readout_controller.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
 import 'package:paint_color_assistant/widgets/color_chip.dart';
+import 'package:paint_color_assistant/widgets/swatch_caption.dart';
 
 // Terracotta: CIELAB L58 → Munsell value 5.5, grayscale a neutral.
 const _terracotta = Sample(
@@ -121,6 +122,13 @@ void main() {
     expect(circles.single.decoration,
         isA<BoxDecoration>().having((d) => d.color, 'color',
             Color.fromARGB(255, rgb.red, rgb.green, rgb.blue)));
+  });
+
+  testWidgets('accompanies its swatch with the approximation caption (AC-15)',
+      (tester) async {
+    await _pumpRegion(tester);
+    // The region's single swatch carries the standing reminder, once.
+    expect(find.byType(SwatchCaption), findsOneWidget);
   });
 
   testWidgets('formats a whole Munsell value without a trailing .0',

@@ -4,6 +4,7 @@ import '../app/build_app.dart';
 import '../color_science/color_science.dart';
 import '../domain/paint.dart';
 import '../widgets/paint_row.dart';
+import '../widgets/swatch_caption.dart';
 import 'palette_controller.dart';
 
 /// The paint-list region of the Palette screen's My-paints view (wireframe
@@ -60,6 +61,12 @@ class PaintListRegion extends StatelessWidget {
                   ? null
                   : _masstoneSwatch(science, paint),
             ),
+        // The swatch approximation caption (bs-17 AC-15), shown once below the
+        // paint rows whenever this screen renders masstone swatches — i.e. when
+        // there are paints and a colour-science scope to render them through. A
+        // standalone list (no scope) renders bare names and no swatch, so no
+        // caption either.
+        if (paints.isNotEmpty && science != null) const SwatchCaption(),
         // E32 Add paint (AC-4): opens the reviewed-dataset picker; choosing a
         // paint adds it to "My paints" with its dataset provenance preserved.
         TextButton(

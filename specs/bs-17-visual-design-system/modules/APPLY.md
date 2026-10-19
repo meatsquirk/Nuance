@@ -1,6 +1,6 @@
 # Module APPLY — wire the screens to the design system
 
-**Status:** In progress — APPLY-1 ✅ (AC-14); next APPLY-2 (AC-15)
+**Status:** Done — APPLY-1 ✅ (AC-14), APPLY-2 ✅ (AC-15); module complete, SIGNOFF-1 next
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** screen-level edits across `lib/readout/**`, `lib/capture/**`, `lib/compare/**`, `lib/recipes/**`, `lib/palette/**`, `lib/projects/**`, `lib/display/**`, `lib/onboarding/**` — swapping ad-hoc buttons/cards/labels for the COMPONENTS wrappers, removing residual hardcoded palette colours, and adding the shared swatch caption. Plus a shared caption widget (`lib/widgets/swatch_caption.dart`, new) and the AC-14 source-scan rule.
 **Depends on:** THEME, COMPONENTS · **Blocks:** SIGNOFF-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | APPLY-1 | behavior | AC-14 | ✅ Done | 13,043,220 | 37m 15s (54m 20s) |
-| APPLY-2 | behavior | AC-15 | ⬜ Todo | | |
+| APPLY-2 | behavior | AC-15 | ✅ Done | 18,031,030 | 30m 16s (30m 16s) |
 
 ## Interface reconciliation
 
@@ -122,4 +122,81 @@ them is a future, test-backed change. Noted for SIGNOFF-1.
 
 ### Result
 
+**Scope note:** the spec lists swatches on readout, compare A/B, recipes dots and palette rows,
+but only three roster screens actually render a counted swatch (a `ColorChip` with a non-null
+`color`): **readout** (always), **capture** (the live reading, when a sample exists under a
+colour-science scope) and **palette** (the paint rows, when paints exist under a scope). Compare
+and recipes render no `ColorChip`, so the AC-15 sweep skips them. The caption is attached **once
+per swatch-bearing screen** (not per swatch) — the G-2-accepted screen-grain reading. No existing
+"a hint, not the message" copy was present in `lib/` to reuse (the pre-seeded table assumed one),
+so this phase introduces the single shared copy.
+
+**Landed (lib — 4 files, +1 new):**
+- `lib/widgets/swatch_caption.dart` (**new**) — `SwatchCaption`: an `APPROX.` `MonoLabel` eyebrow
+  + the line "Swatches are screen approximations. Trust the numbers.", folded into one `Semantics`
+  node (`captionKey`, `excludeSemantics`, `label == message`) so a screen reader announces it once.
+  The line uses the muted `colorScheme.onSurfaceVariant` role from the one theme — no palette
+  literal (AC-14 holds).
+- `lib/readout/value_region.dart` — one `SwatchCaption` after the region's single `ColorChip`
+  (unconditional; the region always renders a swatch).
+- `lib/capture/capture_screen.dart` — one `SwatchCaption`, gated `currentSample != null &&
+  AppScope.maybeOf(context)?.colorScience != null` (exactly when `CaptureCurrentReading` draws its
+  live swatch).
+- `lib/palette/paint_list_region.dart` — one `SwatchCaption` below the paint rows, gated
+  `paints.isNotEmpty && science != null` (exactly when the rows render masstone swatches).
+
+**Un-pend + tests (test — 5 files):**
+- `integration_test/bs17/pending.dart` — deleted the `AC-15` row; `pendingACs` is now **empty**
+  (AC-15 was the last pending AC).
+- `integration_test/design_system_test.dart` — updated the two pending-gate guard tests for the
+  terminal empty-map state: the coverage guard now pins `unpended == every AC-1..AC-15` and asserts
+  `pendingACs` **isEmpty**; the mode guard asserts all 15 ACs run in both the default and
+  run-pending modes. AC-15's own test runs by default now (was skipped).
+- new `test/widgets/swatch_caption_test.dart` (5 cases); AC-15 assertions added to
+  `test/readout/value_region_test.dart`, `test/capture/capture_screen_test.dart` (true + both
+  false paths), `test/palette/paint_list_region_test.dart` (swatch/no-scope/no-paint cases).
+- `test/readout/readout_screen_test.dart` — the AC-12 acknowledge test now `ensureVisible`s the
+  Acknowledge control before tapping: the AC-15 caption makes the scrollable readout body taller so
+  the last ListView item can sit below the 800px test viewport. **Assertion unchanged** (marker
+  clears on Acknowledge) — a scroll-into-view adaptation to a real, intended layout addition, not a
+  weakening.
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS; BASE `5bdb14c`):
+- `flutter analyze` on all 10 touched files — **clean**.
+- Unit `flutter test` — **1459 / 1459** green (1450 + 9 new AC-15 cases).
+- Coverage gate (`dart run tool/coverage_gate.dart 5bdb14c`) — **100% line on all 4 touched lib
+  files** (`swatch_caption.dart`, `value_region.dart`, `capture_screen.dart`, `paint_list_region.dart`).
+- Acceptance `flutter test -d flutter-tester integration_test/design_system_test.dart` — **GREEN,
+  27 passed / 0 skipped**: AC-1..AC-15 all run (AC-15 un-pended; the previous 1 skip is gone).
+- Sibling regressions (per-file on `-d flutter-tester`): **bs-11 accessibility 19/19** (the required
+  app-wide-contrast regression — the caption's muted role clears AA), **bs-10 daltonization 25/25**,
+  **readout 12/12**, **capture 19/19**. **palette** 19/21: AC-3 (provenance legend region) and AC-5
+  (palette selector "Travel set") fail — **both reproduce identically at BASE `5bdb14c` with my
+  changes stashed**, so they are pre-existing bs-06 `flutter-tester` viewport artifacts (green on a
+  booted sim), NOT APPLY-2 regressions. Recorded in Known flakes.
+- **Grade gate: PASS** — independent fresh re-grade appended to
+  `behavior-test-completeness-…md`: **AC-15 → A**; AC-1..AC-14 carry forward A; both reworked
+  pending-gate guards A (non-vacuous: assert the empty map's expected contents). 0 plain-B.
+- **Fix passes:** 1/3 — first unit run surfaced 3 failures, all in test code: two brittle assertions
+  in my new `swatch_caption_test` (fontSize) / `capture_screen_test` (the controller auto-samples),
+  and the readout AC-12 tap needing `ensureVisible`. Also refined the capture gate to require a
+  colour-science scope (so no caption renders without a swatch). Green on the next run.
+- **Tokens / Time:** 18,031,030 · 30m 16s active (30m 16s wall).
+
 ### Checkpoint / Handoff
+
+- **Frozen for SIGNOFF-1:** `SwatchCaption` (`lib/widgets/swatch_caption.dart`) is the single
+  swatch-approximation caption; readout/capture/palette each render it once beside their swatch
+  group (capture & palette gated to appear exactly when a swatch does). `pendingACs` is empty — all
+  15 bs-17 ACs run by default. AC-15's sweep counts `ColorChip` with a non-null `color`; compare and
+  recipes render none and are skipped.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart` (all 15 run by default);
+  sibling suites **per-file** on `-d flutter-tester` (never the whole dir). A booted sim clears the
+  bs-06/bs-07/bs-08 viewport flakes.
+- **Known gaps:** the wrapper screen-swap remains deferred from APPLY-1 (components available but not
+  opted into every screen) — SIGNOFF-1 to note. The pre-existing palette (AC-3/AC-5), bs-07 and
+  bs-08 `flutter-tester` viewport flakes are device-lane artifacts, not bs-17 regressions.
+- **Next:** **SIGNOFF-1** — the sign-off packet + summary page + the human decision. All behavior
+  phases are now done; the AC coverage table is fully ✅.
