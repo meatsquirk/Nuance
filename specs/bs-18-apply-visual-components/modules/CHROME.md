@@ -1,6 +1,6 @@
 # Module CHROME — app chrome (scaffold, bottom nav, top bar)
 
-**Status:** Not started
+**Status:** In progress — CHROME-1 done; next CHROME-2 (shell)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/app/build_app.dart`, `lib/app/theme.dart` (nav/appbar theme tokens only), new `lib/app/app_shell.dart` (nav scaffold) and `lib/app/app_destinations.dart`; the `BS18_RUN_PENDING` runner + coverage gate tooling it establishes (scaffold).
 **Depends on:** — · **Blocks:** ITEST (CHROME-2), all screen modules (they wire through `build_app.dart`)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| CHROME-1 | scaffold | — | ⬜ Next | | |
+| CHROME-1 | scaffold | — | ✅ Done | 5.04M | 16m (16m) |
 | CHROME-2 | shell | — | ⬜ Todo | | |
 | CHROME-3 | behavior | AC-1 | ⬜ Todo | | |
 | CHROME-4 | behavior | AC-2 | ⬜ Todo | | |
@@ -40,6 +40,28 @@ G-1 (approve the spec) ✅ Resolved 2026-10-19 07:33 EDT: approved — Matt Quir
   3. Confirm the coverage gate tooling runs (passes clean, fails on a planted uncovered line) on touched files.
   4. Add the `BS18_RUN_PENDING` pending-test runner convention (mirrors bs-13's `BS13_RUN_PENDING`) so ITEST can record a red baseline.
 - **Exit criteria:** branch pushed; baseline + flake reproduction recorded; gate proven both directions; no product code changed.
+
+### Result — CHROME-1 ✅ Done (2026-10-19)
+
+- **Landed:** branch `feat/bs-18-apply-visual-components` off `main@fa21c49` (= `d3a1c4f` + plan-only commits; verified `d3a1c4f..fa21c49` touches `specs/` only, no `lib/`). `flutter pub get` clean. No product code.
+- **BS18_RUN_PENDING runner:** new `integration_test/visual_application/pending.dart` — the runner convention (mirrors bs-17's `bs17/pending.dart`): `runPending` (define + host env), `pendingSkipReason(acId, {forceRunPending})`, `acTestWidgets(...)`, `behaviorPhases` (13 bs-18 behaviour phases), and `pendingACs` seeded with all 14 ACs → owners from the master plan AC coverage table. ITEST-1 builds the harness/fixtures on top and un-pending = deleting a row.
+- **Self-test:** new `integration_test/visual_application/pending_runner_test.dart` proves the runner both directions — default run **6 passed / 1 skipped** (AC-1 wiring smoke skipped; un-pended AC runs); `--dart-define=BS18_RUN_PENDING=true` run **7 passed / 0 skipped** (AC-1 now runs). Plus integrity invariants (every owner ∈ behaviorPhases; seed == AC-coverage table).
+- **Coverage gate** (`tool/coverage_gate.dart`, pre-existing): proven both directions on touched files — clean tree (no touched `lib/`) → `PASS` exit 0; planted untracked uncovered `lib/_gate_probe.dart` → `FAIL` exit 1 (`NO COVERAGE DATA`); probe removed, tree clean.
+- **Baseline recorded** (branch point, code-equiv `d3a1c4f`): unit suite `flutter test --coverage test/` = **1643 passed, exit 0**; `coverage/lcov.info` generated.
+- **Carried flakes reproduce** (off-lane flutter-tester native fails, NOT regressions — scaffold changed no product code): `palette_test` AC-3 + AC-5 (bs-06), `self_assessment_test` AC-4 (bs-07), `display_test` AC-9 (bs-08) — each the sole failure in an otherwise-green suite. Matches the master plan Known flakes table.
+- **Gates:** unit ✅; coverage gate ✅ both directions; no acceptance/grade gate (scaffold). `dart analyze` on new files exit 0. Fix passes: 0/3.
+
+### Checkpoint / Handoff — after CHROME-1
+
+- **Frozen interfaces (this phase):** `integration_test/visual_application/pending.dart` — `pendingACs`, `behaviorPhases`, `runPending`, `pendingSkipReason`, `acTestWidgets`. ITEST-1 consumes these; behaviour phases un-pend by deleting a `pendingACs` row.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; `flutter`/`dart` not on PATH; no `timeout`/`gtimeout` on this machine):
+  - Unit + coverage: `flutter test --coverage test/`
+  - Coverage gate on touched files: `dart run tool/coverage_gate.dart d3a1c4f` (base = code merge-base; `COVERAGE_GATE_BASE` also honoured)
+  - Acceptance suite (default): `flutter test -d flutter-tester integration_test/visual_application/`
+  - Red baseline: add `--dart-define=BS18_RUN_PENDING=true`
+  - Sibling flake suites: `flutter test -d flutter-tester integration_test/{palette,self_assessment,display}_test.dart`
+- **Known gaps / notes:** coverage gate is line-only (Dart emits no branch coverage — per-branch exercise is a phase/review duty). The whole `integration_test/` dir won't launch at once (per-file/per-suite only). Sibling source-scan/sim ACs fail natively off the exclusive lane — the 4 above are the expected carried set.
+- **Next (CHROME-2, shell):** add `AppDestination` + `AppShell` (Scaffold + IndexedStack + NavigationBar over the 4 destination screens), test anchors (`bottomNavKey`, per-destination keys, non-colour active-marker key), and `AppTopBar`; wire the default route in `build_app.dart` to the shell; keep behaviour unchanged; existing suite green + unit/coverage gate.
 
 ## Phase CHROME-2 — shell: nav + top-bar shells
 

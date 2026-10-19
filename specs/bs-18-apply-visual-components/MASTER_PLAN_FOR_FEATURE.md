@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** Not started — next CHROME-1 (scaffold); G-1 approved, CHROME-1 startable
+**Status:** In progress — next CHROME-2 (shell)
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -120,7 +120,7 @@ Pre-seeded augmentations: AC-3 (capture partly swapped) strengthened by READ-1; 
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| CHROME | [modules/CHROME.md](modules/CHROME.md) | Scaffold; bottom nav + top bar; owns `build_app.dart` | — | ⬜ Todo |
+| CHROME | [modules/CHROME.md](modules/CHROME.md) | Scaffold; bottom nav + top bar; owns `build_app.dart` | — | ◑ In progress |
 | READ | [modules/READ.md](modules/READ.md) | Readout + Capture screen swaps (incl. warning-overlap fix) | ITEST (G-2) | ⬜ Todo |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Compare + Recipes screen swaps | ITEST (G-2) | ⬜ Todo |
 | ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | ⬜ Todo |
@@ -171,8 +171,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | CHROME-1 | scaffold: branch from main@d3a1c4f, baseline, coverage gate, BS18 pending runner | ⬜ Next | | | blocked by G-1 |
-| 2 | CHROME-2 | shell: bottom-nav + top-bar widget shells + 4-destination IndexedStack wiring + active-destination keys | ⬜ Todo | | | |
+| 1 | CHROME-1 | scaffold: branch from main@d3a1c4f, baseline, coverage gate, BS18 pending runner | ✅ Done | 5.04M | 16m (16m) | branch @ fa21c49; unit 1643✅; gate ✅ both ways; runner ✅ both ways; 4 carried flakes reproduce |
+| 2 | CHROME-2 | shell: bottom-nav + top-bar widget shells + 4-destination IndexedStack wiring + active-destination keys | ⬜ Next | | | |
 | 3 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke | ⬜ Todo | | | |
 | 4 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3, ITEST-4 |
 | 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2, ITEST-4 |
@@ -197,9 +197,14 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-CHROME-1 (scaffold) is next but **blocked by G-1 (approve the spec)**. On approval: branch
-`feat/bs-18-apply-visual-components` off `main@d3a1c4f`, record the baseline test run, confirm the coverage
-gate, and add the `BS18_RUN_PENDING` pending-test runner. Nothing else is startable until CHROME-1 lands.
+CHROME-2 (shell) is next and startable (CHROME-1 done; no gate blocks it). It adds `AppDestination` +
+`AppShell` (Scaffold + IndexedStack + NavigationBar over the 4 destination screens) with test anchors
+(`bottomNavKey`, per-destination keys, a non-colour active-marker key) and the shared `AppTopBar`, wires the
+default route in `build_app.dart` to the shell, keeps behaviour unchanged, and must keep the existing suite
+green + pass unit/coverage on touched files. Verification commands and frozen interfaces: CHROME-1 Checkpoint
+in [modules/CHROME.md](modules/CHROME.md).
+Nothing runs in parallel yet — ITEST depends on CHROME-2, and all behavior phases are gated by G-2 (the
+ITEST-5 test review, still Open).
 
 ## Token usage
 
@@ -210,7 +215,8 @@ gate, and add the `BS18_RUN_PENDING` pending-test runner. Nothing else is starta
 | PLAN | _pending_ | | | | | | | | | | | plan written |
 | PLAN | 82f13234 | 2026-10-19 06:13 EDT | 06:35 | 21m 31s | 14m 30s | claude-opus-4-8 | 64 | 118,672 | 5,121,862 | 36,098 | 5,276,696 | plan written (spec + master + 7 module plans; 14 ACs, 21 phases); authored via fork subagent (~209k tokens) |
 | GATE-DECISION | 82f13234 | 2026-10-19 07:32 EDT | 07:33 | 0m 56s | 0m 56s | claude-opus-4-8 | 14 | 4,918 | 1,364,584 | 3,408 | 1,372,924 | G-1 approved: spec approved by Matt Quirk |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 07:33** | **22m 27s** | **15m 26s** |  | **78** | **123,590** | **6,486,446** | **39,506** | **6,649,620** |  |
+| CHROME-1 | 9120d633 | 2026-10-19 08:01 EDT | 08:17 | 16m 21s | 16m 20s | claude-opus-4-8 | 96 | 103,845 | 4,895,223 | 36,877 | 5,036,041 | scaffold complete: branch @ fa21c49; unit 1643 pass; coverage gate + BS18_RUN_PENDING runner proven both directions; 4 carried flakes reproduce |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 08:17** | **38m 48s** | **31m 46s** |  | **174** | **227,435** | **11,381,669** | **76,383** | **11,685,661** |  |
 
 ## Sign-off
 
