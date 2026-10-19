@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — next ITEST-2/3/4 (acceptance-tests, parallel)
+**Status:** In progress — next ITEST-3/4 (acceptance-tests, parallel) then ITEST-5 (G-2)
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -174,8 +174,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 1 | CHROME-1 | scaffold: branch from main@d3a1c4f, baseline, coverage gate, BS18 pending runner | ✅ Done | 5.04M | 16m (16m) | branch @ fa21c49; unit 1643✅; gate ✅ both ways; runner ✅ both ways; 4 carried flakes reproduce |
 | 2 | CHROME-2 | shell: bottom-nav + top-bar widget shells + 4-destination IndexedStack wiring + active-destination keys | ✅ Done | 19.06M | 52m (1h 04m) | AppDestination/AppShell/AppTopBar + theme tokens; unit 1668✅; cov gate 100% on 5 files; bs-11 19✅ + bs-14 offer✅ (no a11y/behaviour regression); additive fall-through only (G-2 before shell is prod default) |
 | 3 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke | ✅ Done | 5.35M | 13m (13m) | harness+6 fixtures+smoke; default 13✅/1 skip, run-pending 14✅/0 — gate both ways; unit 1668✅; cov gate PASS (no lib touched); folded in CHROME-1 pending_runner_test |
-| 4 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3, ITEST-4 |
-| 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2, ITEST-4 |
+| 4 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ✅ Done | 8.78M | 22m (22m) | AC-1 green@baseline (A); AC-2/4 A; AC-3→READ-1, AC-5→READ-3 A-core/B-pending; grade PASS 0 plain-B |
+| 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-4; extends harness w/ CFG pump |
 | 6 | ITEST-4 | acceptance-tests: AC-11,12,13,14 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2, ITEST-3 |
 | 7 | ITEST-5 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 8 | CHROME-3 | AC-1 — bottom navigation | ⬜ Todo | | | run alone (build_app.dart) |
@@ -197,14 +197,14 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-2/3/4 are now startable in parallel (ITEST-1 done): disjoint `*_test.dart` files over the shared
-`harness.dart` (`pumpShell`/`pumpScreen`, the component finders, the six fixtures). ITEST-2 authors AC-1..5
-(`{chrome,capture,readout}_test.dart`), ITEST-3 AC-6..10 (`{compare,recipes,palette,projects,config}_test.dart`
-— and extends the harness with the CFG Display/onboarding pump), ITEST-4 AC-11..14 (`guards_test.dart`). Each
-authors *pending* tests, records the run-pending red baseline per AC and passes the grade gate; none un-pends.
-All three block ITEST-5 (the test-review packet, gate **G-2**). Every behavior phase — CHROME-3/4 and every
-screen module — stays gated by G-2 (Open). CHROME-2 shipped the shell additively (fall-through only), so
-nothing is production-visible until CHROME-3 (AC-1, after G-2).
+ITEST-2 done (AC-1..5 authored, red baseline recorded, grade gate PASS). **ITEST-3 (AC-6..10) and ITEST-4
+(AC-11..14) remain startable in parallel** — disjoint `*_test.dart` files over `harness.dart`; ITEST-3 also
+**extends the harness** with the CFG Display/onboarding `pumpScreen` case (none exists yet). Each authors
+*pending* tests, records its red baseline and passes the grade gate; none un-pends. Both block **ITEST-5**
+(the test-review packet, gate **G-2**). Every behavior phase stays gated by G-2 (Open).
+Run each `*_test.dart` in its own `flutter test` invocation (the lane flakes relaunching across entrypoints).
+**Review item for ITEST-5:** AC-1 (`TestAC01_BottomNav`) is **green at baseline** — CHROME-2's nav already
+satisfies it — kept pending under owner CHROME-3; the human may instead un-pend it at the review.
 
 ## Token usage
 
@@ -218,7 +218,8 @@ nothing is production-visible until CHROME-3 (AC-1, after G-2).
 | CHROME-1 | 9120d633 | 2026-10-19 08:01 EDT | 08:17 | 16m 21s | 16m 20s | claude-opus-4-8 | 96 | 103,845 | 4,895,223 | 36,877 | 5,036,041 | scaffold complete: branch @ fa21c49; unit 1643 pass; coverage gate + BS18_RUN_PENDING runner proven both directions; 4 carried flakes reproduce |
 | CHROME-2 | c0641155 | 2026-10-19 09:44 EDT | 10:49 | 1h 04m | 52m 35s | claude-opus-4-8 | 206 | 217,878 | 18,751,062 | 94,967 | 19,064,113 | shell done: AppDestination/AppShell/AppTopBar + chrome theme tokens; unit 1668 pass; coverage gate 100% on 5 touched files; bs-11 19 + bs-14 offer green (no regression); additive fall-through only (G-2 gates shell-as-default) |
 | ITEST-1 | 1df2c4ee | 2026-10-19 11:52 EDT | 12:05 | 13m 18s | 13m 18s | claude-opus-4-8 | 66 | 178,518 | 5,113,924 | 53,190 | 5,345,698 | harness + 6 fixtures + smoke; pending gate proven both directions (default 13/1 skip, run-pending 14/0); unit 1668; coverage gate PASS (no lib touched) |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 12:05** | **1h 56m** | **1h 37m** |  | **446** | **623,831** | **35,246,655** | **224,540** | **36,095,472** |  |
+| ITEST-2 | b4717acb | 2026-10-19 12:36 EDT | 12:58 | 22m 12s | 22m 12s | claude-opus-4-8 | 114 | 324,963 | 8,390,366 | 69,419 | 8,784,862 | AC-1..5 pending tests + red baseline; AC-1 green@baseline(A), AC-2/4 A, AC-3→READ-1/AC-5→READ-3 A-core/B-pending; grade gate PASS 0 plain-B; cov gate PASS (no lib) |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 12:58** | **2h 18m** | **1h 59m** |  | **560** | **948,794** | **43,637,021** | **293,959** | **44,880,334** |  |
 
 ## Sign-off
 
