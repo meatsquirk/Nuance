@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-4 done (AC-11..14 authored, all green@baseline + discriminating controls, grade PASS); next ITEST-5 (test review, G-2)
+**Status:** ⏸ Awaiting review — ITEST-5 packet assembled; G-2 awaiting the human decision (blocks every behavior phase)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/visual_application/` (harness, fixtures, one pending test per AC); the `BS18_RUN_PENDING` pending mechanism.
 **Depends on:** CHROME-2 (the shell under test) · **Blocks:** every behavior phase (via G-2)
@@ -13,7 +13,7 @@
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 | ✅ Done | 8.78M | 22m (22m) |
 | ITEST-3 | acceptance-tests | AC-6,7,8,9,10 | ✅ Done | 11.88M | 35m (35m) |
 | ITEST-4 | acceptance-tests | AC-11,12,13,14 | ✅ Done | 6.41M | 22m (22m) |
-| ITEST-5 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-5 | test-review | — (G-2) | ⏸ Awaiting review | 1.08M | 2m 43s (2m 43s) |
 
 ## Interface reconciliation
 
@@ -23,7 +23,7 @@
 
 ## Open gates
 
-G-2 (ITEST-5's review) blocks every behavior phase.
+G-2 (ITEST-5's review) blocks every behavior phase. **Status: awaiting decision (2026-10-19)** — packet assembled under Phase ITEST-5; routed to the human.
 
 ## Phase ITEST-1 — acceptance-tests: harness
 
@@ -129,6 +129,83 @@ G-2 (ITEST-5's review) blocks every behavior phase.
 - **Kind:** test-review · **Target AC:** — · **Depends on:** ITEST-2, ITEST-3, ITEST-4 · **Blocks:** every behavior phase
 - **Tasks:** assemble the test-review packet (catalogue vs authored tests, red baseline, grades, augmentations); route to the human.
 - **Exit criteria:** G-2 recorded (approved, or changes → `ITEST` change phases + a fresh review).
+
+### Status — ⏸ Awaiting review (2026-10-19)
+
+Packet assembled below and routed to the human. **G-2 blocks every behavior phase** (CHROME-3/4, READ-1/2/3, FLOW-1/2, ORG-1/2, CFG-1, GUARD-1/2/3). Record the decision with:
+
+```
+/feature-next-phase --gate bs-18-apply-visual-components G-2 approved | "<changes>"
+```
+
+---
+
+## G-2 Test-review packet
+
+**What this gate approves:** the 14 pending acceptance tests that will govern every behavior phase of bs-18. This is a *presentation-application* feature (swap ad-hoc widgets for finished bs-17 wrappers; build the nav shell; fix the Capture warning overlap) — no behavior, data, numbers or semantics change. The tests therefore assert **structure**: the design-system wrapper is **present** AND the superseded ad-hoc widget is **absent** for each named control/region (D-3).
+
+### Suite at a glance
+
+- **Where:** `integration_test/visual_application/` — `harness.dart` + `fixtures.dart` + `smoke_test.dart` (ITEST-1) and one `*_test.dart` per AC group: `chrome` (AC-1/2), `capture` (AC-3/4), `readout` (AC-5), `compare` (AC-6), `recipes` (AC-7), `palette` (AC-8), `projects` (AC-9), `config` (AC-10), `guards` (AC-11..14).
+- **How it runs** (`flutter-tester` lane; **run each `*_test.dart` in its own `flutter test` invocation** — the lane flakes relaunching across entrypoints): default `flutter test -d flutter-tester integration_test/visual_application/<file>_test.dart` skips the pending tests green; red baseline adds `--dart-define=BS18_RUN_PENDING=true`. Un-pending = deleting one `pending.dart` guard, done by the owning behavior phase.
+- **What's real / faked:** every screen is pumped through its production builder (`buildApp`) over in-memory fixture sources; real rendering, real theme, real wrappers. Only `FakeSpeech`/`FakeHaptics`/`FakeCaptureSource` are faked. No network/camera/platform channels.
+- **Catalogue vs. authored:** all 14 catalogue entries (master plan *Test catalogue*) are authored 1:1 as named `acTestWidgets` tests; no catalogue row is unauthored and no test lacks a catalogue row.
+
+### Grade grid
+
+- **Path:** [`../behavior-test-completeness-bs-18-apply-visual-components.md`](../behavior-test-completeness-bs-18-apply-visual-components.md) (independent grader, did not author).
+- **Counts (whole suite):** straight **A = 10** (AC-1, 2, 4, 6, 9, 10, 11, 12, 13, 14); **A-core / B pending `<phase>` = 4** (AC-3→READ-1, AC-5→READ-3, AC-7→FLOW-2, AC-8→ORG-1 — each a legitimate later-only limit with an augmentation row); **plain-B = 0** (nothing handed to the reviewer as an "optional fix").
+
+### Per-AC summary (test · Given checks · When · Then / Rejects · baseline · grade · owner)
+
+| AC | Test | Given (checked via public surface) | When | Then — key assertions · Rejects | Baseline (run-pending) | Grade | Un-pended by |
+|---|---|---|---|---|---|---|---|
+| AC-1 | `TestAC01_BottomNav` | app pumped on default route; nav shell present | chrome renders | 4 destination keys (Capture/Compare/Recipes/Palette); non-colour active marker; nav colours == `surfaceContainerLowest`/`outline` tokens · *Rejects:* colour-only active state, a missing destination | **green** (CHROME-2 nav already conformant) | A | CHROME-3 |
+| AC-2 | `TestAC02_TopBar` | app pumped on each of 5 primary surfaces | screen renders | `AppTopBar` present; title family == installed `titleLarge` (Atkinson); theme-toggle present · *Rejects:* ad-hoc header without toggle, hardcoded title style | FAIL — no `AppTopBar` mounted | A | CHROME-4 |
+| AC-3 | `TestAC03_CaptureControls` | Capture pumped with `aReading`; shutter/torch/import finders | controls render | shutter on `captureKey` renders ~88×88 round; actions are `PillButton`; torch/import not `TextButton` · *Rejects:* an un-swapped `ElevatedButton`/`TextButton` action | FAIL — shutter 74.3px, ad-hoc `TextButton` | A-core / **B pending READ-1** | READ-1 |
+| AC-4 | `TestAC04_CaptureWarnings` | Capture pumped with ≥2 active warnings @ 200% text scale | warnings render | each banner distinct; render rects do **not** intersect (`!rectA.overlaps(rectB)`) · *Rejects:* same-origin `Positioned` banners that intersect (the current bug) | FAIL — stability∩lock rects overlap | A | READ-2 |
+| AC-5 | `TestAC05_Readout` | Readout pumped with `aReading`; region finders | reading renders | value/name/space regions each have `SurfaceCard` ancestor; each eyebrow `MonoLabel`; one `SpeakButton` · *Rejects:* bare `Column`s; speak as `IconButton` | FAIL — no `SurfaceCard` ancestor | A-core / **B pending READ-3** | READ-3 |
+| AC-6 | `TestAC06_Compare` | Compare pumped with `aComparison`; control finders | comparison renders | A & B are `PillButton`, "Find recipes" primary (`FilledButton`); diff & statement under `SurfaceCard`; a `SpeakButton` · *Rejects:* one of A/B/find left ad-hoc; rows not carded | FAIL — readout "Compare as A" is bare `OutlinedButton` | A | FLOW-1 |
+| AC-7 | `TestAC07_Recipes` | Recipes pumped with `recipesForTarget`; recipe & note finders | list renders | each recipe row under `SurfaceCard`; no Material `Card`/ad-hoc `TextButton` under the region; a pill/speak action · *Rejects:* ad-hoc `Card`/`ListTile` rows | FAIL — rows are Material `Card`s | A-core / **B pending FLOW-2** | FLOW-2 |
+| AC-8 | `TestAC08_Palette` | Palette pumped with `aPalette`; row/badge/add finders | list renders | 3 paint rows each with a `ProvenanceBadge`; add-from-dataset is a `PillButton` · *Rejects:* a row without `ProvenanceBadge`; add left ad-hoc | FAIL — add is bare `TextButton` | A-core / **B pending ORG-1** | ORG-1 |
+| AC-9 | `TestAC09_Projects` | Palette view switched to Projects; `aProject` row present | list renders | each project entry under `SurfaceCard`; open/export are `PillButton` · *Rejects:* bare `GestureDetector`/`Column` entries; ad-hoc actions | FAIL — entries bare, no `SurfaceCard` | A | ORG-2 |
+| AC-10 | `TestAC10_DisplayOnboarding` | `pumpDisplaySettings` (real chrome entry) + `pumpOnboarding` (pushed host) | screens render | sim options are `PillButton`; onboarding step content under `SurfaceCard`; next/back pills · *Rejects:* a setting/onboarding nav left `TextButton`/`ElevatedButton` | FAIL — sim options bare `TextButton` | A | CFG-1 |
+| AC-11 | `TestAC11_SingleTheme` | 7-screen roster each pumped on the installed theme | it renders | exactly one `MaterialApp`; every `Theme.colorScheme` == installed scheme, per screen · **control:** nested `MaterialApp`+scheme flags both checks · *Rejects:* a screen nesting its own app/theme | **green** (invariant already holds) | A | GUARD-2 |
+| AC-12 | `TestAC12_SwatchCaption` | full-roster dynamic sweep; a screen "bears a swatch" iff it renders a `ColorChip` (floor: Readout/Capture/Palette) | it renders | exactly one `SwatchCaption` per swatch-bearer · **controls:** uncaptioned chip `findsNothing` + two captions `findsNWidgets(2)` · *Rejects:* zero or duplicate captions | **green** (3 screens already captioned) | A | GUARD-1 |
+| AC-13 | `TestAC13_A11yPreserved` | 7-screen roster; reused bs-11 `runConformanceCheck` per screen | measured | `tapTarget48.pass && contrastAA.pass` per screen · **controls:** a 24dp target and ~1.6:1 text each flagged · *Rejects:* a swap dropping a target <48dp or a sub-AA pairing | **green** (all pass app-wide) | A | GUARD-3 |
+| AC-14 | `TestAC14_NoHardcodedPalette` | `lib/` scanned via reused bs-17 `residualPaletteLiterals` + the bs-17 AC-14 exclusion set | scan runs | residual == 0 · **control:** a planted `Color(0x..)` temp file returns exactly 1 hit with the right rule tag (comment/string masked) · *Rejects:* a screen re-introducing a palette literal | **green** (`lib/` clean) | A | GUARD-2 |
+
+### Red baseline summary
+
+- **9 FAIL (fail on a Then for the catalogued reason):** AC-2, 3, 4, 5, 6, 7, 8, 9, 10.
+- **5 green at baseline (invariant/structure already holds on the live tree):** AC-1 (nav shipped by CHROME-2) + the four guards AC-11/12/13/14 — each strengthened with a proven discriminating **control** (G5) so the test is non-vacuous. Full per-test table above in *Red baseline*.
+- No compile error, panic or harness error at baseline; every GIVEN renders (CFG pumps, Projects view-switch, readout/compare anchors all pass).
+
+### Augmentations scheduled (closed by behavior phases)
+
+| AC test | Limited because | Closed by | Add |
+|---|---|---|---|
+| `TestAC03` | present/size checks don't sweep *every* capture control (dismiss/lock/calibrate/… all `TextButton` today) | READ-1 | "superseded ad-hoc widget absent" for every capture control |
+| `TestAC05` | doesn't yet assert the old `Card`/plain speak `IconButton` ABSENT (a partial swap carrying both would pass) | READ-3 | "old Card / plain speak IconButton absent" for all readout regions |
+| `TestAC07` | no "ranked by" note exists in `lib/` yet; out-of-gamut note vacuous on the reachable-target pump | FLOW-2 | assert ranked-by + out-of-gamut notes render in `MonoLabel`/body style |
+| `TestAC08` | `paint_list_region.dart` already partly swapped | ORG-1 | per-row `ProvenanceBadge` present + "old add button absent" |
+| `TestAC11` / `TestAC12` / `TestAC14` | — | — | **✅ already satisfied at ITEST-4** (controls + dynamic sweep); GUARD-1/2/3 only un-pend + keep green — none owed forward |
+
+### Decisions for the reviewer (none block approval; each is a scope/strengthening call)
+
+1. **Un-pend the 5 green-at-baseline tests now?** AC-1 + AC-11/12/13/14 already hold on the live tree. The reviewer may un-pend any of them *now* for continuous regression cover during the behavior phases (editing `pending.dart` + the AC-coverage status), rather than leaving them to their owning phase. Default plan: owner un-pends.
+2. **AC-6 cross-screen ownership (headline).** "Compare as A/B" + "Find mixing recipes" physically live in `lib/readout/actions_bar.dart` (READ module), but FLOW-1 (AC-6) owns `lib/compare/**`, and no current phase swaps those readout actions. Decide: expand FLOW-1's file ownership to that file, reassign to READ-3, or add an augmentation — else AC-6 can't be un-pended green by FLOW-1 alone.
+3. **AC-6 A/B outline weight.** The test asserts A/B are pills + recipes is primary, but not that A/B are specifically *secondary/outline* (spec says outline). Cheap strengthening available; grader held AC-6 to A without it.
+4. **AC-7 "ranked by" note.** No such note exists in `lib/`; whether FLOW-2 introduces one is a scope decision (augmentation row already owns it).
+5. **AC-9 create-vs-export.** `projects_region.dart` has Open + Export, no "create project" control; the test asserts the two real actions become pills (the catalogue said "open/create").
+6. **AC-11 tautological line (non-blocking cleanup).** `TestAC11` carries one dead `expect(h.colorScheme, scheme)` assert (`expect(x,x)`); discrimination lives in the one-`MaterialApp` + scheme-override checks (both proven by the control). Grader recommends dropping it; does not lower the grade.
+
+### Result — ITEST-5 ⏸ Awaiting review (2026-10-19)
+
+- **Landed:** this G-2 test-review packet (above) — the catalogue↔authored 1:1 check, the suite-at-a-glance, the per-AC Given/When/Then/Rejects table with baseline+grade+owner, the red-baseline summary (9 FAIL / 5 green-at-baseline-with-controls), the augmentation schedule, the grid path + counts (A=10, A-core/B-pending=4, plain-B=0), and 6 reviewer decisions (none gate-blocking). No `lib/`, no tests and no gate commands run (a test-review phase assembles and routes; the suites were proven by ITEST-1..4). Phase set `⏸ Awaiting review`; G-2 set *awaiting decision* in both plans.
+- **Preconditions met:** ITEST-2/3/4 all ✅ Done; whole-suite grade grid all **A** or **A-core / B pending `<phase>`** with an augmentation row — **zero plain-B** to fix first.
+- **Fix passes:** n/a (no implementation).
+- **Routed to the human.** Decision command: `/feature-next-phase --gate bs-18-apply-visual-components G-2 approved | "<changes>"`. "Changes requested" turns each item into an `ITEST` change phase before the behavior stage, then a fresh review.
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
