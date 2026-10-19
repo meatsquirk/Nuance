@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — next ITEST-4 (last acceptance-tests) then ITEST-5 (G-2)
+**Status:** In progress — next ITEST-5 (test review, G-2)
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -176,8 +176,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke | ✅ Done | 5.35M | 13m (13m) | harness+6 fixtures+smoke; default 13✅/1 skip, run-pending 14✅/0 — gate both ways; unit 1668✅; cov gate PASS (no lib touched); folded in CHROME-1 pending_runner_test |
 | 4 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ✅ Done | 8.78M | 22m (22m) | AC-1 green@baseline (A); AC-2/4 A; AC-3→READ-1, AC-5→READ-3 A-core/B-pending; grade PASS 0 plain-B |
 | 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 11.88M | 35m (35m) | AC-6/9/10 A, AC-7→FLOW-2 / AC-8→ORG-1 A-core/B-pending; grade PASS 0 plain-B; harness got CFG pumps; 4 G-2 review items (headline: AC-6 cross-screen ownership) |
-| 6 | ITEST-4 | acceptance-tests: AC-11,12,13,14 (pending) + red baseline | ⬜ Next | | | last AC-test phase; then ITEST-5 (G-2) |
-| 7 | ITEST-5 | test-review: packet; G-2 | ⬜ Todo | | | |
+| 6 | ITEST-4 | acceptance-tests: AC-11,12,13,14 (pending) + red baseline | ✅ Done | 6.41M | 22m (22m) | all 4 green@baseline + discriminating controls; grade PASS straight-A ×4, 0 plain-B; 3 augmentations satisfied at ITEST-4 (none owed); reuses bs-17 scan + bs-11 conformance |
+| 7 | ITEST-5 | test-review: packet; G-2 | ⬜ Next | | | all AC-test phases done; assemble packet, route to human for G-2 |
 | 8 | CHROME-3 | AC-1 — bottom navigation | ⬜ Todo | | | run alone (build_app.dart) |
 | 9 | CHROME-4 | AC-2 — top bar | ⬜ Todo | | | run alone (build_app.dart) |
 | 10 | READ-1 | AC-3 — capture controls | ⬜ Todo | | | ∥ FLOW/ORG/CFG |
@@ -197,16 +197,21 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-3 done (AC-6..10 authored, red baseline recorded, grade gate PASS; harness extended with the CFG
-`pumpDisplaySettings`/`pumpOnboarding` pumps). **ITEST-4 (AC-11..14) is the last AC-test phase** — authors
-four *pending* tests in `guards_test.dart` over `harness.dart` (AC-11/AC-14 may be green at baseline → add a
-control case per its tasks), records its red baseline, passes the grade gate; none un-pends. It then unblocks
-**ITEST-5** (the test-review packet, gate **G-2**), which every behavior phase still waits on.
+ITEST-4 done (AC-11..14 authored in `guards_test.dart`, **all four green at baseline** + a discriminating
+control each, grade PASS straight-A ×4 / 0 plain-B; the three pre-seeded augmentations satisfied at ITEST-4,
+none owed forward). **All AC-test phases (ITEST-2/3/4) are now done → ITEST-5 (test review, gate G-2) is
+startable.** ITEST-5 assembles the review packet (catalogue vs authored tests, red baseline, grades,
+augmentations), sets itself `⏸ Awaiting review`, and routes to the human; **G-2 blocks every behavior phase**.
 Run each `*_test.dart` in its own `flutter test` invocation (the lane flakes relaunching across entrypoints).
-**ITEST-5 (G-2) packet must carry these review items:** AC-1 green at baseline (CHROME-2 nav already
-conformant); **AC-6 cross-screen ownership** (the "Compare as A/B"/"Find recipes" actions live in
-`lib/readout/actions_bar.dart`, but FLOW-1 owns `lib/compare/**` — no phase currently swaps them); AC-6 A/B
-outline weight; AC-7 "ranked by" note absence; AC-9 create-vs-export (see modules/ITEST.md ITEST-3 handoff).
+
+**ITEST-5 (G-2) packet must carry these review items:**
+- **Green-at-baseline tests (owner un-pends + keeps green):** AC-1 (CHROME-2 nav already conformant) and **all
+  four guards AC-11/AC-12/AC-13/AC-14** (the invariants already hold on the live tree). The reviewer may
+  choose to **un-pend any of these now** for continuous regression cover during the behaviour phases.
+- **AC-6 cross-screen ownership** (headline): the "Compare as A/B"/"Find recipes" actions live in
+  `lib/readout/actions_bar.dart`, but FLOW-1 owns `lib/compare/**` — no phase currently swaps them.
+- AC-6 A/B outline weight; AC-7 "ranked by" note absence; AC-9 create-vs-export (see modules/ITEST.md
+  ITEST-3 handoff).
 
 ## Token usage
 
@@ -222,7 +227,8 @@ outline weight; AC-7 "ranked by" note absence; AC-9 create-vs-export (see module
 | ITEST-1 | 1df2c4ee | 2026-10-19 11:52 EDT | 12:05 | 13m 18s | 13m 18s | claude-opus-4-8 | 66 | 178,518 | 5,113,924 | 53,190 | 5,345,698 | harness + 6 fixtures + smoke; pending gate proven both directions (default 13/1 skip, run-pending 14/0); unit 1668; coverage gate PASS (no lib touched) |
 | ITEST-2 | b4717acb | 2026-10-19 12:36 EDT | 12:58 | 22m 12s | 22m 12s | claude-opus-4-8 | 114 | 324,963 | 8,390,366 | 69,419 | 8,784,862 | AC-1..5 pending tests + red baseline; AC-1 green@baseline(A), AC-2/4 A, AC-3→READ-1/AC-5→READ-3 A-core/B-pending; grade gate PASS 0 plain-B; cov gate PASS (no lib) |
 | ITEST-3 | fa1c824b | 2026-10-19 15:46 EDT | 16:22 | 35m 18s | 35m 18s | claude-opus-4-8 | 148 | 473,904 | 11,305,573 | 98,271 | 11,877,896 | AC-6..10 pending tests + red baseline; AC-6/9/10 A, AC-7->FLOW-2 / AC-8->ORG-1 A-core/B-pending; grade gate PASS 0 plain-B; harness extended with CFG pumps; cov gate PASS (no lib) |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 16:22** | **2h 53m** | **2h 35m** |  | **708** | **1,422,698** | **54,942,594** | **392,230** | **56,758,230** |  |
+| ITEST-4 | 8dd2548b | 2026-10-19 17:47 EDT | 18:09 | 21m 46s | 21m 46s | claude-opus-4-8 | 96 | 260,811 | 6,091,638 | 61,448 | 6,413,993 | AC-11..14 pending + green-baseline w/ controls; grade PASS straight-A x4, 0 plain-B; 3 augmentations satisfied |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 18:09** | **3h 15m** | **2h 56m** |  | **804** | **1,683,509** | **61,034,232** | **453,678** | **63,172,223** |  |
 
 ## Sign-off
 

@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** In progress — ITEST-3 done (AC-6..10 authored + red baseline + grade PASS); next ITEST-4 (AC-11..14) then ITEST-5 (test review, G-2)
+**Status:** In progress — ITEST-4 done (AC-11..14 authored, all green@baseline + discriminating controls, grade PASS); next ITEST-5 (test review, G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/visual_application/` (harness, fixtures, one pending test per AC); the `BS18_RUN_PENDING` pending mechanism.
 **Depends on:** CHROME-2 (the shell under test) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 5.35M | 13m (13m) |
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 | ✅ Done | 8.78M | 22m (22m) |
 | ITEST-3 | acceptance-tests | AC-6,7,8,9,10 | ✅ Done | 11.88M | 35m (35m) |
-| ITEST-4 | acceptance-tests | AC-11,12,13,14 | ⬜ Todo | | |
+| ITEST-4 | acceptance-tests | AC-11,12,13,14 | ✅ Done | 6.41M | 22m (22m) |
 | ITEST-5 | test-review | — (G-2) | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -107,6 +107,23 @@ G-2 (ITEST-5's review) blocks every behavior phase.
 - **Tasks:** author `TestAC11_SingleTheme`, `TestAC12_SwatchCaption`, `TestAC13_A11yPreserved`, `TestAC14_NoHardcodedPalette`. Note AC-11/AC-14 may be green at baseline (control-case rows) — add the discriminating control so they still earn their grade.
 - **Exit criteria:** suite green with the four pending (or control-case-justified); red baseline recorded; grade gate passed.
 
+### Result — ITEST-4 ✅ Done (2026-10-19)
+
+- **Landed:** `integration_test/visual_application/guards_test.dart` — four *pending* `acTestWidgets` tests (AC-11..AC-14) over the ITEST-1 harness, **reusing the shipped bs-17 source-scan** (`residualPaletteLiterals`, `../design_system_source_scan.dart`) and **bs-11 conformance check** (`runConformanceCheck`, `../conformance/conformance_check.dart`) rather than re-deriving them. No `lib/` touched (cross-cutting guards assert structure over the real assembled app). A small `_roster` helper (all 7 pumpable screens) + a `_schemeOverridingThemes` helper + a `_fixtureApp` control-builder are local to the file.
+- **Ground truth (ITEST-4 probes, deleted):** all four invariants ALREADY HOLD at baseline — `lib/` scan residual **0**; every roster screen installs exactly **one** `MaterialApp` with **no** scheme-overriding `Theme`; every ColorChip-bearing reachable screen (Readout/Capture/Palette/Display) carries exactly **one** `SwatchCaption`; every screen passes `tapTarget48` + `contrastAA`. So all four are **green at baseline** (the AC-1 precedent), each strengthened with a discriminating **control** (G5) so the guard is non-vacuous.
+- **Default run** (per file): `guards` → **4 skipped** (AC-11..14 pending) → suite green. `dart analyze integration_test/visual_application/guards_test.dart` → No issues.
+- **Red baseline** (`--dart-define=BS18_RUN_PENDING=true`, per file) — recorded in the Red baseline table: **4 pass / 0 skip — green at baseline**. Each control's discriminating assertion fires inside the passing test (`…pass isFalse` / `findsNothing` / `findsNWidgets(2)` / `hasLength(1)`), so a non-discriminating control would have turned its test red — the controls provably fire.
+- **Grade gate PASS** (independent grader, did not author; grid `../behavior-test-completeness-bs-18-apply-visual-components.md`): **straight A = AC-11, AC-12, AC-13, AC-14**; A-core/B pending = 0; **plain-B = 0**. No fix owed this phase.
+- **Augmentations:** the three pre-seeded ITEST-4 augmentation rows (TestAC11/TestAC12/TestAC14 controls) are **SATISFIED** by the authored controls + dynamic full-roster sweep — **none owed forward**; owners GUARD-1/2/3 just un-pend (delete the `pending.dart` row) and keep green.
+- **Coverage gate** `dart run tool/coverage_gate.dart 8fa1e0f` → **PASS** (no touched `lib/**`; integration-test-only phase, unit suite not re-run — ITEST-2/3 precedent). **Fix passes: 0/3** (first full red-baseline run green; one post-grade cleanup — removed a tautological `expect(h.colorScheme, scheme)` (`expect(x,x)`) in AC-11 per the grader's non-blocking note, re-ran 4✅/0; discrimination lives in the one-MaterialApp + scheme-override checks + the control, so the removal neither strengthens nor weakens the test).
+- **G-2 review item surfaced:** all four guards are green-at-baseline — the reviewer may choose to **un-pend them now** (edit `pending.dart` + the AC-coverage status) for continuous regression cover during the behaviour phases, instead of at GUARD-1/2/3.
+
+### Checkpoint / Handoff — after ITEST-4
+
+- **Authored anchors (behaviour phases satisfy these):** **AC-11** (GUARD-2) — exactly one `MaterialApp` per screen + `_schemeOverridingThemes` empty across the 7-screen roster; control = a nested `MaterialApp`+scheme that flags both. **AC-12** (GUARD-1) — exactly one `SwatchCaption.captionKey` on each `ColorChip`-bearing roster screen (dynamic sweep, `containsAll{Readout,Capture,Palette}` floor); controls = an uncaptioned chip (`findsNothing`) + two captions in distinct parents (`findsNWidgets(2)`). **AC-13** (GUARD-3) — `runConformanceCheck` `tapTarget48.pass && contrastAA.pass` on each screen; controls = a 24dp target + ~1.6:1 text, each flagged. **AC-14** (GUARD-2) — `residualPaletteLiterals(['lib'], exempt {kThemeAuthorityFile, ...kCaptureDeviceLiteralFiles})` empty; control = a planted `Color(0x..)` temp file flagged, comment/string masked. Each owner just un-pends + keeps green (the controls + sweeps already discriminate).
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout`/`gtimeout`; **run each `*_test.dart` individually**): default `flutter test -d flutter-tester integration_test/visual_application/guards_test.dart`; red baseline add `--dart-define=BS18_RUN_PENDING=true`; analyze `dart analyze integration_test/visual_application/`; gate `dart run tool/coverage_gate.dart <base>`.
+- **Known gaps / next:** ITEST-4 was the **last AC-test phase**. All of ITEST-2, ITEST-3, ITEST-4 are done → **ITEST-5 (test review, gate G-2) is now startable**; G-2 blocks every behaviour phase. The packet must carry the ITEST-2/3 review items PLUS the ITEST-4 item (all four guards green-at-baseline; option to un-pend now).
+
 ## Phase ITEST-5 — test-review
 
 - **Kind:** test-review · **Target AC:** — · **Depends on:** ITEST-2, ITEST-3, ITEST-4 · **Blocks:** every behavior phase
@@ -127,10 +144,10 @@ G-2 (ITEST-5's review) blocks every behavior phase.
 | AC-8 | TestAC08_Palette | FAIL | `expectPill(addPaintKey)` false — add-from-dataset is a bare `TextButton` (rows + per-row `ProvenanceBadge` already present — partly swapped) | ORG-1 | A-core / B pending ORG-1 |
 | AC-9 | TestAC09_Projects | FAIL | "the project entry sits inside a SurfaceCard" — entries are bare `GestureDetector`/`Column` (view-switch to Projects + project row GIVENs pass) | ORG-2 | A |
 | AC-10 | TestAC10_DisplayOnboarding | FAIL | `expectPill(simOff)` false — the simulation options are bare `TextButton`s (Display panel opens via `pumpDisplaySettings`; `pumpOnboarding` step render verified by probe) | CFG-1 | A |
-| AC-11 | TestAC11_SingleTheme | _tbd_ (may pass — control case) | — | GUARD-2 | _tbd_ |
-| AC-12 | TestAC12_SwatchCaption | _tbd_ FAIL | captions only on 3 screens | GUARD-1 | _tbd_ |
-| AC-13 | TestAC13_A11yPreserved | _tbd_ (guards post-swap) | — | GUARD-3 | _tbd_ |
-| AC-14 | TestAC14_NoHardcodedPalette | _tbd_ (may pass — control case) | — | GUARD-2 | _tbd_ |
+| AC-11 | TestAC11_SingleTheme | **PASS — green at baseline** | — (1 MaterialApp + no scheme-overriding Theme on all 7 roster screens; control: nested app+theme flags both) | GUARD-2 (un-pends + keeps green) | A |
+| AC-12 | TestAC12_SwatchCaption | **PASS — green at baseline** | — (Readout/Capture/Palette/Display already captioned; control: uncaptioned chip `findsNothing` + two-caption `findsNWidgets(2)`) | GUARD-1 (un-pends + keeps green) | A |
+| AC-13 | TestAC13_A11yPreserved | **PASS — green at baseline** | — (every roster screen passes 48dp + AA; control: 24dp target + ~1.6:1 text each flagged) | GUARD-3 (un-pends + keeps green) | A |
+| AC-14 | TestAC14_NoHardcodedPalette | **PASS — green at baseline** | — (`lib/` residual 0 outside bs-17 exclusions; control: planted `Color(0x..)` temp file flagged, comment/string masked) | GUARD-2 (un-pends + keeps green) | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
@@ -140,6 +157,6 @@ G-2 (ITEST-5's review) blocks every behavior phase.
 | TestAC05 | present-side checks catch the named Rejects but don't assert the superseded `Card`/plain speak `IconButton` ABSENT, so a partial swap carrying both new+old would pass | READ-3 | "old Card / plain speak IconButton absent" for all readout regions | ⬜ Open (confirmed ITEST-2 — graded A-core / B pending READ-3) |
 | TestAC07 | no "ranked by" note exists in `lib/` yet (grep-confirmed) and the out-of-gamut note is vacuous on the reachable-target pump, so the scenario's "notes in design-system mono/body style" clause can't discriminate now | FLOW-2 | once the ranked-by note exists + an out-of-gamut target is pumped, assert both the ranked-by and out-of-gamut notes render in `MonoLabel`/body style | ⬜ Open (added ITEST-3 — graded A-core / B pending FLOW-2) |
 | TestAC08 | `paint_list_region.dart` is already partly swapped | ORG-1 | per-row `ProvenanceBadge` present + "old add button absent" | ⬜ Open (confirmed ITEST-3 — graded A-core / B pending ORG-1) |
-| TestAC12 | `SwatchCaption` already on 3 screens | GUARD-1 | enumerate ALL swatch-bearing screens in the sweep | ⬜ Open |
-| TestAC11 | no screen nests a Theme today, so the check may pass before any work | GUARD-2 | a control case (a deliberately-nested Theme fixture the check catches) | ⬜ Open |
-| TestAC14 | source-scan is clean today | GUARD-2 | a control case (a planted literal the scan catches) | ⬜ Open |
+| TestAC12 | `SwatchCaption` already on 3 screens | GUARD-1 | enumerate ALL swatch-bearing screens in the sweep | ✅ Satisfied at ITEST-4 — the test dynamically sweeps every `ColorChip`-bearing roster screen (auto-covers any new swatch screen a swap adds) + a missing/duplicate-caption control; GUARD-1 just un-pends + keeps green |
+| TestAC11 | no screen nests a Theme today, so the check may pass before any work | GUARD-2 | a control case (a deliberately-nested Theme fixture the check catches) | ✅ Satisfied at ITEST-4 — nested `MaterialApp`+scheme control flags both the one-MaterialApp and scheme-override checks; GUARD-2 just un-pends + keeps green |
+| TestAC14 | source-scan is clean today | GUARD-2 | a control case (a planted literal the scan catches) | ✅ Satisfied at ITEST-4 — planted `Color(0x..)` temp-file control flagged (comment/string masked); GUARD-2 just un-pends + keeps green |
