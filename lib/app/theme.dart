@@ -93,6 +93,27 @@ class AppTheme {
           ),
         ),
         dividerTheme: const DividerThemeData(thickness: hairlineBorderWidth),
+        // bs-18 CHROME-2 — the app-chrome surfaces (the shared top bar and the
+        // bottom navigation) read the warm-paper tokens from here, so no chrome
+        // widget hardcodes a palette colour (AC-14) and the single installed
+        // theme carries their look (AC-11). The top bar sits on paper-white with
+        // ink text and no M3 surface tint; the bottom nav sits on the same
+        // paper-white with the cobalt accent marking the selected destination
+        // (paired with the filled glyph + bold label so active state never rests
+        // on colour alone — AC-1/AC-13).
+        appBarTheme: AppBarTheme(
+          backgroundColor: colorScheme.surfaceContainerLowest,
+          foregroundColor: colorScheme.onSurface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: colorScheme.surfaceContainerLowest,
+          indicatorColor: colorScheme.primary,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
       );
 
   // --- Warm-paper palette tokens (bs-17 THEME-3, D-2/D-5) ---

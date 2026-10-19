@@ -7,6 +7,8 @@ import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/repeatable_speech.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
+import 'package:paint_color_assistant/app/app_destinations.dart';
+import 'package:paint_color_assistant/app/app_shell.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/capture/capture_controls.dart';
@@ -413,6 +415,43 @@ void main() {
         ),
       );
       expect(seen, isNull);
+    });
+
+    testWidgets(
+        'the fall-through route shows the bottom-nav shell over the Readout '
+        'landing (bs-18 CHROME-2)', (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+      // The shell's bottom nav wraps the unchanged Readout landing: the Readout
+      // and the sharing-offer overlay are still the opening (Capture) body.
+      expect(find.byKey(AppShell.bottomNavKey), findsOneWidget);
+      expect(find.byType(ReadoutScreen), findsOneWidget);
+      // All four destinations are offered; Capture opens active.
+      for (final d in AppDestination.values) {
+        expect(find.byKey(d.navItemKey), findsOneWidget);
+      }
+      expect(find.byKey(AppShell.activeDestinationKey), findsOneWidget);
+      // The other destinations are lazy — not yet built.
+      expect(find.byType(ComparisonHomeScreen), findsNothing);
+      expect(find.byType(RecipesHomeScreen), findsNothing);
+      expect(find.byType(PaletteHomeScreen), findsNothing);
+    });
+
+    testWidgets(
+        'each fall-through destination builds its home screen when selected '
+        '(bs-18 CHROME-2)', (tester) async {
+      await tester.pumpWidget(buildApp(_deps()));
+
+      await tester.tap(find.byKey(AppDestination.compare.navItemKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(ComparisonHomeScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(AppDestination.recipes.navItemKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(RecipesHomeScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(AppDestination.palette.navItemKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(PaletteHomeScreen), findsOneWidget);
     });
 
     testWidgets('reuses an already-repeatable injected speech as-is, and leaves '

@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — next CHROME-2 (shell)
+**Status:** In progress — next ITEST-1 (acceptance-tests)
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -172,8 +172,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | CHROME-1 | scaffold: branch from main@d3a1c4f, baseline, coverage gate, BS18 pending runner | ✅ Done | 5.04M | 16m (16m) | branch @ fa21c49; unit 1643✅; gate ✅ both ways; runner ✅ both ways; 4 carried flakes reproduce |
-| 2 | CHROME-2 | shell: bottom-nav + top-bar widget shells + 4-destination IndexedStack wiring + active-destination keys | ⬜ Next | | | |
-| 3 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke | ⬜ Todo | | | |
+| 2 | CHROME-2 | shell: bottom-nav + top-bar widget shells + 4-destination IndexedStack wiring + active-destination keys | ✅ Done | 19.06M | 52m (1h 04m) | AppDestination/AppShell/AppTopBar + theme tokens; unit 1668✅; cov gate 100% on 5 files; bs-11 19✅ + bs-14 offer✅ (no a11y/behaviour regression); additive fall-through only (G-2 before shell is prod default) |
+| 3 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate, smoke | ⬜ Next | | | |
 | 4 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3, ITEST-4 |
 | 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2, ITEST-4 |
 | 6 | ITEST-4 | acceptance-tests: AC-11,12,13,14 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2, ITEST-3 |
@@ -197,14 +197,15 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-CHROME-2 (shell) is next and startable (CHROME-1 done; no gate blocks it). It adds `AppDestination` +
-`AppShell` (Scaffold + IndexedStack + NavigationBar over the 4 destination screens) with test anchors
-(`bottomNavKey`, per-destination keys, a non-colour active-marker key) and the shared `AppTopBar`, wires the
-default route in `build_app.dart` to the shell, keeps behaviour unchanged, and must keep the existing suite
-green + pass unit/coverage on touched files. Verification commands and frozen interfaces: CHROME-1 Checkpoint
-in [modules/CHROME.md](modules/CHROME.md).
-Nothing runs in parallel yet — ITEST depends on CHROME-2, and all behavior phases are gated by G-2 (the
-ITEST-5 test review, still Open).
+ITEST-1 (acceptance-tests) is next and startable (CHROME-2 done; it depends only on CHROME-2, no gate). It
+builds the acceptance harness over the wired shells — fixtures (`aReading`, `aComparison`, …), the
+`BS18_RUN_PENDING` pending gate and a smoke test — anchoring on the CHROME-2 shell keys
+(`AppShell.bottomNavKey`/`activeDestinationKey`, `AppDestination.navItemKey`, `AppTopBar.*Key`). After ITEST-1,
+ITEST-2/3/4 can run in parallel (disjoint AC files); ITEST-5 is the test review (G-2).
+All behavior phases — CHROME-3/4 and every screen module — stay gated by G-2 (the ITEST-5 review, Open). The
+remaining CHROME work: CHROME-3 (AC-1) makes the shell the shipped default + finalises the nav treatment;
+CHROME-4 (AC-2) mounts `AppTopBar` on each destination. CHROME-2 shipped the shell additively (fall-through
+only), so nothing is yet production-visible.
 
 ## Token usage
 
@@ -216,7 +217,8 @@ ITEST-5 test review, still Open).
 | PLAN | 82f13234 | 2026-10-19 06:13 EDT | 06:35 | 21m 31s | 14m 30s | claude-opus-4-8 | 64 | 118,672 | 5,121,862 | 36,098 | 5,276,696 | plan written (spec + master + 7 module plans; 14 ACs, 21 phases); authored via fork subagent (~209k tokens) |
 | GATE-DECISION | 82f13234 | 2026-10-19 07:32 EDT | 07:33 | 0m 56s | 0m 56s | claude-opus-4-8 | 14 | 4,918 | 1,364,584 | 3,408 | 1,372,924 | G-1 approved: spec approved by Matt Quirk |
 | CHROME-1 | 9120d633 | 2026-10-19 08:01 EDT | 08:17 | 16m 21s | 16m 20s | claude-opus-4-8 | 96 | 103,845 | 4,895,223 | 36,877 | 5,036,041 | scaffold complete: branch @ fa21c49; unit 1643 pass; coverage gate + BS18_RUN_PENDING runner proven both directions; 4 carried flakes reproduce |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 08:17** | **38m 48s** | **31m 46s** |  | **174** | **227,435** | **11,381,669** | **76,383** | **11,685,661** |  |
+| CHROME-2 | c0641155 | 2026-10-19 09:44 EDT | 10:49 | 1h 04m | 52m 35s | claude-opus-4-8 | 206 | 217,878 | 18,751,062 | 94,967 | 19,064,113 | shell done: AppDestination/AppShell/AppTopBar + chrome theme tokens; unit 1668 pass; coverage gate 100% on 5 touched files; bs-11 19 + bs-14 offer green (no regression); additive fall-through only (G-2 gates shell-as-default) |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 10:49** | **1h 42m** | **1h 24m** |  | **380** | **445,313** | **30,132,731** | **171,350** | **30,749,774** |  |
 
 ## Sign-off
 

@@ -286,4 +286,26 @@ void main() {
       expect(side?.color, theme.colorScheme.onSurface);
     });
   });
+
+  group('bs-18 app-chrome theme tokens (CHROME-2)', () {
+    final theme = AppTheme.light().themeData;
+    final cs = AppTheme.light().colorScheme;
+
+    test('the top bar sits on paper-white with ink text and no tint', () {
+      final appBar = theme.appBarTheme;
+      expect(appBar.backgroundColor, cs.surfaceContainerLowest);
+      expect(appBar.foregroundColor, cs.onSurface);
+      expect(appBar.surfaceTintColor, Colors.transparent);
+      expect(appBar.elevation, 0);
+      expect(appBar.scrolledUnderElevation, 0);
+    });
+
+    test('the bottom nav reads the warm-paper surface + accent tokens', () {
+      final nav = theme.navigationBarTheme;
+      expect(nav.backgroundColor, cs.surfaceContainerLowest);
+      expect(nav.indicatorColor, cs.primary);
+      expect(nav.surfaceTintColor, Colors.transparent);
+      expect(nav.elevation, 0);
+    });
+  });
 }

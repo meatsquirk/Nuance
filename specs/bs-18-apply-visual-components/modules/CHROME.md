@@ -1,6 +1,6 @@
 # Module CHROME — app chrome (scaffold, bottom nav, top bar)
 
-**Status:** In progress — CHROME-1 done; next CHROME-2 (shell)
+**Status:** In progress — CHROME-2 done; next CHROME-3 (AC-1, blocked by G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/app/build_app.dart`, `lib/app/theme.dart` (nav/appbar theme tokens only), new `lib/app/app_shell.dart` (nav scaffold) and `lib/app/app_destinations.dart`; the `BS18_RUN_PENDING` runner + coverage gate tooling it establishes (scaffold).
 **Depends on:** — · **Blocks:** ITEST (CHROME-2), all screen modules (they wire through `build_app.dart`)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | CHROME-1 | scaffold | — | ✅ Done | 5.04M | 16m (16m) |
-| CHROME-2 | shell | — | ⬜ Todo | | |
+| CHROME-2 | shell | — | ✅ Done | 19.06M | 52m (1h 04m) |
 | CHROME-3 | behavior | AC-1 | ⬜ Todo | | |
 | CHROME-4 | behavior | AC-2 | ⬜ Todo | | |
 
@@ -75,6 +75,20 @@ G-1 (approve the spec) ✅ Resolved 2026-10-19 07:33 EDT: approved — Matt Quir
   3. Add a shared `AppTopBar` shell the destinations can mount (title + optional back/close + theme toggle slot), rendering through the theme; wire it on the 4 destinations without changing their behaviour.
   4. Leave deep-link entries routing to their screens unchanged.
 - **Exit criteria:** app builds; the default route shows the shell with 4 destinations switchable; existing suite stays green (behaviour unchanged); unit + coverage gate on touched files.
+
+### Result — CHROME-2 ✅ Done (2026-10-19)
+
+- **Decision (user, 2026-10-19):** *additive, zero-behaviour-change* wiring. The shell is wired **only on the true fall-through** (no capture source, no deep-link entry); a wired `captureSource` and every `*Entry` still open their screen directly (unchanged), so the nav is not yet visible in the shipped app (production boots `captureSource` → Capture). Making the shell the production-visible default is deferred to CHROME-3 (AC-1, after G-2). This preserves the signed-off bs-01/bs-02/bs-14 suites.
+- **Landed:** new `lib/app/app_destinations.dart` (`AppDestination` enum capture/compare/recipes/palette — label + outline/filled glyph + `navItemKey`); new `lib/app/app_shell.dart` (`AppShell` = Scaffold + lazy `IndexedStack` + custom themed bottom nav; anchors `bottomNavKey`, per-destination `navItemKey`, non-colour `activeDestinationKey` = filled glyph + bold label); new `lib/app/app_top_bar.dart` (`AppTopBar` shared top-bar shell — Atkinson title + back/close + theme-toggle slot, keys `titleKey`/`leadingKey`/`themeToggleKey`). `build_app.dart` fall-through → `_defaultShell` (Capture dest = the unchanged Readout + sharing-offer landing `_fallThroughHome`; Compare/Recipes/Palette lazy). `theme.dart` + `appBarTheme`/`navigationBarTheme` warm-paper tokens.
+- **Deviations from the task wording (justified by the user decision):** (1) a **custom themed bottom bar** instead of Material `NavigationBar`, so the keys + the non-colour active marker are deterministic (Material's icon/selectedIcon cross-fade can't carry a "present-only-when-selected" keyed marker); `navigationBarTheme` tokens are added for CHROME-3 to adopt. (2) `AppTopBar` is built + unit-tested but **not yet mounted** on the destinations — mounting it would double the `AppBar` (each screen keeps its own header) and break `find.text('Readout')`; the per-destination swap is CHROME-4/AC-2. (3) lazy `IndexedStack` (not eager) so booting the fall-through mounts only the Capture body — no extra controller/read-endpoint/pending-timer on the default route.
+- **Gates:** `dart analyze` (5 lib + 5 test touched files) → No issues. Unit + coverage `flutter test --coverage test/` → **1668 pass / 0 fail** (baseline 1643 + 25 new). Coverage gate `tool/coverage_gate.dart d3a1c4f` → **100% line coverage on all 5 touched files, PASS**. No acceptance/grade gate (shell). **Fix passes: 2/3** (both test-only: a `find.descendant` that excluded the keyed box; raw-vs-resolved `titleLarge` geometry).
+- **Existing-suite regression check (fall-through is shared):** bs-11 accessibility **19/19** (AC-4 48dp + AC-5 AA contrast hold over the new nav chrome); bs-14 `consent_and_record` (default-route opt-in offer) **5/5**; base `harness_test` **5/5**. Carried: running the whole `integration_test/bs14/` dir, 3 files hit "Unable to start the app on the device" launch flakes under machine load — each passes run alone (confirmed on `consent_and_record`), matching the known whole-dir-won't-launch gotcha.
+
+### Checkpoint / Handoff — after CHROME-2
+
+- **Frozen interfaces (this phase):** `AppDestination` (enum + `label`/`icon`/`selectedIcon`/`navItemKey`); `AppShell({destinations, bodies, initialIndex})` with `bottomNavKey` / `activeDestinationKey` and lazy `IndexedStack`; `AppTopBar({title, onBack?, onClose?, themeToggle?})` with `titleKey`/`leadingKey`/`themeToggleKey`. ITEST-1/2 anchor the AC-1/AC-2 pending tests on these keys; the app-chrome theme tokens live on `AppTheme.light().themeData` (`appBarTheme`, `navigationBarTheme`).
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout`/`gtimeout`): unit+cov `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart d3a1c4f`; touched tests `flutter test test/app/{app_destinations,app_shell,app_top_bar,theme,build_app}_test.dart`; regression `flutter test -d flutter-tester integration_test/{bs11/accessibility_test.dart,bs14/consent_and_record_test.dart,harness_test.dart}` (run bs14 files one at a time — the dir won't launch at once under load).
+- **Known gaps / next:** the shell is NOT the shipped default yet (fall-through only) — **CHROME-3 (AC-1, after G-2)** makes it the production-visible default (route `captureSource` through it) and finalises the design-system nav treatment (adopt `navigationBarTheme`, DecoratedBox token check). **CHROME-4 (AC-2)** mounts `AppTopBar` on each destination (removing their ad-hoc headers). ITEST-1 (the acceptance harness) is the next startable phase and depends only on CHROME-2.
 
 ## Phase CHROME-3 — behavior: bottom navigation (AC-1)
 

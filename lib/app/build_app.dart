@@ -63,6 +63,8 @@ import '../sharing/sharing_scope.dart';
 import '../store/cvd_profile_store.dart';
 import '../store/persistent_store.dart';
 import '../store/source_photo_store.dart';
+import 'app_destinations.dart';
+import 'app_shell.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -726,27 +728,70 @@ Widget _home(AppDependencies deps) {
                     )
                   : deps.paletteEntry != null
                       ? const PaletteHomeScreen()
-                      : Stack(
-                          children: [
-                            // bs-14 CORE-3: the home landing overlays the
-                            // one-time plain-language opt-in offer. It shows only
-                            // while sharing is active (a store is wired) and the
-                            // painter has not opted in, and renders nothing
-                            // otherwise — so it is a zero-footprint overlay on a
-                            // fresh Readout and gone once opted in (AC-1). On the
-                            // default route only, so a pushed route (e.g. the
-                            // self-assessment onboarding) covers it.
-                            ReadoutScreen(sample: deps.initialSample),
-                            const Positioned.fill(
-                              child: SafeArea(
-                                child: Align(
-                                  alignment: Alignment.bottomCenter,
-                                  child: SharingOptInOffer(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
+                      : _defaultShell(deps);
+}
+
+/// The default landing on the no-entry, no-capture-source fall-through route
+/// (bs-18 CHROME-2, AC-1; wireframe E44): the [AppShell]'s four-destination
+/// bottom navigation over Capture / Compare / Recipes / Palette.
+///
+/// The Capture destination (the opening one) is the pre-shell default landing
+/// — the Readout for [AppDependencies.initialSample] with the sharing opt-in
+/// offer overlaid ([_fallThroughHome]) — so booting here mounts exactly what it
+/// did before, now inside the nav chrome; the other three destinations build
+/// their home screens lazily the first time the painter selects them (D: zero
+/// behaviour change — no extra controller or read endpoint is constructed on
+/// boot). This is reached only on the fall-through: a wired capture source or
+/// any deep-link entry still opens its screen directly (D-1), so the shipped
+/// app and the acceptance harnesses are unchanged. CHROME-3 (AC-1) finalises
+/// the nav treatment over this shell.
+Widget _defaultShell(AppDependencies deps) {
+  return AppShell(
+    destinations: AppDestination.values,
+    bodies: [
+      (_) => _fallThroughHome(deps),
+      (_) => ComparisonHomeScreen(
+            sampleSource: deps.sampleSource,
+            cvdProfile: deps.cvdProfile,
+            confusionCheck: deps.confusionCheck,
+            speech: deps.speech,
+            router: deps.router,
+          ),
+      (_) => RecipesHomeScreen(
+            target: deps.initialSample,
+            sampleSource: deps.sampleSource,
+            paletteSource: _solverPaletteSource(deps),
+            mixingEngine: deps.mixingEngine,
+            speech: deps.speech,
+            router: deps.router,
+          ),
+      (_) => const PaletteHomeScreen(),
+    ],
+  );
+}
+
+/// The pre-shell default landing (bs-14 CORE-3): the Readout for
+/// [AppDependencies.initialSample] with the one-time plain-language opt-in offer
+/// overlaid. The offer shows only while sharing is active (a store is wired) and
+/// the painter has not opted in, and renders nothing otherwise — so it is a
+/// zero-footprint overlay on a fresh Readout and gone once opted in (AC-1). On
+/// the default route only, so a pushed route (e.g. the self-assessment
+/// onboarding) covers it. Unchanged from the pre-CHROME-2 fall-through; now the
+/// Capture destination's body in [_defaultShell].
+Widget _fallThroughHome(AppDependencies deps) {
+  return Stack(
+    children: [
+      ReadoutScreen(sample: deps.initialSample),
+      const Positioned.fill(
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: SharingOptInOffer(),
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 /// Exposes the callback the self-assessment calls after saving a profile, so the
