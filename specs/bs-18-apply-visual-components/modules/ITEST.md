@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 done; next ITEST-2/3/4 (parallel, disjoint AC files)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/visual_application/` (harness, fixtures, one pending test per AC); the `BS18_RUN_PENDING` pending mechanism.
 **Depends on:** CHROME-2 (the shell under test) · **Blocks:** every behavior phase (via G-2)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| ITEST-1 | acceptance-tests | — (harness) | ⬜ Todo | | |
+| ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 5.35M | 13m (13m) |
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 | ⬜ Todo | | |
 | ITEST-3 | acceptance-tests | AC-6,7,8,9,10 | ⬜ Todo | | |
 | ITEST-4 | acceptance-tests | AC-11,12,13,14 | ⬜ Todo | | |
@@ -32,6 +32,19 @@ G-2 (ITEST-5's review) blocks every behavior phase.
 - **Files:** `integration_test/visual_application/harness.dart`, `fixtures.dart`, a smoke test.
 - **Tasks:** build the pump harness + the six fixtures (`aReading`, `aComparison`, `recipesForTarget`, `aPalette`, `aProject`, `anOnboardingStep`); wire the `BS18_RUN_PENDING` gate; one smoke test that pumps the shell.
 - **Exit criteria:** harness green; pending mechanism proven (a planted pending test is skipped by default, runs under the flag).
+
+### Result — ITEST-1 ✅ Done (2026-10-19)
+
+- **Landed:** `integration_test/visual_application/fixtures.dart` (the six catalogue fixtures `aReading`, `aComparison`, `recipesForTarget`, `aPalette`, `aProject`, `anOnboardingStep` — small immutable holders over the shipped domain types, each exposing the in-memory source its `AppDependencies` entry is wired with); `harness.dart` (`VisualScreen` roster, `VisualHarness` with the installed-theme / CHROME-2 shell anchors / bs-17 component finders / `rectOf`, and `pumpShell` + `pumpScreen` over the single `buildApp` entry, faking only `FakeSpeech`/`FakeHaptics`/`FakeCaptureSource`; re-exports the gate + fixtures + fakes + shell/top-bar + bs-17 widgets); `smoke_test.dart` (the never-pending scaffold suite). **Deleted** CHROME-1's `pending_runner_test.dart` — folded into `smoke_test.dart` (its own header said ITEST-1 replaces it).
+- **Smoke / guards (`smoke_test.dart`, all non-vacuous):** a shell smoke pumping the real app onto the nav shell (4 destination keys present, exactly one non-colour active marker under the opening Capture destination, one `MaterialApp` theme) + a destination-switch test (active marker moves under each tapped item); the pending gate both directions + integrity invariants + a planted `acTestWidgets` wiring smoke; six fixture guards (named/measured reading, two distinct compare samples, reachable+out-of-gamut recipe targets over a ≥2-paint palette, ≥3 paints spanning ≥2 provenance tiers, a named project with a note, an interior onboarding step with an active-sim Display snapshot).
+- **Gates:** `dart analyze integration_test/visual_application/` → No issues. Default run `flutter test -d flutter-tester integration_test/visual_application/` → **13 pass / 1 skip** (the planted pending AC-1 smoke skipped). Run-pending `--dart-define=BS18_RUN_PENDING=true` → **14 pass / 0 skip** (the planted pending test now runs) — pending mechanism proven both directions. Unit `flutter test --coverage test/` → **1668 pass**. Coverage gate `dart run tool/coverage_gate.dart d3a1c4f` → **PASS** (this phase touched no `lib/`; CHROME-2's 5 files still 100%). No grade gate at ITEST-1 (its exit criteria is harness-green + pending-proven; grades start at ITEST-2). **Fix passes: 0/3** (first full test run green; two pre-run fixes were analyzer-caught: `../fakes/` relative path, and `SampleSource` has no public `samples` getter).
+- **No sibling regression risk:** added one isolated new suite dir + deleted its own CHROME-1 self-test; touched no `lib/` and no shared harness, so no sibling suite is affected (not re-run).
+
+### Checkpoint / Handoff — after ITEST-1
+
+- **Frozen vocabulary (ITEST-2/3/4 build on this):** `pumpShell(tester, {initialSample})` → the nav shell (AC-1/AC-2, and AC-5's Readout = the opening Capture destination's body); `pumpScreen(tester, VisualScreen.{capture,compare,recipes,palette})` → the deep-link screen via its entry flag, wired with the fixture source. `VisualHarness` exposes `installedTheme`/`colorScheme`, `bottomNav`/`activeDestination`/`navItem(d)`, `pillButtons`/`speakButtons`/`surfaceCards`/`monoLabels`/`provenanceBadges`/`swatchCaptions`, `rectOf(finder)`. The harness re-exports `pending.dart`, `fixtures.dart`, the fakes, the shell/top-bar types and the bs-17 widgets — an AC test imports only `harness.dart`.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout`/`gtimeout`): default `flutter test -d flutter-tester integration_test/visual_application/`; red baseline add `--dart-define=BS18_RUN_PENDING=true`; analyze `dart analyze integration_test/visual_application/`; unit+cov `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart d3a1c4f`.
+- **Known gaps / next:** the **CFG** screens (Display settings — reached through the app chrome's settings entry, present on every route; onboarding — pushed onto the running app, no home entry) have **no `pumpScreen` case yet**: ITEST-3 extends the harness with their pump when it authors AC-10 (the `anOnboardingStep` fixture + `DisplaySettings` snapshot are ready). The whole `integration_test/visual_application/` dir launches at once on `flutter-tester` (proven here) — unlike the whole `integration_test/` root. **Next:** ITEST-2 (AC-1..5), ITEST-3 (AC-6..10), ITEST-4 (AC-11..14) run in parallel over disjoint `*_test.dart` files; each un-pends nothing (authors pending tests) and records its red baseline + grade. All three block ITEST-5 (the G-2 review).
 
 ## Phase ITEST-2 — acceptance-tests: AC-1..5 (pending) + red baseline
 
