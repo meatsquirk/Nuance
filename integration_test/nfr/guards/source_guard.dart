@@ -24,6 +24,11 @@
 // pipelines ([sanctionedDomainConversionFiles]); it still flags any other stray
 // conversion. See [sanctionedDomainConversionFiles] for the rationale.
 //
+// AC-8 note (bs-14 G-4, Matt Quirk 2026-10-16): the off-device-sender scan
+// exempts exactly one owner-sanctioned path ([sanctionedOffDevicePathFiles]) —
+// bs-14's consented, record-only, local-network peer transport — and still
+// flags any other egress anywhere in `lib/`. See [sanctionedOffDevicePathFiles].
+//
 // This is test-support only — no `lib/` product code (D-7).
 //
 // These scans read the repo source tree through `dart:io`, so they run on the
@@ -125,6 +130,23 @@ const Set<String> deltaEAuthorityFiles = {
 const Set<String> sanctionedDomainConversionFiles = {
   'lib/recipes/engine/subtractive_engine.dart',
   'lib/a11y/cvd/confusion_check.dart',
+};
+
+/// The one off-device path the AC-8 sweep permits, sanctioned by the owner under
+/// bs-14 G-4 (Matt Quirk, 2026-10-16).
+///
+/// bs-14's peer-to-peer evidence sharing (D-4) is the single exception to the
+/// v1 no-off-device-path rule: a **consented, record-only, local-network-only**
+/// `PeerTransport` — no server, no account, no stored addressing; only a
+/// `MixAccuracyRecord` serialization crosses. The real socket / multicast I/O
+/// lives in exactly one file, `lib/sharing/exchange/local_network_io.dart`;
+/// that file is exempt from [offDeviceSenders] so the bs-12 suite stays green,
+/// while **any other** off-device sender anywhere in `lib/` is still flagged.
+/// The bs-14 boundary guard (`local_network_boundary_test.dart`) asserts that
+/// this one path carries nothing but record serializations; the on-device
+/// discovery/socket path is verified by the bs-14 sign-off walkthrough (D-3).
+const Set<String> sanctionedOffDevicePathFiles = {
+  'lib/sharing/exchange/local_network_io.dart',
 };
 
 /// The one seam allowed to hold platform-specific code (AC-17).
@@ -257,7 +279,8 @@ List<String> forbiddenDependencies({Iterable<String>? resolvedNames}) {
 List<SourceOffender> offDeviceSenders({
   Iterable<String> roots = kDefaultSourceRoots,
 }) =>
-    _scanSource(roots, ruleOffDeviceSender, _offDeviceSendPatterns);
+    _scanSource(roots, ruleOffDeviceSender, _offDeviceSendPatterns,
+        isAllowed: _isSanctionedOffDevicePath);
 
 /// Sites under [roots] that couple a caller to the concrete type [typeName]
 /// directly instead of its interface (AC-14 the mixing engine, AC-15 the CVD
@@ -402,6 +425,11 @@ bool _isConversionAuthority(String path) {
   return conversionAuthorityFiles.contains(p) ||
       sanctionedDomainConversionFiles.contains(p);
 }
+
+/// Exempt from the off-device-sender scan: the single owner-sanctioned
+/// local-network path ([sanctionedOffDevicePathFiles], bs-14 G-4).
+bool _isSanctionedOffDevicePath(String path) =>
+    sanctionedOffDevicePathFiles.contains(_normaliseScanPath(path));
 
 /// Exempt from the ΔE scan: the single [deltaEAuthorityFiles] authority.
 bool _isDeltaEAuthority(String path) =>

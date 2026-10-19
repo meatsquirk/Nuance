@@ -1,0 +1,337 @@
+# bs-14 behavior-test completeness grid
+
+Graded at CORE-3 (AC-1), then RECORD-2 (AC-3, AC-4). Every un-pended AC test is
+re-graded each behaviour phase by a fresh independent reviewer; the remaining ACs
+stay pending until their phases land.
+
+| AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 | Notes |
+|----|------|-------|----|----|----|----|----|----|-------|
+| AC-1 | `TestAC01_OptInOnceNeverShown` | A | pass | pass | pass | pass | pass | pass | Drives the real keyed offer through the live widget surface; checks all Givens before the When; rejects the never-records, re-shown-offer, and mechanism-surface impls. CORE-3 augmentation (below) now also scans the populated pre-opt-in inventory, demonstrating the live `userFacingSharingSurfaces` binding (closes the G3 residual). Under CORE-4 its post-opt-in no-mechanism scan now reads a non-empty live surface (`[recipesImproveSignal]`) rather than an empty list — stronger, still A (see CORE-4 section). |
+| AC-2 | `TestAC02_NoPerExchangeAction` | A | pass | pass | pass | pass | pass | pass | Boots the opted-in app (consent written to the real `PersistentConsentStore`, read back live by `_SharingRoot`), settles past the silent fire-and-forget exchange, then asserts the background round asked nothing: `speech.utterances` empty and `haptics.confirmations == 0` (paired with a live probe control proving both sinks record), no `userFacingSharingSurfaces` entry names a mechanism, and the one permitted signal — the mechanism-free "recipes improve over time" — is present (post-settle reading proving the opted-in surface swapped in). Rejects the pre-CORE-4 shell (empty surface ⇒ recipe signal absent), a per-exchange spoken/haptic prompt, and a mechanism-naming surface. |
+| AC-3 | `TestAC03_RecordCarriesOnlyEvidence` | A | pass | pass | n/a | pass | pass | pass | Builds a record through the real `EvidenceRecordBuilder` from the recipe-bearing `confirmedEvidence` Sample; asserts all four named fields at value — `declaredPalette == seedPalette`, `measuredColour.lab ==` the mix's CIELAB + `lch` closeTo the real `ColorScience`, `tier == referenceCard` (card-calibrated swatch), and `paintCombination == seedCombination`. Rejects palette-omission, colour-mismatch, wrong-tier, and (after the RECORD-2 strengthening) a wrong/extra/missing paint combination. |
+| AC-4 | `TestAC04_NothingPersonalLeaves` | A | pass | pass | pass | pass | pass | pass | Plants personal tokens (sample name, evidence source id) in the source mix, checks them present through the public `Sample` surface, then asserts the crossing `canonicalForm` carries neither — redaction by construction — with a positive brand control proving the serialization is non-empty (non-vacuous). Rejects a builder that serialized a name/source id into any carried field. |
+| AC-5 | `TestAC05_NoPaletteNotShared` | A | pass | pass | n/a | pass | pass | pass | Calls the real `EvidenceRecordBuilder.selectShareSet([shareable, noPaletteRecord])` and observes the result through `recordEndpoint(...).shareSet`. Both Givens checked at value (`isPresent` true/false); the positive/negative pair is a genuine two-way control rejecting both "share everything" and "exclude everything"; the two fixtures are value-distinct under `MixAccuracyRecord.==`. G3 n/a (synchronous pure-Dart selection, no settle point). |
+| AC-10 | `TestAC10_AppendOnlyMerge` | A | pass | pass | n/a | pass | pass | pass | Merges `peerRecords(3)` from 3 distinct sources (Given: 3 records / 3 distinct sources / 3 distinct measurements, all checked before the When) through the real `EvidenceMerge().ingest` riding bs-13's append-only add, observed via `mappingEndpoint(evidence: merged).view!.evidence`. Asserts exact growth (+3), prior seed preserved & first (`sublist` orderedEquals existing), and a per-item loop checking `kind==peerContributed`, `source==incoming[i].source`, `coordinates==measuredColour.lab`. Rejects dedup of distinct measurements, overwrite/replace, reorder, dropped source tag, mislabelled kind, wrong coords. G3 n/a (synchronous pure function). |
+| AC-8 | `TestAC08_ClusteredRefine` | A | pass | pass | n/a | pass | pass | pass | Merges `peerRecords(7, outlier: true)` (7 tight-cluster records + 1 far outlier = 8) through the real `EvidenceMerge().ingest` + real `CrowdRefine().refine` (MAD / modified-z robust estimate), observed via `mappingEndpoint(value: result.value, evidence: merged).view!.value`. All 4 Givens checked before the When: `records` hasLength 8, `clusterCentroid` closeTo `seedMappingValue` (0.01), stale stored seed far (>5) and plain-mean-of-all far (>3) — so both named wrong impls are separable. Then pins the refined value within 1.5 of the cluster centroid AND >1.5 from the plain mean of all 8; the ~9 gap cleanly separates the two 1.5-bands. Rejects (a) ignore-the-crowd → stays at the stale seed (~15 off) and (b) plain-average-all → pulled ~9 toward the outlier. G3 n/a (synchronous pure fn). Asserts only the refined value, not tier/label (AC-9). |
+| AC-11 | `TestAC11_OutlierDiscarded` | A | pass | pass | n/a | pass | pass | pass | Same robust-estimate code path as AC-8 (D-6), distinct fixture: `peerRecords(6, outlier: true)` (6 tight + 1 far outlier = 7). Givens checked before the When: `records` hasLength 7, `clusterCentroid` closeTo `seedMappingValue` (0.01), plain-mean-of-all >3 off the centroid. Then pins the estimate within 1.5 of the 6-record cluster centroid AND >1.5 from the all-7 plain mean; the ~10 gap separates the bands. Rejects averaging the outlier in (pulled ~10 off) and — via the closeness band — ignore-the-crowd (stale seed ~15 off). G3 n/a (synchronous pure fn). Asserts only the estimate value, not tier/label (AC-9). |
+
+## G1 — every Given checked before the When
+Pass. The scenario's Given ("the painter is offered to 'help improve recipe accuracy by sharing anonymous mix results'") is asserted three ways through the public surface before the tap: the offered copy equals the frozen `SharingConsent.defaultOfferCopy` (value-exact, plain-language, mechanism-free), the keyed offer control is present (`findsOneWidget` — also a "no other offer" count check), and the fresh install is `consented == false`. The not-yet-opted-in precondition is the state the "opts in once" When needs, and it is checked.
+
+## G2 — a configured Given answers
+Pass. Nothing is script-overridden. The offer's presence and copy are computed by production code (`SharingOptInOffer` reading the live `SharingConsentReadEndpoint`), and the not-opted-in state is the real default loaded from the wired store. The When taps the actual `ElevatedButton(key: 'sharing-opt-in-offer')` in the booted tree, whose `onPressed` writes the real `ConsentStore`; `_SharingRoot` re-reads the store and rebuilds the endpoint. `after` is re-read from the *live* endpoint by key (not the boot-time capture), so the answer comes from the real reactive wiring, not a fixture.
+
+## G3 — negative Thens settled and controlled
+Pass, with a noted weakness. Both negatives are read after `pumpAndSettle()`, past the opt-in's settle point (consent recorded, offer gone). The "offer not re-shown" negative (`findsNothing`) has a proper demonstrated transition: the same finder returned `findsOneWidget` before the When, so the reading is shown to actually change. The "no mechanism surface" negative scans `after.userFacingSharingSurfaces` and is paired with a predicate control (`_mentionsNetworkConcept('Peers nearby · last synced')` is true) that proves the scan would flag a mechanism-naming surface. Because the real inventory binding is live (a wrong impl that exposed a "peers nearby / last synced" surface post-opt-in would populate the list and be caught by the loop), the empty-list pass is a real result for the correct impl, not a broken-predicate accident. Weakness: the control proves the *predicate*, not that the *observed inventory* can carry a flaggable entry — the test never scans the non-empty pre-opt-in inventory (`[offerCopy]`), so the live binding of `userFacingSharingSurfaces` is relied on but not demonstrated in-test. Not A-denying (the discrimination holds against the real code), but the ideal strengthening is below.
+
+## G4 — grain and value
+Pass. Asserts the raw observables the step names at the right grain: consent is recorded (`after.consented == true`), each user-facing surface is scanned against the four spec-named mechanism concepts plus related network vocabulary (`peer/device/sync/network/...`), and the one-time offer is exactly gone (`findsNothing`). The offer copy is asserted by exact value against the frozen string.
+
+## G5 — names what it rejects
+Pass. Fails an impl that never records consent (`after.consented` would stay false), an impl that re-presents the one-time offer (`findsNothing` would fail — and the pre-When `findsOneWidget` proves the finder is not simply always-empty), and an impl that exposes a mechanism-naming surface after opt-in (the loop catches it, and the predicate control guarantees the catch is live). The only impl it does not reject is an always-empty inventory stub — but that is semantically correct for AC-1 (showing nothing never shows the mechanism), so it is not a wrong implementation of this AC.
+
+## G6 — one AC per test
+Pass. The test asserts only AC-1's behavior — consent recorded, no mechanism shown, offer shown once. It does not touch AC-2's permitted "recipes improve" signal (`_isRecipeImprovedSignal` is defined in the file but used only by the AC-2 test), and it asserts nothing about the record contents (AC-3/4/5).
+
+## CORE-3 augmentation (applied — closes the G3 residual)
+Before the When, the test now scans the non-empty pre-opt-in `app.userFacingSharingSurfaces` and asserts it (a) is non-empty, (b) contains the offer copy, and (c) passes the no-mechanism scan. This turns the post-opt-in empty scan into a demonstrated populated→empty transition and proves the inventory the loop reads is the live production surface list, not a possibly-dead binding. It discriminates against the pre-CORE-3 code (whose inventory was always empty), so it is a genuine strengthening of AC-1's own invisibility assertion (G6-safe). Grade remains **A**.
+
+## RECORD-2 grading (AC-3, AC-4)
+
+Fresh independent reviewer, re-graded against G1–G6 (grade what the code does).
+
+- **AC-4 — A on first grade.** G1: the configured Given (a mix that also carries a personal name + evidence source id) is verified present through the public `Sample` surface before the When. G2/G4: redaction is observed from the real `prepare` + real `MixAccuracyRecord.canonicalForm` (the content crossing the boundary, D-4). G3: the absence Thens are paired with a positive brand control proving the serialization is populated (non-vacuous). G5: rejects a builder that serialized a sample name or evidence-source id into any carried field. G6: asserts only AC-4's redaction. Residual (not A-denying): only two of the six spec-named categories are plantable — photograph/project/CVD-profile/location have no leak vector on the 4-field record, so there is nothing to plant for them.
+- **AC-3 — came back B, fixed in-phase to A (fix pass 1).** The first grade failed **G4/G5** on the paint combination only: it was asserted as `isNotEmpty` + `orderedEquals(paintIds..sort())` — a self-comparison that is vacuous because `PaintCombination.of` always sorts/dedups, so any non-empty combination passed and a wrong-field/extra/missing-id impl would not be caught. RECORD-2 replaced it with a value assertion `expect(record.paintCombination, seedCombination)` (`seedCombination == PaintCombination.of(seedMapping.candidatePaintIds)`, the fixture's actual recipe). Re-graded by the same reviewer: **G4 now PASS** (all four named fields at value) and **G5 now PASS** (rejects wrong-field, extra-id and missing-id combinations via `PaintCombination.==`'s `listEquals`; reorder/duplicate inputs are correctly not rejected — that is the intended canonicalization). Grade **A**. The other rules were PASS throughout; G3 n/a (no negative Thens).
+
+**Counts after RECORD-2: 3 A / 0** over the un-pended tests (AC-1, AC-3, AC-4). AC-2/AC-5..AC-12 remain pending their phases; AC-9 carries its *B pending MERGE-4* augmentation.
+
+## RECORD-3 grading (AC-5)
+
+Fresh independent reviewer, re-graded the un-pended set (AC-1, AC-3, AC-4, AC-5) against G1–G6.
+
+- **AC-5 — A on first grade.** G1: both Givens checked at value through the public surface before the When — `shareable.declaredPalette.isPresent == true`, `noPaletteRecord.declaredPalette.isPresent == false` (matches the spec's configured Given, not a comment). G2: the configured palette-presence answers; the real `EvidenceRecordBuilder.selectShareSet` decides keep/drop by reading `candidate.declaredPalette.isPresent`, nothing overriding it. G3 n/a — a synchronous pure-Dart selection has no later moment the forbidden thing could happen; the negative Then is paired with the positive `contains(shareable)` control so the share-set is not vacuously empty. G4: membership of the specific records (not a bare count) on the raw `shareSet` observable. G5: the positive/negative pair rejects both "share everything" (no-op) and "exclude everything" (stub); the two fixtures are value-distinct under `MixAccuracyRecord.==`. G6: asserts only AC-5. Non-A-denying note: the fixtures also differ in `tier`, so a contrived tier-filter impl would coincidentally pass — an incidental fixture confound, not a plausible palette-exclusion impl; every plausible wrong impl is still rejected.
+- **AC-1 / AC-3 / AC-4 — remain A** (no downgrade). RECORD-3 touched only `selectShareSet`; their code paths and tests are unchanged.
+
+**Counts after RECORD-3: 4 A / 0** over the un-pended tests (AC-1, AC-3, AC-4, AC-5). AC-2/AC-6..AC-12 remain pending their phases; AC-9 still carries its *B pending MERGE-4* augmentation.
+
+## MERGE-2 grading (AC-10)
+
+Fresh independent reviewer, re-graded the un-pended set (AC-1, AC-3, AC-4, AC-5, AC-10) against G1–G6 (grade what the code does).
+
+- **AC-10 — A on first grade.** G1: the three configured Givens are checked through the public surface before the When — `incoming` hasLength 3, `.map(source).toSet()` hasLength 3 (the "several devices" premise), `.map(measuredColour.lab).toSet()` hasLength 3 (distinct measurements). G2: behaviour comes from the real `EvidenceMerge().ingest` riding the real `ProvenanceDerivation.appendEvidence`; `mappingEndpoint(evidence: merged)` is a thin pass-through, `observed` is the real merge output. G3 n/a — `ingest` is a synchronous pure function, no later moment an overwrite could occur; the "none overwrites" negative is controlled positively by the exact +3 growth and prior-unchanged assertions. G4: exact count `existing.length + 3`, a per-item loop over all three asserting the raw `kind`/`source`/`coordinates` observables, prior preserved by `first == priorSeed` + `sublist` orderedEquals. G5: rejects dedup of distinct measurements, overwrite/replace, reorder, dropped source tag, mislabelled kind, wrong coords (residual, non-A-denying: no byte-identical fixture, so content-hash dedup of identical records isn't probed — outside AC-10's distinct-device framing). G6: asserts only AC-10 (the endpoint's default tier/label are passed but never asserted — AC-9's concern).
+- **AC-1 / AC-3 / AC-4 / AC-5 — remain A** (no downgrade). MERGE-2 touched only `evidence_merge.dart`, the pending gate, the harness pending-set guard and the merge unit test — none touch the CORE-3/RECORD code paths or those tests.
+
+**Counts after MERGE-2: 5 A / 0** over the un-pended tests (AC-1, AC-3, AC-4, AC-5, AC-10). AC-2/AC-6..AC-9/AC-11/AC-12 remain pending their phases; AC-9 still carries its *B pending MERGE-4* augmentation.
+
+## MERGE-3 grading (AC-8, AC-11)
+
+Fresh independent reviewer, re-graded the un-pended set (AC-1, AC-3, AC-4, AC-5, AC-8, AC-10, AC-11) against G1–G6 (grade what the code does). Ran `flutter test integration_test/bs14/refine_test.dart -d flutter-tester`: AC-8 and AC-11 pass green, AC-9/AC-12 skip (still pending). MERGE-3's real `_robustCentralEstimate` (coordinate-wise median → modified z-score on per-point distance, threshold 3.5, mean of survivors) discards the single far outlier and returns the exact cluster centroid (= `seedMappingValue`) on both fixtures.
+
+- **AC-8 — A on first grade.** G1: all four Givens checked through the public surface before the When — `records` hasLength 8, `clusterCentroid` closeTo `seedMappingValue` (the cluster centres on the mapping value), `_dist(staleSeed, seedMappingValue) > 5`, `_dist(plainMeanOfAll, seedMappingValue) > 3`. G2: the robust estimate comes from the real `CrowdRefine().refine` over the real `EvidenceMerge().ingest` output (peer-contributed points), observed through the thin `mappingEndpoint` pass-through — no script/fake override. G3 n/a: `refine` is a synchronous pure function with no later moment, and the negative Then ("not the plain mean") is paired with the positive closeness-to-centroid Then as a two-way control. G4: asserts the raw refined value at the step's grain — per-axis `closeTo` the cluster centroid within 1.5 AND `_dist > 1.5` from the plain mean of all 8; the ~9 separation makes the two 1.5-bands disjoint, so the tolerance is not a leftover-tolerating fudge. G5: rejects the two named wrong impls — (a) ignore-the-crowd keeps the stale seed (~15 off the centroid → closeness fails) and (b) plain-average-all is pulled ~9 toward the outlier (→ both the closeness Then and the >1.5-from-plain-mean Then fail). G6: asserts only AC-8's refined value; the endpoint's default tier/label are never read (AC-9's concern). Non-A-denying note: any valid robust estimator (coordinate-wise median alone, a trimmed mean, drop-farthest-then-mean) also passes — that is correct, the spec says "robust central estimate ... outliers discarded" and does not pin a single estimator; the test correctly does not over-fit to MAD.
+- **AC-11 — A on first grade.** G1: Givens checked before the When — `records` hasLength 7, `clusterCentroid` closeTo `seedMappingValue` (0.01), `_dist(plainMeanOfAll, clusterCentroid) > 3` (the outlier genuinely pulls the plain mean off). G2: real `ingest` + real `refine.refine(...).value`, no override. G3 n/a (synchronous pure fn); the "not averaged in" negative is controlled by the positive closeness-to-centroid assertion. G4: raw estimate at grain — per-axis `closeTo` the 6-record cluster centroid within 1.5 AND `_dist > 1.5` from the all-7 plain mean (~10 gap → disjoint bands). G5: rejects plain-average-all (pulled ~10 off) and, via the closeness band, ignore-the-crowd (stale seed ~15 off). G6: asserts only the estimate value; distinct fixture from AC-8 (6+1, not 7+1) exercising the same D-6 path independently; does not assert tier/label. Non-A-denying note: AC-11 does not separately assert the stale-seed-far Given (AC-8 does), but the Then's `closeTo(clusterCentroid, 1.5)` still rejects "ignore the crowd" because the stale seed is ~15 off — the ignore-crowd impl cannot pass, so the missing explicit Given is a robustness omission, not a discrimination gap.
+- **AC-1 / AC-3 / AC-4 / AC-5 / AC-10 — remain A** (no downgrade). MERGE-3 touched only `lib/sharing/merge/crowd_refine.dart`, its unit test (`test/sharing/merge/crowd_refine_test.dart`), the pending gate (`integration_test/bs14/pending.dart`) and the harness pending-set guard (`integration_test/bs14/harness_test.dart`) — none touch the CORE-3/RECORD/MERGE-2 code paths or those tests, and their re-run grades are unchanged.
+
+**Counts after MERGE-3: 7 A / 0** over the un-pended tests (AC-1, AC-3, AC-4, AC-5, AC-8, AC-10, AC-11). AC-2/AC-6/AC-7/AC-9/AC-12 remain pending their phases; AC-9 still carries its *B pending MERGE-4* augmentation.
+
+## MERGE-4 grading (AC-9) — recorded late at MERGE-5
+
+MERGE-4 un-pended AC-9 and graded it **A** (B→A; the master plan's session log and `modules/MERGE.md` Result record this), but its commit (`c9c22b6`) did not append a grading section to this grid — the file was left stale at MERGE-3. MERGE-5's fresh full re-grade below covers AC-9 in detail and records the B→A, bringing the grid current.
+
+## MERGE-5 grading (AC-12; full re-grade)
+
+Fresh, independent re-grade of the full un-pended set (AC-1, AC-3, AC-4, AC-5, AC-8, AC-9, AC-10, AC-11, AC-12) against G1–G6, grading what the code actually does. Ran all three bs-14 acceptance files on `-d flutter-tester` (one app-booting file per invocation): AC-8/9/11/12 green (`refine_test.dart`), AC-10 green (`exchange_and_merge_test.dart`), AC-1/3/4/5 green (`consent_and_record_test.dart`); AC-2/AC-6/AC-7 correctly skip (still pending). AC-12 and AC-9 graded in full below; the rest confirmed A with an explicit check of whether MERGE-5's change to `evidence_merge.dart` could have affected them.
+
+- **AC-12 — `TestAC12_RateLimited` — A (first grade).** Drives the **real** `EvidenceMerge().ingest` (default `maxPerSource == SourceRateLimiter.defaultMaxPerSource == 50`), which builds a `SourceRateLimiter` internally and keys the per-source count on the source id — no fake limiter. The flood (100 from `flooder`) and 5 honest records (`honest-peer`) are ingested in one call; `observed` is read back through the thin `mappingEndpoint(...).view!.evidence` pass-through, so it is the real merge output.
+  - **G1 — pass.** All four Givens are asserted through the public surface before the When: `cap > 0`, `floodCount (100) > cap`, `flood.map(source).toSet() == {flooder}` (the flood is single-source), `honestRecords hasLength 5`. (Minor, non-A-denying: the honest set's source id is not separately asserted to equal `honest`/differ from `flooder`, but the `sourcedFromOnePeer(source: honest)` helper fixes it and the `_countFrom(observed, honest)` reading would fail if it were mis-sourced.)
+  - **G2 — pass.** The cap that answers is the real configured `SourceRateLimiter.defaultMaxPerSource` consumed by the real `EvidenceMerge.ingest`; nothing scripts or overrides the count. `cap` in the test is the same constant, so the `== cap` assertion tracks the production bound rather than a magic number.
+  - **G3 — n/a (legitimately), controlled.** `ingest` is a synchronous pure function with no later moment a late admission could occur; the "excess rejected" negative is pinned at value (`flooder == cap`, i.e. exactly 50, not >50, not 100) and paired with the positive control (`honest == 5`, all accepted), proving the limiter both rejects and admits.
+  - **G4 — pass.** Both Thens asserted at exact value on the raw observable (count of `peerContributed` points per source in the merged log): flooder capped at exactly `cap` (50); honest peer at exactly `honestCount` (5). No tolerance, no derived quantity.
+  - **G5 — pass. Rejects: (a) no cap** → all 100 flooder points accepted (`100 != 50`, flooder Then fails); **(b) a global cap that starves others** → the flood (ingested first) fills the global budget, so the honest records that arrive after it are all rejected (`honest == 0 != 5`, honest Then fails). It also rejects a positional/arrival cap that ignores source. The per-source-vs-global discrimination is real because the flood precedes the honest records in arrival order.
+  - **G6 — pass.** Asserts only AC-12's bound; no tier/label/exchange concerns touched.
+
+- **AC-9 — `TestAC09_NeverPromotes` — A (fresh full grade; was *B pending MERGE-4*, now un-pended and augmented).** MERGE-4 landed the derivation glue (`RefineResult.label = qualifier(tier)`) and both augmentations; this is the first grid row to grade it fresh. The test rides the real `EvidenceMerge().ingest` (which stamps `peerContributed` and **discards** any declared `MeasurementTier`) and the real `CrowdRefine().refine` → real `ProvenanceDerivation.tierFor`/`.qualifier`.
+  - **G1 — pass.** Every Given checked through the public surface before the When: `tierFor([llmSeed]) == estimated` (starts Estimated); `peers hasLength 5`; every peer `declaredPalette.isPresent` (interpretable); and the MERGE-4 augmentation-1 realizes the "refined by peer records" Given through the real merge and asserts it — `refinedEvidence hasLength 6`, `first == _llmSeedPoint` (seed unchanged and first), exactly 5 `peerContributed` points. This Given was a comment before MERGE-2 appended; it is now a checked precondition.
+  - **G2 — pass.** The tier and label come from the real refiner: `result.tier`/`result.label` are derived by `tierFor`/`qualifier`, and the endpoint is built by **passing `result.tier` and `result.label`** (not relying on `mappingEndpoint`'s estimated/"Estimated — not yet verified" defaults), so the `endpoint.view` assertions read the product-sourced values, not a harness fixture. The high-tier path goes through the real `ingest` (declared instrument tier discarded) and real `refine`.
+  - **G3 — n/a (pure fn), with a real can-change control.** The never-promote negative is controlled by the own-swatch control: `promoteWithOwnSwatch(refinedEvidence, photographedSwatch)` returns `confirmed` + `"Confirmed — you measured this"`, proving the same mapping's derived tier/label **can** change, so "stays Estimated" is a real result and not a constant.
+  - **G4 — pass.** Asserts at value: derived `tier == estimated` and label at the exact string `"Estimated — not yet verified"` (both the refiner result and the endpoint view); the high-tier-peer result's `tier == estimated` and label exact; the control at `confirmed` + exact `"Confirmed — you measured this"`.
+  - **G5 — pass. Rejects: (a)** promote-because-peer-evidence-present (would raise tier above Estimated); **(b)** the strongest wrong impl — honour a record's **declared** high tier: augmentation-2 ingests a peer record declaring `MeasurementTier.instrument`, asserts it is stamped `peerContributed` with the declared tier discarded, and that `refine` still derives `estimated` + the Estimated label. An impl that mapped the instrument record to an `instrumentMeasured` point (which `tierFor` would raise to Measured) fails here — peer evidence is *actively excluded*, not merely absent. **(c)** a label rebuilt to say "verified" / showing Confirmed. The own-swatch control additionally rejects a vacuous always-Estimated stub.
+  - **G6 — pass.** Asserts only AC-9's never-promote invariant; `promoteWithOwnSwatch` is used purely as the AC-9 can-change discriminator, not to assert a different AC.
+
+- **AC-10 — `TestAC10_AppendOnlyMerge` — remains A. Re-verified carefully (shares `evidence_merge.dart` with AC-12).** MERGE-5 added rate limiting inside `ingest`, but AC-10 ingests only 3 records from 3 **distinct** sources — each source's count is 1, far under the 50 cap — so the limiter admits all three and the append-only behaviour is unchanged. Re-ran green: exact +3 growth, prior seed preserved and first, per-item `kind==peerContributed`/`source`/`coordinates` all hold. No regression from the shared-file change.
+- **AC-8 — `TestAC08_ClusteredRefine` — remains A.** MERGE-5 did not touch `crowd_refine.dart`; the 8 ingested records use distinct `peer-i` sources (count 1 each, under cap), so the rate limit does not perturb the merged set the robust estimate runs over. Green; refined value within 1.5 of the cluster centroid and >1.5 from the plain mean. No effect from `evidence_merge.dart`'s change.
+- **AC-11 — `TestAC11_OutlierDiscarded` — remains A.** Same as AC-8: 7 distinct-source records, all admitted, same robust-estimate path. Green; estimate at the 6-record cluster centroid, not the all-7 plain mean. Unaffected by MERGE-5.
+- **AC-1 — `TestAC01_OptInOnceNeverShown` — remains A.** Consent/widget path; does not touch `evidence_merge.dart`. Green.
+- **AC-3 — `TestAC03_RecordCarriesOnlyEvidence` — remains A.** Record-builder path; no dependence on merge. Green.
+- **AC-4 — `TestAC04_NothingPersonalLeaves` — remains A.** Record-builder redaction path; no dependence on merge. Green.
+- **AC-5 — `TestAC05_NoPaletteNotShared` — remains A.** Share-set selection path; no dependence on merge. Green.
+
+**Counts after MERGE-5: 9 A / 0** over the nine un-pended tests (AC-1, AC-3, AC-4, AC-5, AC-8, AC-9, AC-10, AC-11, AC-12). AC-2/AC-6/AC-7 remain pending their phases. AC-9's *B pending MERGE-4* augmentation is now resolved (B→A).
+
+## EXCHANGE-3 grading (AC-7; full re-grade)
+
+Fresh independent reviewer, re-graded the full un-pended set (AC-1, AC-3, AC-4,
+AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12) against G1–G6, grading what the
+code does. EXCHANGE-3 changed only `lib/sharing/exchange/gossip_exchange.dart`
+(`exchangeOnce`: discover → empty peers return `ExchangeReport.empty`; else
+`ExchangeReport(exchangesConducted: peers.length)`); the fire-and-forget
+scheduler is unchanged. AC-7 is the only un-pended test that exercises the
+gossip exchange / scheduler.
+
+- **AC-7 — `TestAC07_NoPeerNoWait` — A (first grade).** Drives the real
+  `GossipExchange.exchangeOnce` over the sanctioned fake loopback transport
+  (D-3) via the real `ExchangeScheduler`, read through the thin
+  `ExchangeOutcomeEndpoint` pass-through.
+  - **G1 pass.** The one Given ("no other install is reachable") is asserted
+    through the public surface before the When two ways — `network.peersReachable
+    isFalse` and `await transport.discover() isEmpty` (checked values, not a
+    comment).
+  - **G2 pass.** The configured `peersReachable: false` answers: the real
+    `discover()` returns `[]` and the real `exchangeOnce` decides "no exchange"
+    (`peers.isEmpty → empty`); the real scheduler folds it. The only fake is the
+    sanctioned transport, driven by the setting — nothing stubs the gossip
+    outcome.
+  - **G3 pass.** The "no exchange occurred" negative (`exchanges==0`,
+    `offered==0`) is read only after a real settle point (`await
+    expectLater(scheduler.settled, completes)`), paired with the reachable-peer
+    control (`exchanges>=1`) proving the reading can be non-zero. The no-wait
+    invariant is read synchronously right after `trigger` returns (the core flow
+    is not blocked) and again post-settle.
+  - **G4 pass.** Raw observables at grain/value: no-peer `exchanges==0` /
+    `offered==0` / `waited isFalse`; control `exchanges>=1` (peer count 1) /
+    `waited isFalse`.
+  - **G5 pass.** The reachable-peer control is the discriminator — it is red at
+    the shell (which exchanged nothing, so `exchanges==0`) and goes green only
+    once EXCHANGE-3's conduct-count lands, rejecting the "never exchanges at all"
+    impl that would make the no-peer zero vacuous. A blocking core flow would
+    hang `await settled` → timeout.
+  - **G6 pass.** The control asserts only AC-7's own liveness/no-wait invariant
+    (`exchanges>=1`, `waited isFalse`) — nothing about `offered` content or which
+    records crossed, so it does not reach into AC-6's `mine − theirs` semantics.
+  - Non-A-denying residual: `waitedOnExchange` is a by-contract constant-false
+    flag with no control that flips it; liveness discrimination rests on the
+    test's synchronous-trigger structure + `await settled completes`, and the
+    primary "no exchange" claim is genuinely controlled. No fix required.
+- **AC-1 / AC-3 / AC-4 / AC-5 / AC-8 / AC-9 / AC-10 / AC-11 / AC-12 — remain A**
+  (no downgrade). None construct or trigger the gossip exchange, so EXCHANGE-3's
+  change to `gossip_exchange.dart` cannot affect them. (AC-10 shares the
+  `exchange_and_merge_test.dart` file with AC-7 but uses only `EvidenceMerge`,
+  never the exchange.)
+
+**Counts after EXCHANGE-3: 10 A / 0** over the ten un-pended tests (AC-1, AC-3,
+AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12). AC-2 (CORE-4) and AC-6
+(EXCHANGE-2) remain pending their phases.
+
+## CORE-4 grading (AC-2; full re-grade)
+
+Fresh independent reviewer, re-graded the full un-pended set (AC-1, AC-2, AC-3,
+AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12) against G1–G6, grading what
+the code actually does. CORE-4 changed `lib/app/build_app.dart` (`_SharingRoot`:
+opted-in surface list becomes `[SharingConsent.recipesImproveSignal]`; adopting a
+consented state fires one fire-and-forget `ExchangeScheduler.trigger` over the
+inert `InactivePeerTransport`; mounts `ExchangeOutcomeEndpoint`),
+`lib/sharing/consent/sharing_consent.dart` (added the `recipesImproveSignal`
+constant), and `lib/sharing/sharing_scope.dart` (`SharingDependencies` gained an
+optional `exchangeScheduler`). Ran `flutter test
+integration_test/bs14/consent_and_record_test.dart -d flutter-tester`: AC-1..AC-5
+all green, AC-2 now un-pended and passing. `harness_test.dart` also green.
+
+- **AC-2 — `TestAC02_NoPerExchangeAction` — A (first grade).** Boots the real app
+  through `buildApp` with consent pre-written to the real `PersistentConsentStore`
+  (the same contract CORE-3's opt-in action writes); `_SharingRoot._load` reads it
+  back live, adopts the consented state and fires the silent background round over
+  the inert `InactivePeerTransport` (discovers no peer ⇒ no-op). `speech`/`haptics`
+  are the real faked platform sinks wired through `AppDependencies`.
+  - **G1 — pass.** The one Given ("the painter has opted in") is asserted through
+    the public surface before the When — `app.consented isTrue`, read from the live
+    `SharingConsentReadEndpoint` after booting over the consent-bearing store.
+  - **G2 — pass.** The configured Given answers: the opted-in state comes from the
+    real store, not a script override; `_SharingRoot` reads it back through its real
+    reactive `_load`, sets the opted-in surface list and triggers the real
+    `ExchangeScheduler` over the real `GossipExchange`. The only fake is the
+    sanctioned platform speech/haptics sinks; the exchange path is production code.
+  - **G3 — pass.** The negative Thens (`speech.utterances` empty,
+    `haptics.confirmations == 0`, no surface names a mechanism) are read only after
+    `pumpAndSettle()` — the settle point past which a per-exchange prompt, had one
+    been emitted, would have fired. They are paired with a live control: a probe
+    (`speech.speak('probe')` / `haptics.confirm()`) through the same wired sinks is
+    recorded (`hasLength(1)` / `1`), proving the readings CAN change and the
+    empty/zero pass is not a dead-sink accident.
+  - **G4 — pass.** Raw observables at grain/value: `utterances` exactly empty,
+    `confirmations` exactly `0`, each surface scanned against the mechanism
+    vocabulary in a per-item loop, and the permitted signal checked present via
+    `_isRecipeImprovedSignal`. Minor, non-A-denying: the spec's "sees **only**"
+    is asserted as "a recipe-improved signal is present AND no surface is a
+    mechanism" rather than "the sole surface IS the recipe signal" — but the
+    opted-in list is exactly `[recipesImproveSignal]` and the no-mechanism loop
+    covers every entry, so no mechanism can hide; the "only" is not under-asserted
+    in any way that admits a wrong impl.
+  - **G5 — pass. Rejects:** (a) the pre-CORE-4 shell / an impl whose opted-in
+    surface is empty or omits the signal ⇒ `any(_isRecipeImprovedSignal)` is false,
+    the recipe-signal Then fails; (b) a per-exchange spoken or haptic prompt ⇒ the
+    empty/zero Thens fail (and the probe control proves the sinks would have caught
+    it); (c) a surface that names a mechanism post-opt-in ("peers nearby", "last
+    synced", …) ⇒ the no-mechanism loop over the now-populated live list catches it.
+  - **G6 — pass.** Asserts only AC-2's no-per-exchange-action invariant; does not
+    re-assert AC-1's offer-gone / records-consent (it only reads `consented` as its
+    own Given) and touches no record/merge concern.
+  - Non-A-denying residual: the recipe-improved-signal presence check is framed in
+    the test as proving "the exchange actually ran", but the opted-in surface list
+    is set from `_consent.consented` in `build()` independently of whether
+    `_startBackgroundExchange` fired — so it strictly proves consent was adopted and
+    the opted-in surface swapped in (the post-settle reading), not the trigger call
+    itself. The silence Thens are nonetheless genuinely controlled (the probe) and
+    discriminate against every plausible wrong impl above; no fix required.
+
+- **AC-1 — `TestAC01_OptInOnceNeverShown` — remains A (re-verified under CORE-4's
+  surface change).** AC-1's post-opt-in loop scans `after.userFacingSharingSurfaces`
+  for mechanism wording. Before CORE-4 that list was empty once opted in (a
+  semantically-correct but vacuous scan); CORE-4 makes it `[recipesImproveSignal]`
+  = "Your recipes improve over time.", which contains none of the scanned concepts
+  (peer/device/sync/network/…), so the loop now iterates a **non-empty live
+  production surface** and still passes — the no-mechanism assertion is no longer
+  vacuous post-opt-in, and the live binding of `userFacingSharingSurfaces` is now
+  demonstrated both pre- and post-opt-in. The offer-gone Then (`findsNothing`) is
+  unaffected (`SharingOptInOffer` still collapses when `consented`). A strict
+  strengthening of AC-1's own invisibility assertion; grade stays **A**.
+
+- **AC-3 / AC-4 / AC-5 / AC-7 / AC-8 / AC-9 / AC-10 / AC-11 / AC-12 — remain A** (no
+  downgrade). CORE-4 touched only `build_app.dart` (the consented surface + exchange
+  wiring), `sharing_consent.dart` (new constant) and `sharing_scope.dart` (optional
+  field). The record/share-set path (AC-3/4/5), the gossip exchange/scheduler
+  (AC-7), and the merge/refine/rate-limit path (AC-8..AC-12) read none of the
+  changed code; `ExchangeScheduler` itself is unchanged and the new
+  `SharingDependencies.exchangeScheduler` is an additive optional field. Their
+  code paths and tests are unchanged.
+
+**Counts after CORE-4: 11 A / 0** over the eleven un-pended tests (AC-1, AC-2,
+AC-3, AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12). AC-6 (EXCHANGE-2)
+remains pending its phase.
+
+## EXCHANGE-2 grading (AC-6)
+
+Fresh independent reviewer (did not write these tests), grading what the code
+actually does against G1–G6. EXCHANGE-2 un-pended AC-6 (the last pending AC, so
+every bs-14 AC is now built) and changed only `lib/sharing/exchange/gossip_exchange.dart`
+(`exchangeOnce`: for each reachable peer, `theirs = receive(peer)`, offer
+`mine − theirs` by `contentHash`, drop any candidate the `SeenSet` has already
+registered, then register+keep the records the peer offers back). Ran
+`flutter test integration_test/bs14/exchange_and_merge_test.dart -d flutter-tester`:
+AC-6/AC-7/AC-10 all green (+3, all passed).
+
+| AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 | Notes |
+|----|------|-------|----|----|----|----|----|----|-------|
+| AC-6 | `TestAC06_ExchangeOnlyMissing` | A | pass | pass | pass | pass | pass | pass | Drives the real `GossipExchange.exchangeOnce` over the sanctioned fake loopback transport (D-3) via the real `ExchangeScheduler`, read through the transport's own delivered inbox (`network.inboxOf`) and the thin `ExchangeOutcomeEndpoint`. Rejects offering the full set (`{r1,r2}` would cross), an identity-keyed diff (the distinct-object `r2a`/`r2b` pair), and re-offering already-seen records every round (second round leaves B's inbox at exactly one r1). Residual (non-A-denying): value-equality keying is not separated from content-hash keying on this fixture (`r2a == r2b` AND same hash), mirroring AC-10's accepted "no sub-tolerance fixture" residual. |
+
+- **G1 — pass.** The scenario Given ("two installs reachable on the same local
+  network") is asserted through the public surface before the When: `network.peersReachable
+  isTrue`, `await a.transport.discover()` **contains** `b.id` (A really discovers B),
+  and each side's holdings pinned with `ownRecords orderedEquals [r1, r2a]` /
+  `[r2b, r3]` (count + identity + order — a genuine "A holds exactly {r1,r2}, no
+  other" check). The discrimination setup is also checked as a precondition:
+  `{r1,r2a,r3}.contentHash` hasLength 3 (three distinct records), `r2a == r2b`
+  with equal `contentHash`, and `identical(r2a, r2b) isFalse` — so the
+  content-hash-vs-identity test below rests on verified facts, not comments.
+- **G2 — pass.** The configured holdings answer. The records each install offers
+  come from the real `network.join(offering:)`, `receive()` returns the peer's
+  real offering, and the `mine − theirs` diff + `SeenSet` dedup are computed by
+  the real `exchangeOnce` reading `MixAccuracyRecord.contentHash`. The only fake
+  is the sanctioned transport (D-3), driven by the fixture; nothing scripts the
+  offered set or the outcome.
+- **G3 — pass (settled + controlled).** The "only the missing record crosses"
+  negative (r2 common ⇒ dropped) is pinned as an exact-set equality
+  (`inboxOf(b) == {r1.contentHash}`) read after the round settles
+  (`runExchange` awaits `scheduler.settled`), and the "already-seen dropped"
+  negative is read after a **second** settled round. Both are controlled by a
+  demonstrated can-change reading: B's inbox goes 0→1 when A has a genuinely
+  missing record to offer, and then stays at 1 on the repeat — so "does not grow"
+  is a real result, not a dead observable.
+- **G4 — pass.** Asserts the truest raw observable ("what crossed" = the
+  transport's delivered inbox) at exact value: `inboxOf(b)` content-hash set
+  `== {r1.contentHash}` and `inboxOf(a) == {r3.contentHash}` (exact sets, not
+  mere counts), plus `offered == 1` (exact), `exchanges >= 1`, and the
+  second-round `hasLength(1)` with the hash set still `{r1.contentHash}`. No
+  tolerance, no derived-only quantity (the endpoint's `offered`/`exchanges` are
+  asserted *in addition to*, not instead of, the raw inbox).
+- **G5 — pass. Rejects:** (a) **offering the full set** — an impl that offered
+  all of `mine` would put `{r1.hash, r2.hash}` in B's inbox, failing the exact-set
+  `== {r1.hash}`; (b) **an identity-keyed diff** — the common r2 is held as two
+  distinct objects (`r2a` at A, `r2b` at B), so a diff keyed on object identity
+  would re-offer r2 and the common record would cross, failing the exact-set
+  equality; the content-hash diff drops it; (c) **re-offering already-seen records
+  every round** — the second round over an unchanged B leaves B's inbox at exactly
+  one r1; a no-`SeenSet` impl would re-offer r1 (B still "misses" it, since B's
+  static offering never carries r1 back) and the inbox would reach length 2. All
+  three are plausible wrong impls separated by the fixture. Residual (non-A-denying):
+  because `r2a == r2b` *and* their content hashes match, a diff keyed by value
+  equality (`==`) would behave identically on this fixture, so the test separates
+  content-hash keying from object-identity keying but **not** from value-equality
+  keying — the two diverge only for sub-rounding-tolerance near-duplicates (D-7),
+  which the fixture does not include. Consistent with the suite's prior accepted
+  residuals (AC-10 "no byte-identical fixture"); a value-equality diff is not a
+  behaviourally-wrong impl on any realistic input here, so this does not deny A.
+- **G6 — pass.** Asserts exactly AC-6's two Then clauses — "each offers only the
+  records the other is missing, keyed by content hash" (the exact inbox sets +
+  `offered == 1`) and "duplicates and already-seen records are dropped" (the
+  second-round dedup). It touches no merge/refine content (AC-10), no consent
+  surface (AC-1/AC-2) and no record-field concern (AC-3/4/5).
+
+- **AC-7 — `TestAC07_NoPeerNoWait` — remains A.** EXCHANGE-2 changed
+  `gossip_exchange.dart`, which AC-7's reachable-peer control also exercises (a
+  reachable peer now conducts a *real* offer/receive instead of only counting the
+  conduct). Re-verified: the no-peer path still returns `ExchangeReport.empty`
+  early on `peers.isEmpty` (unchanged), so `exchanges == 0` / `offered == 0` /
+  `settled completes` still hold; and the control still asserts only
+  `exchanges >= 1` and `waitedOnExchange isFalse` — both still true now that the
+  reachable peer additionally offers its one missing record. Ran green alongside
+  AC-6. No regression.
+- **Others remain A (untouched by EXCHANGE-2).** AC-1/AC-2/AC-3/AC-4/AC-5/AC-8/
+  AC-9/AC-10/AC-11/AC-12 neither construct nor trigger the gossip diff;
+  EXCHANGE-2's change to `exchangeOnce` only runs on the non-empty-peer branch.
+  AC-2's app-level exchange runs over the inert `InactivePeerTransport` (no peer
+  ⇒ early empty return, the new diff never executes); AC-10 shares the
+  `exchange_and_merge_test.dart` file but uses only `EvidenceMerge`. Code paths
+  and tests unchanged.
+
+**Counts after EXCHANGE-2: 12 A / 0 below-A** over the twelve un-pended tests
+(AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12) —
+all 12 ACs are now un-pended.

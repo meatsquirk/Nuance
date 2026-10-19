@@ -48,6 +48,18 @@ import '../recipes/palette_source.dart';
 import '../recipes/recipe_controller.dart';
 import '../recipes/recipe_read_endpoint.dart';
 import '../recipes/recipes_screen.dart';
+import '../sharing/consent/consent_store.dart';
+import '../sharing/consent/opt_in_offer.dart';
+import '../sharing/consent/sharing_consent.dart';
+import '../sharing/exchange/exchange_outcome_endpoint.dart';
+import '../sharing/exchange/exchange_scheduler.dart';
+import '../sharing/exchange/gossip_exchange.dart';
+import '../sharing/exchange/local_network_transport.dart';
+import '../sharing/exchange/peer_transport.dart';
+import '../sharing/exchange/seen_set.dart';
+import '../sharing/record/mix_accuracy_record.dart';
+import '../sharing/sharing_read_endpoint.dart';
+import '../sharing/sharing_scope.dart';
 import '../store/cvd_profile_store.dart';
 import '../store/persistent_store.dart';
 import '../store/source_photo_store.dart';
@@ -184,6 +196,7 @@ class AppDependencies {
     this.pdfShareSink,
     this.displayController,
     this.seedDataset = const SeedDataset.empty(),
+    this.peerTransport,
   });
 
   /// Derives every presentable form of a sample's colour (COLOR stub for now).
@@ -367,6 +380,20 @@ class AppDependencies {
   /// (SEED-3) and the acceptance harness injects a dataset here.
   final SeedDataset seedDataset;
 
+  /// The off-device actor the background gossip exchange runs over once the
+  /// painter opts in (bs-14 EXCHANGE-4, D-4 / G-4), or null to use the shipped
+  /// default.
+  ///
+  /// `_SharingRoot` resolves null to a real [LocalNetworkTransport] — the one
+  /// sanctioned, consented, record-only local-network path — so the shipped app
+  /// exchanges on-device. The acceptance suite mounts its own transport through
+  /// the harness; app-boot widget tests that opt in inject an inert
+  /// `InactivePeerTransport` here so they stay deterministic (the real
+  /// transport's discovery/socket path is verified by the on-device sign-off
+  /// walkthrough, D-3). Construction is cheap and does no I/O; discovery runs
+  /// only once a consented round is fired.
+  final PeerTransport? peerTransport;
+
   /// Returns a copy of these dependencies with only [cvdProfile] replaced
   /// (bs-07 AC-13, D-3).
   ///
@@ -397,6 +424,7 @@ class AppDependencies {
         pdfShareSink: pdfShareSink,
         displayController: displayController,
         seedDataset: seedDataset,
+        peerTransport: peerTransport,
       );
 }
 
@@ -536,6 +564,11 @@ class _AppState extends State<_App> {
   /// DALT-11, AC-6), or null when no persistence is wired (bare unit trees).
   CvdProfileStore? _profileStore;
 
+  /// The crowd-refinement consent store the sharing subsystem reads/writes
+  /// (bs-14 CORE-2), or null when no persistence is wired (bare unit trees), in
+  /// which case the [SharingScope] is not mounted and sharing stays inactive.
+  ConsentStore? _consentStore;
+
   @override
   void initState() {
     super.initState();
@@ -548,6 +581,11 @@ class _AppState extends State<_App> {
     if (store != null) {
       _profileStore = CvdProfileStore(store);
       _profileStore!.changes.addListener(_handleStoreChanged);
+      // bs-14 CORE-2: build the sharing subsystem's consent store over the same
+      // persistent seam so the [SharingScope] can be mounted. A shell — nothing
+      // reads it yet and the stored default is not opted in — so this adds no
+      // behaviour.
+      _consentStore = PersistentConsentStore(store);
     }
   }
 
@@ -624,6 +662,22 @@ class _AppState extends State<_App> {
       dataset: deps.seedDataset,
       child: tree,
     );
+    // bs-14 CORE-3: mount the crowd-refinement subsystem above the MaterialApp
+    // (so later surfaces read it from any route) through [_SharingRoot], which
+    // holds the painter's live consent read from the store and exposes it (plus
+    // the user-facing sharing-surface inventory the invisibility guarantee reads)
+    // through the [SharingScope] + [SharingConsentReadEndpoint]. Opting in (the
+    // [SharingOptInOffer] on the home screen) writes the store, the root re-reads
+    // it, and the endpoint rebuilds — so the offer disappears and consent reads
+    // true (AC-1). Absent when no store is wired (bare unit trees).
+    final consentStore = _consentStore;
+    if (consentStore != null) {
+      tree = _SharingRoot(
+        consentStore: consentStore,
+        peerTransport: deps.peerTransport,
+        child: tree,
+      );
+    }
     return AppScope(
       dependencies: deps,
       child: LiveProfileScope(
@@ -672,7 +726,27 @@ Widget _home(AppDependencies deps) {
                     )
                   : deps.paletteEntry != null
                       ? const PaletteHomeScreen()
-                      : ReadoutScreen(sample: deps.initialSample);
+                      : Stack(
+                          children: [
+                            // bs-14 CORE-3: the home landing overlays the
+                            // one-time plain-language opt-in offer. It shows only
+                            // while sharing is active (a store is wired) and the
+                            // painter has not opted in, and renders nothing
+                            // otherwise — so it is a zero-footprint overlay on a
+                            // fresh Readout and gone once opted in (AC-1). On the
+                            // default route only, so a pushed route (e.g. the
+                            // self-assessment onboarding) covers it.
+                            ReadoutScreen(sample: deps.initialSample),
+                            const Positioned.fill(
+                              child: SafeArea(
+                                child: Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: SharingOptInOffer(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
 }
 
 /// Exposes the callback the self-assessment calls after saving a profile, so the
@@ -735,6 +809,7 @@ AppDependencies _depsWithSpeech(AppDependencies deps, Speech speech) {
     pdfShareSink: deps.pdfShareSink,
     displayController: deps.displayController,
     seedDataset: deps.seedDataset,
+    peerTransport: deps.peerTransport,
   );
 }
 
@@ -874,6 +949,146 @@ class _SpokenOutputChrome extends StatelessWidget {
           child: const SafeArea(child: SpokenOutputPanel()),
         ),
       ],
+    );
+  }
+}
+
+/// Holds the painter's live crowd-refinement consent and exposes the sharing
+/// subsystem to the whole tree (bs-14 CORE-3).
+///
+/// A small stateful root, symmetric to [_DisplayRoot] / [_SpeechRoot]: it reads
+/// the stored [SharingConsent] from the [consentStore] at mount and re-reads it
+/// whenever the store changes, so an opt-in written by the [SharingOptInOffer]
+/// reconfigures the live consent immediately. It wraps [child] (the rest of the
+/// app, down to the `MaterialApp`) in the [SharingScope] holding the injected
+/// sharing dependencies and, beneath it, the keyed [SharingConsentReadEndpoint]
+/// the acceptance suite observes.
+///
+/// The endpoint's [SharingConsentReadEndpoint.userFacingSharingSurfaces]
+/// inventory — the invisibility guarantee reads it — reflects the one surface
+/// the subsystem shows for the current consent: the plain-language offer while
+/// the painter has not opted in, and the mechanism-free "recipes improve over
+/// time" outcome signal once they have (CORE-4). It never names a mechanism.
+///
+/// Once opted in it also runs the background gossip exchange silently (CORE-4,
+/// AC-2): a fire-and-forget [ExchangeScheduler] round is triggered when consent
+/// is adopted — never prompting, speaking or buzzing, and never blocking a core
+/// flow. The round runs over [peerTransport] — the real [LocalNetworkTransport]
+/// by default (EXCHANGE-4), so the shipped app exchanges on-device; app-boot
+/// tests inject an inert transport to stay deterministic. The scheduler and its
+/// [ExchangeOutcomeEndpoint] seam are built once here regardless of consent.
+class _SharingRoot extends StatefulWidget {
+  const _SharingRoot({
+    required this.consentStore,
+    required this.peerTransport,
+    required this.child,
+  });
+
+  /// The write/read seam for the painter's opt-in consent (AC-1).
+  final ConsentStore consentStore;
+
+  /// The off-device transport the background exchange runs over, or null to use
+  /// the shipped default real [LocalNetworkTransport] (EXCHANGE-4, G-4).
+  final PeerTransport? peerTransport;
+
+  /// The app subtree (down to the `MaterialApp`) wrapped in the sharing scope.
+  final Widget child;
+
+  @override
+  State<_SharingRoot> createState() => _SharingRootState();
+}
+
+class _SharingRootState extends State<_SharingRoot> {
+  /// The painter's live consent. Seeded with the not-opted-in default so a fresh
+  /// install (empty store) renders the offer before the async load returns; a
+  /// store that already holds a consent replaces it once [_load] completes.
+  SharingConsent _consent = const SharingConsent();
+
+  /// The fire-and-forget background gossip scheduler (CORE-4, AC-2). Built once
+  /// over [_SharingRoot.peerTransport] (the real [LocalNetworkTransport] by
+  /// default, EXCHANGE-4) and exposed through the [SharingScope] so a core flow
+  /// can reach the exchange without ever waiting on it.
+  late final ExchangeScheduler _scheduler;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduler = ExchangeScheduler(
+      GossipExchange(
+        transport: widget.peerTransport ?? LocalNetworkTransport(),
+        seenSet: SeenSet(),
+      ),
+    );
+    widget.consentStore.changes.addListener(_handleStoreChanged);
+    unawaited(_load());
+  }
+
+  /// Re-reads the stored consent when the store changes, so an opt-in recorded
+  /// through the store reconfigures the live consent (AC-1).
+  void _handleStoreChanged() => unawaited(_load());
+
+  /// Loads the stored consent and adopts it when it differs from the live one.
+  ///
+  /// Adopting a consented state starts the silent background exchange (CORE-4):
+  /// the opt-in transition (and a boot that reads back an already-opted-in
+  /// consent) each fire exactly one fire-and-forget round.
+  Future<void> _load() async {
+    final loaded = await widget.consentStore.load();
+    if (!mounted) return;
+    if (loaded != _consent) {
+      setState(() => _consent = loaded);
+      if (loaded.consented) _startBackgroundExchange();
+    }
+  }
+
+  /// Fires one silent, fire-and-forget background gossip round (CORE-4, AC-2).
+  ///
+  /// The exchange runs without prompting, speaking or buzzing, and the caller
+  /// does not await it — so no core flow is ever blocked (the "no per-exchange
+  /// action" invariant). The painter is shown only the mechanism-free "recipes
+  /// improve" signal. No own records are offered yet — wiring the painter's
+  /// shareable mixes into the live round is the last on-device step verified at
+  /// the sign-off walkthrough (EXCHANGE-4, D-3); over the real
+  /// [LocalNetworkTransport] the round discovers peers on the local network,
+  /// over an injected inert transport (tests) it reaches none.
+  void _startBackgroundExchange() =>
+      _scheduler.trigger(const <MixAccuracyRecord>[]);
+
+  @override
+  void dispose() {
+    widget.consentStore.changes.removeListener(_handleStoreChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The subsystem's one user-visible surface pre-opt-in is the plain-language
+    // offer; once opted in it shows only the mechanism-free "recipes improve
+    // over time" outcome signal (CORE-4, AC-2). Neither names a mechanism — the
+    // invisibility guarantee reads this inventory.
+    final surfaces = _consent.consented
+        ? const <String>[SharingConsent.recipesImproveSignal]
+        : <String>[_consent.offerCopy];
+    return SharingScope(
+      dependencies: SharingDependencies(
+        consentStore: widget.consentStore,
+        exchangeScheduler: _scheduler,
+      ),
+      // Expose the running exchange tally through the keyed endpoint the
+      // acceptance suite reads. It reflects whatever the round folded — zero /
+      // not-waited when no peer is reachable (tests' inert transport, or a real
+      // round that found no one), live counts once the on-device exchange
+      // carries data.
+      child: ExchangeOutcomeEndpoint(
+        key: ExchangeOutcomeEndpoint.endpointKey,
+        outcome: _scheduler.outcome,
+        child: SharingConsentReadEndpoint(
+          key: SharingConsentReadEndpoint.endpointKey,
+          consent: _consent,
+          userFacingSharingSurfaces: surfaces,
+          child: widget.child,
+        ),
+      ),
     );
   }
 }
