@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../a11y/cvd/cvd_profile.dart';
 import '../app/build_app.dart';
+import '../app/theme.dart';
 import '../display/color_simulation.dart';
 import '../display/display_scope.dart';
 import '../display/display_settings.dart';
@@ -47,18 +48,11 @@ class ProvenanceIcon extends StatelessWidget {
 
   /// The decorative tint for [tier] — never load-bearing (the glyph and label
   /// carry the meaning), so it is remapped under daltonization like any swatch.
-  static Color tintFor(ProvenanceTier tier) {
-    switch (tier) {
-      case ProvenanceTier.measured:
-        return const Color(0xFF1B7F3B); // green
-      case ProvenanceTier.calculated:
-        return const Color(0xFF1565C0); // blue
-      case ProvenanceTier.estimated:
-        return const Color(0xFFC62828); // red
-      case ProvenanceTier.confirmed:
-        return const Color(0xFF6A1B9A); // purple
-    }
-  }
+  ///
+  /// The tint reads the single palette source [AppTheme.provenanceTint] (D-7),
+  /// so no palette literal is hardcoded here (bs-17 AC-14); the values are
+  /// unchanged, so the bs-10/bs-11 behaviour is byte-for-byte preserved.
+  static Color tintFor(ProvenanceTier tier) => AppTheme.provenanceTint(tier);
 
   @override
   Widget build(BuildContext context) {

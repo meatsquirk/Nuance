@@ -1,0 +1,315 @@
+# Module COMPONENTS — the styled widget set
+
+**Status:** In progress
+**Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
+**Owns (files/areas):** `lib/widgets/pill_button.dart` (new), `lib/widgets/speak_button.dart` (new), `lib/widgets/surface_card.dart` (new), `lib/widgets/mono_label.dart` (new), and the border-style augmentation of `lib/widgets/provenance_badge.dart` / `lib/widgets/provenance_icon.dart` (AC-13 only).
+**Depends on:** THEME · **Blocks:** APPLY
+
+## Dashboard
+
+| Phase | Kind | Target AC | Status | Tokens | Time |
+|---|---|---|---|---|---|
+| COMPONENTS-1 | shell | — | ✅ Done | 4,522,630 | 10m 25s |
+| COMPONENTS-2 | behavior | AC-10 | ✅ Done | 6,332,367 | 13m 15s |
+| COMPONENTS-3 | behavior | AC-11 | ✅ Done | 4,156,872 | 9m 34s |
+| COMPONENTS-4 | behavior | AC-12 | ✅ Done | 6,295,885 | 12m 47s |
+| COMPONENTS-5 | behavior | AC-13 | ✅ Done | 2,589,616 | 5m 36s |
+
+## Interface reconciliation
+
+- Every component is a thin wrapper over a Material widget whose look comes from `AppTheme` (D-7), so the "single theme" guarantee (AC-14) holds and the components need no colour arguments:
+  - `PillButton.primary({onPressed, child})` → `FilledButton` (ink fill, paper label); `PillButton.secondary(...)` → `OutlinedButton` (transparent, bordered). Shape inherited (StadiumBorder).
+  - `SpeakButton({onPressed, semanticLabel})` → round accent button carrying the speaker icon; sizes `standard/compact/mini` map to the wireframe 64/52/44.
+  - `SurfaceCard({child})` / `SurfaceCard.emphasis(...)` / `SurfaceCard.inverted(...)` → surface fill + hairline border / ink border / ink fill + paper text, radius from `cardTheme`.
+  - `MonoLabel(String text)` → `Text` in the `AppTheme` mono-label style, upper-cased in the widget.
+- These wrappers **replace** ad-hoc buttons/cards/labels during APPLY; they don't themselves touch screens. The existing `ColorChip`, `ValueReading`, `PaintRow`, `AccessibleNotice`, `StatusBadge` are untouched except where APPLY swaps a raw button/card for a wrapper.
+- **AC-13 reuse (D-6):** `ProvenanceBadge`/`ProvenanceIcon` already carry glyph+text (bs-10/bs-11). COMPONENTS-5 adds only the wireframe border signature (measured=solid, calculated=sf2 fill, estimated=dashed, confirmed=ink fill) via the theme tokens; the semantics label and glyph are unchanged, so bs-11/bs-10 ACs are untouched.
+
+## Open gates
+
+- **G-2** (feature-level) blocks COMPONENTS-2..5: acceptance tests approved first.
+
+## Phase COMPONENTS-1 — shell: component API
+
+- **Kind:** shell
+- **Target AC:** —
+- **Depends on:** THEME-1 · **Blocks:** ITEST-1, COMPONENTS-2..5 · ∥ THEME-2
+- **Files:** `lib/widgets/pill_button.dart`, `lib/widgets/speak_button.dart`, `lib/widgets/surface_card.dart`, `lib/widgets/mono_label.dart`
+- **Tasks:**
+  1. Create the four widget classes with their final public API (above), each rendering through the **current** theme (so they look ~stock for now) — the shells the suite targets. No screen is rewired yet.
+- **Exit criteria:** unit gate passes; existing suite stays green; the widgets instantiate and render in a widget test. Behaviour of the app unchanged (nothing uses them yet).
+
+### Result
+
+Shell complete; the four styled widgets exist with their **final public API**,
+rendering through the current theme so they look ~stock (no screen is rewired;
+nothing renders them yet). New files:
+- `lib/widgets/pill_button.dart` — `PillButton.primary` → `FilledButton`,
+  `.secondary` → `OutlinedButton`; `onPressed`/`child`, no colour args.
+- `lib/widgets/speak_button.dart` — round `RawMaterialButton` (CircleBorder,
+  `shrinkWrap` + tight constraints so the 44px `mini` is exact), accent fill
+  `colorScheme.primary` + `onPrimary` glyph (`Icons.volume_up`); `SpeakButtonSize`
+  enum {standard 64, compact 52, mini 44}; `semanticLabel` on a `MergeSemantics`
+  so a screen reader announces one labelled button.
+- `lib/widgets/surface_card.dart` — `SurfaceCard` (surface fill + hairline
+  `outlineVariant` border), `.emphasis` (2px `onSurface` ink border), `.inverted`
+  (`AppTheme.inverted.paper` fill + `.ink` default text); radius from `cardTheme`
+  (default 16 when unset). Reads the frozen `AppTheme` tokens (D-7).
+- `lib/widgets/mono_label.dart` — upper-cases its text, drawn in `AppTheme.monoLabel`.
+**Verification:** `flutter analyze` on the 8 new files clean; `flutter test`
+**1435/1435** green (1418 baseline + 17 new widget tests); coverage gate **100%
+line on all 4 touched `lib/widgets/*.dart`** vs BASE `969dafb`. App byte-identical
+(no accessor/screen wired). **Fix passes:** 3/3 — all confined to the `SpeakButton`
+test mechanics (ambiguous `SizedBox` finder → assert `RawMaterialButton` size;
+label/tap node merge → `MergeSemantics` + `button: true` + `isSemantics` matcher;
+deprecated `hasFlag`/`containsSemantics`); the other three widgets passed first run.
+**Tokens/Time:** 4,522,630 · 10m 25s.
+
+### Checkpoint / Handoff
+
+- **Frozen public API (COMPONENTS-2..5 finalise the *look*, not these signatures):**
+  - `PillButton.primary({required VoidCallback? onPressed, required Widget child})` / `.secondary(...)`
+  - `SpeakButton({required VoidCallback? onPressed, required String semanticLabel, SpeakButtonSize size = standard})`; `enum SpeakButtonSize { standard(64), compact(52), mini(44) }` with a `.diameter` getter
+  - `SurfaceCard({required Widget child})` / `.emphasis({...})` / `.inverted({...})`
+  - `MonoLabel(String text)`
+- **Verification commands** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+  unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`.
+- **Known gaps:** none. The widgets read stock-derived theme values until the
+  THEME behavior phases fill the warm-paper tokens; COMPONENTS-2..5 (behavior,
+  blocked by G-2) finalise the exact weights/borders and un-pend AC-10..13.
+  AC-13's provenance-badge signature lands in COMPONENTS-5 on the existing
+  `ProvenanceBadge`/`ProvenanceIcon` (not touched here).
+- **Next:** ITEST-1 (the acceptance harness) — both THEME-2 and this phase (the
+  two shells) are now done, so ITEST-1 is unblocked. THEME-3.. / COMPONENTS-2.. /
+  APPLY-.. remain blocked by G-2.
+
+## Phase COMPONENTS-2 — behavior: pill buttons (AC-10)
+
+- **Kind:** behavior
+- **Target AC:** AC-10 (also realises AC-7/AC-8 for buttons via the inherited theme)
+- **Depends on:** THEME-3, ITEST-4 (G-2) · **Blocks:** APPLY-1
+- **Files:** `lib/widgets/pill_button.dart`
+- **Tasks:** finalise `PillButton.primary` (ink `FilledButton`, paper label, no border, weight 800) and `.secondary` (transparent `OutlinedButton`, 2px border, ink label), both fully-rounded from the theme.
+- **Acceptance gate:** un-pend AC-10; `TestAC10_Pills` green with earlier ACs; unit + coverage gate.
+
+### Result
+
+AC-10 built and un-pended. `PillButton.primary` now wraps a `FilledButton` styled
+ink-filled — `backgroundColor: onSurface`, `foregroundColor: surface` (paper label),
+label weight 800 (`labelLarge.copyWith(fontWeight: w800)`), **no** shape/side set →
+the fully-rounded `StadiumBorder` + no-border are inherited from the frozen theme.
+`PillButton.secondary` wraps an `OutlinedButton` styled `backgroundColor: transparent`,
+`foregroundColor: onSurface` (ink label), **no** shape/side set → the `StadiumBorder`
++ 2px ink (`onSurface`) side come from `outlinedButtonTheme`. The theme is frozen; all
+treatment is at the widget level in `lib/widgets/pill_button.dart` only.
+
+**Un-pend:** deleted the `AC-10` row in `integration_test/bs17/pending.dart`
+(`pendingACs` now `{AC-11..AC-15}`); updated the two pending-gate guard tests
+(`unpended` += AC-10; pending exemplars → AC-11/AC-15).
+**AC-7 augmentation (pill half) CLOSED:** added `expect(primaryShape/secondaryShape,
+isA<StadiumBorder>())` on the mounted `PillButton` instances in the AC-10 test — proves
+a rendered pill inherits the theme stadium (the pill sets no shape). AC-7 → "A-core / B
+pending COMPONENTS-4" (card half only, owed by AC-12).
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+`flutter analyze` on the 4 touched files clean; unit `flutter test` **1444/1444** green
+(1442 baseline + 2 new pill colour/weight tests); coverage gate **100% line on
+`lib/widgets/pill_button.dart`** vs BASE `71e34a6`; acceptance
+`flutter test -d flutter-tester integration_test/design_system_test.dart` **GREEN —
+21 passed / 5 skipped** (AC-1..AC-10 run, AC-11..AC-15 pending). **Grade gate PASS**
+(independent re-grade): 9 straight A (incl. AC-10), 1 A-core/B-pending (AC-7 →
+COMPONENTS-4), 0 plain-B; both guard tests A. **Fix passes:** 0/3 (green first run).
+**Tokens/Time:** 6,332,367 · 13m 15s.
+
+### Checkpoint / Handoff
+
+- **Frozen for APPLY:** `PillButton.primary`/`.secondary` render their final look
+  (ink-fill/paper-label/w800 primary; transparent/ink-label/2px-ink-border secondary),
+  both fully-rounded via the inherited `StadiumBorder`. Public API unchanged
+  (`primary({onPressed, child})` / `secondary(...)`). APPLY swaps ad-hoc buttons for these.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage`
+  then `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none for the pill. AC-7's card-half rendered-instance augmentation
+  is still owed by COMPONENTS-4 (a mounted `SurfaceCard` must inherit `cardTheme` r18).
+- **Next:** COMPONENTS-3 (AC-11 SpeakButton), COMPONENTS-4 (AC-12 SurfaceCard — closes
+  AC-7's card half), COMPONENTS-5 (AC-13 provenance badge) — all three still startable
+  **concurrently** (each owns its own `lib/widgets/*.dart`, disjoint). Then APPLY-1
+  (alone) / APPLY-2, then SIGNOFF-1.
+
+## Phase COMPONENTS-3 — behavior: speak FAB (AC-11)
+
+- **Kind:** behavior
+- **Target AC:** AC-11
+- **Depends on:** THEME-3, ITEST-4 (G-2) · **Blocks:** APPLY-1
+- **Files:** `lib/widgets/speak_button.dart`
+- **Tasks:** finalise `SpeakButton` as a round, accent-filled button (paper-coloured icon), carrying the speaker-wave icon, in the three sizes; expose its `semanticLabel` (leaves bs-11's label contract intact).
+- **Acceptance gate:** un-pend AC-11; `TestAC11_SpeakFab` green with earlier ACs; unit + coverage gate.
+
+### Result
+
+AC-11 built and un-pended. **No `SpeakButton` code change was needed:** the FAB's
+wireframe treatment *is* the theme accent fill, and the COMPONENTS-1 shell already
+renders `fillColor: scheme.primary` / `scheme.onPrimary` glyph on a `CircleBorder`
+with the three diameters and the `semanticLabel`. Once THEME-3 made `colorScheme.primary`
+the cobalt accent (`WarmPaper.accent` = `#2F55C8`), the shell *became* the final look —
+unlike the `PillButton` (COMPONENTS-2), which had to override the stock accent fill with
+an ink fill. So the FAB AC was realised by the shell + THEME; this phase finalises it by
+un-pending and confirming, plus a doc-comment refresh in `lib/widgets/speak_button.dart`
+recording that the accent fill is the frozen final treatment.
+
+**Un-pend:** deleted the `AC-11` row in `integration_test/bs17/pending.dart`
+(`pendingACs` now `{AC-12..AC-15}`); updated the two pending-gate guard tests in
+`integration_test/design_system_test.dart` (`unpended` += AC-11; pending exemplars
+`AC-11/AC-15` → `AC-12/AC-15`; ambient-path exemplar `AC-11` → `AC-12`).
+**Augmentations:** none owed by this phase; none newly enabled (no new behaviour was
+built that lets an already-green AC test assert more). The AC-7 **card half** remains
+owed by COMPONENTS-4.
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+`flutter analyze` on the 4 touched files clean; unit `flutter test` **1444/1444** green
+(unchanged — the widget's behaviour is unchanged); coverage gate **100% line on
+`lib/widgets/speak_button.dart`** (the one touched lib file, comment-only) vs BASE
+`5306d28`; acceptance `flutter test -d flutter-tester integration_test/design_system_test.dart`
+**GREEN — 22 passed / 4 skipped** (AC-1..AC-11 run, AC-12..AC-15 pending); run-pending
+pre-un-pend confirmed `AC-11` green. **Grade gate PASS** (independent fresh re-grade of
+AC-1..AC-11): **10 straight A** (incl. AC-11) + **1 A-core / B-pending COMPONENTS-4**
+(AC-7 card half, carried unchanged — not regressed, not closed this phase), 0 plain-B;
+both pending-gate guard tests A (non-vacuous). **Fix passes:** 0/3 (green first run).
+**Tokens/Time:** 4,156,872 · 9m 34s.
+
+### Checkpoint / Handoff
+
+- **Frozen for APPLY:** `SpeakButton` renders its final look — a round (`CircleBorder`)
+  accent-filled (`colorScheme.primary`) FAB with a paper glyph (`onPrimary`, `Icons.volume_up`)
+  in the three `SpeakButtonSize` diameters (64/52/44), carrying `semanticLabel`. Public API
+  unchanged. APPLY swaps ad-hoc speak controls for this.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none for the speak FAB. AC-7's card-half rendered-instance augmentation
+  is still owed by COMPONENTS-4 (a mounted `SurfaceCard` must inherit `cardTheme` r18).
+- **Next:** COMPONENTS-4 (AC-12 SurfaceCard — closes AC-7's card half), COMPONENTS-5
+  (AC-13 provenance badge) — both still startable **concurrently** (disjoint `lib/widgets/`).
+  Then APPLY-1 (alone) / APPLY-2, then SIGNOFF-1.
+
+## Phase COMPONENTS-4 — behavior: surface cards and panels (AC-12)
+
+- **Kind:** behavior
+- **Target AC:** AC-12 (also realises AC-7/AC-8 for cards)
+- **Depends on:** THEME-3, ITEST-4 (G-2) · **Blocks:** APPLY-1, APPLY-2
+- **Files:** `lib/widgets/surface_card.dart`
+- **Tasks:** finalise `SurfaceCard` (surface fill, 2px hairline-colour border, theme radius), `.emphasis` (2px ink border), `.inverted` (ink fill, paper-coloured text + child default text colour).
+- **Acceptance gate:** un-pend AC-12; `TestAC12_Cards` green with earlier ACs; unit + coverage gate.
+
+### Result
+
+AC-12 built and un-pended. `SurfaceCard` finalised in `lib/widgets/surface_card.dart`:
+the only behavioural change was the **ordinary** variant's border width — placeholder
+`AppTheme.hairlineBorderWidth` (1px) → finalised `AppTheme.standardBorderWidth` (2px),
+keeping the line colour `scheme.outlineVariant` (the human-approved AC-12 test asserts
+the 2px standard width — this carried the red). `.emphasis` (`onSurface` ink border,
+2px) and `.inverted` (`AppTheme.inverted.paper` ink fill, no border, `AppTheme.inverted.ink`
+paper text) were already final in the shell. Radius is inherited from `cardTheme.shape`
+(r18); the widget sets no colour arguments and no radius of its own. Doc comment refreshed
+to record the finalised treatment. Unit test `test/widgets/surface_card_test.dart`
+ordinary-case updated to assert 2px (the shell's 1px placeholder became the finalised 2px).
+
+**Un-pend:** deleted the `AC-12` row in `integration_test/bs17/pending.dart` (`pendingACs`
+now `{AC-13, AC-14, AC-15}`); updated the two pending-gate guard tests (`unpended` += AC-12;
+pending/ambient exemplars AC-12 → AC-13).
+**AC-7 augmentation (card half) CLOSED:** added, in the AC-12 test, an assertion that the
+*rendered* ordinary `SurfaceCard` inherits the theme `cardTheme` corner radius (`== r18`,
+in [16,22]) — proves a mounted card picks up the theme radius, not the hardcoded r16
+fallback. With the pill half (closed COMPONENTS-2) and the card half both closed on real
+instances, **AC-7 → straight A** (was A-core / B pending COMPONENTS-4). TestAC12's own
+divergence augmentation was already satisfied by its mounted-instance design (ITEST-3).
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+`flutter analyze` on the 4 touched files clean; unit `flutter test` **1444/1444** green
+(unchanged count — modified one existing unit test, no net add); coverage gate **100% line
+on `lib/widgets/surface_card.dart`** (the one touched lib file) vs BASE `e38d7f1`; acceptance
+`flutter test -d flutter-tester integration_test/design_system_test.dart` **GREEN — 23
+passed / 3 skipped** (AC-1..AC-12 run, AC-13..AC-15 pending). **Grade gate PASS**
+(independent fresh re-grade of AC-1..AC-12, fresh subagent): **12 straight A** (incl. AC-12
+new and AC-7 now fully closed), **0 A-core/B-pending**, 0 plain-B; both pending-gate guard
+tests A (non-vacuous). **Fix passes:** 0/3 (green first run).
+**Tokens/Time:** 6,295,885 · 12m 47s.
+
+### Checkpoint / Handoff
+
+- **Frozen for APPLY:** `SurfaceCard` renders its final look — ordinary (surface fill +
+  `outlineVariant` line border @2px), `.emphasis` (surface fill + `onSurface` ink border
+  @2px), `.inverted` (ink fill `AppTheme.inverted.paper`, no border, paper text
+  `AppTheme.inverted.ink`), corner radius inherited from `cardTheme` (r18). Public API
+  unchanged (`SurfaceCard({child})` / `.emphasis(...)` / `.inverted(...)`). APPLY swaps
+  ad-hoc panels/cards for these.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage` then
+  `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none for the surface card. AC-7 is now fully closed (both pill and card
+  rendered-instance inheritance proven). No component-module augmentation remains open.
+- **Next:** COMPONENTS-5 (AC-13 provenance badge glyph+border signature) — last component
+  phase; owns `lib/widgets/provenance_badge.dart` / `provenance_icon.dart`, disjoint from
+  the finalised widgets. Then APPLY-1 (AC-14, run **alone** — touches many screens) → APPLY-2
+  (AC-15), then SIGNOFF-1. Augmentations still owed after COMPONENTS-5: **AC-14** (APPLY-1:
+  zero residual hardcoded palette colours + pin the D-4 set).
+
+## Phase COMPONENTS-5 — behavior: provenance badge signature (AC-13)
+
+- **Kind:** behavior
+- **Target AC:** AC-13
+- **Depends on:** THEME-3, ITEST-4 (G-2) · **Blocks:** SIGNOFF-1
+- **Files:** `lib/widgets/provenance_badge.dart`, `lib/widgets/provenance_icon.dart`
+- **Tasks:** add the border-style signature per provenance kind (measured ◉ solid ink; calculated ∑ sunken fill; estimated ≈ dashed; confirmed ✓ ink fill), reading theme tokens; keep the existing glyph + semantics label (D-6). Verify bs-10/bs-11 provenance tests stay green.
+- **Acceptance gate:** un-pend AC-13; `TestAC13_ProvenanceSignature` green with earlier ACs; bs-10/bs-11 suites stay green; unit + coverage gate.
+
+### Result
+
+AC-13 built and un-pended. `ProvenanceBadge.build` now switches on `provenance.tier`
+and wraps the **unchanged** glyph+label content in one of four colour-independent,
+theme-read border-style signatures: `measured` = solid ink border
+(`Border.all(onSurface, standardBorderWidth=2px)`); `calculated` = sunken
+(`AppTheme.sunkenSurface`) fill, no border; `estimated` = dashed ink border drawn by a
+new `CustomPaint(painter: _DashedBorderPainter(...))` (**`painter:`**, not
+`foregroundPainter:` — a foregroundPainter would collapse the signature and fail the
+test); `confirmed` = `AppTheme.inverted.paper` ink fill with the label flipped to
+`inverted.ink`. Glyph (`ProvenanceIcon`) and `Semantics(label, excludeSemantics:true)`
+are byte-for-byte the bs-10/bs-11 wording (D-6) — only `provenance_badge.dart` changed
+(`provenance_icon.dart` untouched). The tier now reads from glyph AND border, never hue
+alone.
+
+**Un-pend:** deleted the `AC-13` row in `integration_test/bs17/pending.dart`
+(`pendingACs` now `{AC-14, AC-15}`); updated the two pending-gate guards (un-pended set
++= AC-13; still-pending/ambient exemplars moved to AC-14/AC-15). **No augmentation
+owed** by AC-13 (the only open augmentation in the feature remains AC-14/APPLY-1).
+
+**Verification** (Flutter on `~/development/flutter/bin`; no `timeout` on macOS):
+`flutter analyze` on the 2 touched files clean; unit `flutter test` **1450/1450** green
+(1444 baseline + 6 new AC-13 badge tests); coverage gate **100% line on
+`lib/widgets/provenance_badge.dart`** vs BASE `3830764` (incl. `_DashedBorderPainter.paint`
++ `shouldRepaint`); acceptance
+`flutter test -d flutter-tester integration_test/design_system_test.dart` **GREEN —
+24 passed / 2 skipped** (AC-1..AC-13 run, AC-14/AC-15 pending). bs-10/bs-11 provenance
+suites stay green (part of the 1450). **Grade gate PASS** (independent re-grade appended
+to `behavior-test-completeness-…md`): **13 straight A** (AC-1..AC-13), 0 A-core/B-pending,
+0 plain-B; both guard tests A, non-vacuous. **Fix passes:** 0/3 (green first run).
+**Tokens/Time:** 2,589,616 · 5m 36s.
+
+### Checkpoint / Handoff
+
+- **Frozen for APPLY:** `ProvenanceBadge` renders its final per-tier signature (solid
+  ink border / sunken fill / dashed `CustomPaint.painter` / ink fill) read from the
+  theme tokens; public API unchanged (`ProvenanceBadge({required provenance})`). The
+  `_DashedBorderPainter` is a private helper of the file.
+- **Verification commands:** unit `flutter test`; coverage `flutter test --coverage`
+  then `dart run tool/coverage_gate.dart <BASE>`; `flutter analyze`; acceptance
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none for the badge. All five components (pill, speak, card, mono-label,
+  provenance badge) are now final.
+- **Next:** COMPONENTS module complete (AC-10..AC-13 all ✅; AC-7 fully closed). The
+  APPLY module is unblocked: **APPLY-1** (AC-14 — install the one theme app-wide, remove
+  residual hardcoded palette colours; run **alone**, touches many screens, owes the
+  AC-14 augmentation — zero residual palette literals + pin the D-4 exclusion set) then
+  **APPLY-2** (AC-15 — shared swatch approximation caption), then **SIGNOFF-1**.

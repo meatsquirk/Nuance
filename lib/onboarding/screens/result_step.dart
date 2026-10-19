@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../a11y/cvd/cvd_profile.dart';
+import '../../app/theme.dart';
 import '../engine/severity_band.dart';
 import '../onboarding_controller.dart';
 
@@ -70,13 +71,17 @@ class ResultStep extends StatelessWidget {
   /// CVD projection lives behind `ConfusionCheck` and arrives with the display
   /// simulation / daltonization features (bs-08 / bs-10); bs-07 only needs the
   /// pair to re-render with the slider so the painter can self-calibrate.
-  static const Color _pairOriginal = Color(0xFF4CAF50);
+  ///
+  /// Reads the single palette source [AppTheme.cvdDemoOriginal] (D-7) so the
+  /// screen hardcodes no palette literal (bs-17 AC-14); the value is unchanged.
+  static Color get _pairOriginal => AppTheme.cvdDemoOriginal;
 
   /// The illustrative "simulated" colour for [severity] (0..1): the original
   /// blended toward a neutral grey in proportion to the severity, so a stronger
   /// severity makes the pair look more alike (the collapse the painter dials in).
+  /// The neutral grey is the single palette source [AppTheme.cvdDemoNeutral].
   static Color _simulatedColour(double severity) =>
-      Color.lerp(_pairOriginal, const Color(0xFF9E9E9E),
+      Color.lerp(_pairOriginal, AppTheme.cvdDemoNeutral,
           severity.clamp(0.0, 1.0))!;
 
   /// The controller the type / severity / save actions act on (FLOW-5..8,

@@ -13,6 +13,7 @@ import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/widgets/color_chip.dart';
 import 'package:paint_color_assistant/widgets/paint_row.dart';
+import 'package:paint_color_assistant/widgets/swatch_caption.dart';
 
 const Paint _paint = Paint(
   id: 'pg7',
@@ -104,6 +105,26 @@ void main() {
         chip.color,
         Color.fromARGB(255, expected.red, expected.green, expected.blue),
       );
+    });
+
+    testWidgets('carries the swatch approximation caption once, only when it '
+        'renders swatches (AC-15)', (tester) async {
+      final controller = _controllerWith(const [_paint]);
+      addTearDown(controller.dispose);
+
+      // Swatches rendered (paints + a scope to remap through) → one caption.
+      await _pump(tester, controller, withScope: true);
+      expect(find.byType(SwatchCaption), findsOneWidget);
+
+      // No scope → bare names, no swatch → no caption.
+      await _pump(tester, controller);
+      expect(find.byType(SwatchCaption), findsNothing);
+
+      // No paints → no swatch → no caption even under a scope.
+      final empty = _controllerWith(const []);
+      addTearDown(empty.dispose);
+      await _pump(tester, empty, withScope: true);
+      expect(find.byType(SwatchCaption), findsNothing);
     });
   });
 }

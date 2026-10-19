@@ -116,6 +116,40 @@ flutter:
     # directory is bundled.
     - assets/paints/
 
+  # Bundled app typefaces (bs-17 THEME-1, decision D-1). Atkinson Hyperlegible
+  # Next (prose/headings) and Atkinson Hyperlegible Mono (micro-labels and
+  # numeric readouts) are shipped as app assets under assets/fonts/ — the SI
+  # mandates fully-offline operation, so we do NOT use the google_fonts package
+  # (a network fetch would break first-run render offline). SIL Open Font
+  # License 1.1; the licence text ships at assets/fonts/OFL.txt. These families
+  # are only *declared* here in THEME-1; AppTheme starts referencing them in
+  # THEME-4.
+  fonts:
+    - family: Atkinson Hyperlegible Next
+      fonts:
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-BoldItalic.ttf
+          weight: 700
+          style: italic
+    - family: Atkinson Hyperlegible Mono
+      fonts:
+        - asset: assets/fonts/AtkinsonHyperlegibleMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/AtkinsonHyperlegibleMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/AtkinsonHyperlegibleMono-Bold.ttf
+          weight: 700
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
