@@ -1,3 +1,4 @@
+# Approved 2026-10-19 by Matt Quirk (G-1) — planned 2026-10-19 by /feature-next-phase (resumes bs-17's deferred APPLY-1 screen-swap)
 # Feature: bs-18 Apply the visual design system to every screen and the app chrome
 #
 # Presentation-application feature over bs-17 (visual-design-system). bs-17 shipped

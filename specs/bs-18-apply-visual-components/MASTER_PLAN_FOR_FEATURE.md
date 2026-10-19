@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** Not started — next CHROME-1 (scaffold), blocked by G-1 (approve the spec)
+**Status:** Not started — next CHROME-1 (scaffold); G-1 approved, CHROME-1 startable
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -153,7 +153,7 @@ every screen phase and must run after them, sequentially.
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record the approval as its first line) | CHROME-1 | Open |
+| G-1 | decision | Approve the spec (record the approval as its first line) | CHROME-1 | ✅ Resolved 2026-10-19 07:33 EDT: approved — Matt Quirk (recorded on the spec's first line) |
 | G-2 | decision | Approve the acceptance tests (ITEST-5's packet) | every behavior phase | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -209,7 +209,8 @@ gate, and add the `BS18_RUN_PENDING` pending-test runner. Nothing else is starta
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | _pending_ | | | | | | | | | | | plan written |
 | PLAN | 82f13234 | 2026-10-19 06:13 EDT | 06:35 | 21m 31s | 14m 30s | claude-opus-4-8 | 64 | 118,672 | 5,121,862 | 36,098 | 5,276,696 | plan written (spec + master + 7 module plans; 14 ACs, 21 phases); authored via fork subagent (~209k tokens) |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 06:35** | **21m 31s** | **14m 30s** |  | **64** | **118,672** | **5,121,862** | **36,098** | **5,276,696** |  |
+| GATE-DECISION | 82f13234 | 2026-10-19 07:32 EDT | 07:33 | 0m 56s | 0m 56s | claude-opus-4-8 | 14 | 4,918 | 1,364,584 | 3,408 | 1,372,924 | G-1 approved: spec approved by Matt Quirk |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 07:33** | **22m 27s** | **15m 26s** |  | **78** | **123,590** | **6,486,446** | **39,506** | **6,649,620** |  |
 
 ## Sign-off
 

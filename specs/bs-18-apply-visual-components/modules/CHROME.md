@@ -26,7 +26,7 @@ or controller behaviour (D-2).
 
 ## Open gates
 
-G-1 (approve the spec) blocks CHROME-1. G-2 (approve the tests) blocks CHROME-3, CHROME-4.
+G-1 (approve the spec) ✅ Resolved 2026-10-19 07:33 EDT: approved — Matt Quirk; CHROME-1 startable. G-2 (approve the tests) blocks CHROME-3, CHROME-4.
 
 ## Phase CHROME-1 — scaffold
 
