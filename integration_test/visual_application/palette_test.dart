@@ -3,15 +3,17 @@
 //
 // Pumps the real Palette screen (`pumpScreen(palette)`, wired with the fixture's
 // three mixed-provenance paints) and reads the design-system treatment off the
-// pumped tree. Pending; red at baseline on the add-from-dataset action (an
-// ad-hoc `TextButton` today). The paint rows + per-row provenance badges are
-// ALREADY on the design system (`PaintRow` → `ProvenanceBadge`, partly swapped),
-// so this test asserts their present side here; the exhaustive "old add button
-// absent" sweep is the pre-seeded TestAC08 → ORG-1 augmentation (ITEST.md).
+// pumped tree. Un-pended by ORG-1, which swapped the add-from-dataset action from
+// the ad-hoc `TextButton` to a `PillButton`. The paint rows + per-row provenance
+// badges were ALREADY on the design system (`PaintRow` → `ProvenanceBadge`, partly
+// swapped), so this test asserts their present side here; the "old add button
+// absent" sweep — the pre-seeded TestAC08 → ORG-1 augmentation (ITEST.md) — is
+// now made below (closed by ORG-1).
 //
 // AC ids mirror the plan's `AC-n` names verbatim.
 // ignore_for_file: constant_identifier_names
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/palette/paint_list_region.dart';
@@ -61,5 +63,14 @@ void main() {
     // ad-hoc TextButton it is today (rejects the add action left ad-hoc).
     expectPill(tester, PaintListRegion.addPaintKey,
         reason: 'the add-from-dataset action renders as a PillButton');
+
+    // AUGMENTATION (TestAC08 → ORG-1, pre-seeded in ITEST-3): the old ad-hoc
+    // add button is *gone* — no `TextButton` labelled "Add paint" survives the
+    // swap. This discriminates the pre-ORG-1 tree, where the add action was
+    // exactly that `TextButton`; the E31 view selector's own
+    // "My paints"/"Projects" `TextButton`s (ORG-1 leaves the selector stock)
+    // carry different labels, so the sweep stays tight to the add action.
+    expect(find.widgetWithText(TextButton, 'Add paint'), findsNothing,
+        reason: 'the old ad-hoc add-paint TextButton is gone (ORG-1 swap)');
   });
 }

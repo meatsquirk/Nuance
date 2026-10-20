@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../a11y/cvd/cvd_profile.dart';
 import '../app/router.dart';
+import '../widgets/pill_button.dart';
+import '../widgets/surface_card.dart';
 
 /// The vision-profile card on the Palette screen (wireframe S1.R1, element E30).
 ///
@@ -39,7 +41,11 @@ class VisionProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    // The vision-profile panel is the wireframe's carded reading (bs-18 ORG-1,
+    // AC-8): a design-system [SurfaceCard] in place of the Material `Card`, with
+    // the same 12dp inner padding. Colours and the r18 radius come from the one
+    // installed theme, so the card carries no colour arguments (AC-14).
+    return SurfaceCard(
       key: regionKey,
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -52,7 +58,9 @@ class VisionProfileCard extends StatelessWidget {
             ),
             Text('Your current estimate is $_estimate'),
             // E30 Retake the self-assessment — opens the bs-07 entry (D-7).
-            TextButton(
+            // The design-system secondary pill (ORG-1); the ad-hoc `TextButton`
+            // it superseded is gone.
+            PillButton.secondary(
               key: retakeKey,
               onPressed: () =>
                   Navigator.of(context).push(router.toSelfAssessment()),

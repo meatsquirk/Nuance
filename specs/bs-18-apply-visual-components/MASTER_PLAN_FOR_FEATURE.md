@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — CHROME ✅ + READ ✅ + FLOW ✅ (AC-6, AC-7); next ORG-1 ∥ CFG-1 concurrently.
+**Status:** In progress — CHROME ✅ + READ ✅ + FLOW ✅ + ORG-1 ✅ (AC-6..AC-8); next ORG-2 (after ORG-1) ∥ CFG-1.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -51,7 +51,7 @@ this feature only *opts screens into them*.
 | AC-5 | The Readout screen renders its regions as cards with mono eyebrows and a speak FAB | ITEST-2 `TestAC05_Readout` | READ-3 | ✅ Done |
 | AC-6 | The Compare screen renders its controls and rows as design-system components | ITEST-3 `TestAC06_Compare` | FLOW-1 | ✅ Done |
 | AC-7 | The Recipes screen renders recipes as cards with mono notes and pill actions | ITEST-3 `TestAC07_Recipes` | FLOW-2 | ✅ Done |
-| AC-8 | The Palette screen renders paints, provenance and the add action as design-system components | ITEST-3 `TestAC08_Palette` | ORG-1 | ⬜ Todo |
+| AC-8 | The Palette screen renders paints, provenance and the add action as design-system components | ITEST-3 `TestAC08_Palette` | ORG-1 | ✅ Done |
 | AC-9 | The Projects region renders projects as cards with pill actions | ITEST-3 `TestAC09_Projects` | ORG-2 | ⬜ Todo |
 | AC-10 | The Display and Onboarding screens render through the design system | ITEST-3 `TestAC10_DisplayOnboarding` | CFG-1 | ⬜ Todo |
 | AC-11 | Every screen inherits the one installed theme | ITEST-4 `TestAC11_SingleTheme` | GUARD-2 | ⬜ Todo |
@@ -123,7 +123,7 @@ Pre-seeded augmentations: AC-3 (capture partly swapped) strengthened by READ-1; 
 | CHROME | [modules/CHROME.md](modules/CHROME.md) | Scaffold; bottom nav + top bar; owns `build_app.dart` | — | ✅ Done |
 | READ | [modules/READ.md](modules/READ.md) | Readout + Capture screen swaps (incl. warning-overlap fix) | ITEST (G-2) | ✅ Done |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Compare + Recipes screen swaps | ITEST (G-2) | ✅ Done (FLOW-1 + FLOW-2) |
-| ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | ⬜ Todo |
+| ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | In progress (ORG-1 done) |
 | CFG | [modules/CFG.md](modules/CFG.md) | Display + Onboarding screen swaps | ITEST (G-2) | ⬜ Todo |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | App-wide guards: swatch caption, single theme, a11y, source-scan | all screen modules | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | CHROME-2 | ◑ In progress |
@@ -186,8 +186,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | READ-3 | AC-5 — readout cards + mono + speak FAB | ✅ Done | 20.70M | 36m 23s (36m 23s) | AC-5 ✅ A (promoted A-core/B-pending READ-3→straight A via the speak-at-anchor + Card-absent augmentation); name/value/space regions→SurfaceCard + MonoLabel eyebrows, speak→always-visible Scaffold FAB SpeakButton; unit 1675✅; cov 100%/2; grade A×5 0-B; 10 siblings re-verified✅ (bs-01/daltonization readout pumps got a tall-surface fix; bs-11 eyes-free + contrast hold); fix 0/3; display AC-9 = pre-existing flake (reproduces at BASE) |
 | 13 | FLOW-1 | AC-6 — compare | ✅ Done | 10.99M | 25m 25s (25m 25s) | AC-6 ✅ A; readout compare/recipes→pills, diff/statement carded, compare speak→SpeakButton FAB; resolved G-2 cross-screen ownership + outline augmentation |
 | 14 | FLOW-2 | AC-7 — recipes | ✅ Done | 14.73M | 27m 04s (27m 04s) | AC-7 ✅ straight A; recipe rows → SurfaceCard, Speak recipe → SpeakButton, ranked-by + out-of-gamut notes → MonoLabel; closed the TestAC07 "notes hardcoded" augmentation; unit 1676✅, cov 100%/2, grade A=7/0-B, fix 0/3; bs-04 24 + bs-05 22 + bs-11 19 re-verified✅ |
-| 15 | ORG-1 | AC-8 — palette | ⬜ Next | | | ∥ CFG-1 (disjoint dirs); ORG-2 after ORG-1 |
-| 16 | ORG-2 | AC-9 — projects | ⬜ Todo | | | ∥ READ/FLOW/CFG |
+| 15 | ORG-1 | AC-8 — palette | ✅ Done | 10.83M | 26m 57s (26m 57s) | AC-8 ✅ straight A; add-from-dataset → PillButton.secondary, vision card → SurfaceCard + retake pill; closed the TestAC08 "old add button absent" augmentation; unit 1676✅, cov 100%/2, grade A=8/0-B, fix 1/3; bs-06 21/2 + bs-07 23/1 (only carried off-lane flakes) |
+| 16 | ORG-2 | AC-9 — projects | ⬜ Next | | | after ORG-1 (same dir); ∥ CFG-1 |
 | 17 | CFG-1 | AC-10 — display + onboarding | ⬜ Todo | | | ∥ READ/FLOW/ORG |
 | 18 | GUARD-1 | AC-12 — swatch caption on every swatch screen | ⬜ Todo | | | after all screen phases |
 | 19 | GUARD-2 | AC-11 + AC-14 — single theme + source-scan | ⬜ Todo | | | after GUARD-1 |
@@ -198,20 +198,21 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**FLOW ✅ done (FLOW-2, AC-7 — recipes → design system).** Recipe rows → `SurfaceCard` (Material `Card`
-gone), per-recipe "Speak recipe" → `SpeakButton` (compact), a new `MonoLabel` "Ranked by closeness" note
-heads the list, and the out-of-gamut marker is a `MonoLabel` inside a `SurfaceCard` (READ-2 banner treatment,
-superseding the error-red container). Presentation only (D-2). Closed the pre-seeded **TestAC07 → FLOW-2**
-augmentation (ranked-by + out-of-gamut notes asserted as `MonoLabel`, the latter via the new additive
-`pumpRecipes(outOfGamutTarget)`). AC-7 straight **A**. unit 1676✅, cov 100%/2, grade A=7/0-B, fix 0/3;
-bs-04 24 + bs-05 22 + bs-11 19 re-verified✅. Recipes target-selector/speak-target (E22/E23) + wet-dry (E24)
-left stock Material (not named by AC-7, no design-system segmented widget) — see FLOW.md Checkpoint.
+**ORG-1 ✅ done (AC-8 — Palette paints/provenance/add → design system).** The add-from-dataset action is a
+`PillButton.secondary` (ad-hoc `TextButton` gone); the vision-profile panel is a `SurfaceCard` and its retake
+action a `PillButton.secondary` (Material `Card`/`TextButton` gone); paint rows + per-row `ProvenanceBadge`
+were already design-system. Presentation only (D-2). Closed the pre-seeded **TestAC08 → ORG-1** augmentation
+(the "old add button absent" sweep, red-baselined against BASE). AC-8 straight **A**. unit 1676✅, cov 100%/2,
+grade A=8/0-B, fix 1/3 (the smoke pending-exemplar re-point AC-8→AC-9); bs-06 21/2 + bs-07 23/1 re-verified
+(only the carried off-lane flakes fail). Palette selector (E31 toggle/options) + provenance legend left stock
+(not named by AC-8, no design-system component supersedes them) — see ORG.md Checkpoint.
 
-**Startable now (each a separate `--parallel` session, mutually concurrent — disjoint dirs):**
-- **ORG-1** (AC-8, `lib/palette/**`) — paint rows/badges/add action → design-system; owes the ORG-1 add-absent
-  augmentation. ∥ **CFG-1** (AC-10, `lib/display/**`,`lib/onboarding/**`).
-- **ORG-2** (AC-9) after ORG-1 (same dir). GUARD-1/2/3 run last, sequentially, after every screen phase
-  (GUARD-1 now unblocked for FLOW's half — still waits on ORG-2 + CFG-1).
+**Startable now (each a separate `--parallel` session — disjoint dirs):**
+- **ORG-2** (AC-9, `lib/palette/projects_region.dart` + `lib/projects/**`) — project entries → `SurfaceCard`,
+  open/create/export actions → `PillButton`. Same dir as ORG-1, so it runs *after* ORG-1 (now done).
+  ∥ **CFG-1** (AC-10, `lib/display/**`,`lib/onboarding/**`) — independent, still startable concurrently.
+- **GUARD-1/2/3** run last, sequentially, after every screen phase (GUARD-1 now waits only on ORG-2 + CFG-1 —
+  the CHROME/READ/FLOW/ORG-1 halves are done).
 
 **Watch:** (a) **Tall-surface gotcha** — a harness reading below-fold shell content must pump device-tall
 (`tester.view.physicalSize = Size(1000,3200)`, reset on teardown), as bs-18 `pumpShell` does. (b) Scope any
@@ -247,7 +248,8 @@ flutter-tester, bs-08; reproduces at BASE).
 | READ-3 | 827503f5 | 2026-10-20 10:58 EDT | 11:34 | 36m 23s | 36m 23s | claude-opus-4-8 | 230 | 352,507 | 20,229,588 | 112,773 | 20,695,098 | AC-5 un-pended + green; promoted A-core/B-pending READ-3 → straight A; readout regions carded + MonoLabel eyebrows + always-visible speak FAB; unit 1675, cov 100%/2, grade A×5 0-B, fix 0/3; display AC-9 = pre-existing off-lane flake |
 | FLOW-1 | a37e367e | 2026-10-20 11:38 EDT | 12:04 | 25m 25s | 25m 25s | claude-opus-4-8 | 154 | 298,211 | 10,621,841 | 70,967 | 10,991,173 | AC-6 un-pended straight A; readout compare/recipes→pills + compare diff/statement carded + speak→SpeakButton FAB; resolved G-2 cross-screen ownership + outline augmentation; unit 1676, cov 100%/3, grade A=6/0-B; fix 2/3 (test-infra); bs-03 26 + readout siblings re-verified |
 | FLOW-2 | cbc0b114 | 2026-10-20 12:15 EDT | 12:42 | 27m 04s | 27m 04s | claude-opus-4-8 | 188 | 273,772 | 14,378,643 | 81,289 | 14,733,892 | AC-7 un-pended straight A; recipe rows→SurfaceCard + Speak recipe→SpeakButton + ranked-by/out-of-gamut notes→MonoLabel; closed TestAC07 augmentation; unit 1676, cov 100%/2, grade A=7/0-B, fix 0/3; bs-04 24 + bs-05 22 + bs-11 19 re-verified |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 12:42** | **14h 02m** | **6h 12m** |  | **2,028** | **3,907,047** | **151,851,508** | **1,000,881** | **156,761,464** |  |
+| ORG-1 | 865bc909 | 2026-10-20 12:46 EDT | 13:13 | 26m 57s | 26m 57s | claude-opus-4-8 | 180 | 225,794 | 10,563,037 | 44,618 | 10,833,629 | AC-8 un-pended straight A; add-from-dataset->PillButton.secondary + vision card->SurfaceCard + retake pill; closed TestAC08 'old add button absent' augmentation; unit 1676, cov 100%/2, grade A=8/0-B, fix 1/3; bs-06 21/2 + bs-07 23/1 (only carried off-lane flakes) |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 13:13** | **14h 29m** | **6h 39m** |  | **2,208** | **4,132,841** | **162,414,545** | **1,045,499** | **167,595,093** |  |
 
 ## Sign-off
 

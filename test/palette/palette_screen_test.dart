@@ -25,6 +25,7 @@ import 'package:paint_color_assistant/projects/project_source.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/store/source_photo_store.dart';
+import 'package:paint_color_assistant/widgets/pill_button.dart';
 
 PaletteController _paletteController({List<PaintPalette> catalogue = const []}) =>
     PaletteController(source: InMemoryPaletteSource(catalogue: catalogue));
@@ -179,14 +180,17 @@ void main() {
         project: project,
       );
 
-      // E32 Add paint is now active (PALETTE-2, AC-4).
+      // E32 Add paint is now active (PALETTE-2, AC-4). bs-18 ORG-1 swapped the
+      // ad-hoc `TextButton` for the design-system `PillButton` (AC-8), so read
+      // its wiring off the pill.
       final addPaint =
-          tester.widget<TextButton>(find.byKey(PaintListRegion.addPaintKey));
+          tester.widget<PillButton>(find.byKey(PaintListRegion.addPaintKey));
       expect(addPaint.onPressed, isNotNull,
           reason: 'PALETTE-2 wires the add-paint control (AC-4)');
-      // E30 Retake the self-assessment is now active (SCREEN-3, AC-11).
+      // E30 Retake the self-assessment is now active (SCREEN-3, AC-11); also a
+      // `PillButton` after the ORG-1 swap (AC-8).
       final retake =
-          tester.widget<TextButton>(find.byKey(VisionProfileCard.retakeKey));
+          tester.widget<PillButton>(find.byKey(VisionProfileCard.retakeKey));
       expect(retake.onPressed, isNotNull,
           reason: 'SCREEN-3 wires the retake control (AC-11)');
       // E31 selector segments are now wired (SCREEN-2, AC-1): each toggles a

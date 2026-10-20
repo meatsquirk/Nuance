@@ -341,3 +341,36 @@ No plain-B row exists; no row needs a fix this phase. **AC-6 grades straight A**
 ## Gate status: PASS
 
 No plain-B row exists; no row needs a fix this phase. **AC-7 grades straight A** — FLOW-2's note augmentation closes the sole outstanding ITEST-3 limit (the "notes hardcoded" Reject), adding a ranked-by `MonoLabel` assertion to the main body and an out-of-gamut `MonoLabel` assertion over the `outOfGamutTarget` pump, both of which red-baseline against the pre-FLOW-2 error-red/no-note tree and strengthen only AC-7. AC-1..AC-6 carry their prior A forward (bodies untouched; the additive `pumpRecipes` leaves every existing pump path unchanged). AC-7 verified green (both bodies) this session.
+
+---
+
+# ORG-1 (re-grade of un-pended AC tests AC-1..AC-8) — behaviour-test completeness grade
+
+- **Grader:** independent fresh-subagent grader (did not author the tests; read-only on production/test code — only this grid file appended). Scope: the one AC test ORG-1 un-pends — `acTestWidgets('AC-8', …)` in `integration_test/visual_application/palette_test.dart` — plus a carry-forward confirmation of AC-1..AC-7.
+- **What ORG-1 changed:** PRODUCTION code (presentation only) — `lib/palette/paint_list_region.dart` (the E32 add-from-dataset action: ad-hoc `TextButton(key: addPaintKey, child: Text('Add paint'))` → design-system `PillButton.secondary(key: addPaintKey, …)`; the per-row `PaintRow` → `ProvenanceBadge` treatment was already design-system from an earlier stage) and `lib/palette/vision_profile_card.dart` (panel `Card` → `SurfaceCard`, retake `TextButton` → `PillButton.secondary`, `retakeKey` kept — NOT asserted by AC-8; covered by the sibling unit test `test/palette/vision_profile_card_test.dart`). TEST — it ADDS the pre-seeded **TestAC08 → ORG-1** augmentation to the AC-8 body: the "old add button absent" sweep `expect(find.widgetWithText(TextButton, 'Add paint'), findsNothing)` (the per-row `ProvenanceBadge`-present Thens and `expectPill(addPaintKey)` were already authored). TEST-INFRA/gate plumbing — `pending.dart` (AC-8 row removed) and `smoke_test.dart` (pending-gate exemplars re-pointed AC-8 → AC-9); neither is an AC test. **No AC-1..AC-7 test body was touched** and **no AC body weakened**.
+- **Verified this session:** `flutter test -d flutter-tester integration_test/visual_application/palette_test.dart` → AC-8 green on the swapped tree. BASE confirmed at `git show 638df66:lib/palette/paint_list_region.dart`: the add action was exactly `TextButton(key: addPaintKey, child: Text('Add paint'))`, so the added `find.widgetWithText(TextButton, 'Add paint') findsNothing` sweep red-baselines against the pre-ORG-1 tree. Grade is of the test *design*.
+
+## Grade grid
+
+| AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 |
+|----|------|-------|----|----|----|----|----|----|
+| AC-8 | `TestAC08_Palette` (per-row badge + add-pill + old-add-button-absent augmentation) | **straight A** (was A-core / B pending ORG-1) | ✓ `pumpScreen(palette)`; `PaintListRegion.regionKey`, each of the three `PaintRow.rowKeyFor(pw6/py43/pbk9)`, and `addPaintKey` all `findsOneWidget` before the Thens | ✓ real `PaletteScreen` via `buildApp`, wired with the fixture's three mixed-provenance paints; `PaintRow`/`ProvenanceBadge`/`PillButton` + the `TextButton` sweep read off the rendered tree, not a script | n/a — static descendant/ancestor/type reads after `pumpAndSettle`; the one `findsNothing` sweep is a static structural read, paired with the positive `expectPill(addPaintKey)` control so the reading can change | ✓ exact & per-item: iterates **all three** named paint ids, each row a descendant `ProvenanceBadge findsOneWidget`; `expectPill(addPaintKey)` for the add action; **+ augmentation**: `find.widgetWithText(TextButton, 'Add paint') findsNothing` | ✓ now catches the full catalogue — a row with no `ProvenanceBadge`; the add action left ad-hoc; **and (augmentation) a partial swap that mounts the pill but leaves the old `TextButton` 'Add paint'** (red at the pre-ORG-1 tree) | ✓ one AC (AC-8) — every assertion is an AC-8 paint-row / add-action step; the sweep strengthens only AC-8 |
+
+## Did ORG-1's augmentation close the item?
+
+**Yes — AC-8 is promoted A-core / B pending ORG-1 → straight A.** The ITEST-3 limit was that `paint_list_region.dart` was *partly swapped* (rows + badges already design-system, add still an ad-hoc `TextButton`), so the authored present-side checks (per-row `ProvenanceBadge findsOneWidget`; `expectPill(addPaintKey)`) could pass a partial ORG-1 swap that mounted the pill while leaving the old add button in co-presence. ORG-1's added sweep closes exactly that:
+- **(a) strengthens only AC-8 (G6):** the sweep is an AC-8 add-action step; it asserts no other AC's behaviour.
+- **(b) discriminates:** against the BASE tree (verified at `git show 638df66`) the add action was `TextButton(key: addPaintKey, child: Text('Add paint'))`, so `find.widgetWithText(TextButton, 'Add paint') findsNothing` would go **red**; against the swapped tree the add action is a `PillButton.secondary` (wrapping an `OutlinedButton`, not a `TextButton`), so it passes. Not a vacuous present-only pre-pass.
+- **(c) stays tight — no vacuous pass, no wrong fail:** the E31 view selector's own controls (`palette_screen.dart:87–93`, `TextButton`s labelled **'My paints'** / **'Projects'**) carry different labels, so the `widgetWithText(TextButton, 'Add paint')` matcher does not match them — the sweep cannot vacuously pass on an unrelated `TextButton`, nor does any surviving selector `TextButton` wrongly fail it. The My-paints view is live for this pump, so the Projects-view `TextButton`s (`projects_region.dart`) are not mounted.
+
+AC-1..AC-7 retain straight **A**: ORG-1 touched none of their bodies, and its production changes are confined to the palette files (`paint_list_region.dart`, `vision_profile_card.dart`) not exercised by AC-1..AC-7. The `vision_profile_card.dart` `SurfaceCard`/retake-pill swap is not asserted by AC-8 (covered by the sibling unit test), so it neither strengthens nor weakens the AC suite.
+
+## Counts (un-pended AC-1..AC-8)
+
+- **Straight A:** 8 — AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8
+- **A-core / B pending `<phase>`:** 0
+- **Below A (plain B, must be fixed this phase):** 0
+
+## Gate status: PASS
+
+No plain-B row exists; no row needs a fix this phase. **AC-8 grades straight A** — ORG-1's "old add button absent" augmentation closes the sole outstanding ITEST-3 limit (the partly-swapped Palette's co-presence risk), red-baselines against the BASE `TextButton` 'Add paint' tree, stays tight to the add action (the E31 selector's 'My paints'/'Projects' `TextButton`s carry different labels, so it neither vacuously passes nor wrongly fails), and strengthens only AC-8. AC-1..AC-7 carry their prior A forward (bodies untouched; production changes confined to palette files not exercised by AC-1..AC-7; AC-2's omitted back/close clause remains acceptable scoping, ◑ on G4). AC-8 verified green this session.

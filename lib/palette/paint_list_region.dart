@@ -4,6 +4,7 @@ import '../app/build_app.dart';
 import '../color_science/color_science.dart';
 import '../domain/paint.dart';
 import '../widgets/paint_row.dart';
+import '../widgets/pill_button.dart';
 import '../widgets/swatch_caption.dart';
 import 'palette_controller.dart';
 
@@ -69,7 +70,11 @@ class PaintListRegion extends StatelessWidget {
         if (paints.isNotEmpty && science != null) const SwatchCaption(),
         // E32 Add paint (AC-4): opens the reviewed-dataset picker; choosing a
         // paint adds it to "My paints" with its dataset provenance preserved.
-        TextButton(
+        // Rendered as the design-system secondary pill (bs-18 ORG-1, AC-8) —
+        // the add-from-dataset action is a within-list secondary action, so it
+        // takes the outlined [PillButton.secondary], matching the capture/readout
+        // action pills; the ad-hoc `TextButton` it superseded is gone.
+        PillButton.secondary(
           key: addPaintKey,
           onPressed: () => _openDatasetPicker(context),
           child: const Text('Add paint'),
