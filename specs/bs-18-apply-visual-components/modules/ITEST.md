@@ -1,6 +1,6 @@
 # Module ITEST — acceptance integration suite
 
-**Status:** ⏸ Awaiting review — ITEST-5 packet assembled; G-2 awaiting the human decision (blocks every behavior phase)
+**Status:** ✅ Done — all 5 ITEST phases complete; G-2 approved 2026-10-19 (Matt Quirk). Behavior stage open.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/visual_application/` (harness, fixtures, one pending test per AC); the `BS18_RUN_PENDING` pending mechanism.
 **Depends on:** CHROME-2 (the shell under test) · **Blocks:** every behavior phase (via G-2)
@@ -13,7 +13,7 @@
 | ITEST-2 | acceptance-tests | AC-1,2,3,4,5 | ✅ Done | 8.78M | 22m (22m) |
 | ITEST-3 | acceptance-tests | AC-6,7,8,9,10 | ✅ Done | 11.88M | 35m (35m) |
 | ITEST-4 | acceptance-tests | AC-11,12,13,14 | ✅ Done | 6.41M | 22m (22m) |
-| ITEST-5 | test-review | — (G-2) | ⏸ Awaiting review | 1.08M | 2m 43s (2m 43s) |
+| ITEST-5 | test-review | — (G-2) | ✅ Done | 1.08M | 2m 43s (2m 43s) |
 
 ## Interface reconciliation
 
@@ -23,7 +23,7 @@
 
 ## Open gates
 
-G-2 (ITEST-5's review) blocks every behavior phase. **Status: awaiting decision (2026-10-19)** — packet assembled under Phase ITEST-5; routed to the human.
+G-2 (ITEST-5's review) blocks every behavior phase. **✅ Resolved 2026-10-19 19:48 EDT: approved — Matt Quirk** (14 pending acceptance tests approved as-is; 6 non-blocking reviewer items carry to their owning phases — notably AC-6 cross-screen ownership for FLOW-1).
 
 ## Phase ITEST-1 — acceptance-tests: harness
 
@@ -130,13 +130,9 @@ G-2 (ITEST-5's review) blocks every behavior phase. **Status: awaiting decision 
 - **Tasks:** assemble the test-review packet (catalogue vs authored tests, red baseline, grades, augmentations); route to the human.
 - **Exit criteria:** G-2 recorded (approved, or changes → `ITEST` change phases + a fresh review).
 
-### Status — ⏸ Awaiting review (2026-10-19)
+### Status — ✅ Done · G-2 approved (2026-10-19, Matt Quirk)
 
-Packet assembled below and routed to the human. **G-2 blocks every behavior phase** (CHROME-3/4, READ-1/2/3, FLOW-1/2, ORG-1/2, CFG-1, GUARD-1/2/3). Record the decision with:
-
-```
-/feature-next-phase --gate bs-18-apply-visual-components G-2 approved | "<changes>"
-```
+Packet assembled below, routed to the human, **approved as-is**. The 14 pending acceptance tests are the approved governing suite for every behavior phase; the 6 reviewer decisions below are non-blocking and carry to their owning phases (headline: AC-6 cross-screen ownership → FLOW-1). The behavior stage (CHROME-3/4, READ, FLOW, ORG, CFG, GUARD) is now open.
 
 ---
 

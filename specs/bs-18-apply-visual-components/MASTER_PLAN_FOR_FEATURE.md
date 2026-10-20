@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** ⏸ Awaiting review — ITEST-5 packet assembled; G-2 awaiting the human decision (blocks every behavior phase)
+**Status:** In progress — G-2 approved (2026-10-19); next CHROME-3 (AC-1 bottom nav). Behavior stage open.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -154,7 +154,7 @@ every screen phase and must run after them, sequentially.
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record the approval as its first line) | CHROME-1 | ✅ Resolved 2026-10-19 07:33 EDT: approved — Matt Quirk (recorded on the spec's first line) |
-| G-2 | decision | Approve the acceptance tests (ITEST-5's packet) | every behavior phase | ⏳ Awaiting decision (2026-10-19) — packet in [modules/ITEST.md](modules/ITEST.md) § G-2 Test-review packet |
+| G-2 | decision | Approve the acceptance tests (ITEST-5's packet) | every behavior phase | ✅ Resolved 2026-10-19 19:48 EDT: approved — Matt Quirk (14 pending acceptance tests approved as-is; the 6 non-blocking reviewer items carry to their owning behavior phases per the packet defaults — notably AC-6 cross-screen ownership, which FLOW-1 must resolve) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -177,8 +177,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | ITEST-2 | acceptance-tests: AC-1,2,3,4,5 (pending) + red baseline | ✅ Done | 8.78M | 22m (22m) | AC-1 green@baseline (A); AC-2/4 A; AC-3→READ-1, AC-5→READ-3 A-core/B-pending; grade PASS 0 plain-B |
 | 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 11.88M | 35m (35m) | AC-6/9/10 A, AC-7→FLOW-2 / AC-8→ORG-1 A-core/B-pending; grade PASS 0 plain-B; harness got CFG pumps; 4 G-2 review items (headline: AC-6 cross-screen ownership) |
 | 6 | ITEST-4 | acceptance-tests: AC-11,12,13,14 (pending) + red baseline | ✅ Done | 6.41M | 22m (22m) | all 4 green@baseline + discriminating controls; grade PASS straight-A ×4, 0 plain-B; 3 augmentations satisfied at ITEST-4 (none owed); reuses bs-17 scan + bs-11 conformance |
-| 7 | ITEST-5 | test-review: packet; G-2 | ⏸ Awaiting review | 1.08M | 2m 43s (2m 43s) | packet assembled (modules/ITEST.md § G-2); G-2 routed to human; A=10 / A-core-B-pending=4 / plain-B=0 |
-| 8 | CHROME-3 | AC-1 — bottom navigation | ⬜ Next | | | run alone (build_app.dart); **G-2-blocked until approved** |
+| 7 | ITEST-5 | test-review: packet; G-2 | ✅ Done | 1.08M | 2m 43s (2m 43s) | packet assembled (modules/ITEST.md § G-2); **G-2 approved 2026-10-19 — Matt Quirk**; A=10 / A-core-B-pending=4 / plain-B=0 |
+| 8 | CHROME-3 | AC-1 — bottom navigation | ⬜ Next | | | run alone (build_app.dart); **G-2 approved → startable** |
 | 9 | CHROME-4 | AC-2 — top bar | ⬜ Todo | | | run alone (build_app.dart) |
 | 10 | READ-1 | AC-3 — capture controls | ⬜ Todo | | | ∥ FLOW/ORG/CFG |
 | 11 | READ-2 | AC-4 — capture warning overlap fix | ⬜ Todo | | | after READ-1 (lib/capture) |
@@ -197,21 +197,21 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ITEST-5 done → ⏸ Awaiting review.** The G-2 test-review packet is assembled in
-[modules/ITEST.md](modules/ITEST.md) § *G-2 Test-review packet* (suite-at-a-glance, catalogue↔authored 1:1,
-per-AC Given/When/Then/Rejects + baseline + grade + owner, red-baseline summary, augmentation schedule, grid
-path + counts **A=10 / A-core-B-pending=4 / plain-B=0**, and 6 reviewer decisions). **Nothing else can start
-until a human records G-2** — it blocks every behavior phase.
+**G-2 approved (Matt Quirk, 2026-10-19) → the behavior stage is open.** The 14 pending acceptance tests are
+approved as-is; the 6 non-blocking reviewer items carry to their owning phases per the packet defaults.
 
-**Decision command:** `/feature-next-phase --gate bs-18-apply-visual-components G-2 approved | "<changes>"`.
-Approved → CHROME-3 becomes startable (the parallel windows open: CHROME-3/4 alone on `build_app.dart`,
-then READ ∥ FLOW ∥ ORG ∥ CFG over disjoint dirs). Changes requested → each item becomes an `ITEST` change
-phase before the behavior stage, then a fresh review.
+**Next: CHROME-3** (AC-1, bottom navigation) — run **alone** (CHROME owns `build_app.dart`, which every screen
+is wired through; D-7). Then CHROME-4 (AC-2, top bar), also alone. After the two CHROME phases, the screen
+modules run concurrently over disjoint dirs: **READ** (`lib/readout/**`,`lib/capture/**`) ∥ **FLOW**
+(`lib/compare/**`,`lib/recipes/**`) ∥ **ORG** (`lib/palette/**`,`lib/projects/**`) ∥ **CFG**
+(`lib/display/**`,`lib/onboarding/**`), each via a separate `--parallel` session. GUARD-1/2/3 run last,
+sequentially, after every screen phase.
 
-**Headline reviewer item:** AC-6 cross-screen ownership — the "Compare as A/B"/"Find recipes" actions live in
-`lib/readout/actions_bar.dart`, but FLOW-1 owns `lib/compare/**`; no phase currently swaps them. Plus: whether
-to un-pend the 5 green-at-baseline tests now (AC-1 + guards AC-11..14); AC-6 A/B outline weight; AC-7
-"ranked by" note; AC-9 create-vs-export; AC-11's tautological line (non-blocking cleanup).
+**Carry-forward reviewer items (not gate blockers):** (1) **AC-6 cross-screen ownership** — "Compare as A/B"/
+"Find recipes" live in `lib/readout/actions_bar.dart` but FLOW-1 owns `lib/compare/**`; **FLOW-1 must re-scope
+its file ownership (or reassign to READ-3) to un-pend AC-6 green**. (2) The 5 green-at-baseline tests (AC-1 +
+guards AC-11..14) stay pending; their owning phases un-pend them. (3) AC-6 A/B outline weight; AC-7 "ranked
+by" note; AC-9 create-vs-export; AC-11 tautological line — each a cheap strengthening/scope call for its phase.
 
 ## Token usage
 
@@ -229,7 +229,8 @@ to un-pend the 5 green-at-baseline tests now (AC-1 + guards AC-11..14); AC-6 A/B
 | ITEST-3 | fa1c824b | 2026-10-19 15:46 EDT | 16:22 | 35m 18s | 35m 18s | claude-opus-4-8 | 148 | 473,904 | 11,305,573 | 98,271 | 11,877,896 | AC-6..10 pending tests + red baseline; AC-6/9/10 A, AC-7->FLOW-2 / AC-8->ORG-1 A-core/B-pending; grade gate PASS 0 plain-B; harness extended with CFG pumps; cov gate PASS (no lib) |
 | ITEST-4 | 8dd2548b | 2026-10-19 17:47 EDT | 18:09 | 21m 46s | 21m 46s | claude-opus-4-8 | 96 | 260,811 | 6,091,638 | 61,448 | 6,413,993 | AC-11..14 pending + green-baseline w/ controls; grade PASS straight-A x4, 0 plain-B; 3 augmentations satisfied |
 | ITEST-5 | d8dfb528 | 2026-10-19 19:36 EDT | 19:39 | 2m 43s | 2m 43s | claude-opus-4-8 | 24 | 72,638 | 998,440 | 12,561 | 1,083,663 | test-review packet assembled; G-2 routed to human (awaiting decision); grid A=10 / A-core-B-pending=4 / plain-B=0; blocks every behavior phase |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 19:39** | **3h 18m** | **2h 59m** |  | **828** | **1,756,147** | **62,032,672** | **466,239** | **64,255,886** |  |
+| SIGNOFF-DECISION | d8dfb528 | 2026-10-19 20:47 EDT | 20:48 | 1m 28s | 1m 28s | claude-opus-4-8 | 22 | 101,155 | 1,310,893 | 6,205 | 1,418,275 | ITEST-5 approved — G-2 approved by Matt Quirk; 14 pending acceptance tests approved as-is; behavior stage open |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 20:48** | **3h 19m** | **3h 01m** |  | **850** | **1,857,302** | **63,343,565** | **472,444** | **65,674,161** |  |
 
 ## Sign-off
 
