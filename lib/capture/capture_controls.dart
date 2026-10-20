@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/pill_button.dart';
 import 'capture_controller.dart';
 
 /// The Capture screen's control surface: the wireframe buttons E15–E21.
@@ -21,8 +22,20 @@ import 'capture_controller.dart';
 /// action (AC-3) and a "send to comparison" action (AC-5). Each throws
 /// [UnimplementedError] until its behaviour phase (CAPTURE-3/4/5) un-defers it;
 /// SCREEN-1 only fixes the keys and the wiring.
+///
+/// bs-18 READ-1 renders these controls as the wireframe's design-system
+/// components (AC-3): E20 capture is the [_shutterDiameter]px round shutter
+/// button; the action controls (dismiss / lock / calibrate / import / sample /
+/// send) are [PillButton.secondary]s; the toggles (value-only, torch) and the
+/// E18 radius options show their on/selected state the non-colour way — a
+/// filled [PillButton.primary] when on/selected, an outlined
+/// [PillButton.secondary] when off/unselected. The keys, labels, wiring and
+/// state-driven text are unchanged (presentation only, D-2).
 class CaptureControls extends StatelessWidget {
   const CaptureControls({required this.controller, super.key});
+
+  /// The diameter (logical px) of the round E20 capture shutter button (AC-3).
+  static const double _shutterDiameter = 88;
 
   /// Stable anchor for E15 — dismiss the low-light warning.
   static const Key dismissWarningKey = ValueKey('capture-e15-dismiss-warning');
@@ -73,46 +86,63 @@ class CaptureControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         // E15–E17, E20, E21: wired to the controller action (deferred until
-        // each action's behaviour phase un-defers it).
-        TextButton(
+        // each action's behaviour phase un-defers it). Rendered as the
+        // wireframe's design-system components (AC-3).
+        PillButton.secondary(
           key: dismissWarningKey,
           onPressed: controller.dismissWarning,
           child: const Text('Dismiss warning'),
         ),
-        TextButton(
+        PillButton.secondary(
           key: lockKey,
           onPressed: controller.lock,
           child: const Text('Lock AE · AWB · AF'),
         ),
-        TextButton(
+        PillButton.secondary(
           key: calibrateKey,
           onPressed: controller.calibrate,
           child: const Text('Calibrate'),
         ),
-        TextButton(
+        // E20 capture — the round shutter button, the screen's primary action
+        // (AC-3). An ink-filled circle sized to [_shutterDiameter]; the icon
+        // carries the "Capture" screen-reader label the old text button gave
+        // (bs-11 AC-6). The default padded tap target keeps it ≥ 48dp.
+        FilledButton(
           key: captureKey,
           onPressed: controller.commit,
-          child: const Text('Capture'),
+          style: FilledButton.styleFrom(
+            shape: const CircleBorder(),
+            padding: EdgeInsets.zero,
+            backgroundColor: cs.onSurface,
+            foregroundColor: cs.surface,
+            minimumSize: const Size(_shutterDiameter, _shutterDiameter),
+            maximumSize: const Size(_shutterDiameter, _shutterDiameter),
+          ),
+          child: const Icon(Icons.camera_alt, semanticLabel: 'Capture'),
         ),
-        TextButton(
+        // E21 value-only toggle — filled while on, outlined while off (the
+        // non-colour selected state), reading "✓ Value" / "Value" (AC-10).
+        _toggle(
           key: valueOnlyKey,
+          on: controller.state.valueOnly,
           onPressed: controller.toggleValueOnly,
-          // E21 reads "✓ Value" while the value-only grayscale preview is on,
-          // "Value" while off (AC-10).
-          child: Text(controller.state.valueOnly ? '✓ Value' : 'Value'),
+          label: controller.state.valueOnly ? '✓ Value' : 'Value',
         ),
         // E18: the sampling-radius selector — one option per radius, the
-        // selected one marked (AC-3).
+        // selected one filled (AC-3).
         // A `Wrap` (not a `Row`) so the label + radius options reflow onto the
         // next line instead of overflowing at 200% font scale (AC-3); at the
         // default scale they stay on one line as before.
         Wrap(
           key: radiusKey,
+          spacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             // Bold so the field label meets the AA contrast floor (AC-5): at
@@ -122,19 +152,18 @@ class CaptureControls extends StatelessWidget {
             // legible-text 3:1 threshold).
             const Text('Radius', style: TextStyle(fontWeight: FontWeight.bold)),
             for (final radiusPx in radiusOptionsPx)
-              TextButton(
+              _toggle(
                 key: radiusOptionKey(radiusPx),
+                on: controller.state.radiusPx == radiusPx,
                 onPressed: () => controller.setRadius(radiusPx),
-                child: Text(
-                  controller.state.radiusPx == radiusPx
-                      ? '✓ $radiusPx px'
-                      : '$radiusPx px',
-                ),
+                label: controller.state.radiusPx == radiusPx
+                    ? '✓ $radiusPx px'
+                    : '$radiusPx px',
               ),
           ],
         ),
         // E19: imports a gallery photo and samples its point P (SOURCE-3).
-        TextButton(
+        PillButton.secondary(
           key: importKey,
           onPressed: controller.importPhoto,
           child: const Text('Import photo'),
@@ -142,16 +171,17 @@ class CaptureControls extends StatelessWidget {
         // bs-09 torch toggle (AC-1, AC-2): reflects state.torchOn and drives the
         // torch on / off. The mechanism and the colour-temperature warning land
         // in CAPTURE-3; SCREEN-2 renders the toggle live against it.
-        TextButton(
+        _toggle(
           key: torchKey,
+          on: controller.state.torchOn,
           onPressed: controller.state.torchOn
               ? controller.turnTorchOff
               : controller.turnTorchOn,
-          child: Text(controller.state.torchOn ? '✓ Torch' : 'Torch'),
+          label: controller.state.torchOn ? '✓ Torch' : 'Torch',
         ),
         // bs-09 multi-point sampling (AC-3): samples the current frame at every
         // marked point. Behaviour lands in CAPTURE-4; the stub throws until then.
-        TextButton(
+        PillButton.secondary(
           key: samplePointsKey,
           onPressed: controller.sampleMarkedPoints,
           child: const Text('Sample points'),
@@ -159,12 +189,29 @@ class CaptureControls extends StatelessWidget {
         // bs-09 send-to-comparison (AC-5): hands a pair of readings to the
         // comparison. Reading selection and the behaviour land in CAPTURE-5; the
         // index pair here is a shell placeholder and the stub throws until then.
-        TextButton(
+        PillButton.secondary(
           key: sendToComparisonKey,
           onPressed: () => controller.sendPairToComparison(0, 1),
           child: const Text('Send to comparison'),
         ),
       ],
     );
+  }
+
+  /// A two-state control that shows its on/selected state the non-colour way:
+  /// an ink-filled [PillButton.primary] when [on], an outlined
+  /// [PillButton.secondary] when off. Used for the value-only / torch toggles
+  /// and each radius option, so selection reads without relying on colour
+  /// (bs-11) and the widget type stays [PillButton] across the flip.
+  Widget _toggle({
+    required Key key,
+    required bool on,
+    required VoidCallback onPressed,
+    required String label,
+  }) {
+    final child = Text(label);
+    return on
+        ? PillButton.primary(key: key, onPressed: onPressed, child: child)
+        : PillButton.secondary(key: key, onPressed: onPressed, child: child);
   }
 }

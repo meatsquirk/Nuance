@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — CHROME module done (AC-1 nav ✅, AC-2 top bar ✅); next the 4 screen groups (READ/FLOW/ORG/CFG) in parallel.
+**Status:** In progress — CHROME done + READ-1 ✅ (AC-3 capture controls); next READ-2 (after READ-1) and FLOW-1 ∥ ORG-1 ∥ CFG-1 ∥ READ-3 concurrently.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -46,7 +46,7 @@ this feature only *opts screens into them*.
 |---|---|---|---|---|
 | AC-1 | The app shows the design-system bottom navigation | ITEST-2 `TestAC01_BottomNav` | CHROME-3 | ✅ Done |
 | AC-2 | Each primary screen shows the design-system top bar | ITEST-2 `TestAC02_TopBar` | CHROME-4 | ✅ Done |
-| AC-3 | The Capture screen's controls render as design-system components | ITEST-2 `TestAC03_CaptureControls` | READ-1 | ⬜ Todo |
+| AC-3 | The Capture screen's controls render as design-system components | ITEST-2 `TestAC03_CaptureControls` | READ-1 | ✅ Done |
 | AC-4 | The Capture screen's warnings stack without overlapping | ITEST-2 `TestAC04_CaptureWarnings` | READ-2 | ⬜ Todo |
 | AC-5 | The Readout screen renders its regions as cards with mono eyebrows and a speak FAB | ITEST-2 `TestAC05_Readout` | READ-3 | ⬜ Todo |
 | AC-6 | The Compare screen renders its controls and rows as design-system components | ITEST-3 `TestAC06_Compare` | FLOW-1 | ⬜ Todo |
@@ -121,7 +121,7 @@ Pre-seeded augmentations: AC-3 (capture partly swapped) strengthened by READ-1; 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | CHROME | [modules/CHROME.md](modules/CHROME.md) | Scaffold; bottom nav + top bar; owns `build_app.dart` | — | ✅ Done |
-| READ | [modules/READ.md](modules/READ.md) | Readout + Capture screen swaps (incl. warning-overlap fix) | ITEST (G-2) | ⬜ Todo |
+| READ | [modules/READ.md](modules/READ.md) | Readout + Capture screen swaps (incl. warning-overlap fix) | ITEST (G-2) | ◑ In progress |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Compare + Recipes screen swaps | ITEST (G-2) | ⬜ Todo |
 | ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | ⬜ Todo |
 | CFG | [modules/CFG.md](modules/CFG.md) | Display + Onboarding screen swaps | ITEST (G-2) | ⬜ Todo |
@@ -181,8 +181,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-5 | test-review: packet; G-2 | ✅ Done | 1.08M | 2m 43s (2m 43s) | packet assembled (modules/ITEST.md § G-2); **G-2 approved 2026-10-19 — Matt Quirk**; A=10 / A-core-B-pending=4 / plain-B=0 |
 | 8 | CHROME-3 | AC-1 — bottom navigation | ✅ Done | 16.50M | 33m (8h 04m) | AC-1 ✅ A; nav is now the prod-visible default (captureSource routes through the shell); unit 1669✅; cov 100%/6 files; bs-02/09/10/11/14 re-verified✅; fixed pre-existing CHROME-2 regression in bs-01 readout AC-11 (nav-label collision) |
 | 9 | CHROME-4 | AC-2 — top bar | ✅ Done | 9.93M | 25m (25m) | AC-2 ✅ A; AppTopBar + presentation-only ThemeToggleButton (D-3) mounted on all 5 screens; auto-back preserved (D-2); unit 1671✅; cov 100%/11 files; grade A/A 0-B; 10 sibling suites re-verified✅; palette AC-3/AC-5 = known bs-06 flakes (reproduce at BASE) |
-| 10 | READ-1 | AC-3 — capture controls | ⬜ Next | | | startable now; ∥ FLOW-1/ORG-1/CFG-1 |
-| 11 | READ-2 | AC-4 — capture warning overlap fix | ⬜ Todo | | | after READ-1 (lib/capture) |
+| 10 | READ-1 | AC-3 — capture controls | ✅ Done | 10.07M | 24m (24m) | AC-3 ✅ A (promoted from A-core/B-pending via the full ad-hoc-absent augmentation); shutter→88px round FilledButton, actions→pills, toggles/radius→filled-vs-outlined; unit 1673✅; cov 100%/12; 8 siblings re-verified✅ (bs-02 AC-5 cast fix); grade A/A/A 0-B |
+| 11 | READ-2 | AC-4 — capture warning overlap fix | ⬜ Next | | | after READ-1 (shared lib/capture) |
 | 12 | READ-3 | AC-5 — readout cards + mono + speak FAB | ⬜ Todo | | | ∥ FLOW/ORG/CFG |
 | 13 | FLOW-1 | AC-6 — compare | ⬜ Todo | | | ∥ READ/ORG/CFG |
 | 14 | FLOW-2 | AC-7 — recipes | ⬜ Todo | | | ∥ READ/ORG/CFG |
@@ -198,18 +198,23 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CHROME module done (AC-1 ✅ nav, AC-2 ✅ top bar).** CHROME-4 mounted the shared `AppTopBar` + a
-presentation-only `ThemeToggleButton` (D-3: flips its own glyph only; dark wiring stays deferred) on all 5
-primary screens, swapping each ad-hoc `AppBar`; auto-implied back preserved (D-2). AC-2 green + straight A;
-10 sibling suites re-verified; palette AC-3/AC-5 are the known bs-06 flakes (reproduce at BASE). No further
-`build_app.dart` edits from here (D-7).
+**READ-1 ✅ (AC-3).** Capture controls now render as the design system: E20 shutter → round 88×88
+`FilledButton` (icon `semanticLabel:'Capture'` keeps the a11y label), action controls → `PillButton.secondary`,
+value-only/torch toggles + radius options → filled-vs-outlined pills (`_toggle` helper). AC-3 promoted to
+straight A by its added ad-hoc-absent augmentation; unit 1673✅, cov 100%/12, 8 siblings re-verified (bs-02
+AC-5 lock cast fixed `TextButton`→`PillButton.onPressed`). Only `lib/capture/capture_controls.dart` + tests
+changed — no `build_app.dart` (D-7).
 
-**Next: the 4 screen groups run concurrently over disjoint dirs**, each a separate `--parallel` session:
-**READ** (`lib/readout/**`, `lib/capture/**`) ∥ **FLOW** (`lib/compare/**`, `lib/recipes/**`) ∥ **ORG**
-(`lib/palette/**`, `lib/projects/**`) ∥ **CFG** (`lib/display/**`, `lib/onboarding/**`). Within READ,
-READ-1 then READ-2 both touch `lib/capture/**` — sequence them; READ-3 (readout) is independent. **Watch:**
-scope any new bare-text screen-title assertion to the screen's `AppBar` (nav labels collide with bare
-`find.text`). GUARD-1/2/3 run last, sequentially, after every screen phase.
+**Startable now (each a separate `--parallel` session, disjoint dirs):**
+- **READ-2** (AC-4) — Capture warning overlap fix in `lib/capture/capture_live_view.dart`; **sequences after
+  READ-1** (shares `lib/capture/**`), so it is startable now that READ-1 is done.
+- **READ-3** (AC-5, `lib/readout/**`) ∥ **FLOW-1** (AC-6, `lib/compare/**`) ∥ **ORG-1** (AC-8, `lib/palette/**`)
+  ∥ **CFG-1** (AC-10, `lib/display/**`,`lib/onboarding/**`) — mutually concurrent (READ-3 and READ-2 don't
+  overlap; different dirs). GUARD-1/2/3 run last, sequentially, after every screen phase.
+
+**Watch:** scope any new bare-text screen-title assertion to the screen's `AppBar` (nav labels collide with
+bare `find.text`); a swap must keep each capture-control key off bare `TextButton`/`ElevatedButton` or the
+AC-3 sweep reddens.
 
 **Carry-forward reviewer items (not gate blockers):** (1) **AC-6 cross-screen ownership** — "Compare as A/B"/
 "Find recipes" live in `lib/readout/actions_bar.dart` but FLOW-1 owns `lib/compare/**`; **FLOW-1 must re-scope
@@ -237,7 +242,8 @@ its phase.
 | SIGNOFF-DECISION | d8dfb528 | 2026-10-19 20:47 EDT | 20:48 | 1m 28s | 1m 28s | claude-opus-4-8 | 22 | 101,155 | 1,310,893 | 6,205 | 1,418,275 | ITEST-5 approved — G-2 approved by Matt Quirk; 14 pending acceptance tests approved as-is; behavior stage open |
 | CHROME-3 | 55c96a98 | 2026-10-19 22:00 EDT | 2026-10-20 06:05 | 8h 04m | 32m 35s | claude-opus-4-8 | 176 | 383,424 | 16,015,776 | 96,207 | 16,495,583 | AC-1 un-pended (A); nav is prod-visible default (captureSource routes through shell, no main.dart change); unit 1669 pass; cov gate 100%/6 files; bs-02/09/10/11/14 re-verified green; fixed pre-existing CHROME-2 regression in bs-01 readout AC-11 (nav-label collision); grade A=5/B=0; fix passes 1/3 |
 | CHROME-4 | 44b8cfca | 2026-10-20 07:25 EDT | 07:51 | 25m 04s | 25m 04s | claude-opus-4-8 | 154 | 227,379 | 9,642,044 | 57,436 | 9,927,013 | AC-2 top bar un-pended; green + grade A/A; unit 1671, cov 100%/11, 10 siblings re-verified |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 07:51** | **11h 48m** | **3h 58m** |  | **1,180** | **2,468,105** | **89,001,385** | **626,087** | **92,096,757** |  |
+| READ-1 | 57b7c403 | 2026-10-20 07:56 EDT | 08:20 | 24m 10s | 24m 10s | claude-opus-4-8 | 138 | 262,938 | 9,750,049 | 59,205 | 10,072,330 | AC-3 un-pended + augmentation; shutter 88px round FilledButton, actions pills, toggles/radius filled-vs-outlined; unit 1673, cov 100%/12, grade A(AC-1/2/3) 0-B; 8 siblings re-verified (bs-02 AC-5 cast fix); fix passes 1/3 |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 08:20** | **12h 12m** | **4h 22m** |  | **1,318** | **2,731,043** | **98,751,434** | **685,292** | **102,169,087** |  |
 
 ## Sign-off
 

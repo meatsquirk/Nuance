@@ -65,6 +65,51 @@ void main() {
       expect(widgetAtKey, isNot(isA<TextButton>()));
       expect(widgetAtKey, isNot(isA<ElevatedButton>()));
     }
+
+    // AUGMENTATION (READ-1): the present/size checks above catch the shutter
+    // and the torch/import Rejects, but every *other* capture control was an
+    // ad-hoc TextButton too (dismiss/lock/calibrate/value-only/radius options/
+    // sample/send). Sweep them all — no capture control may remain a bare
+    // TextButton or ElevatedButton. Discriminates the full swap: it fails
+    // against the pre-READ-1 tree, where these were all TextButtons.
+    final sweepKeys = <Key>[
+      CaptureControls.dismissWarningKey,
+      CaptureControls.lockKey,
+      CaptureControls.calibrateKey,
+      CaptureControls.importKey,
+      CaptureControls.valueOnlyKey,
+      CaptureControls.captureKey,
+      CaptureControls.torchKey,
+      CaptureControls.samplePointsKey,
+      CaptureControls.sendToComparisonKey,
+      for (final r in CaptureControls.radiusOptionsPx)
+        CaptureControls.radiusOptionKey(r),
+    ];
+    for (final key in sweepKeys) {
+      final keyed = find.byKey(key);
+      expect(keyed, findsOneWidget, reason: '$key renders');
+      final widgetAtKey = tester.widget(keyed);
+      expect(widgetAtKey, isNot(isA<TextButton>()),
+          reason: '$key is not an ad-hoc TextButton');
+      expect(widgetAtKey, isNot(isA<ElevatedButton>()),
+          reason: '$key is not an ad-hoc ElevatedButton');
+      expect(find.descendant(of: keyed, matching: find.byType(TextButton)),
+          findsNothing,
+          reason: '$key has no ad-hoc TextButton inside');
+    }
+
+    // THEN the action controls (not the toggles or the round shutter) render as
+    // design-system pills.
+    for (final key in [
+      CaptureControls.dismissWarningKey,
+      CaptureControls.lockKey,
+      CaptureControls.calibrateKey,
+      CaptureControls.importKey,
+      CaptureControls.samplePointsKey,
+      CaptureControls.sendToComparisonKey,
+    ]) {
+      expectPill(tester, key);
+    }
   });
 
   // ------------------------------------------------------------------------

@@ -26,6 +26,7 @@ import 'package:paint_color_assistant/color_science/color_science.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/readout/name_header.dart';
+import 'package:paint_color_assistant/widgets/pill_button.dart';
 
 import 'capture_harness.dart';
 
@@ -510,9 +511,12 @@ void main() {
         reason: 'AC-5: the reading is not STABLE while it is still settling');
     expect(find.text('STABLE 12/12'), findsNothing,
         reason: 'AC-5: no STABLE reading is shown before locking');
+    // The lock control is the bs-18 design-system pill (READ-1 swapped the
+    // ad-hoc TextButton); it is enabled iff its onPressed is wired — the same
+    // "present + enabled" the AC asserts, tracking only the widget type.
     final lockButton =
-        tester.widget<TextButton>(find.byKey(CaptureControls.lockKey));
-    expect(lockButton.enabled, isTrue,
+        tester.widget<PillButton>(find.byKey(CaptureControls.lockKey));
+    expect(lockButton.onPressed, isNotNull,
         reason: 'AC-5: the lock control invites locking (present + enabled)');
   });
 

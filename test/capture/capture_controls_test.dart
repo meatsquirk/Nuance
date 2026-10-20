@@ -5,6 +5,7 @@ import 'package:paint_color_assistant/capture/capture_controls.dart';
 import 'package:paint_color_assistant/capture/capture_state.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
+import 'package:paint_color_assistant/widgets/pill_button.dart';
 
 CaptureController _controller() => CaptureController(
       source: SoftwareCaptureSource(
@@ -73,7 +74,8 @@ void main() {
 
     expect(CaptureControls.radiusOptionsPx, [1, 5, 21]);
     for (final radiusPx in CaptureControls.radiusOptionsPx) {
-      final option = tester.widget<TextButton>(
+      // Each option is a design-system pill (AC-3), not an ad-hoc TextButton.
+      final option = tester.widget<PillButton>(
           find.byKey(CaptureControls.radiusOptionKey(radiusPx)));
       expect(option.onPressed, isNotNull,
           reason: 'the $radiusPx px option is selectable');
@@ -121,7 +123,7 @@ void main() {
     await _pump(tester, controller);
 
     final import =
-        tester.widget<TextButton>(find.byKey(CaptureControls.importKey));
+        tester.widget<PillButton>(find.byKey(CaptureControls.importKey));
     expect(import.onPressed, isNotNull,
         reason: 'E19 is enabled and reaches controller.importPhoto');
 
@@ -142,7 +144,7 @@ void main() {
     // toggle and raises no deferred throw. (E16 lock is live as of CAPTURE-3,
     // E15 dismiss + E20 capture as of CAPTURE-4, E17 calibrate as of CAPTURE-5.)
     final button =
-        tester.widget<TextButton>(find.byKey(CaptureControls.valueOnlyKey));
+        tester.widget<PillButton>(find.byKey(CaptureControls.valueOnlyKey));
     expect(button.onPressed, isNotNull, reason: 'E21 should be wired');
 
     // Off: reads "Value".
@@ -175,18 +177,85 @@ void main() {
     // All three reach real behaviour now — a tap raises no deferred throw
     // (commit + dismiss landed in CAPTURE-4; E17 calibrate in CAPTURE-5, a no-op
     // here since this controls-only harness has no reference card in view).
+    // E20 capture is the round shutter (a FilledButton, AC-3); dismiss and
+    // calibrate are design-system pills.
+    final shutter =
+        tester.widget<FilledButton>(find.byKey(CaptureControls.captureKey));
+    expect(shutter.onPressed, isNotNull, reason: 'E20 capture should be wired');
+    for (final key in [
+      CaptureControls.dismissWarningKey,
+      CaptureControls.calibrateKey,
+    ]) {
+      final button = tester.widget<PillButton>(find.byKey(key));
+      expect(button.onPressed, isNotNull, reason: '$key should be wired');
+    }
     for (final key in [
       CaptureControls.captureKey,
       CaptureControls.dismissWarningKey,
       CaptureControls.calibrateKey,
     ]) {
-      final button = tester.widget<TextButton>(find.byKey(key));
-      expect(button.onPressed, isNotNull, reason: '$key should be wired');
-
       await tester.tap(find.byKey(key));
       await tester.pump();
       expect(tester.takeException(), isNull,
           reason: '$key reaches live behaviour, not a deferred throw');
+    }
+  });
+
+  testWidgets('renders E20 capture as the ~88px round shutter button (AC-3)',
+      (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    // The shutter is a round ~88px button (rejects leaving it a small ad-hoc
+    // text button), carrying the "Capture" screen-reader label its icon gives.
+    final shutter = find.byKey(CaptureControls.captureKey);
+    final size = tester.getSize(shutter);
+    expect(size.width, closeTo(88, 4));
+    expect(size.height, closeTo(88, 4));
+    expect(tester.widget(shutter), isA<FilledButton>());
+    expect(
+      find.descendant(of: shutter, matching: find.byType(TextButton)),
+      findsNothing,
+    );
+  });
+
+  testWidgets('renders every capture control as a design-system component, '
+      'not an ad-hoc TextButton (AC-3)', (tester) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await _pump(tester, controller);
+
+    // The action controls are pills; the shutter is the round FilledButton.
+    // None is a bare TextButton any more (the full AC-3 swap).
+    for (final key in [
+      CaptureControls.dismissWarningKey,
+      CaptureControls.lockKey,
+      CaptureControls.calibrateKey,
+      CaptureControls.importKey,
+      CaptureControls.valueOnlyKey,
+      CaptureControls.torchKey,
+      CaptureControls.samplePointsKey,
+      CaptureControls.sendToComparisonKey,
+      for (final r in CaptureControls.radiusOptionsPx)
+        CaptureControls.radiusOptionKey(r),
+    ]) {
+      final keyed = find.byKey(key);
+      expect(keyed, findsOneWidget, reason: '$key renders');
+      expect(tester.widget(keyed), isA<PillButton>(),
+          reason: '$key renders as a design-system pill');
+    }
+    for (final key in [
+      CaptureControls.captureKey,
+      CaptureControls.dismissWarningKey,
+      CaptureControls.torchKey,
+      CaptureControls.radiusOptionKey(5),
+    ]) {
+      expect(
+        find.descendant(of: find.byKey(key), matching: find.byType(TextButton)),
+        findsNothing,
+        reason: '$key is not an ad-hoc TextButton',
+      );
     }
   });
 
@@ -196,7 +265,7 @@ void main() {
     await _pump(tester, controller);
 
     final button =
-        tester.widget<TextButton>(find.byKey(CaptureControls.lockKey));
+        tester.widget<PillButton>(find.byKey(CaptureControls.lockKey));
     expect(button.onPressed, isNotNull, reason: 'E16 lock should be wired');
 
     await tester.tap(find.byKey(CaptureControls.lockKey));
@@ -246,7 +315,7 @@ void main() {
     // Off by default: the toggle reads "Torch".
     expect(controller.state.torchOn, isFalse);
     final button =
-        tester.widget<TextButton>(find.byKey(CaptureControls.torchKey));
+        tester.widget<PillButton>(find.byKey(CaptureControls.torchKey));
     expect(button.onPressed, isNotNull, reason: 'the torch toggle is wired');
     expect(_torchLabel(tester), 'Torch');
 
@@ -288,7 +357,7 @@ void main() {
     await _pump(tester, controller);
 
     final button =
-        tester.widget<TextButton>(find.byKey(CaptureControls.samplePointsKey));
+        tester.widget<PillButton>(find.byKey(CaptureControls.samplePointsKey));
     expect(button.onPressed, isNotNull);
 
     // Multi-point sampling is live as of CAPTURE-4: a tap reaches real
@@ -314,7 +383,7 @@ void main() {
       ..sampleMarkedPoints();
 
     final button = tester
-        .widget<TextButton>(find.byKey(CaptureControls.sendToComparisonKey));
+        .widget<PillButton>(find.byKey(CaptureControls.sendToComparisonKey));
     expect(button.onPressed, isNotNull);
 
     // The send is live as of CAPTURE-5: a tap reaches real behaviour (no
