@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/mono_label.dart';
+import '../widgets/speak_button.dart';
+import '../widgets/surface_card.dart';
 import 'engine/mixing_engine.dart';
 import 'recipe_controller.dart';
 
@@ -24,6 +27,16 @@ class RecipeListRegion extends StatelessWidget {
   /// acceptance suite scopes its trace / muddying assertions to.
   static Key cardKey(int index) => ValueKey('recipe-card-$index');
 
+  /// Stable anchor for the "ranked by" note (AC-7): the design-system mono
+  /// eyebrow above the solved list telling the painter the recipes are ordered
+  /// closest-first.
+  static const Key rankedNoteKey = ValueKey('recipes-ranked-note');
+
+  /// The "ranked by" note's text (AC-7), rendered through [MonoLabel] in the
+  /// design-system mono micro-label style: the recipes below are ordered by
+  /// their distance from the target, the closest first.
+  static const String rankedNoteText = 'Ranked by closeness';
+
   /// The controller supplying the solved recipes (empty in this shell; filled by
   /// ENGINE-2).
   final RecipeController controller;
@@ -37,6 +50,10 @@ class RecipeListRegion extends StatelessWidget {
       children: recipes.isEmpty
           ? const [Text('No recipes yet')]
           : [
+              // AC-7: the "ranked by" note — a design-system mono eyebrow
+              // telling the painter the recipes below are ordered closest-first.
+              const MonoLabel(rankedNoteText, key: rankedNoteKey),
+              const SizedBox(height: 8),
               for (var i = 0; i < recipes.length; i++)
                 _RecipeCard(
                   recipe: recipes[i],
@@ -75,39 +92,51 @@ class _RecipeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final predicted = recipe.predictedColor;
-    return Card(
-      key: RecipeListRegion.cardKey(index),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final component in recipe.components)
-              if (component.isTrace)
-                _TraceComponent(component: component)
-              else
-                Text('${component.paint.name} — '
-                    '${(component.partsFraction * 100).round()}%'),
-            Text('Predicted colour: L ${predicted.lightness.round()}, '
-                'a ${predicted.a.round()}, b ${predicted.b.round()}'),
-            // The mix's distance from the target and its plain verdict (AC-5 /
-            // D-7). The verdict is null only on a recipe built without one (the
-            // model default); the engine always fills it, so it reads here.
-            Text('ΔE00 ${recipe.deltaE00.toStringAsFixed(1)}'
-                '${recipe.verdict == null ? '' : ' — ${recipe.verdict}'}'),
-            // When the target is out of gamut (AC-9) the mix is the nearest
-            // possible, not a match — the card says so plainly so the verdict's
-            // distance band is never read as a claimed match.
-            if (recipe.outOfGamut)
-              const Text('Nearest possible — not an exact match'),
-            if (recipe.muddying) const Text('Liable to muddy'),
-            // E25 Speak recipe — wired by RECIPE-4 (AC-12): speaks this recipe's
-            // paints and their parts through the controller's speech seam.
-            TextButton(
-              onPressed: () => controller.speakRecipe(recipe),
-              child: const Text('Speak recipe'),
-            ),
-          ],
+    // AC-7 (presentation only, D-2): each recipe sits in a design-system
+    // [SurfaceCard] rather than a Material `Card`, and the inter-card gap keeps
+    // the list's vertical rhythm. [cardKey] moves to the inner content so the
+    // `SurfaceCard` is its ancestor — the acceptance finder reads a `SurfaceCard`
+    // *above* `cardKey(index)` — while the trace / muddying finders the bs-04
+    // suite scopes to `cardKey(index)` still see the same content beneath it.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SurfaceCard(
+        child: Padding(
+          key: RecipeListRegion.cardKey(index),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final component in recipe.components)
+                if (component.isTrace)
+                  _TraceComponent(component: component)
+                else
+                  Text('${component.paint.name} — '
+                      '${(component.partsFraction * 100).round()}%'),
+              Text('Predicted colour: L ${predicted.lightness.round()}, '
+                  'a ${predicted.a.round()}, b ${predicted.b.round()}'),
+              // The mix's distance from the target and its plain verdict (AC-5 /
+              // D-7). The verdict is null only on a recipe built without one (the
+              // model default); the engine always fills it, so it reads here.
+              Text('ΔE00 ${recipe.deltaE00.toStringAsFixed(1)}'
+                  '${recipe.verdict == null ? '' : ' — ${recipe.verdict}'}'),
+              // When the target is out of gamut (AC-9) the mix is the nearest
+              // possible, not a match — the card says so plainly so the verdict's
+              // distance band is never read as a claimed match.
+              if (recipe.outOfGamut)
+                const Text('Nearest possible — not an exact match'),
+              if (recipe.muddying) const Text('Liable to muddy'),
+              // E25 Speak recipe — the design-system round speak affordance
+              // (AC-7 recipe action, superseding the ad-hoc TextButton): speaks
+              // this recipe's paints and their parts through the controller's
+              // speech seam (AC-12).
+              SpeakButton(
+                onPressed: () => controller.speakRecipe(recipe),
+                semanticLabel: 'Speak recipe',
+                size: SpeakButtonSize.compact,
+              ),
+            ],
+          ),
         ),
       ),
     );

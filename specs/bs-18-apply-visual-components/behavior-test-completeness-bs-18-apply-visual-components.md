@@ -75,7 +75,7 @@
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC07 | the "ranked by" note does not exist in `lib/` yet and the out-of-gamut note is vacuous on the reachable-target pump, so the catalogue Reject "notes hardcoded" is unreachable at ITEST-3 | **FLOW-2** | once the ranked-by note is introduced + an out-of-gamut target is pumped: assert both notes render in the design-system `MonoLabel`/body style (not hardcoded) | ⬜ Open (**new** — confirmed ITEST-3, graded A-core / B pending FLOW-2) |
+| TestAC07 | the "ranked by" note does not exist in `lib/` yet and the out-of-gamut note is vacuous on the reachable-target pump, so the catalogue Reject "notes hardcoded" is unreachable at ITEST-3 | **FLOW-2** | once the ranked-by note is introduced + an out-of-gamut target is pumped: assert both notes render in the design-system `MonoLabel`/body style (not hardcoded) | ✅ **Closed FLOW-2 (2026-10-20)** — ranked-by note added as a `MonoLabel` + out-of-gamut marker is a `MonoLabel`; main body asserts the ranked-by `MonoLabel`, the augmentation pumps `outOfGamutTarget` and asserts the banner `MonoLabel`; both red-baseline at the pre-FLOW-2 tree. AC-7 re-graded **straight A** |
 | TestAC08 | `paint_list_region.dart` is partly swapped (rows+badges design-system, add still ad-hoc), so present-side checks don't prove the old add button absent | **ORG-1** | per-row `ProvenanceBadge` present + "old add button absent" | ⬜ Open (pre-seeded; **confirmed** ITEST-3 — graded A-core / B pending ORG-1) |
 
 AC-6, AC-9 and AC-10 are fully-ad-hoc at baseline (no partial swap), so their present-side `expectPill`/`SurfaceCard`-ancestor checks cleanly discriminate the catalogue Rejects and **no absent-sweep augmentation is owed**. AC-6's A/B-secondary strengthening (note 1), AC-9's create-vs-export discrepancy (note 6) and AC-6's readout ownership (note 7) are **G-2 review items**, not augmentation rows.
@@ -313,3 +313,31 @@ No plain-B row exists; no row needs a fix this phase. All five un-pended AC test
 ## Gate status: PASS
 
 No plain-B row exists; no row needs a fix this phase. **AC-6 grades straight A** — FLOW-1's outline-weight augmentation closed the sole outstanding G-2 reviewer item and promoted AC-6's prior G4 ◑ to ✓, so the test now asserts all four scenario clauses at their exact grain (A/B outline, find-recipes ink-filled primary, both regions carded, speak a `SpeakButton` FAB) while still catching both catalogue Rejects and the A/B-as-primary wrong impl. AC-1..AC-5 carry their prior A forward (bodies untouched; AC-2's omitted back/close clause remains acceptable scoping, ◑ on G4; production changes don't reach those tests). AC-6 verified green this session.
+
+---
+
+# FLOW-2 (re-grade of un-pended AC tests AC-1..AC-7) — behaviour-test completeness grade
+
+- **Grader:** independent fresh-subagent grader (did not author the tests; read-only). Scope: the one AC test FLOW-2 un-pends — the two `acTestWidgets('AC-7', …)` bodies in `integration_test/visual_application/recipes_test.dart` (the main carding/action test + the new out-of-gamut note augmentation) — plus a carry-forward confirmation of AC-1..AC-6.
+- **What FLOW-2 changed:** PRODUCTION code — `lib/recipes/recipe_list_region.dart` (adds the "Ranked by closeness" note as a design-system `MonoLabel` keyed `rankedNoteKey` above the solved list; recipe rows → `SurfaceCard` + `SpeakButton` action) and `lib/recipes/gamut_banner.dart` (the OUT OF GAMUT marker is now a `MonoLabel` inside a `SurfaceCard`, superseding the pre-FLOW-2 error-red `Container`+`Text`). TEST-INFRA — additive `pumpRecipes(tester, {Sample? target})` in `harness.dart` (threads `recipesTarget ?? recipesForTarget.target`, so the existing `pumpScreen(recipes)` path is byte-for-byte unchanged). It ADDS the pre-seeded **TestAC07 → FLOW-2** augmentation (the out-of-gamut-target pump + both notes asserted as `MonoLabel`) and the ranked-by `MonoLabel` assertion to the main body. **No AC-1..AC-6 test body was touched** and **no AC body weakened**.
+- **Verified this session:** `flutter test -d flutter-tester integration_test/visual_application/recipes_test.dart` → **2 pass / all green** (main AC-7 + out-of-gamut augmentation). Pre-FLOW-2 (HEAD 328f546) confirmed: `recipe_list_region.dart` had no ranked note / no MonoLabel; `gamut_banner.dart` marker was an error-red `Container`+`Text` — so both new note assertions red-baseline at HEAD. Grade is of the test *design*.
+
+## Grade grid
+
+| AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 |
+|----|------|-------|----|----|----|----|----|----|
+| AC-7 | `TestAC07_Recipes` (main + out-of-gamut augmentation) | **straight A** (was A-core / B pending FLOW-2) | ✓ main: `regionKey`+`cardKey(0)` before the Thens; augmentation: `GamutBanner.regionKey` + the visible `OUT OF GAMUT` marker `findsOneWidget` before the Thens | ✓ real assembled app via `buildApp`/`pumpScreen`/`pumpRecipes`; real mixing engine returns ranked recipes (reachable target) and marks the out-of-gamut target unreachable; card chrome, action & note types read off the rendered tree | n/a — static ancestor/descendant/type reads after `pumpAndSettle`; the two main `findsNothing` Thens (no Material `Card` in region; no `TextButton` in the card) are each paired with a positive control (`SurfaceCard` ancestor present; `hasSpeak‖hasPill`) | ✓ exact: `SurfaceCard` ancestor on `cardKey(0)` + region-wide `findsNothing(Card)`; action `TextButton` absent + `SpeakButton‖PillButton` present; **ranked-by note `findsOneWidget` + `isA<MonoLabel>`**; **out-of-gamut marker a `MonoLabel` descendant of the banner** | ✓ now catches **all three** catalogue Rejects — rows as Material/ad-hoc `Card`; action as ad-hoc `TextButton`; **notes hardcoded** (ranked-by `isA<MonoLabel>` + out-of-gamut `MonoLabel`, both red at the pre-FLOW-2 tree) | ✓ one AC (AC-7) — both bodies assert only AC-7's carding / action / note clauses |
+
+## Did FLOW-2's augmentation close the item?
+
+**Yes — AC-7 is promoted A-core / B pending FLOW-2 → straight A.** The ITEST-3 limit was that the catalogue's third Reject, "notes hardcoded", was unreachable: no ranked-by note existed in `lib/` and the out-of-gamut note was vacuous on the reachable-target pump (banner collapsed). FLOW-2 closes exactly that in two places. (a) **Strengthens only AC-7 (G6):** every added assertion is an AC-7 carding/action/note step; no other AC's behaviour is asserted. (b) **Discriminates:** against the pre-FLOW-2 tree (verified at HEAD 328f546), `recipe_list_region.dart` had no MonoLabel ranked note, so the main body's `rankedNote findsOneWidget` + `isA<MonoLabel>` would be red; `gamut_banner.dart` rendered the marker as an error-red `Container`+`Text`, so the augmentation's `find.byType(MonoLabel) findsOneWidget` inside the banner would be red. Neither is a vacuous present-only pre-pass. (c) **Both note halves covered under one palette:** the augmentation pumps the fixture's `outOfGamutTarget` over the same `recipesForTarget` palette via the additive `pumpRecipes`, so the banner actually renders, and still asserts the ranked-by note stays a `MonoLabel`. AC-1..AC-6 retain straight **A**: FLOW-2 touched none of their bodies, and the sole shared-file change (`pumpRecipes`) defaults to the prior reachable-target wiring, so no existing AC pump path moves.
+
+## Counts (un-pended AC-1..AC-7)
+
+- **Straight A:** 7 — AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7
+- **A-core / B pending `<phase>`:** 0
+- **Below A (plain B, must be fixed this phase):** 0
+
+## Gate status: PASS
+
+No plain-B row exists; no row needs a fix this phase. **AC-7 grades straight A** — FLOW-2's note augmentation closes the sole outstanding ITEST-3 limit (the "notes hardcoded" Reject), adding a ranked-by `MonoLabel` assertion to the main body and an out-of-gamut `MonoLabel` assertion over the `outOfGamutTarget` pump, both of which red-baseline against the pre-FLOW-2 error-red/no-note tree and strengthen only AC-7. AC-1..AC-6 carry their prior A forward (bodies untouched; the additive `pumpRecipes` leaves every existing pump path unchanged). AC-7 verified green (both bodies) this session.

@@ -1,6 +1,6 @@
 # Module FLOW — Compare + Recipes screen swaps
 
-**Status:** In progress — FLOW-1 ✅ (AC-6 straight A); next FLOW-2 (AC-7).
+**Status:** ✅ Done — FLOW-1 (AC-6) + FLOW-2 (AC-7) both straight A.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/compare/**`, `lib/recipes/**` (screen/region/control widgets only — not controllers, sources, read endpoints or `recipes/engine/**`).
 **Depends on:** ITEST (G-2) · **Blocks:** GUARD
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | FLOW-1 | behavior | AC-6 | ✅ Done | 10.99M | 25m 25s (25m 25s) |
-| FLOW-2 | behavior | AC-7 | ⬜ Todo | | |
+| FLOW-2 | behavior | AC-7 | ✅ Done | 14.73M | 27m 04s (27m 04s) |
 
 ## Interface reconciliation
 
@@ -20,8 +20,7 @@ frozen (D-2). Ranked-by / out-of-gamut copy is unchanged — only its text style
 
 ## Open gates
 
-G-2 blocks both phases. FLOW-1 and FLOW-2 touch disjoint dirs (`lib/compare` vs `lib/recipes`) and may run in
-either order or in parallel once G-2 is open.
+None. G-2 (the ITEST-5 test-review) was resolved 2026-10-19 (approved — Matt Quirk); both FLOW phases are done.
 
 ## Phase FLOW-1 — behavior: Compare (AC-6)
 
@@ -63,3 +62,20 @@ either order or in parallel once G-2 is open.
   2. Remove the ad-hoc `Card`/`ListTile`/buttons these superseded.
 - **Exit criteria:** `lib/recipes` suite + bs-04 mixing-recipes + bs-05 correction-loop suites green.
 - **Acceptance gate:** un-pend AC-7; `TestAC07_Recipes` green with earlier ACs; sibling suites green.
+
+### Result — FLOW-2 (✅ Done)
+
+- **Landed (production, presentation-only, D-2):** `lib/recipes/recipe_list_region.dart` — each recipe row now sits in a design-system `SurfaceCard` (the Material `Card` removed; `cardKey(index)` moved to the inner content so the `SurfaceCard` is its ancestor, keeping the bs-04 trace/muddying finders intact); the per-recipe "Speak recipe" action (E25) is now the design-system round `SpeakButton` (`SpeakButtonSize.compact`, semantic label "Speak recipe"), superseding the ad-hoc `TextButton`; a new `MonoLabel` "Ranked by closeness" note (keyed `RecipeListRegion.rankedNoteKey`, const `rankedNoteText`) heads the solved list. `lib/recipes/gamut_banner.dart` — the out-of-gamut marker is now a `MonoLabel` inside a `SurfaceCard` (the READ-2 warning-banner treatment), superseding the ad-hoc error-red `Container`+`Text(titleMedium)`; the screen-reader explanation is preserved via `Semantics(label: …, excludeSemantics: true)`, and `regionKey` stays the stable anchor in both the shown and collapsed states.
+- **Un-pended:** AC-7 (`integration_test/visual_application/pending.dart` row removed).
+- **Augmentation made (TestAC07 → FLOW-2, the pre-seeded ITEST-3 row):** closed. The AC-7 test gained (a) a main-body assertion that the ranked-by note renders as a `MonoLabel`, and (b) a second `acTestWidgets('AC-7', …)` body that pumps the fixture's `outOfGamutTarget` (new additive harness `pumpRecipes(tester, {Sample? target})`) so the banner actually renders, then asserts the out-of-gamut marker is a `MonoLabel` descendant of the banner (ranked-by note still a `MonoLabel` for the nearest-possible recipes). Both assertions red-baseline at the pre-FLOW-2 tree — closing the catalogue's third Reject, "notes hardcoded". AC-7 re-graded **straight A**.
+- **Tests (sibling maintenance for the swap, no behaviour weakened):** `integration_test/recipes_harness.dart` `whenSpeakRecipe` finds the per-recipe `SpeakButton` by semantic label (was `widgetWithText(TextButton, 'Speak recipe')`). `test/recipes/recipes_screen_test.dart` — the recipe-card group reads `SurfaceCard` (was `find.byType(Card)`), asserts the ranked-by `MonoLabel`, and the "Speak recipe" enabled/tap tests drive the `SpeakButton`; the GamutBanner shown-case test gained `MonoLabel`+`SurfaceCard` descendant assertions. `integration_test/visual_application/smoke_test.dart` — the ITEST-1 pending-gate exemplar/seed re-pointed from AC-7 to AC-8 (AC-7 added to the un-pended set).
+- **Verification:** `flutter analyze` (lib/recipes + the integration/test files) clean. Unit `flutter test --coverage test/` → **1676 pass**. Coverage gate `dart run tool/coverage_gate.dart 328f546` → **100% on both touched lib files** (`recipe_list_region.dart`, `gamut_banner.dart`). Acceptance (`-d flutter-tester`): `recipes_test.dart` (AC-7) **2✅** (main + out-of-gamut augmentation). Siblings re-verified one suite at a time: bs-18 `smoke_test` 13✅/1-skip; bs-04 `recipes_test` **24✅** (incl. the SpeakButton-driven `whenSpeakRecipe`, AC-7 trace, AC-9 OUT OF GAMUT via the carded banner); bs-05 `correction_test` **22✅**; bs-11 `bs11/accessibility_test` **19✅** (no a11y regression from the banner recolour — the colour-cue conformance rule explicitly excludes coloured banners, now a text+mono SurfaceCard).
+- **Grade gate: PASS** (independent fresh-subagent grader; grid `../behavior-test-completeness-bs-18-apply-visual-components.md`): AC-7 **straight A** (the notes-hardcoded Reject now caught; augmentation closed). AC-1..AC-6 carry prior **A** forward (bodies untouched; the additive `pumpRecipes` leaves every existing pump path unchanged). **Straight A = 7 (AC-1..AC-7), A-core/B-pending = 0, plain-B = 0.**
+- **Fix passes: 0/3** — every gate passed on the first full run.
+
+### Checkpoint / Handoff — after FLOW-2
+
+- **Frozen interfaces (this phase):** `RecipeListRegion` renders a `MonoLabel` ranked-by note keyed `rankedNoteKey` (const `rankedNoteText = 'Ranked by closeness'`) above the solved list, each recipe row inside a `SurfaceCard` with `cardKey(index)` on the inner content (so a `SurfaceCard` is the ancestor of `cardKey`), and the per-recipe speak as a `SpeakButton` (semantic label "Speak recipe", `SpeakButtonSize.compact`). `GamutBanner` renders the marker as a `MonoLabel` inside a `SurfaceCard` keyed `regionKey` when out of gamut, and `SizedBox.shrink(key: regionKey)` when in gamut; `markerText` ('OUT OF GAMUT') and the screen-reader explanation are unchanged. A later phase restyling Recipes must keep the recipe rows under a `SurfaceCard` ancestor of `cardKey`, the speak action a `SpeakButton`, and the two notes `MonoLabel`s, or AC-7 reddens.
+- **Harness:** `integration_test/visual_application/harness.dart` gained `pumpRecipes(tester, {Sample? target})` — opens Recipes mixing toward `target ?? recipesForTarget.target`; the existing `pumpScreen(VisualScreen.recipes)` path is unchanged (defaults to the reachable target).
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout` on macOS): unit+cov `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart <BASE>`; AC-7 `flutter test -d flutter-tester integration_test/visual_application/recipes_test.dart`; bs-04 `flutter test -d flutter-tester integration_test/recipes_test.dart`; bs-05 `flutter test -d flutter-tester integration_test/correction_test.dart` (run suites one at a time; the whole `visual_application/` dir won't launch at once under load).
+- **Known gaps / next:** FLOW module complete. The Recipes screen's target-selector / speak-target (E22/E23, `target_region.dart`) and the wet/dry toggle (E24, `controls_region.dart`) were **not** restyled — not named by AC-7 and not superseded by a named design-system component (there is no segmented-control widget in `lib/widgets/`), mirroring FLOW-1 leaving "Open readout for A/B" as `TextButton` and AC-10's justified pills-vs-segmented scoping; they stay stock Material. ORG-1 (AC-8), ORG-2 (AC-9) and CFG-1 (AC-10) remain startable; GUARD-1/2/3 run last after every screen phase. GUARD-1 depends on FLOW-2 (now done).

@@ -24,6 +24,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/recipes/gamut_banner.dart';
 import 'package:paint_color_assistant/recipes/recipe_list_region.dart';
 
 import 'harness.dart';
@@ -87,5 +88,52 @@ void main() {
         .isNotEmpty;
     expect(hasSpeak || hasPill, isTrue,
         reason: 'the recipe action is a design-system SpeakButton or PillButton');
+
+    // THEN the "ranked by" note renders in the design-system mono style — a
+    // [MonoLabel], not an ad-hoc styled `Text` (rejects a note hardcoded). The
+    // note is present whenever recipes are, so it reads on the reachable pump.
+    final rankedNote = find.byKey(RecipeListRegion.rankedNoteKey);
+    expect(rankedNote, findsOneWidget, reason: 'the "ranked by" note renders');
+    expect(tester.widget(rankedNote), isA<MonoLabel>(),
+        reason: 'the "ranked by" note is a design-system MonoLabel');
+  });
+
+  // AC-7 augmentation (FLOW-2) — the out-of-gamut note in the design-system
+  // mono style. The reachable target above leaves the banner collapsed, so this
+  // pumps the fixture's out-of-gamut target over the same palette (the engine
+  // marks it unreachable) and asserts the banner marker renders through
+  // [MonoLabel] — closing the catalogue's "notes hardcoded" Reject the
+  // authoring phase (ITEST-3) could not reach.
+  acTestWidgets('AC-7',
+      'TestAC07_Recipes (out-of-gamut): the out-of-gamut note renders in the '
+      'design-system mono style over the same palette',
+      (tester) async {
+    // GIVEN the Recipes screen open mixing toward the fixture's out-of-gamut
+    // target — the gamut banner is shown (not collapsed).
+    await pumpRecipes(tester, target: recipesForTarget.outOfGamutTarget);
+    final banner = find.byKey(GamutBanner.regionKey);
+    expect(banner, findsOneWidget, reason: 'Given: the gamut banner anchor');
+    expect(
+      find.descendant(of: banner, matching: find.text(GamutBanner.markerText)),
+      findsOneWidget,
+      reason: 'Given: the out-of-gamut target shows the OUT OF GAMUT marker',
+    );
+
+    // WHEN the note renders.
+
+    // THEN the out-of-gamut marker renders through a design-system [MonoLabel]
+    // (rejects the marker left as an ad-hoc styled `Text`).
+    expect(
+      find.descendant(of: banner, matching: find.byType(MonoLabel)),
+      findsOneWidget,
+      reason: 'the out-of-gamut marker is a design-system MonoLabel',
+    );
+
+    // AND the "ranked by" note still renders as a MonoLabel for the
+    // nearest-possible recipes an out-of-gamut target still yields.
+    final rankedNote = find.byKey(RecipeListRegion.rankedNoteKey);
+    expect(rankedNote, findsOneWidget, reason: 'the "ranked by" note renders');
+    expect(tester.widget(rankedNote), isA<MonoLabel>(),
+        reason: 'the "ranked by" note is a design-system MonoLabel');
   });
 }

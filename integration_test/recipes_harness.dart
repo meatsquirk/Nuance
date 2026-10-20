@@ -39,6 +39,7 @@ import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/recipes/recipe_controller.dart';
 import 'package:paint_color_assistant/recipes/recipe_read_endpoint.dart';
 import 'package:paint_color_assistant/recipes/recipe_state.dart';
+import 'package:paint_color_assistant/widgets/speak_button.dart';
 
 import 'fakes/fake_haptics.dart';
 import 'fakes/fake_speech.dart';
@@ -435,7 +436,11 @@ class RecipesHarness {
   /// speak control wired by RECIPE-4; until then the precondition names the
   /// owner. Inert control ⇒ `warnIfMissed` off.
   Future<void> whenSpeakRecipe(int index) async {
-    final controls = find.widgetWithText(TextButton, 'Speak recipe');
+    // bs-18 FLOW-2 swapped the per-recipe "Speak recipe" TextButton for the
+    // design-system [SpeakButton] (AC-7); find it by its semantic label.
+    final controls = find.byWidgetPredicate(
+      (w) => w is SpeakButton && w.semanticLabel == 'Speak recipe',
+    );
     expect(
       controls,
       findsAtLeastNWidgets(index + 1),

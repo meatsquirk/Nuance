@@ -17,6 +17,9 @@ import 'package:paint_color_assistant/recipes/recipe_speech.dart';
 import 'package:paint_color_assistant/recipes/recipe_state.dart';
 import 'package:paint_color_assistant/recipes/recipes_screen.dart';
 import 'package:paint_color_assistant/recipes/target_region.dart';
+import 'package:paint_color_assistant/widgets/mono_label.dart';
+import 'package:paint_color_assistant/widgets/speak_button.dart';
+import 'package:paint_color_assistant/widgets/surface_card.dart';
 
 const _olive = Sample(
   name: 'Deep Olive Green',
@@ -103,6 +106,11 @@ Future<void> _pumpRegion(WidgetTester tester, Widget child) =>
 bool _enabled(WidgetTester tester, String label) => tester
     .widget<TextButton>(find.widgetWithText(TextButton, label))
     .enabled;
+
+/// The per-recipe "Speak recipe" control is a design-system [SpeakButton]
+/// (bs-18 FLOW-2, AC-7), found by its semantic label.
+Finder get _speakRecipe => find.byWidgetPredicate(
+    (w) => w is SpeakButton && w.semanticLabel == 'Speak recipe');
 
 void main() {
   group('RecipesScreen', () {
@@ -225,7 +233,9 @@ void main() {
       expect(find.text('No recipes yet'), findsOneWidget);
       // No recipe cards ⇒ no speak-recipe control yet (ENGINE-2 renders the
       // card; RECIPE-4 wires its speak control).
-      expect(find.widgetWithText(TextButton, 'Speak recipe'), findsNothing);
+      expect(_speakRecipe, findsNothing);
+      // The empty state carries no "ranked by" note either (bs-18 FLOW-2).
+      expect(find.byKey(RecipeListRegion.rankedNoteKey), findsNothing);
     });
 
     testWidgets('renders a card per solved recipe with paints, parts and the '
@@ -238,12 +248,23 @@ void main() {
       await _pumpRegion(tester, RecipeListRegion(controller: controller));
 
       expect(find.text('No recipes yet'), findsNothing);
-      expect(find.byType(Card), findsWidgets);
+      // bs-18 FLOW-2 (AC-7): recipe rows are design-system SurfaceCards now, not
+      // Material Cards.
+      expect(find.byType(SurfaceCard), findsWidgets);
+      expect(find.byType(Card), findsNothing);
+      // The "ranked by" note renders as a design-system MonoLabel above the list.
+      expect(find.byKey(RecipeListRegion.rankedNoteKey), findsOneWidget);
+      expect(
+        tester.widget(find.byKey(RecipeListRegion.rankedNoteKey)),
+        isA<MonoLabel>(),
+      );
       // The single-paint palette's recipe names Yellow Ochre at 100%.
       expect(find.textContaining('Yellow Ochre'), findsWidgets);
       expect(find.textContaining('Predicted colour:'), findsWidgets);
-      // E25 speak recipe is present per card and wired by RECIPE-4.
-      expect(_enabled(tester, 'Speak recipe'), isTrue,
+      // E25 speak recipe is present per card (a SpeakButton, AC-7) and wired by
+      // RECIPE-4.
+      expect(_speakRecipe, findsWidgets);
+      expect(tester.widget<SpeakButton>(_speakRecipe.first).onPressed, isNotNull,
           reason: 'E25 speak recipe is wired in RECIPE-4');
     });
 
@@ -258,9 +279,7 @@ void main() {
       final recipe = controller.state.recipes.first;
 
       await _pumpRegion(tester, RecipeListRegion(controller: controller));
-      await tester.tap(
-        find.widgetWithText(TextButton, 'Speak recipe').first,
-      );
+      await tester.tap(_speakRecipe.first);
       await tester.pump();
 
       expect(speech.utterances, [recipeSpeech(recipe)]);
@@ -395,6 +414,22 @@ void main() {
         find.descendant(
           of: find.byKey(GamutBanner.regionKey),
           matching: find.text('OUT OF GAMUT'),
+        ),
+        findsOneWidget,
+      );
+      // bs-18 FLOW-2 (AC-7): the marker renders through the design system — a
+      // MonoLabel inside a SurfaceCard, not the ad-hoc error-red container.
+      expect(
+        find.descendant(
+          of: find.byKey(GamutBanner.regionKey),
+          matching: find.byType(MonoLabel),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(GamutBanner.regionKey),
+          matching: find.byType(SurfaceCard),
         ),
         findsOneWidget,
       );

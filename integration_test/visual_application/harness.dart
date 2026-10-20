@@ -219,17 +219,28 @@ Future<VisualHarness> pumpShell(
 Future<VisualHarness> pumpScreen(WidgetTester tester, VisualScreen screen) =>
     _pump(tester, screen);
 
+/// Opens the Recipes screen mixing toward [target] (default the fixture's
+/// reachable target).
+///
+/// FLOW-2's AC-7 augmentation pumps the fixture's `outOfGamutTarget` through
+/// this so the out-of-gamut note actually renders (the reachable target leaves
+/// the banner collapsed), letting the test assert the ranked-by and
+/// out-of-gamut notes render in the design-system mono style over one palette.
+Future<VisualHarness> pumpRecipes(WidgetTester tester, {Sample? target}) =>
+    _pump(tester, VisualScreen.recipes, recipesTarget: target);
+
 Future<VisualHarness> _pump(
   WidgetTester tester,
   VisualScreen screen, {
   Sample? initialSample,
+  Sample? recipesTarget,
 }) async {
   await tester.pumpWidget(const SizedBox());
   await tester.pump();
   final speech = FakeSpeech();
   final haptics = FakeHaptics();
   await tester.pumpWidget(
-    buildApp(_depsFor(screen, speech, haptics, initialSample)),
+    buildApp(_depsFor(screen, speech, haptics, initialSample, recipesTarget)),
   );
   await tester.pumpAndSettle();
   return VisualHarness(
@@ -248,6 +259,7 @@ AppDependencies _depsFor(
   FakeSpeech speech,
   FakeHaptics haptics,
   Sample? initialSample,
+  Sample? recipesTarget,
 ) {
   const science = ColorScienceImpl();
   switch (screen) {
@@ -279,7 +291,8 @@ AppDependencies _depsFor(
         colorScience: science,
         speech: speech,
         haptics: haptics,
-        recipesEntry: RecipesEntry(target: recipesForTarget.target),
+        recipesEntry:
+            RecipesEntry(target: recipesTarget ?? recipesForTarget.target),
         paletteSource: recipesForTarget.paletteSource,
       );
     case VisualScreen.palette:

@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — CHROME ✅ + READ ✅ + FLOW-1 ✅ (AC-6); next FLOW-2 ∥ ORG-1 ∥ CFG-1 concurrently.
+**Status:** In progress — CHROME ✅ + READ ✅ + FLOW ✅ (AC-6, AC-7); next ORG-1 ∥ CFG-1 concurrently.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -50,7 +50,7 @@ this feature only *opts screens into them*.
 | AC-4 | The Capture screen's warnings stack without overlapping | ITEST-2 `TestAC04_CaptureWarnings` | READ-2 | ✅ Done |
 | AC-5 | The Readout screen renders its regions as cards with mono eyebrows and a speak FAB | ITEST-2 `TestAC05_Readout` | READ-3 | ✅ Done |
 | AC-6 | The Compare screen renders its controls and rows as design-system components | ITEST-3 `TestAC06_Compare` | FLOW-1 | ✅ Done |
-| AC-7 | The Recipes screen renders recipes as cards with mono notes and pill actions | ITEST-3 `TestAC07_Recipes` | FLOW-2 | ⬜ Todo |
+| AC-7 | The Recipes screen renders recipes as cards with mono notes and pill actions | ITEST-3 `TestAC07_Recipes` | FLOW-2 | ✅ Done |
 | AC-8 | The Palette screen renders paints, provenance and the add action as design-system components | ITEST-3 `TestAC08_Palette` | ORG-1 | ⬜ Todo |
 | AC-9 | The Projects region renders projects as cards with pill actions | ITEST-3 `TestAC09_Projects` | ORG-2 | ⬜ Todo |
 | AC-10 | The Display and Onboarding screens render through the design system | ITEST-3 `TestAC10_DisplayOnboarding` | CFG-1 | ⬜ Todo |
@@ -122,7 +122,7 @@ Pre-seeded augmentations: AC-3 (capture partly swapped) strengthened by READ-1; 
 |---|---|---|---|---|
 | CHROME | [modules/CHROME.md](modules/CHROME.md) | Scaffold; bottom nav + top bar; owns `build_app.dart` | — | ✅ Done |
 | READ | [modules/READ.md](modules/READ.md) | Readout + Capture screen swaps (incl. warning-overlap fix) | ITEST (G-2) | ✅ Done |
-| FLOW | [modules/FLOW.md](modules/FLOW.md) | Compare + Recipes screen swaps | ITEST (G-2) | ◐ In progress (FLOW-1 ✅) |
+| FLOW | [modules/FLOW.md](modules/FLOW.md) | Compare + Recipes screen swaps | ITEST (G-2) | ✅ Done (FLOW-1 + FLOW-2) |
 | ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | ⬜ Todo |
 | CFG | [modules/CFG.md](modules/CFG.md) | Display + Onboarding screen swaps | ITEST (G-2) | ⬜ Todo |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | App-wide guards: swatch caption, single theme, a11y, source-scan | all screen modules | ⬜ Todo |
@@ -185,8 +185,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 11 | READ-2 | AC-4 — capture warning overlap fix | ✅ Done | 8.17M | 20m 33s (20m 33s) | AC-4 ✅ A; warnings relaid in one vertical Column of SurfaceCard banners (D-6) → rects non-overlapping at 200%; keys/text/visibility/semantics unchanged; unit 1675✅; cov 100%/13; grade A/A/A/A 0-B; 8 siblings re-verified✅ (bs-11 contrast holds); fix 0/3 |
 | 12 | READ-3 | AC-5 — readout cards + mono + speak FAB | ✅ Done | 20.70M | 36m 23s (36m 23s) | AC-5 ✅ A (promoted A-core/B-pending READ-3→straight A via the speak-at-anchor + Card-absent augmentation); name/value/space regions→SurfaceCard + MonoLabel eyebrows, speak→always-visible Scaffold FAB SpeakButton; unit 1675✅; cov 100%/2; grade A×5 0-B; 10 siblings re-verified✅ (bs-01/daltonization readout pumps got a tall-surface fix; bs-11 eyes-free + contrast hold); fix 0/3; display AC-9 = pre-existing flake (reproduces at BASE) |
 | 13 | FLOW-1 | AC-6 — compare | ✅ Done | 10.99M | 25m 25s (25m 25s) | AC-6 ✅ A; readout compare/recipes→pills, diff/statement carded, compare speak→SpeakButton FAB; resolved G-2 cross-screen ownership + outline augmentation |
-| 14 | FLOW-2 | AC-7 — recipes | ⬜ Next | | | ∥ ORG-1/CFG-1 (disjoint dirs) |
-| 15 | ORG-1 | AC-8 — palette | ⬜ Todo | | | ∥ READ/FLOW/CFG |
+| 14 | FLOW-2 | AC-7 — recipes | ✅ Done | 14.73M | 27m 04s (27m 04s) | AC-7 ✅ straight A; recipe rows → SurfaceCard, Speak recipe → SpeakButton, ranked-by + out-of-gamut notes → MonoLabel; closed the TestAC07 "notes hardcoded" augmentation; unit 1676✅, cov 100%/2, grade A=7/0-B, fix 0/3; bs-04 24 + bs-05 22 + bs-11 19 re-verified✅ |
+| 15 | ORG-1 | AC-8 — palette | ⬜ Next | | | ∥ CFG-1 (disjoint dirs); ORG-2 after ORG-1 |
 | 16 | ORG-2 | AC-9 — projects | ⬜ Todo | | | ∥ READ/FLOW/CFG |
 | 17 | CFG-1 | AC-10 — display + onboarding | ⬜ Todo | | | ∥ READ/FLOW/ORG |
 | 18 | GUARD-1 | AC-12 — swatch caption on every swatch screen | ⬜ Todo | | | after all screen phases |
@@ -198,34 +198,30 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**FLOW-1 ✅ (AC-6) — compare controls/rows → design system.** Readout `ActionsBar` renders "Compare as A/B"
-as `PillButton.secondary` (outline) and "Find mixing recipes" as `PillButton.primary` (ink-filled); the
-Compare screen cards its difference + statement regions in `SurfaceCard`s and moves "Speak whole comparison"
-to an always-visible `Scaffold.floatingActionButton` `SpeakButton` (keyed `ComparisonActionsBar.speakKey`).
-Presentation only (D-2). Resolved the headline **G-2 AC-6 cross-screen ownership** item (the three named
-actions live in the READ module's `actions_bar.dart`) + added the **AC-6 A/B outline-weight** augmentation
-(A/B `subtreeHas<FilledButton>` isFalse). AC-6 straight **A**. unit 1676✅, cov 100%/3, grade A=6/0-B,
-fix 2/3 (both test-infra: device-tall `pumpShell`, smoke exemplar re-point).
+**FLOW ✅ done (FLOW-2, AC-7 — recipes → design system).** Recipe rows → `SurfaceCard` (Material `Card`
+gone), per-recipe "Speak recipe" → `SpeakButton` (compact), a new `MonoLabel` "Ranked by closeness" note
+heads the list, and the out-of-gamut marker is a `MonoLabel` inside a `SurfaceCard` (READ-2 banner treatment,
+superseding the error-red container). Presentation only (D-2). Closed the pre-seeded **TestAC07 → FLOW-2**
+augmentation (ranked-by + out-of-gamut notes asserted as `MonoLabel`, the latter via the new additive
+`pumpRecipes(outOfGamutTarget)`). AC-7 straight **A**. unit 1676✅, cov 100%/2, grade A=7/0-B, fix 0/3;
+bs-04 24 + bs-05 22 + bs-11 19 re-verified✅. Recipes target-selector/speak-target (E22/E23) + wet-dry (E24)
+left stock Material (not named by AC-7, no design-system segmented widget) — see FLOW.md Checkpoint.
 
 **Startable now (each a separate `--parallel` session, mutually concurrent — disjoint dirs):**
-- **FLOW-2** (AC-7, `lib/recipes/**`) — recipe rows → `SurfaceCard`, ranked-by/out-of-gamut → mono/body,
-  recipe actions → pills; exit criteria add bs-04 mixing-recipes + bs-05 correction-loop suites.
-  ∥ **ORG-1** (AC-8, `lib/palette/**`) ∥ **CFG-1** (AC-10, `lib/display/**`,`lib/onboarding/**`).
-- ORG-2 after ORG-1. GUARD-1/2/3 run last, sequentially, after every screen phase.
+- **ORG-1** (AC-8, `lib/palette/**`) — paint rows/badges/add action → design-system; owes the ORG-1 add-absent
+  augmentation. ∥ **CFG-1** (AC-10, `lib/display/**`,`lib/onboarding/**`).
+- **ORG-2** (AC-9) after ORG-1 (same dir). GUARD-1/2/3 run last, sequentially, after every screen phase
+  (GUARD-1 now unblocked for FLOW's half — still waits on ORG-2 + CFG-1).
 
-**Watch:** (a) **Tall-surface gotcha** — the carded Readout is taller than the short flutter-tester surface;
-any harness reading below-fold readout content or tapping the in-scroll actions bar must pump device-tall
-(`tester.view.physicalSize = Size(1000,3200)`, reset on teardown) — applied in `harness.dart`
-(`givenReadoutOf`), `daltonization_harness.dart` (`_assembleDaltonization`) and now the bs-18
-`visual_application/harness.dart` `pumpShell` (FLOW-1, for the readout compare/recipes handoffs AC-6 reads).
-(b) Scope any new bare-text screen-title assertion to the screen's `AppBar`. (c) The whole
-`visual_application/` dir won't launch at once under load (run suites one at a time).
+**Watch:** (a) **Tall-surface gotcha** — a harness reading below-fold shell content must pump device-tall
+(`tester.view.physicalSize = Size(1000,3200)`, reset on teardown), as bs-18 `pumpShell` does. (b) Scope any
+new bare-text screen-title assertion to the screen's `AppBar`. (c) The whole `visual_application/` dir won't
+launch at once under load (run suites one at a time).
 
-**Carry-forward reviewer items (not gate blockers):** (1) ~~AC-6 cross-screen ownership~~ ✅ resolved by
-FLOW-1. (2) The 4 green-at-baseline guards (AC-11..14) stay pending; their owning GUARD phases un-pend them.
-(3) ~~AC-6 A/B outline weight~~ ✅ added by FLOW-1; AC-7 "ranked by" note; AC-9 create-vs-export; AC-11
-tautological line — each a cheap strengthening/scope call for its phase. (4) **display AC-9** stays an open
-known flake (off-lane flutter-tester, bs-08; reproduces at BASE).
+**Carry-forward reviewer items (not gate blockers):** (1) The 4 green-at-baseline guards (AC-11..14) stay
+pending; their owning GUARD phases un-pend them. (2) AC-9 create-vs-export; AC-11 tautological line — each a
+cheap strengthening/scope call for its phase. (3) **display AC-9** stays an open known flake (off-lane
+flutter-tester, bs-08; reproduces at BASE).
 
 ## Token usage
 
@@ -250,7 +246,8 @@ known flake (off-lane flutter-tester, bs-08; reproduces at BASE).
 | READ-2 | e2bfefd1 | 2026-10-20 10:26 EDT | 10:46 | 20m 33s | 20m 33s | claude-opus-4-8 | 138 | 251,514 | 7,870,002 | 50,560 | 8,172,214 | AC-4 un-pended + green; capture warnings relaid as a single vertical Column of SurfaceCard banners (D-6), rects non-overlapping at 200%; keys/text/visibility/semantics unchanged; unit 1675, cov 100%/13, grade A/A/A/A 0-B, 8 siblings re-verified, fix 0/3 |
 | READ-3 | 827503f5 | 2026-10-20 10:58 EDT | 11:34 | 36m 23s | 36m 23s | claude-opus-4-8 | 230 | 352,507 | 20,229,588 | 112,773 | 20,695,098 | AC-5 un-pended + green; promoted A-core/B-pending READ-3 → straight A; readout regions carded + MonoLabel eyebrows + always-visible speak FAB; unit 1675, cov 100%/2, grade A×5 0-B, fix 0/3; display AC-9 = pre-existing off-lane flake |
 | FLOW-1 | a37e367e | 2026-10-20 11:38 EDT | 12:04 | 25m 25s | 25m 25s | claude-opus-4-8 | 154 | 298,211 | 10,621,841 | 70,967 | 10,991,173 | AC-6 un-pended straight A; readout compare/recipes→pills + compare diff/statement carded + speak→SpeakButton FAB; resolved G-2 cross-screen ownership + outline augmentation; unit 1676, cov 100%/3, grade A=6/0-B; fix 2/3 (test-infra); bs-03 26 + readout siblings re-verified |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 12:04** | **13h 35m** | **5h 45m** |  | **1,840** | **3,633,275** | **137,472,865** | **919,592** | **142,027,572** |  |
+| FLOW-2 | cbc0b114 | 2026-10-20 12:15 EDT | 12:42 | 27m 04s | 27m 04s | claude-opus-4-8 | 188 | 273,772 | 14,378,643 | 81,289 | 14,733,892 | AC-7 un-pended straight A; recipe rows→SurfaceCard + Speak recipe→SpeakButton + ranked-by/out-of-gamut notes→MonoLabel; closed TestAC07 augmentation; unit 1676, cov 100%/2, grade A=7/0-B, fix 0/3; bs-04 24 + bs-05 22 + bs-11 19 re-verified |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 12:42** | **14h 02m** | **6h 12m** |  | **2,028** | **3,907,047** | **151,851,508** | **1,000,881** | **156,761,464** |  |
 
 ## Sign-off
 
