@@ -220,14 +220,18 @@ class AppDependencies {
   /// through this same [buildApp] entry (capture replaces it in bs-02).
   final Sample initialSample;
 
-  /// The capture source the app opens the Capture screen on, or null to open on
-  /// the Readout (bs-02 D-2).
+  /// The capture source the app's Capture destination reads from, or null for
+  /// the capture-less Readout landing (bs-02 D-2; bs-18 CHROME-3).
   ///
-  /// When present, [buildApp] launches to the Capture screen reading from this
-  /// source and capture commits navigate to the Readout (D-5); when null the app
-  /// opens on the Readout for [initialSample], preserving bs-01's entry. The
-  /// shipped app injects a [CaptureSource]; the bs-02 acceptance harness injects
-  /// a fake with a known ground-truth scene.
+  /// When present, the nav shell's opening Capture destination is the Capture
+  /// screen reading from this source, and capture commits navigate to the
+  /// Readout (D-5); when null that destination is the Readout for
+  /// [initialSample], preserving bs-01's entry. Either way the app opens on the
+  /// four-destination nav shell (CHROME-3) unless a deep-link entry is set. The
+  /// correction loop ([correctionEntry]) reads this source directly as its
+  /// camera instead (checked first). The shipped app injects a [CaptureSource];
+  /// the bs-02 acceptance harness injects a fake with a known ground-truth
+  /// scene.
   final CaptureSource? captureSource;
 
   /// The painter's colour-vision profile, read by [confusionCheck] (bs-03 D-4).
@@ -470,19 +474,20 @@ class AppScope extends InheritedWidget {
 /// Builds the root widget of the Paint Color Assistant.
 ///
 /// The single production assembly entry (D-7): it injects [deps] via [AppScope]
-/// and wires the router into a [MaterialApp]. The app opens on the
-/// [CorrectionHomeScreen] when a [AppDependencies.correctionEntry] is injected
-/// (bs-05 D-2 — checked first, as the loop reuses the capture source as its
-/// camera), on the Capture screen when a [AppDependencies.captureSource] is
-/// injected (bs-02), on the [ComparisonHomeScreen] when a
-/// [AppDependencies.comparisonEntry] is injected (bs-03 D-8), on the
-/// [RecipesHomeScreen] when a [AppDependencies.recipesEntry] is injected (bs-04
-/// D-6), on the [PaletteHomeScreen] when a [AppDependencies.paletteEntry] is
-/// injected (bs-06 SCREEN-1), and otherwise on the [ReadoutScreen] for
-/// [AppDependencies.initialSample] (bs-01's entry). `main.dart` and the
-/// acceptance harnesses construct the app through this one entry, differing only
-/// in the injected services, the initial sample, the capture source and the
-/// comparison / recipes entries.
+/// and wires the router into a [MaterialApp]. The app opens on a *deep-link
+/// entry*'s screen when one is injected — the [CorrectionHomeScreen]
+/// ([AppDependencies.correctionEntry], bs-05 D-2, checked first as the loop
+/// reuses the capture source as its camera), the [ComparisonHomeScreen]
+/// ([AppDependencies.comparisonEntry], bs-03 D-8), the [RecipesHomeScreen]
+/// ([AppDependencies.recipesEntry], bs-04 D-6) or the [PaletteHomeScreen]
+/// ([AppDependencies.paletteEntry], bs-06 SCREEN-1) — and otherwise on the
+/// four-destination nav shell (bs-18 CHROME-3, D-1), whose opening Capture
+/// destination is the [CaptureHomeScreen] when a [AppDependencies.captureSource]
+/// is injected (the shipped app, bs-02) and the [ReadoutScreen] for
+/// [AppDependencies.initialSample] otherwise (bs-01's capture-less entry).
+/// `main.dart` and the acceptance harnesses construct the app through this one
+/// entry, differing only in the injected services, the initial sample, the
+/// capture source and the deep-link entries.
 Widget buildApp(AppDependencies deps) {
   // Make the one app-wide [Speech] repeatable (bs-08 SPEECH-1): wrap the
   // injected sink in a [RepeatableSpeech] so every caller that speaks through
@@ -691,9 +696,19 @@ class _AppState extends State<_App> {
 }
 
 /// The screen [buildApp] opens on for [deps] (the entry precedence in the
-/// [buildApp] doc): correction, then capture, comparison, recipes, palette, else
-/// the Readout. [deps] carries the app-wide [RepeatableSpeech] as its `speech`,
-/// so each screen speaks through the repeatable seam.
+/// [buildApp] doc): a deep-link entry — correction, comparison, recipes or
+/// palette — opens its screen directly (D-1); otherwise the app opens on the
+/// four-destination nav shell ([_defaultShell]), whose opening Capture
+/// destination is the real Capture screen when a [AppDependencies.captureSource]
+/// is wired and the Readout fall-through otherwise. [deps] carries the app-wide
+/// [RepeatableSpeech] as its `speech`, so each screen speaks through the
+/// repeatable seam.
+///
+/// **bs-18 CHROME-3 (AC-1):** a wired capture source is no longer a deep-link
+/// entry that bypasses the chrome — it flows *into* the shell's Capture
+/// destination — so the shipped app (which boots a `captureSource`) shows the
+/// bottom nav. The correction loop still reads the source directly as its camera
+/// (checked first), and the other deep-link entries still open their screen.
 Widget _home(AppDependencies deps) {
   return deps.correctionEntry != null
       ? CorrectionHomeScreen(
@@ -707,49 +722,50 @@ Widget _home(AppDependencies deps) {
           speech: deps.speech,
           router: deps.router,
         )
-      : deps.captureSource != null
-          ? const CaptureHomeScreen()
-          : deps.comparisonEntry != null
-              ? ComparisonHomeScreen(
+      : deps.comparisonEntry != null
+          ? ComparisonHomeScreen(
+              sampleSource: deps.sampleSource,
+              cvdProfile: deps.cvdProfile,
+              confusionCheck: deps.confusionCheck,
+              speech: deps.speech,
+              router: deps.router,
+            )
+          : deps.recipesEntry != null
+              ? RecipesHomeScreen(
+                  target: deps.recipesEntry!.target,
                   sampleSource: deps.sampleSource,
-                  cvdProfile: deps.cvdProfile,
-                  confusionCheck: deps.confusionCheck,
+                  paletteSource: _solverPaletteSource(deps),
+                  mixingEngine: deps.mixingEngine,
                   speech: deps.speech,
                   router: deps.router,
                 )
-              : deps.recipesEntry != null
-                  ? RecipesHomeScreen(
-                      target: deps.recipesEntry!.target,
-                      sampleSource: deps.sampleSource,
-                      paletteSource: _solverPaletteSource(deps),
-                      mixingEngine: deps.mixingEngine,
-                      speech: deps.speech,
-                      router: deps.router,
-                    )
-                  : deps.paletteEntry != null
-                      ? const PaletteHomeScreen()
-                      : _defaultShell(deps);
+              : deps.paletteEntry != null
+                  ? const PaletteHomeScreen()
+                  : _defaultShell(deps);
 }
 
-/// The default landing on the no-entry, no-capture-source fall-through route
-/// (bs-18 CHROME-2, AC-1; wireframe E44): the [AppShell]'s four-destination
-/// bottom navigation over Capture / Compare / Recipes / Palette.
+/// The default app route (bs-18 CHROME-3, AC-1; wireframe E44): the [AppShell]'s
+/// four-destination bottom navigation over Capture / Compare / Recipes /
+/// Palette. Every non-deep-link boot lands here, so the shipped app (which wires
+/// a [AppDependencies.captureSource]) shows the nav.
 ///
-/// The Capture destination (the opening one) is the pre-shell default landing
-/// — the Readout for [AppDependencies.initialSample] with the sharing opt-in
-/// offer overlaid ([_fallThroughHome]) — so booting here mounts exactly what it
-/// did before, now inside the nav chrome; the other three destinations build
-/// their home screens lazily the first time the painter selects them (D: zero
-/// behaviour change — no extra controller or read endpoint is constructed on
-/// boot). This is reached only on the fall-through: a wired capture source or
-/// any deep-link entry still opens its screen directly (D-1), so the shipped
-/// app and the acceptance harnesses are unchanged. CHROME-3 (AC-1) finalises
-/// the nav treatment over this shell.
+/// The opening Capture destination hosts the real [CaptureHomeScreen] when a
+/// capture source is wired (the shipped app and the capture suites), and the
+/// pre-shell Readout landing — the Readout for [AppDependencies.initialSample]
+/// with the sharing opt-in offer overlaid ([_fallThroughHome]) — when none is
+/// (bs-01's capture-less fall-through). Either way booting mounts exactly the
+/// one screen it did before, now inside the nav chrome; the other three
+/// destinations build their home screens lazily the first time the painter
+/// selects them (zero extra controller or read endpoint on boot). Deep-link
+/// entries still open their screen directly (D-1). CHROME-3 (AC-1) finalises the
+/// nav treatment over this shell and routes the capture boot through it.
 Widget _defaultShell(AppDependencies deps) {
   return AppShell(
     destinations: AppDestination.values,
     bodies: [
-      (_) => _fallThroughHome(deps),
+      (_) => deps.captureSource != null
+          ? const CaptureHomeScreen()
+          : _fallThroughHome(deps),
       (_) => ComparisonHomeScreen(
             sampleSource: deps.sampleSource,
             cvdProfile: deps.cvdProfile,

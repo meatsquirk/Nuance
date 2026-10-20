@@ -26,9 +26,10 @@ import 'store/source_photo_store.dart';
 /// directory, loads the persistent palette/project sources and launches via
 /// [buildApp], the single assembly entry both acceptance harnesses also use.
 /// The store I/O is asynchronous, so `main` awaits [productionDependencies]
-/// before the first frame; with a capture source wired the app still opens on
-/// the Capture screen (bs-02), and the Palette screen (bs-06) reads the real
-/// store when later navigation reaches it.
+/// before the first frame; with a capture source wired the app opens on the
+/// four-destination nav shell whose opening Capture destination is the Capture
+/// screen (bs-18 CHROME-3), and the Palette destination (bs-06) reads the real
+/// store when the painter navigates to it.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(buildApp(await productionDependencies()));
@@ -97,8 +98,9 @@ Future<void> sharePdfToDevice(Uint8List bytes, String filename) async {
 /// wiring is testable without the path_provider platform channel: it pairs the
 /// shipped stub services (the [ColorScienceImpl] stub, the no-op
 /// [NoopSpeech] / [NoopHaptics] sinks) and the deterministic
-/// [demoCaptureSource] (so the app opens on the Capture screen) with the
-/// injected [store], [sourcePhotoStore] and the loaded [paletteSource] /
+/// [demoCaptureSource] (the nav shell's Capture destination reads it, bs-18
+/// CHROME-3) with the injected [store], [sourcePhotoStore] and the loaded
+/// [paletteSource] /
 /// [projectSource] the Palette screen reads. Later features replace the stub
 /// implementations behind the same [AppDependencies] seam without touching this
 /// entry point.

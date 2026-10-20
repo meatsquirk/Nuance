@@ -478,15 +478,38 @@ void main() {
       expect(repeatable.canRepeat, isFalse);
     });
 
-    testWidgets('opens on the Capture screen when a capture source is wired',
-        (tester) async {
+    testWidgets(
+        'routes a wired capture source through the bottom-nav shell, Capture '
+        'the active opening destination (bs-18 CHROME-3)', (tester) async {
       final source = _captureSource();
       await tester.pumpWidget(buildApp(_captureDeps(source)));
 
-      // The Capture screen, not the Readout, is shown.
+      // The shell is the default even with a capture source: the bottom nav is
+      // present and Capture opens active, showing the real Capture screen (not
+      // the capture-less Readout fall-through, and not a bare screen without the
+      // nav) — so the shipped app shows the chrome (the production-visible
+      // default this phase wired, replacing CHROME-2's bare-screen short-cut).
+      expect(find.byKey(AppShell.bottomNavKey), findsOneWidget);
+      expect(find.byKey(AppShell.activeDestinationKey), findsOneWidget);
       expect(find.byType(CaptureHomeScreen), findsOneWidget);
       expect(find.byType(ReadoutScreen), findsNothing);
       expect(find.widgetWithText(AppBar, 'Capture'), findsOneWidget);
+      // The other three destinations stay lazy — not built until selected.
+      expect(find.byType(ComparisonHomeScreen), findsNothing);
+      expect(find.byType(RecipesHomeScreen), findsNothing);
+      expect(find.byType(PaletteHomeScreen), findsNothing);
+    });
+
+    testWidgets(
+        'the capture boot reaches the other destinations through the nav '
+        '(bs-18 CHROME-3)', (tester) async {
+      await tester.pumpWidget(buildApp(_captureDeps(_captureSource())));
+
+      // Capture is active with its live view; selecting another destination
+      // builds that home screen lazily over the same dependencies.
+      await tester.tap(find.byKey(AppDestination.palette.navItemKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(PaletteHomeScreen), findsOneWidget);
     });
 
     testWidgets(

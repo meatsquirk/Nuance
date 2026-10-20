@@ -131,3 +131,13 @@ The three ITEST-4 augmentations **pre-seeded** in `modules/ITEST.md` are all *sa
 ## Gate status
 
 **PASS.** All four ITEST-4 guards grade **straight A** — each is green at baseline (the invariant already holds on the live tree, the AC-1 precedent) **and** carries a proven, discriminating control plus a non-vacuous real-screen sweep: AC-11 (nested app/theme control fires both the one-`MaterialApp` and scheme-override checks), AC-12 (both the missing-caption *and* duplicate-caption controls fire the "exactly one" rule, with `ColorChip`-emits-no-caption verified so the missing-caption control is real), AC-13 (one discriminating control per reused bs-11 rule — 24dp target and ~1.6:1 text — both proven to read `false`), AC-14 (planted-literal control returns exactly one hit with the right rule tag, comment/string masked). **No plain-B row exists; no row needs a fix this phase.** The only follow-ups are G-2/reviewer items, not gate blockers: AC-11's tautological `expect(h.colorScheme, scheme)` line (note 1) and the AC-11/AC-12 scenario-clause narrowings (notes 2–3). The run-pending baseline is green for all four (control-case-justified, as ITEST-4's exit criteria permits).
+
+## CHROME-3 re-grade (behavior, AC-1 — 2026-10-20)
+
+Independent fresh-subagent re-grade of the only un-pended AC test and CHROME-3's test edits (grader did not author):
+
+- **AC-1 `TestAC01_BottomNav`** — **A** (unchanged body; prior ITEST-2 A retained). G1 Given asserted (`bottomNav findsOneWidget`); G5 rejects both catalogued wrongs (missing destination via `AppDestination.values.hasLength(4)` + per-destination finder; "active by colour only" via filled-on-active + outline-on-unselected); G3 the negative glyph Then sits after `pumpAndSettle` with a positive control; G4 theme-token Thens assert the raw `DecoratedBox` colours; G6 one AC.
+- **`smoke_test.dart` scaffold edits** — **A ×3**: pending-direction proof (now AC-2 + asserts AC-1 never skips), seed-drift (`pendingACs == fullSeed∖{AC-1}` + `fullSeed.hasLength(14)`, no vacuous pass), `acTestWidgets` wiring smoke (AC-2). Comments accurate, deterministic.
+- **`readout_test.dart` AC-11 finder change** — **A**: `find.widgetWithText(AppBar, 'Recipes')` is strictly more discriminating than the old bare `find.text('Recipes')` (excludes the new nav plain-text label); original Given/Then intent preserved, not weakened.
+
+**Counts: A = 5, B = 0. No fix owed.** Gate **PASS**.

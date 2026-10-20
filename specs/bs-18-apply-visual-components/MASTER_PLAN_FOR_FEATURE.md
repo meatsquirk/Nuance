@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — G-2 approved (2026-10-19); next CHROME-3 (AC-1 bottom nav). Behavior stage open.
+**Status:** In progress — CHROME-3 done (AC-1 ✅; nav is the prod default); next CHROME-4 (AC-2 top bar).
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -44,7 +44,7 @@ this feature only *opts screens into them*.
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | The app shows the design-system bottom navigation | ITEST-2 `TestAC01_BottomNav` | CHROME-3 | ⬜ Todo |
+| AC-1 | The app shows the design-system bottom navigation | ITEST-2 `TestAC01_BottomNav` | CHROME-3 | ✅ Done |
 | AC-2 | Each primary screen shows the design-system top bar | ITEST-2 `TestAC02_TopBar` | CHROME-4 | ⬜ Todo |
 | AC-3 | The Capture screen's controls render as design-system components | ITEST-2 `TestAC03_CaptureControls` | READ-1 | ⬜ Todo |
 | AC-4 | The Capture screen's warnings stack without overlapping | ITEST-2 `TestAC04_CaptureWarnings` | READ-2 | ⬜ Todo |
@@ -166,6 +166,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | palette AC-5 | flutter-tester-lane native fail off exclusive lane (bs-06) | carried | `c00422f` | bs-06 / off-lane | Open |
 | self_assessment AC-4 | flutter-tester-lane native fail off exclusive lane (bs-07) | carried | `c00422f` | bs-07 / off-lane | Open |
 | display AC-9 | flutter-tester-lane native fail off exclusive lane (bs-08) | carried | `c00422f` | bs-08 / off-lane | Open |
+| whole `visual_application/` dir | under sustained load (many back-to-back runs) every file hits "Unable to start the app on the device" / "log reader failed" at launch — not a test failure; each file passes run alone / in a small batch | env (device saturation) | CHROME-3 session 2026-10-20 | infra / off-lane | Open |
 
 ## Session log
 
@@ -178,8 +179,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-3 | acceptance-tests: AC-6,7,8,9,10 (pending) + red baseline | ✅ Done | 11.88M | 35m (35m) | AC-6/9/10 A, AC-7→FLOW-2 / AC-8→ORG-1 A-core/B-pending; grade PASS 0 plain-B; harness got CFG pumps; 4 G-2 review items (headline: AC-6 cross-screen ownership) |
 | 6 | ITEST-4 | acceptance-tests: AC-11,12,13,14 (pending) + red baseline | ✅ Done | 6.41M | 22m (22m) | all 4 green@baseline + discriminating controls; grade PASS straight-A ×4, 0 plain-B; 3 augmentations satisfied at ITEST-4 (none owed); reuses bs-17 scan + bs-11 conformance |
 | 7 | ITEST-5 | test-review: packet; G-2 | ✅ Done | 1.08M | 2m 43s (2m 43s) | packet assembled (modules/ITEST.md § G-2); **G-2 approved 2026-10-19 — Matt Quirk**; A=10 / A-core-B-pending=4 / plain-B=0 |
-| 8 | CHROME-3 | AC-1 — bottom navigation | ⬜ Next | | | run alone (build_app.dart); **G-2 approved → startable** |
-| 9 | CHROME-4 | AC-2 — top bar | ⬜ Todo | | | run alone (build_app.dart) |
+| 8 | CHROME-3 | AC-1 — bottom navigation | ✅ Done | 16.50M | 33m (8h 04m) | AC-1 ✅ A; nav is now the prod-visible default (captureSource routes through the shell); unit 1669✅; cov 100%/6 files; bs-02/09/10/11/14 re-verified✅; fixed pre-existing CHROME-2 regression in bs-01 readout AC-11 (nav-label collision) |
+| 9 | CHROME-4 | AC-2 — top bar | ⬜ Next | | | run alone (build_app.dart); startable now (G-2 ✅, CHROME-3 done) |
 | 10 | READ-1 | AC-3 — capture controls | ⬜ Todo | | | ∥ FLOW/ORG/CFG |
 | 11 | READ-2 | AC-4 — capture warning overlap fix | ⬜ Todo | | | after READ-1 (lib/capture) |
 | 12 | READ-3 | AC-5 — readout cards + mono + speak FAB | ⬜ Todo | | | ∥ FLOW/ORG/CFG |
@@ -197,21 +198,25 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**G-2 approved (Matt Quirk, 2026-10-19) → the behavior stage is open.** The 14 pending acceptance tests are
-approved as-is; the 6 non-blocking reviewer items carry to their owning phases per the packet defaults.
+**CHROME-3 done (AC-1 ✅).** The bottom nav is now the production-visible default: a wired `captureSource`
+routes *through* the shell (its Capture destination), so the shipped app shows the nav (scope expansion
+approved by Matt Quirk 2026-10-20). bs-02/09/10/11/14 re-verified green; a pre-existing CHROME-2 regression in
+bs-01 `readout_test` AC-11 (nav-label vs bare-text) was fixed.
 
-**Next: CHROME-3** (AC-1, bottom navigation) — run **alone** (CHROME owns `build_app.dart`, which every screen
-is wired through; D-7). Then CHROME-4 (AC-2, top bar), also alone. After the two CHROME phases, the screen
-modules run concurrently over disjoint dirs: **READ** (`lib/readout/**`,`lib/capture/**`) ∥ **FLOW**
-(`lib/compare/**`,`lib/recipes/**`) ∥ **ORG** (`lib/palette/**`,`lib/projects/**`) ∥ **CFG**
+**Next: CHROME-4** (AC-2, top bar) — run **alone** (owns `build_app.dart` / shared chrome; D-7): mounts the
+shared `AppTopBar` on each destination. **Watch:** keep the capture suites' `AppBar`-scoped finders valid and
+apply the AC-11 nav-label-vs-`AppBar` disambiguation to any new bare-text screen-title assertion. After
+CHROME-4 the screen modules run concurrently over disjoint dirs: **READ** (`lib/readout/**`,`lib/capture/**`)
+∥ **FLOW** (`lib/compare/**`,`lib/recipes/**`) ∥ **ORG** (`lib/palette/**`,`lib/projects/**`) ∥ **CFG**
 (`lib/display/**`,`lib/onboarding/**`), each via a separate `--parallel` session. GUARD-1/2/3 run last,
 sequentially, after every screen phase.
 
 **Carry-forward reviewer items (not gate blockers):** (1) **AC-6 cross-screen ownership** — "Compare as A/B"/
 "Find recipes" live in `lib/readout/actions_bar.dart` but FLOW-1 owns `lib/compare/**`; **FLOW-1 must re-scope
-its file ownership (or reassign to READ-3) to un-pend AC-6 green**. (2) The 5 green-at-baseline tests (AC-1 +
-guards AC-11..14) stay pending; their owning phases un-pend them. (3) AC-6 A/B outline weight; AC-7 "ranked
-by" note; AC-9 create-vs-export; AC-11 tautological line — each a cheap strengthening/scope call for its phase.
+its file ownership (or reassign to READ-3) to un-pend AC-6 green**. (2) The 4 remaining green-at-baseline
+tests (guards AC-11..14) stay pending; their owning phases un-pend them. (3) AC-6 A/B outline weight; AC-7
+"ranked by" note; AC-9 create-vs-export; AC-11 tautological line — each a cheap strengthening/scope call for
+its phase.
 
 ## Token usage
 
@@ -230,7 +235,8 @@ by" note; AC-9 create-vs-export; AC-11 tautological line — each a cheap streng
 | ITEST-4 | 8dd2548b | 2026-10-19 17:47 EDT | 18:09 | 21m 46s | 21m 46s | claude-opus-4-8 | 96 | 260,811 | 6,091,638 | 61,448 | 6,413,993 | AC-11..14 pending + green-baseline w/ controls; grade PASS straight-A x4, 0 plain-B; 3 augmentations satisfied |
 | ITEST-5 | d8dfb528 | 2026-10-19 19:36 EDT | 19:39 | 2m 43s | 2m 43s | claude-opus-4-8 | 24 | 72,638 | 998,440 | 12,561 | 1,083,663 | test-review packet assembled; G-2 routed to human (awaiting decision); grid A=10 / A-core-B-pending=4 / plain-B=0; blocks every behavior phase |
 | SIGNOFF-DECISION | d8dfb528 | 2026-10-19 20:47 EDT | 20:48 | 1m 28s | 1m 28s | claude-opus-4-8 | 22 | 101,155 | 1,310,893 | 6,205 | 1,418,275 | ITEST-5 approved — G-2 approved by Matt Quirk; 14 pending acceptance tests approved as-is; behavior stage open |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-19 20:48** | **3h 19m** | **3h 01m** |  | **850** | **1,857,302** | **63,343,565** | **472,444** | **65,674,161** |  |
+| CHROME-3 | 55c96a98 | 2026-10-19 22:00 EDT | 2026-10-20 06:05 | 8h 04m | 32m 35s | claude-opus-4-8 | 176 | 383,424 | 16,015,776 | 96,207 | 16,495,583 | AC-1 un-pended (A); nav is prod-visible default (captureSource routes through shell, no main.dart change); unit 1669 pass; cov gate 100%/6 files; bs-02/09/10/11/14 re-verified green; fixed pre-existing CHROME-2 regression in bs-01 readout AC-11 (nav-label collision); grade A=5/B=0; fix passes 1/3 |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 06:05** | **11h 23m** | **3h 33m** |  | **1,026** | **2,240,726** | **79,359,341** | **568,651** | **82,169,744** |  |
 
 ## Sign-off
 

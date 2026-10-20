@@ -18,8 +18,8 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/material.dart'; // AppBar — the Recipes screen's title bar (AC-11, bs-18 nav-chrome disambiguation); re-exports widgets.dart
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/app/router.dart';
@@ -466,7 +466,12 @@ void main() {
     final harness = await givenReadoutOf(tester, SAMPLE_OLIVE);
     expect(find.text('Deep Olive Green'), findsOneWidget,
         reason: 'AC-11 Given: the olive sample must be the one shown');
-    expect(find.text('Recipes'), findsNothing,
+    // "On the Recipes screen" is read from that screen's AppBar title, not the
+    // bare text "Recipes": bs-18 CHROME-3 wraps the app in a bottom-nav shell
+    // whose Recipes destination label is a plain Text, so a bare-text match is
+    // ambiguous. The Recipes screen's title lives in an AppBar; the nav label
+    // does not — so this stays precise and nav-chrome-independent.
+    expect(find.widgetWithText(AppBar, 'Recipes'), findsNothing,
         reason: 'AC-11 Given: the painter starts on the Readout, not Recipes');
 
     // When: the painter asks to find mixing recipes for the reading.
@@ -474,7 +479,7 @@ void main() {
 
     // Then: the Recipes screen is shown with "Deep Olive Green" as the target
     // (so the handoff set a target, and the right sample).
-    expect(find.text('Recipes'), findsOneWidget,
+    expect(find.widgetWithText(AppBar, 'Recipes'), findsOneWidget,
         reason: 'AC-11: the Recipes screen must be shown (READOUT-6)');
     expect(find.text('Recipe target: Deep Olive Green'), findsOneWidget,
         reason: 'AC-11: "Deep Olive Green" must be the recipe target (READOUT-6)');
