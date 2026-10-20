@@ -46,7 +46,6 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-10 → CFG-1, AC-11 → GUARD-2, AC-12 → GUARD-1, AC-13 → GUARD-3,
 ///   AC-14 → GUARD-2.
 const Map<String, String> pendingACs = {
-  'AC-10': 'CFG-1', // Display and Onboarding through the design system
   'AC-11': 'GUARD-2', // every screen inherits the one installed theme
   'AC-12': 'GUARD-1', // every swatch-bearing screen carries its caption
   'AC-13': 'GUARD-3', // the restyle preserves accessibility

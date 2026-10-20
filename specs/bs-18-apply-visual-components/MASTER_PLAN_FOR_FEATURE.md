@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — CHROME ✅ + READ ✅ + FLOW ✅ + ORG ✅ (AC-6..AC-9); next CFG-1 (AC-10), then GUARD-1/2/3.
+**Status:** In progress — all 10 screen-swap phases done (CHROME/READ/FLOW/ORG/CFG ✅, AC-1..AC-10); next GUARD-1, then GUARD-2/3 → SIGNOFF-1.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -53,7 +53,7 @@ this feature only *opts screens into them*.
 | AC-7 | The Recipes screen renders recipes as cards with mono notes and pill actions | ITEST-3 `TestAC07_Recipes` | FLOW-2 | ✅ Done |
 | AC-8 | The Palette screen renders paints, provenance and the add action as design-system components | ITEST-3 `TestAC08_Palette` | ORG-1 | ✅ Done |
 | AC-9 | The Projects region renders projects as cards with pill actions | ITEST-3 `TestAC09_Projects` | ORG-2 | ✅ Done |
-| AC-10 | The Display and Onboarding screens render through the design system | ITEST-3 `TestAC10_DisplayOnboarding` | CFG-1 | ⬜ Todo |
+| AC-10 | The Display and Onboarding screens render through the design system | ITEST-3 `TestAC10_DisplayOnboarding` | CFG-1 | ✅ Done |
 | AC-11 | Every screen inherits the one installed theme | ITEST-4 `TestAC11_SingleTheme` | GUARD-2 | ⬜ Todo |
 | AC-12 | Every swatch-bearing screen carries its approximation caption | ITEST-4 `TestAC12_SwatchCaption` | GUARD-1 | ⬜ Todo |
 | AC-13 | The restyle preserves accessibility | ITEST-4 `TestAC13_A11yPreserved` | GUARD-3 | ⬜ Todo |
@@ -124,7 +124,7 @@ Pre-seeded augmentations: AC-3 (capture partly swapped) strengthened by READ-1; 
 | READ | [modules/READ.md](modules/READ.md) | Readout + Capture screen swaps (incl. warning-overlap fix) | ITEST (G-2) | ✅ Done |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Compare + Recipes screen swaps | ITEST (G-2) | ✅ Done (FLOW-1 + FLOW-2) |
 | ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | ✅ Done (ORG-1, ORG-2) |
-| CFG | [modules/CFG.md](modules/CFG.md) | Display + Onboarding screen swaps | ITEST (G-2) | ⬜ Todo |
+| CFG | [modules/CFG.md](modules/CFG.md) | Display + Onboarding screen swaps | ITEST (G-2) | ✅ Done |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | App-wide guards: swatch caption, single theme, a11y, source-scan | all screen modules | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | CHROME-2 | ◑ In progress |
 
@@ -164,7 +164,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|
 | palette AC-3 | flutter-tester-lane native fail off exclusive lane (bs-06) | carried | `c00422f` | bs-06 / off-lane | Open |
 | palette AC-5 | flutter-tester-lane native fail off exclusive lane (bs-06) | carried | `c00422f` | bs-06 / off-lane | Open |
-| self_assessment AC-4 | flutter-tester-lane native fail off exclusive lane (bs-07) | carried | `c00422f` | bs-07 / off-lane | Open |
+| self_assessment AC-4 | intake "I have a diagnosis" tap missed below the fold (bs-07) | carried | `c00422f` | bs-07 | ✅ Resolved CFG-1 (added `ensureVisible` to the intake drivers; bs-07 now 24/0) |
 | display AC-9 | flutter-tester-lane native fail off exclusive lane (bs-08) | carried | `c00422f` | bs-08 / off-lane | Open |
 | whole `visual_application/` dir | under sustained load (many back-to-back runs) every file hits "Unable to start the app on the device" / "log reader failed" at launch — not a test failure; each file passes run alone / in a small batch | env (device saturation) | CHROME-3 session 2026-10-20 | infra / off-lane | Open |
 
@@ -188,8 +188,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 14 | FLOW-2 | AC-7 — recipes | ✅ Done | 14.73M | 27m 04s (27m 04s) | AC-7 ✅ straight A; recipe rows → SurfaceCard, Speak recipe → SpeakButton, ranked-by + out-of-gamut notes → MonoLabel; closed the TestAC07 "notes hardcoded" augmentation; unit 1676✅, cov 100%/2, grade A=7/0-B, fix 0/3; bs-04 24 + bs-05 22 + bs-11 19 re-verified✅ |
 | 15 | ORG-1 | AC-8 — palette | ✅ Done | 10.83M | 26m 57s (26m 57s) | AC-8 ✅ straight A; add-from-dataset → PillButton.secondary, vision card → SurfaceCard + retake pill; closed the TestAC08 "old add button absent" augmentation; unit 1676✅, cov 100%/2, grade A=8/0-B, fix 1/3; bs-06 21/2 + bs-07 23/1 (only carried off-lane flakes) |
 | 16 | ORG-2 | AC-9 — projects | ✅ Done | 5.42M | 17m 57s (17m 57s) | AC-9 ✅ straight A; project entries → SurfaceCard, open → PillButton.primary, export → PillButton.secondary (both ad-hoc TextButtons gone); no augmentation owed (fully-ad-hoc BASE, wholesale key-preserving swap); unit 1676✅, cov 100%/1, grade A=9/0-B, fix 0/3; bs-06 21/2 + bs-07 23/1 (only carried off-lane flakes; bs-06 project ACs all green) |
-| 17 | CFG-1 | AC-10 — display + onboarding | ⬜ Next | | | ∥ READ/FLOW/ORG — independently startable |
-| 18 | GUARD-1 | AC-12 — swatch caption on every swatch screen | ⬜ Todo | | | after all screen phases |
+| 17 | CFG-1 | AC-10 — display + onboarding | ✅ Done | 23.22M | 44m 06s (44m 06s) | AC-10 ✅ straight A; sim+theme options → PillButton, each display group + every onboarding step → SurfaceCard, continue/seeResult/save → PillButton.primary, result pair + SwatchCaption; in-step answer buttons left TextButton (FLOW-1 rule). unit 1676✅, cov 100%/8, grade A=10/0-B, fix 1/3 (ListTile-in-card Material + bs-07 intake ensureVisible). bs-07 24/0 (AC-4 flake fixed), bs-10 25/0, bs-08 20✅ + AC-9 carried (compare-screen, unrelated) |
+| 18 | GUARD-1 | AC-12 — swatch caption on every swatch screen | ⬜ Next | | | unblocked — every screen phase done |
 | 19 | GUARD-2 | AC-11 + AC-14 — single theme + source-scan | ⬜ Todo | | | after GUARD-1 |
 | 20 | GUARD-3 | AC-13 — a11y regression (targets + contrast) | ⬜ Todo | | | after GUARD-2 |
 | 21 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
@@ -198,31 +198,32 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ORG-2 ✅ done (AC-9 — Projects region → design system).** ORG module complete. Each project entry now
-renders in a `SurfaceCard`; E33 Open → `PillButton.primary`, E34 Export → `PillButton.secondary` (both ad-hoc
-`TextButton`s gone, keys + enabled/disabled logic preserved). Presentation only (D-2). No augmentation owed
-or added — the Projects region was fully ad-hoc at BASE, so the wholesale key-preserving swap leaves no
-co-presence surface (grader-confirmed; AC-6/AC-9/AC-10 house-style, unlike AC-8's partly-swapped case). AC-9
-straight **A**. unit 1676✅, cov 100%/1, grade A=9/0-B, fix 0/3; bs-06 21/2 + bs-07 23/1 (only carried
-off-lane flakes; bs-06 project ACs AC-6..AC-10 all green). The smoke pending-exemplar re-pointed AC-9→AC-10.
+**CFG-1 ✅ done (AC-10 — Display + Onboarding → design system).** CFG module complete; **all 10 screen-swap
+ACs (AC-1..AC-10) are now done.** Sim + theme options → `PillButton`, each display group + every onboarding
+step → `SurfaceCard`, continue/seeResult/save → `PillButton.primary`, result pair + one `SwatchCaption`;
+in-step answer/choice buttons left `TextButton` (FLOW-1 "only named/superseded controls" rule). AC-10 straight
+**A**. unit 1676✅, cov 100%/8, grade A=10/0-B, fix 1/3 (ListTile-in-card transparent `Material` + bs-07 intake
+`ensureVisible`). bs-07 24/0 (AC-4 flake resolved), bs-10 25/0, bs-08 20✅ + AC-9 carried. Smoke exemplar
+re-pointed AC-10→AC-11.
 
 **Startable now:**
-- **CFG-1** (AC-10, `lib/display/**`, `lib/onboarding/**`) — the last screen phase: view-switch/options →
-  pills/segmented controls, onboarding steps → `SurfaceCard`s + next/back pills. Independent; runs alone or
-  in its own `--parallel` session.
-- **GUARD-1/2/3** run last, sequentially, after CFG-1 (GUARD-1 now waits only on CFG-1 — every other screen
-  phase, CHROME/READ/FLOW/ORG, is done). GUARD-1 (AC-12 caption sweep) → GUARD-2 (AC-11 single theme + AC-14
-  source-scan) → GUARD-3 (AC-13 a11y regression) → SIGNOFF-1.
+- **GUARD-1** (AC-12 — swatch-caption sweep) — unblocked: every screen phase (CHROME/READ/FLOW/ORG/CFG) is
+  done. Owns the guard sweep over the swapped screens.
+- **GUARD-2** (AC-11 single theme + AC-14 source-scan) and **GUARD-3** (AC-13 a11y regression) run **after**
+  GUARD-1, sequentially (GUARD-1 → GUARD-2 → GUARD-3 → SIGNOFF-1). Not startable until GUARD-1 lands.
 
-**Watch:** (a) **Tall-surface gotcha** — a harness reading below-fold shell content must pump device-tall
-(`tester.view.physicalSize = Size(1000,3200)`, reset on teardown), as bs-18 `pumpShell` does. (b) Scope any
-new bare-text screen-title assertion to the screen's `AppBar`. (c) The whole `visual_application/` dir won't
-launch at once under load (run suites one at a time).
+**Watch:** (a) **Tall-surface / fold gotcha** — the onboarding host lays every step out in one
+`SingleChildScrollView`; carding adds height, so any driver tapping a lower control must `ensureVisible`
+first (CFG-1 fixed the two bs-07 intake drivers for this). A harness reading below-fold shell content must
+pump device-tall (`Size(1000,3200)`, reset on teardown). (b) A `ListTile`/`SwitchListTile`/`CheckboxListTile`
+placed directly inside a `SurfaceCard` needs a transparent `Material` between them or the framework asserts.
+(c) The whole `visual_application/` dir won't launch at once under load (run suites one at a time).
 
 **Carry-forward reviewer items (not gate blockers):** (1) The 4 green-at-baseline guards (AC-11..14) stay
 pending; their owning GUARD phases un-pend them. (2) AC-11 tautological line — a cheap strengthening/scope
-call for GUARD-2. (3) **display AC-9** stays an open known flake (off-lane flutter-tester, bs-08; reproduces
-at BASE).
+call for GUARD-2. (3) **display AC-9** stays an open known flake (off-lane flutter-tester, bs-08; its tap
+targets the text "Speak whole comparison" that bs-18 FLOW-1 re-homed to a `SpeakButton` FAB on the compare
+screen — unrelated to any later phase).
 
 ## Token usage
 
@@ -250,7 +251,8 @@ at BASE).
 | FLOW-2 | cbc0b114 | 2026-10-20 12:15 EDT | 12:42 | 27m 04s | 27m 04s | claude-opus-4-8 | 188 | 273,772 | 14,378,643 | 81,289 | 14,733,892 | AC-7 un-pended straight A; recipe rows→SurfaceCard + Speak recipe→SpeakButton + ranked-by/out-of-gamut notes→MonoLabel; closed TestAC07 augmentation; unit 1676, cov 100%/2, grade A=7/0-B, fix 0/3; bs-04 24 + bs-05 22 + bs-11 19 re-verified |
 | ORG-1 | 865bc909 | 2026-10-20 12:46 EDT | 13:13 | 26m 57s | 26m 57s | claude-opus-4-8 | 180 | 225,794 | 10,563,037 | 44,618 | 10,833,629 | AC-8 un-pended straight A; add-from-dataset->PillButton.secondary + vision card->SurfaceCard + retake pill; closed TestAC08 'old add button absent' augmentation; unit 1676, cov 100%/2, grade A=8/0-B, fix 1/3; bs-06 21/2 + bs-07 23/1 (only carried off-lane flakes) |
 | ORG-2 | 18218673 | 2026-10-20 13:37 EDT | 13:55 | 17m 57s | 17m 57s | claude-opus-4-8 | 108 | 215,129 | 5,168,834 | 38,188 | 5,422,259 | AC-9 un-pended + green; projects→SurfaceCard, open→PillButton.primary, export→PillButton.secondary; unit 1676, cov 100%/1, grade A=9/0-B, fix 0/3; bs-06 21/2 + bs-07 23/1 carried off-lane flakes |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 13:55** | **14h 47m** | **6h 57m** |  | **2,316** | **4,347,970** | **167,583,379** | **1,083,687** | **173,017,352** |  |
+| CFG-1 | 1c6899e7 | 2026-10-20 14:47 EDT | 15:31 | 44m 06s | 44m 06s | claude-opus-4-8 | 258 | 366,559 | 22,745,429 | 112,346 | 23,224,592 | AC-10 straight A; un-pended; unit 1676, cov 100%/8, grade A=10/0-B, fix 1/3; bs-07 24/0 bs-10 25/0 bs-08 20+AC-9 carried |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 15:31** | **15h 31m** | **7h 41m** |  | **2,574** | **4,714,529** | **190,328,808** | **1,196,033** | **196,241,944** |  |
 
 ## Sign-off
 

@@ -16,11 +16,13 @@ import 'package:paint_color_assistant/onboarding/screens/result_step.dart';
 import 'package:paint_color_assistant/onboarding/screens/screening_step.dart';
 import 'package:paint_color_assistant/onboarding/screens/threshold_step.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
+import 'package:paint_color_assistant/widgets/pill_button.dart';
 
 void main() {
   group('OnboardingHost (FLOW-1 shell)', () {
-    testWidgets('boots the onboarding flow and mounts both read endpoints',
-        (tester) async {
+    testWidgets('boots the onboarding flow and mounts both read endpoints', (
+      tester,
+    ) async {
       await tester.pumpWidget(const MaterialApp(home: OnboardingHost()));
 
       // Both acceptance observation seams are mounted over the host.
@@ -30,13 +32,17 @@ void main() {
       expect(find.byKey(OnboardingReadEndpoint.endpointKey), findsOneWidget);
 
       // The onboarding surface and its progress indicator render.
-      expect(find.widgetWithText(AppBar, 'CVD self-assessment'), findsOneWidget);
+      expect(
+        find.widgetWithText(AppBar, 'CVD self-assessment'),
+        findsOneWidget,
+      );
       expect(find.byKey(ProgressRegion.regionKey), findsOneWidget);
       expect(find.text('Step 1 of 4'), findsOneWidget);
     });
 
-    testWidgets('lays out every keyed step region as a stable anchor',
-        (tester) async {
+    testWidgets('lays out every keyed step region as a stable anchor', (
+      tester,
+    ) async {
       await tester.pumpWidget(const MaterialApp(home: OnboardingHost()));
 
       expect(find.byKey(LightingStep.regionKey), findsOneWidget);
@@ -56,14 +62,16 @@ void main() {
       expect(find.byKey(ResultStep.saveKey), findsOneWidget);
     });
 
-    testWidgets('its not-yet-wired controls are inert in the shell', (tester) async {
+    testWidgets('its not-yet-wired controls are inert in the shell', (
+      tester,
+    ) async {
       await tester.pumpWidget(const MaterialApp(home: OnboardingHost()));
 
       // Controls whose behaviour phase has not run yet carry no handler. (The
       // lighting continue is wired by FLOW-3 and the arrangement by FLOW-4, so
       // they are no longer inert.)
       expect(
-        tester.widget<TextButton>(find.byKey(ResultStep.saveKey)).onPressed,
+        tester.widget<PillButton>(find.byKey(ResultStep.saveKey)).onPressed,
         isNull,
       );
       // The severity slider is wired (ENGINE-7) but inert until the estimate is
@@ -75,13 +83,16 @@ void main() {
       // The arrangement step is wired (FLOW-4): the pool shows a control per
       // cap and nothing is arranged yet.
       expect(find.byKey(ArrangementStep.poolKey), findsOneWidget);
-      expect(find.byKey(ArrangementStep.capKey(arrangementCaps.first)),
-          findsOneWidget);
+      expect(
+        find.byKey(ArrangementStep.capKey(arrangementCaps.first)),
+        findsOneWidget,
+      );
       expect(find.text('Arranged: 0'), findsOneWidget);
     });
 
-    testWidgets('reads the profile store from the enclosing AppScope',
-        (tester) async {
+    testWidgets('reads the profile store from the enclosing AppScope', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         AppScope(
           dependencies: AppDependencies(

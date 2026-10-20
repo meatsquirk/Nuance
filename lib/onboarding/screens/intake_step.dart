@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../a11y/cvd/cvd_profile.dart';
+import '../../widgets/surface_card.dart';
 import '../engine/assessment_engine.dart';
 import '../engine/tier_results.dart';
 import '../onboarding_controller.dart';
@@ -48,36 +49,42 @@ class _IntakeStepState extends State<IntakeStep> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      key: IntakeStep.regionKey,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Do reds, browns and greens get mixed up?'),
-        for (final answer in IntakeStep.confusionAnswers) _answerButton(answer),
-        const Text('Prior clinical diagnosis (optional)'),
-        TextButton(
-          onPressed: () => setState(() => _diagnosisOpen = true),
-          child: const Text('I have a diagnosis'),
+    return SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          key: IntakeStep.regionKey,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Do reds, browns and greens get mixed up?'),
+            for (final answer in IntakeStep.confusionAnswers)
+              _answerButton(answer),
+            const Text('Prior clinical diagnosis (optional)'),
+            TextButton(
+              onPressed: () => setState(() => _diagnosisOpen = true),
+              child: const Text('I have a diagnosis'),
+            ),
+            if (_diagnosisOpen)
+              for (final entry in IntakeStep.diagnosisTypeLabels.entries)
+                _diagnosisButton(entry.key, entry.value),
+          ],
         ),
-        if (_diagnosisOpen)
-          for (final entry in IntakeStep.diagnosisTypeLabels.entries)
-            _diagnosisButton(entry.key, entry.value),
-      ],
+      ),
     );
   }
 
   /// A red-green confusion-frequency answer button wired to record [label]
   /// toward the starting prior (AC-3).
   Widget _answerButton(String label) => TextButton(
-        onPressed: () => widget.controller.answerIntake(
-          IntakeAnswer(questionId: rgConfusionQuestionId, value: label),
-        ),
-        child: Text(label),
-      );
+    onPressed: () => widget.controller.answerIntake(
+      IntakeAnswer(questionId: rgConfusionQuestionId, value: label),
+    ),
+    child: Text(label),
+  );
 
   /// A diagnosis type-picker button that seeds the prior as [type] (AC-4).
   Widget _diagnosisButton(CvdType type, String label) => TextButton(
-        onPressed: () => widget.controller.reportDiagnosis(type),
-        child: Text(label),
-      );
+    onPressed: () => widget.controller.reportDiagnosis(type),
+    child: Text(label),
+  );
 }

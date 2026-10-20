@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/pill_button.dart';
 import '../onboarding_controller.dart';
 import 'arrangement_step.dart';
 import 'intake_step.dart';
@@ -29,7 +30,11 @@ import 'threshold_step.dart';
 /// placeholder entry screen.
 class OnboardingScreen extends StatelessWidget {
   /// Creates the onboarding surface over [controller], keyed by [scaffoldKey].
-  const OnboardingScreen({required this.controller, this.scaffoldKey, super.key});
+  const OnboardingScreen({
+    required this.controller,
+    this.scaffoldKey,
+    super.key,
+  });
 
   /// Stable anchor for the "See my result" control that assembles the estimate
   /// and advances to the result step (FLOW-5; `advanceToResult`).
@@ -74,7 +79,7 @@ class OnboardingScreen extends StatelessWidget {
                   // Concludes the battery: assembles the estimate from whatever
                   // tiers ran and advances to the result step (FLOW-5). Always
                   // present — the shell lays every step out at once.
-                  TextButton(
+                  PillButton.primary(
                     key: seeResultKey,
                     onPressed: controller.advanceToResult,
                     child: const Text('See my result'),

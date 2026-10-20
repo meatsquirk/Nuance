@@ -320,12 +320,17 @@ class SelfAssessmentHarness {
   }
 
   /// Answers the Tier 1 intake question with [value] (e.g. [intakeOften]'s
-  /// "Often") by its labelled button (AC-3; wired ENGINE-3).
+  /// "Often") by its labelled button (AC-3; wired ENGINE-3). Scrolls the control
+  /// into view first (bs-18 CFG-1 carded every step, so the intake controls now
+  /// sit at/below the single scroll view's fold like the other below-fold
+  /// drivers the harness already scrolls to).
   Future<void> whenAnswerIntake(String value) async {
-    await tester.tap(find.descendant(
+    final control = find.descendant(
       of: find.byKey(IntakeStep.regionKey),
       matching: find.widgetWithText(TextButton, value),
-    ));
+    );
+    await tester.ensureVisible(control);
+    await tester.tap(control);
     await tester.pumpAndSettle();
   }
 
@@ -335,16 +340,22 @@ class SelfAssessmentHarness {
   /// ENGINE-4). The picker label is keyed off [IntakeStep.diagnosisTypeLabels]
   /// so the chosen [type] always finds its button.
   Future<void> whenReportDiagnosis({CvdType type = CvdType.deutan}) async {
-    await tester.tap(find.descendant(
+    final entry = find.descendant(
       of: find.byKey(IntakeStep.regionKey),
       matching: find.widgetWithText(TextButton, 'I have a diagnosis'),
-    ));
+    );
+    // bs-18 CFG-1 carded every step, so the intake entry now sits at/below the
+    // single scroll view's fold — scroll it in first, as the other drivers do.
+    await tester.ensureVisible(entry);
+    await tester.tap(entry);
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(
+    final choice = find.descendant(
       of: find.byKey(IntakeStep.regionKey),
       matching: find.widgetWithText(
           TextButton, IntakeStep.diagnosisTypeLabels[type]!),
-    ));
+    );
+    await tester.ensureVisible(choice);
+    await tester.tap(choice);
     await tester.pumpAndSettle();
   }
 

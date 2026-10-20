@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/surface_card.dart';
 import '../onboarding_controller.dart';
 
 /// The Tier 3 arrangement step (wireframe S1.R1.E38 arrange colour caps
@@ -39,37 +40,42 @@ class ArrangementStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = controller.state;
-    return Column(
-      key: regionKey,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Arrange the colour caps in hue order'),
-        // The unplaced caps: tapping one places it in the next arranged
-        // position (AC-6). A Wrap keeps the pool compact as it grows/shrinks.
-        Wrap(
-          key: poolKey,
-          spacing: 8,
+    return SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          key: regionKey,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final capId in state.arrangementPool)
-              TextButton(
-                key: capKey(capId),
-                onPressed: () => controller.placeCap(capId),
-                child: Text('Cap $capId'),
-              ),
+            const Text('Arrange the colour caps in hue order'),
+            // The unplaced caps: tapping one places it in the next arranged
+            // position (AC-6). A Wrap keeps the pool compact as it grows/shrinks.
+            Wrap(
+              key: poolKey,
+              spacing: 8,
+              children: [
+                for (final capId in state.arrangementPool)
+                  TextButton(
+                    key: capKey(capId),
+                    onPressed: () => controller.placeCap(capId),
+                    child: Text('Cap $capId'),
+                  ),
+              ],
+            ),
+            Text('Arranged: ${state.arrangedCaps.length}', key: arrangedKey),
+            TextButton(
+              key: startOverKey,
+              onPressed: controller.startOver,
+              child: const Text('Start over'),
+            ),
+            TextButton(
+              key: skipKey,
+              onPressed: controller.skipArrangement,
+              child: const Text('Skip for now'),
+            ),
           ],
         ),
-        Text('Arranged: ${state.arrangedCaps.length}', key: arrangedKey),
-        TextButton(
-          key: startOverKey,
-          onPressed: controller.startOver,
-          child: const Text('Start over'),
-        ),
-        TextButton(
-          key: skipKey,
-          onPressed: controller.skipArrangement,
-          child: const Text('Skip for now'),
-        ),
-      ],
+      ),
     );
   }
 }

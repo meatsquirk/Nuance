@@ -8,23 +8,27 @@ import 'package:paint_color_assistant/onboarding/onboarding_controller.dart';
 import 'package:paint_color_assistant/onboarding/screens/result_step.dart';
 import 'package:paint_color_assistant/store/cvd_profile_store.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
+import 'package:paint_color_assistant/widgets/pill_button.dart';
 
 void main() {
   Future<void> pumpResult(WidgetTester tester, OnboardingController c) =>
-      tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: ListenableBuilder(
-            listenable: c,
-            builder: (context, _) => ResultStep(controller: c),
+      tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListenableBuilder(
+              listenable: c,
+              builder: (context, _) => ResultStep(controller: c),
+            ),
           ),
         ),
-      ));
+      );
 
   // Reaches the result step with {deutan, 0.6 moderate}: a deutan diagnosis and
   // a moderate measured threshold, assembled and advanced (FLOW-5).
   OnboardingController deutanModerate() {
-    final controller =
-        OnboardingController(engine: const TieredAssessmentEngine());
+    final controller = OnboardingController(
+      engine: const TieredAssessmentEngine(),
+    );
     controller.reportDiagnosis(CvdType.deutan);
     controller.scoreThreshold(const [
       ThresholdProbe(contrast: 0.6, detected: false),
@@ -51,8 +55,9 @@ void main() {
   });
 
   testWidgets('shows the approximate-estimate caveat and the clinical '
-      'anomaloscope recommendation on the result (FLOW-8, AC-1)',
-      (tester) async {
+      'anomaloscope recommendation on the result (FLOW-8, AC-1)', (
+    tester,
+  ) async {
     final controller = deutanModerate();
     addTearDown(controller.dispose);
     await pumpResult(tester, controller);
@@ -63,14 +68,18 @@ void main() {
     // …labelling the estimate approximate (it estimates, it does not diagnose)…
     expect(
       find.descendant(
-          of: caveat, matching: find.textContaining('approximate estimate')),
+        of: caveat,
+        matching: find.textContaining('approximate estimate'),
+      ),
       findsOneWidget,
       reason: 'the result labels the estimate an approximate estimate',
     );
     // …and recommending a clinical anomaloscope test for ground truth.
     expect(
       find.descendant(
-          of: caveat, matching: find.textContaining('anomaloscope')),
+        of: caveat,
+        matching: find.textContaining('anomaloscope'),
+      ),
       findsOneWidget,
       reason: 'the result recommends a clinical anomaloscope test',
     );
@@ -92,8 +101,9 @@ void main() {
     expect(find.text('Severity band: moderate'), findsOneWidget);
   });
 
-  testWidgets('moving the severity slider re-renders the band (AC-11)',
-      (tester) async {
+  testWidgets('moving the severity slider re-renders the band (AC-11)', (
+    tester,
+  ) async {
     final controller = deutanModerate();
     addTearDown(controller.dispose);
     await pumpResult(tester, controller);
@@ -105,8 +115,9 @@ void main() {
     // bands fall out — a constant mapping would fail one of the rows.
     final bands = <SeverityBand>{};
     for (final fraction in <double>[0.2, 0.5, 0.95]) {
-      await tester
-          .tapAt(Offset(box.left + box.width * fraction, box.center.dy));
+      await tester.tapAt(
+        Offset(box.left + box.width * fraction, box.center.dy),
+      );
       await tester.pump();
       final value = tester.widget<Slider>(sliderFinder).value;
       final expected = SeverityBand.forSeverity(value / 100);
@@ -143,15 +154,18 @@ void main() {
 
     // The kept calibration is exactly the slider's resulting value (0..1), and
     // the slider now reflects the kept value rather than the estimate's 0.6.
-    final kept = tester.widget<Slider>(find.byKey(ResultStep.severityKey)).value;
+    final kept = tester
+        .widget<Slider>(find.byKey(ResultStep.severityKey))
+        .value;
     expect(controller.state.calibratedSeverity, closeTo(kept / 100, 1e-9));
     expect(kept, isNot(60), reason: 'the control moved the slider off 0.6');
 
     // Control: a second tap keeps a different value instead.
     await tester.tapAt(Offset(box.left + box.width * 0.9, box.center.dy));
     await tester.pumpAndSettle();
-    final kept2 =
-        tester.widget<Slider>(find.byKey(ResultStep.severityKey)).value;
+    final kept2 = tester
+        .widget<Slider>(find.byKey(ResultStep.severityKey))
+        .value;
     expect(kept2, isNot(kept), reason: 'the control sets a different value');
     expect(controller.state.calibratedSeverity, closeTo(kept2 / 100, 1e-9));
   });
@@ -168,8 +182,11 @@ void main() {
     // Tap exactly on the current thumb position (60%) so the value does not move.
     await tester.tapAt(Offset(box.left + box.width * 0.6, box.center.dy));
     await tester.pumpAndSettle();
-    expect(controller.state.calibratedSeverity, closeTo(0.6, 0.02),
-        reason: 'confirming an unmoved slider keeps the estimate severity');
+    expect(
+      controller.state.calibratedSeverity,
+      closeTo(0.6, 0.02),
+      reason: 'confirming an unmoved slider keeps the estimate severity',
+    );
   });
 
   testWidgets('shows the simulated/original pair, which re-renders with the '
@@ -183,9 +200,8 @@ void main() {
     Color simColour() => tester
         .widget<Container>(find.byKey(ResultStep.pairSimulatedKey))
         .color!;
-    Color origColour() => tester
-        .widget<Container>(find.byKey(ResultStep.pairOriginalKey))
-        .color!;
+    Color origColour() =>
+        tester.widget<Container>(find.byKey(ResultStep.pairOriginalKey)).color!;
 
     final originalBefore = origColour();
     final simAtEstimate = simColour();
@@ -197,20 +213,30 @@ void main() {
     await tester.pumpAndSettle();
     final simAtHigh = simColour();
 
-    expect(simAtHigh, isNot(simAtEstimate),
-        reason: 'the simulated swatch tracks the slider');
-    expect(origColour(), originalBefore,
-        reason: 'the original swatch is fixed — it is the reference');
+    expect(
+      simAtHigh,
+      isNot(simAtEstimate),
+      reason: 'the simulated swatch tracks the slider',
+    );
+    expect(
+      origColour(),
+      originalBefore,
+      reason: 'the original swatch is fixed — it is the reference',
+    );
   });
 
-  testWidgets('the pair is absent before an estimate is assembled',
-      (tester) async {
+  testWidgets('the pair is absent before an estimate is assembled', (
+    tester,
+  ) async {
     final controller = OnboardingController();
     addTearDown(controller.dispose);
     await pumpResult(tester, controller);
 
-    expect(find.byKey(ResultStep.pairKey), findsNothing,
-        reason: 'nothing to simulate without an estimate');
+    expect(
+      find.byKey(ResultStep.pairKey),
+      findsNothing,
+      reason: 'nothing to simulate without an estimate',
+    );
   });
 
   testWidgets('the by-hand type picker overrides the estimated type when a '
@@ -222,8 +248,9 @@ void main() {
     // The picker renders a live choice per CvdType under the group key.
     expect(find.byKey(ResultStep.typeKey), findsOneWidget);
     for (final type in CvdType.values) {
-      final choice = tester
-          .widget<TextButton>(find.byKey(ResultStep.typeChoiceKey(type)));
+      final choice = tester.widget<TextButton>(
+        find.byKey(ResultStep.typeChoiceKey(type)),
+      );
       expect(choice.onPressed, isNotNull, reason: '${type.name} is tappable');
     }
     expect(find.text('Estimated type: deutan'), findsOneWidget);
@@ -241,8 +268,9 @@ void main() {
     expect(find.text('Estimated type: deutan'), findsOneWidget);
   });
 
-  testWidgets('the type choices are inert before an estimate is assembled',
-      (tester) async {
+  testWidgets('the type choices are inert before an estimate is assembled', (
+    tester,
+  ) async {
     final controller = OnboardingController();
     addTearDown(controller.dispose);
     await pumpResult(tester, controller);
@@ -250,10 +278,14 @@ void main() {
     // The placeholder still carries the picker group, but the choices are inert.
     expect(find.byKey(ResultStep.typeKey), findsOneWidget);
     for (final type in CvdType.values) {
-      final choice = tester
-          .widget<TextButton>(find.byKey(ResultStep.typeChoiceKey(type)));
-      expect(choice.onPressed, isNull,
-          reason: '${type.name} is inert without an estimate');
+      final choice = tester.widget<TextButton>(
+        find.byKey(ResultStep.typeChoiceKey(type)),
+      );
+      expect(
+        choice.onPressed,
+        isNull,
+        reason: '${type.name} is inert without an estimate',
+      );
     }
   });
 
@@ -274,8 +306,8 @@ void main() {
     controller.advanceToResult();
     await pumpResult(tester, controller);
 
-    // The save control is live on the assembled result.
-    final save = tester.widget<TextButton>(find.byKey(ResultStep.saveKey));
+    // The save control is live on the assembled result (CFG-1 made it a pill).
+    final save = tester.widget<PillButton>(find.byKey(ResultStep.saveKey));
     expect(save.onPressed, isNotNull);
 
     await tester.tap(find.byKey(ResultStep.saveKey));
@@ -289,14 +321,15 @@ void main() {
     expect(propagated, saved);
   });
 
-  testWidgets('the save button is inert before an estimate is assembled',
-      (tester) async {
+  testWidgets('the save button is inert before an estimate is assembled', (
+    tester,
+  ) async {
     final controller = OnboardingController();
     addTearDown(controller.dispose);
     await pumpResult(tester, controller);
 
     expect(
-      tester.widget<TextButton>(find.byKey(ResultStep.saveKey)).onPressed,
+      tester.widget<PillButton>(find.byKey(ResultStep.saveKey)).onPressed,
       isNull,
     );
   });

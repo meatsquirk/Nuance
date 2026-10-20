@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/surface_card.dart';
 import '../engine/tier_results.dart';
 import '../onboarding_controller.dart';
 
@@ -51,7 +52,9 @@ class _ThresholdStepState extends State<ThresholdStep> {
       widget.controller.scoreThreshold([
         for (var i = 0; i < ThresholdStep.contrastDeck.length; i++)
           ThresholdProbe(
-              contrast: ThresholdStep.contrastDeck[i], detected: _responses[i]),
+            contrast: ThresholdStep.contrastDeck[i],
+            detected: _responses[i],
+          ),
       ]);
     }
   }
@@ -59,26 +62,33 @@ class _ThresholdStepState extends State<ThresholdStep> {
   @override
   Widget build(BuildContext context) {
     final done = _responses.length == ThresholdStep.contrastDeck.length;
-    return Column(
-      key: ThresholdStep.regionKey,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Threshold probing'),
-        if (done)
-          const Text('Threshold probing complete')
-        else ...[
-          Text('Probe ${_responses.length + 1} of '
-              '${ThresholdStep.contrastDeck.length}'),
-          TextButton(
-            onPressed: () => _answer(detected: true),
-            child: const Text('I can see it'),
-          ),
-          TextButton(
-            onPressed: () => _answer(detected: false),
-            child: const Text("I can't see it"),
-          ),
-        ],
-      ],
+    return SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          key: ThresholdStep.regionKey,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Threshold probing'),
+            if (done)
+              const Text('Threshold probing complete')
+            else ...[
+              Text(
+                'Probe ${_responses.length + 1} of '
+                '${ThresholdStep.contrastDeck.length}',
+              ),
+              TextButton(
+                onPressed: () => _answer(detected: true),
+                child: const Text('I can see it'),
+              ),
+              TextButton(
+                onPressed: () => _answer(detected: false),
+                child: const Text("I can't see it"),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

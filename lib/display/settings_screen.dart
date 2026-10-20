@@ -3,8 +3,28 @@ import 'package:flutter/material.dart';
 import '../a11y/cvd/cvd_profile.dart';
 import '../onboarding/cvd_profile_read_endpoint.dart';
 import '../store/cvd_profile_store.dart';
+import '../widgets/pill_button.dart';
+import '../widgets/surface_card.dart';
 import 'display_controller.dart';
 import 'display_scope.dart';
+import 'display_settings.dart';
+
+/// Wraps a settings group in a design-system [SurfaceCard] with inner padding
+/// (CFG-1, AC-10 — the Display settings groups render in surface cards). The
+/// card takes its colours, border and radius from the one installed theme, so
+/// it carries no colour arguments and the "one theme" guarantee holds (AC-14).
+Widget _settingGroup(Widget child) => Padding(
+  padding: const EdgeInsets.symmetric(vertical: 6),
+  child: SurfaceCard(
+    // A transparent Material inside the card so the group's SwitchListTiles
+    // paint their ink on it rather than past the card's decorated box (the
+    // framework asserts otherwise); the card's surface still shows through.
+    child: Material(
+      type: MaterialType.transparency,
+      child: Padding(padding: const EdgeInsets.all(12), child: child),
+    ),
+  ),
+);
 
 /// The open-display-settings entry (wireframe S1.R1, element E2 — bs-08
 /// SETTINGS-1).
@@ -199,6 +219,34 @@ class DisplaySettingsScreen extends StatelessWidget {
   static String _simulationLabel(CvdType? type) =>
       type == null ? 'Off' : type.name;
 
+  /// One E47 simulation option as a design-system [PillButton] (AC-10): the
+  /// selected option is the ink-filled primary (and keeps the ✓ mark so meaning
+  /// never rides on fill alone), the rest are the outlined secondary. The key
+  /// stays on the pill so every sibling that drives the option by key (the
+  /// display/daltonization suites) is unchanged.
+  static Widget _simulationOption(
+    DisplayController controller,
+    DisplaySettings settings,
+    CvdType? type,
+  ) {
+    final selected = settings.simulationType == type;
+    final label = Text(
+      selected ? '✓ ${_simulationLabel(type)}' : _simulationLabel(type),
+    );
+    void onPressed() => controller.setSimulationType(type);
+    return selected
+        ? PillButton.primary(
+            key: simulationOptionKey(type),
+            onPressed: onPressed,
+            child: label,
+          )
+        : PillButton.secondary(
+            key: simulationOptionKey(type),
+            onPressed: onPressed,
+            child: label,
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = DisplayScope.of(context);
@@ -231,43 +279,41 @@ class DisplaySettingsScreen extends StatelessWidget {
                   ],
                 ),
                 // E47: the CVD simulation selector — off plus one per type.
-                Column(
-                  key: simulationKey,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('CVD simulation'),
-                    Text(
-                      'Default for your vision: '
-                      '${controller.defaultSimulationType.name}',
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        for (final type in simulationOptions)
-                          TextButton(
-                            key: simulationOptionKey(type),
-                            onPressed: () => controller.setSimulationType(type),
-                            child: Text(
-                              settings.simulationType == type
-                                  ? '✓ ${_simulationLabel(type)}'
-                                  : _simulationLabel(type),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
+                // The view-switch options render as design-system pills (AC-10):
+                // the selected option as the ink-filled primary, the rest as the
+                // outlined secondary.
+                _settingGroup(
+                  Column(
+                    key: simulationKey,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('CVD simulation'),
+                      Text(
+                        'Default for your vision: '
+                        '${controller.defaultSimulationType.name}',
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          for (final type in simulationOptions)
+                            _simulationOption(controller, settings, type),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
                 // E46: the value-only grayscale toggle.
-                SwitchListTile(
-                  key: grayscaleKey,
-                  title: const Text('Value-only grayscale'),
-                  value: settings.grayscale,
-                  onChanged: controller.setGrayscale,
+                _settingGroup(
+                  SwitchListTile(
+                    key: grayscaleKey,
+                    title: const Text('Value-only grayscale'),
+                    value: settings.grayscale,
+                    onChanged: controller.setGrayscale,
+                  ),
                 ),
                 // E48: the simulation-severity slider, 0..100 → 0..1 (D-6).
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
+                _settingGroup(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('Simulation severity'),
@@ -287,19 +333,28 @@ class DisplaySettingsScreen extends StatelessWidget {
                 // bs-10: the daltonization on/off toggle, an independent axis
                 // from simulation/grayscale (D-3/D-5), driving
                 // DisplayController.setDaltonization. The rendering consequence
-                // (remapping swatches) lands in the DALT behaviour phases.
-                SwitchListTile(
-                  key: daltonizationKey,
-                  title: const Text('Daltonize colours'),
-                  value: settings.daltonization,
-                  onChanged: controller.setDaltonization,
+                // (remapping swatches) lands in the DALT behaviour phases. The
+                // no-saved-profile prompt shares the card (one daltonization
+                // group).
+                _settingGroup(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        key: daltonizationKey,
+                        title: const Text('Daltonize colours'),
+                        value: settings.daltonization,
+                        onChanged: controller.setDaltonization,
+                      ),
+                      // bs-10 (AC-10): without a saved profile, prompt for a
+                      // self-assessment instead of remapping against the const
+                      // default; with one saved, show nothing (remap applies).
+                      const _NoSavedProfileRegion(key: noProfileRegionKey),
+                    ],
+                  ),
                 ),
-                // bs-10 (AC-10): without a saved profile, prompt for a
-                // self-assessment instead of remapping against the const
-                // default; with one saved, show nothing (the remap applies).
-                const _NoSavedProfileRegion(key: noProfileRegionKey),
                 // The theme control — shown (AC-1) but presentation only (D-11).
-                const _ThemeControl(key: themeKey),
+                _settingGroup(const _ThemeControl(key: themeKey)),
               ],
             );
           },
@@ -389,6 +444,28 @@ class _ThemeControlState extends State<_ThemeControl> {
   static Key optionKey({required bool dark}) =>
       ValueKey('display-theme-${dark ? 'dark' : 'light'}');
 
+  /// One theme option as a design-system [PillButton] (AC-10): the selected
+  /// option is the ink-filled primary (keeping the ✓ mark), the other the
+  /// outlined secondary. Presentation only — the choice drives no setting (D-11).
+  Widget _themeOption({required bool dark}) {
+    final selected = _dark == dark;
+    final label = Text(
+      selected ? '✓ ${dark ? 'Dark' : 'Light'}' : (dark ? 'Dark' : 'Light'),
+    );
+    void onPressed() => setState(() => _dark = dark);
+    return selected
+        ? PillButton.primary(
+            key: optionKey(dark: dark),
+            onPressed: onPressed,
+            child: label,
+          )
+        : PillButton.secondary(
+            key: optionKey(dark: dark),
+            onPressed: onPressed,
+            child: label,
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -398,16 +475,7 @@ class _ThemeControlState extends State<_ThemeControl> {
         Wrap(
           spacing: 8,
           children: [
-            for (final dark in const [false, true])
-              TextButton(
-                key: optionKey(dark: dark),
-                onPressed: () => setState(() => _dark = dark),
-                child: Text(
-                  _dark == dark
-                      ? '✓ ${dark ? 'Dark' : 'Light'}'
-                      : (dark ? 'Dark' : 'Light'),
-                ),
-              ),
+            for (final dark in const [false, true]) _themeOption(dark: dark),
           ],
         ),
       ],

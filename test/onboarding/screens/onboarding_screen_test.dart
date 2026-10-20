@@ -5,6 +5,7 @@ import 'package:paint_color_assistant/onboarding/onboarding_read_endpoint.dart';
 import 'package:paint_color_assistant/onboarding/screens/onboarding_host.dart';
 import 'package:paint_color_assistant/onboarding/screens/onboarding_screen.dart';
 import 'package:paint_color_assistant/onboarding/screens/result_step.dart';
+import 'package:paint_color_assistant/widgets/pill_button.dart';
 
 void main() {
   group('OnboardingScreen — See my result (FLOW-5 enabler)', () {
@@ -14,63 +15,78 @@ void main() {
 
       final controller = tester
           .widget<OnboardingReadEndpoint>(
-              find.byKey(OnboardingReadEndpoint.endpointKey))
+            find.byKey(OnboardingReadEndpoint.endpointKey),
+          )
           .controller;
       expect(controller.state.estimate, isNull);
       expect(
         find.descendant(
-            of: find.byKey(ResultStep.regionKey), matching: find.text('Result')),
+          of: find.byKey(ResultStep.regionKey),
+          matching: find.text('Result'),
+        ),
         findsOneWidget,
       );
       // The control is present and live (it assembles the estimate — not inert).
-      final button =
-          tester.widget<TextButton>(find.byKey(OnboardingScreen.seeResultKey));
+      // CFG-1 made "See my result" a design-system pill.
+      final button = tester.widget<PillButton>(
+        find.byKey(OnboardingScreen.seeResultKey),
+      );
       expect(button.onPressed, isNotNull);
     });
 
-    testWidgets('tapping it assembles the estimate and renders type + severity',
-        (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: OnboardingHost()));
+    testWidgets(
+      'tapping it assembles the estimate and renders type + severity',
+      (tester) async {
+        await tester.pumpWidget(const MaterialApp(home: OnboardingHost()));
 
-      final seeResult = find.byKey(OnboardingScreen.seeResultKey);
-      await tester.ensureVisible(seeResult);
-      await tester.tap(seeResult);
-      await tester.pumpAndSettle();
+        final seeResult = find.byKey(OnboardingScreen.seeResultKey);
+        await tester.ensureVisible(seeResult);
+        await tester.tap(seeResult);
+        await tester.pumpAndSettle();
 
-      final controller = tester
-          .widget<OnboardingReadEndpoint>(
-              find.byKey(OnboardingReadEndpoint.endpointKey))
-          .controller;
-      final estimate = controller.state.estimate;
-      // No tiers were run, so the empty prior assembles the red-green deutan
-      // default at severity 0 — a result is reachable regardless (D-7).
-      expect(estimate, isNotNull);
-      expect(estimate!.type, CvdType.deutan);
-      expect(estimate.severity, 0);
+        final controller = tester
+            .widget<OnboardingReadEndpoint>(
+              find.byKey(OnboardingReadEndpoint.endpointKey),
+            )
+            .controller;
+        final estimate = controller.state.estimate;
+        // No tiers were run, so the empty prior assembles the red-green deutan
+        // default at severity 0 — a result is reachable regardless (D-7).
+        expect(estimate, isNotNull);
+        expect(estimate!.type, CvdType.deutan);
+        expect(estimate.severity, 0);
 
-      // The result step now renders the estimated type and severity.
-      final result = find.byKey(ResultStep.regionKey);
-      expect(
-        find.descendant(
-            of: result, matching: find.text('Estimated type: deutan')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-            of: result, matching: find.text('Estimated severity: 0')),
-        findsOneWidget,
-      );
-      // The severity slider reflects the estimate (0) and is now live — ENGINE-7
-      // reads its value back as a plain-language band (AC-11). Severity 0 → mild.
-      final slider =
-          tester.widget<Slider>(find.byKey(ResultStep.severityKey));
-      expect(slider.value, 0);
-      expect(slider.onChanged, isNotNull);
-      expect(
-        find.descendant(
-            of: result, matching: find.text('Severity band: mild')),
-        findsOneWidget,
-      );
-    });
+        // The result step now renders the estimated type and severity.
+        final result = find.byKey(ResultStep.regionKey);
+        expect(
+          find.descendant(
+            of: result,
+            matching: find.text('Estimated type: deutan'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: result,
+            matching: find.text('Estimated severity: 0'),
+          ),
+          findsOneWidget,
+        );
+        // The severity slider reflects the estimate (0) and is now live — ENGINE-7
+        // reads its value back as a plain-language band (AC-11). Severity 0 → mild.
+        final slider = tester.widget<Slider>(
+          find.byKey(ResultStep.severityKey),
+        );
+        expect(slider.value, 0);
+        expect(slider.onChanged, isNotNull);
+        expect(
+          find.descendant(
+            of: result,
+            matching: find.text('Severity band: mild'),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

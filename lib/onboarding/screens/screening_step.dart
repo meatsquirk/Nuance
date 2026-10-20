@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/surface_card.dart';
 import '../engine/tier_results.dart';
 import '../onboarding_controller.dart';
 
@@ -33,8 +34,7 @@ class ScreeningStep extends StatefulWidget {
   ];
 
   /// The key of the "I can read it" control for the plate at [index].
-  static Key readKey(int index) =>
-      ValueKey('onboarding-screening-read-$index');
+  static Key readKey(int index) => ValueKey('onboarding-screening-read-$index');
 
   /// The key of the "I can't read it" control for the plate at [index].
   static Key cantReadKey(int index) =>
@@ -60,20 +60,28 @@ class _ScreeningStepState extends State<ScreeningStep> {
     if (_responses.length == ScreeningStep.plateDeck.length) {
       widget.controller.scoreScreening([
         for (var i = 0; i < ScreeningStep.plateDeck.length; i++)
-          PlateResponse(axis: ScreeningStep.plateDeck[i], correct: _responses[i]!),
+          PlateResponse(
+            axis: ScreeningStep.plateDeck[i],
+            correct: _responses[i]!,
+          ),
       ]);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      key: ScreeningStep.regionKey,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Plate screening'),
-        for (var i = 0; i < ScreeningStep.plateDeck.length; i++) _plate(i),
-      ],
+    return SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          key: ScreeningStep.regionKey,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Plate screening'),
+            for (var i = 0; i < ScreeningStep.plateDeck.length; i++) _plate(i),
+          ],
+        ),
+      ),
     );
   }
 

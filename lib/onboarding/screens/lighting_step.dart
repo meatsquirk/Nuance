@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/pill_button.dart';
+import '../../widgets/surface_card.dart';
 import '../onboarding_controller.dart';
 
 /// The Tier 0 display-and-lighting setup step (wireframe S1.R1.E36 display and
@@ -27,38 +29,52 @@ class LightingStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = controller.state;
-    return Column(
-      key: regionKey,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Display and lighting setup'),
-        CheckboxListTile(
-          value: state.brightnessConfirmed,
-          onChanged: (value) => controller.confirmLightingCheck(
-              LightingCheck.brightness,
-              confirmed: value ?? false),
-          title: const Text('Screen brightness turned up'),
+    return SurfaceCard(
+      // A transparent Material inside the card so the CheckboxListTiles paint
+      // their ink on it rather than past the card's decorated box (the
+      // framework asserts otherwise); the card's surface still shows through.
+      child: Material(
+        type: MaterialType.transparency,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            key: regionKey,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Display and lighting setup'),
+              CheckboxListTile(
+                value: state.brightnessConfirmed,
+                onChanged: (value) => controller.confirmLightingCheck(
+                  LightingCheck.brightness,
+                  confirmed: value ?? false,
+                ),
+                title: const Text('Screen brightness turned up'),
+              ),
+              CheckboxListTile(
+                value: state.nightLightConfirmed,
+                onChanged: (value) => controller.confirmLightingCheck(
+                  LightingCheck.nightLight,
+                  confirmed: value ?? false,
+                ),
+                title: const Text('Night-light turned off'),
+              ),
+              CheckboxListTile(
+                value: state.daylightConfirmed,
+                onChanged: (value) => controller.confirmLightingCheck(
+                  LightingCheck.daylight,
+                  confirmed: value ?? false,
+                ),
+                title: const Text('In daylight'),
+              ),
+              PillButton.primary(
+                key: continueKey,
+                onPressed: controller.tryContinue,
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
         ),
-        CheckboxListTile(
-          value: state.nightLightConfirmed,
-          onChanged: (value) => controller.confirmLightingCheck(
-              LightingCheck.nightLight,
-              confirmed: value ?? false),
-          title: const Text('Night-light turned off'),
-        ),
-        CheckboxListTile(
-          value: state.daylightConfirmed,
-          onChanged: (value) => controller.confirmLightingCheck(
-              LightingCheck.daylight,
-              confirmed: value ?? false),
-          title: const Text('In daylight'),
-        ),
-        TextButton(
-          key: continueKey,
-          onPressed: controller.tryContinue,
-          child: const Text('Continue'),
-        ),
-      ],
+      ),
     );
   }
 }

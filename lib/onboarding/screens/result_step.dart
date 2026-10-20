@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../a11y/cvd/cvd_profile.dart';
 import '../../app/theme.dart';
+import '../../widgets/pill_button.dart';
+import '../../widgets/surface_card.dart';
+import '../../widgets/swatch_caption.dart';
 import '../engine/severity_band.dart';
 import '../onboarding_controller.dart';
 
@@ -49,12 +52,15 @@ class ResultStep extends StatelessWidget {
   static const Key pairKey = ValueKey('onboarding-result-pair');
 
   /// Stable anchor for the *original* swatch of the pair (AC-12).
-  static const Key pairOriginalKey = ValueKey('onboarding-result-pair-original');
+  static const Key pairOriginalKey = ValueKey(
+    'onboarding-result-pair-original',
+  );
 
   /// Stable anchor for the *simulated* swatch of the pair (AC-12) — the one that
   /// collapses toward the original as the painter raises the severity.
-  static const Key pairSimulatedKey =
-      ValueKey('onboarding-result-pair-simulated');
+  static const Key pairSimulatedKey = ValueKey(
+    'onboarding-result-pair-simulated',
+  );
 
   /// Stable anchor for the plain-language band readout (AC-11).
   static const Key bandKey = ValueKey('onboarding-result-band');
@@ -80,9 +86,11 @@ class ResultStep extends StatelessWidget {
   /// blended toward a neutral grey in proportion to the severity, so a stronger
   /// severity makes the pair look more alike (the collapse the painter dials in).
   /// The neutral grey is the single palette source [AppTheme.cvdDemoNeutral].
-  static Color _simulatedColour(double severity) =>
-      Color.lerp(_pairOriginal, AppTheme.cvdDemoNeutral,
-          severity.clamp(0.0, 1.0))!;
+  static Color _simulatedColour(double severity) => Color.lerp(
+    _pairOriginal,
+    AppTheme.cvdDemoNeutral,
+    severity.clamp(0.0, 1.0),
+  )!;
 
   /// The controller the type / severity / save actions act on (FLOW-5..8,
   /// PROFILE-2).
@@ -112,15 +120,13 @@ class ResultStep extends StatelessWidget {
   /// **anomaloscope** test for ground truth. Both strings are rendered so a
   /// painter cannot read the result as a clinical diagnosis.
   Widget _caveat() => const Column(
-        key: caveatKey,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('This is an approximate estimate, not a clinical diagnosis.'),
-          Text(
-            'For ground truth, a clinical anomaloscope test is recommended.',
-          ),
-        ],
-      );
+    key: caveatKey,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('This is an approximate estimate, not a clinical diagnosis.'),
+      Text('For ground truth, a clinical anomaloscope test is recommended.'),
+    ],
+  );
 
   /// The simulated-versus-original pair (E41): two swatches side by side. The
   /// simulated one collapses toward the original as [severity] rises, so the
@@ -128,12 +134,12 @@ class ResultStep extends StatelessWidget {
   /// (AC-12).
   Widget _simulatedPair(double severity) {
     Widget swatch(Key key, Color colour, String label) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(key: key, width: 48, height: 48, color: colour),
-            Text(label),
-          ],
-        );
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(key: key, width: 48, height: 48, color: colour),
+        Text(label),
+      ],
+    );
     return Row(
       key: pairKey,
       mainAxisSize: MainAxisSize.min,
@@ -152,27 +158,27 @@ class ResultStep extends StatelessWidget {
     // step shows its placeholder with the slider inert.
     final estimate = controller.state.estimate;
     if (estimate == null) {
-      return Column(
-        key: regionKey,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Result'),
-          // No estimate to adjust yet (shell / before "See my result"), so the
-          // type choices are present but inert.
-          _typePicker(enabled: false),
-          Slider(
-            key: severityKey,
-            value: 0,
-            max: 100,
-            onChanged: null,
+      return SurfaceCard(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            key: regionKey,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Result'),
+              // No estimate to adjust yet (shell / before "See my result"), so
+              // the type choices are present but inert.
+              _typePicker(enabled: false),
+              Slider(key: severityKey, value: 0, max: 100, onChanged: null),
+              const SizedBox(key: caveatKey),
+              const PillButton.primary(
+                key: saveKey,
+                onPressed: null,
+                child: Text('Save profile'),
+              ),
+            ],
           ),
-          const SizedBox(key: caveatKey),
-          const TextButton(
-            key: saveKey,
-            onPressed: null,
-            child: Text('Save profile'),
-          ),
-        ],
+        ),
       );
     }
 
@@ -184,34 +190,42 @@ class ResultStep extends StatelessWidget {
     // (which keeps the estimate's severity if the slider was never moved).
     final severity = controller.state.calibratedSeverity ?? estimate.severity;
     final SeverityBand band = controller.engine.band(severity);
-    return Column(
-      key: regionKey,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Estimated type: ${estimate.type.name}'),
-        Text('Estimated severity: ${(estimate.severity * 100).round()}'),
-        // The by-hand override (E40): tapping a choice sets the estimate's type
-        // to it regardless of what the tiers computed (AC-10).
-        _typePicker(enabled: true),
-        _simulatedPair(severity),
-        Slider(
-          key: severityKey,
-          value: (severity * 100).clamp(0, 100).toDouble(),
-          max: 100,
-          onChanged: (value) => controller.setSeverity(value / 100),
-          onChangeEnd: (_) => controller.confirmCalibration(),
+    return SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          key: regionKey,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Estimated type: ${estimate.type.name}'),
+            Text('Estimated severity: ${(estimate.severity * 100).round()}'),
+            // The by-hand override (E40): tapping a choice sets the estimate's
+            // type to it regardless of what the tiers computed (AC-10).
+            _typePicker(enabled: true),
+            _simulatedPair(severity),
+            // The one swatch-approximation caption beside the colour pair
+            // (AC-10 / AC-12): the swatches are a hint, the numbers authoritative.
+            const SwatchCaption(),
+            Slider(
+              key: severityKey,
+              value: (severity * 100).clamp(0, 100).toDouble(),
+              max: 100,
+              onChanged: (value) => controller.setSeverity(value / 100),
+              onChangeEnd: (_) => controller.confirmCalibration(),
+            ),
+            Text('Severity band: ${band.label}', key: bandKey),
+            _caveat(),
+            // E43 save (AC-13, PROFILE-2): projects the confirmed estimate onto
+            // the stored profile and reconfigures the live pipeline. Live only
+            // on the assembled result — the placeholder branch keeps it inert.
+            PillButton.primary(
+              key: saveKey,
+              onPressed: () => controller.save(),
+              child: const Text('Save profile'),
+            ),
+          ],
         ),
-        Text('Severity band: ${band.label}', key: bandKey),
-        _caveat(),
-        // E43 save (AC-13, PROFILE-2): projects the confirmed estimate onto the
-        // stored profile and reconfigures the live pipeline. Live only on the
-        // assembled result — the placeholder branch keeps it inert.
-        TextButton(
-          key: saveKey,
-          onPressed: () => controller.save(),
-          child: const Text('Save profile'),
-        ),
-      ],
+      ),
     );
   }
 }
