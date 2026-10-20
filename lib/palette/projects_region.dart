@@ -7,6 +7,8 @@ import '../projects/project.dart';
 import '../projects/project_controller.dart';
 import '../projects/project_summary.dart';
 import '../store/source_photo_store.dart';
+import '../widgets/pill_button.dart';
+import '../widgets/surface_card.dart';
 
 /// The projects region of the Palette screen's Projects view (wireframe S1.R1 —
 /// the projects list body, elements E33 Open project and E34 Export to device).
@@ -62,26 +64,43 @@ class ProjectsRegion extends StatelessWidget {
           const Text('No projects yet')
         else
           for (final summary in summaries)
-            _ProjectRow(
-              summary: summary,
-              onOpen: () => controller.openProject(summary.id),
+            // bs-18 ORG-2 (AC-9): each project entry renders in a design-system
+            // [SurfaceCard]. The row's content, its 48dp tap target and its
+            // per-row key are unchanged; only the surrounding Material tile is
+            // replaced. Colours and the r18 radius come from the one installed
+            // theme, so the card carries no colour arguments (AC-14).
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: SurfaceCard(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: _ProjectRow(
+                    summary: summary,
+                    onOpen: () => controller.openProject(summary.id),
+                  ),
+                ),
+              ),
             ),
         Row(
           children: [
             // E33 Open project — opens the first project (PROJECT-4, AC-7/AC-8).
-            // A painter also opens a specific project by tapping its row above;
-            // this primary control is inert only when there are no projects.
-            TextButton(
+            // A painter also opens a specific project by tapping its row above.
+            // The primary in-region action (bs-18 ORG-2, AC-9): a design-system
+            // filled [PillButton.primary]; the ad-hoc `TextButton` it superseded
+            // is gone. Inert only when there are no projects.
+            PillButton.primary(
               key: openProjectKey,
               onPressed: summaries.isEmpty
                   ? null
                   : () => controller.openProject(summaries.first.id),
               child: const Text('Open project'),
             ),
+            const SizedBox(width: 8),
             // E34 Export to device — exports the opened project as a PDF studio
-            // sheet (AC-10, PROJECT-6). Enabled only once a project is open,
-            // since the open project is what is exported.
-            TextButton(
+            // sheet (AC-10, PROJECT-6). The secondary action (bs-18 ORG-2,
+            // AC-9): an outlined [PillButton.secondary]. Enabled only once a
+            // project is open, since the open project is what is exported.
+            PillButton.secondary(
               key: exportKey,
               onPressed:
                   opened == null ? null : () => controller.exportOpenedProject(),

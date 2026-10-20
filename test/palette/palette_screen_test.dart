@@ -215,14 +215,16 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      // bs-18 ORG-2 swapped the ad-hoc open/export `TextButton`s for the
+      // design-system `PillButton` (AC-9), so read their wiring off the pills.
       final open =
-          tester.widget<TextButton>(find.byKey(ProjectsRegion.openProjectKey));
+          tester.widget<PillButton>(find.byKey(ProjectsRegion.openProjectKey));
       expect(open.onPressed, isNotNull,
           reason: 'PROJECT-4 wires the open-project control (AC-7/AC-8), active '
               'when a project exists');
       expect(
           tester
-              .widget<TextButton>(find.byKey(ProjectsRegion.exportKey))
+              .widget<PillButton>(find.byKey(ProjectsRegion.exportKey))
               .onPressed,
           isNull,
           reason: 'E34 export is inert while no project is open');
@@ -231,7 +233,7 @@ void main() {
       await tester.tap(find.byKey(ProjectsRegion.openProjectKey));
       await tester.pumpAndSettle();
       final export =
-          tester.widget<TextButton>(find.byKey(ProjectsRegion.exportKey));
+          tester.widget<PillButton>(find.byKey(ProjectsRegion.exportKey));
       expect(export.onPressed, isNotNull,
           reason: 'PROJECT-6 wires E34 export once a project is open (AC-10)');
       expect(project.lastExport, isNull, reason: 'nothing exported yet');

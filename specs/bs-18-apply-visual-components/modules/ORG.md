@@ -1,6 +1,6 @@
 # Module ORG — Palette + Projects screen swaps
 
-**Status:** In progress — ORG-1 ✅ done (AC-8); next ORG-2 (AC-9)
+**Status:** Done — ORG-1 ✅ (AC-8) + ORG-2 ✅ (AC-9); module complete
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/palette/**`, `lib/projects/**` (screen/region/row widgets only — not controllers, sources, read endpoints, `paint_dataset.dart` data or `project_export.dart`).
 **Depends on:** ITEST (G-2) · **Blocks:** GUARD
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | ORG-1 | behavior | AC-8 | ✅ Done | 10.83M | 26m 57s |
-| ORG-2 | behavior | AC-9 | ⬜ Todo | | |
+| ORG-2 | behavior | AC-9 | ✅ Done | 5.42M | 17m 57s (17m 57s) |
 
 ## Interface reconciliation
 
@@ -64,3 +64,57 @@ G-2 is open.
   2. Remove the superseded `ListTile`/buttons.
 - **Exit criteria:** `lib/projects`/`lib/palette` project suite + bs-06 projects suite green.
 - **Acceptance gate:** un-pend AC-9; `TestAC09_Projects` green with earlier ACs; sibling suites green.
+
+### Result — ORG-2 (✅ Done)
+
+- **Landed (production, presentation-only, D-2):** `lib/palette/projects_region.dart` — each project entry
+  now renders in a design-system `SurfaceCard` (the `_ProjectRow`'s content, its 48dp tap target and its
+  per-row `projectRowKey` unchanged; the bare `Column` tile is gone), and the two region actions became
+  design-system pills: E33 Open project → `PillButton.primary` (`openProjectKey` preserved), E34 Export →
+  `PillButton.secondary` (`exportKey` preserved). Both ad-hoc `TextButton`s are gone; the enabled/disabled
+  `onPressed` logic (open inert with no projects; export inert until a project is open) is unchanged.
+  Colours/r18 radius come from the one installed theme, so the card and pills carry no colour arguments (AC-14).
+- **Un-pended:** AC-9 (`integration_test/visual_application/pending.dart` row removed).
+- **Augmentation:** none owed and none added. The grader confirmed the Projects region was *fully* ad-hoc at
+  BASE (both controls keyed `TextButton`s, entries bare `Column`s — `git show ed25f7c:…projects_region.dart`),
+  so this is a wholesale key-preserving swap with no co-presence surface a leftover control could linger on;
+  the present-side checks (SurfaceCard ancestor + `expectPill` on both keyed actions) discriminate cleanly
+  (red at BASE, green on swap). The AC-9 test body is unchanged from ITEST-3 (fully-ad-hoc AC-6/AC-9/AC-10
+  house-style precedent, distinct from AC-8's partly-swapped case that needed a sweep).
+- **Tests (sibling maintenance for the swap, no behaviour weakened):** `test/palette/palette_screen_test.dart`
+  — the open/export wiring reads changed from `tester.widget<TextButton>` to `tester.widget<PillButton>`
+  (same `onPressed` isNotNull/isNull enabled-state assertions kept; `PillButton` import already present from
+  ORG-1). `integration_test/visual_application/smoke_test.dart` — the ITEST-1 pending-gate exemplar and the
+  planted wiring-smoke `acTestWidgets` re-pointed AC-9 → AC-10 (next still-pending AC), AC-9 added to the
+  un-pended sets.
+- **Verification:** `flutter analyze` (5 touched files) clean. Unit `flutter test --coverage test/` →
+  **1676 pass**. Coverage gate `dart run tool/coverage_gate.dart ed25f7c` → **100% line on the touched lib
+  file** (`projects_region.dart`). Acceptance (`-d flutter-tester`): `projects_test.dart` (AC-9) **1✅**;
+  `smoke_test.dart` **13✅/1-skip** (the AC-10 pending exemplar). Siblings one at a time: bs-06
+  `palette_test` **21✅/2** (only AC-3 + AC-5, the carried off-lane flakes, owner bs-06; the project ACs
+  AC-6..AC-10 all green through the new cards/pills); bs-07 `self_assessment_test` **23✅/1** (only AC-4, the
+  carried off-lane flake, owner bs-07).
+- **Grade gate: PASS** (independent fresh-subagent grader, did not author; grid
+  `../behavior-test-completeness-bs-18-apply-visual-components.md`): AC-9 **straight A** (confirmed, not
+  revised); no drift in AC-1..AC-8 (ORG-2's change is confined to `projects_region.dart`, which no earlier AC
+  test exercises; no shared helper changed). **Straight A = 9 (AC-1..AC-9), A-core/B-pending = 0, plain-B = 0.**
+- **Fix passes: 0/3** — every gate passed on the first full run.
+
+### Checkpoint / Handoff — after ORG-2
+
+- **Frozen interfaces (this phase):** `ProjectsRegion` renders each project entry inside a `SurfaceCard`
+  (ancestor of `projectRowKey(id)`), its open action (`openProjectKey`) as a `PillButton.primary` and its
+  export action (`exportKey`) as a `PillButton.secondary`. A later phase restyling Projects must keep the
+  entries carded and both actions `PillButton`s, or AC-9 / the sibling `palette_screen_test` wiring reddens.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout` on
+  macOS): unit+cov `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart <BASE>`; AC-9
+  `flutter test -d flutter-tester integration_test/visual_application/projects_test.dart`; smoke
+  `flutter test -d flutter-tester integration_test/visual_application/smoke_test.dart`; bs-06
+  `flutter test -d flutter-tester integration_test/palette_test.dart`; bs-07
+  `flutter test -d flutter-tester integration_test/self_assessment_test.dart` (run visual_application suites
+  one at a time — loading two in one invocation hits the documented "Unable to start the app" launch flake).
+- **Known gaps / next:** ORG module complete. CFG-1 (AC-10, `lib/display/**`,`lib/onboarding/**`) remains
+  independently startable. GUARD-1 now waits only on CFG-1 (every other screen phase — CHROME/READ/FLOW/ORG —
+  is done); GUARD-2/3 follow sequentially. Carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-07
+  self_assessment AC-4, bs-08 display AC-9) stay open in the Known flakes table — reproduce at merge-base, not
+  regressions.
