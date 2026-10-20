@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — CHROME done + READ-1 ✅ (AC-3) + READ-2 ✅ (AC-4 warning overlap); next READ-3 ∥ FLOW-1 ∥ ORG-1 ∥ CFG-1 concurrently.
+**Status:** In progress — CHROME ✅ + READ module ✅ (AC-3/AC-4/AC-5); next FLOW-1 ∥ ORG-1 ∥ CFG-1 concurrently.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -48,7 +48,7 @@ this feature only *opts screens into them*.
 | AC-2 | Each primary screen shows the design-system top bar | ITEST-2 `TestAC02_TopBar` | CHROME-4 | ✅ Done |
 | AC-3 | The Capture screen's controls render as design-system components | ITEST-2 `TestAC03_CaptureControls` | READ-1 | ✅ Done |
 | AC-4 | The Capture screen's warnings stack without overlapping | ITEST-2 `TestAC04_CaptureWarnings` | READ-2 | ✅ Done |
-| AC-5 | The Readout screen renders its regions as cards with mono eyebrows and a speak FAB | ITEST-2 `TestAC05_Readout` | READ-3 | ⬜ Todo |
+| AC-5 | The Readout screen renders its regions as cards with mono eyebrows and a speak FAB | ITEST-2 `TestAC05_Readout` | READ-3 | ✅ Done |
 | AC-6 | The Compare screen renders its controls and rows as design-system components | ITEST-3 `TestAC06_Compare` | FLOW-1 | ⬜ Todo |
 | AC-7 | The Recipes screen renders recipes as cards with mono notes and pill actions | ITEST-3 `TestAC07_Recipes` | FLOW-2 | ⬜ Todo |
 | AC-8 | The Palette screen renders paints, provenance and the add action as design-system components | ITEST-3 `TestAC08_Palette` | ORG-1 | ⬜ Todo |
@@ -121,7 +121,7 @@ Pre-seeded augmentations: AC-3 (capture partly swapped) strengthened by READ-1; 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | CHROME | [modules/CHROME.md](modules/CHROME.md) | Scaffold; bottom nav + top bar; owns `build_app.dart` | — | ✅ Done |
-| READ | [modules/READ.md](modules/READ.md) | Readout + Capture screen swaps (incl. warning-overlap fix) | ITEST (G-2) | ◑ In progress |
+| READ | [modules/READ.md](modules/READ.md) | Readout + Capture screen swaps (incl. warning-overlap fix) | ITEST (G-2) | ✅ Done |
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Compare + Recipes screen swaps | ITEST (G-2) | ⬜ Todo |
 | ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | ⬜ Todo |
 | CFG | [modules/CFG.md](modules/CFG.md) | Display + Onboarding screen swaps | ITEST (G-2) | ⬜ Todo |
@@ -183,8 +183,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 9 | CHROME-4 | AC-2 — top bar | ✅ Done | 9.93M | 25m (25m) | AC-2 ✅ A; AppTopBar + presentation-only ThemeToggleButton (D-3) mounted on all 5 screens; auto-back preserved (D-2); unit 1671✅; cov 100%/11 files; grade A/A 0-B; 10 sibling suites re-verified✅; palette AC-3/AC-5 = known bs-06 flakes (reproduce at BASE) |
 | 10 | READ-1 | AC-3 — capture controls | ✅ Done | 10.07M | 24m (24m) | AC-3 ✅ A (promoted from A-core/B-pending via the full ad-hoc-absent augmentation); shutter→88px round FilledButton, actions→pills, toggles/radius→filled-vs-outlined; unit 1673✅; cov 100%/12; 8 siblings re-verified✅ (bs-02 AC-5 cast fix); grade A/A/A 0-B |
 | 11 | READ-2 | AC-4 — capture warning overlap fix | ✅ Done | 8.17M | 20m 33s (20m 33s) | AC-4 ✅ A; warnings relaid in one vertical Column of SurfaceCard banners (D-6) → rects non-overlapping at 200%; keys/text/visibility/semantics unchanged; unit 1675✅; cov 100%/13; grade A/A/A/A 0-B; 8 siblings re-verified✅ (bs-11 contrast holds); fix 0/3 |
-| 12 | READ-3 | AC-5 — readout cards + mono + speak FAB | ⬜ Next | | | ∥ FLOW-1/ORG-1/CFG-1 (disjoint dirs) |
-| 13 | FLOW-1 | AC-6 — compare | ⬜ Todo | | | ∥ READ/ORG/CFG |
+| 12 | READ-3 | AC-5 — readout cards + mono + speak FAB | ✅ Done | 20.70M | 36m 23s (36m 23s) | AC-5 ✅ A (promoted A-core/B-pending READ-3→straight A via the speak-at-anchor + Card-absent augmentation); name/value/space regions→SurfaceCard + MonoLabel eyebrows, speak→always-visible Scaffold FAB SpeakButton; unit 1675✅; cov 100%/2; grade A×5 0-B; 10 siblings re-verified✅ (bs-01/daltonization readout pumps got a tall-surface fix; bs-11 eyes-free + contrast hold); fix 0/3; display AC-9 = pre-existing flake (reproduces at BASE) |
+| 13 | FLOW-1 | AC-6 — compare | ⬜ Next | | | ∥ ORG-1/CFG-1 (disjoint dirs); must re-scope lib/readout/actions_bar.dart (AC-6 compare) |
 | 14 | FLOW-2 | AC-7 — recipes | ⬜ Todo | | | ∥ READ/ORG/CFG |
 | 15 | ORG-1 | AC-8 — palette | ⬜ Todo | | | ∥ READ/FLOW/CFG |
 | 16 | ORG-2 | AC-9 — projects | ⬜ Todo | | | ∥ READ/FLOW/CFG |
@@ -198,32 +198,34 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**READ-2 ✅ (AC-4).** The Capture live-view readings/warnings now lay out in a **single vertical `Column`**
-of design-system `SurfaceCard` banners (D-6), replacing the fixed-offset corner `Positioned` banners that
-overlapped at 200% text scale — their rects are now disjoint at any scale. Every reading keeps its key, text,
-visibility condition and semantics (presentation only, D-2/D-3). Only `lib/capture/capture_live_view.dart` +
-the scaffold `pending.dart`/`smoke_test.dart` + the sibling unit test changed — no `build_app.dart` (D-7).
-unit 1675✅, cov 100%/13, grade A/A/A/A 0-B, 8 sibling suites re-verified (bs-11 contrast holds on the
-ink-on-`SurfaceCard` banners), fix 0/3.
+**READ-3 ✅ (AC-5) — READ module COMPLETE.** The Readout now renders in the wireframe treatment: the
+name/value/colour-space regions are each wrapped in a `SurfaceCard` with an uppercase `MonoLabel` field
+eyebrow (new `_cardedRegion` helper, `readout_screen.dart`), and the speak action moved from an in-scroll
+`OutlinedButton` to the Readout's always-visible `Scaffold.floatingActionButton` `SpeakButton` (keyed on the
+shared `ActionsBar.speakKey`, label unchanged). Presentation only (D-2/D-3). AC-5 **promoted A-core/B-pending
+READ-3 → straight A** by its augmentation (speak-at-anchor `isA<SpeakButton>()` + no-Card sweep). unit 1675✅,
+cov 100%/2, grade A×5 0-B, fix 0/3. The FAB (not an in-scroll SpeakButton) was needed because carding makes
+the body taller than a short test surface — see the tall-surface gotcha below.
 
 **Startable now (each a separate `--parallel` session, mutually concurrent — disjoint dirs):**
-- **READ-3** (AC-5, `lib/readout/**`) — readout regions → `SurfaceCard` + `MonoLabel` eyebrows + `SpeakButton`;
-  owes the pre-seeded **TestAC05 → READ-3** augmentation (old `Card`/plain speak `IconButton` absent).
-- **FLOW-1** (AC-6, `lib/compare/**`) ∥ **ORG-1** (AC-8, `lib/palette/**`) ∥ **CFG-1** (AC-10,
-  `lib/display/**`,`lib/onboarding/**`). GUARD-1/2/3 run last, sequentially, after every screen phase.
+- **FLOW-1** (AC-6, `lib/compare/**`) — compare controls/rows → design-system; **must re-scope
+  `lib/readout/actions_bar.dart`** to swap the "Compare as A/B"/"Find recipes" actions (AC-6 cross-screen
+  ownership). ∥ **ORG-1** (AC-8, `lib/palette/**`) ∥ **CFG-1** (AC-10, `lib/display/**`,`lib/onboarding/**`).
+- FLOW-2 after FLOW-1, ORG-2 after ORG-1. GUARD-1/2/3 run last, sequentially, after every screen phase.
 
-**Watch:** scope any new bare-text screen-title assertion to the screen's `AppBar` (nav labels collide with
-bare `find.text`); the whole `visual_application/` dir won't launch at once under load (run suites one at a
-time); a later re-lay of the capture readings must keep them in a single vertical run (not fixed-offset
-`Positioned`s) or AC-4 reddens.
+**Watch:** (a) **Tall-surface gotcha** — the carded Readout is taller than the short flutter-tester surface;
+any sibling harness that reads below-fold readout content or taps the in-scroll actions bar must pump on a
+device-tall surface (`tester.view.physicalSize = Size(1000,3200)`, reset on teardown) — applied in
+`harness.dart` (`givenReadoutOf`) and `daltonization_harness.dart` (`_assembleDaltonization`); a FLOW phase
+re-scoping `actions_bar.dart` should keep these. (b) Scope any new bare-text screen-title assertion to the
+screen's `AppBar`. (c) The whole `visual_application/` dir won't launch at once under load (run suites one at
+a time).
 
-**Carry-forward reviewer items (not gate blockers):** (1) **AC-6 cross-screen ownership** — "Compare as A/B"/
-"Find recipes" live in `lib/readout/actions_bar.dart` but FLOW-1 owns `lib/compare/**`; **FLOW-1 must re-scope
-its file ownership (or reassign to READ-3) to un-pend AC-6 green**. (2) AC-4 could additionally assert the
-"design-system banner style" (`SurfaceCard` ancestor per present banner) — a non-blocking strengthening
-(already unit-covered). (3) The 4 green-at-baseline guards (AC-11..14) stay pending; their owning phases
-un-pend them. (4) AC-6 A/B outline weight; AC-7 "ranked by" note; AC-9 create-vs-export; AC-11 tautological
-line — each a cheap strengthening/scope call for its phase.
+**Carry-forward reviewer items (not gate blockers):** (1) **AC-6 cross-screen ownership** — FLOW-1 must
+re-scope `lib/readout/actions_bar.dart` to un-pend AC-6 green. (2) The 4 green-at-baseline guards (AC-11..14)
+stay pending; their owning GUARD phases un-pend them. (3) AC-6 A/B outline weight; AC-7 "ranked by" note; AC-9
+create-vs-export; AC-11 tautological line — each a cheap strengthening/scope call for its phase.
+(4) **display AC-9** stays an open known flake (off-lane flutter-tester, bs-08; reproduces at BASE).
 
 ## Token usage
 
@@ -246,7 +248,8 @@ line — each a cheap strengthening/scope call for its phase.
 | CHROME-4 | 44b8cfca | 2026-10-20 07:25 EDT | 07:51 | 25m 04s | 25m 04s | claude-opus-4-8 | 154 | 227,379 | 9,642,044 | 57,436 | 9,927,013 | AC-2 top bar un-pended; green + grade A/A; unit 1671, cov 100%/11, 10 siblings re-verified |
 | READ-1 | 57b7c403 | 2026-10-20 07:56 EDT | 08:20 | 24m 10s | 24m 10s | claude-opus-4-8 | 138 | 262,938 | 9,750,049 | 59,205 | 10,072,330 | AC-3 un-pended + augmentation; shutter 88px round FilledButton, actions pills, toggles/radius filled-vs-outlined; unit 1673, cov 100%/12, grade A(AC-1/2/3) 0-B; 8 siblings re-verified (bs-02 AC-5 cast fix); fix passes 1/3 |
 | READ-2 | e2bfefd1 | 2026-10-20 10:26 EDT | 10:46 | 20m 33s | 20m 33s | claude-opus-4-8 | 138 | 251,514 | 7,870,002 | 50,560 | 8,172,214 | AC-4 un-pended + green; capture warnings relaid as a single vertical Column of SurfaceCard banners (D-6), rects non-overlapping at 200%; keys/text/visibility/semantics unchanged; unit 1675, cov 100%/13, grade A/A/A/A 0-B, 8 siblings re-verified, fix 0/3 |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 10:46** | **12h 33m** | **4h 43m** |  | **1,456** | **2,982,557** | **106,621,436** | **735,852** | **110,341,301** |  |
+| READ-3 | 827503f5 | 2026-10-20 10:58 EDT | 11:34 | 36m 23s | 36m 23s | claude-opus-4-8 | 230 | 352,507 | 20,229,588 | 112,773 | 20,695,098 | AC-5 un-pended + green; promoted A-core/B-pending READ-3 → straight A; readout regions carded + MonoLabel eyebrows + always-visible speak FAB; unit 1675, cov 100%/2, grade A×5 0-B, fix 0/3; display AC-9 = pre-existing off-lane flake |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 11:34** | **13h 09m** | **5h 19m** |  | **1,686** | **3,335,064** | **126,851,024** | **848,625** | **131,036,399** |  |
 
 ## Sign-off
 

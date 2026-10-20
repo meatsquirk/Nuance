@@ -20,6 +20,11 @@ class ActionsBar extends StatelessWidget {
   static const Key barKey = ValueKey('readout-actions-bar');
 
   /// Stable anchor for the "speak this readout" action (A11Y-2).
+  ///
+  /// The speak action itself is the Readout's floating [SpeakButton] (AC-5,
+  /// READ-3) — rendered by [ReadoutScreen] as the screen's always-visible
+  /// `floatingActionButton`, not inside this bar — but the key stays here as the
+  /// shared anchor every sibling (the spoken-output / eyes-free flows) taps.
   static const Key speakKey = ValueKey('readout-action-speak');
 
   /// Stable anchor for the "compare as A" action (READOUT-6).
@@ -49,11 +54,6 @@ class ActionsBar extends StatelessWidget {
       spacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        OutlinedButton(
-          key: speakKey,
-          onPressed: () => controller.speak(),
-          child: const Text('Speak this readout'),
-        ),
         OutlinedButton(
           key: compareAKey,
           onPressed: () => Navigator.of(context)

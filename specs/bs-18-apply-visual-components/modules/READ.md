@@ -1,6 +1,6 @@
 # Module READ — Readout + Capture screen swaps
 
-**Status:** In progress — READ-1 ✅ (AC-3), READ-2 ✅ (AC-4); next READ-3 (independent, concurrent with FLOW/ORG/CFG).
+**Status:** ✅ Complete — READ-1 ✅ (AC-3), READ-2 ✅ (AC-4), READ-3 ✅ (AC-5). Module done; unblocks GUARD.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/**`, `lib/capture/**` (screen/control/region widgets only — not controllers, sources, read endpoints or `capture/source/**` device literals).
 **Depends on:** ITEST (G-2) · **Blocks:** GUARD
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | READ-1 | behavior | AC-3 | ✅ Done | 10.07M | 24m |
 | READ-2 | behavior | AC-4 | ✅ Done | 8.17M | 20m 33s |
-| READ-3 | behavior | AC-5 | ⬜ Todo | | |
+| READ-3 | behavior | AC-5 | ✅ Done | 20.70M | 36m 23s |
 
 ## Interface reconciliation
 
@@ -167,3 +167,72 @@ G-2 (the acceptance-test review) ✅ resolved 2026-10-19 — approved by Matt Qu
 - **Exit criteria:** `lib/readout` suite + bs-01 colour-readout + bs-08 spoken-output suites green.
 - **Acceptance gate:** un-pend AC-5; `TestAC05_Readout` green with earlier ACs; sibling suites green.
 - **Augments:** `TestAC05`: add "old `Card`/plain speak `IconButton` absent" for the regions `value_region.dart` already partly swapped.
+
+### Result — READ-3 ✅ Done (2026-10-20)
+
+- **Landed (`lib/readout/readout_screen.dart` + `lib/readout/actions_bar.dart`):** the Readout now renders in
+  the wireframe's design-system treatment (AC-5). The **name / value / colour-space** regions are each wrapped
+  in a `SurfaceCard` carrying an uppercase `MonoLabel` field eyebrow ("Colour name" / "Value" / "Colour space")
+  via a new private `_cardedRegion(eyebrow, region)` helper; each region keeps its own key, so the card is the
+  region's ancestor and the eyebrow is a sibling (never a descendant of the region key — the bs-01 header/name
+  paragraph reads stay intact). The **speak** action moved from an in-scroll `OutlinedButton` in `ActionsBar`
+  to the Readout's always-visible `Scaffold.floatingActionButton` — the wireframe's round accent `SpeakButton`
+  (standard 64px), keyed on the shared `ActionsBar.speakKey` anchor with its semantic label unchanged
+  ("Speak this readout"). Temperature, provenance and the compare/recipes/acknowledge actions are untouched
+  (other ACs own them). Presentation only (D-2/D-3): every key, text, visibility and wiring is preserved.
+- **Why the FAB (not an in-scroll SpeakButton):** carding the three regions makes the scrollable body taller;
+  an in-scroll speak control fell outside a lazily-built `ListView`'s range and never laid out (the AC-5 test,
+  bs-01 `whenSpeak`, and bs-11 eyes-free all need it). A `Scaffold.floatingActionButton` is the faithful
+  "floating speak button" and is always built + hit-testable, fixing all three at once.
+- **AC-5 un-pended** (deleted its `pendingACs` row). **Augmentation made (TestAC05 → READ-3):** the AC-5 test
+  now also asserts the widget **at** `ActionsBar.speakKey` `isA<SpeakButton>()` (discriminates the pre-READ-3
+  tree, where speak was an `OutlinedButton` at that anchor, and a partial swap that adds a `SpeakButton`
+  elsewhere while leaving the old control) and that no carded region sits inside a Material `Card`
+  (belt-and-suspenders co-presence reject). Scaffold drained: smoke pending proof moved AC-5 → **AC-6** (owner
+  FLOW-1), AC-5 added to the `unpended` set; `fullSeed.hasLength(14)` unchanged.
+- **Gates:** `dart analyze` (touched lib + tests) → No issues. Unit `flutter test --coverage test/` →
+  **1675 pass** (net ±0: removed the obsolete `ActionsBar` speak test, added a `ReadoutScreen` FAB speak-wiring
+  test). Coverage gate `dart run tool/coverage_gate.dart 5dcdd6e` → **100% on both touched lib files, PASS**.
+  Acceptance: `visual_application/readout_test.dart` **AC-5 green** (run-pending and default; AC-6 pending-
+  skipped); bs-18 smoke 13✅/1 skip. **Grade gate PASS** — independent fresh-subagent re-grade: **AC-5
+  promoted A-core/B-pending READ-3 → straight A**; AC-1/AC-2/AC-3/AC-4 retain **A**; A=5 / B=0, no fix owed.
+  **Fix passes: 0/3** (green on the first full run; the sibling-surface work below was pre-empted, not a gate
+  failure).
+- **Sibling re-verification (one suite at a time):** bs-01 `readout_test` 12✅, `harness_test` 5✅ (needed a
+  tall-surface fix — see Checkpoint), bs-10 `daltonization_test` 25✅ (same tall-surface fix to its readout
+  pump; AC-4 reads the provenance region), bs-11 `accessibility_test` 19✅ (eyes-free speak lands on the FAB
+  by label; app-wide contrast holds), `comparison_test` 26✅, `capture_test` 19✅, bs12 `nfr_test` 33✅, bs-17
+  `design_system_test` 27✅, bs-18 `chrome_test` 2✅. **display AC-9** fails on flutter-tester but is the
+  **documented pre-existing flake** (master Known-flakes; verified it reproduces at BASE `5dcdd6e` with this
+  phase's changes stashed, and it fails on the Comparison screen *before* the readout opens — not a regression).
+  The three readout unit tests + the `actions_bar` speak test were updated for the FAB/tall-surface (unit side).
+
+### Checkpoint / Handoff — after READ-3
+
+- **Frozen interfaces (this phase):** `ReadoutScreen` cards the name/value/colour-space regions in
+  `SurfaceCard`s with `MonoLabel` eyebrows (`_cardedRegion`) and renders speak as a
+  `Scaffold.floatingActionButton` `SpeakButton` keyed `ActionsBar.speakKey` (semantic label "Speak this
+  readout"). `ActionsBar` no longer renders speak (the `speakKey` const stays as the shared anchor). AC-5
+  (`TestAC05_Readout`) is un-pended and must stay green — a later phase that restyles these must keep each
+  region in a `SurfaceCard` ancestor with a `MonoLabel` eyebrow and keep the speak control a `SpeakButton`
+  at `speakKey`, or the AC-5 present-side + at-anchor sweep reddens.
+- **Tall-surface gotcha (sibling test-infra):** the carded readout is taller than the short default
+  flutter-tester surface, so any harness that **reads below-fold readout content or taps the in-scroll
+  actions bar** must pump on a device-tall surface. Applied in `integration_test/harness.dart`
+  (`givenReadoutOf`) and `integration_test/daltonization_harness.dart` (`_assembleDaltonization`):
+  `tester.view.physicalSize = const Size(1000, 3200); devicePixelRatio = 1.0;` with
+  `addTearDown(resetPhysicalSize/resetDevicePixelRatio)`. The bs-18 `pumpShell` needs no change (AC-5 reads
+  the top-of-list cards and the FAB, both always built). A future FLOW phase that re-scopes
+  `lib/readout/actions_bar.dart` (AC-6 compare ownership) inherits these anchors unchanged.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout`):
+  unit+cov `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart 5dcdd6e`; AC-5
+  `flutter test -d flutter-tester integration_test/visual_application/readout_test.dart`; readout siblings
+  `flutter test -d flutter-tester integration_test/{readout_test,daltonization_test}.dart` and
+  `integration_test/bs11/accessibility_test.dart` (run one suite at a time; the whole `visual_application/`
+  dir won't launch at once under load).
+- **Known gaps / next:** **READ module is COMPLETE** (READ-1/2/3 ✅). The remaining startable behaviour
+  phases run concurrently in separate `--parallel` sessions (disjoint dirs): **FLOW-1** (AC-6,
+  `lib/compare/**` — and must re-scope `lib/readout/actions_bar.dart` for the compare actions) ∥ **ORG-1**
+  (AC-8, `lib/palette/**`) ∥ **CFG-1** (AC-10, `lib/display/**`, `lib/onboarding/**`). FLOW-2/ORG-2 after
+  their -1; GUARD-1/2/3 last. No `build_app.dart` edit here (D-7). **display AC-9** stays an open known flake
+  (off-lane flutter-tester; pre-existing).

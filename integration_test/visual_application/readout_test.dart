@@ -13,6 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:paint_color_assistant/readout/actions_bar.dart';
 import 'package:paint_color_assistant/readout/name_header.dart';
 import 'package:paint_color_assistant/readout/space_selector.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
@@ -67,6 +68,32 @@ void main() {
     // (rejects leaving speak a plain IconButton / OutlinedButton).
     expect(h.speakButtons, findsOneWidget,
         reason: 'speak renders as the SpeakButton FAB');
+
+    // THEN (augmentation READ-3) the superseded ad-hoc widgets are gone, so a
+    // *partial* swap that adds the new design-system widgets but keeps the old
+    // ones is rejected — the present-side checks above would pass such a tree.
+    //
+    // The speak control AT its anchor is the SpeakButton, not the plain
+    // OutlinedButton/IconButton it superseded. This discriminates the pre-READ-3
+    // tree (where speakKey was an OutlinedButton) and a partial swap that adds a
+    // SpeakButton elsewhere while leaving the old control on the anchor.
+    final speakAnchor = find.byKey(ActionsBar.speakKey);
+    expect(speakAnchor, findsOneWidget,
+        reason: 'the speak action renders at its anchor');
+    expect(tester.widget(speakAnchor), isA<SpeakButton>(),
+        reason: 'speak at its anchor is the SpeakButton FAB, not a plain '
+            'OutlinedButton / IconButton');
+
+    // Each carded region sits in a SurfaceCard, not a plain Material Card (a
+    // naive swap that reached for Card would be carried past the present-side
+    // SurfaceCard check only if it also kept a SurfaceCard; this rejects the Card).
+    for (final key in regionKeys) {
+      expect(
+        find.ancestor(of: find.byKey(key), matching: find.byType(Card)),
+        findsNothing,
+        reason: 'the ${_name(key)} region sits in a SurfaceCard, not a Card',
+      );
+    }
   });
 }
 

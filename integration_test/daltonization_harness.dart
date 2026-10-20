@@ -570,6 +570,15 @@ Future<DaltonizationHarness> _assembleDaltonization(
   PaletteSource paletteSource = const InMemoryPaletteSource(),
   _SettleMode settle = _SettleMode.pumpAndSettle,
 }) async {
+  // bs-18 cards the Readout regions, so its scrollable body is taller than a
+  // short default test surface — enough that the provenance region (read by
+  // AC-4) falls outside a lazily-built ListView's range and is never laid out.
+  // Pump on a device-tall surface so the whole Readout is built and on-screen,
+  // as on a real phone; reset after the test so the surface change does not leak.
+  tester.view.physicalSize = const Size(1000, 3200);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
   // Open a fresh app each time, so a repeated `given…` in one test does not
   // reuse the previous screen's State (mirrors the other bs harnesses).
   await tester.pumpWidget(const SizedBox());

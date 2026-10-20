@@ -46,7 +46,6 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-10 → CFG-1, AC-11 → GUARD-2, AC-12 → GUARD-1, AC-13 → GUARD-3,
 ///   AC-14 → GUARD-2.
 const Map<String, String> pendingACs = {
-  'AC-5': 'READ-3', // Readout regions as cards + mono eyebrows + speak FAB
   'AC-6': 'FLOW-1', // Compare controls and rows as design-system components
   'AC-7': 'FLOW-2', // Recipes as cards with mono notes and pill actions
   'AC-8': 'ORG-1', // Palette paints, provenance and add action

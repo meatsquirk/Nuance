@@ -16,20 +16,11 @@ const _sample = Sample(
   provenance: Provenance(ProvenanceTier.measured),
 );
 
-/// A [Speech] that records each utterance, so the speak button (AC-8) wiring can
-/// be observed.
-class _RecordingSpeech implements Speech {
-  final List<String> utterances = [];
-
-  @override
-  Future<void> speak(String utterance) async => utterances.add(utterance);
-}
-
-ReadoutController _controller({Sample? sample, Speech? speech}) =>
+ReadoutController _controller({Sample? sample}) =>
     ReadoutController(
       sample: sample ?? _sample,
       colorScience: const ColorScienceImpl(),
-      speech: speech ?? const NoopSpeech(),
+      speech: const NoopSpeech(),
       haptics: const NoopHaptics(),
       router: const AppRouter(),
     );
@@ -91,17 +82,9 @@ void main() {
     expect(find.text('Recipe target: Warm Terracotta'), findsOneWidget);
   });
 
-  testWidgets('"Speak this readout" drives the controller\'s speak action (AC-8)',
-      (tester) async {
-    final speech = _RecordingSpeech();
-    await _pumpBar(tester, _controller(speech: speech));
-
-    await tester.tap(find.byKey(ActionsBar.speakKey));
-    await tester.pump();
-
-    expect(speech.utterances,
-        [const ColorScienceImpl().decompose(_sample)]);
-  });
+  // The speak action moved to the Readout's floating SpeakButton (AC-5,
+  // READ-3); its wiring to [ReadoutController.speak] is covered by
+  // readout_screen_test's "the floating speak button drives speak" test.
 
   testWidgets('a non-fresh reading shows no marker and disables Acknowledge '
       '(AC-12 control)', (tester) async {

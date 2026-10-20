@@ -15,6 +15,7 @@ import 'package:paint_color_assistant/readout/readout_screen.dart';
 import 'package:paint_color_assistant/readout/space_selector.dart';
 import 'package:paint_color_assistant/readout/temperature_line.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
+import 'package:paint_color_assistant/widgets/speak_button.dart';
 
 const _sample = Sample(
   name: 'Warm Terracotta',
@@ -36,10 +37,28 @@ AppDependencies _freshDeps() => AppDependencies(
       haptics: const NoopHaptics(),
     );
 
+/// A [Speech] that records each utterance, so the floating speak button's
+/// wiring to the controller (AC-8) can be observed.
+class _RecordingSpeech implements Speech {
+  final List<String> utterances = [];
+
+  @override
+  Future<void> speak(String utterance) async => utterances.add(utterance);
+}
+
 Future<void> _pumpScreen(
   WidgetTester tester, {
   Sample sample = _sample,
 }) {
+  // The design-system readout (bs-18) cards its regions, so the scrollable body
+  // is taller than the short default test surface — the in-scroll actions bar
+  // would otherwise fall outside the lazily-built ListView and never lay out.
+  // Pump on a device-tall surface so every region and control is built and
+  // on-screen, as on a real phone; reset after the test so it does not leak.
+  tester.view.physicalSize = const Size(1000, 3200);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
   return tester.pumpWidget(
     AppScope(
       dependencies: _deps(),
@@ -121,17 +140,22 @@ void main() {
   testWidgets('enables the navigation and speak actions; acknowledge only for '
       'a just-captured reading (A11Y-2)', (tester) async {
     await _pumpScreen(tester); // _sample is not just-captured
-    // READOUT-6 wired the handoffs and A11Y-2 wired speak: all are live.
+    // READOUT-6 wired the navigation handoffs (in-scroll outlined buttons) and
+    // A11Y-2 wired speak (the Readout's floating SpeakButton, AC-5): all live.
     for (final key in const [
       ActionsBar.compareAKey,
       ActionsBar.compareBKey,
       ActionsBar.recipesKey,
-      ActionsBar.speakKey,
     ]) {
       final button = tester.widget<OutlinedButton>(find.byKey(key));
       expect(button.enabled, isTrue,
           reason: 'the action $key must be enabled');
     }
+    expect(
+      tester.widget<SpeakButton>(find.byKey(ActionsBar.speakKey)).onPressed,
+      isNotNull,
+      reason: 'the floating speak action must be enabled',
+    );
     // Nothing was just captured: no marker, and Acknowledge is disabled.
     expect(find.byKey(ActionsBar.justCapturedKey), findsNothing);
     expect(
@@ -139,6 +163,28 @@ void main() {
       isFalse,
       reason: 'Acknowledge is disabled when nothing was just captured',
     );
+  });
+
+  testWidgets('the floating speak button drives the controller\'s speak action '
+      '(AC-8)', (tester) async {
+    final speech = _RecordingSpeech();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          colorScience: const ColorScienceImpl(),
+          speech: speech,
+          haptics: const NoopHaptics(),
+        ),
+        child: const MaterialApp(home: ReadoutScreen(sample: _sample)),
+      ),
+    );
+
+    // The speak FAB is a Scaffold.floatingActionButton — always visible, so it
+    // taps without scrolling the readout.
+    await tester.tap(find.byKey(ActionsBar.speakKey));
+    await tester.pump();
+
+    expect(speech.utterances, [const ColorScienceImpl().decompose(_sample)]);
   });
 
   testWidgets('a just-captured reading shows the marker and enables Acknowledge '

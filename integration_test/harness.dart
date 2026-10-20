@@ -234,6 +234,16 @@ Future<ReadoutHarness> givenReadoutOf(
   WidgetTester tester,
   Sample sample,
 ) async {
+  // bs-18 renders the readout regions as cards, so the scrollable body is now
+  // taller than a short default test surface — enough that the provenance region
+  // and the actions bar fall outside a lazily-built ListView's range and are
+  // never laid out. Pump on a device-tall surface so the whole readout is built
+  // and every control this harness reads / taps is on-screen, matching a real
+  // phone. Reset after the test so the surface change does not leak.
+  tester.view.physicalSize = const Size(1000, 3200);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
   final speech = FakeSpeech();
   final haptics = FakeHaptics();
   await tester.pumpWidget(
