@@ -1,6 +1,6 @@
 # Module READ — Readout + Capture screen swaps
 
-**Status:** In progress — READ-1 ✅ (AC-3); next READ-2 (after READ-1, shared `lib/capture`), READ-3 independent.
+**Status:** In progress — READ-1 ✅ (AC-3), READ-2 ✅ (AC-4); next READ-3 (independent, concurrent with FLOW/ORG/CFG).
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/**`, `lib/capture/**` (screen/control/region widgets only — not controllers, sources, read endpoints or `capture/source/**` device literals).
 **Depends on:** ITEST (G-2) · **Blocks:** GUARD
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | READ-1 | behavior | AC-3 | ✅ Done | 10.07M | 24m |
-| READ-2 | behavior | AC-4 | ⬜ Todo | | |
+| READ-2 | behavior | AC-4 | ✅ Done | 8.17M | 20m 33s |
 | READ-3 | behavior | AC-5 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -102,6 +102,58 @@ G-2 (the acceptance-test review) ✅ resolved 2026-10-19 — approved by Matt Qu
   2. Keep each warning's text, key, visibility condition and semantics unchanged (presentation only).
 - **Exit criteria:** `lib/capture` + bs-09 suites green; warning strings/keys unchanged.
 - **Acceptance gate:** un-pend AC-4; `TestAC04_CaptureWarnings` green (render rects non-overlapping) with earlier ACs; sibling suites green.
+
+### Result — READ-2 ✅ Done (2026-10-20)
+
+- **Landed (`lib/capture/capture_live_view.dart` only):** the live camera readings/warnings now lay out in a
+  **single vertical run** (D-6, AC-4). The six fixed-offset corner `Positioned` banners — which collided at
+  large text scale (the observed overlap: at 200% the stability `Rect(8,64,179,104)` intersected the lock
+  `Rect(8,88,259,128)`) — are replaced by one `Positioned(left:8, top:8, right:8)` holding a `Column`
+  (`mainAxisSize.min`, `crossAxisAlignment.start`). `top` alone (no `bottom`/`height`) leaves the run's height
+  unbounded, so the Column can never flex-overflow at any text scale, and its layout guarantees each banner
+  gets its own vertical band → no two rects can intersect. Each reading/warning is wrapped by a new private
+  `_banner` helper in a design-system **`SurfaceCard`** (horizontal 12 / vertical 8 padding, 8px inter-banner
+  gap) — the wireframe banner treatment. Every reading keeps its **key, text, visibility condition and
+  semantics** unchanged (stability/lock/accuracy always present; downgrade-reasons behind `isNotEmpty`;
+  low-light + torch behind `Visibility`); only the layout and the banner surface changed, and the explicit
+  `Colors.white` text styles were dropped so each reads as theme `onSurface` on the paper card (presentation
+  only, D-2/D-3). The feed + its value-only `ColorFiltered` and the marked-point `Positioned`s are untouched,
+  so the readings stay Stack siblings of the feed (grayscale touches the feed alone, AC-10).
+- **AC-4 un-pended** (deleted its `pendingACs` row). Scaffold drained: the smoke `pending.dart` proof moved
+  from AC-4 → **AC-5** (owner READ-3) and AC-4 added to the smoke `unpended` set; `fullSeed.hasLength(14)`
+  unchanged. **No augmentation owed** (the AC-4 test already asserts the full non-overlap grain).
+- **Gates:** `dart analyze` (touched lib + 3 tests) → No issues. Unit `flutter test --coverage test/` →
+  **1675 pass** (1673 + 2 new `capture_live_view_test.dart` tests: single non-overlapping vertical run at
+  200%, each reading in a SurfaceCard banner). Coverage gate `dart run tool/coverage_gate.dart d3a1c4f` →
+  **100% on all 13 touched lib files, PASS**. Acceptance: `visual_application/capture_test.dart` **AC-4 green**
+  (AC-3 green, AC-5 pending-skipped); smoke green (13 pass / 1 skip = AC-5). **Grade gate PASS** — independent
+  fresh-subagent re-grade of all four un-pended tests: **AC-1 A, AC-2 A, AC-3 A, AC-4 A**; A=4 / B=0, no
+  grade changed, no fix owed. **Fix passes: 0/3** (green on the first full run).
+- **Sibling re-verification (one suite at a time):** bs-18 smoke 13✅, bs-02 `capture_test` 19✅, bs-09
+  `advanced_capture_test` 21✅, bs-12 `bs12/nfr_test` 33✅, bs-11 `bs11/accessibility_test` 19✅ (the
+  ink-on-`SurfaceCard` banners keep AA contrast), bs-10 `daltonization_test` 25✅, bs-17 `design_system_test`
+  27✅, bs-18 `chrome_test` 2✅. palette AC-3/AC-5 remain the known bs-06 off-lane flakes (not run).
+
+### Checkpoint / Handoff — after READ-2
+
+- **Frozen interfaces (this phase):** `CaptureLiveView` lays its readings/warnings in one `Column` inside a
+  single `Positioned(left:8,top:8,right:8)`, each wrapped by `_banner` in a `SurfaceCard`. AC-4
+  (`TestAC04_CaptureWarnings`) is un-pended and must stay green — a later phase that re-lays these must keep
+  the banners in a layout whose rects cannot intersect at 200% text scale (a single `Column`/vertical run,
+  not fixed-offset corner `Positioned`s), or AC-4 reddens. Every reading key stays on its `Text` (accuracy
+  key wraps its Text; downgrade key on its inner Column); the feed's value-only `ColorFiltered` and the
+  marked-point `Positioned`s are unchanged.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout`):
+  unit+cov `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart d3a1c4f`; AC-4
+  `flutter test -d flutter-tester integration_test/visual_application/capture_test.dart`; capture-screen
+  siblings `flutter test -d flutter-tester integration_test/{capture_test,advanced_capture_test}.dart` and
+  `integration_test/bs11/accessibility_test.dart` (run one suite at a time under load; the whole
+  `visual_application/` dir won't launch at once when saturated).
+- **Known gaps / next:** **READ module is READ-1 ✅ + READ-2 ✅; only READ-3 (AC-5, readout) remains** — it
+  is independent of capture and runs concurrently with FLOW-1/ORG-1/CFG-1 (disjoint dirs). No `build_app.dart`
+  edit here (D-7). **Reviewer recommendation (non-blocking):** AC-4's acceptance test could additionally
+  assert the "design-system banner style" (a `SurfaceCard` ancestor per present banner); the grader flagged
+  this as a strengthening, not a gate blocker — the banner style is already unit-covered. Not owed.
 
 ## Phase READ-3 — behavior: Readout cards + mono + speak FAB (AC-5)
 

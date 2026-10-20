@@ -89,27 +89,27 @@ void main() {
 
   group('ITEST-1 pending gate — proven both directions', () {
     test('a pending AC is skipped by default and runs under the flag', () {
-      // AC-4 is still seeded pending (owner READ-2) — AC-1 (CHROME-3), AC-2
-      // (CHROME-4) and AC-3 (READ-1) were un-pended, so this proof moved to the
-      // next pending AC.
+      // AC-5 is still seeded pending (owner READ-3) — AC-1 (CHROME-3), AC-2
+      // (CHROME-4), AC-3 (READ-1) and AC-4 (READ-2) were un-pended, so this proof
+      // moved to the next pending AC.
       expect(
-        pendingACs.containsKey('AC-4'),
+        pendingACs.containsKey('AC-5'),
         isTrue,
-        reason: 'AC-4 must be seeded pending for this proof',
+        reason: 'AC-5 must be seeded pending for this proof',
       );
 
       // Default run: the AC is skipped with an owner-naming reason.
-      final defaultReason = pendingSkipReason('AC-4', forceRunPending: false);
+      final defaultReason = pendingSkipReason('AC-5', forceRunPending: false);
       expect(defaultReason, isNotNull);
-      expect(defaultReason, contains('READ-2'));
+      expect(defaultReason, contains('READ-3'));
       expect(defaultReason, contains('--dart-define=BS18_RUN_PENDING=true'));
 
       // Run-pending: the same AC executes (no skip reason).
-      expect(pendingSkipReason('AC-4', forceRunPending: true), isNull);
+      expect(pendingSkipReason('AC-5', forceRunPending: true), isNull);
 
-      // The un-pended ACs (AC-1 CHROME-3, AC-2 CHROME-4, AC-3 READ-1) never
-      // skip, either mode.
-      for (final unpended in const ['AC-1', 'AC-2', 'AC-3']) {
+      // The un-pended ACs (AC-1 CHROME-3, AC-2 CHROME-4, AC-3 READ-1,
+      // AC-4 READ-2) never skip, either mode.
+      for (final unpended in const ['AC-1', 'AC-2', 'AC-3', 'AC-4']) {
         expect(pendingSkipReason(unpended, forceRunPending: false), isNull);
         expect(pendingSkipReason(unpended, forceRunPending: true), isNull);
       }
@@ -159,6 +159,7 @@ void main() {
         'AC-1', // CHROME-3 (bottom nav)
         'AC-2', // CHROME-4 (top bar)
         'AC-3', // READ-1 (capture controls)
+        'AC-4', // READ-2 (capture warnings stack without overlap)
       };
       final expectedPending = Map.of(fullSeed)
         ..removeWhere((ac, _) => unpended.contains(ac));
@@ -173,11 +174,11 @@ void main() {
     // deterministically by the forceRunPending tests above, so these bodies are
     // benign and never pollute the red-baseline run. The ITEST AC tests supply
     // the real assertions.
-    acTestWidgets('AC-4', 'planted pending-AC wiring smoke', (tester) async {
-      // AC-4 is still pending (AC-1/AC-2/AC-3 were un-pended by CHROME-3/
-      // CHROME-4/READ-1), so this body is skipped by default and proves the gate
-      // wiring under the run flag.
-      expect(pendingACs.containsKey('AC-4'), isTrue);
+    acTestWidgets('AC-5', 'planted pending-AC wiring smoke', (tester) async {
+      // AC-5 is still pending (AC-1/AC-2/AC-3/AC-4 were un-pended by CHROME-3/
+      // CHROME-4/READ-1/READ-2), so this body is skipped by default and proves
+      // the gate wiring under the run flag.
+      expect(pendingACs.containsKey('AC-5'), isTrue);
     });
     acTestWidgets('AC-NOT-SEEDED', 'planted unpended-AC wiring smoke', (
       tester,

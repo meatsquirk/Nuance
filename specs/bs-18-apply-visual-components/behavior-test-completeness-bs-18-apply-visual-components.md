@@ -209,3 +209,38 @@ The final `expectPill` loop (lines 103–112) correctly scopes pill-assertion to
 ## Gate status
 
 **PASS.** No plain-B row exists. All three un-pended AC tests grade **straight A**: AC-1 and AC-2 carry their prior A unchanged (bodies untouched by READ-1; AC-2's omitted back/close clause remains acceptable scoping, ◑ on G4, not a downgrade), and **AC-3 is promoted A-core / B pending READ-1 → straight A** — the READ-1 augmentation adds the exhaustive "ad-hoc widget absent" sweep over every capture control, which discriminates (would fail the pre-READ-1 all-`TextButton` tree), strengthens only AC-3, and closes the ITEST-2 limit against the now-fully-swapped screen. The bs-02 AC-5 sibling edit preserves the "present + enabled" intent and does not weaken it. **No row needs a fix this phase.**
+
+---
+
+# READ-2 (re-grade of un-pended AC tests AC-1, AC-2, AC-3, AC-4) — behaviour-test completeness grade
+
+- **Date:** 2026-10-20
+- **Grader:** independent fresh-subagent grader (did not author the tests; read-only — no file modified).
+- **What READ-2 changed:** PRODUCTION code only — `lib/capture/capture_live_view.dart`. It replaced the old fixed-offset corner `Positioned` warning banners (which collided at 200% text scale) with a single vertical `Column` (one run) inside one `Positioned(left:8, top:8, right:8)`, each reading/warning wrapped in a design-system `SurfaceCard` banner (`_banner`, 8px inter-banner gap). This un-pends **AC-4**. READ-2 touched **no AC test body** (only `capture_live_view.dart`, the scaffold `pending.dart`/`smoke_test.dart`, and the sibling unit test `capture_live_view_test.dart` changed) and owes **no augmentation**.
+
+## Grade grid
+
+| AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 | Rejects caught |
+|----|------|-------|----|----|----|----|----|----|----------------|
+| AC-1 | `TestAC01_BottomNav` | **A** | ✓ `pumpShell` boots real app; `bottomNav findsOneWidget` before the When | ✓ real CHROME-2/3 shell via `buildApp`; colours off `h.colorScheme` | n/a — static reads after settle; negative glyph Then paired with positive controls | ✓ `values hasLength(4)` + per-destination finder; filled/outline active glyph; token fill/hairline | ✓ missing destination; active-by-colour-only; hardcoded chrome colour | ✓ bottom nav only | nav missing a destination; active by colour alone; hardcoded fill/hairline |
+| AC-2 | `TestAC02_TopBar` | **A** | ✓ iterates all 5 primary surfaces; each asserted rendered before the When | ✓ pumps each real screen via `buildApp`; title family off installed theme `titleLarge` | n/a — static reads after settle; no negative Then | ◑ asserts bar+Atkinson-title+toggle; omits conditional back/close clause — acceptable scoping, not plain B | ✓ both catalogue Rejects across all 5 surfaces | ✓ shared top bar only | ad-hoc header; header missing toggle; hardcoded title style |
+| AC-3 | `TestAC03_CaptureControls` | **A** | ✓ `pumpScreen(capture)`; shutter/torch/import finders before the When | ✓ real swapped `CaptureControls`; shutter via `tester.getSize` | n/a — static layout/type reads after settle | ✓ exhaustive sweep: shutter `closeTo(88,4)`; every control `isNot<TextButton>`/`isNot<ElevatedButton>` + no descendant TextButton; `expectPill` ×6 | ✓ limit closed by READ-1 augmentation (fails pre-READ-1 tree) | ✓ Capture controls only | any un-swapped TextButton/ElevatedButton control; non-88px shutter; no pill |
+| AC-4 | `TestAC04_CaptureWarnings` | **A** | ✓ sets `textScaleFactorTestValue=2.0` (reset on teardown); pumps real Capture; collects present banners among `{stabilityKey,lockIndicatorKey,accuracyKey}` and asserts `present.length>=2` through the public tree | ✓ reads real rendered rects (`tester.getRect`) off real `CaptureLiveView` at real 200% scale — not a script | n/a — static position reads; "must not overlap" is a layout invariant | ✓ correct grain: rect of **every** present banner, pairwise `!overlaps` over all pairs, each failure naming both rects. ◑ does not assert the "banner style"/SurfaceCard clause — acceptable scoping (AC-2 precedent), recommended non-blocking strengthening | ✓ fails the named Reject exactly: pre-READ-2 overlapping fixed-offset `Positioned` banners (stability∩lock at 200%); PASSES the single-vertical-run `SurfaceCard` Column (disjoint rects) | ✓ warning-banner non-overlap only | overlapping `Positioned` warning banners at the 200% a11y text floor (the fixed bug) |
+
+### AC-4 verification (the test READ-2 un-pends)
+- **(a) Given through the public surface:** ✓ — 200% scale set+torn-down; real app pumped; `present.length>=2` asserted before the When.
+- **(b) When through the real tree:** ✓ — rects from `tester.getRect` on the real `CaptureLiveView` rendered by `buildApp`.
+- **(c) Fails pre-READ-2 / passes post-READ-2:** ✓ — old fixed-offset banners overlapped at 200% (red); the new single `Column` stacks each `SurfaceCard` band with an 8px gap → disjoint rects (green).
+- **(d) Asserts AC-4 only:** ✓ — pairwise non-overlap of the present warning banners; no other AC's behaviour.
+- **Verdict:** stays **grade A** — green at baseline yet still discriminating (AC-1 precedent). One ◑ on G4 (the "design-system banner style" clause is not asserted in the acceptance test) recorded as a recommended, non-gate-blocking reviewer strengthening; not a downgrade (the single named catalogue Reject — the overlap bug — is fully caught). Note: the banner-style IS covered at the unit level by the new `capture_live_view_test.dart` "renders each live reading in a design-system SurfaceCard banner" test.
+
+## Counts
+- **Straight A:** 4 — AC-1, AC-2, AC-3, AC-4
+- **A-core / B pending `<phase>`:** 0
+- **Below A (plain B):** 0
+
+## Change vs prior grid
+No grade changed. Prior: AC-1 A, AC-2 A, AC-3 A (READ-1 promotion), AC-4 A. All four retained — READ-2 left every AC test body untouched; its production change keeps AC-4 green while the test design still discriminates against the overlap bug, so the prior A holds with no new G-rule violation.
+
+## Gate status: PASS
+No plain-B row exists; no row needs a fix this phase.

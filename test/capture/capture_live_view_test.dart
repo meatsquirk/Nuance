@@ -4,6 +4,7 @@ import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_eyedropper.dart';
 import 'package:paint_color_assistant/capture/capture_live_view.dart';
 import 'package:paint_color_assistant/capture/capture_state.dart';
+import 'package:paint_color_assistant/widgets/surface_card.dart';
 
 Widget _host(CaptureState state) => MaterialApp(
       home: Scaffold(body: CaptureLiveView(state: state)),
@@ -219,6 +220,61 @@ void main() {
       findsOneWidget,
       reason: 'the missing-card reason is named in words',
     );
+  });
+
+  // ---- READ-2 (AC-4): readings laid in a single non-overlapping vertical run
+
+  testWidgets(
+      'lays the live readings in a single vertical run that never overlaps, '
+      'even at 200% text scale (AC-4)', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    // A state that surfaces every reading/warning at once — the densest run.
+    await tester.pumpWidget(_host(const CaptureState(
+      stabilityCount: 6,
+      lowLightWarning: true,
+      torchWarning: 'Torch (~5000 K) may bias the reading',
+    )));
+
+    const keys = <Key>[
+      CaptureLiveView.stabilityKey,
+      CaptureLiveView.lockIndicatorKey,
+      CaptureLiveView.accuracyKey,
+      CaptureLiveView.warningKey,
+      CaptureLiveView.torchWarningKey,
+    ];
+    final rects = {
+      for (final key in keys) key: tester.getRect(find.byKey(key)),
+    };
+    for (var i = 0; i < keys.length; i++) {
+      for (var j = i + 1; j < keys.length; j++) {
+        expect(
+          rects[keys[i]]!.overlaps(rects[keys[j]]!),
+          isFalse,
+          reason: '${keys[i]} must not overlap ${keys[j]}',
+        );
+      }
+    }
+  });
+
+  testWidgets('renders each live reading in a design-system SurfaceCard banner '
+      '(AC-4)', (tester) async {
+    await tester.pumpWidget(_host(const CaptureState(lowLightWarning: true)));
+
+    // Each present reading sits inside a SurfaceCard (the wireframe banner).
+    for (final key in const [
+      CaptureLiveView.stabilityKey,
+      CaptureLiveView.lockIndicatorKey,
+      CaptureLiveView.accuracyKey,
+      CaptureLiveView.warningKey,
+    ]) {
+      expect(
+        find.ancestor(of: find.byKey(key), matching: find.byType(SurfaceCard)),
+        findsOneWidget,
+        reason: '$key renders in a SurfaceCard banner',
+      );
+    }
   });
 
   test('exposes stable keys', () {

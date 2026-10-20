@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/surface_card.dart';
 import 'capture_accuracy.dart';
 import 'capture_eyedropper.dart';
 import 'capture_state.dart';
@@ -74,6 +75,19 @@ class CaptureLiveView extends StatelessWidget {
     0, 0, 0, 1, 0,
   ];
 
+  /// Wraps one live reading/warning in the wireframe's design-system banner — a
+  /// [SurfaceCard] with banner padding — and the inter-banner gap below it, so
+  /// the vertical run keeps a consistent rhythm (READ-2 / AC-4).
+  Widget _banner(Widget child) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: SurfaceCard(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: child,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     // Placeholder feed surface; SOURCE-2 renders real frames here. In value-only
@@ -88,8 +102,67 @@ class CaptureLiveView extends StatelessWidget {
           )
         : feedSurface;
 
+    // AC-4 (D-6): the live readings and warnings are laid in a single vertical
+    // run — one [Column] whose layout keeps every banner in its own band — so no
+    // two banner rects can intersect however the system text scales (the old
+    // fixed-offset corner `Positioned`s collided at large text sizes). Each is
+    // rendered as a design-system banner (a [SurfaceCard]). Every reading keeps
+    // its key, text, visibility condition and semantics; only the layout and the
+    // banner surface change (presentation only, D-2/D-3). The run stays a Stack
+    // sibling of the feed so the value-only grayscale filter touches the feed
+    // alone (AC-10), never the readings.
+    final readings = <Widget>[
+      // The stability indicator ("SETTLING n/12" / "STABLE 12/12").
+      _banner(Text(state.stabilityText, key: stabilityKey)),
+      // The AE/AWB/AF lock indicator ("… LOCKED" / "… AUTO", E16).
+      _banner(Text(state.lockIndicatorText, key: lockIndicatorKey)),
+      // The accuracy region carries [accuracyKey] as a wrapper around the label
+      // text, so callers can assert the tier word *within* the region
+      // (`find.descendant(of: accuracyKey, matching: find.text(...))`).
+      _banner(
+        KeyedSubtree(
+          key: accuracyKey,
+          child: Text(state.accuracy.label),
+        ),
+      ),
+      // bs-12 AC-9: when a reading is under one or more poor conditions, name
+      // each one in words below the accuracy label, so the painter knows the
+      // reading is downgraded and *why* — never returned as if trustworthy.
+      // Empty (the trustworthy reading) renders nothing.
+      if (downgradeReasons.isNotEmpty)
+        _banner(
+          Column(
+            key: downgradeReasonsKey,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final reason in downgradeReasons) Text(reason.label),
+            ],
+          ),
+        ),
+      // E15's low-light warning, shown only while the state carries it.
+      Visibility(
+        visible: state.lowLightWarning,
+        child: _banner(
+          const Text(
+            'Low light — reading may be approximate',
+            key: warningKey,
+          ),
+        ),
+      ),
+      // bs-09 torch colour-temperature warning (AC-1), shown only while the
+      // controller has set the warning string (raised by CAPTURE-3's
+      // turnTorchOn; AC-1 landed in SCREEN-2).
+      Visibility(
+        visible: state.torchWarning != null,
+        child: _banner(
+          Text(state.torchWarning ?? '', key: torchWarningKey),
+        ),
+      ),
+    ];
+
     // Fills the space its parent gives it (the Capture screen hands it the area
-    // above the controls); the readings are laid over the feed.
+    // above the controls); the readings run down the top-left over the feed.
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -97,86 +170,18 @@ class CaptureLiveView extends StatelessWidget {
         // The eyedropper carries [CaptureEyedropper.eyedropperKey] itself; its
         // reticle sizes to the selected sampling radius (AC-3).
         CaptureEyedropper(radiusPx: state.radiusPx),
-        // The text readings, laid over the feed so none rests on colour alone.
+        // The single vertical run of readings/warnings. `top` only (no `bottom`/
+        // `height`) leaves the run's height unbounded, so the Column lays its
+        // banners out one under another with no risk of a flex overflow at any
+        // text scale; `left`+`right` give it a width so long warnings wrap.
         Positioned(
           left: 8,
           top: 8,
-          child: Text(
-            state.stabilityText,
-            key: stabilityKey,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-        Positioned(
           right: 8,
-          top: 8,
-          // The accuracy region carries [accuracyKey] as a wrapper around the
-          // label text, so callers can assert the tier word *within* the region
-          // (`find.descendant(of: accuracyKey, matching: find.text(...))`).
-          child: KeyedSubtree(
-            key: accuracyKey,
-            child: Text(
-              state.accuracy.label,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 8,
-          top: 32,
-          child: Text(
-            state.lockIndicatorText,
-            key: lockIndicatorKey,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-        // bs-12 AC-9: when a reading is under one or more poor conditions, name
-        // each one in words below the accuracy label, so the painter knows the
-        // reading is downgraded and *why* — never returned as if trustworthy.
-        // Empty (the trustworthy reading) renders nothing.
-        if (downgradeReasons.isNotEmpty)
-          Positioned(
-            right: 8,
-            top: 32,
-            child: Column(
-              key: downgradeReasonsKey,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final reason in downgradeReasons)
-                  Text(
-                    reason.label,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-              ],
-            ),
-          ),
-        Positioned(
-          left: 8,
-          bottom: 8,
-          child: Visibility(
-            visible: state.lowLightWarning,
-            child: const Text(
-              'Low light — reading may be approximate',
-              key: warningKey,
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ),
-        // bs-09 torch colour-temperature warning (AC-1): a sibling banner above
-        // the low-light warning, shown only while the controller has set the
-        // warning string (raised by CAPTURE-3's turnTorchOn; AC-1 landed in
-        // SCREEN-2).
-        Positioned(
-          left: 8,
-          bottom: 32,
-          child: Visibility(
-            visible: state.torchWarning != null,
-            child: Text(
-              state.torchWarning ?? '',
-              key: torchWarningKey,
-              style: const TextStyle(color: Colors.white),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: readings,
           ),
         ),
         // bs-09 marked points (AC-3): each point the painter has marked draws on
