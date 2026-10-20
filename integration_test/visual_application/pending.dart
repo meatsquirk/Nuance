@@ -46,7 +46,10 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-10 → CFG-1, AC-11 → GUARD-2, AC-12 → GUARD-1, AC-13 → GUARD-3,
 ///   AC-14 → GUARD-2.
 const Map<String, String> pendingACs = {
-  'AC-13': 'GUARD-3', // the restyle preserves accessibility
+  // All 14 bs-18 ACs are now delivered — the map is intentionally empty.
+  // AC-13 (the restyle preserves accessibility) was un-pended by GUARD-3, the
+  // last behaviour phase, so the gate is fully open and every AC runs by
+  // default. The scaffold guard in `smoke_test.dart` asserts it is exactly {}.
 };
 
 /// The behaviour phases allowed to own a pending AC.

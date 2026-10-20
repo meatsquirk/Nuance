@@ -1,6 +1,6 @@
 # Module GUARD — app-wide guards (swatch caption, single theme, a11y, source-scan)
 
-**Status:** In progress — GUARD-2 done; next GUARD-3
+**Status:** ✅ Done — GUARD-1/2/3 all landed (AC-11..14 un-pended); module complete → SIGNOFF-1
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/visual_application/` guard checks and the extended source-scan rule (`integration_test/conformance/checks/` or the design-system suite); small corrective edits across any `lib/**` screen a guard flags.
 **Depends on:** CHROME-3/4, READ-3, FLOW-2, ORG-2, CFG-1 (every screen swapped) · **Blocks:** SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | GUARD-1 | behavior | AC-12 | ✅ Done | 2.29M | 4m 30s |
 | GUARD-2 | behavior | AC-11, AC-14 | ✅ Done | 2.15M | 4m 53s |
-| GUARD-3 | behavior | AC-13 | ⬜ Todo | | |
+| GUARD-3 | behavior | AC-13 | ✅ Done | 3.94M | 12m 34s |
 
 ## Interface reconciliation
 
@@ -129,3 +129,42 @@ G-2 blocks all three phases; each also depends on every screen behavior phase.
   1. Run the bs-11 tap-target (≥48dp) and WCAG AA contrast checks over every swapped screen; fix any pill/FAB/nav item/label that regressed.
 - **Exit criteria:** every interactive control ≥48dp; every text pairing ≥ AA across screens; bs-11 conformance suite green.
 - **Acceptance gate:** un-pend AC-13; `TestAC13_A11yPreserved` green with all earlier ACs; the full suite green (0 pending) — the gate into SIGNOFF-1.
+
+### Result — GUARD-3 (✅ Done)
+
+- **What landed:** AC-13 un-pended — **all 14 bs-18 ACs now delivered; `pendingACs` is exactly `{}`.** No
+  `lib/**` change was needed: the a11y sweep already held at the fully-swapped tree. Run-pending over the full
+  roster (Readout shell, Capture, Compare, Recipes, Palette, Display settings, Onboarding), the reused bs-11
+  conformance check reported every interactive control ≥48dp (`tapTarget48` pass) and every text pairing ≥ AA
+  (`contrastAA` pass) on every screen; the test's discriminating controls (a 24dp target, a ~1.6:1 pairing)
+  still fail the rules, so the sweep is non-vacuous. GUARD-3 emptied `pendingACs` (`pending.dart`) and moved the
+  smoke gate to its terminal (drained-map) form, mirroring bs-17's completed suite: the directional proof became
+  "with every AC delivered the gate runs them all in either mode" (asserts `pendingACs.isEmpty` + every
+  AC-1..AC-14 runs in both modes), the seed-drain test now lists AC-13 among the un-pended (so `pendingACs`
+  equals the empty expected map), and the planted AC-13 wiring smoke became a delivered-AC smoke.
+- **Acceptance:** run-pending probe first — all four guards green with their controls. Default-mode run after
+  un-pend: `guards_test` +4 (AC-11/12/13/14 all run, 0 skip); `smoke_test` +14 (0 skip; the AC-13 wiring smoke
+  now runs). Full `visual_application/` sweep per-file (whole dir won't launch at once): all 10 files green,
+  **0 pending** — the gate into SIGNOFF-1.
+- **Unit + coverage:** no touched `lib/**` — coverage gate N/A (nothing to gate). No unit test changed.
+- **Siblings:** no `lib/**` change ⇒ no regression surface; carried off-lane flakes (bs-06 palette AC-3/AC-5,
+  bs-08 display AC-9) unchanged, not re-run (GUARD-1/GUARD-2 reasoning).
+- **Grade:** AC-13 **A** carried from ITEST-4 (the AC test is unchanged; GUARD-3 un-pends it and edits only the
+  scaffold bookkeeping, which keeps its non-vacuous invariants in the bs-17-A-graded drained form). SIGNOFF-1
+  produces the authoritative fresh full-suite grid. **Fix passes: 0/3.**
+- **Tokens / time:** 3.94M / 12m 34s (12m 34s).
+
+### Checkpoint / Handoff — after GUARD-3
+
+- **Frozen interfaces (this phase):** `pendingACs` is now empty — the behaviour stage is complete; every
+  AC-1..AC-14 runs by default. `TestAC13_A11yPreserved` is a standing app-wide a11y regression guard (48dp +
+  AA over the full roster); any later edit that drops a control below the floor or a pairing below AA reddens
+  it. The smoke gate asserts `pendingACs` is exactly `{}`.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout` on
+  macOS): guards `flutter test -d flutter-tester integration_test/visual_application/guards_test.dart`
+  (default now runs all four); gate self-check
+  `flutter test -d flutter-tester integration_test/visual_application/smoke_test.dart`; full suite = each
+  `integration_test/visual_application/*_test.dart` run one file at a time (the whole dir won't launch at once).
+- **Known gaps / next:** none owed. **SIGNOFF-1** is now unblocked (GUARD-3 was its only dependency) — assemble
+  the sign-off packet + summary page, produce the authoritative fresh full-suite grade grid, set the round
+  awaiting the human decision, and stop for `--signoff`.

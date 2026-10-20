@@ -7,11 +7,12 @@
 //     onto the CHROME-2 nav shell — all four destinations present, exactly one
 //     non-colour active marker (under the opening Capture destination), the one
 //     theme installed — and that the shell switches between destinations;
-//   * the `BS18_RUN_PENDING` pending gate proven **both directions** (a pending
-//     AC is skipped by default and runs under the flag; an un-pended AC always
-//     runs), plus the integrity invariants (every owner is a known behaviour
-//     phase; the seed matches the master plan AC coverage table) and a planted
-//     `acTestWidgets` wiring smoke;
+//   * the `BS18_RUN_PENDING` pending gate: all 14 ACs are now delivered, so the
+//     pending map is empty and every AC runs in both the default and the
+//     run-pending modes (the skip logic stays wired, with nothing left to
+//     skip), plus the integrity invariants (every owner is a known behaviour
+//     phase; the seed drains to exactly the master plan AC coverage table) and
+//     a planted `acTestWidgets` wiring smoke;
 //   * fixture guards asserting each of the six fixtures is well-formed, so a
 //     later AC test built on an empty/degenerate fixture fails here first.
 //
@@ -87,50 +88,33 @@ void main() {
     });
   });
 
-  group('ITEST-1 pending gate — proven both directions', () {
-    test('a pending AC is skipped by default and runs under the flag', () {
-      // AC-13 is still seeded pending (owner GUARD-3) — AC-1 (CHROME-3), AC-2
-      // (CHROME-4), AC-3 (READ-1), AC-4 (READ-2), AC-5 (READ-3), AC-6 (FLOW-1),
-      // AC-7 (FLOW-2), AC-8 (ORG-1), AC-9 (ORG-2), AC-10 (CFG-1), AC-12
-      // (GUARD-1) and AC-11 + AC-14 (GUARD-2) were un-pended, so this proof
-      // moved to the last pending AC.
-      expect(
-        pendingACs.containsKey('AC-13'),
-        isTrue,
-        reason: 'AC-13 must be seeded pending for this proof',
-      );
-
-      // Default run: the AC is skipped with an owner-naming reason.
-      final defaultReason = pendingSkipReason('AC-13', forceRunPending: false);
-      expect(defaultReason, isNotNull);
-      expect(defaultReason, contains('GUARD-3'));
-      expect(defaultReason, contains('--dart-define=BS18_RUN_PENDING=true'));
-
-      // Run-pending: the same AC executes (no skip reason).
-      expect(pendingSkipReason('AC-13', forceRunPending: true), isNull);
-
-      // The un-pended ACs (AC-1 CHROME-3, AC-2 CHROME-4, AC-3 READ-1,
-      // AC-4 READ-2, AC-5 READ-3, AC-6 FLOW-1, AC-7 FLOW-2, AC-8 ORG-1,
-      // AC-9 ORG-2, AC-10 CFG-1, AC-11 + AC-14 GUARD-2, AC-12 GUARD-1) never
-      // skip, either mode.
-      for (final unpended in const [
-        'AC-1',
-        'AC-2',
-        'AC-3',
-        'AC-4',
-        'AC-5',
-        'AC-6',
-        'AC-7',
-        'AC-8',
-        'AC-9',
-        'AC-10',
-        'AC-11',
-        'AC-12',
-        'AC-14',
-      ]) {
-        expect(pendingSkipReason(unpended, forceRunPending: false), isNull);
-        expect(pendingSkipReason(unpended, forceRunPending: true), isNull);
+  group('ITEST-1 pending gate — fully drained (all 14 ACs delivered)', () {
+    test('with every AC delivered the gate runs them all in either mode', () {
+      // GUARD-3 un-pended AC-13 (the restyle preserves accessibility), the last
+      // behaviour phase, so the pending map is now empty — AC-1 (CHROME-3),
+      // AC-2 (CHROME-4), AC-3 (READ-1), AC-4 (READ-2), AC-5 (READ-3), AC-6
+      // (FLOW-1), AC-7 (FLOW-2), AC-8 (ORG-1), AC-9 (ORG-2), AC-10 (CFG-1),
+      // AC-11 + AC-14 (GUARD-2), AC-12 (GUARD-1) and AC-13 (GUARD-3) are all
+      // delivered. Every AC-1..AC-14 therefore runs in both the default and the
+      // run-pending modes — none is skipped. Both directions use the explicit
+      // [forceRunPending] so the guard is deterministic in either ambient mode.
+      // This fails if an AC were silently *re*-pended (its skip reason would be
+      // non-null) or if the gate inverted to skip a delivered AC.
+      expect(pendingACs, isEmpty,
+          reason: 'all 14 bs-18 ACs are delivered; none is still pending');
+      for (var n = 1; n <= 14; n++) {
+        final ac = 'AC-$n';
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is delivered and must run in the default run');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac must run in run-pending mode too');
       }
+      // The ambient path acTestWidgets uses agrees with the current mode (the
+      // skip logic is still correctly wired, it simply has nothing to skip).
+      expect(
+        pendingSkipReason('AC-13'),
+        pendingSkipReason('AC-13', forceRunPending: runPending),
+      );
     });
 
     test('an un-pended AC always runs, in either mode', () {
@@ -186,6 +170,7 @@ void main() {
         'AC-10', // CFG-1 (display option pills + carded groups; carded steps)
         'AC-11', // GUARD-2 (every screen inherits the one installed theme)
         'AC-12', // GUARD-1 (one swatch caption per swatch-bearing screen)
+        'AC-13', // GUARD-3 (the restyle preserves accessibility)
         'AC-14', // GUARD-2 (no new hardcoded palette colours)
       };
       final expectedPending = Map.of(fullSeed)
@@ -201,12 +186,12 @@ void main() {
     // deterministically by the forceRunPending tests above, so these bodies are
     // benign and never pollute the red-baseline run. The ITEST AC tests supply
     // the real assertions.
-    acTestWidgets('AC-13', 'planted pending-AC wiring smoke', (tester) async {
-      // AC-13 is still pending (AC-1..AC-12 and AC-14 were un-pended by
-      // CHROME-3/CHROME-4/READ-1/READ-2/READ-3/FLOW-1/FLOW-2/ORG-1/ORG-2/
-      // CFG-1/GUARD-1/GUARD-2), so this body is skipped by default and proves
-      // the gate wiring under the run flag.
-      expect(pendingACs.containsKey('AC-13'), isTrue);
+    acTestWidgets('AC-13', 'planted delivered-AC wiring smoke', (tester) async {
+      // AC-13 was un-pended by GUARD-3 (the last behaviour phase), so — like
+      // every other AC — this body now runs by default and proves the gate
+      // wiring for a delivered AC does not throw at registration.
+      expect(pendingACs.containsKey('AC-13'), isFalse);
+      expect(pendingACs, isEmpty);
     });
     acTestWidgets('AC-NOT-SEEDED', 'planted unpended-AC wiring smoke', (
       tester,
