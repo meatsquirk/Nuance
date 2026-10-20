@@ -464,3 +464,53 @@ AC-1..AC-9 therefore retain straight **A** (AC-2's omitted back/close clause rem
 ## Gate status: PASS
 
 No plain-B row exists; no row needs a fix this phase. **AC-10 grades straight A** (confirmed unchanged from its ITEST-3 grade, now un-pended by CFG-1 — the last screen phase — and verified green on the swapped tree). CFG-1 is a *wholesale* swap of a fully-ad-hoc baseline (sim options, lighting/continue, see-result all keyed `TextButton`s → `PillButton`s in place; the lighting step's bare `Column` gained a `SurfaceCard`), with no surviving ad-hoc control at any asserted key, so the authored present-side checks (`expectPill` ×4 + `SurfaceCard` ancestor) discriminate both catalogue Rejects cleanly and **no absent-sweep augmentation was owed** (the AC-6/AC-9/AC-10 fully-ad-hoc precedent, distinct from AC-8's partly-swapped ORG-1 case). The two ◑-on-G4 scope narrowings (pills-vs-segmented, single-step/no-back) are justified scoping carried from ITEST-3, not fixable gaps. CFG-1's shared edits are gate plumbing + the separate bs-07 self_assessment harness + four sibling unit tests; they drift no AC-1..AC-9 acceptance body, all of which carry their prior A forward. AC-10 verified green this session.
+
+
+---
+
+# SIGNOFF-1 — whole-suite re-grade (fresh independent context)
+
+- **Date:** 2026-10-20
+- **Grader:** independent test-quality grader (did NOT author these tests); fresh context, read every test file directly.
+- **Scope:** the full bs-18 acceptance integration suite, all 14 AC tests now un-pended (`pendingACs == {}`, verified in `pending.dart` lines 48–53), graded against G1–G6 plus the scaffold "no vacuous pass" rule. Grade is of the test *design* and what the un-pended code asserts.
+- **Method:** read `smoke_test.dart`, `harness.dart`, `pending.dart`, `chrome_test.dart`, `capture_test.dart`, `readout_test.dart`, `compare_test.dart`, `recipes_test.dart`, `palette_test.dart`, `projects_test.dart`, `config_test.dart`, `guards_test.dart`, the spec, and the full prior grid. Verified: pending map empty; all 14 ACs registered via `acTestWidgets` (AC-7 ×2 = main + out-of-gamut augmentation, AC-13 ×2 = guards body + smoke wiring smoke); suite green 10/10 files at current HEAD (GUARD-3 @ 9d0436d).
+
+## Grade grid
+
+| Row | Test | Grade | One-line justification |
+|-----|------|-------|------------------------|
+| AC-1 | `TestAC01_BottomNav` (chrome_test) | **A** | G1 `bottomNav findsOneWidget` before When; G4 `AppDestination.values hasLength(4)` + per-destination finder + filled/outline active glyph + raw `DecoratedBox` token colours (`surfaceContainerLowest`/`outline`); G5 rejects missing destination, active-by-colour-only, hardcoded chrome colour; G6 nav only. |
+| AC-2 | `TestAC02_TopBar` (chrome_test) | **A** | G1 iterates 5 primary surfaces, each `MaterialApp findsOneWidget` before When; G2/G4 title family `contains('Atkinson')` **and** `== installedTheme.titleLarge.fontFamily`, `AppTopBar`+`themeToggleKey findsOneWidget`; G5 catches ad-hoc header + hardcoded title. ◑ omits conditional back/close clause — acceptable scoping (roots need none), not a downgrade. |
+| AC-3 | `TestAC03_CaptureControls` (capture_test) | **A** | G1 shutter/torch/import finders before When; G4 shutter `closeTo(88,4)` + **exhaustive sweep** over all 9 action/toggle keys + radius options asserting `isNot<TextButton>/<ElevatedButton>` + no descendant TextButton, `expectPill` ×6; G5 the READ-1 augmentation fails the pre-swap all-`TextButton` tree; G6 capture only. |
+| AC-4 | `TestAC04_CaptureWarnings` (capture_test) | **A** | G1 sets 200% text scale (reset on teardown), asserts `present.length>=2` through the tree; G4 pairwise `!overlaps` over every present banner's real `getRect`; G5 fails the overlapping-`Positioned` bug at the a11y floor. ◑ banner-style clause unit-covered, not asserted here — acceptable scoping. |
+| AC-5 | `TestAC05_Readout` (readout_test) | **A** | G1 per-region key finders before When; G4 per-region `SurfaceCard` ancestor + descendant `MonoLabel`, `monoLabels findsAtLeastN(3)`, `SpeakButton findsOneWidget`; G5 READ-3 augmentation: speak-at-anchor `isA<SpeakButton>()` (discriminates the pre-swap `OutlinedButton`) + per-region `Card` absence; G6 readout only. |
+| AC-6 | `TestAC06_Compare` (compare_test) | **A** | G1 both surfaces checked before Thens; G4 recipes `PillButton`+`FilledButton` isTrue, A/B `expectPill`+`FilledButton` **isFalse** (outline weight asserted post-FLOW-1), diff/statement `SurfaceCard` ancestor, speak `SpeakButton`; G5 both catalogue Rejects + A/B-as-primary; G6 one AC across its two real surfaces. |
+| AC-7 | `TestAC07_Recipes` main + out-of-gamut (recipes_test) | **A** | G1 region+`cardKey(0)` / banner marker before Thens; G3 the two `findsNothing` negatives paired with positive controls; G4 `SurfaceCard` ancestor + region-wide no-`Card`, ranked-by note `isA<MonoLabel>`, out-of-gamut marker `MonoLabel` over the `outOfGamutTarget` pump; G5 FLOW-2 closes the "notes hardcoded" Reject (red at pre-FLOW-2 tree). |
+| AC-8 | `TestAC08_Palette` (palette_test) | **A** | G1 region + 3 rows + add key before Thens; G3 the `findsNothing` add-absent sweep paired with positive `expectPill` control; G4 per-row `ProvenanceBadge findsOneWidget` over all 3 ids, `expectPill(addPaintKey)`; G5 ORG-1 augmentation `widgetWithText(TextButton,'Add paint') findsNothing` discriminates the partial-swap co-presence (stays tight — selector labels differ). |
+| AC-9 | `TestAC09_Projects` (projects_test) | **A** | G1 reaches Projects view via real E31 selector, asserts region + `projectRowKey` before Thens; G4 `SurfaceCard` ancestor + `expectPill` on both real actions (open/export); G5 both Rejects on a fully-ad-hoc baseline — wholesale keyed swap, no absent-sweep owed; G6 one AC. |
+| AC-10 | `TestAC10_DisplayOnboarding` (config_test) | **A** | G1 both config surfaces opened through real chrome/route, Givens before Thens; G2 real injected deutan settings + in-memory store, not a fake override; G4 `expectPill` ×4 + `SurfaceCard` ancestor on the step; G5 both Rejects on a fully-ad-hoc baseline. ◑ pills-only (no segmented ships) + single-step/no-back — justified scoping. |
+| AC-11 | `TestAC11_SingleTheme` (guards_test) | **A** | G1 sweeps all 7 roster screens, Given per screen, `screensChecked == _roster.length` pins non-vacuous; G4 exactly one `MaterialApp` + no scheme-overriding `Theme` per screen; G5 nested-`MaterialApp`+scheme control fires BOTH checks (`findsNWidgets(2)`, `isNotEmpty`). ◑ colour-scheme not "type" — acceptable; one tautological `expect(colorScheme,scheme)` is dead, not the discriminator. |
+| AC-12 | `TestAC12_SwatchCaption` (guards_test) | **A** | G1 dynamic full-roster sweep, `swept containsAll {Readout,Capture,Palette}` pins non-vacuous; G4 `swatchCaptions findsOneWidget` per bearer; G5 TWO controls — uncaptioned `ColorChip` → `findsNothing`, two captions → `findsNWidgets(2)` — so only exactly-one passes; G6 one AC. |
+| AC-13 | `TestAC13_A11yPreserved` (guards_test) | **A** | G1 sweeps 7 screens, asserts each rule ran (`isNotNull`) before `.pass`, `screensChecked == _roster.length`; G4 reuses bs-11 aggregate `tapTarget48`/`contrastAA`; G5 one control per rule — 24dp target → tap `.pass isFalse`, ~1.6:1 text → contrast `.pass isFalse`; G6 one AC. |
+| AC-14 | `TestAC14_NoHardcodedPalette` (guards_test) | **A** | G1 scans `lib/` with the bs-17 exclusion set (the Given is the scanned tree); G4 `residual isEmpty` + control `hasLength(1)` AND `.single.rule == ruleHardcodedPalette`; G5 planted real literal flagged while comment/string masked — proves the scan is non-vacuous; G6 one AC. |
+| Scaffold | smoke_test: pending-map-empty assertion (lines 92–118) | **A** | Asserts `pendingACs isEmpty` then a fixed `n=1..14` loop asserting each AC runs in both default and run-pending modes — a fixed-range loop, never a vacuous empty-set loop; deterministic; comment matches code. |
+| Scaffold | smoke_test: AC-test-existence / seed-drain + wiring smoke (lines 137–201) | **A** | `pendingACs == fullSeed∖unpended (= {})` AND `fullSeed hasLength(14)` pins the drain to the full 14-AC master-plan table non-vacuously; the `acTestWidgets` wiring smoke asserts `pendingACs isEmpty`/no-key. Comments accurate; deterministic. |
+| Scaffold | smoke_test: owner-validity (lines 127–135) | **A** | Loops `pendingACs.entries` asserting each owner ∈ `behaviorPhases`. See note below. |
+
+## Rows differing from the prior grid
+
+**None in grade.** Every AC carries the same **A** the prior grid reached at its last re-grade (AC-1..AC-10 straight A per the CFG-1 section; AC-11..AC-14 straight A per ITEST-4; the AC-3/AC-5/AC-7/AC-8 "A-core / B pending" states were all promoted to straight A by their owning phase's landed augmentation — READ-1, READ-3, FLOW-2, ORG-1 respectively, each verified red-at-baseline / green-on-swap and strengthening only its own AC). No downgrade is taken, so no G-rule citation is owed. The prior grid did not append a GUARD-1/2/3 re-grade section; this re-grade independently confirms AC-11..AC-14's ITEST-4 **A** holds now that the guards are un-pended and green.
+
+## Transparency note — the one row to watch (not a downgrade)
+
+**Owner-validity (smoke_test lines 127–135) loops over the now-empty `pendingACs`, so in isolation its body is vacuous.** Per the scaffold rule, a loop over a possibly-empty set must assert the set's size/contents or hold either way. This loop does neither *inside its own body*. It is held at **A** because the same file pins the set's expected contents non-vacuously in two companion guards: the pending-map-empty test asserts `pendingACs isEmpty`, and the seed-drain test asserts `pendingACs == {}` **and** `fullSeed hasLength(14)`. With the map provably and correctly empty, the owner-validity invariant has nothing to hide — no bad owner can exist to slip past — so the vacuity is a verified-correct end state, not a masked defect. Recommended non-blocking cleanup (G-2/reviewer item, mirrors prior house style): add `expect(pendingACs, isEmpty)` (or a size assert) to this test's body so it holds either way on its own. It does not lower the grade and is not gate-blocking.
+
+## Counts
+
+- **AC tests (AC-1..AC-14): straight A = 14, below A = 0.**
+- **Scaffold tests: A = 3, below A = 0** (owner-validity A with the transparency note above).
+- **Whole suite: straight A = 17, below A = 0.**
+
+## Gate status
+
+**PASS** — all 17 rows grade A; no below-A row; no fix owed this phase.

@@ -125,6 +125,11 @@ void main() {
     });
 
     test('every pending AC names a known behaviour phase as its owner', () {
+      // Non-vacuity guard: pin the map's expected end state so this test's own
+      // body asserts a concrete fact even when the loop below iterates nothing.
+      // All 14 ACs are delivered, so the map is drained to {}; the seed-drain
+      // test pins that `== fullSeed∖unpended` and `fullSeed hasLength(14)`.
+      expect(pendingACs, isEmpty);
       for (final entry in pendingACs.entries) {
         expect(
           behaviorPhases.contains(entry.value),

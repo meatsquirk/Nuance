@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — GUARD-3 ✅ (AC-13 un-pended); all 14 ACs delivered, 0 pending; next SIGNOFF-1.
+**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet assembled; 14/14 ACs ✅, suite 17 A / 0 below A, unit 1676✅, cross-feature 341✅ (3 carried off-lane flakes); awaiting human `--signoff`.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -126,7 +126,7 @@ Pre-seeded augmentations: AC-3 (capture partly swapped) strengthened by READ-1; 
 | ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | ✅ Done (ORG-1, ORG-2) |
 | CFG | [modules/CFG.md](modules/CFG.md) | Display + Onboarding screen swaps | ITEST (G-2) | ✅ Done |
 | GUARD | [modules/GUARD.md](modules/GUARD.md) | App-wide guards: swatch caption, single theme, a11y, source-scan | all screen modules | ✅ Done (GUARD-1/2/3) |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | CHROME-2 | ◑ In progress |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | CHROME-2 | ✅ Done (ITEST-1..5; G-2 approved) |
 
 ## Dependency graph
 
@@ -192,37 +192,28 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 18 | GUARD-1 | AC-12 — swatch caption on every swatch screen | ✅ Done | 2.29M | 4m 30s | AC-12 ✅ A (carried from ITEST-4); no `lib/**` change — invariant already held, un-pend only; cov PASS (no touched lib); default run AC-12 green, AC-11/13/14 skip |
 | 19 | GUARD-2 | AC-11 + AC-14 — single theme + source-scan | ✅ Done | 2.15M | 4m 53s | AC-11+AC-14 un-pended, grades A carried from ITEST-4; no `lib/**` change (invariants held), cov PASS, fix 0/3; default run AC-11/12/14 green, AC-13 skips |
 | 20 | GUARD-3 | AC-13 — a11y regression (targets + contrast) | ✅ Done | 3.94M | 12m 34s | AC-13 un-pended, grade A carried; no `lib/**` change (48dp+AA sweep already held over full roster), cov N/A, fix 0/3; all 14 ACs delivered → 0 pending; suite green (10/10 files) |
-| 21 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | unblocked (GUARD-3 landed); 0 pending; assemble packet + fresh full grid → `--signoff` |
+| 21 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⏸ Awaiting | 6.78M | 35m 42s | packet [signoff/round-1.md](signoff/round-1.md); full verify green (analyze clean, unit 1676, cov-gate PASS, bs-18 29/29 both modes, cross-feature 341/3-flakes); fresh re-grade 17 A/0; 1 cheap smoke hardening applied; awaiting `--signoff` |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets).
 
 ## Next phase
 
-**GUARD-3 ✅ done (AC-13 a11y regression).** AC-13 un-pended — **the behaviour stage is complete: all 14 ACs
-delivered, `pendingACs` is exactly `{}`, the full suite is green (10/10 files), 0 pending.** No `lib/**` change
-was needed: the reused bs-11 conformance check reported every interactive control ≥48dp and every text pairing
-≥ AA across the full roster (Readout/Capture/Compare/Recipes/Palette/Display/Onboarding), with the test's 24dp
-+ ~1.6:1 controls still failing the rules (non-vacuous). Emptied `pendingACs` and moved the smoke gate to its
-drained-map form (mirrors bs-17's completed suite): directional proof → "every AC delivered, runs in either
-mode"; seed-drain lists AC-13 among un-pended; the planted AC-13 wiring smoke is now a delivered-AC smoke.
-Grade A carried from ITEST-4; cov N/A (no touched `lib/**`); fix 0/3.
+**SIGNOFF-1 ✅ packet assembled — feature is `⏸ Awaiting sign-off`.** This is the only remaining phase and it
+holds for the human decision; the agent never approves.
 
-**Startable now:**
-- **SIGNOFF-1** — unblocked (GUARD-3 was its only dependency). Assemble the sign-off packet + summary page,
-  produce the authoritative **fresh full-suite grade grid** (all 14 ACs + the scaffold/guard tests), set the
-  round awaiting the human decision, and stop for `/feature-next-phase --signoff bs-18-apply-visual-components
-  approved | changes "<items>"`. The agent never approves.
+- **Decision command:** `/feature-next-phase --signoff bs-18-apply-visual-components approved | changes "<items>"`.
+- **Packet:** [signoff/round-1.md](signoff/round-1.md) (at code `9d0436d`, the sign-off commit stamped on the decision).
+- **Evidence (full verification this session):** analyze clean · unit **1676** pass · coverage-gate **PASS** (no
+  touched `lib/**` vs HEAD) · bs-18 suite **29/29** green in **both** default and run-pending modes (pending map
+  `{}`) · cross-feature regression **341 pass / 3** = the carried off-lane flakes only · fresh-context whole-suite
+  re-grade **17 A / 0 below A** (14 AC tests + 3 scaffold guards).
+- **One cheap fix applied this phase:** the smoke owner-validity guard got an `expect(pendingACs, isEmpty)` so it
+  is non-vacuous on its own body (grader's non-blocking recommendation). No other `lib/**`/test change.
+- **Carried flakes (not bs-18):** bs-06 palette AC-3/AC-5 + bs-08 display AC-9 — off-lane viewport artifacts in
+  code bs-18 does not touch (D-2), reproduce at merge-base `c00422f`.
 
-**Watch (for SIGNOFF-1):** (a) The whole `visual_application/` dir won't launch at once under load — run each
-`*_test.dart` file one at a time (10 files) for the grid's green evidence. (b) Sibling off-lane flakes carried
-and unchanged (no `lib/**` change since CFG-1): **bs-06 palette AC-3/AC-5** and **bs-08 display AC-9**
-(flutter-tester native fails off the exclusive iOS-sim lane; reproduce at merge-base `c00422f`, not
-regressions). (c) The grade grid should re-confirm straight-A across the suite (ITEST-4 graded all four GUARD
-ACs A; GUARD-1/2/3 un-pended without changing any AC assertion).
-
-**Known deferrals to surface in the packet:** the presentation-only scope (D-2) means no screen's behaviour,
-data, numbers, routing or spoken output changed; the bs-17 APPLY-1 Capture warning-overlap was addressed here
-by READ-2 (AC-4). No AC closed by user-accepted gap — every AC passed its gate.
+**On approval:** set SIGNOFF-1 ✅, feature `Status: Done — signed off <date> by <reviewer> at <commit>`, record
+the `SIGNOFF-DECISION` ledger row, then the feature is ready to merge to `main`.
 
 ## Token usage
 
@@ -230,7 +221,6 @@ by READ-2 (AC-4). No AC closed by user-accepted gap — every AC passed its gate
 
 | Phase / activity | Session | Start | End | Wall | Active | Model(s) | Input | Cache write | Cache read | Output | Total | Outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| PLAN | _pending_ | | | | | | | | | | | plan written |
 | PLAN | 82f13234 | 2026-10-19 06:13 EDT | 06:35 | 21m 31s | 14m 30s | claude-opus-4-8 | 64 | 118,672 | 5,121,862 | 36,098 | 5,276,696 | plan written (spec + master + 7 module plans; 14 ACs, 21 phases); authored via fork subagent (~209k tokens) |
 | GATE-DECISION | 82f13234 | 2026-10-19 07:32 EDT | 07:33 | 0m 56s | 0m 56s | claude-opus-4-8 | 14 | 4,918 | 1,364,584 | 3,408 | 1,372,924 | G-1 approved: spec approved by Matt Quirk |
 | CHROME-1 | 9120d633 | 2026-10-19 08:01 EDT | 08:17 | 16m 21s | 16m 20s | claude-opus-4-8 | 96 | 103,845 | 4,895,223 | 36,877 | 5,036,041 | scaffold complete: branch @ fa21c49; unit 1643 pass; coverage gate + BS18_RUN_PENDING runner proven both directions; 4 carried flakes reproduce |
@@ -254,10 +244,11 @@ by READ-2 (AC-4). No AC closed by user-accepted gap — every AC passed its gate
 | GUARD-1 | e141ef0b | 2026-10-20 15:47 EDT | 15:52 | 4m 30s | 4m 30s | claude-opus-4-8 | 50 | 80,706 | 2,190,953 | 15,714 | 2,287,423 | AC-12 un-pended, grade A carried; no lib change (invariant held), cov PASS, fix 0/3 |
 | GUARD-2 | b0f1327f | 2026-10-20 16:02 EDT | 16:07 | 4m 53s | 4m 53s | claude-opus-4-8 | 44 | 83,784 | 2,052,734 | 14,204 | 2,150,766 | AC-11 + AC-14 un-pended (single theme + source-scan); grades A carried from ITEST-4; no lib change (invariants held); cov PASS; default run AC-11/12/14 green, AC-13 skips; fix 0/3 |
 | GUARD-3 | fd7a375f | 2026-10-20 16:23 EDT | 16:35 | 12m 34s | 12m 34s | claude-opus-4-8 | 78 | 102,748 | 3,809,796 | 25,843 | 3,938,465 | AC-13 un-pended (a11y regression: 48dp+AA over full roster); grade A carried from ITEST-4; no lib change (sweep already held), cov N/A, fix 0/3; all 14 ACs delivered → 0 pending; suite green 10/10 files |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 16:35** | **15h 53m** | **8h 03m** |  | **2,746** | **4,981,767** | **198,382,291** | **1,251,794** | **204,618,598** |  |
+| SIGNOFF-1 | 9072bbeb | 2026-10-20 17:29 EDT | 18:05 | 35m 42s | 35m 42s | claude-opus-4-8 | 104 | 292,057 | 6,435,518 | 48,180 | 6,775,859 | sign-off packet assembled; full verify green (analyze clean, unit 1676, cov-gate PASS, bs-18 29/29 both modes, cross-feature 341/3 carried flakes); fresh re-grade 17 A/0; smoke owner-validity hardened; awaiting --signoff |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 18:05** | **16h 28m** | **8h 38m** |  | **2,850** | **5,273,824** | **204,817,809** | **1,299,974** | **211,394,457** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `<commit>` | _tbd_ | ⏸ Awaiting |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `9d0436d` | 17 A / 0 below A | ⏸ Awaiting |
