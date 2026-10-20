@@ -1,6 +1,6 @@
 # Module GUARD — app-wide guards (swatch caption, single theme, a11y, source-scan)
 
-**Status:** In progress — GUARD-1 done; next GUARD-2
+**Status:** In progress — GUARD-2 done; next GUARD-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/visual_application/` guard checks and the extended source-scan rule (`integration_test/conformance/checks/` or the design-system suite); small corrective edits across any `lib/**` screen a guard flags.
 **Depends on:** CHROME-3/4, READ-3, FLOW-2, ORG-2, CFG-1 (every screen swapped) · **Blocks:** SIGNOFF-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | GUARD-1 | behavior | AC-12 | ✅ Done | 2.29M | 4m 30s |
-| GUARD-2 | behavior | AC-11, AC-14 | ⬜ Todo | | |
+| GUARD-2 | behavior | AC-11, AC-14 | ✅ Done | 2.15M | 4m 53s |
 | GUARD-3 | behavior | AC-13 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -81,6 +81,43 @@ G-2 blocks all three phases; each also depends on every screen behavior phase.
   2. Extend the bs-17 AC-14 source-scan to the swapped screens, reusing the exact exclusion list (camera-device + colour-data modules); route any residual literal through the theme.
 - **Exit criteria:** nested-theme count == 0 under each screen; source-scan clean; sibling suites green.
 - **Acceptance gate:** un-pend AC-11 and AC-14; `TestAC11_SingleTheme` + `TestAC14_NoHardcodedPalette` green with earlier ACs.
+
+### Result — GUARD-2 (✅ Done)
+
+- **What landed:** AC-11 and AC-14 un-pended. No `lib/**` change was needed — the ITEST-4 ground-truth probe
+  already held at the fully-swapped tree: every harness-reachable screen installs exactly one `MaterialApp`
+  with no scheme-overriding `Theme`, and `lib/` carries zero residual palette `Color(0x..)` literals outside the
+  bs-17 exclusions (`kThemeAuthorityFile` + `kCaptureDeviceLiteralFiles`). The task's "extend the source-scan
+  over the swapped screens" is already met: `TestAC14` scans `roots: ['lib']`, which covers every swapped
+  screen, with the exact bs-17 exclusion list. GUARD-2 removed `AC-11` and `AC-14` from `pendingACs`
+  (`pending.dart`) and updated the smoke gate's bookkeeping (the skip-by-default proof moved AC-11 → the last
+  pending AC-13; AC-11 + AC-14 added to the never-skip and seed-drain lists; the wiring-smoke planted AC moved
+  AC-11 → AC-13).
+- **Acceptance:** run-pending probe first — all four guards (AC-11/12/13/14) green with their discriminating
+  controls. Default-mode run after un-pend: AC-11 ✅, AC-12 ✅, AC-14 ✅ run green while AC-13 skips (owner
+  GUARD-3). `smoke_test` green (13 pass / 1 skip = the planted AC-13 wiring).
+- **Unit + coverage:** no touched `lib/**` — coverage gate PASS (nothing to gate). No unit test changed.
+- **Grade:** AC-11 **A** and AC-14 **A** carried from ITEST-4 (tests unchanged; un-pend only, like GUARD-1's
+  AC-12). **Fix passes: 0/3.**
+- **Siblings:** no `lib/**` change ⇒ no regression surface; carried off-lane flakes (bs-06 palette AC-3/AC-5,
+  bs-08 display AC-9) unchanged, not re-run.
+- **Tokens / time:** 2.15M / 4m 53s (4m 53s).
+
+### Checkpoint / Handoff — after GUARD-2
+
+- **Frozen interfaces (this phase):** `pendingACs` now holds only AC-13 (GUARD-3). AC-11/AC-12/AC-14 are green
+  and always run. `TestAC11_SingleTheme` (one `MaterialApp`, no scheme override) and
+  `TestAC14_NoHardcodedPalette` (bs-17 source-scan over `lib/`) are now standing regression guards; any later
+  edit that nests a theme/app or hardcodes a palette literal reddens them.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout` on macOS):
+  guards `flutter test -d flutter-tester integration_test/visual_application/guards_test.dart` (default = AC-11/
+  12/14 run, AC-13 skips; `--dart-define=BS18_RUN_PENDING=true` runs all four); gate self-check
+  `flutter test -d flutter-tester integration_test/visual_application/smoke_test.dart`; coverage gate
+  `dart run tool/coverage_gate.dart <BASE>`.
+- **Known gaps / next:** **GUARD-3** (AC-13 a11y regression) is now unblocked — un-pend AC-13, run the bs-11
+  tap-target (≥48dp) + AA-contrast sweep over every swapped screen (the test already does this with
+  discriminating 24dp + low-contrast controls and was green run-pending here), fixing any control that
+  regressed. That un-pends the last pending AC, taking the suite to 0 pending — the gate into **SIGNOFF-1**.
 
 ## Phase GUARD-3 — behavior: a11y regression (AC-13)
 

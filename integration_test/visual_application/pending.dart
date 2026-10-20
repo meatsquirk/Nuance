@@ -46,9 +46,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-10 → CFG-1, AC-11 → GUARD-2, AC-12 → GUARD-1, AC-13 → GUARD-3,
 ///   AC-14 → GUARD-2.
 const Map<String, String> pendingACs = {
-  'AC-11': 'GUARD-2', // every screen inherits the one installed theme
   'AC-13': 'GUARD-3', // the restyle preserves accessibility
-  'AC-14': 'GUARD-2', // no new hardcoded palette colours
 };
 
 /// The behaviour phases allowed to own a pending AC.
