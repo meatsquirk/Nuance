@@ -47,7 +47,6 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-14 → GUARD-2.
 const Map<String, String> pendingACs = {
   'AC-11': 'GUARD-2', // every screen inherits the one installed theme
-  'AC-12': 'GUARD-1', // every swatch-bearing screen carries its caption
   'AC-13': 'GUARD-3', // the restyle preserves accessibility
   'AC-14': 'GUARD-2', // no new hardcoded palette colours
 };

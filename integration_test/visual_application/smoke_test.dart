@@ -110,7 +110,7 @@ void main() {
 
       // The un-pended ACs (AC-1 CHROME-3, AC-2 CHROME-4, AC-3 READ-1,
       // AC-4 READ-2, AC-5 READ-3, AC-6 FLOW-1, AC-7 FLOW-2, AC-8 ORG-1,
-      // AC-9 ORG-2, AC-10 CFG-1) never skip, either mode.
+      // AC-9 ORG-2, AC-10 CFG-1, AC-12 GUARD-1) never skip, either mode.
       for (final unpended in const [
         'AC-1',
         'AC-2',
@@ -122,6 +122,7 @@ void main() {
         'AC-8',
         'AC-9',
         'AC-10',
+        'AC-12',
       ]) {
         expect(pendingSkipReason(unpended, forceRunPending: false), isNull);
         expect(pendingSkipReason(unpended, forceRunPending: true), isNull);
@@ -179,6 +180,7 @@ void main() {
         'AC-8', // ORG-1 (palette add pill + vision card SurfaceCard)
         'AC-9', // ORG-2 (projects as surface cards + pill actions)
         'AC-10', // CFG-1 (display option pills + carded groups; carded steps)
+        'AC-12', // GUARD-1 (one swatch caption per swatch-bearing screen)
       };
       final expectedPending = Map.of(fullSeed)
         ..removeWhere((ac, _) => unpended.contains(ac));

@@ -1,7 +1,7 @@
 # Master Plan — bs-18 Apply the visual design system to every screen and the app chrome
 
 **Spec:** [bs-18-apply-visual-components.feature](../bs-18-apply-visual-components.feature)
-**Status:** In progress — all 10 screen-swap phases done (CHROME/READ/FLOW/ORG/CFG ✅, AC-1..AC-10); next GUARD-1, then GUARD-2/3 → SIGNOFF-1.
+**Status:** In progress — GUARD-1 ✅ (AC-12 un-pended); next GUARD-2 (AC-11+AC-14), then GUARD-3 → SIGNOFF-1.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (+ `support.js`) from `docs/Color blindness artist tool.zip`; [specs/wireframe-spec-derivation.md](../wireframe-spec-derivation.md); bs-17 component contracts ([specs/bs-17-visual-design-system.feature](../bs-17-visual-design-system.feature), [bs-17 APPLY module](../bs-17-visual-design-system/modules/APPLY.md)) and theme chokepoint `lib/app/theme.dart`.
 **Code home:** `/Users/matthew.quirk/Nuance` · https://github.com/meatsquirk/Nuance · base `main` @ `d3a1c4f` → `feat/bs-18-apply-visual-components` · extends existing (confirmed by Matt Quirk, 2026-10-19)
 
@@ -55,7 +55,7 @@ this feature only *opts screens into them*.
 | AC-9 | The Projects region renders projects as cards with pill actions | ITEST-3 `TestAC09_Projects` | ORG-2 | ✅ Done |
 | AC-10 | The Display and Onboarding screens render through the design system | ITEST-3 `TestAC10_DisplayOnboarding` | CFG-1 | ✅ Done |
 | AC-11 | Every screen inherits the one installed theme | ITEST-4 `TestAC11_SingleTheme` | GUARD-2 | ⬜ Todo |
-| AC-12 | Every swatch-bearing screen carries its approximation caption | ITEST-4 `TestAC12_SwatchCaption` | GUARD-1 | ⬜ Todo |
+| AC-12 | Every swatch-bearing screen carries its approximation caption | ITEST-4 `TestAC12_SwatchCaption` | GUARD-1 | ✅ Done |
 | AC-13 | The restyle preserves accessibility | ITEST-4 `TestAC13_A11yPreserved` | GUARD-3 | ⬜ Todo |
 | AC-14 | No new hardcoded palette colours are introduced | ITEST-4 `TestAC14_NoHardcodedPalette` | GUARD-2 | ⬜ Todo |
 
@@ -125,7 +125,7 @@ Pre-seeded augmentations: AC-3 (capture partly swapped) strengthened by READ-1; 
 | FLOW | [modules/FLOW.md](modules/FLOW.md) | Compare + Recipes screen swaps | ITEST (G-2) | ✅ Done (FLOW-1 + FLOW-2) |
 | ORG | [modules/ORG.md](modules/ORG.md) | Palette + Projects screen swaps | ITEST (G-2) | ✅ Done (ORG-1, ORG-2) |
 | CFG | [modules/CFG.md](modules/CFG.md) | Display + Onboarding screen swaps | ITEST (G-2) | ✅ Done |
-| GUARD | [modules/GUARD.md](modules/GUARD.md) | App-wide guards: swatch caption, single theme, a11y, source-scan | all screen modules | ⬜ Todo |
+| GUARD | [modules/GUARD.md](modules/GUARD.md) | App-wide guards: swatch caption, single theme, a11y, source-scan | all screen modules | ◐ In progress (GUARD-1 ✅) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | CHROME-2 | ◑ In progress |
 
 ## Dependency graph
@@ -189,8 +189,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 15 | ORG-1 | AC-8 — palette | ✅ Done | 10.83M | 26m 57s (26m 57s) | AC-8 ✅ straight A; add-from-dataset → PillButton.secondary, vision card → SurfaceCard + retake pill; closed the TestAC08 "old add button absent" augmentation; unit 1676✅, cov 100%/2, grade A=8/0-B, fix 1/3; bs-06 21/2 + bs-07 23/1 (only carried off-lane flakes) |
 | 16 | ORG-2 | AC-9 — projects | ✅ Done | 5.42M | 17m 57s (17m 57s) | AC-9 ✅ straight A; project entries → SurfaceCard, open → PillButton.primary, export → PillButton.secondary (both ad-hoc TextButtons gone); no augmentation owed (fully-ad-hoc BASE, wholesale key-preserving swap); unit 1676✅, cov 100%/1, grade A=9/0-B, fix 0/3; bs-06 21/2 + bs-07 23/1 (only carried off-lane flakes; bs-06 project ACs all green) |
 | 17 | CFG-1 | AC-10 — display + onboarding | ✅ Done | 23.22M | 44m 06s (44m 06s) | AC-10 ✅ straight A; sim+theme options → PillButton, each display group + every onboarding step → SurfaceCard, continue/seeResult/save → PillButton.primary, result pair + SwatchCaption; in-step answer buttons left TextButton (FLOW-1 rule). unit 1676✅, cov 100%/8, grade A=10/0-B, fix 1/3 (ListTile-in-card Material + bs-07 intake ensureVisible). bs-07 24/0 (AC-4 flake fixed), bs-10 25/0, bs-08 20✅ + AC-9 carried (compare-screen, unrelated) |
-| 18 | GUARD-1 | AC-12 — swatch caption on every swatch screen | ⬜ Next | | | unblocked — every screen phase done |
-| 19 | GUARD-2 | AC-11 + AC-14 — single theme + source-scan | ⬜ Todo | | | after GUARD-1 |
+| 18 | GUARD-1 | AC-12 — swatch caption on every swatch screen | ✅ Done | 2.29M | 4m 30s | AC-12 ✅ A (carried from ITEST-4); no `lib/**` change — invariant already held, un-pend only; cov PASS (no touched lib); default run AC-12 green, AC-11/13/14 skip |
+| 19 | GUARD-2 | AC-11 + AC-14 — single theme + source-scan | ⬜ Next | | | after GUARD-1 (now unblocked) |
 | 20 | GUARD-3 | AC-13 — a11y regression (targets + contrast) | ⬜ Todo | | | after GUARD-2 |
 | 21 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | |
 
@@ -198,19 +198,19 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CFG-1 ✅ done (AC-10 — Display + Onboarding → design system).** CFG module complete; **all 10 screen-swap
-ACs (AC-1..AC-10) are now done.** Sim + theme options → `PillButton`, each display group + every onboarding
-step → `SurfaceCard`, continue/seeResult/save → `PillButton.primary`, result pair + one `SwatchCaption`;
-in-step answer/choice buttons left `TextButton` (FLOW-1 "only named/superseded controls" rule). AC-10 straight
-**A**. unit 1676✅, cov 100%/8, grade A=10/0-B, fix 1/3 (ListTile-in-card transparent `Material` + bs-07 intake
-`ensureVisible`). bs-07 24/0 (AC-4 flake resolved), bs-10 25/0, bs-08 20✅ + AC-9 carried. Smoke exemplar
-re-pointed AC-10→AC-11.
+**GUARD-1 ✅ done (AC-12 — swatch caption on every swatch-bearing screen).** AC-12 un-pended; **11 of 14 ACs
+now done (AC-1..AC-10, AC-12).** No `lib/**` change was needed — the swap phases (notably CFG-1's result-step
+`SwatchCaption`) already kept the invariant, so at the fully-swapped tree every swatch-bearing screen renders
+exactly one caption. Removed `AC-12` from `pendingACs` and added it to the smoke gate's two un-pended lists.
+AC-12 **A** carried from ITEST-4 (test unchanged). cov PASS (no touched `lib/**`), fix 0/3. Default run: AC-12
+green, AC-11/AC-13/AC-14 still skip.
 
 **Startable now:**
-- **GUARD-1** (AC-12 — swatch-caption sweep) — unblocked: every screen phase (CHROME/READ/FLOW/ORG/CFG) is
-  done. Owns the guard sweep over the swapped screens.
-- **GUARD-2** (AC-11 single theme + AC-14 source-scan) and **GUARD-3** (AC-13 a11y regression) run **after**
-  GUARD-1, sequentially (GUARD-1 → GUARD-2 → GUARD-3 → SIGNOFF-1). Not startable until GUARD-1 lands.
+- **GUARD-2** (AC-11 single theme + AC-14 source-scan) — now unblocked (GUARD-1 landed). Un-pend AC-11 + AC-14;
+  assert no swapped screen wraps a child in its own `Theme`/`MaterialApp`; extend the bs-17 source-scan over the
+  swapped screens (reuse the exact camera-device + colour-data exclusion list). Both green at baseline.
+- **GUARD-3** (AC-13 a11y regression) runs **after** GUARD-2, then **SIGNOFF-1**
+  (GUARD-2 → GUARD-3 → SIGNOFF-1). Not startable until GUARD-2 lands.
 
 **Watch:** (a) **Tall-surface / fold gotcha** — the onboarding host lays every step out in one
 `SingleChildScrollView`; carding adds height, so any driver tapping a lower control must `ensureVisible`
@@ -252,7 +252,8 @@ screen — unrelated to any later phase).
 | ORG-1 | 865bc909 | 2026-10-20 12:46 EDT | 13:13 | 26m 57s | 26m 57s | claude-opus-4-8 | 180 | 225,794 | 10,563,037 | 44,618 | 10,833,629 | AC-8 un-pended straight A; add-from-dataset->PillButton.secondary + vision card->SurfaceCard + retake pill; closed TestAC08 'old add button absent' augmentation; unit 1676, cov 100%/2, grade A=8/0-B, fix 1/3; bs-06 21/2 + bs-07 23/1 (only carried off-lane flakes) |
 | ORG-2 | 18218673 | 2026-10-20 13:37 EDT | 13:55 | 17m 57s | 17m 57s | claude-opus-4-8 | 108 | 215,129 | 5,168,834 | 38,188 | 5,422,259 | AC-9 un-pended + green; projects→SurfaceCard, open→PillButton.primary, export→PillButton.secondary; unit 1676, cov 100%/1, grade A=9/0-B, fix 0/3; bs-06 21/2 + bs-07 23/1 carried off-lane flakes |
 | CFG-1 | 1c6899e7 | 2026-10-20 14:47 EDT | 15:31 | 44m 06s | 44m 06s | claude-opus-4-8 | 258 | 366,559 | 22,745,429 | 112,346 | 23,224,592 | AC-10 straight A; un-pended; unit 1676, cov 100%/8, grade A=10/0-B, fix 1/3; bs-07 24/0 bs-10 25/0 bs-08 20+AC-9 carried |
-| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 15:31** | **15h 31m** | **7h 41m** |  | **2,574** | **4,714,529** | **190,328,808** | **1,196,033** | **196,241,944** |  |
+| GUARD-1 | e141ef0b | 2026-10-20 15:47 EDT | 15:52 | 4m 30s | 4m 30s | claude-opus-4-8 | 50 | 80,706 | 2,190,953 | 15,714 | 2,287,423 | AC-12 un-pended, grade A carried; no lib change (invariant held), cov PASS, fix 0/3 |
+| **Feature total** |  | **2026-10-19 06:13 EDT** | **2026-10-20 15:52** | **15h 35m** | **7h 45m** |  | **2,624** | **4,795,235** | **192,519,761** | **1,211,747** | **198,529,367** |  |
 
 ## Sign-off
 
