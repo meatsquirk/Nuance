@@ -86,3 +86,38 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
+
+/// The shared light/dark theme toggle the chrome mounts in every [AppTopBar]
+/// (wireframe E45, bs-18 AC-2).
+///
+/// It is **presentation only**: the app ships the single warm-paper light theme
+/// and the dark-mode wiring is deferred (bs-18 D-3, following bs-17), so the
+/// control toggles only its own glyph — it is the top-bar affordance the design
+/// system calls for, not the (unbuilt) app-wide dark switch. Its icon renders in
+/// the theme's app-bar foreground token (the ambient [IconButton] style), never
+/// a hardcoded colour, so the one installed theme carries it (AC-11/AC-14).
+///
+/// Each destination supplies `const ThemeToggleButton()` to its top bar's
+/// [AppTopBar.themeToggle] slot, keeping [AppTopBar] itself free of display
+/// wiring (its CHROME-2 contract: no toggle unless one is supplied).
+class ThemeToggleButton extends StatefulWidget {
+  const ThemeToggleButton({super.key});
+
+  @override
+  State<ThemeToggleButton> createState() => _ThemeToggleButtonState();
+}
+
+class _ThemeToggleButtonState extends State<ThemeToggleButton> {
+  /// The locally-shown brightness. Presentation only — flipping it changes the
+  /// glyph, not the app-wide theme (dark wiring deferred, D-3).
+  bool _dark = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: () => setState(() => _dark = !_dark),
+      icon: Icon(_dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+      tooltip: _dark ? 'Switch to light theme' : 'Switch to dark theme',
+    );
+  }
+}

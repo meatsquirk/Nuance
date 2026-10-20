@@ -1,6 +1,6 @@
 # Module CHROME — app chrome (scaffold, bottom nav, top bar)
 
-**Status:** In progress — CHROME-3 done (AC-1 ✅, nav is the production default); next CHROME-4 (AC-2)
+**Status:** Done — all 4 phases complete (AC-1 ✅ nav, AC-2 ✅ top bar); module exits to the screen groups
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/app/build_app.dart`, `lib/app/theme.dart` (nav/appbar theme tokens only), new `lib/app/app_shell.dart` (nav scaffold) and `lib/app/app_destinations.dart`; the `BS18_RUN_PENDING` runner + coverage gate tooling it establishes (scaffold).
 **Depends on:** — · **Blocks:** ITEST (CHROME-2), all screen modules (they wire through `build_app.dart`)
@@ -12,7 +12,7 @@
 | CHROME-1 | scaffold | — | ✅ Done | 5.04M | 16m (16m) |
 | CHROME-2 | shell | — | ✅ Done | 19.06M | 52m (1h 04m) |
 | CHROME-3 | behavior | AC-1 | ✅ Done | 16.50M | 33m (8h 04m) |
-| CHROME-4 | behavior | AC-2 | ⬜ Todo | | |
+| CHROME-4 | behavior | AC-2 | ✅ Done | 9.93M | 25m (25m) |
 
 ## Interface reconciliation
 
@@ -131,3 +131,18 @@ G-1 (approve the spec) ✅ Resolved 2026-10-19 07:33 EDT: approved — Matt Quir
   2. Replace each destination's ad-hoc header with `AppTopBar`.
 - **Exit criteria:** see acceptance gate; run alone (touches shared chrome).
 - **Acceptance gate:** un-pend AC-2; `TestAC02_TopBar` green with all earlier ACs; sibling suites green.
+
+### Result — CHROME-4 ✅ Done (2026-10-20)
+
+- **Landed:** the shared design-system top bar is now mounted on every primary screen. New `ThemeToggleButton` in `lib/app/app_top_bar.dart` (presentation-only light/dark glyph toggle — the chrome affordance AC-2/wireframe E45 calls for; **dark wiring stays deferred, D-3**, so it flips only its own glyph, not the app-wide theme; icon renders in the ambient app-bar foreground token, no hardcoded colour). Each of the 5 screens — `ReadoutScreen`, `CaptureScreen`, `ComparisonScreen`, `RecipesScreen`, `PaletteScreen` — swapped its ad-hoc `AppBar(title: Text('X'))` for `const AppTopBar(title: 'X', themeToggle: ThemeToggleButton())`, title string unchanged.
+- **D-2 preserved:** left `onBack`/`onClose` null so `AppTopBar`'s internal `AppBar` keeps `automaticallyImplyLeading` (the plain `AppBar` these screens had already auto-implied back only when the route could pop) — identical back/close behaviour. The AC-2 roster surfaces are all root destinations, so none shows a back (correct per the grader's note; screens that need back/close are AC-10's). `AppTopBar` renders an `AppBar`, so sibling `find.widgetWithText(AppBar, '<title>')` finders stay valid. No routing/data/spoken-output change.
+- **Frozen interface respected:** `AppTopBar`'s CHROME-2 contract (no toggle unless one is supplied) kept intact — the toggle is supplied by each screen, not defaulted inside the bar, so the CHROME-2 unit test "no toggle by default" still holds. `AppTopBar` body unchanged.
+- **AC-2 un-pended** (deleted its `pendingACs` row). Updated the ITEST-1 smoke scaffold to track the drain: pending-direction proof + `acTestWidgets` wiring smoke moved to AC-3 (READ-1); the un-pended checks cover AC-1 **and** AC-2; seed-drift `unpended = {AC-1, AC-2}`, `fullSeed.hasLength(14)`.
+- **Gates:** `dart analyze` (6 lib + 1 test + 2 itest touched) → No issues. Unit `flutter test --coverage test/` → **1671 pass** (1669 + 2 new `ThemeToggleButton` tests). Coverage gate `dart run tool/coverage_gate.dart d3a1c4f` → **100% on all 11 touched lib files, PASS**. Acceptance: `chrome_test.dart` **AC-1 + AC-2 green**; smoke green default (13+1 skip) and run-pending (14). **Grade gate PASS** — independent fresh-subagent re-grade of the un-pended AC tests: AC-1 **A**, AC-2 **A**; A=2 / B=0, no fix owed (AC-2 now green yet still discriminating — fails the pre-CHROME-4 ad-hoc-header code; omitted back/close clause is acceptable-scoping ◑ per the ITEST-2 precedent). **Fix passes: 0/3.** No augmentation owed (AC-2 was straight A at ITEST-2).
+- **Sibling re-verification (D-2):** readout 12✅, capture 19✅, comparison 26✅, recipes 24✅, correction 22✅, advanced_capture 21✅, daltonization 25✅, bs-11 accessibility 19✅ (new 48dp toggle tap target + AA contrast hold), bs-17 design_system 27✅, harness 5✅. `palette_test` AC-3 + AC-5 fail = the **known bs-06 carried flakes** — proven to reproduce identically with my edits stashed at BASE `acdf9c8` (+21 -2, same two tests), NOT a CHROME-4 regression. `design_system_source_scan.dart` has no `main()` (a library imported by `design_system_test`, not a standalone suite) — expected, not a failure.
+
+### Checkpoint / Handoff — after CHROME-4 (CHROME module complete)
+
+- **Frozen interfaces (this phase):** every primary screen mounts `AppTopBar` as its `Scaffold.appBar` with `const ThemeToggleButton()` in the toggle slot and no explicit leading (auto-implied back preserved). `ThemeToggleButton` is presentation-only (D-3) — a screen phase must NOT wire it to real theme switching without re-opening D-3. AC-2 (`TestAC02_TopBar`) is un-pended and must stay green; any screen phase that restyles a header must keep the screen's `AppTopBar` + its `const ThemeToggleButton()` and keep the title string (so `AppTopBar.titleKey` + the installed-theme title family hold).
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; no `timeout`/`gtimeout`): unit+cov `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart d3a1c4f`; AC-1/AC-2 `flutter test -d flutter-tester integration_test/visual_application/chrome_test.dart`; sibling re-verify per screen (run one suite at a time under load).
+- **Known gaps / next:** CHROME is **done** — the screen-group modules now run in parallel over disjoint dirs (separate `--parallel` sessions): **READ** (`lib/readout/**`, `lib/capture/**` — READ-1 then READ-2 both touch `lib/capture/**`, so sequence them; READ-3 is readout) ∥ **FLOW** (`lib/compare/**`, `lib/recipes/**`) ∥ **ORG** (`lib/palette/**`, `lib/projects/**`) ∥ **CFG** (`lib/display/**`, `lib/onboarding/**`). No screen phase edits `lib/app/build_app.dart` (D-7). **Watch:** any new bare-text screen-title assertion must scope to the screen's `AppBar` (nav labels collide with bare `find.text`). GUARD-1/2/3 run last, sequentially, after every screen phase. **Carry-forward reviewer item (not a gate blocker):** AC-6 cross-screen ownership — "Compare as A/B" / "Find recipes" live in `lib/readout/actions_bar.dart` but FLOW-1 owns `lib/compare/**`; FLOW-1 must re-scope its file ownership (or reassign to READ-3) to un-pend AC-6 green.

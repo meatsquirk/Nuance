@@ -141,3 +141,32 @@ Independent fresh-subagent re-grade of the only un-pended AC test and CHROME-3's
 - **`readout_test.dart` AC-11 finder change** — **A**: `find.widgetWithText(AppBar, 'Recipes')` is strictly more discriminating than the old bare `find.text('Recipes')` (excludes the new nav plain-text label); original Given/Then intent preserved, not weakened.
 
 **Counts: A = 5, B = 0. No fix owed.** Gate **PASS**.
+
+---
+
+# CHROME-4 (re-grade of un-pended AC tests AC-1, AC-2) — behaviour-test completeness grade
+
+Independent fresh-subagent re-grade (grader did not author the tests). Scope: the two currently un-pended bs-18 acceptance tests after CHROME-4 — `TestAC01_BottomNav` (owner CHROME-3) and `TestAC02_TopBar` (owner CHROME-4), both in `integration_test/visual_application/chrome_test.dart`. CHROME-4 changed PRODUCTION code (mounted `AppTopBar` + `const ThemeToggleButton()` on all 5 primary screens) and the ITEST-1 smoke scaffold; it did NOT touch either AC test body. Grade is of the test DESIGN. Prior ITEST-2 grid graded AC-1 **A** / AC-2 **A** (AC-2 with a ◑ on G4 for the omitted back/close clause, ruled acceptable scoping); both retained — no downgrade.
+
+## Grade grid
+
+| AC | Test | Grade | G1 | G2 | G3 | G4 | G5 | G6 | Rejects caught |
+|----|------|-------|----|----|----|----|----|----|----------------|
+| AC-1 | `TestAC01_BottomNav` | **A** | ✓ `pumpShell` boots real app; Given `bottomNav findsOneWidget` before the When | ✓ real CHROME-2/3 shell via `buildApp`; colours off `h.colorScheme`, glyphs/keys off the real nav | n/a — static reads after `pumpAndSettle`; the negative glyph Then paired with positive filled/outline controls | ✓ `AppDestination.values hasLength(4)` + per-destination finder; active marker once under Capture; filled `selectedIcon` active / outline `icon` unselected; `DecoratedBox.color==surfaceContainerLowest`, `border.top.color==outline` | ✓ missing destination; active-by-colour-only; hardcoded chrome colour | ✓ bottom nav only | a nav missing a destination; active by colour alone; a hardcoded nav fill/hairline |
+| AC-2 | `TestAC02_TopBar` | **A** | ✓ iterates all 5 primary surfaces; each asserted rendered (`MaterialApp findsOneWidget`, reason-tagged) before the When | ✓ pumps each real screen via `buildApp`; title family off the real `AppTopBar.titleKey` Text, compared to the installed theme's `titleLarge.fontFamily` | n/a — static presence/family reads after `pumpAndSettle`; no negative Then | ◑ per-surface exact for asserted clauses: `AppTopBar findsOneWidget`; title family `contains('Atkinson')` **and** `== installedTheme...titleLarge.fontFamily`; `themeToggleKey findsOneWidget`. Omits conditional back/close clause — acceptable scoping (ITEST-2 precedent), not plain B | ✓ both catalogue Rejects across all 5 surfaces: ad-hoc header left in place; hardcoded (non-theme) title; also a header missing the toggle | ✓ shared top bar only | a screen left on its ad-hoc header; a header missing the theme toggle; a hardcoded title style |
+
+## Notes
+
+1. **AC-2 now DISCRIMINATES post-CHROME-4.** Pre-CHROME-4 the screens sat on ad-hoc `AppBar(title:Text('X'))` and the test red-baselined at `find.byType(AppTopBar) findsNothing`. Now mounted on all 5 surfaces → green, yet the design still fails a wrong impl: revert one screen to its ad-hoc header → that surface's `AppTopBar findsOneWidget` fails; give a screen a hardcoded non-theme title → the `== installedTheme...titleLarge.fontFamily` equality fails. `themeToggleKey` is load-bearing because `AppTopBar` renders it only when a non-null `themeToggle` is supplied (`app_top_bar.dart`), and every screen now supplies `const ThemeToggleButton()`.
+2. **AC-2 omitted back/close clause stays ◑, not plain B** (unchanged from ITEST-2): all 5 roster surfaces are root nav destinations needing no back/close, pumped as roots, so `leadingKey` is legitimately absent; neither catalogue Reject concerns the affordance. Screens that need back/close are graded under AC-10. No G1–G6 rule newly violated by CHROME-4.
+3. **AC-1 unchanged by CHROME-4** (owner CHROME-3); carries its A.
+
+## Counts
+
+- **Straight A:** 2 — AC-1, AC-2
+- **A-core / B pending:** 0
+- **Below A (plain B):** 0
+
+## Verdict
+
+**PASS** — no plain-B row. Both un-pended AC tests grade **straight A**; AC-2 now green yet still fully discriminating. No row needs a fix this phase.

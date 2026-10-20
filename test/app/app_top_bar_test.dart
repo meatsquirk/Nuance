@@ -88,4 +88,53 @@ void main() {
       );
     });
   });
+
+  group('ThemeToggleButton (presentation-only, AC-2 / D-3)', () {
+    Widget hostToggle() => MaterialApp(
+          theme: AppTheme.light().themeData,
+          home: const Scaffold(
+            appBar: AppTopBar(
+              title: 'Readout',
+              themeToggle: ThemeToggleButton(),
+            ),
+            body: SizedBox(),
+          ),
+        );
+
+    testWidgets('mounts in the top-bar toggle slot with no hardcoded colour',
+        (tester) async {
+      await tester.pumpWidget(hostToggle());
+      // The toggle sits under the shared slot key, as an ambient IconButton.
+      expect(find.byKey(AppTopBar.themeToggleKey), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(AppTopBar.themeToggleKey),
+          matching: find.byType(IconButton),
+        ),
+        findsOneWidget,
+      );
+      // Its icon carries no own colour — it renders in the ambient app-bar
+      // foreground token (no hardcoded palette, AC-11/AC-14).
+      final icon = tester.widget<Icon>(find.byIcon(Icons.dark_mode_outlined));
+      expect(icon.color, isNull);
+    });
+
+    testWidgets('toggles its glyph and tooltip between light and dark',
+        (tester) async {
+      await tester.pumpWidget(hostToggle());
+
+      // Starts showing the "switch to dark" affordance (the app ships light).
+      expect(find.byIcon(Icons.dark_mode_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.light_mode_outlined), findsNothing);
+      expect(find.byTooltip('Switch to dark theme'), findsOneWidget);
+
+      // Tapping flips the presentation glyph (no app-wide theme change — the one
+      // installed theme is unchanged; dark wiring is deferred, D-3).
+      await tester.tap(find.byKey(AppTopBar.themeToggleKey));
+      await tester.pump();
+      expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.dark_mode_outlined), findsNothing);
+      expect(find.byTooltip('Switch to light theme'), findsOneWidget);
+    });
+  });
 }

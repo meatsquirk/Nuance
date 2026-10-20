@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_top_bar.dart';
 import '../app/build_app.dart';
 import '../widgets/swatch_caption.dart';
 import 'capture_controller.dart';
@@ -33,7 +34,7 @@ class CaptureScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Capture')),
+      appBar: const AppTopBar(title: 'Capture', themeToggle: ThemeToggleButton()),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,

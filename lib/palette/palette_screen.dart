@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_top_bar.dart';
 import '../app/build_app.dart';
 import '../projects/project_controller.dart';
 import 'paint_list_region.dart';
@@ -59,7 +60,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
   Widget build(BuildContext context) {
     final showMyPaints = _view == _PaletteView.myPaints;
     return Scaffold(
-      appBar: AppBar(title: const Text('Palette')),
+      appBar: const AppTopBar(title: 'Palette', themeToggle: ThemeToggleButton()),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: Listenable.merge(

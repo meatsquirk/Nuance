@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_top_bar.dart';
 import 'controls_region.dart';
 import 'gamut_banner.dart';
 import 'recipe_controller.dart';
@@ -28,7 +29,7 @@ class RecipesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Recipes')),
+      appBar: const AppTopBar(title: 'Recipes', themeToggle: ThemeToggleButton()),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,

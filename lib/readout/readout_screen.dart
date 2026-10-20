@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_top_bar.dart';
 import '../app/build_app.dart';
 import '../domain/sample.dart';
 import 'actions_bar.dart';
@@ -66,7 +67,7 @@ class _ReadoutScreenState extends State<ReadoutScreen> {
   Widget build(BuildContext context) {
     final controller = _controller!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Readout')),
+      appBar: const AppTopBar(title: 'Readout', themeToggle: ThemeToggleButton()),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,

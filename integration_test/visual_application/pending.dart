@@ -46,7 +46,6 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-10 → CFG-1, AC-11 → GUARD-2, AC-12 → GUARD-1, AC-13 → GUARD-3,
 ///   AC-14 → GUARD-2.
 const Map<String, String> pendingACs = {
-  'AC-2': 'CHROME-4', // design-system top bar on each primary screen
   'AC-3': 'READ-1', // Capture controls as design-system components
   'AC-4': 'READ-2', // Capture warnings stack without overlapping
   'AC-5': 'READ-3', // Readout regions as cards + mono eyebrows + speak FAB

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_top_bar.dart';
 import 'actions_bar.dart';
 import 'comparison_controller.dart';
 import 'confusion_region.dart';
@@ -27,7 +28,8 @@ class ComparisonScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Comparison')),
+      appBar: const AppTopBar(
+          title: 'Comparison', themeToggle: ThemeToggleButton()),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,
