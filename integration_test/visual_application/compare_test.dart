@@ -80,6 +80,20 @@ void main() {
     expect(shell.pillButtons, findsWidgets,
         reason: 'the readout carries design-system pills, not just ad-hoc buttons');
 
+    // FLOW-1 augmentation (G-2 reviewer item): "Compare as A/B" are the
+    // wireframe's OUTLINE/secondary pills, not the ink-filled primary — only
+    // "Find mixing recipes" is primary. A secondary PillButton wraps an
+    // OutlinedButton, never a FilledButton, so this rejects an A/B action
+    // promoted to the call-to-action weight.
+    for (final key in const <Key>[
+      ActionsBar.compareAKey,
+      ActionsBar.compareBKey,
+    ]) {
+      expect(subtreeHas<FilledButton>(tester, find.byKey(key)), isFalse,
+          reason: 'the $key pill is outline/secondary, not the ink-filled '
+              'primary');
+    }
+
     // GIVEN the Compare screen open on the fixture comparison — its difference,
     // statement and speak controls render.
     final compare = await pumpScreen(tester, VisualScreen.compare);

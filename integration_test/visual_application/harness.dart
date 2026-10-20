@@ -196,8 +196,20 @@ class VisualHarness {
 Future<VisualHarness> pumpShell(
   WidgetTester tester, {
   Sample? initialSample,
-}) =>
-    _pump(tester, VisualScreen.shell, initialSample: initialSample);
+}) {
+  // The carded Readout (READ-3) renders taller than the short default test
+  // surface, so its in-scroll actions bar — the compare / recipes handoffs AC-6
+  // reads — sits below the fold on an 800px surface and a lazy [ListView] never
+  // builds it. Pump the shell on a device-tall surface so every readout region
+  // builds (the tall-surface gotcha, READ-3). AC-1/AC-2 (the Scaffold nav and
+  // top bar) and AC-5 (the top-of-list cards and the FAB) are unaffected — a
+  // taller surface only reveals more.
+  tester.view.physicalSize = const Size(1000, 3200);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  return _pump(tester, VisualScreen.shell, initialSample: initialSample);
+}
 
 /// Opens the app on a deep-link [screen] through its `AppDependencies` entry
 /// flag, wired with the matching fixture's source.

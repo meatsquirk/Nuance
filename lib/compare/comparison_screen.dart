@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_top_bar.dart';
+import '../widgets/speak_button.dart';
+import '../widgets/surface_card.dart';
 import 'actions_bar.dart';
 import 'comparison_controller.dart';
 import 'confusion_region.dart';
@@ -30,6 +32,22 @@ class ComparisonScreen extends StatelessWidget {
     return Scaffold(
       appBar: const AppTopBar(
           title: 'Comparison', themeToggle: ThemeToggleButton()),
+      // Speak is the wireframe's round accent floating speak button (AC-6): an
+      // always-visible FAB, not an in-scroll control, so it reads and activates
+      // without scrolling. Its key is the shared [ComparisonActionsBar.speakKey]
+      // anchor and its label is unchanged, so the spoken-output siblings still
+      // land on and drive it. It is enabled only once there is a comparison to
+      // speak (both slots set), so it rebuilds with the controller's state.
+      floatingActionButton: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => SpeakButton(
+          key: ComparisonActionsBar.speakKey,
+          onPressed: controller.state.comparison != null
+              ? () => controller.speak()
+              : null,
+          semanticLabel: 'Speak whole comparison',
+        ),
+      ),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,
@@ -39,9 +57,9 @@ class ComparisonScreen extends StatelessWidget {
               children: [
                 SlotsRegion(controller: controller),
                 const SizedBox(height: 12),
-                DifferenceRegion(controller: controller),
+                _carded(DifferenceRegion(controller: controller)),
                 const SizedBox(height: 12),
-                StatementRegion(controller: controller),
+                _carded(StatementRegion(controller: controller)),
                 const SizedBox(height: 12),
                 ConfusionRegion(controller: controller),
                 const SizedBox(height: 16),
@@ -54,3 +72,15 @@ class ComparisonScreen extends StatelessWidget {
     );
   }
 }
+
+/// Lays a comparison [region] inside a [SurfaceCard] — the wireframe's carded
+/// reading treatment (AC-6). The region keeps its own key, so the card sits
+/// *above* the region's anchor (the acceptance finders read the card as the
+/// region's ancestor). The difference and statement regions already render their
+/// own field heading, so no mono eyebrow is added here.
+Widget _carded(Widget region) => SurfaceCard(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: region,
+      ),
+    );

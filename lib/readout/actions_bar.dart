@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/router.dart';
+import '../widgets/pill_button.dart';
 import 'readout_controller.dart';
 
 /// The actions bar: speak the readout, carry it into a comparison, start a
@@ -54,19 +55,23 @@ class ActionsBar extends StatelessWidget {
       spacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        OutlinedButton(
+        // "Compare as A"/"B" are the transparent, bordered secondary pills and
+        // "Find mixing recipes" the ink-filled primary call-to-action pill — the
+        // wireframe's two action weights (AC-6). The keys stay on the pills, so
+        // every sibling that drives these handoffs by key is unchanged.
+        PillButton.secondary(
           key: compareAKey,
           onPressed: () => Navigator.of(context)
               .push(controller.comparisonRoute(ComparisonSlot.a)),
           child: const Text('Compare as A'),
         ),
-        OutlinedButton(
+        PillButton.secondary(
           key: compareBKey,
           onPressed: () => Navigator.of(context)
               .push(controller.comparisonRoute(ComparisonSlot.b)),
           child: const Text('Compare as B'),
         ),
-        OutlinedButton(
+        PillButton.primary(
           key: recipesKey,
           onPressed: () =>
               Navigator.of(context).push(controller.recipesRoute()),

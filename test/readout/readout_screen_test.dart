@@ -15,6 +15,7 @@ import 'package:paint_color_assistant/readout/readout_screen.dart';
 import 'package:paint_color_assistant/readout/space_selector.dart';
 import 'package:paint_color_assistant/readout/temperature_line.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
+import 'package:paint_color_assistant/widgets/pill_button.dart';
 import 'package:paint_color_assistant/widgets/speak_button.dart';
 
 const _sample = Sample(
@@ -140,15 +141,16 @@ void main() {
   testWidgets('enables the navigation and speak actions; acknowledge only for '
       'a just-captured reading (A11Y-2)', (tester) async {
     await _pumpScreen(tester); // _sample is not just-captured
-    // READOUT-6 wired the navigation handoffs (in-scroll outlined buttons) and
-    // A11Y-2 wired speak (the Readout's floating SpeakButton, AC-5): all live.
+    // READOUT-6 wired the navigation handoffs (now the wireframe's design-system
+    // pills — bs-18 AC-6) and A11Y-2 wired speak (the Readout's floating
+    // SpeakButton, AC-5): all live. An enabled [PillButton] has a non-null
+    // onPressed.
     for (final key in const [
       ActionsBar.compareAKey,
       ActionsBar.compareBKey,
       ActionsBar.recipesKey,
     ]) {
-      final button = tester.widget<OutlinedButton>(find.byKey(key));
-      expect(button.enabled, isTrue,
+      expect(tester.widget<PillButton>(find.byKey(key)).onPressed, isNotNull,
           reason: 'the action $key must be enabled');
     }
     expect(

@@ -29,6 +29,7 @@ import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/compare/actions_bar.dart';
 import 'package:paint_color_assistant/compare/comparison_controller.dart';
 import 'package:paint_color_assistant/compare/comparison_read_endpoint.dart';
 import 'package:paint_color_assistant/compare/comparison_state.dart';
@@ -412,8 +413,11 @@ class ComparisonHarness {
   }
 
   /// Asks to speak the whole comparison, incl. any warning (E6, AC-9).
+  ///
+  /// The speak control is the Compare screen's floating [SpeakButton] (bs-18
+  /// AC-6), anchored at [ComparisonActionsBar.speakKey], not an in-bar button.
   Future<void> whenSpeak() async {
-    await tester.tap(find.widgetWithText(TextButton, 'Speak whole comparison'));
+    await tester.tap(find.byKey(ComparisonActionsBar.speakKey));
     await tester.pumpAndSettle();
   }
 

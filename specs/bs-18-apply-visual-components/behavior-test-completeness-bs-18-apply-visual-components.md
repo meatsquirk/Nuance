@@ -285,3 +285,31 @@ AC-1..AC-4 retain straight **A**: READ-3 did not touch their bodies. The product
 ## Gate status: PASS
 
 No plain-B row exists; no row needs a fix this phase. All five un-pended AC tests grade **straight A**. **AC-5 is promoted A-core / B pending READ-3 → straight A**: the READ-3 augmentation adds the speak-at-anchor `isA<SpeakButton>()` check (discriminates the pre-READ-3 `OutlinedButton`) and the per-region Material-`Card` absence sweep (a non-vacuous belt-and-suspenders reject of the SurfaceCard+Card co-presence partial swap), strengthens only AC-5, and closes the ITEST-2 co-presence limit against the now-fully-swapped Readout. AC-1..AC-4 carry their prior A unchanged (bodies untouched; AC-2's omitted back/close clause remains acceptable scoping, ◑ on G4). AC-5 verified green at the run-pending baseline this session.
+
+---
+
+# FLOW-1 (re-grade of un-pended AC tests AC-1..AC-6) — behaviour-test completeness grade
+
+- **Grader:** independent fresh-subagent grader (did not author the tests; read-only). Scope: the one AC test FLOW-1 un-pends — `TestAC06_Compare` in `integration_test/visual_application/compare_test.dart` — plus a carry-forward confirmation of AC-1..AC-5.
+- **What FLOW-1 changed:** PRODUCTION code — `lib/readout/actions_bar.dart` ("Compare as A/B" → `PillButton.secondary`, "Find mixing recipes" → `PillButton.primary`, keys on the pills; acknowledge/justCaptured unchanged), `lib/compare/comparison_screen.dart` (difference + statement regions each wrapped in a `SurfaceCard` ancestor via the `_carded` helper, region keys kept; "Speak whole comparison" moved to the screen's `Scaffold.floatingActionButton` as a `SpeakButton` keyed `ComparisonActionsBar.speakKey`, enabled only when `state.comparison != null`), and `lib/compare/actions_bar.dart` (dropped the in-bar speak `TextButton`; `speakKey` kept as the shared anchor; "Open readout for A/B" stay `TextButton`). This un-pends **AC-6** and ADDS the G-2 reviewer "AC-6 A/B outline weight" augmentation (`subtreeHas<FilledButton>` isFalse on compareA/B — they are the outline/secondary pills, not the ink-filled primary). FLOW-1 also changed **test-infra only** — `harness.dart` `pumpShell` pumps a device-tall 1000×3200 surface (reset on teardown) so the carded readout's below-fold actions bar builds; `comparison_harness.dart` `whenSpeak` taps the FAB by `ComparisonActionsBar.speakKey`; and sibling unit tests `test/compare/comparison_screen_test.dart`, `test/readout/readout_screen_test.dart` were updated for the new widget types. **No AC-1..AC-5 test body was touched** and **no AC body weakened**.
+- **Verified this session:** `flutter test -d flutter-tester integration_test/visual_application/compare_test.dart` → **1 pass / all green** (AC-6 un-pended + the outline augmentation). Grade is of the test *design*.
+
+## Grade grid
+
+| AC | Test | Grade | G1 Given | G2 answers | G3 negatives | G4 grain | G5 rejects | G6 one-AC |
+|---|---|---|---|---|---|---|---|---|
+| AC-6 | `TestAC06_Compare` | **straight A** (ITEST-3 ◑-on-G4 resolved) | ✓ both surfaces checked before their Thens (`compareAKey/compareBKey/recipesKey` on `pumpShell`; `DifferenceRegion/StatementRegion.regionKey` on `pumpScreen(compare)`) | ✓ real assembled app via `buildApp`, types/weights read off the rendered tree | n/a — static type/subtree/ancestor reads after `pumpAndSettle` (the one `isFalse` is a static subtree-type read) | ✓ (was ◑) exact for all four clauses: recipes `PillButton`+`FilledButton` isTrue, **A/B `PillButton`+`FilledButton` isFalse (the now-asserted outline weight)**, each region a `SurfaceCard` ancestor, speak a `SpeakButton` | ✓ both catalogue Rejects (A/B/find ad-hoc; rows not carded) + A/B-promoted-to-primary + find-not-primary | ✓ every assertion is AC-6; cross-surface ownership is a real AC-6 behaviour, not a G6 violation |
+
+## Did FLOW-1's augmentation close the G-2 reviewer item?
+
+**Yes.** ITEST-3 note 1 recommended, verbatim, `expect(subtreeHas<FilledButton>(..compareA/B), isFalse)` as the "AC-6 A/B outline weight" G-2 item; FLOW-1 added exactly that loop. It strengthens only AC-6 (G6) and discriminates the A/B-as-primary wrong impl (passes the shipped `PillButton.secondary`/OutlinedButton tree, fails an A/B promoted to `PillButton.primary`/FilledButton). This is an AC-1-precedent design-strengthening of an already-A test, **not** a red→green B-pending closure (AC-6 was never B-pending; no augmentation row was owed). The compare-speak swap was *fully* ad-hoc at the FLOW-1 baseline (in-bar `TextButton`, zero `SpeakButton`), so the present-side `speakButtons findsWidgets` discriminates 0→≥1 cleanly — the straight-A / no-absent-sweep treatment the house style gives AC-9/AC-10. The one ◑-adjacent note (speak checked as `findsWidgets` not `findsOneWidget`/at-anchor-type) blocks no catalogue Reject and is not a fixable gate gap.
+
+## Counts (un-pended AC-1..AC-6)
+
+- **Straight A:** 6 — AC-1, AC-2, AC-3, AC-4, AC-5, AC-6
+- **A-core / B pending `<phase>`:** 0
+- **Below A (plain B, must be fixed this phase):** 0
+
+## Gate status: PASS
+
+No plain-B row exists; no row needs a fix this phase. **AC-6 grades straight A** — FLOW-1's outline-weight augmentation closed the sole outstanding G-2 reviewer item and promoted AC-6's prior G4 ◑ to ✓, so the test now asserts all four scenario clauses at their exact grain (A/B outline, find-recipes ink-filled primary, both regions carded, speak a `SpeakButton` FAB) while still catching both catalogue Rejects and the A/B-as-primary wrong impl. AC-1..AC-5 carry their prior A forward (bodies untouched; AC-2's omitted back/close clause remains acceptable scoping, ◑ on G4; production changes don't reach those tests). AC-6 verified green this session.

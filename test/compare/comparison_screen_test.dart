@@ -13,6 +13,7 @@ import 'package:paint_color_assistant/compare/difference_region.dart';
 import 'package:paint_color_assistant/compare/sample_source.dart';
 import 'package:paint_color_assistant/compare/slots_region.dart';
 import 'package:paint_color_assistant/compare/statement_region.dart';
+import 'package:paint_color_assistant/widgets/speak_button.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -348,7 +349,7 @@ void main() {
         .widget<TextButton>(find.widgetWithText(TextButton, label))
         .enabled;
 
-    testWidgets('Speak and both Open-readout controls are inert with no slots',
+    testWidgets('both Open-readout controls are inert with no slots',
         (tester) async {
       final controller = _controller();
       addTearDown(controller.dispose);
@@ -358,37 +359,12 @@ void main() {
         ),
       );
 
-      // With no second sample there is no comparison to speak (AC-9) and nothing
-      // to open — every action is disabled.
-      expect(enabled(tester, 'Speak whole comparison'), isFalse,
-          reason: 'no comparison yet ⇒ Speak whole comparison disabled');
+      // With no sample placed there is nothing to open — both are disabled. (The
+      // speak action is the screen's floating SpeakButton now, tested below.)
       expect(enabled(tester, 'Open readout for A'), isFalse,
           reason: 'slot A empty ⇒ Open readout for A disabled');
       expect(enabled(tester, 'Open readout for B'), isFalse,
           reason: 'slot B empty ⇒ Open readout for B disabled');
-    });
-
-    testWidgets('with both slots set, tapping Speak speaks the whole comparison '
-        'once (AC-9)', (tester) async {
-      final speech = _RecordingSpeech();
-      final controller =
-          _controller(speech: speech, initialA: _sampleA, initialB: _sampleB);
-      addTearDown(controller.dispose);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: ComparisonActionsBar(controller: controller)),
-        ),
-      );
-
-      expect(enabled(tester, 'Speak whole comparison'), isTrue,
-          reason: 'both slots set ⇒ there is a comparison to speak');
-      await tester.tap(find.widgetWithText(TextButton, 'Speak whole comparison'));
-      await tester.pump();
-
-      // Exactly one utterance, and it is the whole-comparison text the builder
-      // produces for this state (reuses DIFF's lines) — rejects a tap that
-      // speaks nothing or more than once.
-      expect(speech.utterances, [comparisonSpeech(controller.state)]);
     });
 
     testWidgets('tapping Open-readout-A opens the Readout for slot A (AC-10)',
@@ -430,6 +406,42 @@ void main() {
 
       expect(router.pushed, [same(_sampleB)]);
       expect(find.text('stub-readout'), findsOneWidget);
+    });
+  });
+
+  group('comparison speak (floating SpeakButton, bs-18 AC-6)', () {
+    SpeakButton fab(WidgetTester tester) => tester.widget<SpeakButton>(
+        find.byKey(ComparisonActionsBar.speakKey));
+
+    testWidgets('with no second sample the speak FAB is disabled (AC-9)',
+        (tester) async {
+      final controller = _controller();
+      addTearDown(controller.dispose);
+      await _pumpScreen(tester, controller);
+
+      // The speak control is the Compare screen's floating SpeakButton; with no
+      // comparison yet there is nothing to speak, so its handler is null.
+      expect(find.byKey(ComparisonActionsBar.speakKey), findsOneWidget);
+      expect(fab(tester).onPressed, isNull,
+          reason: 'no comparison yet ⇒ the speak FAB is disabled');
+    });
+
+    testWidgets('with both slots set, tapping the speak FAB speaks the whole '
+        'comparison once (AC-9)', (tester) async {
+      final speech = _RecordingSpeech();
+      final controller =
+          _controller(speech: speech, initialA: _sampleA, initialB: _sampleB);
+      addTearDown(controller.dispose);
+      await _pumpScreen(tester, controller);
+
+      expect(fab(tester).onPressed, isNotNull,
+          reason: 'both slots set ⇒ there is a comparison to speak');
+      await tester.tap(find.byKey(ComparisonActionsBar.speakKey));
+      await tester.pump();
+
+      // Exactly one utterance, and it is the whole-comparison text the builder
+      // produces for this state — rejects a tap that speaks nothing or twice.
+      expect(speech.utterances, [comparisonSpeech(controller.state)]);
     });
   });
 }

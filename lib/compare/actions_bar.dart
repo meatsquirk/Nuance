@@ -12,12 +12,22 @@ import 'comparison_controller.dart';
 /// [ComparisonController.openReadout] for its slot and is enabled only when that
 /// slot holds a sample (AC-10, AC-11). Speak (E6) drives
 /// [ComparisonController.speak] (CVD-3, AC-9) and is enabled only once both slots
-/// are set — there is no comparison to speak until then.
+/// are set — there is no comparison to speak until then. The speak action itself
+/// is the Compare screen's always-visible floating [SpeakButton] (bs-18 AC-6),
+/// rendered by [ComparisonScreen] as the screen's `floatingActionButton`, not in
+/// this bar — but [speakKey] stays here as the shared anchor its siblings tap.
 class ComparisonActionsBar extends StatelessWidget {
   const ComparisonActionsBar({required this.controller, super.key});
 
   /// Stable anchor for the actions bar.
   static const Key regionKey = ValueKey('comparison-actions-bar');
+
+  /// Stable anchor for the "speak whole comparison" action (E6, AC-9).
+  ///
+  /// The control is the Compare screen's floating [SpeakButton] (bs-18 AC-6),
+  /// rendered by [ComparisonScreen] outside this bar; the key stays here as the
+  /// shared anchor every sibling (the spoken-output flow) taps.
+  static const Key speakKey = ValueKey('comparison-action-speak');
 
   /// The controller whose actions these controls invoke.
   final ComparisonController controller;
@@ -28,12 +38,6 @@ class ComparisonActionsBar extends StatelessWidget {
       key: regionKey,
       spacing: 8,
       children: [
-        TextButton(
-          onPressed: controller.state.comparison != null
-              ? () => controller.speak()
-              : null,
-          child: const Text('Speak whole comparison'),
-        ),
         TextButton(
           onPressed: controller.slotFilled(ComparisonSlot.a)
               ? () => Navigator.of(context)
