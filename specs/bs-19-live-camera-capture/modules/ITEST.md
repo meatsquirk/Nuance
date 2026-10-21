@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** 🔶 In progress — ITEST-1..3 done; next ITEST-4 (test review = G-2)
+**Status:** 🔶 In progress — ITEST-1..3 done; ITEST-4 packet assembled, ⏸ awaiting G-2 decision
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/live_camera/` (new), `integration_test/fakes/scripted_camera_source.dart` (new), the `BS19_RUN_PENDING` pending gate for this suite.
 **Depends on:** CAM-2, PERM-1, VIEW-1 (all shells) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 7,639,135 | 14m 08s |
 | ITEST-2 | acceptance-tests | AC-1..AC-5 | ✅ Done | 14,061,597 | 34m 15s |
 | ITEST-3 | acceptance-tests | AC-6..AC-10 | ✅ Done | 16,840,597 | 1h 16m |
-| ITEST-4 | test-review | — (G-2) | ⬜ Next | | |
+| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | | |
 
 ## Interface reconciliation
 
@@ -133,8 +133,50 @@ Five *pending* AC tests over the ITEST-1 harness — **no `lib/` code** (coverag
 - **Exit criteria:** packet complete; grid all A (or *B pending*); stop with `/feature-next-phase --gate bs-19-live-camera-capture G-2 approved | "<changes>"`.
 - **Acceptance gate:** —
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+
+**Status: ⏸ Awaiting review — G-2 awaiting human decision.** No `lib/` or test code changed this phase (packet assembly only; coverage N/A). Packet below is the whole acceptance suite put in front of a human before any behavior is coded.
+
+#### Review packet — bs-19 acceptance suite (G-2)
+
+**Scope.** 10 pending integration tests, one per AC, over the ITEST-1 harness (`givenLiveCamera` → real `buildApp`, the only faked thing the camera device via `ScriptedCameraSource` at `AppDependencies.captureSource` + a `RecordingCameraPermission`). Lane: `-d flutter-tester`, per file. Pending gate `BS19_RUN_PENDING`; default run skips all 10, smoke (never-pending) stays green at 11/11.
+
+**Grid:** `specs/bs-19-live-camera-capture/behavior-test-completeness-bs-19-live-camera-capture.md` — **10 A / 0 B**, independent fresh grader (did not write the tests), 2026-10-21. ITEST-2 grid (AC-1..5) + ITEST-3 grid (AC-6..10). AC-2 was B→A in-phase (YUV tolerance 30→12).
+
+**Look at first (reviewer):**
+1. **The hardware-faking boundary** (D-5): every test drives the real app + real `CaptureController` + real conversion maths; only the camera *device* is scripted. Satisfy yourself the scripted source is a faithful stand-in and not a shortcut past the behavior. The real `camera`-plugin source (`CameraCaptureSource`) is exercised by the **device walkthrough at sign-off**, not here.
+2. **The 4 green-at-baseline ACs (AC-3, AC-5, AC-6, AC-10)** — they pass today because the reading/lock/torch pipeline is source-agnostic and the manifests already ship. Confirm each still *rejects* a placeholder/fixed/independent impl via its control (detailed per-AC below); their behavior phases' residual is "un-pend + keep green".
+3. **⚠ AC-10 / PERM-4:** the platform declarations already landed in the **PERM-1 shell**, so AC-10 is green now and **PERM-4 has no new product work** — residual is purely un-pend + confirm. Flagged so the reviewer knows PERM-4 is bookkeeping.
+4. **AC-7 / AC-8 wiring note:** both rest on the production *source selection*, which the assembly doesn't run yet. PERM-2/PERM-3 must wire the harness to inject selection *inputs* (permission outcome + availability), not an already-chosen source. The AC-7 denied-branch control already proves permission (not injected kind) is what answers.
+
+**Per-AC** — test · Given (checked on public surface) · When · Then + Rejects:
+
+| AC | Test | Given (pre-When check) | When | Then + Rejects |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_LivePreview` | read endpoint `activeSourceKind==camera` (granted-camera selection) | Capture screen opens | `showsPlaceholder` false **and** `LiveFrameView.frame` not null. Rejects: a view that keeps the placeholder / ignores frames. |
+| AC-2 | `TestAC02_FrameConversion` | raw buffer bytes `[b,g,r,255]` (BGRA) / Y-plane byte (YUV) == known | convert `CameraImage`→`Frame` | reticle pixel == known within tol (BGRA L1≤3, YUV L1≤12) + a 2nd colour yields a different pixel. Rejects: BGR↔RGB swap, mis-ranged/limited-range YUV, constant pixel. |
+| AC-3 | `TestAC03_ReadingFollowsFrame` | current reading ≈ c1 (RETICLE_CYAN), control c1≠c2 (450 L1) | source emits `knownFrame(c2)` | reading follows to c2 **and** not stale (≫ from c1). Rejects: stale/placeholder/fixed sampler. *(green at baseline)* |
+| AC-4 | `TestAC04_ValueOnlyLive` | live `frame` not null (VIEW-2) + no placeholder | value-only toggled on | `ColorFiltered` ancestor over `liveViewKey` **and** none over `accuracyKey`. Rejects: graying whole screen incl. readings; filtering placeholder only. |
+| AC-5 | `TestAC05_LockClearsWarning` | `source.locks.allLocked` false + "Exposure not locked" warning present | painter locks AE+AWB+AF | `allLocked` true **and** that warning gone; **control:** `canLock:false` source keeps warning despite UI lock. Rejects: clearing warning without locking; UI flag not reflecting source. *(green at baseline)* |
+| AC-6 | `TestAC06_Torch` | `source.torchOn` false, `torchOnCalls==0`, torch-off affordance | painter turns torch on | `torchOn` true + `torchOnCalls==1` (reached device) + committed sample `litByTorch`; off-path extinguishes (`torchOffCalls==1`); control: torch-off commit `litByTorch:false`. Rejects: toggle not reaching source; missing/always-on stamp. *(green at baseline)* |
+| AC-7 | `TestAC07_PermissionFallback` | recorder `requestCount==0`, status undetermined | Capture opened for live read | `requestCount==1` exactly; granted→`camera`, denied→`software` + "Camera access" affordance + no throw. **Control:** denied branch injects an identical `kind==camera` source, so only the permission decision explains camera→software. Rejects: never requesting; crash/black on denial; staying on dead camera. |
+| AC-8 | `TestAC08_NoCameraFallback` | `source.available` false | Capture opens | `activeSourceKind==software`; reading still works; no throw. Discrimination built in: injected `kind==camera`, so echoing injected kind fails `==software`. Rejects: crash/black; forcing a camera that can't stream. |
+| AC-9 | `TestAC09_Lifecycle` | `acquireCount==1`, `releaseCount==0`, opening reading renders live frame | app `paused` then `resumed` (dispatched) | `releaseCount≥1` on background **and** `acquireCount≥2` on resume; **control:** post-resume live-frame change renders (not frozen/black). Rejects: leaking controller; not re-acquiring. |
+| AC-10 | `TestAC10_PlatformDeclarations` | `AndroidManifest.xml` + `Info.plist` exist on disk | source-scan read | Android has `android.permission.CAMERA` **and** camera `<uses-feature>` (separate asserts); iOS `NSCameraUsageDescription` present **and** non-empty (structured key→string). Rejects: declaring one not the other; bare key; empty usage string. *(green at baseline)* |
+
+**Red baseline** (`--dart-define=BS19_RUN_PENDING=true`, per file): **red** — AC-1 (Then `showsPlaceholder isFalse` → VIEW-2), AC-2 (`returnsNormally` guard, `frameFromCameraImage` throws `UnimplementedError … CAM-3` → CAM-3), AC-4 (Given `frame isNotNull` → VIEW-2/VIEW-3), AC-7 (`requestCount==1`, actual 0 → PERM-2), AC-8 (`activeSourceKind==software`, actual camera → PERM-3), AC-9 (`releaseCount>=1`, actual 0 → CAM-7). **Green at baseline** — AC-3, AC-5, AC-6, AC-10 (source-agnostic pipeline / shipped manifests), each written with a discriminating control. All reds are clean `TestFailure`s (no panic/hang).
+
+**Augmentations** (full table in *Test augmentations* below; all already written in the AC-test phases, each closed by un-pend + keep-green in its behavior phase): TestAC03→CAM-4 (reading changes c1→c2), TestAC05→CAM-5 (warning clears *because* `allLocked`), TestAC06→CAM-6 (toggle reaches source + off-extinguish), TestAC04→VIEW-3 (readings subtree outside grayscale), TestAC10→PERM-4 (`<uses-feature>` + non-empty iOS usage; ⚠ no new product work).
+
+**Owning behavior phases:** AC-1→VIEW-2, AC-2→CAM-3, AC-3→CAM-4, AC-4→VIEW-3, AC-5→CAM-5, AC-6→CAM-6, AC-7→PERM-2, AC-8→PERM-3, AC-9→CAM-7, AC-10→PERM-4.
+
+**Decision:** `/feature-next-phase --gate bs-19-live-camera-capture G-2 approved | "<changes>"`. Approval unblocks every behavior phase (CAM-3 first — it is the enabler for VIEW-2 and the CAM behavior phases). "Changes requested" turns each item into an `ITEST` change phase before the behavior stage, then a fresh review.
+
+### Checkpoint / Handoff
+- **Gate G-2 is the only thing this phase produces** — a human decision on the packet above. **No behavior phase (CAM-3, VIEW-2/3, CAM-4/5/6/7, PERM-2/3/4) may start before G-2 is approved.**
+- **On approval:** record via `--gate bs-19-live-camera-capture G-2 approved`; that flips ITEST-4 → ✅ Done and makes **CAM-3** the next startable phase (the enabler: AC-2 frame conversion + real frame stream; blocks VIEW-2, CAM-4/5/6/7, PERM-2).
+- **On changes requested:** each item becomes an ITEST change phase before behavior; a fresh test review follows it.
+- Suite state frozen at HEAD `c7d34b0`: default run skips all 10 pending + smoke 11/11; run-pending reproduces the red baseline above. Verification commands unchanged (ITEST-3 Checkpoint).
 
 ## Red baseline  <!-- filled by the AC-test phases -->
 
