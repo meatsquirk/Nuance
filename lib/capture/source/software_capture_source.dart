@@ -140,6 +140,11 @@ class SoftwareCaptureSource implements CaptureSource {
   @override
   CaptureSourceKind get kind => CaptureSourceKind.software;
 
+  // The deterministic software source is always usable — it never falls back on
+  // itself (bs-19 AC-8).
+  @override
+  bool get available => true;
+
   @override
   Stream<Frame> get frames => Stream<Frame>.fromIterable(_feed());
 

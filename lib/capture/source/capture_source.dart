@@ -200,6 +200,20 @@ abstract class CaptureSource {
   /// selection path.
   CaptureSourceKind get kind;
 
+  /// Whether a usable camera backs this source (bs-19 PERM-3, AC-8).
+  ///
+  /// The software source is always usable, so it reports true. A live camera
+  /// source reports whether the device actually has a camera: the production
+  /// selection probes device availability before ever constructing a
+  /// [CameraCaptureSource] (on-device, plan D-5), so a camera source that exists
+  /// is backed by one and also reports true. The Capture host still honours this
+  /// on the injected source, so a device that reports **no** usable camera
+  /// (`false`) falls back to the software source at once — a readable preview,
+  /// no prompt and no "camera access needed" affordance (availability ≠
+  /// permission). The acceptance suite's scripted source makes it settable to
+  /// model that no-camera device.
+  bool get available;
+
   /// The live feed of frames.
   Stream<Frame> get frames;
 

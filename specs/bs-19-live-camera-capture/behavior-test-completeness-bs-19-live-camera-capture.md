@@ -460,3 +460,28 @@ example uses a genuinely-pending AC (AC-8/PERM-3).
 
 **PERM-2 grade count: 8 A / 0 below A** (every un-pended AC test: AC-1..AC-7, AC-9). No downgrades
 from the prior grid; no fix owed. Feature grid remains all-A.
+
+## Grade — PERM-3 re-grade (AC-1..AC-9)
+
+Independent fresh grader (did **not** write these tests), **2026-10-21**, after
+PERM-3 un-pended **AC-8** (no-camera fallback) and added `bool get available` to
+the `CaptureSource` interface. Re-grades **every** un-pended AC test (AC-1..AC-9;
+AC-10 still pending → PERM-4).
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_LivePreview` | A | G1,G4,G5,G6 (G2/G3 n/a) | Default fixture `available=true`+`kind=camera` → PERM-3 branch skipped, granted arm keeps the camera controller. `showsPlaceholder isFalse` + `frame isNotNull` kill "keeps placeholder" / "ignores frames". |
+| AC-2 | `TestAC02_FrameConversion` | A | G1,G4,G5,G6 | Pure `frameFromCameraImage` below the source/host — PERM-3 can't touch it. BGRA tol 3 + BGR↔RGB `>100`; YUV tol 12 rejects limited-range mis-decode; c1/c2 control kills a constant pixel. |
+| AC-3 | `TestAC03_ReadingFollowsFrame` | A (live) | G1,G2,G3,G4,G5,G6 | c1→c2 over 450-L1 vs 45 tol; granted-keeps-controller arm preserves the subscription (branch not reached). Kills stale/fixed/placeholder sampler. |
+| AC-4 | `TestAC04_ValueOnlyLive` | A | G1,G3,G4,G5,G6 (G2 n/a) | `ColorFiltered` over `liveViewKey` findsOne + over `accuracyKey` findsNothing; value-only path untouched. |
+| AC-5 | `TestAC05_LockClearsWarning` | A (live) | G1,G2,G3,G4,G5,G6 | `canLock:false` control proves clear comes from `source.locks.allLocked`; both sources `available=true` → branch skipped, lock path unchanged. |
+| AC-6 | `TestAC06_Torch` | A (live) | G1,G2,G3,G4,G5,G6 | `torchOnCalls==1` kills a UI-only toggle; torch-off-commit control kills a torch-blind stamp; all apps `available=true`. |
+| AC-7 | `TestAC07_PermissionFallback` | A (live) | G1,G2,G4,G5,G6 (G3 n/a) | Both branches inject identical `kind=camera, available=true` source, diverge only on the permission recorder → camera-vs-software provably permission-driven; `available=true` means PERM-3's branch never fires, so AC-7 exercises exactly the untouched PERM-2 code. |
+| AC-8 | `TestAC08_NoCameraFallback` | A (live, PERM-3) | G1,G4,G5,G6 (G2 built-in, G3 n/a) | **New.** Given "no usable camera" asserted on the public surface (`source.available isFalse`) before the When; When drives real `buildApp`/`didChangeDependencies` (`kind==camera && !available` → `cameraFallbackSource()`). `activeSourceKind==software` overturns the injected `kind=camera` wrong-impl baseline (dead-camera echo), `currentSample isNotNull` pins "can still read", `takeException isNull` pins no-crash. Clean red at baseline. Corroborated by the build_app unit test (`requestCount==0`, `permissionState==undetermined`, `acquireCount==0`, no affordance → branch runs before any prompt; availability≠permission). Minor (not a downgrade, matches prior AC-7/AC-5 notes): "import/use-rest-of-app" clauses not asserted (fallback is bs-02's shipped source; no distinct wrong-impl escapes); `kind==camera` pinned by fixture default rather than re-asserted. |
+| AC-9 | `TestAC09_Lifecycle` | A (live) | G1,G3,G4,G5,G6 (G2 n/a) | `acquireCount==1`/`releaseCount==0` Givens; `release>=1` on background, `acquire>=2` on resume + frozen-feed control; `available=true` → branch skipped, keep-on-grant preserves `acquireCount==1`. |
+
+### Summary — PERM-3
+
+- **Grade counts: 9×A, 0 below A.** No downgrades from the prior grid; every prior-A row holds; no fix owed.
+- **AC-8 grades A:** Given on the public surface, When through the real assembled host, three Thens reject the three catalogue wrong-impls (dead-camera kind echo, black/unreadable view, crash); the discrimination is built into the fixture (injected `kind=camera` is the wrong-impl baseline the `==software` assertion overturns), so no separate control is needed.
+- **The `available` interface change did NOT weaken any neighbour.** It resolves to `true` on every shipped and fake source; the host branch is gated on `kind==camera && !available`, never taken for AC-1..AC-7/AC-9 (all `available=true`), so the PERM-2 permission flow, CAM lifecycle, torch, lock and render paths are untouched. Only AC-8 sets `available=false`.

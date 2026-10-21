@@ -85,6 +85,14 @@ class CameraCaptureSource implements CaptureSource {
   @override
   CaptureSourceKind get kind => CaptureSourceKind.camera;
 
+  // A camera source is constructed only when the production selection has
+  // already found a camera on the device (on-device, plan D-5), so one that
+  // exists is backed by a camera and reports available (bs-19 AC-8). The
+  // no-camera fallback the host makes is driven off the injected source's
+  // availability, which the acceptance suite's scripted source sets to false.
+  @override
+  bool get available => true;
+
   @override
   Stream<Frame> get frames {
     late final StreamController<Frame> controller;

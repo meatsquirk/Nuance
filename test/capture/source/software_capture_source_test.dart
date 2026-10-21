@@ -309,5 +309,13 @@ void main() {
       );
       expect(source.kind, CaptureSourceKind.software);
     });
+
+    test('is always available — the software source never falls back on itself '
+        '(bs-19 AC-8)', () {
+      final source = SoftwareCaptureSource(
+        const SceneSpec(groundTruth: groundTruth),
+      );
+      expect(source.available, isTrue);
+    });
   });
 }

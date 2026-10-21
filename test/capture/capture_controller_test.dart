@@ -39,6 +39,11 @@ class _ControllableSource implements CaptureSource {
   @override
   CaptureSourceKind kind = CaptureSourceKind.software;
 
+  // A usable camera backs this source (bs-19 AC-8); the controller tests never
+  // exercise the no-camera fallback, which is a host concern.
+  @override
+  bool available = true;
+
   @override
   Stream<Frame> get frames => _frames.stream;
 
@@ -144,6 +149,10 @@ class _RecordingFeedSource implements CaptureSource {
 
   @override
   CaptureSourceKind kind = CaptureSourceKind.camera;
+
+  // A usable camera backs this source (bs-19 AC-8).
+  @override
+  bool available = true;
 
   @override
   CaptureLocks get locks => const CaptureLocks();

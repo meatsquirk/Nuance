@@ -1200,6 +1200,17 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen>
     if (_controller == null) {
       final deps = AppScope.of(context);
       final source = deps.captureSource!;
+      // bs-19 PERM-3 (AC-8): a live camera source on a device that reports no
+      // usable camera falls back to the software source at once — the painter
+      // keeps a readable preview and can still read, import a photo and use the
+      // rest of the app, with no crash. No permission prompt and no "camera
+      // access needed" affordance: availability is not permission (D-3). Built
+      // synchronously (not after an await) so the fallback's seed frame is
+      // sampled on the screen's first pump, exactly as a present camera would be.
+      if (source.kind == CaptureSourceKind.camera && !source.available) {
+        _controller = _buildController(cameraFallbackSource());
+        return;
+      }
       _controller = _buildController(source);
       // bs-19 PERM-2: when a live camera source is selected and a permission
       // seam is wired, request camera access on first entry and select the

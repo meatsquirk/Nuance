@@ -211,5 +211,13 @@ void main() {
     test('identifies as the live camera source (bs-19 PERM-1)', () {
       expect(CameraCaptureSource().kind, CaptureSourceKind.camera);
     });
+
+    test('reports available — a camera source is backed by a camera '
+        '(bs-19 AC-8)', () {
+      // The production selection builds this only after finding a camera, so a
+      // constructed camera source reports available; the no-camera fallback is
+      // driven off a source that reports false (the scripted suite source).
+      expect(CameraCaptureSource().available, isTrue);
+    });
   });
 }

@@ -52,7 +52,7 @@ const Map<String, String> pendingACs = {
   // AC-6 (The torch toggles the device light) un-pended by CAM-6.
   // AC-9 (Camera released and re-acquired across lifecycle) un-pended by CAM-7.
   // AC-7 (Permission requested; denial falls back gracefully) un-pended by PERM-2.
-  'AC-8': 'PERM-3', // A device with no camera falls back gracefully
+  // AC-8 (A device with no camera falls back gracefully) un-pended by PERM-3.
   'AC-10': 'PERM-4', // The app declares camera use on both platforms
 };
 

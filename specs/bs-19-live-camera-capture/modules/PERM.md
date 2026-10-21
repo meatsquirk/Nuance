@@ -1,6 +1,6 @@
 # Module PERM — Permission, fallback, wiring & platform declarations
 
-**Status:** In progress — PERM-2 done (AC-7 live); next PERM-3 (AC-8) ∥ PERM-4 (AC-10)
+**Status:** In progress — PERM-3 done (AC-8 live); next PERM-4 (AC-10)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/camera_permission.dart` (new), production source selection in `lib/main.dart` (+ `selectCaptureSource` use), the capture-state camera-availability/permission field, `lib/capture/capture_read_endpoint.dart` (extend), `android/app/src/main/AndroidManifest.xml`, `ios/Runner/Info.plist`; tests under `test/capture/` + the AC-10 source-scan.
 **Depends on:** CAM · **Blocks:** SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | PERM-1 | shell | — | ✅ Done | 9.02M | 14m 15s |
 | PERM-2 | behavior | AC-7 | ✅ Done | 17.79M | 29m 12s |
-| PERM-3 | behavior | AC-8 | ⬜ Todo | | |
+| PERM-3 | behavior | AC-8 | ✅ Done | 10.75M | 17m 46s |
 | PERM-4 | behavior | AC-10 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -157,8 +157,59 @@ live-capture entry and selects the source from the outcome. New + touched lib
 - **Acceptance gate:** un-pend AC-8; suite green.
 - **Augments:** none
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+AC-8 live (grade **A**): a live camera source on a device that reports no usable
+camera falls back to the software source at once — no prompt, no affordance. New
++ touched lib (all 100% covered):
+- `capture_source.dart` — new abstract `bool get available` on the `CaptureSource`
+  interface (doc: software always usable; a camera source that exists is backed by
+  a camera; the host honours it on the injected source, so `false` models a
+  no-camera device).
+- `software_capture_source.dart` → `available => true`; `camera_capture_source.dart`
+  → `available => true` (a camera source is built only after the on-device
+  selection finds a camera, D-5).
+- `build_app.dart` — `_CaptureHomeScreenState.didChangeDependencies`: when
+  `source.kind == camera && !source.available`, build over `cameraFallbackSource()`
+  (a `SoftwareCaptureSource`, kind `software`) **synchronously** and return — the
+  seed frame is sampled on the first pump, and the permission prompt / affordance
+  are skipped (availability ≠ permission, D-3). The camera-present path is
+  unchanged (PERM-2 flow).
+- **Test fakes:** `available` override added to `_ControllableSource` +
+  `_RecordingFeedSource` (capture_controller_test), `_LifecycleCaptureSource`
+  (build_app_test, settable), and `@override` on `ScriptedCameraSource.available`.
+- **Acceptance wiring:** AC-8 un-pended (pending.dart row → comment); smoke
+  exact-set guard adds AC-8 to `unpendedACs`; pending-skip example moved AC-8→AC-10
+  (owner PERM-4). +3 unit tests (host no-camera fallback asserting
+  `activeSourceKind==software`, `currentSample!=null`, `requestCount==0`,
+  `permissionState==undetermined`, `acquireCount==0`, no affordance, no crash; each
+  source's `available`).
+- **Gates:** `dart analyze lib/ test/ integration_test/` clean; `flutter test
+  --coverage test/` = **1687 passed**; `dart run tool/coverage_gate.dart ec96777` =
+  **100% on all 4 touched lib files**. Acceptance: AC-8 (`TestAC08_NoCameraFallback`)
+  **green** (permission_test.dart, with AC-7); whole `live_camera/` per-file green
+  (smoke 11/11, preview 2, reading 2, controls 2), AC-10 still skipped (PERM-4).
+  **Grade: fresh independent re-grade = 9 A / 0 below A** across every un-pended AC
+  test (AC-1..AC-9); the `available` interface change weakened no neighbour (the
+  branch is never taken for an `available=true` source). Cross-feature regression
+  (host-pumping suites): bs-02 capture 19/19, bs-09 advanced-capture 21/21, bs-11
+  a11y 19/19, bs-12 nfr 33/33 — all green. Carried off-lane flakes (bs-06 palette
+  AC-3/AC-5, bs-08 display AC-9) untouched. **Fix passes: 0/3** (green on the first
+  full run).
+- **Tokens/Time:** see dashboard (PERM-3 row) + master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase (PERM-4 + SIGNOFF-1 build on):**
+  - `CaptureSource.available` — the availability seam. Every shipped/fake source
+    reports `true`; the host falls back only on an injected `kind==camera` source
+    that reports `false`. The real device-availability probe (whether the device has
+    any camera) is the production selection's job on-device (D-5); a constructed
+    `CameraCaptureSource` reports available.
+  - The host no-camera branch runs **before** the permission prompt and tears
+    nothing down — it simply builds the fallback controller. It does not touch
+    `_cameraPermission`/`_cameraSource`/`_resolvedPermission`, so no affordance
+    shows and `permissionState` stays `undetermined`.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`, run bare): unit+cov `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart <base>`; analyze `dart analyze lib/ test/ integration_test/`; AC-8 `flutter test -d flutter-tester integration_test/live_camera/permission_test.dart` (**per-file — the whole `live_camera/` dir fails to launch at once**).
+- **Known gaps:** none for AC-8. AC-10 (PERM-4) remains the only pending AC; it is green-at-baseline (declarations shipped in PERM-1), so PERM-4 is un-pend + confirm + the usage-string/uses-feature augmentation. Then SIGNOFF-1.
 
 ## Phase PERM-4 — Platform declarations (Android + iOS)
 

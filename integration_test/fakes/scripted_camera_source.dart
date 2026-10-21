@@ -97,6 +97,7 @@ class ScriptedCameraSource implements CaptureSource {
   /// A test-only selection signal read by the no-camera fallback phase (PERM-3):
   /// false means the availability probe finds no camera, so the selection must
   /// fall back to the software source.
+  @override
   bool available;
 
   /// How many times the lock controls were driven at the source (AC-5).

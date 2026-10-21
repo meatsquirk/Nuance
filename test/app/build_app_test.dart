@@ -146,6 +146,9 @@ class _LifecycleCaptureSource implements CaptureSource {
 
   @override
   CaptureSourceKind kind = CaptureSourceKind.camera;
+  // Settable so a test can model a device with no usable camera (bs-19 AC-8).
+  @override
+  bool available = true;
   @override
   CaptureLocks get locks => const CaptureLocks();
   @override
@@ -773,6 +776,40 @@ void main() {
       expect(endpoint.activeSourceKind, CaptureSourceKind.software);
       expect(endpoint.permissionState, CameraPermissionState.undetermined);
       expect(find.textContaining('Camera access'), findsNothing);
+    });
+
+    testWidgets(
+        'a device with no usable camera falls back to software without a prompt '
+        'or an affordance, and still reads (bs-19 AC-8)', (tester) async {
+      // A live camera source on a device that reports no usable camera: a
+      // permission seam is wired, but availability is probed first, so the host
+      // must fall back to the software source without ever prompting.
+      final source = _LifecycleCaptureSource()..available = false;
+      final permission = _RecordingPermission();
+      await tester.pumpWidget(
+        buildApp(_cameraPermissionDeps(source, permission)),
+      );
+      await tester.pumpAndSettle();
+
+      final endpoint = _captureEndpoint(tester);
+      expect(endpoint.activeSourceKind, CaptureSourceKind.software,
+          reason: 'no usable camera falls back to the deterministic software '
+              'source (not a dead camera / black view)');
+      // The painter can still take a reading on the fallback.
+      expect(endpoint.controller.state.currentSample, isNotNull,
+          reason: 'the software fallback still samples a reading');
+      // Availability is not permission: no prompt, no "camera access needed".
+      expect(permission.requestCount, 0,
+          reason: 'a no-camera device is never prompted for permission '
+              '(availability ≠ permission)');
+      expect(endpoint.permissionState, CameraPermissionState.undetermined,
+          reason: 'permission stays undecided when the camera is absent');
+      expect(find.textContaining('Camera access'), findsNothing,
+          reason: 'the no-camera fallback shows no permission affordance');
+      expect(source.acquireCount, 0,
+          reason: 'the absent camera source is never subscribed');
+      expect(tester.takeException(), isNull,
+          reason: 'no camera falls back without crashing');
     });
 
     testWidgets('a commit opens the captured reading\'s Readout and confirms',

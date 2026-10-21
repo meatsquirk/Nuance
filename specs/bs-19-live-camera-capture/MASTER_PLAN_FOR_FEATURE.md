@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — PERM-2 done (AC-7 live); next PERM-3 (AC-8) ∥ PERM-4 (AC-10)
+**Status:** In progress — PERM-3 done (AC-8 live); next PERM-4 (AC-10), then SIGNOFF-1
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -41,7 +41,7 @@
 | AC-5 | Locking AE·AWB·AF settles the live camera | ITEST-2 `TestAC05_LockClearsWarning` | CAM-5 | ✅ Done |
 | AC-6 | The torch toggles the device light | ITEST-3 `TestAC06_Torch` | CAM-6 | ✅ Done |
 | AC-7 | Permission requested; denial falls back gracefully | ITEST-3 `TestAC07_PermissionFallback` | PERM-2 | ✅ Done |
-| AC-8 | A device with no camera falls back gracefully | ITEST-3 `TestAC08_NoCameraFallback` | PERM-3 | ⬜ Todo |
+| AC-8 | A device with no camera falls back gracefully | ITEST-3 `TestAC08_NoCameraFallback` | PERM-3 | ✅ Done |
 | AC-9 | Camera released and re-acquired across lifecycle | ITEST-3 `TestAC09_Lifecycle` | CAM-7 | ✅ Done |
 | AC-10 | The app declares camera use on both platforms | ITEST-3 `TestAC10_PlatformDeclarations` | PERM-4 | ⬜ Todo |
 
@@ -157,18 +157,18 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 14 | CAM-6 | AC-6 real device torch | ✅ Done | 5,348,128 | 13m 23s | real torch forwarding via CameraDevice seam (`setFlashMode`); un-pend AC-6; 6×A; unit 1674; cov 100% 1 touched; fix 0/3 |
 | 15 | CAM-7 | AC-9 camera lifecycle release/resume | ✅ Done | 17,712,519 | 47m 55s | WidgetsBindingObserver on Capture host → controller pauseFeed/resumeFeed (D-7); AC-9 un-pended; CAM module complete; 7×A; unit 1680; cov 100% 2 touched; fix 1/3 (host unit test: FakeAsync no-flush of async cancel) |
 | 16 | PERM-2 | AC-7 permission request + denial fallback + state | ✅ Done | 17,788,884 | 29m 12s | host requests on entry (camera source + seam); granted keeps camera, denied swaps to software fallback + affordance; 8×A; unit 1684; cov 100% 4 touched; fix 1/3 |
-| 17 | PERM-3 | AC-8 no-camera fallback | ⬜ Next | | | after PERM-2 |
-| 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ⬜ Todo | | | ∥ |
+| 17 | PERM-3 | AC-8 no-camera fallback | ✅ Done | 10,749,642 | 17m 46s | 9×A re-grade; AC-8 live; `available` seam; fix 0/3 |
+| 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ⬜ Next | | | last AC before SIGNOFF-1 |
 | 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | after all behavior |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**PERM-2 done — AC-7 permission + graceful fallback (grade A); 8 ACs delivered (AC-1..AC-7, AC-9).** `AppDependencies.cameraPermission` seam wired; the Capture host (`_CaptureHomeScreenState`) requests camera access on first entry **only when** a seam is wired and the source is `CaptureSourceKind.camera` — **granted keeps** the already-subscribed camera controller (preserves AC-1/AC-9 seed-frame timing), **denied swaps** to `cameraFallbackSource()` (a neutral software scene, kind `software`) and shows the `_CameraAccessAffordance` ("Camera access needed… Retry"). `PluginCameraPermission.request()` wired to the plugin's `initialize()` prompt (coverage-ignored device code, D-5); production wires it but it stays dormant on the shipped software source. AC-7 un-pended. Remaining pending/red: AC-8 (PERM-3), AC-10 (PERM-4).
-- **Startable now:** PERM-3 (AC-8, depends on PERM-2 — now met) ∥ PERM-4 (AC-10). Both own the PERM files, disjoint from CAM-*/VIEW-* sources. Each = un-pend its AC + keep green.
-- **⚠ PERM-4:** AC-10's declarations already shipped in PERM-1 — AC-10 green-at-baseline now, PERM-4 is un-pend + confirm only (no product work).
-- **PERM-3 (AC-8) reuse points:** `cameraFallbackSource()` + `_replaceController` are built; the AC-8 **availability** probe seam is PERM-3's (the scripted source's `available` flag stands for it). No-camera needs no permission prompt and no affordance — availability ≠ permission; select the software fallback and keep a readable `currentSample`.
+**PERM-3 done — AC-8 no-camera fallback (grade A); 9 ACs delivered (AC-1..AC-9).** Added `bool get available` to the `CaptureSource` interface; the Capture host falls back to `cameraFallbackSource()` (kind `software`) **synchronously** when an injected camera-kind source reports `!available` — no permission prompt, no "camera access needed" affordance (availability ≠ permission). Every shipped/fake source reports `available=true`, so the branch is inert for all neighbours. AC-8 un-pended; the whole un-pended suite re-graded **9 A / 0 below A**. **AC-10 (PERM-4) is the only remaining pending AC.**
+- **Startable now:** PERM-4 (AC-10, depends on PERM-1 — met). Owns `AndroidManifest.xml` + `ios/Runner/Info.plist`, disjoint from all source/host code.
+- **⚠ PERM-4 is un-pend + confirm + augment only:** AC-10's declarations already shipped in PERM-1 (Android `CAMERA` + `uses-feature required=false`, iOS `NSCameraUsageDescription`), so AC-10 is **green-at-baseline** — no product work. Make the scheduled augmentation (assert the usage string is non-empty and the uses-feature present, not just the permission) and keep `TestAC10_PlatformDeclarations` green.
+- **Then SIGNOFF-1** (all 10 ACs delivered) — the sign-off packet + summary page + human approval.
 - **Carried gotchas:** the whole `integration_test/live_camera/` dir **won't launch at once** — run per-file (`flutter test -d flutter-tester integration_test/live_camera/<file>_test.dart`). macOS has no `timeout`; run bare. 2 carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-08 display AC-9) are unrelated.
 
 ## Token usage
@@ -195,7 +195,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | CAM-6 | 80228cbc | 2026-10-21 14:44 EDT | 14:58 | 13m 23s | 13m 23s | claude-opus-4-8 | 106 | 222,564 | 5,100,087 | 25,371 | 5,348,128 | AC-6 real device torch forwarding via CameraDevice seam (setFlashMode torch/off); un-pend AC-6; 6×A; unit 1674; cov 100% 1 touched; fix 0/3 |
 | CAM-7 | 82fe6d69 | 2026-10-21 15:00 EDT | 15:48 | 47m 55s | 47m 55s | claude-opus-4-8 | 210 | 336,106 | 17,290,790 | 85,413 | 17,712,519 | AC-9 lifecycle release/resume delivered; CAM module complete; 7xA; unit 1680; coverage PASS 2 touched; fix 1/3 |
 | PERM-2 | 524c73db | 2026-10-21 16:14 EDT | 16:43 | 29m 12s | 29m 12s | claude-opus-4-8 | 196 | 371,418 | 17,328,340 | 88,930 | 17,788,884 | AC-7 permission request + denial fallback live (grade A); 8 ACs delivered (AC-1..AC-7,AC-9); unit 1684, cov 100% 4 touched, 8 A/0 below; fix 1/3 |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 16:43** | **8h 09m** | **6h 16m** |  | **2,074** | **3,647,977** | **137,801,467** | **850,817** | **142,302,335** |  |
+| PERM-3 | 9d0d231d | 2026-10-21 16:54 EDT | 17:11 | 17m 46s | 17m 46s | claude-opus-4-8 | 166 | 268,475 | 10,433,083 | 47,918 | 10,749,642 | AC-8 no-camera fallback live; grade 9A/0; available seam; fix 0/3 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 17:11** | **8h 26m** | **6h 33m** |  | **2,240** | **3,916,452** | **148,234,550** | **898,735** | **153,051,977** |  |
 
 ## Sign-off
 
