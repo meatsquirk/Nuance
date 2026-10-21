@@ -46,6 +46,10 @@ class CaptureScreen extends StatelessWidget {
                 Expanded(
                   child: CaptureLiveView(
                     state: controller.state,
+                    // bs-19 VIEW-2: paint the active source's latest frame as
+                    // the live preview (the camera feed). Null on the software
+                    // / no-camera fallback, which keeps the flat placeholder.
+                    frame: controller.currentFrame,
                     downgradeReasons: controller.activeDowngradeReasons,
                   ),
                 ),

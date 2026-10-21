@@ -1,6 +1,6 @@
 # Module VIEW — Live preview rendering
 
-**Status:** In progress — VIEW-1 shell done; VIEW-2/VIEW-3 (behavior) gated by G-2
+**Status:** In progress — VIEW-1 shell + VIEW-2 (AC-1) done; VIEW-3 (AC-4) startable
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_live_view.dart`, a frame-render widget (e.g. `lib/capture/live_frame_view.dart`), widget tests under `test/capture/`.
 **Depends on:** CAM · **Blocks:** SIGNOFF-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | VIEW-1 | shell | — | ✅ Done | | |
-| VIEW-2 | behavior | AC-1 | ⬜ Todo | | |
+| VIEW-2 | behavior | AC-1 | ✅ Done | 7.74M | 14m 54s |
 | VIEW-3 | behavior | AC-4 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -20,7 +20,7 @@
 
 ## Open gates
 
-- G-2 (test review) blocks VIEW-2, VIEW-3.
+- G-2 (test review) ✅ Resolved 2026-10-21 12:36 EDT (Matt Quirk) — behavior stage unblocked; VIEW-2 done, VIEW-3 startable.
 
 ## Phase VIEW-1 — Frame-render widget seam
 
@@ -66,8 +66,25 @@ Frame-render widget seam — **no behaviour change** (the feed still shows the f
 - **Acceptance gate:** un-pend AC-1; `integration_test/live_camera/` green.
 - **Augments:** none
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+Live preview now paints the active camera source's frame — **AC-1 delivered (grade A)**.
+- **Lib (2 files, 100% covered):**
+  - `capture_controller.dart` — new `Frame? get currentFrame`: the latest buffered frame (`_recentFrames.last`) **only** when `source.kind == CaptureSourceKind.camera` and a frame has arrived, else null. So the live camera paints its feed while the deterministic **software / no-camera fallback keeps the flat placeholder** (the VIEW-1 invariant) — its synthetic feed still drives the sampled reading, it is simply not painted as a preview.
+  - `capture_screen.dart` — passes `frame: controller.currentFrame` into `CaptureLiveView` (was unset/null).
+- **AC un-pended:** AC-1 (`TestAC01_LivePreview`) — deleted its row in `pending.dart`. Green in the default suite; `showsPlaceholder isFalse` + `liveView.frame isNotNull`.
+- **Augmentations:** none of its own. **Smoke-guard follow-through** (`live_camera/smoke_test.dart`, required because VIEW-2 changed observable state): render-path assertion flipped `showsPlaceholder` true→`isFalse` (AC-1 delivered); pending exact-set `unpendedACs` now `{AC-1, AC-2}`; the pending-skip example moved AC-1→AC-3 (CAM-4). Guards stay non-vacuous (set-equality both directions).
+- **Gates:** analyze clean; unit+coverage **PASS** — `flutter test --coverage test/` 1672 passed, exit 0; `coverage_gate.dart 4673ec7` **100% on both touched files**. Acceptance **PASS** — `live_camera/` default suite green (AC-1 runs green; AC-2 green; others skip pending); run-pending baseline unchanged (AC-3/AC-5/AC-6/AC-10 green-at-baseline, AC-7/AC-8/AC-9 still red → PERM-2/PERM-3/CAM-7). No regression: `capture_test.dart` 19/19, `advanced_capture_test.dart` 21/21. **Grade A** (fresh independent re-grade, live). **Fix passes: 0/3.**
+- **Note:** AC-4 (VIEW-3) already passes in run-pending mode now (the grayscale `ColorFiltered` was wired in the SCREEN-1 shell around the feed surface, so once the real frame flows it greys correctly) — left pending; VIEW-3 un-pends + confirms it.
+- **Tokens/Time:** see dashboard (VIEW-2 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase (VIEW-3 builds on):**
+  - `CaptureController.currentFrame` — the live preview frame seam. Camera source → latest frame; software/fallback → null (placeholder). The Capture screen feeds it to `CaptureLiveView.frame`.
+  - The feed surface renders through `LiveFrameView(frame: controller.currentFrame, key: liveViewKey)` inside the value-only `ColorFiltered` wrapper (unchanged from the shell). VIEW-3 only needs to **un-pend AC-4** and make its augmentation (assert the readings subtree sits OUTSIDE the grayscale filter); the behaviour already works — the `ColorFiltered` wraps `feedSurface` (which carries `liveViewKey`), and `accuracyKey` is a sibling outside it.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart <BASE>`.
+  - Acceptance (one file per invocation): `flutter test -d flutter-tester integration_test/live_camera/preview_test.dart` (default: AC-1/AC-2 green, AC-4 pending); add `--dart-define=BS19_RUN_PENDING=true` to run AC-4.
+- **Known gaps:** none introduced. AC-4 remains pending (VIEW-3). The software path deliberately shows the placeholder (not its synthetic feed).
 
 ## Phase VIEW-3 — Value-only grayscale over the live frame
 

@@ -5,7 +5,7 @@
 //      through `buildApp` over a scripted camera source boots to the Capture
 //      route, the read endpoint answers (active source kind + permission state),
 //      the live feed reaches the controller (a reading is sampled), and the
-//      render path is still honestly the VIEW-1 placeholder (AC-1 pending);
+//      render path paints the live camera frame (AC-1 delivered by VIEW-2);
 //   2. guard tests over the pending gate and the fixtures, so the scaffold
 //      can't pass vacuously — the pending map must cover exactly the 10 ACs
 //      (each owned by a real behaviour phase), the gate must skip a pending AC
@@ -54,9 +54,10 @@ void main() {
       // → state, so a reading has been sampled under the reticle.
       expect(harness.state.currentSample, isNotNull);
 
-      // …but the render path is still the VIEW-1 placeholder — VIEW-2 has not
-      // wired the frame into the live view yet, so AC-1 is honestly pending.
-      expect(harness.showsPlaceholder, isTrue);
+      // …and the render path now paints the live camera frame — VIEW-2 wired
+      // the active source's frame into the live view, so the flat placeholder
+      // is gone (AC-1 delivered).
+      expect(harness.showsPlaceholder, isFalse);
     },
   );
 
@@ -68,7 +69,7 @@ void main() {
       // un-pended AC-2; each later phase adds its AC here as it lands, so this
       // guard stays an exact-set assertion (non-vacuous) rather than drifting
       // to a bare count as the map shrinks.
-      const unpendedACs = <String>{'AC-2'}; // CAM-3
+      const unpendedACs = <String>{'AC-1', 'AC-2'}; // VIEW-2, CAM-3
       final expectedPending = <String>{
         for (var n = 1; n <= 10; n++) 'AC-$n',
       }..removeAll(unpendedACs);
@@ -91,13 +92,13 @@ void main() {
 
     test('a pending AC is skipped only in the default run; it runs in '
         'run-pending mode, and an un-pended AC always runs', () {
-      // AC-1 is pending (owned by VIEW-2): skipped by default, run under
+      // AC-3 is pending (owned by CAM-4): skipped by default, run under
       // run-pending. The reason names its owner so a red-baseline failure is
-      // attributable.
-      final reason = pendingSkipReason('AC-1', forceRunPending: false);
+      // attributable. (AC-1 was the example until VIEW-2 delivered it.)
+      final reason = pendingSkipReason('AC-3', forceRunPending: false);
       expect(reason, isNotNull);
-      expect(reason, contains('VIEW-2'));
-      expect(pendingSkipReason('AC-1', forceRunPending: true), isNull);
+      expect(reason, contains('CAM-4'));
+      expect(pendingSkipReason('AC-3', forceRunPending: true), isNull);
 
       // An AC absent from the map (none is un-pended yet, so use an unmapped id)
       // always runs, in either mode — the gate never skips a non-pending AC.
@@ -106,8 +107,8 @@ void main() {
 
       // The ambient path `acTestWidgets` uses agrees with the current mode.
       expect(
-        pendingSkipReason('AC-1'),
-        pendingSkipReason('AC-1', forceRunPending: runPending),
+        pendingSkipReason('AC-3'),
+        pendingSkipReason('AC-3', forceRunPending: runPending),
       );
     });
   });

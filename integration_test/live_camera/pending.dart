@@ -44,7 +44,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// table; each behaviour phase then removes the row it owns as it un-pends that
 /// AC. Every owner must be a member of [behaviorPhases].
 const Map<String, String> pendingACs = {
-  'AC-1': 'VIEW-2', // The live view shows the camera feed
+  // AC-1 (The live view shows the camera feed) un-pended by VIEW-2.
   // AC-2 (Camera frames convert to the correct colour) un-pended by CAM-3.
   'AC-3': 'CAM-4', //  The reading follows the live camera frame
   'AC-4': 'VIEW-3', // Value-only mode shows the live feed in grayscale

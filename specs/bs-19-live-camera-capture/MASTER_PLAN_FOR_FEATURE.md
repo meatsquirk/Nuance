@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — CAM-3 done (AC-2 live + real frame stream); next VIEW-2 ∥ CAM-4/5/6/7 ∥ PERM-2
+**Status:** In progress — VIEW-2 done (AC-1 live preview); next CAM-4 ∥ CAM-5/6/7 ∥ PERM-2 ∥ VIEW-3
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -34,7 +34,7 @@
 
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
-| AC-1 | The live view shows the camera feed | ITEST-2 `TestAC01_LivePreview` | VIEW-2 | ⬜ Todo |
+| AC-1 | The live view shows the camera feed | ITEST-2 `TestAC01_LivePreview` | VIEW-2 | ✅ Done |
 | AC-2 | Camera frames convert to the correct colour | ITEST-2 `TestAC02_FrameConversion` | CAM-3 | ✅ Done |
 | AC-3 | The reading follows the live camera frame | ITEST-2 `TestAC03_ReadingFollowsFrame` | CAM-4 | ⬜ Todo |
 | AC-4 | Value-only mode shows the live feed in grayscale | ITEST-2 `TestAC04_ValueOnlyLive` | VIEW-3 | ⬜ Todo |
@@ -150,8 +150,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 7 | ITEST-3 | acceptance-tests: AC-6..AC-10 (pending) + red baseline | ✅ Done | 16,840,597 | 1h 16m | 5×A; AC-6/AC-10 green-at-baseline, AC-7/8/9 red (PERM-2/PERM-3/CAM-7); fix 1/3 (AC-9 paused-pump hang) |
 | 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,411,488 | 2m 42s | G-2 approved 2026-10-21 (Matt Quirk); behavior stage unblocked |
 | 9 | CAM-3 | AC-2 frame conversion + real frame stream (enabler-ish) | ✅ Done | 8.08M | 19m 38s | AC-2 live (A); CameraDevice seam, PluginCameraDevice coverage-ignored (D-5); cov 100% 2 touched; fix 1/3 |
-| 10 | VIEW-2 | AC-1 live preview renders real frames | ⬜ Next | | | startable (∥ CAM-4/5/6/7, PERM-2) |
-| 11 | CAM-4 | AC-3 reading follows the live frame | ⬜ Todo | | | ∥ VIEW-2 |
+| 10 | VIEW-2 | AC-1 live preview renders real frames | ✅ Done | 7.74M | 14m 54s | AC-1 live (A); `currentFrame` seam, camera-only paint; smoke guards updated; fix 0/3 |
+| 11 | CAM-4 | AC-3 reading follows the live frame | ⬜ Next | | | ∥ CAM-5/6/7, PERM-2, VIEW-3 |
 | 12 | VIEW-3 | AC-4 value-only grayscale over live frame | ⬜ Todo | | | after VIEW-2 |
 | 13 | CAM-5 | AC-5 real AE·AWB·AF locks clear the warning | ⬜ Todo | | | ∥ |
 | 14 | CAM-6 | AC-6 real device torch | ⬜ Todo | | | ∥ |
@@ -165,9 +165,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CAM-3 done — the behavior fan-out is open.** AC-2 is live (grade A); `frameFromCameraImage` + the `CameraDevice`-seam frame stream are frozen.
-- **Startable now, concurrently:** VIEW-2 (AC-1), CAM-4 (AC-3), CAM-5 (AC-5), CAM-6 (AC-6), CAM-7 (AC-9), PERM-2 (AC-7). VIEW-2→VIEW-3; PERM-2→PERM-3; PERM-4 independent. Each = un-pend its AC + make its augmentation + keep green.
-- **Merge note:** the CAM-3/VIEW-2 pair over `capture_live_view.dart` is NOT actually a conflict — CAM-3 did not touch that file (it worked in `lib/capture/source/`). CAM-4/5/6/7 all own `camera_capture_source.dart`, so run those sequentially (or coordinate) to avoid clobbering.
+**VIEW-2 done — AC-1 live preview renders real camera frames (grade A).** `CaptureController.currentFrame` (camera-only; software/fallback → placeholder) is frozen; the Capture screen feeds it to `CaptureLiveView.frame`. 6 ACs delivered (AC-1/2/6/10 live/green, AC-3/5 green-at-baseline not yet un-pended), 4 pending (AC-7/8/9 red; AC-4 green-at-baseline).
+- **Startable now, concurrently:** CAM-4 (AC-3), CAM-5 (AC-5), CAM-6 (AC-6), CAM-7 (AC-9), PERM-2 (AC-7), VIEW-3 (AC-4). PERM-2→PERM-3; PERM-4 independent. Each = un-pend its AC + make its augmentation + keep green.
+- **VIEW-3 is now trivial:** AC-4 already passes in run-pending mode (the grayscale `ColorFiltered` wraps the feed surface in the shell; the real frame now flows). VIEW-3 = un-pend AC-4 + its readings-outside-filter augmentation.
+- **Merge note:** CAM-4/5/6/7 all own `camera_capture_source.dart`, so run those sequentially (or coordinate) to avoid clobbering. VIEW-3 owns `capture_live_view.dart` (disjoint from the CAM-* source files and from PERM-*).
 - **⚠ PERM-4:** AC-10's declarations already shipped in PERM-1 — AC-10 green now, PERM-4 is un-pend + confirm only (no product work).
 - **Carried watch-outs:** AC-7/AC-8 need PERM-2/PERM-3 to inject selection *inputs* (permission outcome + availability), not a chosen source. CAM-7 reuses CAM-3's `frames` onListen/onCancel acquire/release over a `WidgetsBindingObserver` (D-7); live-binding gotcha — never pump while `paused` (`tester.idle()` + resume-then-pump). macOS has no `timeout`; run `flutter test -d flutter-tester` per file.
 
@@ -188,7 +189,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | ITEST-4 | 94dd8ba1 | 2026-10-21 12:32 EDT | 12:35 | 2m 42s | 2m 42s | claude-opus-4-8 | 34 | 73,170 | 1,327,773 | 10,511 | 1,411,488 | test-review packet assembled (10 pending AC tests, grid 10 A/0 B @ c7d34b0); phase ⏸ awaiting review; G-2 awaiting human decision; no code changed |
 | SIGNOFF-DECISION | 94dd8ba1 | 2026-10-21 12:36 EDT | 12:37 | 1m 08s | 1m 08s | claude-opus-4-8 | 20 | 12,542 | 1,181,191 | 5,023 | 1,198,776 | ITEST-4 approved — G-2 tests accepted by Matt Quirk; behavior stage unblocked (next CAM-3) |
 | CAM-3 | 12093520 | 2026-10-21 12:41 EDT | 13:00 | 19m 38s | 19m 38s | claude-opus-4-8 | 114 | 237,653 | 7,779,414 | 62,082 | 8,079,263 | behavior done: AC-2 live (A) real CameraImage->Frame conversion + CameraDevice-seam frame stream; PluginCameraDevice coverage-ignored (D-5 device walkthrough); unit 1670, coverage 100% on 2 touched lib files, acceptance AC-2 green default+run-pending, later ACs pending; grade 1xA; fix 1/3 |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 13:00** | **5h 51m** | **3h 58m** |  | **1,158** | **1,905,127** | **76,791,374** | **543,315** | **79,240,974** |  |
+| VIEW-2 | 65b7b2d6 | 2026-10-21 13:03 EDT | 13:18 | 14m 54s | 14m 54s | claude-opus-4-8 | 124 | 228,782 | 7,480,031 | 36,018 | 7,744,955 | AC-1 live preview (grade A); currentFrame camera-only seam; smoke guards updated; unit 1672, cov 100% 2 touched, suite green; fix 0/3 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 13:18** | **6h 06m** | **4h 13m** |  | **1,282** | **2,133,909** | **84,271,405** | **579,333** | **86,985,929** |  |
 
 ## Sign-off
 

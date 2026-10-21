@@ -136,3 +136,40 @@ against the implemented conversion:
 
 **CAM-3 grade count: 1 A / 0 B** (the sole un-pended AC). Feature grid remains
 all-A.
+
+## Re-grade — VIEW-2 (AC-1 live, 2026-10-21)
+
+VIEW-2 landed the live preview render path (`CaptureController.currentFrame`,
+camera-only; fed to `CaptureLiveView.frame`) and un-pended **AC-1**. An
+independent fresh grader (did not write the test or the code) re-graded the
+now-live AC-1 against the implementation:
+
+- **AC-1 `TestAC01_LivePreview` — A (holds the prior as-written A).** Given read
+  through the public read endpoint (`h.activeSourceKind == camera`) before the
+  When; the painted frame genuinely flows `source.frames` (seed `FRAME_CYAN`) →
+  `_onFrame` → `_recentFrames` → `currentFrame` → `CaptureScreen` →
+  `LiveFrameView.frame` (G2 — nothing fakes the answer). The two Thens are a
+  non-vacuous pair that kills **both** named Rejects: `showsPlaceholder isFalse`
+  (the painted path is a `CustomPaint`, never the `ColoredBox(placeholderColor)`
+  — a view that keeps the placeholder fails) and `liveView.frame isNotNull` (a
+  wiring that ignores frames / never passes `currentFrame` down fails; the
+  `tester.widget<LiveFrameView>` cast also throws if the key is absent, so the
+  placeholder check can't pass vacuously). Grain is right for AC-1 (preview vs
+  placeholder; colour is AC-2, frame-change AC-3), so `frame isNotNull` rather
+  than `== FRAME_CYAN` (G4). The camera-only gating in `currentFrame` is what
+  makes the frame non-null here and null on the software fallback, but AC-1 only
+  drives the camera branch — appropriate scoping (the software→null invariant is
+  VIEW-1's and is checked structurally in smoke), not a gap. G3 n/a (structural
+  open-state read after the single pump). One AC. Confirmed green in the default
+  suite.
+- **Scaffold guards (`smoke_test.dart`) — NON-VACUOUS.** All three VIEW-2 edits
+  verified: the render-path assertion `showsPlaceholder isFalse` is backed by the
+  preceding `find.byKey(liveViewKey) findsOneWidget` (would fail if the
+  placeholder regressed); the exact-set `unpendedACs = {AC-1, AC-2}` compares
+  `pendingACs.keys.toSet()` to `{AC-1..AC-10} \ unpended` (set-equality both
+  directions, not a count) and checks each unpended AC's skip-reason is null and
+  every owner is a real behaviour phase; the pending-skip example moved AC-1→AC-3
+  (owner CAM-4), still a genuinely-pending AC.
+
+**VIEW-2 grade count: 1 A / 0 B** (the sole un-pended AC). Feature grid remains
+all-A.

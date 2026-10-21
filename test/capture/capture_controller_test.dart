@@ -33,8 +33,11 @@ SoftwareCaptureSource _source() => SoftwareCaptureSource(
 class _ControllableSource implements CaptureSource {
   final StreamController<Frame> _frames = StreamController<Frame>();
 
+  /// The selection this source stands for; settable so a test can drive the
+  /// live [CaptureSourceKind.camera] preview path (bs-19 VIEW-2) as well as the
+  /// software fallback. Defaults to software so existing cases are unchanged.
   @override
-  CaptureSourceKind get kind => CaptureSourceKind.software;
+  CaptureSourceKind kind = CaptureSourceKind.software;
 
   @override
   Stream<Frame> get frames => _frames.stream;
@@ -126,6 +129,44 @@ void main() {
       expect(controller.source, same(source));
       expect(controller.state, const CaptureState());
       controller.dispose();
+    });
+  });
+
+  group('currentFrame — the live preview frame (bs-19 VIEW-2, AC-1)', () {
+    test('a live camera source paints its latest frame', () async {
+      final source = _ControllableSource()..kind = CaptureSourceKind.camera;
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+
+      // Before any frame arrives there is nothing to paint.
+      expect(controller.currentFrame, isNull,
+          reason: 'no frame yet, so the placeholder still shows');
+
+      final frame = _uniformFrame(const Pixel(0, 170, 200));
+      source.emitFrame(frame);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.currentFrame, same(frame),
+          reason: 'the camera preview paints the most recent frame');
+
+      // A newer frame replaces the painted one.
+      final next = _uniformFrame(const Pixel(220, 120, 20));
+      source.emitFrame(next);
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.currentFrame, same(next));
+    });
+
+    test('a software source keeps the placeholder even after it has fed frames',
+        () async {
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      // Drain the software feed so frames have been buffered.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.state.currentSample, isNotNull,
+          reason: 'the software feed still drives the sampled reading');
+      expect(controller.currentFrame, isNull,
+          reason: 'but the software / fallback source paints no live preview');
     });
   });
 

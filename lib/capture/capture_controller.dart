@@ -43,6 +43,22 @@ class CaptureController extends ChangeNotifier {
   /// The current observable capture state.
   CaptureState get state => _state;
 
+  /// The latest live frame for the preview to paint (bs-19 VIEW-2), or null
+  /// when the active source has no live image to show.
+  ///
+  /// On the live [CaptureSourceKind.camera] source this is the most recent
+  /// frame the feed delivered, so [CaptureLiveView] paints the camera image
+  /// instead of the flat placeholder; it is null before the first frame
+  /// arrives. On the deterministic [CaptureSourceKind.software] fallback — the
+  /// demo scene or the no-camera / denied-permission path — it stays null, so
+  /// that source keeps the flat placeholder surface it has always shown
+  /// (the VIEW-1 invariant); its synthetic feed still drives the sampled
+  /// reading, it is simply not painted as a live preview.
+  Frame? get currentFrame =>
+      source.kind == CaptureSourceKind.camera && _recentFrames.isNotEmpty
+          ? _recentFrames.last
+          : null;
+
   /// Advances the stability settling counter one step per rendered frame while
   /// the reading is unlocked and not yet stable (AC-5): the painter watches
   /// "SETTLING n/12" climb as the live view runs under auto exposure. Each frame
