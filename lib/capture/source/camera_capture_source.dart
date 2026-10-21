@@ -39,6 +39,9 @@ class CameraCaptureSource implements CaptureSource {
   bool _torchOn = false;
 
   @override
+  CaptureSourceKind get kind => CaptureSourceKind.camera;
+
+  @override
   Stream<Frame> get frames => const Stream<Frame>.empty();
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/capture/camera_permission.dart';
 import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_state.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
@@ -40,6 +41,7 @@ void main() {
       expect(state.markedPoints, isEmpty);
       expect(state.markedReadings, isEmpty);
       expect(state.pairToCompare, isNull);
+      expect(state.cameraPermission, CameraPermissionState.undetermined);
     });
   });
 
@@ -104,6 +106,7 @@ void main() {
         markedPoints: const [point],
         markedReadings: const [reading],
         pairToCompare: _pair,
+        cameraPermission: CameraPermissionState.granted,
       );
       expect(copy.lockState, LockState.locked);
       expect(copy.stabilityCount, 12);
@@ -119,6 +122,7 @@ void main() {
       expect(copy.markedPoints, const [point]);
       expect(copy.markedReadings, const [reading]);
       expect(copy.pairToCompare, same(_pair));
+      expect(copy.cameraPermission, CameraPermissionState.granted);
     });
 
     test('clearTorchWarning forces torchWarning back to null past the '
@@ -205,6 +209,13 @@ void main() {
     test('unequal when pairToCompare differs', () {
       expect(
         const CaptureState(pairToCompare: _pair),
+        isNot(equals(const CaptureState())),
+      );
+    });
+
+    test('unequal when cameraPermission differs', () {
+      expect(
+        const CaptureState(cameraPermission: CameraPermissionState.granted),
         isNot(equals(const CaptureState())),
       );
     });

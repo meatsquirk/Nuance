@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
+import 'camera_permission.dart';
 import 'capture_controller.dart';
+import 'source/capture_source.dart';
 
 /// Exposes the live [CaptureController] to the acceptance tests.
 ///
@@ -27,6 +29,21 @@ class CaptureReadEndpoint extends InheritedWidget {
   /// The controller whose [CaptureController.state] and
   /// [CaptureController.source] the tests observe.
   final CaptureController controller;
+
+  /// Which source is driving the capture now — the live
+  /// [CaptureSourceKind.camera] or the [CaptureSourceKind.software] fallback
+  /// (bs-19 AC-1 / AC-7 / AC-8).
+  ///
+  /// The production source selection (PERM-2/PERM-3) is hidden behind the
+  /// `AppDependencies.captureSource` seam; this surfaces the active source's
+  /// own [CaptureSource.kind] so a test can assert the selection without
+  /// reaching into the assembly.
+  CaptureSourceKind get activeSourceKind => controller.source.kind;
+
+  /// The resolved camera-permission state (bs-19 AC-7), read from the live
+  /// [CaptureState.cameraPermission]. Inert ([CameraPermissionState.undetermined])
+  /// until PERM-2 requests permission.
+  CameraPermissionState get permissionState => controller.state.cameraPermission;
 
   /// The [CaptureController] exposed by the nearest enclosing endpoint above
   /// [context]. Throws if there is none (every Capture screen provides one).

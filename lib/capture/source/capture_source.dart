@@ -165,6 +165,21 @@ enum CaptureMode {
   raw,
 }
 
+/// Which kind of source is driving the capture (bs-19 PERM-1).
+///
+/// The read endpoint surfaces the active source's [CaptureSource.kind] so the
+/// acceptance tests can observe the production source-selection the public UI
+/// otherwise hides: granted permission with a camera present selects the live
+/// [camera] source, while denied permission or no usable camera falls back to
+/// the [software] source (AC-1 / AC-7 / AC-8).
+enum CaptureSourceKind {
+  /// The live device camera (`CameraCaptureSource`).
+  camera,
+
+  /// The deterministic software source (the demo scene / fallback).
+  software,
+}
+
 /// A source of capture frames and the camera controls over them (SI D2).
 ///
 /// Yields a live stream of [Frame]s, exposes exposure / white-balance / focus
@@ -175,6 +190,16 @@ enum CaptureMode {
 /// `SoftwareCaptureSource` as the deterministic default and the base the test
 /// `FakeCaptureSource` configures.
 abstract class CaptureSource {
+  /// Which kind of source this is — the live device [CaptureSourceKind.camera]
+  /// or the deterministic [CaptureSourceKind.software] source (bs-19 PERM-1).
+  ///
+  /// Reported through the capture read endpoint as the *active* source kind, so
+  /// the acceptance tests can assert which source the production selection chose
+  /// (AC-1 / AC-7 / AC-8); the shipped sources return a constant, while the
+  /// acceptance suite's scripted source makes it settable to simulate either
+  /// selection path.
+  CaptureSourceKind get kind;
+
   /// The live feed of frames.
   Stream<Frame> get frames;
 

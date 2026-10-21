@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../domain/color_coordinates.dart';
 import '../domain/sample.dart';
+import 'camera_permission.dart';
 import 'capture_accuracy.dart';
 import 'source/capture_source.dart';
 import 'source/sampling.dart';
@@ -122,6 +123,7 @@ class CaptureState {
     this.markedPoints = const [],
     this.markedReadings = const [],
     this.pairToCompare,
+    this.cameraPermission = CameraPermissionState.undetermined,
   });
 
   /// Whether AE/AWB/AF are auto or locked (AC-4, AC-5).
@@ -185,6 +187,16 @@ class CaptureState {
   /// Readout handoff.
   final ComparisonPair? pairToCompare;
 
+  /// The resolved camera-permission state (bs-19 AC-7), surfaced through the
+  /// capture read endpoint as the observable `permissionState`.
+  ///
+  /// Inert in the PERM-1 shell — it defaults to
+  /// [CameraPermissionState.undetermined] and nothing moves it yet, so the
+  /// shipped behaviour is unchanged. PERM-2 sets it when it requests permission
+  /// at first live-capture entry and drives the production source selection
+  /// from the result (granted → live source, denied → software fallback).
+  final CameraPermissionState cameraPermission;
+
   /// True once [stabilityCount] has reached [kStabilityFrameTarget].
   bool get isStable => stabilityCount >= kStabilityFrameTarget;
 
@@ -231,6 +243,7 @@ class CaptureState {
     List<MarkedPoint>? markedPoints,
     List<MultiPointReading>? markedReadings,
     ComparisonPair? pairToCompare,
+    CameraPermissionState? cameraPermission,
   }) {
     return CaptureState(
       lockState: lockState ?? this.lockState,
@@ -248,6 +261,7 @@ class CaptureState {
       markedPoints: markedPoints ?? this.markedPoints,
       markedReadings: markedReadings ?? this.markedReadings,
       pairToCompare: pairToCompare ?? this.pairToCompare,
+      cameraPermission: cameraPermission ?? this.cameraPermission,
     );
   }
 
@@ -267,7 +281,8 @@ class CaptureState {
       other.torchWarning == torchWarning &&
       listEquals(other.markedPoints, markedPoints) &&
       listEquals(other.markedReadings, markedReadings) &&
-      other.pairToCompare == pairToCompare;
+      other.pairToCompare == pairToCompare &&
+      other.cameraPermission == cameraPermission;
 
   @override
   int get hashCode => Object.hash(
@@ -285,6 +300,7 @@ class CaptureState {
         Object.hashAll(markedPoints),
         Object.hashAll(markedReadings),
         pairToCompare,
+        cameraPermission,
       );
 
   @override

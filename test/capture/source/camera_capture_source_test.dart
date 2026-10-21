@@ -79,5 +79,9 @@ void main() {
       expect(source.colorSpace, CaptureColorSpace.srgb);
       expect(source.captureMode, CaptureMode.processed);
     });
+
+    test('identifies as the live camera source (bs-19 PERM-1)', () {
+      expect(CameraCaptureSource().kind, CaptureSourceKind.camera);
+    });
   });
 }

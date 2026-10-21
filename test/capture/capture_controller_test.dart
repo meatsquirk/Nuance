@@ -34,6 +34,9 @@ class _ControllableSource implements CaptureSource {
   final StreamController<Frame> _frames = StreamController<Frame>();
 
   @override
+  CaptureSourceKind get kind => CaptureSourceKind.software;
+
+  @override
   Stream<Frame> get frames => _frames.stream;
 
   /// Delivers one live frame to the controller's subscription.

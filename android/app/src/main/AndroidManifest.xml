@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- bs-19 live camera capture: the live source reads the device camera
+         (AC-10). The uses-feature is required="false" so phones with no camera
+         still install and fall back to the software source (AC-8). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="paint_color_assistant"
         android:name="${applicationName}"

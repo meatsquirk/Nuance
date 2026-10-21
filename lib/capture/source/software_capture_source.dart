@@ -138,6 +138,9 @@ class SoftwareCaptureSource implements CaptureSource {
   CaptureLocks _locks = const CaptureLocks();
 
   @override
+  CaptureSourceKind get kind => CaptureSourceKind.software;
+
+  @override
   Stream<Frame> get frames => Stream<Frame>.fromIterable(_feed());
 
   /// The live feed: the scene's explicit frames when it carries them, otherwise

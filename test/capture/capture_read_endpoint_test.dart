@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paint_color_assistant/capture/camera_permission.dart';
 import 'package:paint_color_assistant/capture/capture_controller.dart';
 import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
+import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 
@@ -69,5 +71,17 @@ void main() {
 
   test('exposes a stable key for the acceptance suite', () {
     expect(CaptureReadEndpoint.endpointKey, const Key('capture-read-endpoint'));
+  });
+
+  test('reports the active source kind and permission state (bs-19 PERM-1)', () {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    final endpoint =
+        CaptureReadEndpoint(controller: controller, child: const SizedBox());
+
+    // The software source is active and no permission has been resolved yet
+    // (inert PERM-1 default).
+    expect(endpoint.activeSourceKind, CaptureSourceKind.software);
+    expect(endpoint.permissionState, CameraPermissionState.undetermined);
   });
 }

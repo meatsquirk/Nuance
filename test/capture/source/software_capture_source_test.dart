@@ -302,5 +302,12 @@ void main() {
       ));
       expect(source.locks.allLocked, isTrue);
     });
+
+    test('identifies as the software source (bs-19 PERM-1)', () {
+      final source = SoftwareCaptureSource(
+        const SceneSpec(groundTruth: groundTruth),
+      );
+      expect(source.kind, CaptureSourceKind.software);
+    });
   });
 }
