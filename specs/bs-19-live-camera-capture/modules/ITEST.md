@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** 🔶 In progress — ITEST-1..3 done; ITEST-4 packet assembled, ⏸ awaiting G-2 decision
+**Status:** ✅ Done — ITEST-1..4 complete; G-2 approved 2026-10-21 (Matt Quirk); behavior stage unblocked
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/live_camera/` (new), `integration_test/fakes/scripted_camera_source.dart` (new), the `BS19_RUN_PENDING` pending gate for this suite.
 **Depends on:** CAM-2, PERM-1, VIEW-1 (all shells) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 7,639,135 | 14m 08s |
 | ITEST-2 | acceptance-tests | AC-1..AC-5 | ✅ Done | 14,061,597 | 34m 15s |
 | ITEST-3 | acceptance-tests | AC-6..AC-10 | ✅ Done | 16,840,597 | 1h 16m |
-| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | | |
+| ITEST-4 | test-review | — (G-2) | ✅ Done | 1,411,488 | 2m 42s |
 
 ## Interface reconciliation
 
@@ -135,7 +135,7 @@ Five *pending* AC tests over the ITEST-1 harness — **no `lib/` code** (coverag
 
 ### Result
 
-**Status: ⏸ Awaiting review — G-2 awaiting human decision.** No `lib/` or test code changed this phase (packet assembly only; coverage N/A). Packet below is the whole acceptance suite put in front of a human before any behavior is coded.
+**Status: ✅ Done — G-2 approved 2026-10-21 12:36 EDT by Matt Quirk.** The acceptance suite is accepted; the behavior stage is unblocked (next CAM-3). No `lib/` or test code changed this phase (packet assembly only; coverage N/A). Packet below is the whole acceptance suite that was put in front of the reviewer before any behavior was coded.
 
 #### Review packet — bs-19 acceptance suite (G-2)
 

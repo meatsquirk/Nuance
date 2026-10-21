@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** ⏸ Awaiting sign-off decision on tests — ITEST-4 packet assembled; G-2 awaiting human approval; no behavior phase may start until approved
+**Status:** In progress — G-2 approved (tests accepted); behavior stage unblocked, next CAM-3
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -125,7 +125,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec (record the approval as its first line) | CAM-1 | ✅ Resolved 2026-10-21: approved — spec first line records it — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision — packet assembled in modules/ITEST.md § ITEST-4 (2026-10-21, suite @ c7d34b0, 10 A/0 B) |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-21 12:36 EDT: approved — Matt Quirk (packet modules/ITEST.md § ITEST-4, suite @ c7d34b0, 10 A/0 B; behavior stage unblocked) |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -148,8 +148,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 5 | ITEST-1 | acceptance-tests: harness, `ScriptedCameraSource` + fixtures, pending gate (all 10 pending), smoke | ✅ Done | 7,639,135 | 14m 08s | harness over `buildApp`; smoke 11/11 both modes; no lib touched |
 | 6 | ITEST-2 | acceptance-tests: AC-1..AC-5 (pending) + red baseline | ✅ Done | 14,061,597 | 34m 15s | 5×A; AC-1/2/4 red, AC-3/5 green-at-baseline; AC-2 B→A (YUV tol) fix 1/3 |
 | 7 | ITEST-3 | acceptance-tests: AC-6..AC-10 (pending) + red baseline | ✅ Done | 16,840,597 | 1h 16m | 5×A; AC-6/AC-10 green-at-baseline, AC-7/8/9 red (PERM-2/PERM-3/CAM-7); fix 1/3 (AC-9 paused-pump hang) |
-| 8 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,411,488 | 2m 42s | packet in modules/ITEST.md; G-2 awaiting decision |
-| 9 | CAM-3 | AC-2 frame conversion + real frame stream (enabler-ish) | ⬜ Todo | | | blocks VIEW-2, CAM-4/5/6/7, PERM-2 |
+| 8 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,411,488 | 2m 42s | G-2 approved 2026-10-21 (Matt Quirk); behavior stage unblocked |
+| 9 | CAM-3 | AC-2 frame conversion + real frame stream (enabler-ish) | ⬜ Next | | | enabler; blocks VIEW-2, CAM-4/5/6/7, PERM-2 |
 | 10 | VIEW-2 | AC-1 live preview renders real frames | ⬜ Todo | | | after CAM-3 |
 | 11 | CAM-4 | AC-3 reading follows the live frame | ⬜ Todo | | | ∥ VIEW-2 |
 | 12 | VIEW-3 | AC-4 value-only grayscale over live frame | ⬜ Todo | | | after VIEW-2 |
@@ -165,11 +165,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ITEST-4 (test review = G-2) ✅ packet assembled — ⏸ awaiting human decision.** The whole acceptance suite (10 pending AC tests, one per AC, grid **10 A / 0 B** @ `c7d34b0`) is put in front of a human before behavior is coded. Packet: `modules/ITEST.md` § *Phase ITEST-4 → Review packet*. No code changed this phase.
-- **Decision needed:** `/feature-next-phase --gate bs-19-live-camera-capture G-2 approved | "<changes>"`. **G-2 blocks every behavior phase — none may start until it is approved.**
-- **On approval:** next startable phase is **CAM-3** (enabler: AC-2 frame conversion + real frame stream; blocks VIEW-2, CAM-4/5/6/7, PERM-2). Then the fan-out — VIEW-2 ∥ CAM-4/5/6/7 after CAM-3 (VIEW-2 after CAM-3 per the merge-risky `capture_live_view.dart` pair), PERM-2→PERM-3 chain, PERM-4 independent.
-- **⚠ Reviewer flag / PERM-4:** AC-10's declarations already shipped in PERM-1, so AC-10 is green now and PERM-4 is un-pend + confirm only (no product work). Watch-outs carried: AC-7/AC-8 need PERM-2/PERM-3 to inject selection *inputs* (not a chosen source); live-binding gotcha — never pump while `paused` (CAM-7 uses `tester.idle()` + resume-then-pump).
-- **On changes requested:** each item becomes an ITEST change phase before behavior, then a fresh review.
+**G-2 approved 2026-10-21 (Matt Quirk) — the acceptance tests are accepted; behavior stage is unblocked.** The behavior stage (stage 4) may now start.
+- **Next startable: CAM-3** (the enabler) — AC-2 frame conversion (`frameFromCameraImage`: BGRA + full-range BT.601 YUV420 per the pinned contract, BGRA L1≤3 / YUV L1≤12) + the real frame stream. Un-pends AC-2; blocks VIEW-2, CAM-4/5/6/7, PERM-2.
+- **After CAM-3 the fan-out opens:** VIEW-2 (after CAM-3 — merge-risky `capture_live_view.dart` pair), then VIEW-2→VIEW-3; CAM-4/CAM-5/CAM-6/CAM-7 run ∥; PERM-2→PERM-3 chain; PERM-4 independent. Each behavior phase = un-pend its AC + make its augmentation + keep green.
+- **⚠ PERM-4:** AC-10's declarations already shipped in PERM-1 — AC-10 green now, PERM-4 is un-pend + confirm only (no product work).
+- **Carried watch-outs:** AC-7/AC-8 need PERM-2/PERM-3 to inject selection *inputs* (permission outcome + availability), not a chosen source. Live-binding gotcha — never pump while `paused` (CAM-7: `tester.idle()` + resume-then-pump). macOS has no `timeout`; run `flutter test -d flutter-tester` per file.
 
 ## Token usage
 
@@ -186,7 +186,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | ITEST-2 | 8202bc18 | 2026-10-21 09:41 EDT | 10:16 | 34m 15s | 34m 15s | claude-opus-4-8 | 180 | 359,870 | 13,602,806 | 98,741 | 14,061,597 | 5 pending AC tests (AC-1..AC-5); red baseline recorded; grade 5xA (AC-2 B->A YUV tolerance, fix 1/3); no lib touched |
 | ITEST-3 | 636a10e0 | 2026-10-21 11:13 EDT | 12:29 | 1h 16m | 1h 16m | claude-opus-4-8 | 166 | 366,807 | 16,375,454 | 98,170 | 16,840,597 | 5 pending AC tests (AC-6..AC-10); red baseline AC-6/10 green, AC-7/8/9 red (PERM-2/PERM-3/CAM-7); grade 5xA; unit 1666; coverage PASS no touched lib; fix 1/3 (AC-9 paused-pump hang) |
 | ITEST-4 | 94dd8ba1 | 2026-10-21 12:32 EDT | 12:35 | 2m 42s | 2m 42s | claude-opus-4-8 | 34 | 73,170 | 1,327,773 | 10,511 | 1,411,488 | test-review packet assembled (10 pending AC tests, grid 10 A/0 B @ c7d34b0); phase ⏸ awaiting review; G-2 awaiting human decision; no code changed |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 12:35** | **5h 30m** | **3h 37m** |  | **1,024** | **1,654,932** | **67,830,769** | **476,210** | **69,962,935** |  |
+| SIGNOFF-DECISION | 94dd8ba1 | 2026-10-21 12:36 EDT | 12:37 | 1m 08s | 1m 08s | claude-opus-4-8 | 20 | 12,542 | 1,181,191 | 5,023 | 1,198,776 | ITEST-4 approved — G-2 tests accepted by Matt Quirk; behavior stage unblocked (next CAM-3) |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 12:37** | **5h 31m** | **3h 39m** |  | **1,044** | **1,667,474** | **69,011,960** | **481,233** | **71,161,711** |  |
 
 ## Sign-off
 
