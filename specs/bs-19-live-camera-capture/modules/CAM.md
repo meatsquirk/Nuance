@@ -25,7 +25,7 @@
 
 ## Open gates
 
-- G-1 (approve the spec) blocks CAM-1. G-2 (test review) blocks CAM-3..CAM-7.
+- G-1 (approve the spec) ✅ Resolved 2026-10-21 (approved — Matt Quirk); CAM-1 unblocked. G-2 (test review) blocks CAM-3..CAM-7.
 
 ## Phase CAM-1 — Scaffold
 

@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** Not started — next CAM-1 (blocked by G-1: approve the spec)
+**Status:** In progress — G-1 approved; next CAM-1 (scaffold)
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -124,7 +124,7 @@ graph LR
 
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
-| G-1 | decision | Approve the spec (record the approval as its first line) | CAM-1 | Open |
+| G-1 | decision | Approve the spec (record the approval as its first line) | CAM-1 | ✅ Resolved 2026-10-21: approved — spec first line records it — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.

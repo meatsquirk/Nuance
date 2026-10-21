@@ -1,4 +1,4 @@
-# Planned 2026-10-20 by /feature-next-phase — AWAITING G-1 spec approval (no approval line yet)
+# Planned 2026-10-20 by /feature-next-phase. G-1 spec APPROVED 2026-10-21 by Matt Quirk.
 # Feature: bs-19 Live camera capture source
 #
 # Resumes the deferred "SOURCE-2" work the capture architecture was always built
