@@ -1,0 +1,62 @@
+# Behaviour-test completeness grid — bs-19-live-camera-capture
+
+Per-AC grade grid for the bs-19 **ITEST-2** acceptance tests
+(`integration_test/live_camera/preview_test.dart` — AC-1/AC-2/AC-4;
+`integration_test/live_camera/reading_test.dart` — AC-3/AC-5). Graded by an
+independent fresh grader (did **not** write these tests) on **2026-10-21**.
+Grades the assertions **as written** — i.e. the behaviour each pending test will
+exercise once its owning phase lands (AC-1 → VIEW-2, AC-2 → CAM-3, AC-4 →
+VIEW-3) — **except AC-3 and AC-5**, which already run **GREEN at baseline** (the
+sampling/lock pipeline is source-agnostic) and are graded against the **live**
+behaviour, confirming each already rejects a placeholder/fixed/independent
+implementation through its control.
+
+## Grade — ITEST-2 (AC-1..AC-5)
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_LivePreview` | A | G1,G4,G5,G6 (G2/G3 n/a) | **As-written (VIEW-2).** Given checked through the public read endpoint before the When: `h.activeSourceKind == CaptureSourceKind.camera` (the scripted source stands for the granted-camera selection and the endpoint surfaces its kind). When = the Capture screen opened by `givenLiveCamera`. Two Thens assert the AC's two clauses at grain against the **real** widget tree: `h.showsPlaceholder isFalse` (the `ColoredBox(LiveFrameView.placeholderColor)` under `liveViewKey` is gone) and `tester.widget<LiveFrameView>(liveViewKey).frame isNotNull`. **Kills** the catalogue's two Rejects: a view that keeps the placeholder (fails `showsPlaceholder isFalse` — the `frame==null` branch of `LiveFrameView` returns exactly that `ColoredBox`) and one that ignores frames (fails `frame isNotNull`). The pair is non-vacuous: a view that painted *nothing* would pass `showsPlaceholder` but fail `frame isNotNull`, and vice-versa, so both assertions bite. Red baseline is clean — `CaptureScreen` today never passes `frame:` to `CaptureLiveView`, so `frame` is null, `showsPlaceholder` true, and the Then reds (no panic). Structural open-state read after the single `pump`, so G3 (settle+control) n/a; G2 n/a (no configured value answers). One AC. |
+| AC-2 | `TestAC02_FrameConversion` | A (B→A, fixed in-phase) | G1,G4,G5,G6 | **FIX APPLIED (ITEST-2 author, 2026-10-21):** tightened `_yuvToleranceL1` 30→12 so the "within tolerance" Then now rejects the limited-/video-range BT.601 mis-decode the grader flagged — the correct full-range decode lands L1 ≤ 2–3 while a limited-range decode lands L1 21 (c1 cyan) / 29 (c2 orange), both now outside 12; the comment was corrected to document the mis-range guard. Baseline unchanged (still a clean red on the CAM-3 `returnsNormally` guard; the tolerance only bites once CAM-3 lands). Re-graded **A**. Original B justification follows. — **As-written (CAM-3), pure-Dart over `frameFromCameraImage`.** Given checked on the raw observable before converting: the BGRA buffer's first 4 bytes `== [c1.b, c1.g, c1.r, 255]` and the YUV Y-plane's first byte `== _yOf(c1)` (G1). The `returnsNormally` guard in `_convertedCentre` is a **clean red**, not a masked panic: at baseline `frame_conversion.dart` throws `UnimplementedError('… lands in CAM-3')`, so `expect(returnsNormally)` throws a `TestFailure` naming CAM-3 *before* the `late final frame` is read (the `return frame.pixelAt` line is never reached); post-CAM-3 it passes and proceeds. **BGRA half is airtight:** tol `_bgraToleranceL1 = 3` with a correct B,G,R read landing L1 0; **kills** a BGR↔RGB swap (correct output is L1 400 from the swapped value — far past the `>100` assertion, and a swapped impl itself fails the `≤3` Then) and a constant pixel (the c1-vs-c2 control, `_l1(bgraPx, bgraPx2) > 100`, with c2=`RETICLE_ORANGE`). **YUV half kills the gross mis-ranges** (a U↔V swap ≈ L1 433, a missing `+128` bias, an output-channel swap — all ≫ 30). **GAP (G5):** the YUV tolerance `_yuvToleranceL1 = 30` does **not** reject the *canonical* mis-range — a full-range-encoded buffer decoded with limited-range (video BT.601, `1.164/1.596/2.017`) coefficients. For `RETICLE_CYAN` the correct full-range decode lands **L1 = 2** and the limited-range decode lands **L1 = 21** (verified: both `≤ 30`), so a limited-range converter — the most common real Android YUV bug — passes. The uniform frame makes downsampling lossless, so the only legitimate error is ~2 L1 of 8-bit rounding; the tolerance is ~15× looser than needed, and the comment's claim that a wrong range "leaves >180" is false for this case. The catalogue names "mis-ranged YUV conversion" as a Reject, and the data cannot separate it from the correct impl with no control to compensate. **Fix (augmentation, applicable now — not phase-pending):** tighten `_yuvToleranceL1` to ≤ ~10 (cleanly separates the L1 2 correct decode from the L1 21 limited-range decode), **or** add an explicit limited-range-decode control asserting it lands beyond tolerance. One AC. |
+| AC-3 | `TestAC03_ReadingFollowsFrame` | A (live) | G1,G2,G3,G4,G5,G6 | **GREEN now; graded live.** Given checked through the public read endpoint: `before = _readingOf(h)` (reads `state.currentSample`, rendered back via the real `ColorScienceImpl.toSRGB`), `_distToReticle(before, RETICLE_CYAN) < 45` — the seed `FRAME_CYAN` is sampled by the real `sampleAreaAverage` over a uniform frame, so the round-trip is tight (well under 45). Control precondition `_distToReticle(before, RETICLE_ORANGE) > 135` proves c1/c2 are well separated (actual L1 cyan→orange = 450). When = `whenFrameChangesTo(FRAME_ORANGE)` pushes onto the real broadcast feed and `pump`s — the settle point where the frame flows source→controller→state (G2: the **configured** emitted frame is what answers, no faked sample value). Thens assert the raw observable at grain: `_distToReticle(after, ORANGE) < 45` (reading followed) **and** `_distToReticle(after, CYAN) > 135` (not stale). **Kills** a stale/placeholder/constant sampler: one stuck on c1 keeps `after`≈cyan → `dist(after, ORANGE)` = 450 > 45 fails the follow Then; the 450 ≫ 45 separation (10×) makes both the follow and the reject non-vacuous. Textbook G3 — the negative ("not cyan") sits after the pump settle point and is paired with the demonstrated before→after change (cyan→orange). One AC. |
+| AC-4 | `TestAC04_ValueOnlyLive` | A | G1,G3,G4,G5,G6 (G2 n/a) | **As-written (VIEW-3).** Given is a pending precondition naming its owner (VIEW-2) and asserted on the public surface: `liveView.frame isNotNull` ("a live colour frame is shown (VIEW-2)") and `h.showsPlaceholder isFalse` (G1). When = `whenToggleValueOnly` taps the real E21 (`CaptureControls.valueOnlyKey` → `controller.toggleValueOnly`, flipping `CaptureState.valueOnly`) and `pumpAndSettle`s (the settle point). Thens read the real tree: a `ColorFiltered` **ancestor of `liveViewKey`** `findsOneWidget`, and a `ColorFiltered` ancestor of `accuracyKey` `findsNothing`. **Verified correct against `capture_live_view.dart`:** value-only wraps `feedSurface` (which carries `liveViewKey`) in the saturation-0 `ColorFiltered`, while `accuracyKey` is a sibling `KeyedSubtree` in the same `Stack`, outside that filter. The `findsOneWidget` (vs bs-02's looser `findsWidgets`) is safe here because the app-wide `GrayscaleFilter` (bs-08) is the **only** other `ColorFiltered` in `lib/` and is inert in this test (`DisplaySettings.grayscale` defaults `false`, simulation defaults none; value-only drives `CaptureState.valueOnly`, **not** `DisplayScope.grayscale`), so no root filter sits above either key. **Kills** the catalogue's two Rejects: graying the whole screen incl. readings (would put a `ColorFiltered` over `accuracyKey` → `findsNothing` fails) and filtering the placeholder only (the Given pins a real `frame` under the greyed feed). G3: the negative (readings outside the filter) sits after the `pumpAndSettle` settle point, paired with the positive control that the filter *did* apply over the feed. One AC. |
+| AC-5 | `TestAC05_LockClearsWarning` | A (live) | G1,G2,G3,G4,G5,G6 | **GREEN now; graded live — the strongest G2 row.** Given checked on the public surface: `source.locks.allLocked isFalse`, and the "Exposure not locked" warning present via `find.descendant(of: downgradeReasonsKey, matching: find.text(AccuracyDowngradeReason.exposureUnlocked.label))` `findsOneWidget` (the screen feeds `controller.activeDowngradeReasons`, which includes `exposureUnlocked` while `!source.locks.allLocked`). When = `whenLock` taps the real E16 → `controller.lock()` → `source.lockExposure/WhiteBalance/Focus`; `pumpAndSettle` is the settle point. Thens at grain: `source.locks.allLocked isTrue` **and** the `exposureUnlocked` label under `downgradeReasonsKey` `findsNothing` — correctly asserts the *specific reason text* (the region persists carrying the still-active `missingReferenceCard` reason; a whole-region finder would be wrong here, so the grain is right). **G2 CONTROL (the load-bearing discrimination):** after `pumpWidget(const SizedBox())` tears the first app down (so `CaptureHomeScreen.initState` rebuilds a fresh controller rather than the element-reuse keeping the locked first source), a `ScriptedCameraSource(canLock: false)` is mounted; `whenLock` taps, `lock()` still flips the controller's own `lockState` to locked, yet `source.locks.allLocked` stays `false` (the no-op lock) → the warning **stays** (`findsOneWidget`). This proves the warning clears from the **source's** `locks.allLocked`, not from the UI lock flag — **killing** both named Rejects: "clearing the warning without locking" and "locking state not reflected from the source". Textbook G3 (negative after settle + a control that keeps the warning present); the reset is sound (`initState`-built controller). One AC. |
+
+### Summary — ITEST-2
+
+- **Grade counts (after the in-phase fix): 5×A, 0×B.** As first graded: 4×A, 1×B
+  (AC-2); the B was fixed in ITEST-2 (fix pass 1/3) and re-graded A — see below.
+- **AC-2 B→A — rule & fix (G5 limited):** the YUV path's `_yuvToleranceL1 = 30`
+  was too loose to reject the canonical full-range-vs-limited-range YUV mis-range
+  — for `RETICLE_CYAN` the correct full-range decode is **L1 2** and a
+  limited-range (video BT.601) decode is **L1 21**, both inside 30, so the most
+  plausible real YUV bug would pass. The BGRA path (exact, tol 3) and the gross
+  YUV errors (U/V swap, missing bias, output swap) and the constant-pixel control
+  were already killed, so it was a near-miss, not a vacuous test. **Fixed in
+  ITEST-2:** `_yuvToleranceL1` tightened 30→12 (separates the L1 2 correct decode
+  from the L1 21/29 limited-range decode cleanly while leaving the correct decode
+  comfortable); this needed no later behaviour, only a tighter bound, so it was
+  **not** "B pending <phase>". Re-graded A.
+- **Fixture-discrimination confirmation:** `RETICLE_CYAN(0,170,200)` and
+  `RETICLE_ORANGE(220,120,20)` are L1 450 apart — an order of magnitude above the
+  reading tolerance 45 — so AC-3's follow/reject inequalities (`<45` / `>135`)
+  and AC-2's BGRA constant-pixel/channel-swap rejects (`>100`) are non-vacuous.
+- **Live rows (AC-3, AC-5) confirmed against live behaviour:** both already
+  reject the implementations their catalogue rows name — AC-3's c1→c2 change with
+  the 10× separation kills a stale/fixed sampler; AC-5's `canLock:false` control
+  (with the `pumpWidget(SizedBox())` reset forcing a fresh `initState`
+  controller) kills a warning driven off the UI lock flag rather than
+  `source.locks.allLocked`.
+- **Judgement calls (no further downgrades):**
+  1. **AC-4 `findsOneWidget`** over `liveViewKey` is tighter than bs-02's
+     `findsWidgets`; verified safe because the only other `ColorFiltered` in
+     `lib/` (the app-wide `GrayscaleFilter`) is inert by default and value-only
+     drives `CaptureState.valueOnly`, not `DisplayScope.grayscale`. If a future
+     default turned app-wide grayscale on, both `liveViewKey` *and* `accuracyKey`
+     would gain a root filter and the `findsNothing` Then would false-fail —
+     flagged, not a current defect.
+  2. **AC-1 / AC-2** red baselines are clean (null `frame` Then; `returnsNormally`
+     guard throws a `TestFailure` before the `late final` read), so neither masks
+     a panic.
+- All five rows check every Given through the public surface before the When,
+  drive the When through the real surface, and assert the raw observable the step
+  names at its grain. After the AC-2 tolerance tightening, all five grade **A**.

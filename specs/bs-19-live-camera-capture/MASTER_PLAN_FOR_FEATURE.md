@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — ITEST-1 (acceptance harness) done; next ITEST-2 ∥ ITEST-3 (one pending AC test each + red baseline)
+**Status:** In progress — ITEST-2 (AC-1..AC-5 pending + red baseline, 5×A) done; next ITEST-3 (AC-6..AC-10), then ITEST-4 = G-2
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -146,8 +146,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 3 | PERM-1 | shell: permission seam + capture-state availability/permission field + manifest/plist entries + read endpoint | ✅ Done | 9.02M | 14m 15s | ∥ VIEW-1 |
 | 4 | VIEW-1 | shell: frame-render widget seam in live view (inactive: null→placeholder) | ✅ Done | 3.75M | 11m 03s | all shells done |
 | 5 | ITEST-1 | acceptance-tests: harness, `ScriptedCameraSource` + fixtures, pending gate (all 10 pending), smoke | ✅ Done | 7,639,135 | 14m 08s | harness over `buildApp`; smoke 11/11 both modes; no lib touched |
-| 6 | ITEST-2 | acceptance-tests: AC-1..AC-5 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
-| 7 | ITEST-3 | acceptance-tests: AC-6..AC-10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
+| 6 | ITEST-2 | acceptance-tests: AC-1..AC-5 (pending) + red baseline | ✅ Done | 14,061,597 | 34m 15s | 5×A; AC-1/2/4 red, AC-3/5 green-at-baseline; AC-2 B→A (YUV tol) fix 1/3 |
+| 7 | ITEST-3 | acceptance-tests: AC-6..AC-10 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-2 (done) |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | CAM-3 | AC-2 frame conversion + real frame stream (enabler-ish) | ⬜ Todo | | | blocks VIEW-2, CAM-4/5/6/7, PERM-2 |
 | 10 | VIEW-2 | AC-1 live preview renders real frames | ⬜ Todo | | | after CAM-3 |
@@ -165,9 +165,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ITEST-1 (harness) ✅ done** — `givenLiveCamera` drives the real `buildApp` with a `ScriptedCameraSource` (controllable feed + settable kind/permission/available + lock/torch recorders) at the `captureSource` seam, plus a `RecordingCameraPermission`, `LiveCameraHarness` (`activeSourceKind`/`permissionState`/`showsPlaceholder` + `when…` actions) and `knownFrame`/`FRAME_CYAN`/`FRAME_ORANGE`. Smoke + 10 guards green in both modes; no `lib/` touched (coverage gate trivially PASS); unit 1666.
-- **ITEST-2 ∥ ITEST-3** ⬜ startable now (disjoint files): one *pending* `acTestWidgets` test per AC against the harness, run `--dart-define=BS19_RUN_PENDING=true`, record the red baseline + grades. ITEST-2 = AC-1..AC-5 (`preview_test.dart`, `reading_test.dart`); ITEST-3 = AC-6..AC-10 (`controls_test.dart`, `permission_test.dart`, `platform_test.dart`). Then **ITEST-4 test review = G-2**, which gates the entire behavior stage. No behavior phase (CAM-3+, VIEW-2/3, PERM-2/3/4) may start before G-2.
-- **Watch-outs carried to the AC phases:** (1) no `cameraPermission` seam in `AppDependencies` yet (PERM-2 wires it) → AC-7 can't drive the request through the assembly; its test stays pending on a Given precondition naming PERM-2, and `permissionState` reads inert `undetermined`. (2) `CaptureLiveView` gets no `frame:` → `showsPlaceholder` is true though the feed reaches the controller; AC-1 (render) red until VIEW-2. (3) `emitFrame` then `pump` (broadcast feed drops a frame pushed before the controller subscribes).
+**ITEST-2 (AC-1..AC-5) ✅ done** — five *pending* AC tests over the ITEST-1 harness (`preview_test.dart`: AC-1/AC-2/AC-4; `reading_test.dart`: AC-3/AC-5); no `lib/` touched (coverage gate PASS). Red baseline: AC-1/AC-2/AC-4 red (clean Then / Given-precondition / `returnsNormally` naming VIEW-2 / CAM-3 / VIEW-2), AC-3/AC-5 green-at-baseline with their discriminating controls written in. Grade 5×A (AC-2 was B on a loose YUV tolerance → tightened 30→12 in-phase, fix 1/3). AC-2 pins the conversion contract (BGRA B,G,R,A exact; YUV420 full-range BT.601 via plane strides) for G-2.
+- **ITEST-3** ⬜ startable now (disjoint from ITEST-2): one *pending* `acTestWidgets` per AC for AC-6..AC-10 (`controls_test.dart`, `permission_test.dart`, `platform_test.dart`), run `--dart-define=BS19_RUN_PENDING=true`, record the red baseline + grades. Then **ITEST-4 test review = G-2** (needs ITEST-2 **and** ITEST-3 done), which gates the entire behavior stage. No behavior phase (CAM-3+, VIEW-2/3, PERM-2/3/4) may start before G-2.
+- **Watch-outs for ITEST-3:** (1) no `cameraPermission` seam in `AppDependencies` yet (PERM-2 wires it) → AC-7 stays pending on a Given precondition naming PERM-2; `permissionState` reads inert `undetermined`. (2) AC-6 torch augmentation (toggle reaches source + off-path extinguishes) is ITEST-3's. (3) **two-app-per-test gotcha:** `buildApp`'s root element is reused across a second `pumpWidget` of the same type, so the Capture controller keeps the first source — pump `const SizedBox()` between scenarios to force a fresh `initState` (AC-5 does this). (4) launch per file; the dir won't launch at once.
 
 ## Token usage
 
@@ -181,7 +181,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PERM-1 | e0c78d3c | 2026-10-21 07:03 EDT | 07:17 | 14m 15s | 14m 15s | claude-opus-4-8 | 156 | 118,429 | 8,859,213 | 42,134 | 9,019,932 | shell done: CameraPermission seam + PluginCameraPermission (inert), CaptureSourceKind+kind on interface, CaptureState.cameraPermission, read endpoint activeSourceKind/permissionState, Android CAMERA+uses-feature & iOS NSCameraUsageDescription; +8 unit, 1663 pass, 100% cov 6 touched; app still software by default; fix passes 0/3 |
 | VIEW-1 | cb3235a5 | 2026-10-21 07:41 EDT | 07:52 | 11m 03s | 11m 03s | claude-opus-4-8 | 80 | 82,817 | 3,642,896 | 24,170 | 3,749,963 | shell: LiveFrameView frame-render seam; unit+cov 100% (11 touched), 1666 pass; existing capture suites green; placeholder unchanged |
 | ITEST-1 | 298d1e40 | 2026-10-21 09:05 EDT | 09:19 | 14m 08s | 14m 08s | claude-opus-4-8 | 104 | 164,685 | 7,423,711 | 50,635 | 7,639,135 | harness + ScriptedCameraSource/RecordingCameraPermission + fixtures + pending gate (all 10 ACs pending) + smoke; 3 test files, no lib touched; smoke 11/11 green default + run-pending; unit 1666; coverage gate PASS (0 touched lib); fix passes 0/3 |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 09:19** | **3h 37m** | **1h 44m** |  | **644** | **855,085** | **36,524,736** | **268,788** | **37,649,253** |  |
+| ITEST-2 | 8202bc18 | 2026-10-21 09:41 EDT | 10:16 | 34m 15s | 34m 15s | claude-opus-4-8 | 180 | 359,870 | 13,602,806 | 98,741 | 14,061,597 | 5 pending AC tests (AC-1..AC-5); red baseline recorded; grade 5xA (AC-2 B->A YUV tolerance, fix 1/3); no lib touched |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 10:16** | **4h 12m** | **2h 19m** |  | **824** | **1,214,955** | **50,127,542** | **367,529** | **51,710,850** |  |
 
 ## Sign-off
 
