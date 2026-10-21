@@ -1,6 +1,6 @@
 # Module CAM — Real camera capture source
 
-**Status:** In progress — CAM-1 done; next CAM-2 (shell)
+**Status:** In progress — CAM-2 shell done; CAM-3 (behavior) next but gated by G-2 (test review)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/camera_capture_source.dart` (new), `lib/capture/source/frame_conversion.dart` (new), the source-selection factory seam in `lib/capture/source/`; `pubspec.yaml` (`camera` dep); unit tests under `test/capture/source/`. Also the scaffold (branch + runner + gate).
 **Depends on:** — · **Blocks:** VIEW, PERM, ITEST
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | CAM-1 | scaffold | — | ✅ Done | 4,687,376 | 13m 23s (44m 03s) |
-| CAM-2 | shell | — | ⬜ Next | | |
+| CAM-2 | shell | — | ✅ Done | 4,236,040 | 10m 17s (10m 17s) |
 | CAM-3 | behavior | AC-2 (+ real frame stream, enabler-ish) | ⬜ Todo | | |
 | CAM-4 | behavior | AC-3 | ⬜ Todo | | |
 | CAM-5 | behavior | AC-5 | ⬜ Todo | | |
@@ -74,8 +74,29 @@ Scaffold only — **no product code** (`lib/` untouched; gate confirms 0 touched
 - **Exit criteria:** unit gate passes; existing suite stays green; app still boots on the software source (unchanged default).
 - **Acceptance gate:** —
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+Inert camera-source shell — **no behaviour change** (the app still assembles and boots on the software source; the acceptance suite does not exist yet, so only the unit gate + existing suite run for a shell).
+- **Dependency:** `camera: ^0.12.1` added to `pubspec.yaml` (`flutter pub get` resolved camera 0.12.1 + camera_platform_interface 2.15.0 et al.; project-local). `camera_platform_interface: ^2.15.0` added to **dev_dependencies** so the conversion test can build a real `CameraImage` from `CameraImageData` on the host.
+- **New lib files (all 100% covered):**
+  - `lib/capture/source/camera_capture_source.dart` — `CameraCaptureSource implements CaptureSource`, every member present but inert/device-free: `frames`/`stability` = `const Stream.empty()`; `lighting` adequate; `referenceCardPresent` false; `normaliseAgainstCard` returns its arg (D-6); lock + torch + importPhoto record local state; `supportsWideGamut`/`supportsRaw` false; `colorSpace` sRGB; `captureMode` processed (D-6). No `CameraController`, no plugin call — construction is cheap.
+  - `lib/capture/source/frame_conversion.dart` — `Frame frameFromCameraImage(CameraImage)`; signature fixed, body `throw UnimplementedError` (real YUV420/BGRA conversion is CAM-3).
+  - `lib/capture/source/capture_source_factory.dart` — `selectCaptureSource({required CaptureSource Function() softwareFallback, bool useCamera=false})`; returns the fallback unless `useCamera` (then a `CameraCaptureSource`). PERM-2 drives `useCamera`.
+- **Wiring:** `lib/main.dart` `assembleDependencies` now sets `captureSource: selectCaptureSource(softwareFallback: demoCaptureSource)` — default `useCamera:false` ⇒ still a `SoftwareCaptureSource`, so `smoke_test` assertions (and the Capture-route boot) hold unchanged.
+- **Tests:** +12 unit tests (`camera_capture_source_test.dart` 9, `capture_source_factory_test.dart` 2, `frame_conversion_test.dart` 1). `dart analyze lib/capture/source/ test/capture/source/ lib/main.dart` → No issues.
+- **Gates:** unit + coverage **PASS** — `flutter test --coverage test/` = **1655 passed** (1643 baseline + 12), exit 0; `dart run tool/coverage_gate.dart 11944b6` = **100% line coverage on all 4 touched lib files** (camera_capture_source, capture_source_factory, frame_conversion, main.dart). No acceptance/grade gate (shell). **Fix passes: 0/3.**
+- **Tokens/Time:** see dashboard (CAM-2 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase (interfaces CAM-3+ build on):**
+  - `CameraCaptureSource()` — no-arg, cheap. CAM-3 adds the `CameraController` wiring (inject the controller so it stays host-testable) and feeds `frames` from `startImageStream`; CAM-5 wires the lock controls to AE·AWB·AF and reflects `locks`; CAM-6 wires torch to `setFlashMode`; CAM-7 adds lifecycle release/resume. Each overrides the inert member it owns — the shell's recorded-state defaults keep the controller's reflections honest until then.
+  - `frameFromCameraImage(CameraImage) → Frame` — CAM-3 replaces the `throw` with the real conversion (YUV420 Android / BGRA8888 iOS → RGB, downsampled, D-4) and unit-tests it against golden buffers.
+  - `selectCaptureSource(...)` — the production source-selection seam; **PERM-2** sets `useCamera` from the resolved camera permission + availability (granted & camera present → live source; denied/none → software fallback).
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`/`gtimeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/`
+  - Coverage gate on touched files: `dart run tool/coverage_gate.dart 11944b6`
+  - Analyze: `dart analyze lib/ test/`
+- **Known gaps:** none introduced. The camera source is inert — it emits no frames and makes no device call; it is never selected in assembly yet (factory default is software). A real `CameraImage` for a host unit test is built via `CameraImage.fromPlatformInterface(CameraImageData(...))` (needs the `camera_platform_interface` dev dep, now added).
+- **Next (CAM-3, behavior — GATED by G-2):** implement the real frame stream + `frameFromCameraImage`. Depends on CAM-2 (done) **and** ITEST-4 (G-2 test-review approval); blocks VIEW-2, CAM-4/5/6/7, PERM-2. The two remaining shells (PERM-1, VIEW-1) are startable now, concurrently.
 
 ## Phase CAM-3 — Real frame stream + CameraImage→Frame conversion
 

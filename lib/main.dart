@@ -10,6 +10,7 @@ import 'a11y/cvd/cvd_profile.dart';
 import 'a11y/haptics.dart';
 import 'a11y/speech.dart';
 import 'app/build_app.dart';
+import 'capture/source/capture_source_factory.dart';
 import 'capture/source/software_capture_source.dart';
 import 'color_science/color_science_impl.dart';
 import 'domain/color_coordinates.dart';
@@ -113,7 +114,11 @@ AppDependencies assembleDependencies({
     colorScience: const ColorScienceImpl(),
     speech: const NoopSpeech(),
     haptics: const NoopHaptics(),
-    captureSource: demoCaptureSource(),
+    // bs-19 CAM-2: the capture source is chosen through the `selectCaptureSource`
+    // seam. The seam still returns the software fallback (the camera is selected
+    // from the resolved permission/availability in PERM-2), so the app opens on
+    // the deterministic demo scene exactly as before.
+    captureSource: selectCaptureSource(softwareFallback: demoCaptureSource),
     cvdProfile: cvdProfile,
     store: store,
     sourcePhotoStore: sourcePhotoStore,

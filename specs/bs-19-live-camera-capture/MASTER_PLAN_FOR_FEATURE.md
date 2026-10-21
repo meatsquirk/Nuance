@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — CAM-1 scaffold done; next CAM-2 ∥ PERM-1 ∥ VIEW-1 (shells)
+**Status:** In progress — CAM-2 shell done; next PERM-1 ∥ VIEW-1 (shells)
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -142,9 +142,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | CAM-1 | scaffold: branch, BS19_RUN_PENDING runner, baseline, coverage gate | ✅ Done | 4,687,376 | 13m 23s (44m 03s) | G-1 approved in-session; baseline 1643✓; gate both ways |
-| 2 | CAM-2 | shell: `camera` dep + `CameraCaptureSource` skeleton + source-selection factory seam (default software) | ⬜ Next | | | ∥ PERM-1 ∥ VIEW-1 |
-| 3 | PERM-1 | shell: permission seam + capture-state availability/permission field + manifest/plist entries + read endpoint | ⬜ Todo | | | ∥ CAM-2 ∥ VIEW-1 |
-| 4 | VIEW-1 | shell: frame-render widget seam in live view (inactive: null→placeholder) | ⬜ Todo | | | ∥ CAM-2 ∥ PERM-1 |
+| 2 | CAM-2 | shell: `camera` dep + `CameraCaptureSource` skeleton + source-selection factory seam (default software) | ✅ Done | 4,236,040 | 10m 17s (10m 17s) | inert shell; factory wired into assembly (still software); 12 unit tests; 100% cov |
+| 3 | PERM-1 | shell: permission seam + capture-state availability/permission field + manifest/plist entries + read endpoint | ⬜ Next | | | ∥ VIEW-1 |
+| 4 | VIEW-1 | shell: frame-render widget seam in live view (inactive: null→placeholder) | ⬜ Next | | | ∥ PERM-1 |
 | 5 | ITEST-1 | acceptance-tests: harness, `ScriptedCameraSource` + fixtures, pending gate (all 10 pending), smoke | ⬜ Todo | | | |
 | 6 | ITEST-2 | acceptance-tests: AC-1..AC-5 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-6..AC-10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
@@ -165,11 +165,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CAM-1 (scaffold) ✅ done** (G-1 approved in the same session; branch `feat/bs-19` off `main` @ `11944b6`; `BS19_RUN_PENDING` runner; baseline 1643✓; gate proven both ways). Three shell phases are now startable and **run concurrently** (disjoint file ownership):
-- **CAM-2** (shell): `camera` dep + inert `CameraCaptureSource` + stub `frame_conversion.dart` + `selectCaptureSource` factory seam (still software by default). Owns `pubspec.yaml`, `lib/capture/source/`.
+**CAM-2 (shell) ✅ done** (`camera: ^0.12.1` added; inert `CameraCaptureSource` + stub `frame_conversion.dart` + `selectCaptureSource` factory wired into `assembleDependencies`, still software by default; 12 unit tests, 1655 pass, 100% cov on all 4 touched lib files; app still boots on the software source). Two shell phases remain and **run concurrently** (disjoint file ownership):
 - **PERM-1** (shell): permission seam + capture-state availability/permission field + Android manifest / iOS plist entries + read endpoint.
 - **VIEW-1** (shell): frame-render widget seam in the live view (inactive: null → placeholder).
-- All three block ITEST-1 (harness). The behavior stage is additionally gated by **G-2** (test review, ITEST-4). Run each shell in its own `/clear`ed session (or `--parallel`).
+- Both block ITEST-1 (harness). CAM-3 (first behavior) depends on CAM-2 (done) + ITEST-4 (G-2). The behavior stage is additionally gated by **G-2** (test review, ITEST-4). Run each shell in its own `/clear`ed session (or `--parallel`).
+- **CAM-2 seam for PERM-2:** `selectCaptureSource({required softwareFallback, bool useCamera})` in `lib/capture/source/capture_source_factory.dart` returns the fallback unless `useCamera`; PERM-2 drives `useCamera` from the resolved permission/availability. Conversion stub `frameFromCameraImage` throws `UnimplementedError` until CAM-3.
 
 ## Token usage
 
@@ -179,7 +179,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | 9072bbeb | 2026-10-20 20:38 EDT | 22:43 | 2h 04m | 41m 52s | claude-opus-4-8 | 132 | 286,390 | 7,949,040 | 81,245 | 8,316,807 | plan written (spec 10 ACs + master + CAM/VIEW/PERM/ITEST modules, 19 phases); real CameraCaptureSource over camera plugin; shared session after bs-18 signoff |
 | CAM-1 | a47f10a5 | 2026-10-21 06:03 EDT | 06:47 | 44m 03s | 13m 23s | claude-opus-4-8 | 92 | 95,473 | 4,554,587 | 37,224 | 4,687,376 | scaffold done; G-1 approved in-session (on main); branch off 11944b6; BS19_RUN_PENDING runner (10 ACs seeded); baseline 1643 pass; coverage gate proven both directions; no product code |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 06:47** | **2h 48m** | **55m 15s** |  | **224** | **381,863** | **12,503,627** | **118,469** | **13,004,183** |  |
+| CAM-2 | 706c419e | 2026-10-21 06:50 EDT | 07:01 | 10m 17s | 10m 17s | claude-opus-4-8 | 80 | 107,291 | 4,095,289 | 33,380 | 4,236,040 | shell done: camera dep + inert CameraCaptureSource + frame_conversion stub + selectCaptureSource factory wired into assembly (still software); 12 unit tests; 1655 pass; 100% cov on 4 touched lib files; app boots on software source unchanged |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 07:01** | **2h 58m** | **1h 05m** |  | **304** | **489,154** | **16,598,916** | **151,849** | **17,240,223** |  |
 
 ## Sign-off
 

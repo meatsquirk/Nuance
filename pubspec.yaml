@@ -64,6 +64,18 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.3
 
+  # Live camera capture (bs-19 SOURCE-2 / CAM module). The official Flutter
+  # `camera` plugin drives the device camera (CameraX on Android, AVFoundation
+  # on iOS) behind the existing `CaptureSource` seam, so the Capture live view
+  # reads real frames instead of the deterministic software feed. Only the new
+  # camera source files (`CameraCaptureSource` and its `frame_conversion`) depend
+  # on it; the software source and the whole pure-Dart component graph stay
+  # device-free, so the unit suite still runs on the host under `flutter test`.
+  # The camera is selected at assembly through the
+  # `selectCaptureSource` factory, which stays on the software source until the
+  # permission/availability resolution lands (CAM-2 ships the seam inert).
+  camera: ^0.12.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -90,6 +102,13 @@ dev_dependencies:
   # (bs-06 SCREEN-1 smoke test).
   path_provider_platform_interface: ^2.1.2
   plugin_platform_interface: ^2.1.8
+
+  # Platform-interface image types (bs-19 CAM-2). The camera frame-conversion
+  # unit test builds a minimal real `CameraImage` from `CameraImageData` to
+  # exercise the conversion signature on the host without a device; those image
+  # types live in `camera_platform_interface`, so the test depends on it
+  # directly (it is already pulled in transitively by `camera`).
+  camera_platform_interface: ^2.15.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
