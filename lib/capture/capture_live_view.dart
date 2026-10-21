@@ -3,13 +3,17 @@ import 'package:flutter/material.dart';
 import 'capture_accuracy.dart';
 import 'capture_eyedropper.dart';
 import 'capture_state.dart';
+import 'live_frame_view.dart';
+import 'source/frame.dart';
 
 /// The live camera viewport: the feed surface, the centre eyedropper, and the
 /// text readings laid over it (stability, accuracy, low-light warning).
 ///
-/// SCREEN-1 shell — it renders a placeholder feed surface (a flat colour; the
-/// real frame render and the value-only grayscale toggle land in SOURCE-2 /
-/// SCREEN-3) with the [CaptureEyedropper] centred over it, and surfaces the
+/// SCREEN-1 shell — it renders the feed surface through [LiveFrameView] (bs-19
+/// VIEW-1): with no [frame] it shows a flat placeholder, and once a source
+/// streams frames (VIEW-2) the same widget paints the live feed. The value-only
+/// grayscale toggle wraps that surface (SCREEN-3). It centres the
+/// [CaptureEyedropper] over the feed and surfaces the
 /// observable [CaptureState] as text so no reading rests on colour alone (the
 /// bs-01 label contract): the stability indicator, the accuracy tier and the
 /// low-light warning are words, not bare colour. It reads a plain [CaptureState]
@@ -23,6 +27,7 @@ import 'capture_state.dart';
 class CaptureLiveView extends StatelessWidget {
   const CaptureLiveView({
     required this.state,
+    this.frame,
     this.downgradeReasons = const <AccuracyDowngradeReason>{},
     super.key,
   });
@@ -58,6 +63,12 @@ class CaptureLiveView extends StatelessWidget {
   /// The capture state this viewport reflects.
   final CaptureState state;
 
+  /// The latest frame from the active capture source, painted as the feed
+  /// surface. Null — the shell default — shows the flat placeholder, so the
+  /// software-source and no-camera paths are unchanged until VIEW-2 wires a
+  /// live source's frames in (bs-19 VIEW-1).
+  final Frame? frame;
+
   /// The poor-capture conditions currently in effect (bs-12 AC-9), surfaced as
   /// words over the feed so the painter is told *why* a reading would be
   /// downgraded (never trusting colour alone). Empty — the trustworthy case —
@@ -76,14 +87,15 @@ class CaptureLiveView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Placeholder feed surface; SOURCE-2 renders real frames here. In value-only
-    // mode (AC-10) the feed is wrapped in a saturation-0 [ColorFiltered] so it
-    // renders grayscale, leaving the overlaid readings in colour.
-    const Widget feedSurface =
-        ColoredBox(key: liveViewKey, color: Color(0xFF3A3A3A));
+    // The feed surface, rendered through [LiveFrameView]: a flat placeholder
+    // until a source streams frames (VIEW-2), the painted frame thereafter. In
+    // value-only mode (AC-10) the feed is wrapped in a saturation-0
+    // [ColorFiltered] so it renders grayscale, leaving the overlaid readings in
+    // colour.
+    final Widget feedSurface = LiveFrameView(frame: frame, key: liveViewKey);
     final Widget feed = state.valueOnly
-        ? const ColorFiltered(
-            colorFilter: ColorFilter.matrix(_grayscaleMatrix),
+        ? ColorFiltered(
+            colorFilter: const ColorFilter.matrix(_grayscaleMatrix),
             child: feedSurface,
           )
         : feedSurface;
