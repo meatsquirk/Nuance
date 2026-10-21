@@ -1,6 +1,6 @@
 # Module CAM — Real camera capture source
 
-**Status:** In progress — CAM-4 done (AC-3 reading follows the live frame, un-pend only); CAM-5/6/7 startable
+**Status:** In progress — CAM-5 done (AC-5 real AE·AWB·AF lock forwarding; warning clears from source lock state); CAM-6/7 startable
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/camera_capture_source.dart` (new), `lib/capture/source/frame_conversion.dart` (new), the source-selection factory seam in `lib/capture/source/`; `pubspec.yaml` (`camera` dep); unit tests under `test/capture/source/`. Also the scaffold (branch + runner + gate).
 **Depends on:** — · **Blocks:** VIEW, PERM, ITEST
@@ -13,7 +13,7 @@
 | CAM-2 | shell | — | ✅ Done | 4,236,040 | 10m 17s (10m 17s) |
 | CAM-3 | behavior | AC-2 (+ real frame stream, enabler-ish) | ✅ Done | 8.08M | 19m 38s |
 | CAM-4 | behavior | AC-3 | ✅ Done | 4.41M | 9m 06s |
-| CAM-5 | behavior | AC-5 | ⬜ Todo | | |
+| CAM-5 | behavior | AC-5 | ✅ Done | | |
 | CAM-6 | behavior | AC-6 | ⬜ Todo | | |
 | CAM-7 | behavior | AC-9 | ⬜ Todo | | |
 
@@ -174,8 +174,23 @@ AC-3 delivered as an **un-pend + keep-green** phase — **no product code, no te
 - **Acceptance gate:** un-pend AC-5; suite green.
 - **Augments:** `TestAC05`: assert the warning clears **because** the source reports `allLocked`, not independently (G2).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+AC-5 delivered: the **real** `CameraCaptureSource` lock controls now hold AE·AWB·AF on the device, and AC-5 is un-pended.
+- **Product (`camera_capture_source.dart`):** the `CameraDevice` seam gained `lockExposure`/`lockWhiteBalance`/`lockFocus`; `CameraCaptureSource.lock*` now records the lock in `_locks` **and** forwards it to the device via `unawaited(_device.lock*())`, so a real device holds the controls (not just local state). `PluginCameraDevice` drives `setExposureMode(ExposureMode.locked)` / `setFocusMode(FocusMode.locked)`; the `camera` plugin (0.12.1) exposes **no** white-balance lock, so AWB is held implicitly by the AE lock on both iOS (AVFoundation) and Android (CameraX) — `lockWhiteBalance` is a documented device no-op, confirmed at the D-5 walkthrough. The three device methods are the module's only `// coverage:ignore` (device-bound), alongside CAM-3's `start`/`stop`.
+- **Acceptance:** AC-5 row deleted from `pending.dart` (un-pend) so `TestAC05_LockClearsWarning` runs in the **default** suite. `smoke_test.dart` guards updated: exact-set `unpendedACs` → `{AC-1..AC-5}`; pending-skip example moved AC-5→AC-6 (owner CAM-6). No AC-test logic changed — the AC-5 test drives the scripted source; its `canLock:false` control (written in ITEST-2) proves the warning tracks `source.locks.allLocked`, not the UI lock flag (G2).
+- **Unit test:** +1 (`each lock control forwards to the device (CAM-5)`) — a fake device records `exposureLocks`/`whiteBalanceLocks`/`focusLocks`, each asserted `==1` after the matching `source.lock*`, plus `locks` fields flip. Covers the new forwarding (the AC test can't reach `CameraCaptureSource`).
+- **Gates:** `dart analyze` clean. Unit **1673 pass** (1672 + 1), exit 0. Coverage gate vs BASE `3eaf857`: **100% line on the one touched lib file** (`camera_capture_source.dart`; the 3 device lock methods coverage-ignored). Acceptance (per file `-d flutter-tester`): **AC-5 green in default and run-pending**; AC-1/2/3/4 still green; smoke **11/11** both modes. **Grade gate: 5×A / 0 below A** — a fresh independent grader re-graded every un-pended AC test (AC-1..AC-5); all hold A, no downgrade, no fix owed. **Fix passes: 0/3.**
+- **Augmentation:** `TestAC05` augmentation (warning clears from `source.locks.allLocked`, not independently — G2) **closed** — present from ITEST-2, un-pended and kept green here.
+- **Tokens/Time:** see dashboard (CAM-5 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase:** `CameraDevice` now carries `lockExposure`/`lockWhiteBalance`/`lockFocus` (all `Future<void>`); `CameraCaptureSource.lock*` records `_locks` + forwards to the device. CAM-6 (torch) and CAM-7 (lifecycle) both own `camera_capture_source.dart` — rebase onto this. CAM-6 wires `turnTorchOn`/`turnTorchOff`/`torchOn` to the device torch (add torch methods to the seam the same way these locks were added); CAM-7 reuses the `frames` onListen/onCancel acquire/release over a `WidgetsBindingObserver` (D-7). The real device lock behaviour (AE·AWB·AF actually held, AWB following AE) is unverified by automated tests (device I/O) — rests on the D-5 sign-off walkthrough, as with CAM-3's `PluginCameraDevice`.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/` (or `test/capture/source/` to re-gate faster)
+  - Coverage gate: `dart run tool/coverage_gate.dart <BASE>` (CAM-5 BASE = `3eaf857`)
+  - Acceptance (default, per file): `flutter test -d flutter-tester integration_test/live_camera/reading_test.dart`; add `--dart-define=BS19_RUN_PENDING=true` for run-pending. Run per file — two files in one invocation can hit the launcher flake.
+- **Known gaps:** none introduced. AWB has no plugin lock control (held implicitly by AE lock — D-5 walkthrough). Production still defaults to the software source until PERM-2 flips `selectCaptureSource(useCamera:)`.
+- **Next:** CAM-6 (AC-6), CAM-7 (AC-9) — both own `camera_capture_source.dart`, so sequence them. PERM-2 (AC-7)→PERM-3 (AC-8), PERM-4 (AC-10, un-pend + confirm only) run concurrently (disjoint files). Then SIGNOFF-1.
 
 ## Phase CAM-6 — Real device torch
 

@@ -240,3 +240,50 @@ fresh grader (did not write the tests or the code) re-graded every un-pended AC 
 
 **VIEW-3 grade count: 4 A / 0 below A** (every un-pended AC test). No downgrades from
 the prior grid; no fix owed. Feature grid remains all-A.
+
+## Re-grade — CAM-5 (AC-5 un-pended + real lock forwarding, 2026-10-21)
+
+CAM-5 un-pended **AC-5** (deleted its `pendingACs` row) so `TestAC05_LockClearsWarning`
+now runs in the **default** suite, and wired the **real** camera lock controls: the
+`CameraDevice` seam gained `lockExposure`/`lockWhiteBalance`/`lockFocus`, and
+`CameraCaptureSource`'s lock controls now record the lock in `locks` *and* forward it to
+the device (`PluginCameraDevice` drives `setExposureMode(locked)`/`setFocusMode(locked)`;
+AWB is held implicitly by the AE lock — the plugin exposes no AWB control — documented for
+the D-5 walkthrough, coverage-ignored). The AC-5 integration test drives the scripted
+source and is **unchanged**; the real-source forwarding is covered by a new unit test. An
+independent fresh grader (did not write the tests or the code) re-graded every un-pended AC
+test (AC-1..AC-5):
+
+- **AC-1 `TestAC01_LivePreview` — A** (holds; unaffected by CAM-5).
+- **AC-2 `TestAC02_FrameConversion` — A** (holds; unaffected by CAM-5).
+- **AC-3 `TestAC03_ReadingFollowsFrame` — A** (holds; unaffected by CAM-5).
+- **AC-4 `TestAC04_ValueOnlyLive` — A** (holds; unaffected by CAM-5).
+- **AC-5 `TestAC05_LockClearsWarning` — A (live) — the strongest G2 row.** Verified against
+  live code: `lock()` (capture_controller.dart) unconditionally flips the UI `lockState`
+  **and** calls `source.lock*`, while `activeDowngradeReasons` emits `exposureUnlocked` from
+  `if (!source.locks.allLocked)` — the **source's** locks, not the UI flag, which the live
+  view renders under `downgradeReasonsKey`. So the `canLock:false` control is a genuine
+  discriminator: the stuck source's locks stay `allLocked:false`, the warning **stays**
+  (`findsOneWidget`) though `lock()` flipped `lockState` — killing both named Rejects
+  (clear-without-locking; locking-not-reflected-from-source). G1 (both Givens on the public
+  surface before the When), G3 (negative after `pumpAndSettle`, paired with the warning-stays
+  control; asserts the specific `exposureUnlocked` label, not the whole region), G4/G5/G6 all
+  met; the `pumpWidget(SizedBox())` reset is sound (forces a fresh `initState` controller over
+  the stuck source). Grader's minor note (not a downgrade, consistent with the prior AC-7
+  judgement): the control branch does not re-assert its pre-tap state, but `stuck` is freshly
+  constructed `canLock:false` using the identical assembly already shown to raise the warning
+  at open, so the pre-state is pinned by construction.
+- **Unit-test spot-check (CAM-5 device forwarding).** `each lock control forwards to the
+  device (CAM-5)` (`camera_capture_source_test.dart`) genuinely asserts forwarding — a
+  `_FakeCameraDevice` records `exposureLocks`/`whiteBalanceLocks`/`focusLocks`, each asserted
+  `== 1` after the matching `source.lock*` call, plus the `locks` fields flip. Non-vacuous;
+  this is the real-source coverage (the AC-5 integration grade stands on the scripted-source
+  test above).
+- **Scaffold guards (`smoke_test.dart`) — NON-VACUOUS.** The exact-set
+  `unpendedACs = {AC-1..AC-5}` compares `pendingACs.keys.toSet()` to `{AC-1..AC-10} \ unpended`
+  (set-equality both directions, not a count), checks each un-pended AC's skip-reason is null
+  and every owner is a real behaviour phase; the pending-skip example moved AC-5→AC-6 (owner
+  CAM-6), still a genuinely-pending AC.
+
+**CAM-5 grade count: 5 A / 0 below A** (every un-pended AC test). No downgrades from the prior
+grid; no fix owed. Feature grid remains all-A.

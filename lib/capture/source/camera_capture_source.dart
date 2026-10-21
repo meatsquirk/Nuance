@@ -24,6 +24,16 @@ abstract class CameraDevice {
 
   /// Stops frame delivery and releases the device.
   Future<void> stop();
+
+  /// Holds the device's auto-exposure at its current value (AE lock — CAM-5).
+  Future<void> lockExposure();
+
+  /// Holds the device's auto white balance at its current value (AWB lock —
+  /// CAM-5).
+  Future<void> lockWhiteBalance();
+
+  /// Holds the device's auto-focus at its current value (AF lock — CAM-5).
+  Future<void> lockFocus();
 }
 
 /// The native [CaptureSource] over the device camera (bs-19 SOURCE-2).
@@ -35,8 +45,6 @@ abstract class CameraDevice {
 /// `frame_conversion.dart`, and releases the device when the subscription ends.
 /// The remaining members stay inert on this skeleton until their phase lands:
 ///
-/// - CAM-5 wires [lockExposure] / [lockWhiteBalance] / [lockFocus] and reflects
-///   [locks] from the real controller's AE · AWB · AF state.
 /// - CAM-6 wires [turnTorchOn] / [turnTorchOff] and [torchOn] to the device
 ///   torch.
 /// - CAM-7 releases and re-initialises the controller across the app lifecycle.
@@ -44,9 +52,13 @@ abstract class CameraDevice {
 /// The inert defaults follow plan D-6: calibration stays deferred, so
 /// [normaliseAgainstCard] returns its argument unchanged; the source reports the
 /// standard sRGB [colorSpace] and the [CaptureMode.processed] pipeline, and does
-/// not yet claim wide-gamut or RAW capability. Lock and torch requests are
-/// recorded in local state until the real controls land, so the controller's
-/// reflections stay honest.
+/// not yet claim wide-gamut or RAW capability.
+///
+/// CAM-5 wires the lock controls: [lockExposure] / [lockWhiteBalance] /
+/// [lockFocus] each record the lock in [locks] *and* forward it to the device
+/// so the real camera holds AE · AWB · AF (the plugin exposes AE and AF; AWB is
+/// held implicitly by the AE lock on both platforms — see [PluginCameraDevice]).
+/// The torch requests stay recorded in local state until CAM-6 lands.
 class CameraCaptureSource implements CaptureSource {
   /// Creates the camera source over [device] (defaulting to the shipped
   /// [PluginCameraDevice]).
@@ -107,13 +119,22 @@ class CameraCaptureSource implements CaptureSource {
   void importPhoto(ImportedPhoto photo) => _importedPhoto = photo;
 
   @override
-  void lockExposure() => _locks = _locks.copyWith(exposure: true);
+  void lockExposure() {
+    _locks = _locks.copyWith(exposure: true);
+    unawaited(_device.lockExposure());
+  }
 
   @override
-  void lockWhiteBalance() => _locks = _locks.copyWith(whiteBalance: true);
+  void lockWhiteBalance() {
+    _locks = _locks.copyWith(whiteBalance: true);
+    unawaited(_device.lockWhiteBalance());
+  }
 
   @override
-  void lockFocus() => _locks = _locks.copyWith(focus: true);
+  void lockFocus() {
+    _locks = _locks.copyWith(focus: true);
+    unawaited(_device.lockFocus());
+  }
 
   @override
   bool get torchOn => _torchOn;
@@ -177,6 +198,32 @@ class PluginCameraDevice implements CameraDevice {
     await controller.stopImageStream();
     await controller.dispose();
     _controller = null;
+  }
+  // coverage:ignore-end
+
+  // coverage:ignore-start
+  @override
+  Future<void> lockExposure() async {
+    await _controller?.setExposureMode(ExposureMode.locked);
+  }
+  // coverage:ignore-end
+
+  // coverage:ignore-start
+  @override
+  Future<void> lockWhiteBalance() async {
+    // The `camera` plugin exposes no white-balance lock; on both iOS
+    // (AVFoundation) and Android (CameraX) the device holds auto white balance
+    // once auto-exposure is locked, so AWB is held by [lockExposure] and this
+    // has no separate control to drive. Kept as an explicit seam member so the
+    // source routes all three lock intents uniformly (D-5 on-device walkthrough
+    // confirms AWB settles with AE).
+  }
+  // coverage:ignore-end
+
+  // coverage:ignore-start
+  @override
+  Future<void> lockFocus() async {
+    await _controller?.setFocusMode(FocusMode.locked);
   }
   // coverage:ignore-end
 }

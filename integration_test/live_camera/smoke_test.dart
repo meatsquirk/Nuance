@@ -70,7 +70,7 @@ void main() {
       // guard stays an exact-set assertion (non-vacuous) rather than drifting
       // to a bare count as the map shrinks.
       const unpendedACs = <String>{
-        'AC-1', 'AC-2', 'AC-3', 'AC-4', // VIEW-2, CAM-3, CAM-4, VIEW-3
+        'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', // VIEW-2, CAM-3, CAM-4, VIEW-3, CAM-5
       };
       final expectedPending = <String>{
         for (var n = 1; n <= 10; n++) 'AC-$n',
@@ -94,14 +94,14 @@ void main() {
 
     test('a pending AC is skipped only in the default run; it runs in '
         'run-pending mode, and an un-pended AC always runs', () {
-      // AC-5 is pending (owned by CAM-5): skipped by default, run under
+      // AC-6 is pending (owned by CAM-6): skipped by default, run under
       // run-pending. The reason names its owner so a red-baseline failure is
       // attributable. (AC-1 was the example until VIEW-2; AC-3 until CAM-4;
-      // AC-4 until VIEW-3.)
-      final reason = pendingSkipReason('AC-5', forceRunPending: false);
+      // AC-4 until VIEW-3; AC-5 until CAM-5.)
+      final reason = pendingSkipReason('AC-6', forceRunPending: false);
       expect(reason, isNotNull);
-      expect(reason, contains('CAM-5'));
-      expect(pendingSkipReason('AC-5', forceRunPending: true), isNull);
+      expect(reason, contains('CAM-6'));
+      expect(pendingSkipReason('AC-6', forceRunPending: true), isNull);
 
       // An AC absent from the map (none is un-pended yet, so use an unmapped id)
       // always runs, in either mode — the gate never skips a non-pending AC.

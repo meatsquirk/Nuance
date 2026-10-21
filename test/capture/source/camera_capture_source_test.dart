@@ -14,6 +14,9 @@ class _FakeCameraDevice implements CameraDevice {
   void Function(CameraImage image)? _onImage;
   bool started = false;
   bool stopped = false;
+  int exposureLocks = 0;
+  int whiteBalanceLocks = 0;
+  int focusLocks = 0;
 
   @override
   Future<void> start(void Function(CameraImage image) onImage) async {
@@ -25,6 +28,15 @@ class _FakeCameraDevice implements CameraDevice {
   Future<void> stop() async {
     stopped = true;
   }
+
+  @override
+  Future<void> lockExposure() async => exposureLocks++;
+
+  @override
+  Future<void> lockWhiteBalance() async => whiteBalanceLocks++;
+
+  @override
+  Future<void> lockFocus() async => focusLocks++;
 
   /// Delivers [image] as if the device produced a frame.
   void emit(CameraImage image) => _onImage?.call(image);
@@ -111,6 +123,28 @@ void main() {
       expect(source.locks.whiteBalance, isTrue);
       source.lockFocus();
       expect(source.locks.focus, isTrue);
+      expect(source.locks.allLocked, isTrue);
+    });
+
+    test('each lock control forwards to the device (CAM-5)', () {
+      // The lock reaches the real camera, not just local state: each control
+      // records its lock in `locks` *and* drives the matching device control,
+      // so on a device AE·AWB·AF are actually held (the D-5 walkthrough).
+      final device = _FakeCameraDevice();
+      final source = CameraCaptureSource(device: device);
+
+      source.lockExposure();
+      expect(source.locks.exposure, isTrue);
+      expect(device.exposureLocks, 1, reason: 'AE lock reaches the device');
+
+      source.lockWhiteBalance();
+      expect(source.locks.whiteBalance, isTrue);
+      expect(device.whiteBalanceLocks, 1, reason: 'AWB lock reaches the device');
+
+      source.lockFocus();
+      expect(source.locks.focus, isTrue);
+      expect(device.focusLocks, 1, reason: 'AF lock reaches the device');
+
       expect(source.locks.allLocked, isTrue);
     });
 
