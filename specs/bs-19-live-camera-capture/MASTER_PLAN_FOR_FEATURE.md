@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — all shells done (VIEW-1 last); next ITEST-1 (acceptance harness)
+**Status:** In progress — ITEST-1 (acceptance harness) done; next ITEST-2 ∥ ITEST-3 (one pending AC test each + red baseline)
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -100,7 +100,7 @@ Pre-seeded augmentations: AC-3/AC-5/AC-6 may run **green at baseline** against a
 | CAM | [modules/CAM.md](modules/CAM.md) | Real `CameraCaptureSource` over the `camera` plugin: frame stream + conversion, AE·AWB·AF locks, torch, lifecycle | — | 🔶 In progress |
 | VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | 🔶 In progress |
 | PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | 🔶 In progress |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔶 In progress |
 
 ## Dependency graph
 
@@ -145,8 +145,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | CAM-2 | shell: `camera` dep + `CameraCaptureSource` skeleton + source-selection factory seam (default software) | ✅ Done | 4,236,040 | 10m 17s (10m 17s) | inert shell; factory wired into assembly (still software); 12 unit tests; 100% cov |
 | 3 | PERM-1 | shell: permission seam + capture-state availability/permission field + manifest/plist entries + read endpoint | ✅ Done | 9.02M | 14m 15s | ∥ VIEW-1 |
 | 4 | VIEW-1 | shell: frame-render widget seam in live view (inactive: null→placeholder) | ✅ Done | 3.75M | 11m 03s | all shells done |
-| 5 | ITEST-1 | acceptance-tests: harness, `ScriptedCameraSource` + fixtures, pending gate (all 10 pending), smoke | ⬜ Next | | | |
-| 6 | ITEST-2 | acceptance-tests: AC-1..AC-5 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
+| 5 | ITEST-1 | acceptance-tests: harness, `ScriptedCameraSource` + fixtures, pending gate (all 10 pending), smoke | ✅ Done | 7,639,135 | 14m 08s | harness over `buildApp`; smoke 11/11 both modes; no lib touched |
+| 6 | ITEST-2 | acceptance-tests: AC-1..AC-5 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
 | 7 | ITEST-3 | acceptance-tests: AC-6..AC-10 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
 | 8 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 9 | CAM-3 | AC-2 frame conversion + real frame stream (enabler-ish) | ⬜ Todo | | | blocks VIEW-2, CAM-4/5/6/7, PERM-2 |
@@ -165,9 +165,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**Stage 2 (shells) complete** — CAM-2 ∥ PERM-1 ∥ **VIEW-1 (shell) ✅ done** (`LiveFrameView({required Frame? frame})` carrying `liveViewKey`: null → flat `placeholderColor` surface, non-null → `CustomPaint` painting the RGB pixels; `capture_live_view.dart` routed through it with an optional `frame` default null; +3 widget tests, 1666 pass, 100% cov on all 11 touched lib files; feed still the flat placeholder — no behaviour change). Stage 3 (acceptance tests) is now startable:
-- **ITEST-1** (acceptance-tests) ⬜ Next: build the harness over the wired shells + `ScriptedCameraSource` + fixtures, register the `BS19_RUN_PENDING` gate (all 10 ACs pending), smoke. Then **ITEST-2 ∥ ITEST-3** (one pending AC test each + red baseline) → **ITEST-4 test review = G-2**, which gates the entire behavior stage. No behavior phase (CAM-3+, VIEW-2/3, PERM-2/3/4) may start before G-2.
-- **Seams for behavior:** `selectCaptureSource({required softwareFallback, bool useCamera})` (CAM-2) — PERM-2 drives `useCamera` from the resolved `CameraPermission`; `frameFromCameraImage` throws until CAM-3; `LiveFrameView(frame:)` paints once VIEW-2 feeds the live frame; the ITEST scripted source makes `CaptureSourceKind kind` settable to script AC-7's granted/denied → camera/software.
+**ITEST-1 (harness) ✅ done** — `givenLiveCamera` drives the real `buildApp` with a `ScriptedCameraSource` (controllable feed + settable kind/permission/available + lock/torch recorders) at the `captureSource` seam, plus a `RecordingCameraPermission`, `LiveCameraHarness` (`activeSourceKind`/`permissionState`/`showsPlaceholder` + `when…` actions) and `knownFrame`/`FRAME_CYAN`/`FRAME_ORANGE`. Smoke + 10 guards green in both modes; no `lib/` touched (coverage gate trivially PASS); unit 1666.
+- **ITEST-2 ∥ ITEST-3** ⬜ startable now (disjoint files): one *pending* `acTestWidgets` test per AC against the harness, run `--dart-define=BS19_RUN_PENDING=true`, record the red baseline + grades. ITEST-2 = AC-1..AC-5 (`preview_test.dart`, `reading_test.dart`); ITEST-3 = AC-6..AC-10 (`controls_test.dart`, `permission_test.dart`, `platform_test.dart`). Then **ITEST-4 test review = G-2**, which gates the entire behavior stage. No behavior phase (CAM-3+, VIEW-2/3, PERM-2/3/4) may start before G-2.
+- **Watch-outs carried to the AC phases:** (1) no `cameraPermission` seam in `AppDependencies` yet (PERM-2 wires it) → AC-7 can't drive the request through the assembly; its test stays pending on a Given precondition naming PERM-2, and `permissionState` reads inert `undetermined`. (2) `CaptureLiveView` gets no `frame:` → `showsPlaceholder` is true though the feed reaches the controller; AC-1 (render) red until VIEW-2. (3) `emitFrame` then `pump` (broadcast feed drops a frame pushed before the controller subscribes).
 
 ## Token usage
 
@@ -180,7 +180,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | CAM-2 | 706c419e | 2026-10-21 06:50 EDT | 07:01 | 10m 17s | 10m 17s | claude-opus-4-8 | 80 | 107,291 | 4,095,289 | 33,380 | 4,236,040 | shell done: camera dep + inert CameraCaptureSource + frame_conversion stub + selectCaptureSource factory wired into assembly (still software); 12 unit tests; 1655 pass; 100% cov on 4 touched lib files; app boots on software source unchanged |
 | PERM-1 | e0c78d3c | 2026-10-21 07:03 EDT | 07:17 | 14m 15s | 14m 15s | claude-opus-4-8 | 156 | 118,429 | 8,859,213 | 42,134 | 9,019,932 | shell done: CameraPermission seam + PluginCameraPermission (inert), CaptureSourceKind+kind on interface, CaptureState.cameraPermission, read endpoint activeSourceKind/permissionState, Android CAMERA+uses-feature & iOS NSCameraUsageDescription; +8 unit, 1663 pass, 100% cov 6 touched; app still software by default; fix passes 0/3 |
 | VIEW-1 | cb3235a5 | 2026-10-21 07:41 EDT | 07:52 | 11m 03s | 11m 03s | claude-opus-4-8 | 80 | 82,817 | 3,642,896 | 24,170 | 3,749,963 | shell: LiveFrameView frame-render seam; unit+cov 100% (11 touched), 1666 pass; existing capture suites green; placeholder unchanged |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 07:52** | **3h 23m** | **1h 30m** |  | **540** | **690,400** | **29,101,025** | **218,153** | **30,010,118** |  |
+| ITEST-1 | 298d1e40 | 2026-10-21 09:05 EDT | 09:19 | 14m 08s | 14m 08s | claude-opus-4-8 | 104 | 164,685 | 7,423,711 | 50,635 | 7,639,135 | harness + ScriptedCameraSource/RecordingCameraPermission + fixtures + pending gate (all 10 ACs pending) + smoke; 3 test files, no lib touched; smoke 11/11 green default + run-pending; unit 1666; coverage gate PASS (0 touched lib); fix passes 0/3 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 09:19** | **3h 37m** | **1h 44m** |  | **644** | **855,085** | **36,524,736** | **268,788** | **37,649,253** |  |
 
 ## Sign-off
 

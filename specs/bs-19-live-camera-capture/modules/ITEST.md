@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** Not started
+**Status:** 🔶 In progress — ITEST-1 done; next ITEST-2 ∥ ITEST-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/live_camera/` (new), `integration_test/fakes/scripted_camera_source.dart` (new), the `BS19_RUN_PENDING` pending gate for this suite.
 **Depends on:** CAM-2, PERM-1, VIEW-1 (all shells) · **Blocks:** every behavior phase (via G-2)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| ITEST-1 | acceptance-tests | — (harness) | ⬜ Todo | | |
+| ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 7,639,135 | 14m 08s |
 | ITEST-2 | acceptance-tests | AC-1..AC-5 | ⬜ Todo | | |
 | ITEST-3 | acceptance-tests | AC-6..AC-10 | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
@@ -32,8 +32,32 @@
 - **Exit criteria:** suite green with all ACs pending; smoke green; grade gate on scaffold tests (no vacuous passes).
 - **Acceptance gate:** —
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+Harness + fixtures + scaffold tests only — **no `lib/` code** (coverage gate confirms 0 touched lib files; the harness drives the existing production `buildApp` directly, exactly as the bs-02 `capture_harness` does, so no assembly constructor had to be extracted).
+- **New test files:**
+  - `integration_test/fakes/scripted_camera_source.dart` — `ScriptedCameraSource implements CaptureSource`: a controllable feed (replays `initialFrames` on subscribe, then forwards `emitFrame` pushes so AC-3 can change the reticle colour mid-stream), settable `kind`/`permissionState`/`available` selection signals, settable `lighting`/`canLock`/`referenceCardPresent`, real lock/torch state, and `lockCalls`/`torchOnCalls`/`torchOffCalls` recorders for the AC-5/AC-6 "the control reached the source" augmentations. Plus `RecordingCameraPermission implements CameraPermission` (counts `request()`, resolves to a scripted granted/denied outcome — held for PERM-2, which wires a `CameraPermission` into the assembly) and a `knownFrame(Pixel)` uniform-frame builder.
+  - `integration_test/live_camera/harness.dart` — the Given/When/Then vocabulary: `givenLiveCamera(tester, {source, permission})` builds the real app via `buildApp` with the scripted source at `AppDependencies.captureSource` (opens on Capture), single `pump` (not `pumpAndSettle`, mirroring bs-02 so the settle counter doesn't run to STABLE). `LiveCameraHarness` exposes `controller`/`state`, `activeSourceKind`/`permissionState` (via the read endpoint), `showsPlaceholder` (reads the live-view tree for the VIEW-1 placeholder), and `when…` actions (`whenLock`, `whenTurnTorchOn/Off`, `whenToggleValueOnly`, `whenCommit`, `whenFrameChangesTo`). Fixtures `FRAME_CYAN`/`FRAME_ORANGE` (distinct reticle colours for AC-2's conversion control and AC-3's c1→c2 change). Re-exports the pending gate + fakes.
+  - `integration_test/live_camera/smoke_test.dart` — 1 never-pending smoke + 10 guard tests.
+- **Pending gate:** untouched (CAM-1 seeded all 10 ACs); ITEST-2/3 register the AC tests via `acTestWidgets`.
+- **Gates:** unit + coverage **PASS** — `flutter test test/` = **1666 passed** (baseline unchanged; ITEST-1 touches only `integration_test/`); coverage gate = **no touched lib files → PASS**. Acceptance (this feature): `smoke_test.dart` **11/11** green in default **and** `--dart-define=BS19_RUN_PENDING=true` modes; whole `integration_test/live_camera/` dir launches green. No AC tests yet → no acceptance/grade-vs-spec gate; scaffold tests are **non-vacuous** (smoke asserts feed reaches the controller *and* the render is still the honest VIEW-1 placeholder; the pending guard asserts the map's exact size=10 and contents with real owners; the fixture guards assert actual recording, both lock-honouring and lock-refusing paths). **Fix passes: 0/3** (green on first full test run).
+- **Tokens/Time:** see dashboard (ITEST-1 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase (the surface ITEST-2/3 write against):**
+  - `givenLiveCamera(tester, {ScriptedCameraSource? source, RecordingCameraPermission? permission}) → LiveCameraHarness` — defaults: a camera-kind scripted source seeded with `FRAME_CYAN`, a granting permission recorder.
+  - `LiveCameraHarness`: `controller`, `state`, `activeSourceKind`, `permissionState`, `showsPlaceholder`, `readEndpoint`; actions `whenLock`, `whenTurnTorchOn`, `whenTurnTorchOff`, `whenToggleValueOnly`, `whenCommit`, `whenFrameChangesTo(Frame)`.
+  - `ScriptedCameraSource({initialFrames, kind, permissionState, available, lighting, canLock, referenceCardPresent})` + `setKind`, `emitFrame`, `dispose`, recorders `lockCalls`/`torchOnCalls`/`torchOffCalls`.
+  - `RecordingCameraPermission({initial, resolvesTo})` + `requestCount`.
+  - `knownFrame(Pixel, {width, height})`; `FRAME_CYAN`/`RETICLE_CYAN`, `FRAME_ORANGE`/`RETICLE_ORANGE`.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has no `timeout`, run bare):
+  - Acceptance (default): `flutter test -d flutter-tester integration_test/live_camera/<file>_test.dart` (whole dir works now but run per file under load).
+  - Red baseline / run-pending: add `--dart-define=BS19_RUN_PENDING=true`.
+  - Unit + coverage: `flutter test --coverage test/`; gate: `COVERAGE_GATE_BASE=<phase-start HEAD> dart run tool/coverage_gate.dart` (ITEST adds no lib, so expect "no touched lib files PASS").
+- **Next (ITEST-2 ∥ ITEST-3):** write the one *pending* AC test per AC against this harness, run run-pending, record the red baseline + grades in the tables below. ITEST-2 = AC-1..AC-5 (`preview_test.dart`, `reading_test.dart`); ITEST-3 = AC-6..AC-10 (`controls_test.dart`, `permission_test.dart`, `platform_test.dart`). Disjoint files → parallel-safe.
+- **Known gaps / watch-outs for the AC phases:**
+  - **No permission seam in `buildApp` yet** — `AppDependencies` has no `cameraPermission` field (PERM-1 added the `CameraPermission` seam but not its injection; PERM-2 wires it). So AC-7's "the permission seam received exactly one request" and the granted→camera / denied→software selection cannot be driven through the assembly yet; AC-7's test asserts them via a Given precondition naming **PERM-2** and stays pending. `permissionState` on the read endpoint is inert `undetermined` until PERM-2.
+  - **Render path still the placeholder** — the Capture screen builds `CaptureLiveView` with no `frame:`, so `showsPlaceholder` is true even though the feed reaches the controller. AC-1 (render) is red until **VIEW-2** feeds the source's frame in.
+  - **`emitFrame` timing** — push a frame *then* `pump` (as `whenFrameChangesTo` does); a frame pushed before the controller subscribes (its `didChangeDependencies`) is dropped by the broadcast stream.
 
 ## Phase ITEST-2 — AC-1..AC-5 pending + red baseline
 
