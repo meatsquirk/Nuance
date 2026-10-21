@@ -7,11 +7,13 @@ import '../a11y/cvd/cvd_profile.dart';
 import '../a11y/haptics.dart';
 import '../a11y/repeatable_speech.dart';
 import '../a11y/speech.dart';
+import '../capture/camera_permission.dart';
 import '../capture/capture_controller.dart';
 import '../capture/capture_read_endpoint.dart';
 import '../capture/capture_state.dart';
 import '../capture/capture_screen.dart';
 import '../capture/source/capture_source.dart';
+import '../capture/source/software_capture_source.dart';
 import '../color_science/color_science.dart';
 import '../correction/correction_controller.dart';
 import '../correction/correction_read_endpoint.dart';
@@ -180,6 +182,7 @@ class AppDependencies {
     this.router = const AppRouter(),
     this.initialSample = demoSample,
     this.captureSource,
+    this.cameraPermission,
     this.cvdProfile = const CvdProfile(type: CvdType.deutan),
     this.confusionCheck = const DichromatConfusionCheck(),
     this.sampleSource = const InMemorySampleSource(),
@@ -227,6 +230,19 @@ class AppDependencies {
   /// shipped app injects a [CaptureSource]; the bs-02 acceptance harness injects
   /// a fake with a known ground-truth scene.
   final CaptureSource? captureSource;
+
+  /// The camera-permission seam the Capture host requests through on first
+  /// live-capture entry (bs-19 AC-7, PERM-2), or null to skip the request.
+  ///
+  /// When present *and* the selected [captureSource] is a live
+  /// [CaptureSourceKind.camera], [CaptureHomeScreen] requests camera access on
+  /// open and selects from the result — granted keeps the camera, denied falls
+  /// back to the deterministic software source and shows a "camera access
+  /// needed" affordance (D-3). null (the default) or a software source skips the
+  /// prompt, so the bs-02..bs-18 harnesses and the shipped software scene are
+  /// unaffected. Production wires the plugin-backed [PluginCameraPermission];
+  /// the acceptance suite injects a recording fake.
+  final CameraPermission? cameraPermission;
 
   /// The painter's colour-vision profile, read by [confusionCheck] (bs-03 D-4).
   ///
@@ -408,6 +424,7 @@ class AppDependencies {
         router: router,
         initialSample: initialSample,
         captureSource: captureSource,
+        cameraPermission: cameraPermission,
         cvdProfile: cvdProfile,
         confusionCheck: confusionCheck,
         sampleSource: sampleSource,
@@ -793,6 +810,7 @@ AppDependencies _depsWithSpeech(AppDependencies deps, Speech speech) {
     router: deps.router,
     initialSample: deps.initialSample,
     captureSource: deps.captureSource,
+    cameraPermission: deps.cameraPermission,
     cvdProfile: deps.cvdProfile,
     confusionCheck: deps.confusionCheck,
     sampleSource: deps.sampleSource,
@@ -1093,6 +1111,17 @@ class _SharingRootState extends State<_SharingRoot> {
   }
 }
 
+/// The deterministic software source the Capture screen falls back to when
+/// camera permission is denied (bs-19 AC-7, PERM-2 — and no camera, AC-8/PERM-3).
+///
+/// A neutral mid-grey scene so the painter keeps a live, readable preview rather
+/// than a black screen on the fallback path (D-3). Its
+/// [CaptureSourceKind.software] kind is what the read endpoint surfaces as the
+/// active source after the camera is given up.
+CaptureSource cameraFallbackSource() => SoftwareCaptureSource(
+      const SceneSpec(groundTruth: ColorCoordinates(lightness: 50, a: 0, b: 0)),
+    );
+
 /// The Capture screen the app opens on when a capture source is wired (bs-02).
 ///
 /// It owns the [CaptureController] over the injected
@@ -1119,6 +1148,19 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen>
   /// The pair the comparison has already been opened for, so the AC-5 pair
   /// handoff fires once per send rather than on every later state change.
   ComparisonPair? _openedComparisonFor;
+
+  /// The camera-permission seam this screen requests through (bs-19 AC-7), or
+  /// null when none is wired or the source is not a live camera — the prompt is
+  /// then skipped and the injected source stands as-is.
+  CameraPermission? _cameraPermission;
+
+  /// The live camera source originally injected, kept so a retry from the
+  /// "camera access needed" affordance can re-select it once granted (AC-7).
+  CaptureSource? _cameraSource;
+
+  /// The resolved camera permission once requested, or null while the screen
+  /// has not needed to ask (AC-7). Gates the denial affordance.
+  CameraPermissionState? _resolvedPermission;
 
   @override
   void initState() {
@@ -1156,11 +1198,78 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen>
     super.didChangeDependencies();
     // Build the controller once, over the capture source injected above.
     if (_controller == null) {
-      final source = AppScope.of(context).captureSource!;
-      _controller = CaptureController(source: source)
+      final deps = AppScope.of(context);
+      final source = deps.captureSource!;
+      _controller = _buildController(source);
+      // bs-19 PERM-2: when a live camera source is selected and a permission
+      // seam is wired, request camera access on first entry and select the
+      // source from the result (granted → the camera, denied → the software
+      // fallback + a "camera access needed" affordance, D-3). A software source
+      // or no seam skips the prompt, so bs-02..bs-18 and the shipped software
+      // scene are unchanged.
+      final permission = deps.cameraPermission;
+      if (permission != null && source.kind == CaptureSourceKind.camera) {
+        _cameraPermission = permission;
+        _cameraSource = source;
+        unawaited(_applyInitialPermission(permission));
+      }
+    }
+  }
+
+  /// Builds a [CaptureController] over [source] with the commit / pair handoffs
+  /// wired, so the camera and the fallback controllers are built identically.
+  CaptureController _buildController(CaptureSource source) =>
+      CaptureController(source: source)
         ..addListener(_openReadoutOnCommit)
         ..addListener(_openComparisonOnPair);
+
+  /// Requests camera access on first live-capture entry and selects the source
+  /// from the result (bs-19 AC-7): granted keeps the live camera; denied swaps
+  /// to the deterministic software fallback and raises the affordance (D-3).
+  Future<void> _applyInitialPermission(CameraPermission permission) async {
+    final result = await permission.request();
+    if (!mounted) return;
+    if (result == CameraPermissionState.granted) {
+      // Keep the already-subscribed camera controller — only record the grant,
+      // so the live feed the screen opened on is never torn down and rebuilt.
+      _controller!.setCameraPermission(result);
+      setState(() => _resolvedPermission = result);
+    } else {
+      setState(() {
+        _resolvedPermission = result;
+        _replaceController(cameraFallbackSource(), result);
+      });
     }
+  }
+
+  /// Re-requests camera access from the "camera access needed" affordance
+  /// (bs-19 AC-7): on a now-granted decision it re-selects the live camera, and
+  /// on a still-denied one it stays on a fresh software fallback.
+  Future<void> _retryPermission() async {
+    final permission = _cameraPermission;
+    if (permission == null) return;
+    final result = await permission.request();
+    if (!mounted) return;
+    final source = result == CameraPermissionState.granted
+        ? _cameraSource!
+        : cameraFallbackSource();
+    setState(() {
+      _resolvedPermission = result;
+      _replaceController(source, result);
+    });
+  }
+
+  /// Tears down the current controller and rebuilds it over [source], recording
+  /// [permission] on the new state (bs-19 AC-7).
+  void _replaceController(
+    CaptureSource source,
+    CameraPermissionState permission,
+  ) {
+    _controller!
+      ..removeListener(_openReadoutOnCommit)
+      ..removeListener(_openComparisonOnPair)
+      ..dispose();
+    _controller = _buildController(source)..setCameraPermission(permission);
   }
 
   /// Opens the captured reading's Readout once a capture commits in adequate
@@ -1212,10 +1321,64 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return CaptureReadEndpoint(
+    final controller = _controller!;
+    final screen = CaptureReadEndpoint(
       key: CaptureReadEndpoint.endpointKey,
-      controller: _controller!,
-      child: CaptureScreen(controller: _controller!),
+      controller: controller,
+      child: CaptureScreen(controller: controller),
+    );
+    // Granted / undetermined: the screen as-is. Denied (bs-19 AC-7): keep the
+    // painter on the working software fallback and overlay the affordance.
+    if (_resolvedPermission != CameraPermissionState.denied) return screen;
+    return Stack(
+      children: [
+        Positioned.fill(child: screen),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            child: _CameraAccessAffordance(onRetry: _retryPermission),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The "camera access needed" affordance shown when camera permission is denied
+/// (bs-19 AC-7, D-3): it tells the painter to enable access in Settings and
+/// offers a Retry that re-requests permission, so denial is recoverable rather
+/// than a dead end. The reading itself continues on the software fallback
+/// beneath it.
+class _CameraAccessAffordance extends StatelessWidget {
+  const _CameraAccessAffordance({required this.onRetry});
+
+  /// Re-requests camera permission (and re-selects the camera when granted).
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Camera access needed — enable it in Settings, then retry.',
+                style: TextStyle(color: scheme.onErrorContainer),
+              ),
+            ),
+            TextButton(
+              onPressed: () => onRetry(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

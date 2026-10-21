@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
 import '../domain/sample.dart';
+import 'camera_permission.dart';
 import 'capture_accuracy.dart';
 import 'capture_state.dart';
 import 'source/capture_source.dart';
@@ -221,6 +222,15 @@ class CaptureController extends ChangeNotifier {
         coordinates: source.normaliseAgainstCard(reading.coordinates),
         accuracy: CaptureAccuracy.calibrated,
       );
+
+  /// Records the resolved camera-permission state (bs-19 AC-7, PERM-2).
+  ///
+  /// The Capture host requests camera access on first live-capture entry and
+  /// calls this with the outcome, so the read endpoint's `permissionState`
+  /// surfaces granted / denied. Purely a state record — it does not touch the
+  /// feed; on denial the host swaps the controller to the software fallback.
+  void setCameraPermission(CameraPermissionState permission) =>
+      emit(_state.copyWith(cameraPermission: permission));
 
   /// Clears the low-light warning without changing the stated accuracy (AC-7).
   ///

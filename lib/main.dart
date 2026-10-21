@@ -10,6 +10,7 @@ import 'a11y/cvd/cvd_profile.dart';
 import 'a11y/haptics.dart';
 import 'a11y/speech.dart';
 import 'app/build_app.dart';
+import 'capture/camera_permission.dart';
 import 'capture/source/capture_source_factory.dart';
 import 'capture/source/software_capture_source.dart';
 import 'color_science/color_science_impl.dart';
@@ -115,10 +116,15 @@ AppDependencies assembleDependencies({
     speech: const NoopSpeech(),
     haptics: const NoopHaptics(),
     // bs-19 CAM-2: the capture source is chosen through the `selectCaptureSource`
-    // seam. The seam still returns the software fallback (the camera is selected
-    // from the resolved permission/availability in PERM-2), so the app opens on
-    // the deterministic demo scene exactly as before.
+    // seam. The seam still returns the software fallback, so the app opens on
+    // the deterministic demo scene exactly as before (the real device camera is
+    // selected on-device, verified at the sign-off walkthrough, plan D-5).
     captureSource: selectCaptureSource(softwareFallback: demoCaptureSource),
+    // bs-19 PERM-2: wire the plugin-backed camera-permission seam. It is dormant
+    // while the shipped source is the software scene (the Capture host only
+    // prompts for a live camera source, AC-7); it is ready for the on-device
+    // camera selection to request access through.
+    cameraPermission: PluginCameraPermission(),
     cvdProfile: cvdProfile,
     store: store,
     sourcePhotoStore: sourcePhotoStore,

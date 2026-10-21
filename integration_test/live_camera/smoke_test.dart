@@ -45,10 +45,11 @@ void main() {
       expect(find.byKey(CaptureControls.captureKey), findsOneWidget);
 
       // The read endpoint surfaces the active source selection (the scripted
-      // source stands for the live camera) and the resolved permission state
-      // (inert at undetermined until PERM-2 wires the request).
+      // source stands for the live camera) and the resolved permission state:
+      // PERM-2 wired the request, and the harness's default recorder grants, so
+      // the camera is kept and the permission reads granted.
       expect(harness.activeSourceKind, CaptureSourceKind.camera);
-      expect(harness.permissionState, CameraPermissionState.undetermined);
+      expect(harness.permissionState, CameraPermissionState.granted);
 
       // The feed is wired end to end: the seed frame flowed source → controller
       // → state, so a reading has been sampled under the reticle.
@@ -72,6 +73,7 @@ void main() {
       const unpendedACs = <String>{
         'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', // VIEW-2, CAM-3, CAM-4, VIEW-3, CAM-5
         'AC-6', // CAM-6
+        'AC-7', // PERM-2
         'AC-9', // CAM-7
       };
       final expectedPending = <String>{
@@ -96,14 +98,14 @@ void main() {
 
     test('a pending AC is skipped only in the default run; it runs in '
         'run-pending mode, and an un-pended AC always runs', () {
-      // AC-7 is pending (owned by PERM-2): skipped by default, run under
+      // AC-8 is pending (owned by PERM-3): skipped by default, run under
       // run-pending. The reason names its owner so a red-baseline failure is
       // attributable. (AC-1 was the example until VIEW-2; AC-3 until CAM-4;
-      // AC-4 until VIEW-3; AC-5 until CAM-5; AC-6 until CAM-6.)
-      final reason = pendingSkipReason('AC-7', forceRunPending: false);
+      // AC-4 until VIEW-3; AC-5 until CAM-5; AC-6 until CAM-6; AC-7 until PERM-2.)
+      final reason = pendingSkipReason('AC-8', forceRunPending: false);
       expect(reason, isNotNull);
-      expect(reason, contains('PERM-2'));
-      expect(pendingSkipReason('AC-7', forceRunPending: true), isNull);
+      expect(reason, contains('PERM-3'));
+      expect(pendingSkipReason('AC-8', forceRunPending: true), isNull);
 
       // An AC absent from the map (none is un-pended yet, so use an unmapped id)
       // always runs, in either mode — the gate never skips a non-pending AC.

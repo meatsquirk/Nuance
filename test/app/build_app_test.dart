@@ -9,6 +9,7 @@ import 'package:paint_color_assistant/a11y/repeatable_speech.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
+import 'package:paint_color_assistant/capture/camera_permission.dart';
 import 'package:paint_color_assistant/capture/capture_controls.dart';
 import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
@@ -187,6 +188,51 @@ AppDependencies _lifecycleDeps(CaptureSource source) => AppDependencies(
       speech: const NoopSpeech(),
       haptics: const NoopHaptics(),
       captureSource: source,
+    );
+
+/// A [CameraPermission] fake that records each [request] and resolves to a
+/// scripted outcome (bs-19 AC-7, PERM-2), so the Capture host's permission-driven
+/// source selection can be driven off-device. [resolvesTo] is mutable so a
+/// retry can resolve differently from the first prompt.
+class _RecordingPermission implements CameraPermission {
+  _RecordingPermission({
+    this.resolvesTo = CameraPermissionState.granted,
+    CameraPermissionState initial = CameraPermissionState.undetermined,
+  }) : _status = initial;
+
+  /// The outcome the next [request] resolves to.
+  CameraPermissionState resolvesTo;
+
+  CameraPermissionState _status;
+
+  /// How many times [request] was called.
+  int requestCount = 0;
+
+  @override
+  CameraPermissionState get status => _status;
+
+  @override
+  Future<CameraPermissionState> request() async {
+    requestCount++;
+    return _status = resolvesTo;
+  }
+}
+
+AppDependencies _cameraPermissionDeps(
+  CaptureSource source,
+  CameraPermission permission,
+) =>
+    AppDependencies(
+      colorScience: const ColorScienceImpl(),
+      speech: const NoopSpeech(),
+      haptics: const NoopHaptics(),
+      captureSource: source,
+      cameraPermission: permission,
+    );
+
+CaptureReadEndpoint _captureEndpoint(WidgetTester tester) =>
+    tester.widget<CaptureReadEndpoint>(
+      find.byKey(CaptureReadEndpoint.endpointKey),
     );
 
 AppDependencies _captureDepsWith(
@@ -615,6 +661,118 @@ void main() {
       // The resumed subscription replayed the seed frame, so a reading renders.
       expect(controller.state.currentSample, isNotNull,
           reason: 'the live feed resumes rather than staying black');
+    });
+
+    testWidgets(
+        'requests camera permission on entry and keeps the live camera when '
+        'granted (bs-19 AC-7)', (tester) async {
+      final source = _LifecycleCaptureSource();
+      final permission =
+          _RecordingPermission(resolvesTo: CameraPermissionState.granted);
+      await tester.pumpWidget(
+        buildApp(_cameraPermissionDeps(source, permission)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(permission.requestCount, 1,
+          reason: 'opening Capture requests camera permission exactly once');
+      final endpoint = _captureEndpoint(tester);
+      expect(endpoint.activeSourceKind, CaptureSourceKind.camera,
+          reason: 'granted keeps the injected live camera source');
+      expect(identical(endpoint.controller.source, source), isTrue,
+          reason: 'the camera controller is not torn down and rebuilt');
+      expect(endpoint.permissionState, CameraPermissionState.granted);
+      expect(source.acquireCount, 1,
+          reason: 'the feed is acquired once — no rebuild on the grant');
+      expect(find.textContaining('Camera access'), findsNothing);
+    });
+
+    testWidgets(
+        'falls back to the software source with an affordance when permission '
+        'is denied (bs-19 AC-7)', (tester) async {
+      final source = _LifecycleCaptureSource();
+      final permission =
+          _RecordingPermission(resolvesTo: CameraPermissionState.denied);
+      await tester.pumpWidget(
+        buildApp(_cameraPermissionDeps(source, permission)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(permission.requestCount, 1);
+      final endpoint = _captureEndpoint(tester);
+      expect(endpoint.activeSourceKind, CaptureSourceKind.software,
+          reason: 'denied swaps to the deterministic software fallback');
+      expect(endpoint.permissionState, CameraPermissionState.denied);
+      expect(find.textContaining('Camera access'), findsOneWidget,
+          reason: 'a "camera access needed" affordance is shown');
+      expect(tester.takeException(), isNull,
+          reason: 'denial falls back without crashing');
+    });
+
+    testWidgets('retrying after a denial re-selects the live camera once it is '
+        'granted (bs-19 AC-7)', (tester) async {
+      final source = _LifecycleCaptureSource();
+      final permission =
+          _RecordingPermission(resolvesTo: CameraPermissionState.denied);
+      await tester.pumpWidget(
+        buildApp(_cameraPermissionDeps(source, permission)),
+      );
+      await tester.pumpAndSettle();
+      expect(_captureEndpoint(tester).activeSourceKind,
+          CaptureSourceKind.software);
+
+      // The painter enables access in Settings, then taps Retry: the prompt now
+      // resolves granted and the live camera is re-selected.
+      permission.resolvesTo = CameraPermissionState.granted;
+      await tester.tap(find.widgetWithText(TextButton, 'Retry'));
+      await tester.pumpAndSettle();
+
+      expect(permission.requestCount, 2);
+      final endpoint = _captureEndpoint(tester);
+      expect(endpoint.activeSourceKind, CaptureSourceKind.camera,
+          reason: 'a granted retry switches back to the live camera');
+      expect(identical(endpoint.controller.source, source), isTrue);
+      expect(endpoint.permissionState, CameraPermissionState.granted);
+      expect(find.textContaining('Camera access'), findsNothing);
+    });
+
+    testWidgets('a retry that is still denied stays on the software fallback '
+        '(bs-19 AC-7)', (tester) async {
+      final source = _LifecycleCaptureSource();
+      final permission =
+          _RecordingPermission(resolvesTo: CameraPermissionState.denied);
+      await tester.pumpWidget(
+        buildApp(_cameraPermissionDeps(source, permission)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'Retry'));
+      await tester.pumpAndSettle();
+
+      expect(permission.requestCount, 2);
+      final endpoint = _captureEndpoint(tester);
+      expect(endpoint.activeSourceKind, CaptureSourceKind.software,
+          reason: 'a still-denied retry keeps the software fallback');
+      expect(endpoint.permissionState, CameraPermissionState.denied);
+      expect(find.textContaining('Camera access'), findsOneWidget);
+    });
+
+    testWidgets('does not request permission for a software source even when a '
+        'seam is wired (bs-19 AC-7)', (tester) async {
+      // Production wires the permission seam while the shipped source is the
+      // software scene; the host must not prompt for a non-camera source.
+      final permission = _RecordingPermission();
+      await tester.pumpWidget(
+        buildApp(_cameraPermissionDeps(_captureSource(), permission)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(permission.requestCount, 0,
+          reason: 'a software source needs no camera permission');
+      final endpoint = _captureEndpoint(tester);
+      expect(endpoint.activeSourceKind, CaptureSourceKind.software);
+      expect(endpoint.permissionState, CameraPermissionState.undetermined);
+      expect(find.textContaining('Camera access'), findsNothing);
     });
 
     testWidgets('a commit opens the captured reading\'s Readout and confirms',

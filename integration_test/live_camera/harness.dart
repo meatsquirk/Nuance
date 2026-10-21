@@ -95,8 +95,10 @@ class LiveCameraHarness {
   /// The scripted camera source the scenario was built over.
   final ScriptedCameraSource source;
 
-  /// The recording permission the AC-7 phase drives (held for PERM-2, which
-  /// wires a `CameraPermission` into the assembly; inert until then).
+  /// The recording permission the assembly requests through on first
+  /// live-capture entry (bs-19 AC-7): PERM-2 wires it in at
+  /// `AppDependencies.cameraPermission`, so the screen drives it and the read
+  /// endpoint surfaces the resolved `permissionState`.
   final RecordingCameraPermission permission;
 
   /// The recording haptics sink injected into the app (commit feedback).
@@ -176,9 +178,10 @@ class LiveCameraHarness {
 /// injected through `AppDependencies.captureSource` and the platform sinks
 /// faked; colour-science is the real `ColorScienceImpl`. Because a capture
 /// source is present, `buildApp` opens on the Capture screen. The [permission]
-/// recorder is held on the returned harness for the AC-7 phase (PERM-2 wires a
-/// `CameraPermission` into the assembly; until then it is observed only through
-/// the fixture).
+/// recorder is injected at `AppDependencies.cameraPermission` (PERM-2), so the
+/// Capture host requests it on entry and selects the source from the outcome
+/// (AC-7); it is also returned on the harness so a test can inspect its
+/// `requestCount`.
 ///
 /// Mounts with a single `pump` rather than `pumpAndSettle`, mirroring the bs-02
 /// capture harness: the stability counter settles one step per rendered frame,
@@ -201,6 +204,7 @@ Future<LiveCameraHarness> givenLiveCamera(
         speech: FakeSpeech(),
         haptics: haptics,
         captureSource: cameraSource,
+        cameraPermission: cameraPermission,
       ),
     ),
   );

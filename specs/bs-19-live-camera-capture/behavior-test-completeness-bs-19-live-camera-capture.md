@@ -381,3 +381,82 @@ touched — and graded adversarially, as the live code now behaves:
 
 **CAM-7 grade count: 7 A / 0 below A** (every un-pended AC test: AC-1..AC-6, AC-9). No downgrades
 from the prior grid; no fix owed. Feature grid remains all-A.
+
+## Re-grade — PERM-2 (AC-7 un-pended, 2026-10-21)
+
+PERM-2 wired the camera-permission seam into the assembly: `givenLiveCamera` now forwards the
+injected `permission` into `buildApp` at `AppDependencies.cameraPermission` (a **shared** harness
+change affecting every live_camera test), and `_CaptureHomeScreenState.didChangeDependencies`
+requests access on first live-capture entry when the source is a live camera — granted keeps the
+already-subscribed camera controller (only records the grant), denied swaps to
+`cameraFallbackSource()` (a `SoftwareCaptureSource`) and overlays the `_CameraAccessAffordance`.
+It un-pended **AC-7** (deleted its `pendingACs` row) so `TestAC07_PermissionFallback` now runs in
+the default suite. An independent fresh grader (did not write the tests or the code) re-graded
+every un-pended AC test (AC-1..AC-7, AC-9) adversarially, as the live code now behaves:
+
+- **AC-1 `TestAC01_LivePreview` — A** (holds). Verified safe under the shared change: the default
+  `givenLiveCamera` wires a `RecordingCameraPermission()` (resolves **granted**) over the default
+  camera-kind source, so `_applyInitialPermission` takes the granted arm, which **keeps** the
+  original controller — `activeSourceKind` stays `camera`, the render path is untouched.
+- **AC-2 `TestAC02_FrameConversion` — A** (holds; pure buffer→Frame conversion, no app assembly,
+  untouched by the permission wiring).
+- **AC-3 `TestAC03_ReadingFollowsFrame` — A** (holds; granted-keeps-controller preserves the
+  source subscription, so `_onFrame` sampling is unchanged).
+- **AC-4 `TestAC04_ValueOnlyLive` — A** (holds; value-only filter untouched).
+- **AC-5 `TestAC05_LockClearsWarning` — A** (holds). Its `canLock:false` control source is still
+  kind `camera`, so the now-firing permission request resolves granted and keeps that controller —
+  the stuck-lock discrimination is unaffected.
+- **AC-6 `TestAC06_Torch` — A** (holds; all three apps use camera-kind sources → granted → kept
+  controller; torch/commit path untouched).
+- **AC-7 `TestAC07_PermissionFallback` — A (now live; holds the prior as-written A).** Granted
+  branch: both Givens checked on the recorder's public surface before the When
+  (`granted.requestCount == 0`, `granted.status == undetermined`) — G1. `request()` increments
+  `requestCount` synchronously at the call site inside `_applyInitialPermission`, dispatched during
+  the first `didChangeDependencies` build, so `requestCount == 1` is pinned by the time the test
+  reads it: the granted branch **does** assert the request happened exactly once before concluding
+  (rejects never-requesting *and* a double request), then `activeSourceKind == camera` and
+  `permissionState == granted` (the grant is surfaced only after the awaited resolution + `setState`
+  that the harness's single `pump` drains). Denied branch (fresh app via `pumpWidget(SizedBox())`):
+  asserts `requestCount == 1`, `activeSourceKind == software` (the real `cameraFallbackSource()`
+  swap, verified — kind `software`), `permissionState == denied`, `find.textContaining('Camera
+  access') findsOneWidget` (the affordance's "Camera access needed — enable it in Settings…" copy),
+  and `tester.takeException() isNull` — fallback **and** affordance **and** no crash, each at grain
+  (G4). **G2/G5 — the airtight discrimination:** both branches inject a source with the *identical*
+  default `kind == camera`; only the permission recorder's `resolvesTo` differs, so the
+  camera-vs-software divergence can **only** come from the permission decision. This provably kills
+  a **dead-camera-kept** impl (would report `camera` on denial → fails `== software`), a
+  **never-requested** impl (`requestCount == 1` on both branches), a crash-on-denial impl, and an
+  impl that echoes the injected source kind. The two-app `pumpWidget(SizedBox())` reset is sound
+  (forces the first `CaptureHomeScreen` to unmount so the denied branch gets a fresh
+  `didChangeDependencies` controller + request, not the granted first one — the established
+  bs-19 idiom). G3 n/a (the decision resolves inside the open-screen assembly; the two-branch
+  contrast is the control). G6: one AC. **Minor (not a downgrade, consistent with the AC-4/AC-5
+  precedent):** (1) the denied branch does not re-assert its pre-When `requestCount == 0`, but
+  `denied` is a freshly constructed recorder whose field defaults 0, so the 0→1 transition is pinned
+  by construction; (2) the granted branch does not assert the affordance is *absent* on grant, so a
+  spurious always-show-affordance impl is not rejected — implausible here (the affordance is built
+  only when `_resolvedPermission == denied`, which the granted arm never sets while keeping the
+  camera), the same symmetric "always-on" observation the grid logged for AC-4, so the grade stands
+  at A.
+- **AC-9 `TestAC09_Lifecycle` — A** (holds). Verified the granted arm **keeps** the already-
+  subscribed controller rather than replacing it (code comment + `_applyInitialPermission` granted
+  branch), so `acquireCount` stays 1 on entry — AC-9's `acquireCount == 1` Given still holds. Had
+  granted rebuilt the controller it would read 2 and break; the keep-on-grant design is exactly
+  what protects AC-9.
+
+**Shared `givenLiveCamera` change — SAFE.** Forwarding the permission into `buildApp` now fires a
+request on open for every camera-kind source (all neighbours), but the default recorder resolves
+**granted**, and the granted arm only records the grant + a no-op `setState` while **keeping** the
+original controller and feed — no teardown, no re-subscription, no lost frames, no sampling change.
+The async request carries no timers and resolves on a microtask the harness `pump`/`pumpAndSettle`
+drains, so no neighbour is left with pending work. Only AC-7's denied branch (the lone
+`resolvesTo: denied`) exercises the fallback path. No neighbour was weakened or broken.
+
+**Smoke exact-set guard — NON-VACUOUS.** `unpendedACs` now includes `AC-7`; `expectedPending =
+{AC-1..10} \ unpendedACs = {AC-8, AC-10}` compared by set-equality to `pendingACs.keys.toSet()`
+(pending.dart holds exactly AC-8→PERM-3, AC-10→PERM-4). Both directions bite; each un-pended AC's
+skip-reason is asserted null; every owner is checked against `behaviorPhases`; the pending-skip
+example uses a genuinely-pending AC (AC-8/PERM-3).
+
+**PERM-2 grade count: 8 A / 0 below A** (every un-pended AC test: AC-1..AC-7, AC-9). No downgrades
+from the prior grid; no fix owed. Feature grid remains all-A.

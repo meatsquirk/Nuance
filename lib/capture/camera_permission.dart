@@ -1,3 +1,5 @@
+import 'package:camera/camera.dart';
+
 /// The painter's camera-permission state (bs-19 D-3/D-5).
 ///
 /// The three states the OS permission flow resolves to. [undetermined] is the
@@ -34,26 +36,47 @@ abstract class CameraPermission {
   Future<CameraPermissionState> request();
 }
 
-/// The shipped, plugin-backed [CameraPermission] (bs-19 PERM-1 shell).
+/// The shipped, plugin-backed [CameraPermission] (bs-19 PERM-2).
 ///
-/// This is the inert skeleton, in the spirit of the CAM-2 camera-source shell:
-/// construction is cheap and device-free, [status] starts
-/// [CameraPermissionState.undetermined], and the real platform [request] — the
-/// camera plugin's permission prompt — lands in PERM-2, which also drives the
-/// production source selection from the resolved state. Until then [request]
-/// throws so no half-wired permission path can ship silently.
+/// Construction is cheap and device-free — [status] starts
+/// [CameraPermissionState.undetermined] and nothing is asked until [request].
+/// [request] drives the OS prompt through the `camera` plugin: it opens the
+/// first camera, whose `initialize()` triggers the platform permission dialog,
+/// and maps the outcome to granted (initialised) or denied (the plugin raised a
+/// `CameraException`, e.g. access denied or no camera). Like the live
+/// [PluginCameraDevice] (CAM-3) the platform calls run only on a real device and
+/// are verified by the sign-off walkthrough (plan D-5), so they are exempt from
+/// the coverage gate; the Capture host's selection logic that consumes this is
+/// covered off-device through the injected [CameraPermission] fake.
 class PluginCameraPermission implements CameraPermission {
-  /// Creates the inert permission shell (no platform call).
+  /// Creates the permission wrapper (no platform call until [request]).
   PluginCameraPermission();
 
-  // Starts undetermined; PERM-2 makes this mutable when it wires the real
-  // platform request that moves it to granted/denied.
-  final CameraPermissionState _status = CameraPermissionState.undetermined;
+  // Starts undetermined; [request] moves it to granted/denied once the OS
+  // prompt resolves.
+  CameraPermissionState _status = CameraPermissionState.undetermined;
 
   @override
   CameraPermissionState get status => _status;
 
+  // coverage:ignore-start
   @override
-  Future<CameraPermissionState> request() async =>
-      throw UnimplementedError('Camera permission request lands in PERM-2.');
+  Future<CameraPermissionState> request() async {
+    try {
+      final cameras = await availableCameras();
+      final controller = CameraController(
+        cameras.first,
+        ResolutionPreset.low,
+        enableAudio: false,
+      );
+      // `initialize()` is what surfaces the OS camera-permission dialog; it
+      // completes once the painter grants access and throws if they deny.
+      await controller.initialize();
+      await controller.dispose();
+      return _status = CameraPermissionState.granted;
+    } on CameraException {
+      return _status = CameraPermissionState.denied;
+    }
+  }
+  // coverage:ignore-end
 }
