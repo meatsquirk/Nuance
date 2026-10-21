@@ -1,6 +1,6 @@
 # Module CAM — Real camera capture source
 
-**Status:** In progress — CAM-5 done (AC-5 real AE·AWB·AF lock forwarding; warning clears from source lock state); CAM-6/7 startable
+**Status:** In progress — CAM-6 done (AC-6 real device torch forwarding); CAM-7 startable (owns `camera_capture_source.dart`, rebase onto CAM-6)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/camera_capture_source.dart` (new), `lib/capture/source/frame_conversion.dart` (new), the source-selection factory seam in `lib/capture/source/`; `pubspec.yaml` (`camera` dep); unit tests under `test/capture/source/`. Also the scaffold (branch + runner + gate).
 **Depends on:** — · **Blocks:** VIEW, PERM, ITEST
@@ -14,7 +14,7 @@
 | CAM-3 | behavior | AC-2 (+ real frame stream, enabler-ish) | ✅ Done | 8.08M | 19m 38s |
 | CAM-4 | behavior | AC-3 | ✅ Done | 4.41M | 9m 06s |
 | CAM-5 | behavior | AC-5 | ✅ Done | | |
-| CAM-6 | behavior | AC-6 | ⬜ Todo | | |
+| CAM-6 | behavior | AC-6 | ✅ Done | 5.35M | 13m 23s |
 | CAM-7 | behavior | AC-9 | ⬜ Todo | | |
 
 ## Interface reconciliation
@@ -205,8 +205,23 @@ AC-5 delivered: the **real** `CameraCaptureSource` lock controls now hold AE·AW
 - **Acceptance gate:** un-pend AC-6; suite green.
 - **Augments:** `TestAC06`: assert the toggle reaches the source and the off-path extinguishes (settle point after off tap).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+AC-6 delivered: the **real** `CameraCaptureSource` torch now drives the device flash, and AC-6 is un-pended.
+- **Product (`camera_capture_source.dart`):** the `CameraDevice` seam gained `turnTorchOn`/`turnTorchOff`; `CameraCaptureSource.turnTorchOn`/`turnTorchOff` now record `_torchOn` **and** forward to the device via `unawaited(_device.turnTorch*())`, so a real device lights/extinguishes the flash (not just local state). `PluginCameraDevice` drives `setFlashMode(FlashMode.torch)` / `setFlashMode(FlashMode.off)`. The two device methods are `// coverage:ignore` (device-bound), alongside CAM-3's `start`/`stop` and CAM-5's locks.
+- **Acceptance:** AC-6 row deleted from `pending.dart` (un-pend) so `TestAC06_Torch` runs in the **default** suite. `smoke_test.dart` guards updated: exact-set `unpendedACs` → `{AC-1..AC-6}`; pending-skip example moved AC-6→AC-7 (owner PERM-2). No AC-test logic changed — the AC-6 test drives the scripted source; its `torchOnCalls`/`torchOffCalls` recorders (written in ITEST-3) prove the toggle reaches the source, and the torch-off commit control proves `litByTorch` tracks real torch state (G5).
+- **Unit test:** +1 (`the torch toggle forwards to the device (CAM-6)`) — a fake device records `torchOnCalls`/`torchOffCalls`, each asserted `==1` after the matching `source.turnTorch*`, plus `torchOn` flips. Covers the new forwarding (the AC test can't reach `CameraCaptureSource`).
+- **Gates:** `dart analyze` clean. Unit **1674 pass** (1673 + 1), exit 0. Coverage gate vs BASE `fe44cb0`: **100% line on the one touched lib file** (`camera_capture_source.dart`; the 2 device torch methods coverage-ignored). Acceptance (per file `-d flutter-tester`): **AC-6 green in default and run-pending**; AC-1..AC-5 still green (preview 3/3, reading 2/2); smoke **11/11** both modes; run-pending shows only AC-9 red (expected — CAM-7 not yet landed). **Grade gate: 6×A / 0 below A** — a fresh independent grader re-graded every un-pended AC test (AC-1..AC-6); all hold A, no downgrade, no fix owed. **Fix passes: 0/3.**
+- **Augmentation:** `TestAC06` augmentation (toggle reaches the source + off-path extinguishes) **closed** — present from ITEST-3, un-pended and kept green here.
+- **Tokens/Time:** see dashboard (CAM-6 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase:** `CameraDevice` now carries `turnTorchOn`/`turnTorchOff` (both `Future<void>`); `CameraCaptureSource.turnTorchOn`/`turnTorchOff` record `_torchOn` + forward to the device. **CAM-7** (lifecycle) also owns `camera_capture_source.dart` — rebase onto this. CAM-7 reuses the `frames` onListen/onCancel acquire/release over a `WidgetsBindingObserver` (D-7). The real device torch behaviour (flash actually lit/extinguished) is unverified by automated tests (device I/O) — rests on the D-5 sign-off walkthrough, as with CAM-3's frame stream and CAM-5's locks.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/` (or `test/capture/source/` to re-gate faster)
+  - Coverage gate: `dart run tool/coverage_gate.dart <BASE>` (CAM-6 BASE = `fe44cb0`)
+  - Acceptance (default, per file): `flutter test -d flutter-tester integration_test/live_camera/controls_test.dart`; add `--dart-define=BS19_RUN_PENDING=true` for run-pending. Run per file — two files in one invocation can hit the launcher flake.
+- **Known gaps:** none introduced. Production still defaults to the software source until PERM-2 flips `selectCaptureSource(useCamera:)`.
+- **Next:** CAM-7 (AC-9) — owns `camera_capture_source.dart`, rebase onto this. PERM-2 (AC-7)→PERM-3 (AC-8), PERM-4 (AC-10, un-pend + confirm only) run concurrently (disjoint files). Then SIGNOFF-1.
 
 ## Phase CAM-7 — Camera lifecycle release/resume
 

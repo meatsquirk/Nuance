@@ -34,6 +34,12 @@ abstract class CameraDevice {
 
   /// Holds the device's auto-focus at its current value (AF lock — CAM-5).
   Future<void> lockFocus();
+
+  /// Lights the device torch (flash held on — CAM-6).
+  Future<void> turnTorchOn();
+
+  /// Extinguishes the device torch (CAM-6).
+  Future<void> turnTorchOff();
 }
 
 /// The native [CaptureSource] over the device camera (bs-19 SOURCE-2).
@@ -45,8 +51,6 @@ abstract class CameraDevice {
 /// `frame_conversion.dart`, and releases the device when the subscription ends.
 /// The remaining members stay inert on this skeleton until their phase lands:
 ///
-/// - CAM-6 wires [turnTorchOn] / [turnTorchOff] and [torchOn] to the device
-///   torch.
 /// - CAM-7 releases and re-initialises the controller across the app lifecycle.
 ///
 /// The inert defaults follow plan D-6: calibration stays deferred, so
@@ -58,7 +62,9 @@ abstract class CameraDevice {
 /// [lockFocus] each record the lock in [locks] *and* forward it to the device
 /// so the real camera holds AE · AWB · AF (the plugin exposes AE and AF; AWB is
 /// held implicitly by the AE lock on both platforms — see [PluginCameraDevice]).
-/// The torch requests stay recorded in local state until CAM-6 lands.
+/// CAM-6 wires the torch: [turnTorchOn] / [turnTorchOff] record [torchOn] *and*
+/// forward to the device so the real camera flash lights and extinguishes
+/// (`setFlashMode(torch)` / `setFlashMode(off)` — see [PluginCameraDevice]).
 class CameraCaptureSource implements CaptureSource {
   /// Creates the camera source over [device] (defaulting to the shipped
   /// [PluginCameraDevice]).
@@ -140,10 +146,16 @@ class CameraCaptureSource implements CaptureSource {
   bool get torchOn => _torchOn;
 
   @override
-  void turnTorchOn() => _torchOn = true;
+  void turnTorchOn() {
+    _torchOn = true;
+    unawaited(_device.turnTorchOn());
+  }
 
   @override
-  void turnTorchOff() => _torchOn = false;
+  void turnTorchOff() {
+    _torchOn = false;
+    unawaited(_device.turnTorchOff());
+  }
 
   @override
   bool get supportsWideGamut => false;
@@ -224,6 +236,20 @@ class PluginCameraDevice implements CameraDevice {
   @override
   Future<void> lockFocus() async {
     await _controller?.setFocusMode(FocusMode.locked);
+  }
+  // coverage:ignore-end
+
+  // coverage:ignore-start
+  @override
+  Future<void> turnTorchOn() async {
+    await _controller?.setFlashMode(FlashMode.torch);
+  }
+  // coverage:ignore-end
+
+  // coverage:ignore-start
+  @override
+  Future<void> turnTorchOff() async {
+    await _controller?.setFlashMode(FlashMode.off);
   }
   // coverage:ignore-end
 }

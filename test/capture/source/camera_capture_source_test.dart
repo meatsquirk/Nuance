@@ -17,6 +17,8 @@ class _FakeCameraDevice implements CameraDevice {
   int exposureLocks = 0;
   int whiteBalanceLocks = 0;
   int focusLocks = 0;
+  int torchOnCalls = 0;
+  int torchOffCalls = 0;
 
   @override
   Future<void> start(void Function(CameraImage image) onImage) async {
@@ -37,6 +39,12 @@ class _FakeCameraDevice implements CameraDevice {
 
   @override
   Future<void> lockFocus() async => focusLocks++;
+
+  @override
+  Future<void> turnTorchOn() async => torchOnCalls++;
+
+  @override
+  Future<void> turnTorchOff() async => torchOffCalls++;
 
   /// Delivers [image] as if the device produced a frame.
   void emit(CameraImage image) => _onImage?.call(image);
@@ -171,6 +179,25 @@ void main() {
       expect(source.torchOn, isTrue);
       source.turnTorchOff();
       expect(source.torchOn, isFalse);
+    });
+
+    test('the torch toggle forwards to the device (CAM-6)', () {
+      // The torch reaches the real camera flash, not just local state: each
+      // control records `torchOn` *and* drives the matching device call, so on
+      // a device the flash lights and extinguishes (the D-5 walkthrough).
+      final device = _FakeCameraDevice();
+      final source = CameraCaptureSource(device: device);
+
+      source.turnTorchOn();
+      expect(source.torchOn, isTrue);
+      expect(device.torchOnCalls, 1, reason: 'the on-path lights the device');
+      expect(device.torchOffCalls, 0);
+
+      source.turnTorchOff();
+      expect(source.torchOn, isFalse);
+      expect(device.torchOffCalls, 1,
+          reason: 'the off-path extinguishes the device');
+      expect(device.torchOnCalls, 1);
     });
 
     test('reports the inert sRGB / processed capture defaults (D-6)', () {

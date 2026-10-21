@@ -49,7 +49,7 @@ const Map<String, String> pendingACs = {
   // AC-3 (The reading follows the live camera frame) un-pended by CAM-4.
   // AC-4 (Value-only mode shows the live feed in grayscale) un-pended by VIEW-3.
   // AC-5 (Locking AE·AWB·AF settles the live camera) un-pended by CAM-5.
-  'AC-6': 'CAM-6', //  The torch toggles the device light
+  // AC-6 (The torch toggles the device light) un-pended by CAM-6.
   'AC-7': 'PERM-2', // Permission requested; denial falls back gracefully
   'AC-8': 'PERM-3', // A device with no camera falls back gracefully
   'AC-9': 'CAM-7', //  Camera released and re-acquired across lifecycle

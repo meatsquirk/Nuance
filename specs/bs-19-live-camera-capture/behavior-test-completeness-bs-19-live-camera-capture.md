@@ -287,3 +287,44 @@ test (AC-1..AC-5):
 
 **CAM-5 grade count: 5 A / 0 below A** (every un-pended AC test). No downgrades from the prior
 grid; no fix owed. Feature grid remains all-A.
+
+## Re-grade — CAM-6 (AC-6 un-pended + real torch forwarding, 2026-10-21)
+
+CAM-6 un-pended **AC-6** (deleted its `pendingACs` row) so `TestAC06_Torch` now runs in the
+**default** suite. Product change: `CameraCaptureSource.turnTorchOn/Off` now records `torchOn`
+**and** forwards to a new `CameraDevice.turnTorchOn/Off` seam (`PluginCameraDevice` drives
+`setFlashMode(torch)` / `setFlashMode(off)`; coverage-ignored device calls, D-5 walkthrough).
+The AC-6 integration test drives the **scripted** source and is **unchanged**; the real-source
+forwarding is covered by a new unit test. An independent fresh grader (did not write the tests
+or the code) re-graded every un-pended AC test (AC-1..AC-6):
+
+- **AC-1 `TestAC01_LivePreview` — A** (holds; unaffected by CAM-6).
+- **AC-2 `TestAC02_FrameConversion` — A** (holds; unaffected by CAM-6).
+- **AC-3 `TestAC03_ReadingFollowsFrame` — A** (holds; unaffected by CAM-6).
+- **AC-4 `TestAC04_ValueOnlyLive` — A** (holds; unaffected by CAM-6).
+- **AC-5 `TestAC05_LockClearsWarning` — A** (holds; unaffected by CAM-6).
+- **AC-6 `TestAC06_Torch` — A (live, shipped torch pipeline).** Scenario A Givens all on the
+  public surface before the When (`source.torchOn`/`state.torchOn` false, `torchOnCalls == 0`,
+  'Torch' label present, no `torchWarningKey`). When = real E-torch tap →
+  `controller.turnTorchOn` → `source.turnTorchOn`. Thens at grain: `source.torchOn isTrue`,
+  **`source.torchOnCalls == 1`** (the load-bearing CAM-6 augmentation — kills a UI-only toggle
+  that never reaches the device), `state.torchOn isTrue`, `✓ Torch` label, `torchWarningKey
+  findsOneWidget`. Off-path control: `torchOffCalls == 1`, state/warning cleared (kills a
+  one-way toggle). Scenario B (fresh app, torch-on commit → `litByTorch isTrue`) + the
+  torch-off-commit control (`litByTorch isFalse`) kill both always-stamp and never-stamp;
+  `isNotNull` checks confirm a sample was committed (non-vacuous). Driving the
+  `ScriptedCameraSource` rather than `CameraCaptureSource` is correct per the D-5 seam
+  convention (the plugin can't run under flutter-tester; real device forwarding is covered by
+  the unit test + on-device walkthrough). G1–G6 met.
+- **Unit-test spot-check (CAM-6 device forwarding).** `the torch toggle forwards to the device
+  (CAM-6)` (`camera_capture_source_test.dart`) genuinely asserts forwarding — a
+  `_FakeCameraDevice` records `torchOnCalls`/`torchOffCalls`, each asserted `== 1` after the
+  matching `source.turnTorch*` call, plus `torchOn` flips. Non-vacuous; this is the real-source
+  coverage (the AC-6 integration grade stands on the scripted-source test above).
+- **Scaffold guards (`smoke_test.dart`) — NON-VACUOUS.** The exact-set
+  `unpendedACs = {AC-1..AC-6}` compares `pendingACs.keys.toSet()` to `{AC-1..AC-10} \ unpended`
+  (set-equality both directions, not a count); the pending-skip example moved AC-6→AC-7 (owner
+  PERM-2), still a genuinely-pending AC.
+
+**CAM-6 grade count: 6 A / 0 below A** (every un-pended AC test). No downgrades from the prior
+grid; no fix owed. Feature grid remains all-A.
