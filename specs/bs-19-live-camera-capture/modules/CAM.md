@@ -1,6 +1,6 @@
 # Module CAM — Real camera capture source
 
-**Status:** Not started
+**Status:** In progress — CAM-1 done; next CAM-2 (shell)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/camera_capture_source.dart` (new), `lib/capture/source/frame_conversion.dart` (new), the source-selection factory seam in `lib/capture/source/`; `pubspec.yaml` (`camera` dep); unit tests under `test/capture/source/`. Also the scaffold (branch + runner + gate).
 **Depends on:** — · **Blocks:** VIEW, PERM, ITEST
@@ -9,8 +9,8 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| CAM-1 | scaffold | — | ⬜ Next | | |
-| CAM-2 | shell | — | ⬜ Todo | | |
+| CAM-1 | scaffold | — | ✅ Done | 4,687,376 | 13m 23s (44m 03s) |
+| CAM-2 | shell | — | ⬜ Next | | |
 | CAM-3 | behavior | AC-2 (+ real frame stream, enabler-ish) | ⬜ Todo | | |
 | CAM-4 | behavior | AC-3 | ⬜ Todo | | |
 | CAM-5 | behavior | AC-5 | ⬜ Todo | | |
@@ -40,8 +40,25 @@
 - **Exit criteria:** branch pushed; baseline recorded; gate proven both directions. No product code.
 - **Acceptance gate:** —
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+Scaffold only — **no product code** (`lib/` untouched; gate confirms 0 touched lib files).
+- **Branch:** `feat/bs-19-live-camera-capture` off `main` @ `11944b6` (the G-1 commit; current main head after the PLAN + G-1 decision landed on main).
+- **Pending runner:** new `integration_test/live_camera/pending.dart` establishes the `BS19_RUN_PENDING` gate (mirror of bs-18's `visual_application/pending.dart`): `pendingACs` seeded with all 10 ACs → owner behaviour phases from the master AC-coverage table (AC-1→VIEW-2, AC-2→CAM-3, AC-3→CAM-4, AC-4→VIEW-3, AC-5→CAM-5, AC-6→CAM-6, AC-7→PERM-2, AC-8→PERM-3, AC-9→CAM-7, AC-10→PERM-4); `behaviorPhases` the 10 owners; `acTestWidgets`/`pendingSkipReason`/`runPending` identical to the sibling mechanism. `dart analyze` → No issues.
+- **Baseline:** `flutter test --coverage test/` = **1643 passed, exit 0** (matches bs-18's scaffold baseline at the same code point); `coverage/lcov.info` generated.
+- **Coverage gate proven both directions** (`tool/coverage_gate.dart`, pre-existing — confirmed it applies): clean tree vs `11944b6` → `no touched lib/**.dart files — PASS` exit 0; planted untracked uncovered `lib/_gate_probe.dart` → `FAIL … NO COVERAGE DATA` exit 1; probe removed, tree clean.
+- **Gates:** no unit/acceptance/grade gate (scaffold, no AC, no lib). **Fix passes: 0/3.**
+- **Tokens/Time:** see dashboard (CAM-1 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase:** the `BS19_RUN_PENDING` runner at `integration_test/live_camera/pending.dart` and its 10-row `pendingACs` map (the single source of truth for which AC is pending). ITEST-1 builds the harness + `ScriptedCameraSource` on top of it; ITEST-2/3 register the 10 ACs via `acTestWidgets`; each behaviour phase un-pends its AC by deleting its row.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`/`gtimeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/`
+  - Coverage gate on touched files: `dart run tool/coverage_gate.dart 11944b6` (base = branch point; `COVERAGE_GATE_BASE` also honoured)
+  - Acceptance suite (default, once ITEST lands): `flutter test -d flutter-tester integration_test/live_camera/`
+  - Acceptance run-pending / red baseline: add `--dart-define=BS19_RUN_PENDING=true`
+  - Sibling off-lane flake suites: `flutter test -d flutter-tester integration_test/{palette,self_assessment,display}_test.dart` (the 3 carried known flakes — reproduce at merge-base, not regressions; whole `integration_test/` dir won't launch at once under load — run per file).
+- **Next (CAM-2, shell):** add the `camera` plugin to `pubspec.yaml`, declare an inert `CameraCaptureSource implements CaptureSource`, stub `frame_conversion.dart`, and introduce a `selectCaptureSource(...)` factory seam that still returns the software source by default (no behaviour change). CAM-2 ∥ PERM-1 ∥ VIEW-1.
+- **Known gaps:** none introduced. Base `main` does not include the signed-off-but-unmerged bs-18; bs-19 extends bs-02 capture code present on main (deliberate — see master plan). Both may touch `capture_live_view.dart` and reconcile at their respective merges.
 
 ## Phase CAM-2 — Camera source skeleton + plugin + selection seam
 
