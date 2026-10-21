@@ -62,16 +62,22 @@ void main() {
 
   group('pending gate', () {
     test(
-        'the pending map covers exactly the 10 bs-19 ACs, each owned by a real '
-        'behaviour phase; all are pending at the start of stage 3', () {
-      // Stage 3 opens with no behaviour built, so every AC is still pending.
-      expect(pendingACs.length, 10);
-      for (var n = 1; n <= 10; n++) {
-        expect(
-          pendingACs.containsKey('AC-$n'),
-          isTrue,
-          reason: 'AC-$n must have a pending entry until its behaviour lands',
-        );
+        'the pending map holds exactly the bs-19 ACs not yet delivered, each '
+        'owned by a real behaviour phase', () {
+      // The 10 ACs, less those a landed behaviour phase has un-pended. CAM-3
+      // un-pended AC-2; each later phase adds its AC here as it lands, so this
+      // guard stays an exact-set assertion (non-vacuous) rather than drifting
+      // to a bare count as the map shrinks.
+      const unpendedACs = <String>{'AC-2'}; // CAM-3
+      final expectedPending = <String>{
+        for (var n = 1; n <= 10; n++) 'AC-$n',
+      }..removeAll(unpendedACs);
+      expect(pendingACs.keys.toSet(), expectedPending,
+          reason: 'only not-yet-delivered ACs stay pending');
+      // A delivered AC is no longer skipped — it runs in the default suite.
+      for (final ac in unpendedACs) {
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is delivered, so the default run executes it');
       }
       // Every owner names a real behaviour phase (rejects a typo'd / stale row).
       for (final entry in pendingACs.entries) {

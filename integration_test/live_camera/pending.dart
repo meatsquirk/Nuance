@@ -45,7 +45,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// AC. Every owner must be a member of [behaviorPhases].
 const Map<String, String> pendingACs = {
   'AC-1': 'VIEW-2', // The live view shows the camera feed
-  'AC-2': 'CAM-3', //  Camera frames convert to the correct colour
+  // AC-2 (Camera frames convert to the correct colour) un-pended by CAM-3.
   'AC-3': 'CAM-4', //  The reading follows the live camera frame
   'AC-4': 'VIEW-3', // Value-only mode shows the live feed in grayscale
   'AC-5': 'CAM-5', //  Locking AE·AWB·AF settles the live camera

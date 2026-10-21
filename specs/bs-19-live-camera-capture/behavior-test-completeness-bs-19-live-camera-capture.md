@@ -113,3 +113,26 @@ still rejects a placeholder/fixed/independent implementation.
   the step's grain; each still fails the plausible wrong impl. (3) AC-10's Android
   `contains`/regex could match a comment (standard source-scan limitation); the
   real elements are genuine and the iOS check is structurally immune.
+
+## Re-grade — CAM-3 (AC-2 live, 2026-10-21)
+
+CAM-3 landed the real `frameFromCameraImage` and un-pended **AC-2**. An
+independent fresh grader (did not write the test) re-graded the now-live AC-2
+against the implemented conversion:
+
+- **AC-2 `TestAC02_FrameConversion` — A (holds the prior A).** Running against
+  the real conversion the tolerances still bite every named Reject: BGR↔RGB swap
+  → L1 400 (fails `≤3` and the `>100` control); limited-/video-range YUV
+  mis-decode → L1 ≈ 21, outside `_yuvToleranceL1 = 12` (correct full-range decode
+  lands L1 ≈ 2); constant pixel → killed by the c1-vs-c2 control (L1 450). G1
+  (both buffers' bytes asserted), G4 (reticle pixel at value), G5 (controls),
+  G6 (one AC) all met; G2 built-in (output derives from the configured buffer),
+  G3 n/a (pure synchronous conversion). Confirmed green under run-pending.
+- **Scaffold guard (`smoke_test.dart` pending gate) — NON-VACUOUS.** CAM-3
+  changed it from the fixed "all 10 pending" assertion to an exact-set assertion,
+  `pendingACs.keys.toSet() == {AC-1..AC-10} \ {AC-2}`, plus "the delivered AC-2
+  runs in the default suite" and the real-owner check. Set-equality bites both
+  directions; no drift to a bare `.length` count.
+
+**CAM-3 grade count: 1 A / 0 B** (the sole un-pended AC). Feature grid remains
+all-A.

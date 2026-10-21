@@ -1,6 +1,6 @@
 # Module CAM — Real camera capture source
 
-**Status:** In progress — CAM-2 shell done; CAM-3 (behavior) next but gated by G-2 (test review)
+**Status:** In progress — CAM-3 behavior done (AC-2 live + real frame stream); CAM-4/5/6/7 startable
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/camera_capture_source.dart` (new), `lib/capture/source/frame_conversion.dart` (new), the source-selection factory seam in `lib/capture/source/`; `pubspec.yaml` (`camera` dep); unit tests under `test/capture/source/`. Also the scaffold (branch + runner + gate).
 **Depends on:** — · **Blocks:** VIEW, PERM, ITEST
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | CAM-1 | scaffold | — | ✅ Done | 4,687,376 | 13m 23s (44m 03s) |
 | CAM-2 | shell | — | ✅ Done | 4,236,040 | 10m 17s (10m 17s) |
-| CAM-3 | behavior | AC-2 (+ real frame stream, enabler-ish) | ⬜ Todo | | |
+| CAM-3 | behavior | AC-2 (+ real frame stream, enabler-ish) | ✅ Done | 8.08M | 19m 38s |
 | CAM-4 | behavior | AC-3 | ⬜ Todo | | |
 | CAM-5 | behavior | AC-5 | ⬜ Todo | | |
 | CAM-6 | behavior | AC-6 | ⬜ Todo | | |
@@ -25,7 +25,7 @@
 
 ## Open gates
 
-- G-1 (approve the spec) ✅ Resolved 2026-10-21 (approved — Matt Quirk); CAM-1 unblocked. G-2 (test review) blocks CAM-3..CAM-7.
+- G-1 (approve the spec) ✅ Resolved 2026-10-21 (approved — Matt Quirk); CAM-1 unblocked. G-2 (test review) ✅ Resolved 2026-10-21 (approved — Matt Quirk); CAM-3 done, CAM-4/5/6/7 unblocked.
 
 ## Phase CAM-1 — Scaffold
 
@@ -112,8 +112,24 @@ Inert camera-source shell — **no behaviour change** (the app still assembles a
 - **Acceptance gate:** un-pend AC-2; `integration_test/live_camera/` green (`TestAC02_*` and all earlier ACs), run-pending == default for delivered ACs.
 - **Augments:** none
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+Real `CameraImage → Frame` conversion (AC-2) + the live frame stream, over an injected `CameraDevice` seam.
+- **`frame_conversion.dart`:** `frameFromCameraImage` implemented — iOS **BGRA8888** read as B,G,R,A→RGB through the plane's `bytesPerRow`/`bytesPerPixel` (exact); Android **YUV420** decoded as **full-range BT.601 (JFIF)** — `R=Y+1.402V'`, `G=Y−0.344136U'−0.714136V'`, `B=Y+1.772U'` — through each plane's own strides with 2×2 chroma subsampling. Result tagged `FrameColorSpace.srgb` (D-6) and nearest-neighbour **downsampled toward a 64px longest side** (D-4, matches the software feed size); integer step `src~/step` output dims keep every sampled `(x,y)` in-bounds with no per-pixel clamp. Unsupported formats `throw ArgumentError`.
+- **`camera_capture_source.dart`:** new `CameraDevice` seam (`start(onImage)` / `stop()`); `frames` now opens a `StreamController` that on first-listen calls `_device.start(...)`, converts each delivered `CameraImage` via `frameFromCameraImage` and emits it, and on cancel calls `_device.stop()` — fully host-tested with a fake device. The inert lock/torch/colour members are unchanged (CAM-5/6/7 own them). Shipped concrete `PluginCameraDevice` drives the real `CameraController` (first camera, `ResolutionPreset.medium`, platform-native image format) — its two device-bound methods are `// coverage:ignore`-wrapped (genuinely unreachable under `flutter-tester`; verified by the D-5 on-device walkthrough at sign-off), the only ignore in `lib/`.
+- **AC-2 un-pended** (`pending.dart` row removed); `smoke_test.dart` pending-gate guard changed from the fixed "all 10 pending" to an exact-set assertion `{AC-1..AC-10}\{AC-2}` + "delivered AC-2 runs by default" (independent grader: NON-VACUOUS).
+- **Gates:** `dart analyze` clean. Unit **1670 pass**; coverage gate **PASS** — 100% line on both touched lib files (`camera_capture_source.dart`, `frame_conversion.dart`) with the device-bound plugin calls coverage-ignored. Acceptance (default, per file `-d flutter-tester`): **AC-2 green**, all later ACs still skipped/pending; AC-2 also green under `--dart-define=BS19_RUN_PENDING=true`. **Grade gate: 1×A** (sole un-pended AC; fresh independent grader confirmed AC-2 holds A against the live conversion). No augmentation owed (CAM-3 Augments: none). **Fix passes: 1/3** (moved `// coverage:ignore-start` above `@override` so the two annotation lines were exempted).
+- **Tokens/Time:** see dashboard (CAM-3 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase (downstream builds on):**
+  - `frameFromCameraImage(CameraImage) → Frame` — the real BGRA/YUV420 converter (sRGB, 64px-downsampled). VIEW-2/CAM-4 render/sample frames the active source yields; in tests that is `ScriptedCameraSource.frames` (unchanged), so they do **not** depend on the real device feed.
+  - `CameraDevice` seam + `CameraCaptureSource({CameraDevice? device})` — CAM-5 wires lock controls, CAM-6 the torch, **CAM-7** the lifecycle release/resume. CAM-7 can reuse the `onListen`/`onCancel` acquire/release already on `frames` and should drive the controller over a `WidgetsBindingObserver` (D-7). PERM-2 flips `selectCaptureSource(useCamera:)` so production actually constructs `CameraCaptureSource()` (→ default `PluginCameraDevice`); no device glue is owed by PERM-2.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/` (or the `test/capture/source/` subset to re-gate the touched files faster)
+  - Coverage gate: `dart run tool/coverage_gate.dart 98f0d2f` (base = CAM-3 BASE)
+  - Acceptance (default, per file): `flutter test -d flutter-tester integration_test/live_camera/<file>_test.dart`; run-pending adds `--dart-define=BS19_RUN_PENDING=true`.
+- **Known gaps:** the real `PluginCameraDevice` is unverified by automated tests (device I/O; D-5 sign-off walkthrough). Production still defaults to the software source (factory `useCamera:false`) until PERM-2, so the live feed is not yet reachable in the shipped app.
+- **Next:** VIEW-2 (merge-risky `capture_live_view.dart` pair with this phase — but CAM-3 did **not** touch `capture_live_view.dart`, so no conflict), CAM-4/5/6/7 ∥, PERM-2→PERM-3, PERM-4. Each un-pends its AC + makes its augmentation.
 
 ## Phase CAM-4 — Reading follows the live frame
 
