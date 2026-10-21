@@ -1,6 +1,6 @@
 # Module CAM — Real camera capture source
 
-**Status:** In progress — CAM-3 behavior done (AC-2 live + real frame stream); CAM-4/5/6/7 startable
+**Status:** In progress — CAM-4 done (AC-3 reading follows the live frame, un-pend only); CAM-5/6/7 startable
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/camera_capture_source.dart` (new), `lib/capture/source/frame_conversion.dart` (new), the source-selection factory seam in `lib/capture/source/`; `pubspec.yaml` (`camera` dep); unit tests under `test/capture/source/`. Also the scaffold (branch + runner + gate).
 **Depends on:** — · **Blocks:** VIEW, PERM, ITEST
@@ -12,7 +12,7 @@
 | CAM-1 | scaffold | — | ✅ Done | 4,687,376 | 13m 23s (44m 03s) |
 | CAM-2 | shell | — | ✅ Done | 4,236,040 | 10m 17s (10m 17s) |
 | CAM-3 | behavior | AC-2 (+ real frame stream, enabler-ish) | ✅ Done | 8.08M | 19m 38s |
-| CAM-4 | behavior | AC-3 | ⬜ Todo | | |
+| CAM-4 | behavior | AC-3 | ✅ Done | 4.41M | 9m 06s |
 | CAM-5 | behavior | AC-5 | ⬜ Todo | | |
 | CAM-6 | behavior | AC-6 | ⬜ Todo | | |
 | CAM-7 | behavior | AC-9 | ⬜ Todo | | |
@@ -144,8 +144,22 @@ Real `CameraImage → Frame` conversion (AC-2) + the live frame stream, over an 
 - **Acceptance gate:** un-pend AC-3; suite green.
 - **Augments:** `TestAC03`: assert the reading *changes* when the live frame changes (not merely equals the first frame) — closes the source-agnostic green-at-baseline limit.
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+AC-3 delivered as an **un-pend + keep-green** phase — **no product code, no test-logic change** (the reading-follows-frame behaviour is the existing source-agnostic sampling, already enabled by CAM-3's real frame stream; the discriminating c1→c2 augmentation was already written in ITEST-2).
+- **Change:** deleted AC-3's row from `integration_test/live_camera/pending.dart` (un-pend), so `TestAC03_ReadingFollowsFrame` now runs in the **default** suite. Updated the `smoke_test.dart` pending guards: `unpendedACs` set → `{AC-1, AC-2, AC-3}` (exact-set assertion, non-vacuous), and moved the pending-skip example AC-3→AC-4 (owner VIEW-3, still genuinely pending). No `lib/` touched.
+- **Confirmation (task 1):** the live frame flows into the reading path unchanged — the real `CaptureController._onFrame` samples each `source.frames` frame via `sampleAreaAverage` into `state.currentSample`; the fake supplies only the frame buffer (the camera device, G2), not the reading. Smoke test re-proves the feed reaches the controller.
+- **Gates:** `dart analyze integration_test/live_camera/` clean. Unit **1672 pass**, exit 0 (unchanged — no unit/lib change). Coverage gate vs BASE `49f9848`: **no touched lib/**.dart files — PASS**. Acceptance: **AC-3 green in the default run** (and run-pending); AC-1/AC-2 still green by default; later ACs (AC-4/5/6/7/8/9/10) still pending. Smoke **11/11** (updated guards green). **Grade gate: 3×A / 0 below A** — a fresh independent grader re-graded every un-pended AC test (AC-1, AC-2, AC-3); all hold A, no downgrade from the prior grid, no fix owed. **Fix passes: 0/3.**
+- **Augmentation:** `TestAC03` augmentation (reading changes c1→c2, rejects a stale/fixed sampler) **closed** — already present from ITEST-2; CAM-4 un-pended it and kept it green. No new augmentation enabled for an already-green neighbour (AC-1/AC-2 unaffected).
+- **Tokens/Time:** see dashboard (CAM-4 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase:** nothing new in `lib/` — the reading path and `CameraCaptureSource` are unchanged. AC-3 is delivered; the real-device confirmation that the live feed drives the reading on hardware rests with the D-5 sign-off walkthrough (as for AC-2's `PluginCameraDevice`).
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/`
+  - Coverage gate: `dart run tool/coverage_gate.dart <BASE>` (CAM-4 BASE = `49f9848`)
+  - Acceptance (default, per file): `flutter test -d flutter-tester integration_test/live_camera/reading_test.dart`; add `--dart-define=BS19_RUN_PENDING=true` for run-pending. Run per file — two files in one invocation can hit the "log reader failed / Unable to start the app" launcher flake (infra, not a test failure).
+- **Known gaps:** none introduced. AC-3's real-device feed is unverified by automated tests (device I/O; D-5 walkthrough), as with AC-2.
+- **Next:** CAM-5 (AC-5), CAM-6 (AC-6), CAM-7 (AC-9) — all own `camera_capture_source.dart`, so sequence them to avoid clobbering. VIEW-3 (AC-4), PERM-2 (AC-7)→PERM-3 (AC-8), PERM-4 (AC-10, un-pend + confirm only) run concurrently (disjoint files).
 
 ## Phase CAM-5 — Real AE·AWB·AF locks clear the warning
 

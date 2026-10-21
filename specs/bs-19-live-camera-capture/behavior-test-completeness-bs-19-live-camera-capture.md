@@ -173,3 +173,35 @@ now-live AC-1 against the implementation:
 
 **VIEW-2 grade count: 1 A / 0 B** (the sole un-pended AC). Feature grid remains
 all-A.
+
+## Re-grade — CAM-4 (AC-3 un-pended, 2026-10-21)
+
+CAM-4 un-pended **AC-3** (deleted its `pendingACs` row) so `TestAC03_ReadingFollowsFrame`
+now runs in the **default** suite. CAM-4 added **no product code and no new test
+assertions** — the reading-follows-frame behaviour is the existing source-agnostic
+sampling, already enabled by CAM-3's real frame stream, and the discriminating
+c1→c2 augmentation was written in ITEST-2. An independent fresh grader (did not
+write the tests or the code) re-graded every un-pended AC test (AC-1, AC-2, AC-3):
+
+- **AC-1 `TestAC01_LivePreview` — A** (holds; unchanged by CAM-4).
+- **AC-2 `TestAC02_FrameConversion` — A** (holds; unchanged by CAM-4).
+- **AC-3 `TestAC03_ReadingFollowsFrame` — A (confirmed live).** The grader verified
+  the c1→c2 change flows through the **real** pipeline, not a faked value:
+  `ScriptedCameraSource` streams real `Frame`s, the real `CaptureController._onFrame`
+  samples via the real `sampleAreaAverage` and publishes `state.currentSample`, and
+  the test reads it back through the real `ColorScienceImpl.toSRGB`; the fake supplies
+  only the frame buffer (the camera device, G2), not the reading. Given asserts the
+  opening reading ≈ c1 plus a c1/c2 separation control (>135); When = `whenFrameChangesTo`
+  (emit + pump settle point); Then asserts the reading moved to c2 (<45) **and** away
+  from stale c1 (>135). Kills a stale/fixed/placeholder sampler. G1 note: the test does
+  not assert `activeSourceKind==camera` (AC-1's job); acceptable, not a gap — the
+  behaviour is source-agnostic, so a kind check would assert something the behaviour
+  does not depend on.
+- **Scaffold guards (`smoke_test.dart`) — NON-VACUOUS.** The exact-set
+  `unpendedACs = {AC-1, AC-2, AC-3}` compares `pendingACs.keys.toSet()` to
+  `{AC-1..AC-10} \ unpended` (set-equality both directions, not a count), checks each
+  un-pended AC's skip-reason is null, and that every owner is a real behaviour phase;
+  the pending-skip example moved AC-3→AC-4 (owner VIEW-3), still a genuinely-pending AC.
+
+**CAM-4 grade count: 3 A / 0 below A** (every un-pended AC test). No downgrades from
+the prior grid; no fix owed. Feature grid remains all-A.

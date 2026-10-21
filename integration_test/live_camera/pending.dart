@@ -46,7 +46,7 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   // AC-1 (The live view shows the camera feed) un-pended by VIEW-2.
   // AC-2 (Camera frames convert to the correct colour) un-pended by CAM-3.
-  'AC-3': 'CAM-4', //  The reading follows the live camera frame
+  // AC-3 (The reading follows the live camera frame) un-pended by CAM-4.
   'AC-4': 'VIEW-3', // Value-only mode shows the live feed in grayscale
   'AC-5': 'CAM-5', //  Locking AE·AWB·AF settles the live camera
   'AC-6': 'CAM-6', //  The torch toggles the device light
