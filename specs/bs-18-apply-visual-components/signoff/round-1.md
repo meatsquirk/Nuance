@@ -2,7 +2,7 @@
 
 **Feature:** bs-18-apply-visual-components · **Spec:** [bs-18-apply-visual-components.feature](../../bs-18-apply-visual-components.feature)
 **Prepared:** 2026-10-20 (SIGNOFF-1) · **At code:** `feat/bs-18-apply-visual-components` @ `9d0436d` (GUARD-3, the last behaviour commit; the sign-off commit is stamped on the decision)
-**Decision:** ⏸ **Awaiting** — `/feature-next-phase --signoff bs-18-apply-visual-components approved | changes "<items>"`
+**Decision:** ✅ **Approved** — 2026-10-20 by **Matt Quirk** at code `9d0436d` (SIGNOFF-DECISION). Feature `Status: Done`; ready to merge to `main`.
 
 bs-18 resumes the "wholesale screen swap" that bs-17 shipped the components for but deliberately deferred (bs-17 APPLY-1, owner decision 2026-10-18). It **opts every primary screen and the app chrome into the finished bs-17 design-system wrappers** — `PillButton`, `SpeakButton`, `SurfaceCard`, `MonoLabel`, `SwatchCaption`, `ProvenanceBadge` — builds the wireframe's **bottom navigation + top bar** (previously classified "presentation / not specified"), and **fixes the Capture-screen warning-banner overlap**. It is presentation only (D-2): it changes the widget that renders a control or region, never a screen's behaviour, data, numbers, routing semantics or spoken output. All 14 acceptance criteria are automated, coded, un-pended and green by default (== run-pending; the pending map is empty). A fresh independent whole-suite re-grade (this session, fresh context) is **17 A / 0 below A** — 14 AC tests + 3 scaffold guards all straight A. This packet is the evidence for the decision.
 
