@@ -1,6 +1,6 @@
 # Module VIEW — Live preview rendering
 
-**Status:** In progress — VIEW-1 shell + VIEW-2 (AC-1) done; VIEW-3 (AC-4) startable
+**Status:** ✅ Complete — VIEW-1 shell + VIEW-2 (AC-1) + VIEW-3 (AC-4) all done
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_live_view.dart`, a frame-render widget (e.g. `lib/capture/live_frame_view.dart`), widget tests under `test/capture/`.
 **Depends on:** CAM · **Blocks:** SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | VIEW-1 | shell | — | ✅ Done | | |
 | VIEW-2 | behavior | AC-1 | ✅ Done | 7.74M | 14m 54s |
-| VIEW-3 | behavior | AC-4 | ⬜ Todo | | |
+| VIEW-3 | behavior | AC-4 | ✅ Done | 3.88M | 11m 59s |
 
 ## Interface reconciliation
 
@@ -98,5 +98,19 @@ Live preview now paints the active camera source's frame — **AC-1 delivered (g
 - **Acceptance gate:** un-pend AC-4; suite green.
 - **Augments:** `TestAC04`: assert the readings subtree sits **outside** the grayscale filter (stays in colour).
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+Value-only grayscale now greys the **live frame**, not the readings — **AC-4 delivered (grade A)**. Un-pend + keep-green only.
+- **No `lib/` change.** The behaviour already existed: the SCREEN-1 shell wraps the feed surface (`LiveFrameView`, carrying `liveViewKey`) in a saturation-0 `ColorFiltered` when `state.valueOnly`, and VIEW-2 made a real frame flow into it. The `accuracyKey` readings region is a Stack sibling outside that filter, so it stays in colour. AC-4's assertions and its readings-outside-filter augmentation were written in ITEST-2.
+- **AC un-pended:** AC-4 (`TestAC04_ValueOnlyLive`) — deleted its row in `pending.dart`. Runs green in the default suite.
+- **Augmentations:** none newly made (the readings-outside-filter augmentation was already in the ITEST-2 test); VIEW-3's residual was making the Given pass (real frame shown) + un-pend. No already-green AC test is further strengthenable by this phase (no new behaviour landed).
+- **Smoke-guard follow-through** (`live_camera/smoke_test.dart`, required because the un-pended set changed): exact-set `unpendedACs` → `{AC-1, AC-2, AC-3, AC-4}`; the pending-skip example moved AC-4 → AC-5 (owner CAM-5), still a genuinely-pending AC. Guards stay non-vacuous (set-equality both directions + each un-pended AC's skip-reason null + every owner a real phase).
+- **Gates:** analyze clean; unit+coverage **PASS** — `flutter test --coverage test/` 1672 passed, exit 0; `coverage_gate.dart ea5d98c` = **no touched lib/**.dart — nothing to gate, PASS**. Acceptance **PASS** — `preview_test.dart` default 3/3 (AC-1/2/4 green); run-pending 3/3; `smoke_test.dart` 11/11; reading/controls/permission/platform default-mode files green with only later-phase ACs (AC-5/6/7/8/9) still skipped-pending. No regression (no lib touched; the existing `capture_test`/`advanced_capture_test` suites don't import the changed test files). **Grade A** (fresh independent re-grade of all 4 un-pended ACs: 4 A / 0 below A). **Fix passes: 0/3.**
+- **Tokens/Time:** see dashboard (VIEW-3 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase:** nothing new — VIEW-3 added no interfaces. AC-4 now runs in the default suite; the value-only grayscale invariant (`ColorFiltered` over `liveViewKey` only, `accuracyKey` outside) is locked by `TestAC04_ValueOnlyLive`.
+- **VIEW module is now complete** (VIEW-1 shell, VIEW-2 AC-1, VIEW-3 AC-4 all done). No VIEW phase remains; VIEW no longer blocks SIGNOFF-1 (which still waits on the CAM-5/6/7 and PERM-2/3/4 behavior phases).
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart <BASE>`.
+  - Acceptance (one file per invocation): `flutter test -d flutter-tester integration_test/live_camera/preview_test.dart` (default: AC-1/AC-2/AC-4 green); `… smoke_test.dart` (11/11).
+- **Known gaps:** none introduced.

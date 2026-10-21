@@ -205,3 +205,38 @@ write the tests or the code) re-graded every un-pended AC test (AC-1, AC-2, AC-3
 
 **CAM-4 grade count: 3 A / 0 below A** (every un-pended AC test). No downgrades from
 the prior grid; no fix owed. Feature grid remains all-A.
+
+## Re-grade — VIEW-3 (AC-4 un-pended, 2026-10-21)
+
+VIEW-3 un-pended **AC-4** (deleted its `pendingACs` row) so `TestAC04_ValueOnlyLive`
+now runs in the **default** suite. VIEW-3 added **no product code**: the value-only
+grayscale behaviour already existed in the SCREEN-1 shell (the saturation-0
+`ColorFiltered` wrapping the feed surface), and AC-4's assertions — including its
+readings-outside-the-filter augmentation — were written in ITEST-2. An independent
+fresh grader (did not write the tests or the code) re-graded every un-pended AC test
+(AC-1, AC-2, AC-3, AC-4):
+
+- **AC-1 `TestAC01_LivePreview` — A** (holds; unchanged by VIEW-3).
+- **AC-2 `TestAC02_FrameConversion` — A** (holds; unchanged by VIEW-3).
+- **AC-3 `TestAC03_ReadingFollowsFrame` — A** (holds; unchanged by VIEW-3).
+- **AC-4 `TestAC04_ValueOnlyLive` — A (confirmed live).** Both stated Givens are
+  checked through the public surface before the When (`liveView.frame isNotNull`
+  via `tester.widget<LiveFrameView>(liveViewKey)` + `showsPlaceholder isFalse`, i.e.
+  a live colour frame is shown — G1). The When taps the real `valueOnlyKey`, driving
+  the real `toggleValueOnly()` → `state.valueOnly` flip → the conditional
+  `ColorFiltered` wrap; nothing scripted supplies the greying (G2). The Then is a
+  discriminating pair verified against `capture_live_view.dart`: the grayscale
+  `ColorFiltered` wraps **only** `feedSurface` (which carries `liveViewKey`) while the
+  `accuracyKey` `KeyedSubtree` is a Stack **sibling** outside it — so
+  `ancestor(liveViewKey, ColorFiltered) findsOneWidget` + `ancestor(accuracyKey,
+  ColorFiltered) findsNothing` kills both named Rejects (grey-the-whole-screen incl.
+  readings; grey-nothing) and an inverted toggle gate (G4/G5/G6). The negative Then is
+  non-vacuous — paired with the positive assertion proving a `ColorFiltered` exists in
+  the tree, so `findsNothing` means "exists but not over the readings" (G3).
+  Grader observation (not a downgrade): the test doesn't assert the filter is *absent*
+  pre-toggle, so a hypothetical always-grayscale build would pass; implausible here
+  (grayscale-at-open is gated in real code and caught across the visual suite) and not a
+  clean G-rule break — grade stands at A.
+
+**VIEW-3 grade count: 4 A / 0 below A** (every un-pended AC test). No downgrades from
+the prior grid; no fix owed. Feature grid remains all-A.
