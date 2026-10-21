@@ -12,6 +12,7 @@ import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/capture/capture_controls.dart';
 import 'package:paint_color_assistant/capture/capture_read_endpoint.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
+import 'package:paint_color_assistant/capture/source/frame.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/correction/correction_read_endpoint.dart';
@@ -103,6 +104,90 @@ class _RecordingSpeech implements Speech {
   @override
   Future<void> speak(String utterance) async => utterances.add(utterance);
 }
+
+/// A live camera [CaptureSource] that records each feed acquisition (a
+/// subscription), so the bs-19 CAM-7 lifecycle wiring on the Capture host can be
+/// observed (AC-9): backgrounding the app releases the feed and resuming
+/// re-acquires it. Mirrors the real [CameraCaptureSource.frames] shape — a fresh
+/// [StreamController] per listen whose `onListen` acquires the device — and
+/// replays a seed frame on each subscription so a resumed feed renders a reading
+/// again rather than staying frozen.
+///
+/// Acquisitions are counted through `onListen` (synchronous at subscription),
+/// not through the subscription teardown's async `onCancel`: the widget-test
+/// FakeAsync zone does not flush an in-flight stream cancellation, so a
+/// re-acquire ([acquireCount] climbing to 2) is the observable, deterministic
+/// signal that the feed was released and re-opened — `resumeFeed` re-subscribes
+/// only when the feed was first released. The precise release/re-acquire pairing
+/// is asserted directly on the controller in `capture_controller_test.dart` and
+/// end-to-end in the AC-9 acceptance test.
+class _LifecycleCaptureSource implements CaptureSource {
+  /// How many times the live feed has been subscribed (a camera acquisition).
+  int acquireCount = 0;
+
+  static final Frame _seed = Frame(
+    width: 8,
+    height: 8,
+    pixels: List<Pixel>.filled(64, const Pixel(0, 170, 200)),
+  );
+
+  @override
+  Stream<Frame> get frames {
+    late final StreamController<Frame> controller;
+    controller = StreamController<Frame>(
+      onListen: () {
+        acquireCount++;
+        if (!controller.isClosed) controller.add(_seed);
+      },
+    );
+    return controller.stream;
+  }
+
+  @override
+  CaptureSourceKind kind = CaptureSourceKind.camera;
+  @override
+  CaptureLocks get locks => const CaptureLocks();
+  @override
+  Stream<StabilityReading> get stability =>
+      const Stream<StabilityReading>.empty();
+  @override
+  Lighting get lighting => Lighting.adequate;
+  @override
+  bool get referenceCardPresent => false;
+  @override
+  ColorCoordinates normaliseAgainstCard(ColorCoordinates raw) => raw;
+  @override
+  ImportedPhoto? importedPhoto;
+  @override
+  void importPhoto(ImportedPhoto photo) => importedPhoto = photo;
+  @override
+  void lockExposure() {}
+  @override
+  void lockWhiteBalance() {}
+  @override
+  void lockFocus() {}
+  @override
+  bool get torchOn => false;
+  @override
+  void turnTorchOn() {}
+  @override
+  void turnTorchOff() {}
+  @override
+  bool get supportsWideGamut => false;
+  @override
+  bool get supportsRaw => false;
+  @override
+  CaptureColorSpace get colorSpace => CaptureColorSpace.srgb;
+  @override
+  CaptureMode get captureMode => CaptureMode.processed;
+}
+
+AppDependencies _lifecycleDeps(CaptureSource source) => AppDependencies(
+      colorScience: const ColorScienceImpl(),
+      speech: const NoopSpeech(),
+      haptics: const NoopHaptics(),
+      captureSource: source,
+    );
 
 AppDependencies _captureDepsWith(
   SoftwareCaptureSource source,
@@ -480,6 +565,56 @@ void main() {
 
       // A disposed ChangeNotifier throws if listened to again.
       expect(() => controller.addListener(() {}), throwsFlutterError);
+    });
+
+    testWidgets(
+        'releases the camera when backgrounded and re-acquires it on resume '
+        '(bs-19 AC-9)', (tester) async {
+      final source = _LifecycleCaptureSource();
+      await tester.pumpWidget(buildApp(_lifecycleDeps(source)));
+      // Settle the stability counter so no self-rescheduling tick is pending.
+      await tester.pumpAndSettle();
+      final controller = tester
+          .widget<CaptureReadEndpoint>(
+            find.byKey(CaptureReadEndpoint.endpointKey),
+          )
+          .controller;
+      expect(source.acquireCount, 1,
+          reason: 'the feed is acquired once when the screen opens');
+      expect(controller.state.currentSample, isNotNull,
+          reason: 'the opening frame has been sampled');
+
+      // Backgrounding the app walks inactive → hidden → paused: the host drives
+      // pauseFeed on each (idempotently), so the feed is NOT re-acquired while
+      // away. The release itself (an async subscription cancel) is not flushed by
+      // the widget-test FakeAsync zone, so it is asserted on the controller and
+      // in the AC-9 acceptance test; here the observable is that no new
+      // acquisition happens while paused.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      expect(source.acquireCount, 1, reason: 'not re-acquired while paused');
+
+      // A terminal detach is handled by the same release arm (no crash, no
+      // spurious re-acquire).
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.detached);
+      await tester.pump();
+      expect(source.acquireCount, 1);
+
+      // Returning to the foreground re-acquires the camera so the feed resumes.
+      // A second acquisition can only happen because the feed was released first
+      // (resumeFeed re-subscribes only when the feed was let go), so this proves
+      // the release → re-acquire pairing without depending on the async cancel.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(source.acquireCount, 2,
+          reason: 'the camera is re-acquired on resume (not left frozen)');
+      // The resumed subscription replayed the seed frame, so a reading renders.
+      expect(controller.state.currentSample, isNotNull,
+          reason: 'the live feed resumes rather than staying black');
     });
 
     testWidgets('a commit opens the captured reading\'s Readout and confirms',

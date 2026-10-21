@@ -1108,7 +1108,8 @@ class CaptureHomeScreen extends StatefulWidget {
   State<CaptureHomeScreen> createState() => _CaptureHomeScreenState();
 }
 
-class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
+class _CaptureHomeScreenState extends State<CaptureHomeScreen>
+    with WidgetsBindingObserver {
   CaptureController? _controller;
 
   /// The committed sample the Readout has already been opened for, so the
@@ -1118,6 +1119,37 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
   /// The pair the comparison has already been opened for, so the AC-5 pair
   /// handoff fires once per send rather than on every later state change.
   ComparisonPair? _openedComparisonFor;
+
+  @override
+  void initState() {
+    super.initState();
+    // Observe the app lifecycle so the camera is released when the Capture
+    // screen leaves the foreground and re-acquired when it returns (bs-19 AC-9,
+    // plan D-7), alongside the screen-dispose release in [dispose].
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Ties the camera to the app lifecycle (bs-19 AC-9, plan D-7).
+  ///
+  /// Releases the live feed when the app leaves the foreground — `inactive`,
+  /// `hidden`, `paused` or `detached` — so the device is freed and left neither
+  /// locked nor streaming in the background, and re-acquires it on `resumed` so
+  /// the preview resumes from a fresh frame rather than a frozen or black one.
+  /// A no-op before [didChangeDependencies] has built the controller.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final controller = _controller;
+    if (controller == null) return;
+    switch (state) {
+      case AppLifecycleState.resumed:
+        controller.resumeFeed();
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        controller.pauseFeed();
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -1169,8 +1201,11 @@ class _CaptureHomeScreenState extends State<CaptureHomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller?.removeListener(_openReadoutOnCommit);
     _controller?.removeListener(_openComparisonOnPair);
+    // Disposing the controller cancels its live feed — the screen-dispose arm of
+    // the AC-9 lifecycle release (plan D-7).
     _controller?.dispose();
     super.dispose();
   }

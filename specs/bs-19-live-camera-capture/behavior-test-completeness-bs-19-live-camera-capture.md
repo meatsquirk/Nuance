@@ -328,3 +328,56 @@ or the code) re-graded every un-pended AC test (AC-1..AC-6):
 
 **CAM-6 grade count: 6 A / 0 below A** (every un-pended AC test). No downgrades from the prior
 grid; no fix owed. Feature grid remains all-A.
+
+## Re-grade — CAM-7 (AC-9 un-pended + lifecycle release/resume, 2026-10-21)
+
+CAM-7 made `_feed` nullable and added `pauseFeed()` (cancels the subscription, clears `_feed`,
+idempotent) / `resumeFeed()` (re-subscribes via `source.frames.listen(_onFrame)`, guarded by
+`if (_disposed || _feed != null) return;`) to `capture_controller.dart`, and made
+`_CaptureHomeScreenState` a `WidgetsBindingObserver` whose `didChangeAppLifecycleState` calls
+`resumeFeed()` on `resumed` and `pauseFeed()` on inactive/hidden/paused/detached. It un-pended
+**AC-9** (deleted its `pendingACs` row) so `TestAC09_Lifecycle` now runs in the default suite,
+added lifecycle unit tests, and updated the smoke exact-set guard. An independent fresh grader
+(did not write the tests or the code) confirmed the lib diff is confined to those two files — no
+AC-1..AC-6 behaviour code (`currentFrame`, `_onFrame`, `lock`, `turnTorch*`, `toggleValueOnly`)
+touched — and graded adversarially, as the live code now behaves:
+
+- **AC-1 `TestAC01_LivePreview` — A** (holds; `currentFrame`/render path untouched).
+- **AC-2 `TestAC02_FrameConversion` — A** (holds; conversion path untouched).
+- **AC-3 `TestAC03_ReadingFollowsFrame` — A** (holds; `_onFrame` sampling untouched).
+- **AC-4 `TestAC04_ValueOnlyLive` — A** (holds; value-only filter untouched).
+- **AC-5 `TestAC05_LockClearsWarning` — A** (holds; `lock()`/`activeDowngradeReasons` untouched).
+- **AC-6 `TestAC06_Torch` — A** (holds; torch/commit path untouched).
+- **AC-9 `TestAC09_Lifecycle` — A (now live; holds the prior as-written A).** Givens on the
+  source's public recorders before the When — `acquireCount==1` (the `frames async*` increments on
+  the controller's constructor subscription), `releaseCount==0`, opening reading ≈ `RETICLE_CYAN`
+  (<45 via the real `ColorScienceImpl` round-trip). The pre-`pumpAndSettle` drives the
+  self-rescheduling settle tick to STABLE 12/12 so it stops scheduling (verified against
+  `_scheduleSettleTick`). `_background` (inactive→hidden→paused, then `tester.idle()`): the live
+  observer calls `pauseFeed()` → `_feed.cancel()` → the generator `finally` runs `releaseCount++`
+  on a microtask `idle()` drains under the real `IntegrationTestWidgetsFlutterBinding` (no-pump-while-
+  paused reasoning sound). `releaseCount >= 1` bites a leaked controller. `_foreground` ends on
+  `resumed` → `resumeFeed()` re-subscribes (guard passes because `pauseFeed` nulled `_feed`), so
+  `acquireCount >= 2` bites a no-re-acquire; the intervening hidden/inactive no-op correctly. The
+  G3 control — `whenFrameChangesTo(FRAME_ORANGE)` → resumed reading ≈ `RETICLE_ORANGE` (<45) over
+  the 450-L1 cyan↔orange separation — kills a frozen/black feed that re-subscribes but never wires
+  frames through. G1/G3/G4/G5/G6 met, G2 n/a. Non-vacuous in both directions.
+- **New CAM-7 unit tests — NON-VACUOUS (both legitimate given their async-zone constraints).**
+  `capture_controller_test.dart` 'lifecycle feed release/resume' drives the **real** controller over
+  `_RecordingFeedSource` under real async (`pumpEventQueue`): exact counts for release+re-acquire
+  (acquire 1→2, release 0→1), idempotent pause (release==1 after two pauses), resume-while-live
+  no-op (`_feed != null` guard → acquire stays 1), resume-after-dispose no-op (`_disposed` guard →
+  acquire unchanged), and a resumed feed delivering a fresh frame (seed→opening <12, emit→next <12).
+  Each bites its guard. The `build_app_test.dart` host test is sound despite the FakeAsync zone not
+  flushing the async `onCancel`: it counts acquisitions via `onListen` and asserts acquire stays 1
+  while paused/detached and reaches 2 on resume — reachable only if the host actually called
+  `pauseFeed` first (`resumeFeed`'s `_feed != null` guard), so it bites both "host never pauses" and
+  "host doesn't re-acquire on resume". The precise release count is pinned in the controller unit
+  test and the AC-9 acceptance test.
+- **Smoke exact-set guard — NON-VACUOUS.** `unpendedACs` now includes AC-9; `expectedPending =
+  {AC-1..10} \ unpendedACs = {AC-7, AC-8, AC-10}` compared by set-equality to
+  `pendingACs.keys.toSet()` (pending.dart holds exactly AC-7→PERM-2, AC-8→PERM-3, AC-10→PERM-4).
+  Both directions bite; the pending-skip example still uses a genuinely-pending AC (AC-7/PERM-2).
+
+**CAM-7 grade count: 7 A / 0 below A** (every un-pended AC test: AC-1..AC-6, AC-9). No downgrades
+from the prior grid; no fix owed. Feature grid remains all-A.

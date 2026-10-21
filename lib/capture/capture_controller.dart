@@ -33,8 +33,13 @@ class CaptureController extends ChangeNotifier {
   /// The source of frames and camera controls this capture reads (D-2).
   final CaptureSource source;
 
-  /// The live-feed subscription that drives [CaptureState.currentSample].
-  late final StreamSubscription<Frame> _feed;
+  /// The live-feed subscription that drives [CaptureState.currentSample], or
+  /// null while the feed is released across the app lifecycle (AC-9).
+  ///
+  /// Opened at construction, cancelled and cleared by [pauseFeed] when the
+  /// Capture screen leaves the foreground, and re-opened by [resumeFeed] when it
+  /// returns (plan D-7).
+  StreamSubscription<Frame>? _feed;
 
   bool _disposed = false;
 
@@ -454,6 +459,34 @@ class CaptureController extends ChangeNotifier {
           AccuracyDowngradeReason.missingReferenceCard,
       };
 
+  /// Releases the live feed across the app lifecycle (AC-9, plan D-7).
+  ///
+  /// Cancels the frame subscription so the active source tears its device down —
+  /// the live [CaptureSource] stops the camera through the `frames` stream's
+  /// `onCancel` — freeing the camera (and dropping any AE/AWB/AF/torch hold)
+  /// while the Capture screen is inactive, hidden, paused or disposed. Idempotent:
+  /// a no-op once the feed is already released, so the several transitions that
+  /// precede a background (`inactive` → `hidden` → `paused`) release the camera
+  /// exactly once.
+  void pauseFeed() {
+    _feed?.cancel();
+    _feed = null;
+  }
+
+  /// Re-acquires the live feed when the Capture screen returns to the foreground
+  /// (AC-9, plan D-7).
+  ///
+  /// Opens a fresh subscription so the source re-initialises its device — the
+  /// live [CaptureSource] restarts the camera through the `frames` stream's
+  /// `onListen` — and the preview resumes from a new frame rather than the frozen
+  /// or black last frame. Idempotent: a no-op while the feed is already live, and
+  /// once the controller is [dispose]d, so a late `resumed` cannot resurrect a
+  /// torn-down controller.
+  void resumeFeed() {
+    if (_disposed || _feed != null) return;
+    _feed = source.frames.listen(_onFrame);
+  }
+
   /// Replaces the observable state and notifies listeners.
   ///
   /// The single mutation seam the behaviour phases move state through, so every
@@ -469,7 +502,7 @@ class CaptureController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    _feed.cancel();
+    _feed?.cancel();
     super.dispose();
   }
 }

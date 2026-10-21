@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — CAM-6 done (AC-6 real device torch); next CAM-7 ∥ PERM-2 ∥ PERM-4
+**Status:** In progress — CAM module COMPLETE (CAM-7 done, AC-9 lifecycle); next PERM-2 ∥ PERM-4
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -42,7 +42,7 @@
 | AC-6 | The torch toggles the device light | ITEST-3 `TestAC06_Torch` | CAM-6 | ✅ Done |
 | AC-7 | Permission requested; denial falls back gracefully | ITEST-3 `TestAC07_PermissionFallback` | PERM-2 | ⬜ Todo |
 | AC-8 | A device with no camera falls back gracefully | ITEST-3 `TestAC08_NoCameraFallback` | PERM-3 | ⬜ Todo |
-| AC-9 | Camera released and re-acquired across lifecycle | ITEST-3 `TestAC09_Lifecycle` | CAM-7 | ⬜ Todo |
+| AC-9 | Camera released and re-acquired across lifecycle | ITEST-3 `TestAC09_Lifecycle` | CAM-7 | ✅ Done |
 | AC-10 | The app declares camera use on both platforms | ITEST-3 `TestAC10_PlatformDeclarations` | PERM-4 | ⬜ Todo |
 
 ## Design decisions
@@ -97,7 +97,7 @@ Pre-seeded augmentations: AC-3/AC-5/AC-6 may run **green at baseline** against a
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| CAM | [modules/CAM.md](modules/CAM.md) | Real `CameraCaptureSource` over the `camera` plugin: frame stream + conversion, AE·AWB·AF locks, torch, lifecycle | — | 🔶 In progress |
+| CAM | [modules/CAM.md](modules/CAM.md) | Real `CameraCaptureSource` over the `camera` plugin: frame stream + conversion, AE·AWB·AF locks, torch, lifecycle | — | ✅ Complete |
 | VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | ✅ Complete |
 | PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | 🔶 In progress |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔶 In progress |
@@ -155,8 +155,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | VIEW-3 | AC-4 value-only grayscale over live frame | ✅ Done | 3.88M | 11m 59s | un-pend + keep green (no lib); VIEW module complete; 4×A; cov PASS (0 touched lib); fix 0/3 |
 | 13 | CAM-5 | AC-5 real AE·AWB·AF locks clear the warning | ✅ Done | 6,178,509 | 11m 02s | real lock forwarding via CameraDevice seam; AWB implicit w/ AE (no plugin ctrl, D-5); 5×A; cov 100% 1 touched; fix 0/3 |
 | 14 | CAM-6 | AC-6 real device torch | ✅ Done | 5,348,128 | 13m 23s | real torch forwarding via CameraDevice seam (`setFlashMode`); un-pend AC-6; 6×A; unit 1674; cov 100% 1 touched; fix 0/3 |
-| 15 | CAM-7 | AC-9 camera lifecycle release/resume | ⬜ Next | | | owns camera_capture_source.dart (rebase onto CAM-6); ∥ PERM-2, PERM-4 |
-| 16 | PERM-2 | AC-7 permission request + denial fallback + state | ⬜ Todo | | | after PERM-1, CAM-3 |
+| 15 | CAM-7 | AC-9 camera lifecycle release/resume | ✅ Done | 17,712,519 | 47m 55s | WidgetsBindingObserver on Capture host → controller pauseFeed/resumeFeed (D-7); AC-9 un-pended; CAM module complete; 7×A; unit 1680; cov 100% 2 touched; fix 1/3 (host unit test: FakeAsync no-flush of async cancel) |
+| 16 | PERM-2 | AC-7 permission request + denial fallback + state | ⬜ Next | | | after PERM-1, CAM-3 |
 | 17 | PERM-3 | AC-8 no-camera fallback | ⬜ Todo | | | after PERM-2 |
 | 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ⬜ Todo | | | ∥ |
 | 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | after all behavior |
@@ -165,11 +165,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**CAM-6 done — AC-6 real device torch (grade A).** The `CameraDevice` seam gained `turnTorchOn`/`turnTorchOff`; `CameraCaptureSource.turnTorch*` now records `_torchOn` **and** forwards to the device (`setFlashMode(torch)` / `setFlashMode(off)`; device methods coverage-ignored, D-5 walkthrough). AC-6 un-pended; the AC-6 test's `torchOnCalls`/`torchOffCalls` recorders (ITEST-3) prove the toggle reaches the source, and the torch-off commit control proves `litByTorch` tracks real torch state. 10 ACs delivered (AC-1..AC-6 green by default; AC-10 green-at-baseline not yet un-pended), 3 fully pending/red (AC-7/8/9).
-- **Startable now, concurrently:** CAM-7 (AC-9), PERM-2 (AC-7), PERM-4 (AC-10). PERM-2→PERM-3. Each = un-pend its AC + make its augmentation + keep green.
-- **⚠ PERM-4:** AC-10's declarations already shipped in PERM-1 — AC-10 green now, PERM-4 is un-pend + confirm only (no product work).
-- **Merge note:** CAM-7 owns `camera_capture_source.dart` — rebase onto CAM-6's seam (which added the torch methods the same way CAM-5 added the locks). PERM-2/3/4 own the PERM files — disjoint from the CAM-* source files.
-- **Carried watch-outs:** AC-7/AC-8 need PERM-2/PERM-3 to inject selection *inputs* (permission outcome + availability), not a chosen source. CAM-7 reuses CAM-3's `frames` onListen/onCancel acquire/release over a `WidgetsBindingObserver` (D-7); live-binding gotcha — never pump while `paused` (`tester.idle()` + resume-then-pump). macOS has no `timeout`; run `flutter test -d flutter-tester` per file (two files in one invocation can hit the launcher flake).
+**CAM-7 done — AC-9 camera lifecycle release/resume (grade A); CAM module COMPLETE.** A `WidgetsBindingObserver` on the Capture host (`_CaptureHomeScreenState`) calls new `CaptureController.pauseFeed()` (cancel the feed) on `inactive`/`hidden`/`paused`/`detached` and `resumeFeed()` (re-subscribe) on `resumed` (D-7); the live `CameraCaptureSource.frames` onListen/onCancel already start/stop the device, so this releases/re-acquires the real camera with no extra glue. AC-9 un-pended. 7 ACs delivered (AC-1..AC-6, AC-9 green by default), 3 pending/red (AC-7/8/10). The observer lives on the host, not the controller, so `correction_controller.dart`'s transient reuse stays binding-free.
+- **Startable now:** PERM-2 (AC-7) → PERM-3 (AC-8); PERM-4 (AC-10) ∥. All own the PERM files, disjoint from the CAM-*/VIEW-* sources. Each = un-pend its AC + make its augmentation + keep green.
+- **⚠ PERM-4:** AC-10's declarations already shipped in PERM-1 — AC-10 green-at-baseline now, PERM-4 is un-pend + confirm only (no product work).
+- **Carried watch-outs:** AC-7/AC-8 need PERM-2/PERM-3 to inject selection *inputs* (permission outcome + availability), not a chosen source. Async-zone gotcha (from CAM-7): under the live integration binding `tester.idle()` drains a subscription-cancel; under the plain widget-test FakeAsync zone it does **not** — unit tests observe a release via real async (`test()` + `pumpEventQueue`) or by counting `onListen` acquisitions, never `await sub.cancel()` in a `testWidgets` body (hangs). macOS has no `timeout`; run `flutter test -d flutter-tester` per file.
 
 ## Token usage
 
@@ -193,7 +192,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | VIEW-3 | 3a0ed481 | 2026-10-21 14:11 EDT | 14:23 | 11m 59s | 11m 59s | claude-opus-4-8 | 80 | 179,522 | 3,676,408 | 20,059 | 3,876,069 | AC-4 un-pended (value-only grayscale over the live frame); no lib change (shell ColorFiltered + VIEW-2 frame flow; augmentation written in ITEST-2); unit 1672, coverage PASS (0 touched lib), acceptance preview 3/3 default + smoke 11/11, VIEW module complete; grade 4A/0; fix 0/3 |
 | CAM-5 | 375c6867 | 2026-10-21 14:28 EDT | 14:39 | 11m 02s | 11m 02s | claude-opus-4-8 | 112 | 216,864 | 5,931,841 | 29,692 | 6,178,509 | AC-5 real AE·AWB·AF lock forwarding via CameraDevice seam; AWB implicit w/ AE (no plugin ctrl, D-5); un-pend AC-5; 5×A; unit 1673; cov 100% 1 touched; fix 0/3 |
 | CAM-6 | 80228cbc | 2026-10-21 14:44 EDT | 14:58 | 13m 23s | 13m 23s | claude-opus-4-8 | 106 | 222,564 | 5,100,087 | 25,371 | 5,348,128 | AC-6 real device torch forwarding via CameraDevice seam (setFlashMode torch/off); un-pend AC-6; 6×A; unit 1674; cov 100% 1 touched; fix 0/3 |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 14:58** | **6h 51m** | **4h 59m** |  | **1,668** | **2,940,453** | **103,182,337** | **676,474** | **106,800,932** |  |
+| CAM-7 | 82fe6d69 | 2026-10-21 15:00 EDT | 15:48 | 47m 55s | 47m 55s | claude-opus-4-8 | 210 | 336,106 | 17,290,790 | 85,413 | 17,712,519 | AC-9 lifecycle release/resume delivered; CAM module complete; 7xA; unit 1680; coverage PASS 2 touched; fix 1/3 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 15:48** | **7h 39m** | **5h 47m** |  | **1,878** | **3,276,559** | **120,473,127** | **761,887** | **124,513,451** |  |
 
 ## Sign-off
 

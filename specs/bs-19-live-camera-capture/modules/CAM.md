@@ -1,6 +1,6 @@
 # Module CAM — Real camera capture source
 
-**Status:** In progress — CAM-6 done (AC-6 real device torch forwarding); CAM-7 startable (owns `camera_capture_source.dart`, rebase onto CAM-6)
+**Status:** CAM module COMPLETE — CAM-7 done (AC-9 lifecycle release/resume). All 7 CAM phases done; AC-2/3/5/6/9 delivered.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/source/camera_capture_source.dart` (new), `lib/capture/source/frame_conversion.dart` (new), the source-selection factory seam in `lib/capture/source/`; `pubspec.yaml` (`camera` dep); unit tests under `test/capture/source/`. Also the scaffold (branch + runner + gate).
 **Depends on:** — · **Blocks:** VIEW, PERM, ITEST
@@ -15,7 +15,7 @@
 | CAM-4 | behavior | AC-3 | ✅ Done | 4.41M | 9m 06s |
 | CAM-5 | behavior | AC-5 | ✅ Done | | |
 | CAM-6 | behavior | AC-6 | ✅ Done | 5.35M | 13m 23s |
-| CAM-7 | behavior | AC-9 | ⬜ Todo | | |
+| CAM-7 | behavior | AC-9 | ✅ Done | 17.71M | 47m 55s |
 
 ## Interface reconciliation
 
@@ -236,5 +236,21 @@ AC-6 delivered: the **real** `CameraCaptureSource` torch now drives the device f
 - **Acceptance gate:** un-pend AC-9; suite green.
 - **Augments:** none
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+AC-9 delivered: the camera is released when the Capture screen leaves the foreground and re-acquired on resume (plan D-7), over a `WidgetsBindingObserver` on the Capture host driving two new controller feed-control methods.
+- **Product — `capture_controller.dart`:** `_feed` is now a nullable `StreamSubscription<Frame>?` (was `late final`). New `pauseFeed()` cancels the subscription and nulls `_feed` (idempotent — a no-op once released, so the `inactive`→`hidden`→`paused` run releases once); new `resumeFeed()` re-subscribes via `source.frames.listen(_onFrame)`, guarded by `if (_disposed || _feed != null) return;` (no-op while live, and after dispose so a late `resumed` can't resurrect a torn-down controller). `dispose()` now `_feed?.cancel()`. Because the live `CameraCaptureSource.frames` acquires/releases the device through the stream's `onListen`/`onCancel` (CAM-3), cancelling the subscription stops the real camera and re-listening restarts it — no extra device glue needed.
+- **Product — `build_app.dart` (`_CaptureHomeScreenState`):** now `with WidgetsBindingObserver`; `initState` adds the observer, `dispose` removes it (plus the existing `_controller?.dispose()` — the screen-dispose release arm of D-7). `didChangeAppLifecycleState` calls `controller.resumeFeed()` on `resumed` and `controller.pauseFeed()` on `inactive`/`hidden`/`paused`/`detached` (exhaustive switch, null-guarded before the controller is built). The observer lives on the host, **not** the controller, so `correction_controller.dart`'s transient reuse of `CaptureController` and the plain-`test()` constructions stay binding-free.
+- **Acceptance:** AC-9 row deleted from `pending.dart` (un-pend) so `TestAC09_Lifecycle` runs in the **default** suite; `smoke_test.dart` exact-set `unpendedACs` → `{AC-1..AC-6, AC-9}` (pending now exactly `{AC-7, AC-8, AC-10}`). No AC-test logic changed — the AC-9 test drives the scripted source's acquire/release recorders (ITEST-3).
+- **Unit tests:** +6 — `capture_controller_test.dart` lifecycle group (5: release+re-acquire exact counts, idempotent pause, resume-while-live no-op, resume-after-dispose no-op, resumed-feed-delivers-fresh-frame) over a new `_RecordingFeedSource` (real async, `pumpEventQueue`); `build_app_test.dart` host lifecycle test (1) over `_LifecycleCaptureSource` that counts acquisitions via `onListen` (the widget-test FakeAsync zone does not flush the async subscription-cancel teardown, so acquire-count — 2 on resume ⇒ released-then-reacquired, since `resumeFeed` no-ops unless released — is the deterministic signal).
+- **Gates:** `dart analyze` clean. Unit **1680 pass** (1674 + 6), exit 0. Coverage gate vs BASE `6c9c292`: **100% line on both touched lib files** (`capture_controller.dart`, `build_app.dart`). Acceptance (per file `-d flutter-tester`): **AC-9 green in default and run-pending** (controls 2/2 with AC-6); preview 3/3, reading 2/2, smoke 11/11 both modes. **Grade gate: 7×A / 0 below A** — a fresh independent grader re-graded every un-pended AC test (AC-1..AC-6, AC-9); all hold A, no downgrade, no fix owed. **Fix passes: 1/3** (the host unit test: the widget-test FakeAsync zone doesn't flush an in-flight async stream cancel, so `releaseCount` stayed 0 — switched the recording source to count acquisitions via `onListen` and assert `acquireCount==2`-on-resume instead).
+- **Tokens/Time:** see dashboard (CAM-7 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase:** `CaptureController.pauseFeed()` / `resumeFeed()` (the lifecycle feed-control seam) and the nullable `_feed`; `_CaptureHomeScreenState` is the lone `WidgetsBindingObserver` tying the camera to the app lifecycle (D-7). The real device release/resume (camera actually stopped on background, restarted on resume, no frozen/black frame, no leaked controller) is unverified by automated tests (device I/O) — rests on the D-5 sign-off walkthrough, as with CAM-3's frame stream / CAM-5's locks / CAM-6's torch.
+- **Known async-zone gotcha (for later readers):** under the live `IntegrationTestWidgetsFlutterBinding` (the acceptance suite) `tester.idle()` drains the subscription-cancel `finally`, so `releaseCount` is observable there; under the plain widget-test **FakeAsync** zone it is **not** flushed — unit tests that need to observe a release must either run under real async (plain `test()` + `pumpEventQueue`, as the controller tests do) or count `onListen` acquisitions instead (as the host test does). Never `await subscription.cancel()` in a `testWidgets` body — it hangs FakeAsync.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no** `timeout`, run bare):
+  - Unit + coverage: `flutter test --coverage test/`
+  - Coverage gate: `dart run tool/coverage_gate.dart <BASE>` (CAM-7 BASE = `6c9c292`)
+  - Acceptance (default, per file): `flutter test -d flutter-tester integration_test/live_camera/controls_test.dart`; add `--dart-define=BS19_RUN_PENDING=true` for run-pending. Run per file — two files in one invocation can hit the launcher flake.
+- **Known gaps:** none introduced. Production still defaults to the software source until PERM-2 flips `selectCaptureSource(useCamera:)`, so the live camera (and its lifecycle release/resume) is not yet reachable in the shipped app.
+- **Next:** PERM-2 (AC-7) → PERM-3 (AC-8), PERM-4 (AC-10, un-pend + confirm only — AC-10 green-at-baseline) — all own the PERM files, disjoint from the CAM-* sources. Then SIGNOFF-1 (needs all behaviour phases done). The CAM module is complete.

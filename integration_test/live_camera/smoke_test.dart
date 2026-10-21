@@ -72,6 +72,7 @@ void main() {
       const unpendedACs = <String>{
         'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', // VIEW-2, CAM-3, CAM-4, VIEW-3, CAM-5
         'AC-6', // CAM-6
+        'AC-9', // CAM-7
       };
       final expectedPending = <String>{
         for (var n = 1; n <= 10; n++) 'AC-$n',

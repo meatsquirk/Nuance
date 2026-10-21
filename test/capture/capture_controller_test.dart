@@ -100,6 +100,104 @@ class _ControllableSource implements CaptureSource {
   CaptureMode get captureMode => CaptureMode.processed;
 }
 
+/// A [CaptureSource] that records each live-feed acquisition (a subscription)
+/// and release (its cancellation) and supports re-subscription, so the CAM-7
+/// lifecycle release/resume (AC-9) can be observed on the real controller.
+///
+/// Mirrors the acceptance suite's `ScriptedCameraSource` feed shape: every
+/// subscription replays the optional [seed] frame (so a resumed feed renders a
+/// fresh frame rather than a frozen/black one) and then stays open for later
+/// [emitFrame]s. Each `frames` subscription increments [acquireCount]; each
+/// cancellation increments [releaseCount].
+class _RecordingFeedSource implements CaptureSource {
+  _RecordingFeedSource({this.seed});
+
+  /// The frame replayed to each new subscription (the opening / resumed frame).
+  final Frame? seed;
+
+  final StreamController<Frame> _live = StreamController<Frame>.broadcast();
+
+  /// How many times the live feed has been subscribed (a camera acquisition).
+  int acquireCount = 0;
+
+  /// How many times a live-feed subscription has ended (a camera release).
+  int releaseCount = 0;
+
+  @override
+  Stream<Frame> get frames async* {
+    acquireCount++;
+    try {
+      if (seed != null) yield seed!;
+      yield* _live.stream;
+    } finally {
+      releaseCount++;
+    }
+  }
+
+  /// Pushes a later frame onto the live feed.
+  void emitFrame(Frame frame) => _live.add(frame);
+
+  /// Closes the feed so no stream is left open across tests.
+  void dispose() {
+    if (!_live.isClosed) _live.close();
+  }
+
+  @override
+  CaptureSourceKind kind = CaptureSourceKind.camera;
+
+  @override
+  CaptureLocks get locks => const CaptureLocks();
+
+  @override
+  Stream<StabilityReading> get stability =>
+      const Stream<StabilityReading>.empty();
+
+  @override
+  Lighting get lighting => Lighting.adequate;
+
+  @override
+  bool get referenceCardPresent => false;
+
+  @override
+  ColorCoordinates normaliseAgainstCard(ColorCoordinates raw) => raw;
+
+  @override
+  ImportedPhoto? importedPhoto;
+
+  @override
+  void importPhoto(ImportedPhoto photo) => importedPhoto = photo;
+
+  @override
+  void lockExposure() {}
+
+  @override
+  void lockWhiteBalance() {}
+
+  @override
+  void lockFocus() {}
+
+  @override
+  bool get torchOn => false;
+
+  @override
+  void turnTorchOn() {}
+
+  @override
+  void turnTorchOff() {}
+
+  @override
+  bool get supportsWideGamut => false;
+
+  @override
+  bool get supportsRaw => false;
+
+  @override
+  CaptureColorSpace get colorSpace => CaptureColorSpace.srgb;
+
+  @override
+  CaptureMode get captureMode => CaptureMode.processed;
+}
+
 /// A uniform [size]×[size] frame of one [pixel].
 Frame _uniformFrame(Pixel pixel, {int size = 16}) => Frame(
       width: size,
@@ -405,6 +503,99 @@ void main() {
       await pumpEventQueue();
       // Cancelled before the feed delivered, so no sample ever lands.
       expect(controller.state.currentSample, isNull);
+    });
+  });
+
+  group('lifecycle feed release/resume (CAM-7, AC-9)', () {
+    test('pauseFeed releases the feed and resumeFeed re-acquires it', () async {
+      final source = _RecordingFeedSource();
+      addTearDown(source.dispose);
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      expect(source.acquireCount, 1,
+          reason: 'the feed is acquired once on construction');
+      expect(source.releaseCount, 0, reason: 'nothing released while live');
+
+      controller.pauseFeed();
+      await pumpEventQueue();
+      expect(source.releaseCount, 1,
+          reason: 'pauseFeed cancels the subscription (a device release)');
+
+      controller.resumeFeed();
+      await pumpEventQueue();
+      expect(source.acquireCount, 2,
+          reason: 'resumeFeed opens a fresh subscription (a re-acquire)');
+      expect(source.releaseCount, 1, reason: 'the re-acquired feed is live');
+    });
+
+    test('pauseFeed is idempotent — a second pause does not release again',
+        () async {
+      final source = _RecordingFeedSource();
+      addTearDown(source.dispose);
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+
+      controller.pauseFeed();
+      controller.pauseFeed();
+      await pumpEventQueue();
+      expect(source.releaseCount, 1,
+          reason: 'the feed is released exactly once despite two pauses');
+    });
+
+    test('resumeFeed is a no-op while the feed is already live', () async {
+      final source = _RecordingFeedSource();
+      addTearDown(source.dispose);
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+
+      controller.resumeFeed(); // already live
+      await pumpEventQueue();
+      expect(source.acquireCount, 1,
+          reason: 'no second subscription opens while the feed is live');
+    });
+
+    test('resumeFeed after dispose does not resurrect the feed', () async {
+      final source = _RecordingFeedSource();
+      addTearDown(source.dispose);
+      final controller = CaptureController(source: source);
+      await pumpEventQueue();
+      controller.dispose();
+      await pumpEventQueue();
+      final acquiredByDispose = source.acquireCount;
+
+      controller.resumeFeed();
+      await pumpEventQueue();
+      expect(source.acquireCount, acquiredByDispose,
+          reason: 'a late resume opens no subscription on a disposed controller');
+    });
+
+    test('a resumed feed delivers a fresh frame (not frozen or black)',
+        () async {
+      const opening = Pixel(0, 170, 200);
+      const next = Pixel(220, 120, 20);
+      final source = _RecordingFeedSource(seed: _uniformFrame(opening));
+      addTearDown(source.dispose);
+      final controller = CaptureController(source: source);
+      addTearDown(controller.dispose);
+      await pumpEventQueue();
+      expect(controller.state.currentSample, isNotNull,
+          reason: 'the opening frame sampled a reading');
+      expect(_l1(controller.state.currentSample!.coordinates, opening),
+          lessThan(12));
+
+      controller.pauseFeed();
+      await pumpEventQueue();
+      controller.resumeFeed();
+      await pumpEventQueue();
+      // The resumed subscription replays the seed, then follows a new frame.
+      source.emitFrame(_uniformFrame(next));
+      await pumpEventQueue();
+      expect(_l1(controller.state.currentSample!.coordinates, next),
+          lessThan(12),
+          reason: 'the reading follows the live frame again after resume');
     });
   });
 
