@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — PERM-3 done (AC-8 live); next PERM-4 (AC-10), then SIGNOFF-1
+**Status:** In progress — all behaviour complete (10/10 ACs ✅, grade 10 A/0); next SIGNOFF-1
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -43,7 +43,7 @@
 | AC-7 | Permission requested; denial falls back gracefully | ITEST-3 `TestAC07_PermissionFallback` | PERM-2 | ✅ Done |
 | AC-8 | A device with no camera falls back gracefully | ITEST-3 `TestAC08_NoCameraFallback` | PERM-3 | ✅ Done |
 | AC-9 | Camera released and re-acquired across lifecycle | ITEST-3 `TestAC09_Lifecycle` | CAM-7 | ✅ Done |
-| AC-10 | The app declares camera use on both platforms | ITEST-3 `TestAC10_PlatformDeclarations` | PERM-4 | ⬜ Todo |
+| AC-10 | The app declares camera use on both platforms | ITEST-3 `TestAC10_PlatformDeclarations` | PERM-4 | ✅ Done |
 
 ## Design decisions
 
@@ -99,7 +99,7 @@ Pre-seeded augmentations: AC-3/AC-5/AC-6 may run **green at baseline** against a
 |---|---|---|---|---|
 | CAM | [modules/CAM.md](modules/CAM.md) | Real `CameraCaptureSource` over the `camera` plugin: frame stream + conversion, AE·AWB·AF locks, torch, lifecycle | — | ✅ Complete |
 | VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | ✅ Complete |
-| PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | 🔶 In progress |
+| PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | ✅ Complete |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔶 In progress |
 
 ## Dependency graph
@@ -158,18 +158,17 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 15 | CAM-7 | AC-9 camera lifecycle release/resume | ✅ Done | 17,712,519 | 47m 55s | WidgetsBindingObserver on Capture host → controller pauseFeed/resumeFeed (D-7); AC-9 un-pended; CAM module complete; 7×A; unit 1680; cov 100% 2 touched; fix 1/3 (host unit test: FakeAsync no-flush of async cancel) |
 | 16 | PERM-2 | AC-7 permission request + denial fallback + state | ✅ Done | 17,788,884 | 29m 12s | host requests on entry (camera source + seam); granted keeps camera, denied swaps to software fallback + affordance; 8×A; unit 1684; cov 100% 4 touched; fix 1/3 |
 | 17 | PERM-3 | AC-8 no-camera fallback | ✅ Done | 10,749,642 | 17m 46s | 9×A re-grade; AC-8 live; `available` seam; fix 0/3 |
-| 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ⬜ Next | | | last AC before SIGNOFF-1 |
-| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Todo | | | after all behavior |
+| 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ✅ Done | 5,210,656 | 11m 01s | un-pend + confirm only (no lib); AC-10 live; map now empty; 10×A re-grade; cov PASS (0 touched lib); fix 0/3 |
+| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | all behaviour done — full cross-feature regression + on-device walkthrough |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**PERM-3 done — AC-8 no-camera fallback (grade A); 9 ACs delivered (AC-1..AC-9).** Added `bool get available` to the `CaptureSource` interface; the Capture host falls back to `cameraFallbackSource()` (kind `software`) **synchronously** when an injected camera-kind source reports `!available` — no permission prompt, no "camera access needed" affordance (availability ≠ permission). Every shipped/fake source reports `available=true`, so the branch is inert for all neighbours. AC-8 un-pended; the whole un-pended suite re-graded **9 A / 0 below A**. **AC-10 (PERM-4) is the only remaining pending AC.**
-- **Startable now:** PERM-4 (AC-10, depends on PERM-1 — met). Owns `AndroidManifest.xml` + `ios/Runner/Info.plist`, disjoint from all source/host code.
-- **⚠ PERM-4 is un-pend + confirm + augment only:** AC-10's declarations already shipped in PERM-1 (Android `CAMERA` + `uses-feature required=false`, iOS `NSCameraUsageDescription`), so AC-10 is **green-at-baseline** — no product work. Make the scheduled augmentation (assert the usage string is non-empty and the uses-feature present, not just the permission) and keep `TestAC10_PlatformDeclarations` green.
-- **Then SIGNOFF-1** (all 10 ACs delivered) — the sign-off packet + summary page + human approval.
-- **Carried gotchas:** the whole `integration_test/live_camera/` dir **won't launch at once** — run per-file (`flutter test -d flutter-tester integration_test/live_camera/<file>_test.dart`). macOS has no `timeout`; run bare. 2 carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-08 display AC-9) are unrelated.
+**PERM-4 done — AC-10 platform declarations (grade A); ALL 10 ACs delivered (AC-1..AC-10).** Un-pend + confirm only: AC-10's declarations shipped in PERM-1 and its test was green-at-baseline, so **no lib/ changed** — only un-pended AC-10 (the `pendingACs` map is now empty) and rewrote the two smoke guards to the terminal all-delivered state. Confirmed on disk: Android `CAMERA` + `<uses-feature required=false>`, iOS non-empty `NSCameraUsageDescription`. Whole suite re-graded **10 A / 0 below A**; coverage gate PASS (0 touched lib); fix 0/3. **Feature behaviour is COMPLETE.**
+- **Next: SIGNOFF-1** (the only remaining phase) — sign-off packet + summary page + human approval.
+- **SIGNOFF-1 to-dos:** run the **full cross-feature regression** (every feature's acceptance suite + whole unit target); the **on-device camera walkthrough** (D-5 manual item — the real `PluginCameraDevice` / `PluginCameraPermission` are the only `// coverage:ignore` in lib/, exercised only on a physical device); tally cost-per-AC.
+- **Carried gotchas:** the whole `integration_test/live_camera/` dir **won't launch at once** — run per-file (`flutter test -d flutter-tester integration_test/live_camera/<file>_test.dart`). macOS has no `timeout`; run bare. 2 carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-08 display AC-9) reproduce at merge-base — not bs-19 regressions. Production still opens on the software source; the wired plugin is dormant in the shipped flutter-tester build.
 
 ## Token usage
 
@@ -196,7 +195,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | CAM-7 | 82fe6d69 | 2026-10-21 15:00 EDT | 15:48 | 47m 55s | 47m 55s | claude-opus-4-8 | 210 | 336,106 | 17,290,790 | 85,413 | 17,712,519 | AC-9 lifecycle release/resume delivered; CAM module complete; 7xA; unit 1680; coverage PASS 2 touched; fix 1/3 |
 | PERM-2 | 524c73db | 2026-10-21 16:14 EDT | 16:43 | 29m 12s | 29m 12s | claude-opus-4-8 | 196 | 371,418 | 17,328,340 | 88,930 | 17,788,884 | AC-7 permission request + denial fallback live (grade A); 8 ACs delivered (AC-1..AC-7,AC-9); unit 1684, cov 100% 4 touched, 8 A/0 below; fix 1/3 |
 | PERM-3 | 9d0d231d | 2026-10-21 16:54 EDT | 17:11 | 17m 46s | 17m 46s | claude-opus-4-8 | 166 | 268,475 | 10,433,083 | 47,918 | 10,749,642 | AC-8 no-camera fallback live; grade 9A/0; available seam; fix 0/3 |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 17:11** | **8h 26m** | **6h 33m** |  | **2,240** | **3,916,452** | **148,234,550** | **898,735** | **153,051,977** |  |
+| PERM-4 | fb59c5de | 2026-10-21 17:18 EDT | 17:29 | 11m 01s | 11m 01s | claude-opus-4-8 | 112 | 188,840 | 4,994,508 | 27,196 | 5,210,656 | AC-10 platform declarations un-pended; 10/10 ACs delivered; grade 10 A/0; coverage gate PASS (0 touched lib); fix 0/3 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 17:29** | **8h 37m** | **6h 44m** |  | **2,352** | **4,105,292** | **153,229,058** | **925,931** | **158,262,633** |  |
 
 ## Sign-off
 

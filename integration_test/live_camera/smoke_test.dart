@@ -66,22 +66,26 @@ void main() {
     test(
         'the pending map holds exactly the bs-19 ACs not yet delivered, each '
         'owned by a real behaviour phase', () {
-      // The 10 ACs, less those a landed behaviour phase has un-pended. CAM-3
-      // un-pended AC-2; each later phase adds its AC here as it lands, so this
-      // guard stays an exact-set assertion (non-vacuous) rather than drifting
-      // to a bare count as the map shrinks.
+      // The 10 ACs, less those a landed behaviour phase has un-pended. Each
+      // behaviour phase added its AC here as it landed; PERM-4 un-pended the
+      // last one (AC-10), so every AC is now delivered and the map is empty.
+      // The guard stays an exact-set assertion (non-vacuous) rather than
+      // drifting to a bare count as the map shrinks.
       const unpendedACs = <String>{
         'AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', // VIEW-2, CAM-3, CAM-4, VIEW-3, CAM-5
         'AC-6', // CAM-6
         'AC-7', // PERM-2
         'AC-8', // PERM-3
         'AC-9', // CAM-7
+        'AC-10', // PERM-4
       };
       final expectedPending = <String>{
         for (var n = 1; n <= 10; n++) 'AC-$n',
       }..removeAll(unpendedACs);
       expect(pendingACs.keys.toSet(), expectedPending,
           reason: 'only not-yet-delivered ACs stay pending');
+      expect(pendingACs, isEmpty,
+          reason: 'all 10 bs-19 ACs are delivered; none is still pending');
       // A delivered AC is no longer skipped — it runs in the default suite.
       for (final ac in unpendedACs) {
         expect(pendingSkipReason(ac, forceRunPending: false), isNull,
@@ -97,20 +101,28 @@ void main() {
       }
     });
 
-    test('a pending AC is skipped only in the default run; it runs in '
-        'run-pending mode, and an un-pended AC always runs', () {
-      // AC-10 is pending (owned by PERM-4): skipped by default, run under
-      // run-pending. The reason names its owner so a red-baseline failure is
-      // attributable. (AC-1 was the example until VIEW-2; AC-3 until CAM-4;
-      // AC-4 until VIEW-3; AC-5 until CAM-5; AC-6 until CAM-6; AC-7 until PERM-2;
-      // AC-8 until PERM-3.)
-      final reason = pendingSkipReason('AC-10', forceRunPending: false);
-      expect(reason, isNotNull);
-      expect(reason, contains('PERM-4'));
-      expect(pendingSkipReason('AC-10', forceRunPending: true), isNull);
+    test('with every AC delivered the gate runs them all in either mode, and '
+        'the gate never skips a non-pending AC', () {
+      // bs-19 behaviour is complete (PERM-4 un-pended the last AC, AC-10), so
+      // the pending map is empty and every AC-1..10 runs in both the default
+      // and the run-pending modes — none is skipped. Both directions use the
+      // explicit [forceRunPending] so the guard is deterministic in either
+      // ambient mode. This fails if an AC were silently *re*-pended (its skip
+      // reason would be non-null) or if the gate inverted to skip a delivered
+      // AC. (While the suite was being built, AC-10 was the pending example
+      // owned by PERM-4; it is now delivered.)
+      expect(pendingACs, isEmpty,
+          reason: 'all 10 bs-19 ACs are delivered; none is still pending');
+      for (var n = 1; n <= 10; n++) {
+        final ac = 'AC-$n';
+        expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+            reason: '$ac is delivered and must run in the default run');
+        expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+            reason: '$ac must run in run-pending mode too');
+      }
 
-      // An AC absent from the map (none is un-pended yet, so use an unmapped id)
-      // always runs, in either mode — the gate never skips a non-pending AC.
+      // An AC absent from the map always runs, in either mode — the gate never
+      // skips a non-pending AC.
       expect(pendingSkipReason('AC-unmapped', forceRunPending: false), isNull);
       expect(pendingSkipReason('AC-unmapped', forceRunPending: true), isNull);
 

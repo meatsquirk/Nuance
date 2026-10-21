@@ -1,6 +1,6 @@
 # Module PERM — Permission, fallback, wiring & platform declarations
 
-**Status:** In progress — PERM-3 done (AC-8 live); next PERM-4 (AC-10)
+**Status:** Done — all 4 phases complete (AC-7, AC-8, AC-10 live; AC-10 un-pended in PERM-4). Module exits to SIGNOFF-1.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/camera_permission.dart` (new), production source selection in `lib/main.dart` (+ `selectCaptureSource` use), the capture-state camera-availability/permission field, `lib/capture/capture_read_endpoint.dart` (extend), `android/app/src/main/AndroidManifest.xml`, `ios/Runner/Info.plist`; tests under `test/capture/` + the AC-10 source-scan.
 **Depends on:** CAM · **Blocks:** SIGNOFF-1
@@ -12,7 +12,7 @@
 | PERM-1 | shell | — | ✅ Done | 9.02M | 14m 15s |
 | PERM-2 | behavior | AC-7 | ✅ Done | 17.79M | 29m 12s |
 | PERM-3 | behavior | AC-8 | ✅ Done | 10.75M | 17m 46s |
-| PERM-4 | behavior | AC-10 | ⬜ Todo | | |
+| PERM-4 | behavior | AC-10 | ✅ Done | 5.21M | 11m 01s |
 
 ## Interface reconciliation
 
@@ -223,5 +223,62 @@ camera falls back to the software source at once — no prompt, no affordance. N
 - **Acceptance gate:** un-pend AC-10; suite green.
 - **Augments:** `TestAC10`: assert the usage description is non-empty and the uses-feature is present, not just the permission.
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+AC-10 live (grade **A**) — the **last** AC; all 10 bs-19 ACs now delivered. This
+phase is **un-pend + confirm + augment only**: AC-10's platform declarations
+already shipped in PERM-1 and its test (`TestAC10_PlatformDeclarations`, the
+non-empty-usage augmentation already built in ITEST-3) was green-at-baseline, so
+**no lib/ and no product code changed**. Two integration-test files only:
+- `integration_test/live_camera/pending.dart` — deleted the `'AC-10': 'PERM-4'`
+  row; the `pendingACs` map is now **empty** (every AC runs by default).
+- `integration_test/live_camera/smoke_test.dart` — rewrote the two pending-gate
+  guards to the terminal all-delivered state: guard 1 adds AC-10 to `unpendedACs`
+  (so `expectedPending` is the empty set) + an explicit `expect(pendingACs,
+  isEmpty)`; guard 2 (which had used AC-10 as the live pending example) became
+  "with every AC delivered the gate runs them all in either mode" — a fixed
+  `for n=1..10` loop asserting each AC's skip reason is null in **both** default
+  and run-pending modes (fails if an AC were silently re-pended or the gate
+  inverted). Both stay non-vacuous.
+- **Confirmed on disk:** `AndroidManifest.xml` `android.permission.CAMERA` +
+  `<uses-feature android:name="android.hardware.camera" android:required="false"/>`
+  (false so no-camera devices still install, AC-8); `ios/Runner/Info.plist`
+  `NSCameraUsageDescription` = a real non-empty sentence. All match the spec
+  scenario verbatim.
+- **Augmentation:** the scheduled `TestAC10` augmentation (assert the usage
+  string non-empty and the uses-feature present, not just the permission) was
+  already satisfied in ITEST-3 — confirmed present, no change needed.
+- **Gates:** `dart analyze lib/ test/ integration_test/` clean; `flutter test
+  --coverage test/` = **1687 passed**, exit 0; `dart run tool/coverage_gate.dart
+  0624e0f` = **PASS (no touched lib/**.dart files — nothing to gate)**. Acceptance:
+  AC-10 (`TestAC10_PlatformDeclarations`) **green in the default run** (no longer
+  skipped); whole `live_camera/` per-file green (smoke 11/11, preview 3, reading
+  2, controls 2, permission 2, platform 1), **no AC pending**. **Grade: fresh
+  independent re-grade = 10 A / 0 below A** across every AC test (AC-1..AC-10) +
+  both rewritten smoke guards + scaffold tests confirmed non-vacuous; no
+  downgrade from any prior grid, no fix owed. **Fix passes: 0/3** (green on the
+  first full run). The 2 carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-08
+  display AC-9) are untouched by this phase.
+- **Tokens/Time:** see dashboard (PERM-4 row) + master ledger.
+
+### Checkpoint / Handoff
+- **Feature behaviour is COMPLETE.** All 10 ACs un-pended and green; the
+  `pendingACs` map is empty; `behaviorPhases` fully consumed. The only remaining
+  phase is **SIGNOFF-1** (sign-off packet + summary page + human approval).
+- **Frozen:** the platform declarations (`AndroidManifest.xml`,
+  `ios/Runner/Info.plist`) are final. No further behaviour change is scheduled.
+- **For SIGNOFF-1:** run the **full cross-feature regression** (every feature's
+  acceptance suite + the whole unit target) per the lifecycle table; note the 2
+  carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-08 display AC-9 —
+  reproduce at merge-base, not bs-19 regressions); the on-device camera
+  walkthrough is the D-5 manual item (real `PluginCameraDevice` /
+  `PluginCameraPermission` are the only `// coverage:ignore` in lib/, exercised
+  only on a physical device). Production still opens on the software source
+  (real camera selection is on-device), so the wired plugin is dormant in the
+  shipped flutter-tester build.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`;
+  macOS has **no** `timeout`, run bare): unit+cov `flutter test --coverage test/`;
+  gate `dart run tool/coverage_gate.dart <base>`; analyze `dart analyze lib/
+  test/ integration_test/`; acceptance **per-file** `flutter test -d
+  flutter-tester integration_test/live_camera/<file>_test.dart` (**the whole
+  `live_camera/` dir fails to launch at once**).
+- **Known gaps:** none. Every AC delivered and graded A.

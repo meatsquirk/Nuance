@@ -53,7 +53,9 @@ const Map<String, String> pendingACs = {
   // AC-9 (Camera released and re-acquired across lifecycle) un-pended by CAM-7.
   // AC-7 (Permission requested; denial falls back gracefully) un-pended by PERM-2.
   // AC-8 (A device with no camera falls back gracefully) un-pended by PERM-3.
-  'AC-10': 'PERM-4', // The app declares camera use on both platforms
+  // AC-10 (The app declares camera use on both platforms) un-pended by PERM-4 —
+  // the last pending AC, so this map is now empty: every bs-19 AC runs by
+  // default.
 };
 
 /// The behaviour phases allowed to own a pending AC.

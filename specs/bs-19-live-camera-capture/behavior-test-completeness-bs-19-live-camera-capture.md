@@ -485,3 +485,33 @@ AC-10 still pending → PERM-4).
 - **Grade counts: 9×A, 0 below A.** No downgrades from the prior grid; every prior-A row holds; no fix owed.
 - **AC-8 grades A:** Given on the public surface, When through the real assembled host, three Thens reject the three catalogue wrong-impls (dead-camera kind echo, black/unreadable view, crash); the discrimination is built into the fixture (injected `kind=camera` is the wrong-impl baseline the `==software` assertion overturns), so no separate control is needed.
 - **The `available` interface change did NOT weaken any neighbour.** It resolves to `true` on every shipped and fake source; the host branch is gated on `kind==camera && !available`, never taken for AC-1..AC-7/AC-9 (all `available=true`), so the PERM-2 permission flow, CAM lifecycle, torch, lock and render paths are untouched. Only AC-8 sets `available=false`.
+
+## Grade — PERM-4 re-grade (AC-1..AC-10 — all delivered)
+
+Independent fresh grader (did **not** write these tests), **2026-10-21**, after
+PERM-4 un-pended the **last** AC, **AC-10** (platform declarations), and rewrote
+the two smoke guards to the terminal all-delivered state. PERM-4 touched exactly
+two files (`pending.dart`, `smoke_test.dart`) — **no lib/ and no AC test body**,
+so AC-1..AC-9 bodies are byte-identical to their prior-A states and AC-10's body
+(written in ITEST-3) is unchanged, only un-pended. Grader verified AC-10's three
+assertions against the real on-disk files (`AndroidManifest.xml:5-6`,
+`Info.plist:7-8`).
+
+| AC | Test | Grade | Rules checked | Justification / gap |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_LivePreview` | A | G1,G4,G5,G6 (G2/G3 n/a) | Given on read endpoint before When; `showsPlaceholder isFalse` + `frame isNotNull` kill both Rejects. Unchanged; holds. |
+| AC-2 | `TestAC02_FrameConversion` | A | G1,G4,G5,G6 | Pure converter below host; BGRA tol 3 + BGR↔RGB control; YUV tol 12 rejects limited-range mis-decode; c1/c2 control. Holds. |
+| AC-3 | `TestAC03_ReadingFollowsFrame` | A (live) | G1..G6 | c1→c2 real sampling, `<45` follow / `>135` stale; settle via pump. Holds. |
+| AC-4 | `TestAC04_ValueOnlyLive` | A | G1,G3,G4,G5,G6 (G2 n/a) | `ColorFiltered` over `liveViewKey` findsOne + over `accuracyKey` findsNothing. Holds. |
+| AC-5 | `TestAC05_LockClearsWarning` | A (live) | G1..G6 | `canLock:false` control proves clear comes from `source.locks.allLocked`. Holds. |
+| AC-6 | `TestAC06_Torch` | A (live) | G1..G6 | `torchOnCalls==1` kills UI-only toggle; torch-off-commit control kills torch-blind stamp. Holds. |
+| AC-7 | `TestAC07_PermissionFallback` | A (live) | G1,G2,G4,G5,G6 (G3 n/a) | Both branches identical `kind=camera, available=true`, diverge only on recorder → camera-vs-software provably permission-driven. Holds. |
+| AC-8 | `TestAC08_NoCameraFallback` | A (live) | G1,G4,G5,G6 (G2 built-in, G3 n/a) | Given `available isFalse` on public surface; `activeSourceKind==software` overturns injected `kind=camera`; `currentSample isNotNull`, no crash. Holds. |
+| AC-9 | `TestAC09_Lifecycle` | A (live) | G1,G3,G4,G5,G6 (G2 n/a) | `acquireCount==1`/`releaseCount==0` Givens; `release>=1` bg, `acquire>=2` resume + frozen-feed control. Holds. |
+| **AC-10** | `TestAC10_PlatformDeclarations` | **A (live — now runs by default)** | G1,G4,G5,G6 (G2/G3 n/a) | Given: both files' `existsSync()` asserted before inspection; reads the **real** files off disk, nothing faked. Three distinct Thens each failing a distinct wrong impl (G5): (1) Android `CAMERA` permission; (2) a **separate** `<uses-feature android.hardware.camera>` regex (rejects one-but-not-the-other); (3) the **augmentation** — captures the `NSCameraUsageDescription` *value* and asserts `isNotNull` **and** `isNotEmpty` (a bare key or empty string fails where a `contains` check would pass). Verified against the shipped declarations. Minor (standard source-scan limit, not a downgrade): the Android `contains` could match a literal inside an XML comment; the real entries are genuine elements and the structured iOS check is immune. |
+
+### Summary — PERM-4
+
+- **Grade counts: 10 A / 0 below A** — the complete delivered suite. No downgrade from any prior grid; every prior-A row holds by inspection (no lib / no AC body changed); no fix owed.
+- **AC-10 grades A** as a source-scan AC: Given (files exist) on the public surface, When (inspect the real on-disk manifests), three Thens rejecting three distinct wrong impls, the non-empty-usage augmentation in place.
+- **Both rewritten smoke guards are NON-VACUOUS.** Guard 1: exact set-equality `pendingACs.keys.toSet() == {}` + `isEmpty` pins the map's contents (a re-pended AC fails it), each delivered AC's null skip-reason asserted. Guard 2: a **fixed** `for n=1..10` loop (not over the empty map) asserts every AC runs in **both** modes — a silently re-pended AC or an inverted gate fails. No drift to a bare count; no fixed sleeps; comments match code.
