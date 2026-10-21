@@ -112,6 +112,23 @@ class ScriptedCameraSource implements CaptureSource {
   /// How many times the torch was extinguished at the source (AC-6).
   int torchOffCalls = 0;
 
+  /// How many times the live feed has been subscribed — a camera *acquisition*
+  /// (AC-9).
+  ///
+  /// The `CaptureController` subscribes once when it is built, so a freshly
+  /// opened Capture screen reads 1. CAM-7 re-acquires — a second subscription —
+  /// when the app returns to the foreground after a background release, so an
+  /// AC-9 Then can assert the camera came back rather than staying frozen.
+  int acquireCount = 0;
+
+  /// How many times a live-feed subscription has ended — a camera *release*
+  /// (AC-9).
+  ///
+  /// Zero while the screen is live; CAM-7 releases (cancels the subscription)
+  /// when the app is backgrounded or the Capture screen is disposed, so an AC-9
+  /// Then can assert the controller was let go rather than leaked.
+  int releaseCount = 0;
+
   /// Replaces the selection this fixture stands for (AC-1 / AC-7 / AC-8).
   ///
   /// The read endpoint surfaces [kind] as the active source kind, so a test
@@ -130,12 +147,20 @@ class ScriptedCameraSource implements CaptureSource {
 
   @override
   Stream<Frame> get frames async* {
-    // Replay the seed frames to the subscriber (the controller), then forward
-    // every frame pushed with [emitFrame] for the rest of the scenario.
-    for (final frame in _initialFrames) {
-      yield frame;
+    // Each subscription is a camera acquisition (AC-9); the matching release is
+    // recorded when the subscription ends — whether cancelled (a lifecycle
+    // release, CAM-7) or completed when the feed closes on [dispose].
+    acquireCount++;
+    try {
+      // Replay the seed frames to the subscriber (the controller), then forward
+      // every frame pushed with [emitFrame] for the rest of the scenario.
+      for (final frame in _initialFrames) {
+        yield frame;
+      }
+      yield* _live.stream;
+    } finally {
+      releaseCount++;
     }
-    yield* _live.stream;
   }
 
   @override

@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** 🔶 In progress — ITEST-1, ITEST-2 done; next ITEST-3 (then ITEST-4 = G-2)
+**Status:** 🔶 In progress — ITEST-1..3 done; next ITEST-4 (test review = G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/live_camera/` (new), `integration_test/fakes/scripted_camera_source.dart` (new), the `BS19_RUN_PENDING` pending gate for this suite.
 **Depends on:** CAM-2, PERM-1, VIEW-1 (all shells) · **Blocks:** every behavior phase (via G-2)
@@ -11,8 +11,8 @@
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 7,639,135 | 14m 08s |
 | ITEST-2 | acceptance-tests | AC-1..AC-5 | ✅ Done | 14,061,597 | 34m 15s |
-| ITEST-3 | acceptance-tests | AC-6..AC-10 | ⬜ Todo | | |
-| ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-3 | acceptance-tests | AC-6..AC-10 | ✅ Done | 16,840,597 | 1h 16m |
+| ITEST-4 | test-review | — (G-2) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -100,8 +100,30 @@ Five *pending* AC tests over the ITEST-1 harness — **no `lib/` code** (coverag
 - **Exit criteria:** as ITEST-2.
 - **Acceptance gate:** —
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result
+Five *pending* AC tests over the ITEST-1 harness — **no `lib/` code** (coverage gate = no touched lib files → PASS; analyze clean).
+- **New test files (ITEST-3 owns):**
+  - `integration_test/live_camera/controls_test.dart` — `TestAC06_Torch` (AC-6), `TestAC09_Lifecycle` (AC-9). AC-6 drives the real E-torch control: toggle on → `source.torchOn`/`torchOnCalls`, torch warning banner; toggle off → extinguished/`torchOffCalls`; then two fresh scenarios (SizedBox reset) for the `litByTorch` commit stamp (lit → true) and a torch-off control (→ false). AC-9 drives app-lifecycle via `tester.binding.handleAppLifecycleStateChanged` against the scripted source's new `acquireCount`/`releaseCount` recorders.
+  - `integration_test/live_camera/permission_test.dart` — `TestAC07_PermissionFallback` (AC-7), `TestAC08_NoCameraFallback` (AC-8). AC-7 drives a `RecordingCameraPermission` (granted + denied branches) and reads `permission.requestCount`, `activeSourceKind`, `permissionState` and the "Camera access" affordance. AC-8 injects an `available:false` camera-kind source and asserts the active source resolves to `software`.
+  - `integration_test/live_camera/platform_test.dart` — `TestAC10_PlatformDeclarations` (AC-10): a source-scan (bs-11/12/13 idiom) of the real `AndroidManifest.xml` + `Info.plist` for the CAMERA permission, the camera `<uses-feature>`, and a structured non-empty `NSCameraUsageDescription`.
+- **Fixture change (additive):** `ScriptedCameraSource` gains `acquireCount`/`releaseCount` recorders — a try/finally around the `frames` generator counts each subscription (acquisition) and its end (release); semantics of the replay-then-forward feed are unchanged (ITEST-2's AC-3 still green).
+- **Red baseline** (`--dart-define=BS19_RUN_PENDING=true`, per file): **AC-6 ✅ green**, **AC-10 ✅ green** at baseline; **AC-7 ❌** red on `requestCount==1` (naming PERM-2), **AC-8 ❌** red on `activeSourceKind==software` (naming PERM-3), **AC-9 ❌** red on `releaseCount>=1` after background (naming CAM-7). All reds are clean `TestFailure`s (no panic/hang). Default run skips all 5 (`All tests skipped`); smoke 11/11 (pending map still exactly 10).
+- **Grades:** independent fresh grader (did not write the tests) → **5×A, 0×B** on the first grading pass. Grid: `behavior-test-completeness-bs-19-live-camera-capture.md` (`## Grade — ITEST-3`).
+- **Gates:** analyze clean; unit+coverage = **1666 pass**, no touched lib → PASS; acceptance = red baseline recorded + default all-skipped + smoke green; grade gate 5×A. **Fix passes: 1/3** — the first AC-9 run *hung*: `pumpAndSettle`/`pump` while the app is `paused` never returns on the **live** `IntegrationTestWidgetsFlutterBinding` (the engine stops producing frames). Fixed by settling the stability tick first and dispatching the background sequence with **no** frame pump (`tester.idle()` drains the async release), pumping only once back in `resumed`. No gate bar was lowered.
+- **Tokens/Time:** see dashboard (ITEST-3 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase (the surface the behaviour phases build against):**
+  - AC tests registered via `acTestWidgets('AC-n', …)`; un-pend = delete the `pendingACs` row. Test names: `TestAC06_Torch`, `TestAC07_PermissionFallback`, `TestAC08_NoCameraFallback`, `TestAC09_Lifecycle`, `TestAC10_PlatformDeclarations`.
+  - `ScriptedCameraSource.acquireCount`/`releaseCount` — a subscription is an acquisition, its end a release; CAM-7's lifecycle observer must cause releaseCount≥1 on background and acquireCount≥2 on resume (likely by disposing+recreating the `CaptureController`, which cancels+re-subscribes the feed — no new `CaptureSource` member needed).
+  - **Live-binding lifecycle gotcha:** never `pump`/`pumpAndSettle` while the app is `paused` — it hangs forever on `flutter-tester`. Dispatch lifecycle transitions, use `tester.idle()` to drain, and pump only after `resumed`. CAM-7's un-pend must keep this shape.
+  - **AC-7/AC-8 contracts for PERM-2/PERM-3:** AC-7 expects the assembly to request permission exactly once on live-capture entry (through an injected `CameraPermission`), select camera on granted / software on denied, and render a "Camera access"-prefixed affordance on denial. AC-8 expects an availability probe to fall back to software when the source reports `available:false`. Both need the harness wired to run the **real selection** (inject the selection *inputs*, not an already-chosen source) — PERM-2/PERM-3's test-infra change.
+- **⚠ AC-10 / PERM-4:** the platform declarations already shipped in the **PERM-1 shell**, so AC-10 is green now. PERM-4 has **no new product work** — its residual is purely un-pend (delete the `pendingACs` AC-10 row) + confirm green. Raised for the G-2 reviewer and PERM-4.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has no `timeout`, run bare; launch per file):
+  - Acceptance (default): `flutter test -d flutter-tester integration_test/live_camera/<file>_test.dart`.
+  - Red baseline / un-pend: add `--dart-define=BS19_RUN_PENDING=true`.
+  - Coverage gate: `COVERAGE_GATE_BASE=<phase-start HEAD> dart run tool/coverage_gate.dart`.
+- **Next:** ITEST-4 (test review = G-2) — needs ITEST-2 **and** ITEST-3 done (both are). Assemble the packet and set the phase awaiting review; no behaviour phase may start before G-2.
 
 ## Phase ITEST-4 — Test review (G-2)
 
@@ -123,11 +145,11 @@ Five *pending* AC tests over the ITEST-1 harness — **no `lib/` code** (coverag
 | AC-3 | TestAC03_ReadingFollowsFrame | ✅ green at baseline | — (sampling is source-agnostic; c1→c2 change + 10× separation control already discriminate) | CAM-4 | A (live) |
 | AC-4 | TestAC04_ValueOnlyLive | ❌ red | Given precondition `liveView.frame isNotNull` naming VIEW-2 (no live frame to grey yet) | VIEW-3 | A |
 | AC-5 | TestAC05_LockClearsWarning | ✅ green at baseline | — (lock/warning pipeline source-agnostic; `canLock:false` control already discriminates) | CAM-5 | A (live) |
-| AC-6 | TestAC06_Torch | _pending_ | | CAM-6 | |
-| AC-7 | TestAC07_PermissionFallback | _pending_ | | PERM-2 | |
-| AC-8 | TestAC08_NoCameraFallback | _pending_ | | PERM-3 | |
-| AC-9 | TestAC09_Lifecycle | _pending_ | | CAM-7 | |
-| AC-10 | TestAC10_PlatformDeclarations | _pending_ | | PERM-4 | |
+| AC-6 | TestAC06_Torch | ✅ green at baseline | — (torch on/off + `litByTorch` commit are source-agnostic; toggle-reaches-source + off-extinguish augmentation and a torch-off `litByTorch:false` control already discriminate) | CAM-6 | A (live) |
+| AC-7 | TestAC07_PermissionFallback | ❌ red | Then `permission.requestCount == 1` (actual 0 — no `CameraPermission` wired into the assembly) | PERM-2 | A |
+| AC-8 | TestAC08_NoCameraFallback | ❌ red | Then `activeSourceKind == software` (actual `camera` — no availability-driven selection yet) | PERM-3 | A |
+| AC-9 | TestAC09_Lifecycle | ❌ red | Then `releaseCount >= 1` after background (actual 0 — `CaptureHomeScreen` is no `WidgetsBindingObserver` yet) | CAM-7 | A |
+| AC-10 | TestAC10_PlatformDeclarations | ✅ green at baseline | — (CAMERA permission + camera `<uses-feature>` + non-empty `NSCameraUsageDescription` already declared in PERM-1; structured key→string + separate-declaration asserts already discriminate) | PERM-4 | A (live) |
 
 ## Test augmentations  <!-- pre-seeded in plan mode; confirmed by AC-test phases; closed by behavior phases -->
 
@@ -135,6 +157,6 @@ Five *pending* AC tests over the ITEST-1 harness — **no `lib/` code** (coverag
 |---|---|---|---|---|
 | TestAC03 | sampling is source-agnostic → green at baseline against any frame source | CAM-4 | assert the reading **changes** when the live frame changes c1→c2 (rejects a stale/fixed sampler) | ✅ Written in ITEST-2 (c1→c2 change + 10× separation control in the AC test, graded A live). CAM-4's residual = un-pend + keep green (real `CameraCaptureSource.frames` stream exercised by CAM-4's unit tests + the sign-off device walkthrough, not flutter-tester). |
 | TestAC05 | the "approximate" warning + lock state already plumb through the abstraction | CAM-5 | assert the warning clears **because** the source reports `allLocked` (G2), not independently | ✅ Written in ITEST-2 (`canLock:false` control proves the warning tracks `source.locks.allLocked`, not the UI flag; graded A live). CAM-5's residual = un-pend + keep green (real source lock state at the device walkthrough). |
-| TestAC06 | `torchOn`/`litByTorch` already plumb through the abstraction | CAM-6 | assert the toggle reaches the source and the off-path extinguishes (settle after off tap) | ⬜ Open (ITEST-3) |
+| TestAC06 | `torchOn`/`litByTorch` already plumb through the abstraction | CAM-6 | assert the toggle reaches the source and the off-path extinguishes (settle after off tap) | ✅ Written in ITEST-3 (`torchOnCalls==1`/`torchOffCalls==1` + `source.torchOn` false after off; plus a torch-OFF commit control `litByTorch:false` vs the torch-ON `litByTorch:true`; graded A live). CAM-6's residual = un-pend + keep green via the real device `setFlashMode`. |
 | TestAC04 | grayscale filter exists over the placeholder | VIEW-3 | assert the readings subtree sits **outside** the grayscale filter (stays in colour) | ✅ Written in ITEST-2 (`ColorFiltered` ancestor over `liveViewKey` but **not** over `accuracyKey`). Activates once VIEW-2/VIEW-3 render a real frame (the Given); VIEW-3's residual = un-pend (make the Given pass) + keep green. |
-| TestAC10 | permission alone is a weak check | PERM-4 | assert the `<uses-feature>` is present and the iOS usage description is non-empty | ⬜ Open |
+| TestAC10 | permission alone is a weak check | PERM-4 | assert the `<uses-feature>` is present and the iOS usage description is non-empty | ✅ Written in ITEST-3 (asserts CAMERA permission **and** the camera `<uses-feature>` **and** a structured `NSCameraUsageDescription` key→non-empty-string; graded A). ⚠ The declarations already landed in the **PERM-1 shell**, so PERM-4's residual is purely un-pend + confirm — no new product work. Flag for G-2 / PERM-4. |
