@@ -1,6 +1,6 @@
 # Module PERM — Permission, fallback, wiring & platform declarations
 
-**Status:** In progress — PERM-1..4 complete (AC-7/8/10 live). **PERM-5 (§9 production activation)** queued (changes requested at SIGNOFF-1, 2026-10-22, Matt Quirk). Module exits to SIGNOFF-2.
+**Status:** Done — PERM-1..5 complete (AC-7/8/10 live; §9 production activation shipped). The real camera is the shipped default when a device camera is present. Module exits to SIGNOFF-2.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/camera_permission.dart` (new), production source selection in `lib/main.dart` (+ `selectCaptureSource` use), the capture-state camera-availability/permission field, `lib/capture/capture_read_endpoint.dart` (extend), `android/app/src/main/AndroidManifest.xml`, `ios/Runner/Info.plist`; tests under `test/capture/` + the AC-10 source-scan.
 **Depends on:** CAM · **Blocks:** SIGNOFF-1 (PERM-1..4), SIGNOFF-2 (PERM-5)
@@ -13,7 +13,7 @@
 | PERM-2 | behavior | AC-7 | ✅ Done | 17.79M | 29m 12s |
 | PERM-3 | behavior | AC-8 | ✅ Done | 10.75M | 17m 46s |
 | PERM-4 | behavior | AC-10 | ✅ Done | 5.21M | 11m 01s |
-| PERM-5 | behavior | — (§9 production activation) | ⬜ Next | — | — |
+| PERM-5 | behavior | — (§9 production activation) | ✅ Done | 5.79M | 31m 35s |
 
 ## Interface reconciliation
 
@@ -299,7 +299,72 @@ non-empty-usage augmentation already built in ITEST-3) was green-at-baseline, so
 - **Augments:** a unit test of the pure selection function (has-camera × permission → kind); no AC-test change.
 
 ### Result
-_(to be written when the phase runs)_
+§9 **production activation shipped** — the real `camera`-plugin path (built behind
+CAM-3 / PERM-2 / PERM-3) is now the shipped default on a device with a camera.
+**No new AC** (all 10 stay green via the injected scripted source); resolves the
+*changes requested* SIGNOFF-1 standing call (2026-10-22, Matt Quirk). Realises D-2.
+Touched lib (2 files, both 100% covered; device probe coverage-exempt):
+- `capture_source_factory.dart` — new **pure** `selectUseCamera({hasCamera,
+  permission}) => hasCamera && permission != denied`. Truth table: no camera →
+  software whatever the permission (AC-8); camera + already-denied → software
+  (painter opted out); camera + granted/undetermined → live `CameraCaptureSource`
+  (the host prompts on first entry, AC-7). Unit-tested over all six combos.
+- `main.dart` — `productionDependencies()` now awaits a startup probe
+  `_deviceHasCamera()` (`availableCameras().isNotEmpty`; any plugin/platform error
+  → `false` so a probe failure degrades to the software scene) and threads
+  `hasCamera` into `assembleDependencies`, which hoists the `PluginCameraPermission`
+  instance, computes `useCamera = selectUseCamera(hasCamera, permission.status)`
+  (undetermined at startup → reduces to "a camera is present") and selects via
+  `selectCaptureSource(useCamera:)`. `_deviceHasCamera`'s `availableCameras()` call
+  is the sole new `// coverage:ignore` (device-only, verified at the SIGNOFF-2
+  walkthrough, D-5), alongside CAM-3's `PluginCameraDevice` / PERM-2's
+  `PluginCameraPermission.request()`. `hasCamera` defaults **false**, so the ITEST
+  harness (which injects its own `captureSource` through `buildApp`) and every
+  no-camera device keep the software scene unchanged — the production selection is
+  the only new behaviour.
+- **Tests:** +6 unit on `selectUseCamera` (the has-camera × permission → kind
+  augment: 3 no-camera-per-permission + undetermined/granted → live + denied →
+  software); +1 smoke (`assembleDependencies(hasCamera: true)` → `CameraCaptureSource`).
+  The existing `main() boots` widget test hung on the new probe (a `camera`
+  platform-channel reply is never pumped inside `testWidgets` fake-async), fixed by
+  a `_FakeCameraPlatform` (pure-Dart `CameraPlatform.instance` returning `[]`, set in
+  `setUp` like `_FakePathProvider`) — no `runAsync`, no binary-messenger round trip,
+  and the empty list keeps the asserted "opens on software → Capture" default honest.
+- **Gates:** `dart analyze lib/ test/ integration_test/` clean; `flutter test
+  --coverage test/` = **1694 passed** (1687 + 7), exit 0; `dart run
+  tool/coverage_gate.dart 5c11ea6` = **100% on both touched lib files** (device probe
+  coverage-exempt). Acceptance: **no AC to un-pend**; all 10 ACs green in **both**
+  default and `BS19_RUN_PENDING=true` (21 scenarios each: smoke 11, preview 3,
+  reading 2, controls 2, permission 2, platform 1). Grade: unchanged — **no AC test
+  or harness file touched**, so the PERM-4 grid holds **10 A / 0 below A**.
+  Cross-feature host-pumping regression: bs-02 capture 19/19, bs-09 advanced-capture
+  21/21, bs-11 a11y 19/19, bs-12 nfr 33/33 — all green (the production probe is inert
+  for their injected software sources). **Fix passes: 1/3** (the `main() boots`
+  fake-async hang).
+- **Tokens/Time:** see dashboard (PERM-5 row) + master ledger.
 
 ### Checkpoint / Handoff
-_(to be written when the phase runs)_
+- **Feature is behaviour- AND production-complete.** All 10 ACs green; the real
+  camera is the shipped default on a camera-bearing device; the software scene is the
+  no-camera / denied fallback (D-2). The only remaining phase is **SIGNOFF-2**.
+- **Frozen:** `selectUseCamera` (pure decision), `_deviceHasCamera` (startup probe),
+  and `assembleDependencies(hasCamera:)`. The ITEST `captureSource:` injection seam is
+  untouched and must stay so — the production selection path is reached only through
+  `main.dart`/`productionDependencies`, never the harness.
+- **For SIGNOFF-2:** regenerate the packet with a fresh full cross-feature regression
+  (expect the 3 carried off-lane flakes: bs-06 palette AC-3/AC-5, bs-08 display AC-9 —
+  reproduce at merge-base, not bs-19 regressions). The **§10E on-device walkthrough now
+  verifies the shipped real-camera default** (live feed on launch, the first-entry
+  permission prompt, grant→feed / deny→software + affordance, no-camera→software,
+  AE·AWB·AF lock + torch, lifecycle release/resume) on a physical device — the three
+  `// coverage:ignore` device seams (`PluginCameraDevice`, `PluginCameraPermission.request`,
+  `_deviceHasCamera`) are exercised only there (D-5). Then `/feature-next-phase
+  --signoff bs-19 ...`.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`;
+  macOS has **no** `timeout`, run bare): unit+cov `flutter test --coverage test/`; gate
+  `dart run tool/coverage_gate.dart <base>`; analyze `dart analyze lib/ test/
+  integration_test/`; acceptance **per-file** `flutter test -d flutter-tester
+  [--dart-define=BS19_RUN_PENDING=true] integration_test/live_camera/<file>_test.dart`
+  (**the whole `live_camera/` dir fails to launch at once**).
+- **Known gaps:** none under `flutter-tester`. The real-camera runtime behaviour is
+  device-only (D-5), verified at the SIGNOFF-2 walkthrough.
