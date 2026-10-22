@@ -262,4 +262,20 @@ class AppTheme {
   /// The neutral grey the simulated swatch collapses toward as severity rises
   /// (bs-07).
   static Color get cvdDemoNeutral => _cvdDemoNeutral;
+
+  // --- Live-camera preview surface (bs-19 VIEW-4, D-7/D-8) ---
+  //
+  // The neutral dark grey shown behind the live-camera preview before a frame
+  // streams — a fixed camera-surface tone (a viewfinder reads dark whatever the
+  // app theme), not an app-chrome colour. Held here as the single palette
+  // source (D-7) so `LiveFrameView` hardcodes no literal (bs-17 AC-14 / D-8);
+  // the hex is unchanged from VIEW-1's `0xFF3A3A3A`, so the un-wired preview
+  // surface looks byte-for-byte identical.
+  static const Color _cameraPlaceholder = Color(0xFF3A3A3A);
+
+  /// The neutral camera-surface grey behind the live-camera preview before a
+  /// frame streams (bs-19 VIEW-4). `LiveFrameView` reads this instead of a
+  /// hardcoded literal (D-8), so the preview surface is sourced from the theme
+  /// authority like every other colour the app paints.
+  static Color get cameraPlaceholderSurface => _cameraPlaceholder;
 }

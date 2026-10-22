@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/theme.dart';
 import 'source/frame.dart';
 
 /// The live preview surface: paints the active capture source's latest [Frame],
@@ -19,15 +20,19 @@ class LiveFrameView extends StatelessWidget {
   /// flat [placeholderColor] surface shows (behaviour unchanged from the shell).
   final Frame? frame;
 
-  /// The flat placeholder colour shown when [frame] is null — the original
-  /// SCREEN-1 feed-surface colour, kept so the un-wired paths look identical.
-  static const Color placeholderColor = Color(0xFF3A3A3A);
+  /// The flat placeholder colour shown when [frame] is null — sourced from the
+  /// theme authority ([AppTheme.cameraPlaceholderSurface]) so this screen holds
+  /// no hardcoded palette literal (bs-17 AC-14 / D-8, VIEW-4). The value is the
+  /// original SCREEN-1 feed-surface grey, kept so the un-wired paths look
+  /// identical; the harness/unit test read this member, so both still track the
+  /// placeholder without depending on a hardcoded literal.
+  static Color get placeholderColor => AppTheme.cameraPlaceholderSurface;
 
   @override
   Widget build(BuildContext context) {
     final frame = this.frame;
     if (frame == null) {
-      return const ColoredBox(color: placeholderColor);
+      return ColoredBox(color: placeholderColor);
     }
     // Paint the frame's pixels directly; the real camera feed is downsampled
     // (D-4) before it reaches here, so a per-pixel paint is cheap enough for

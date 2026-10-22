@@ -35,16 +35,19 @@ const String ruleHardcodedPalette = 'hardcoded-palette-colour';
 /// from the AC-14 sweep.
 const String kThemeAuthorityFile = 'lib/app/theme.dart';
 
-/// The capture "device" colour literals D-4 excludes from the AC-14 sweep.
+/// The capture "device" colour literals D-4 once excluded from the AC-14 sweep
+/// — now **empty** (bs-19 VIEW-4, D-8).
 ///
-/// These emulate a camera surface (the live-view feed / viewfinder), not app
-/// chrome, so theming them would be wrong. AC-14's test combines these with
-/// [kThemeAuthorityFile] in its `exempt` set; the sweep still flags any other
-/// residual palette literal. Pinned by APPLY-1 (which removes the real app-chrome
-/// residuals) against the live `lib/` tree — ITEST-1 only lays the seam.
-const Set<String> kCaptureDeviceLiteralFiles = {
-  'lib/capture/capture_live_view.dart',
-};
+/// These emulated a camera surface (the live-view feed / viewfinder), not app
+/// chrome, so D-4 exempted the one file that held the literal
+/// (`capture_live_view.dart`). bs-19 VIEW-4 themed that camera-surface grey
+/// through `AppTheme` ([kThemeAuthorityFile]) — `AppTheme.cameraPlaceholderSurface`
+/// — so no `lib/` file hardcodes a camera literal any more and the carve-out
+/// silences nothing. D-8 retired it: the theme authority is now the sole
+/// file-level exemption. The constant stays (AC-14's test combines it with
+/// [kThemeAuthorityFile] in its `exempt` set, and pins it empty) so a future
+/// camera literal re-opens the decision deliberately rather than slipping in.
+const Set<String> kCaptureDeviceLiteralFiles = <String>{};
 
 /// The default roots the sweep walks — the real shipped product code.
 const List<String> kDefaultScanRoots = <String>['lib'];

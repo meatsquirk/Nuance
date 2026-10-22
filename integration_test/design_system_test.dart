@@ -885,32 +885,27 @@ void main() {
               'outside the exclusions: '
               '${residual.map((o) => '${o.path}:${o.line}').join(', ')}');
 
-      // Augmentation (APPLY-1): pin the D-4 exclusion set. The capture "device"
-      // exemption is the ONLY file-level exemption beyond the theme authority,
-      // and it is both *necessary* and *complete*:
-      expect(kCaptureDeviceLiteralFiles,
-          const {'lib/capture/capture_live_view.dart'},
-          reason: 'the D-4 capture-device exclusion set is pinned; adding a '
-              'file here must be a deliberate, reviewed D-4 decision');
-      // Necessary + complete: dropping the capture exemption re-exposes residual
-      // literals, and every one lies inside the pinned D-4 set (never leaking a
-      // real screen literal). If a screen hardcoded a new palette colour it
-      // would surface here outside the set and fail.
-      final withoutD4 = residualPaletteLiterals(
+      // Augmentation (bs-19 VIEW-4, D-8): the theme authority is now the SOLE
+      // file-level exemption. bs-19 VIEW-4 themed the live-camera preview
+      // surface through `AppTheme` (`AppTheme.cameraPlaceholderSurface`), so the
+      // former D-4 capture-device carve-out (`capture_live_view.dart`) silences
+      // nothing and is retired — [kCaptureDeviceLiteralFiles] is empty.
+      expect(kCaptureDeviceLiteralFiles, isEmpty,
+          reason: 'D-8 themed the camera surface through AppTheme; no '
+              'capture-device palette literal remains, so the D-4 carve-out is '
+              'retired. Re-adding one must be a deliberate, reviewed decision');
+      // With no capture carve-out there is nowhere left for a residual literal
+      // to hide: a sweep exempting ONLY the theme authority must still be empty.
+      // If a screen hardcoded a palette colour it would surface here and fail.
+      final themeAuthorityOnly = residualPaletteLiterals(
         roots: const ['lib'],
         exempt: {kThemeAuthorityFile},
       );
-      expect(withoutD4, isNotEmpty,
-          reason: 'the D-4 capture exemption must be load-bearing');
-      expect(
-        withoutD4
-            .map((o) => o.path.replaceAll(r'\', '/'))
-            .every(kCaptureDeviceLiteralFiles.contains),
-        isTrue,
-        reason: 'every literal the D-4 exemption silences must be a pinned '
-            'capture-device file, never a screen chrome literal: '
-            '${withoutD4.map((o) => '${o.path}:${o.line}').join(', ')}',
-      );
+      expect(themeAuthorityOnly, isEmpty,
+          reason: 'AppTheme (lib/app/theme.dart) is the sole palette authority; '
+              'every other lib/ file must read its colours from it. Residual '
+              'literals: '
+              '${themeAuthorityOnly.map((o) => '${o.path}:${o.line}').join(', ')}');
     });
 
     // # UX: "Swatches are screen approximations. Trust the numbers." / "APPROX."

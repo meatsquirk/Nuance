@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — SIGNOFF-1 attempt 1 blocked by a bs-17 AC-14 cross-feature regression; next VIEW-4 (theme the live-view placeholder), then re-run SIGNOFF-1. All 10 bs-19 ACs ✅, grade 10 A/0.
+**Status:** In progress — VIEW-4 ✅ done (themed the live-view placeholder, D-8; resolved the bs-17 AC-14 regression). All 10 bs-19 ACs ✅, grade 10 A/0; VIEW module complete. Next: re-run SIGNOFF-1.
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -56,7 +56,7 @@
 | D-5 | Acceptance tests inject a scripted `CaptureSource` (known frames + lock/torch/permission/availability state) at the `AppDependencies.captureSource` seam — no real hardware on `flutter-tester`; the real plugin is verified by a device walkthrough at sign-off | Mirrors `FakeCaptureSource`; the plugin's platform channels can't run under `flutter-tester` |
 | D-6 | **Deferred (out of scope):** real reference-card calibration/`normaliseAgainstCard` against the live camera, RAW capture, and wide-gamut selection — the camera source reports the processed sRGB pipeline and leaves card-normalisation on the software path | Those need camera-specific CV / device tuning; this feature delivers the live feed + sampling. Listed at sign-off as a known gap |
 | D-7 | Camera lifecycle tied to `WidgetsBindingObserver` + screen dispose: release on `inactive`/`paused`, re-init on `resumed` | AC-9; avoids a leaked/locked controller and black frames |
-| D-8 | The live-view **placeholder colour** is sourced from `AppTheme`, not a hardcoded `Color(0x…)` literal (VIEW-4) | Matt Quirk, 2026-10-21. VIEW-1 relocated the placeholder grey into the new `live_frame_view.dart`, which bs-17's design-system conformance AC-14 flags as a residual palette literal (it is outside the pinned D-4 capture-device exclusion set). Chosen over exempting the new file: theming removes the literal entirely, aligning with the design system rather than growing the exclusion set |
+| D-8 | The live-view **placeholder colour** is sourced from `AppTheme`, not a hardcoded `Color(0x…)` literal (VIEW-4); **the D-4 capture-device exemption is retired** (`kCaptureDeviceLiteralFiles = {}`), leaving `AppTheme` the sole AC-14 file-level exemption | Matt Quirk, 2026-10-21. VIEW-1 relocated the placeholder grey into the new `live_frame_view.dart`, which bs-17's design-system AC-14 flags as a residual palette literal. Chosen over exempting the new file: theming removes the literal entirely (`AppTheme.cameraPlaceholderSurface`), aligning with the design system. VIEW-4 found VIEW-1 had moved the lone camera-device literal **out of** the D-4-exempt `capture_live_view.dart`, so theming it left the carve-out silencing nothing and broke AC-14's load-bearing augmentation; Matt chose to retire the now-moot exemption and rewrite that augmentation (empty set + `AppTheme` as sole authority). Core AC-14 rule unchanged; D-4's frame-conversion decision is otherwise untouched |
 
 ## Acceptance integration test plan
 
@@ -99,7 +99,7 @@ Pre-seeded augmentations: AC-3/AC-5/AC-6 may run **green at baseline** against a
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | CAM | [modules/CAM.md](modules/CAM.md) | Real `CameraCaptureSource` over the `camera` plugin: frame stream + conversion, AE·AWB·AF locks, torch, lifecycle | — | ✅ Complete |
-| VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | 🔶 Reopened — VIEW-4 (theme placeholder) next |
+| VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | ✅ Done (VIEW-1/2/3/4) |
 | PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | ✅ Complete |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔶 In progress |
 
@@ -167,30 +167,28 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 17 | PERM-3 | AC-8 no-camera fallback | ✅ Done | 10,749,642 | 17m 46s | 9×A re-grade; AC-8 live; `available` seam; fix 0/3 |
 | 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ✅ Done | 5,210,656 | 11m 01s | un-pend + confirm only (no lib); AC-10 live; map now empty; 10×A re-grade; cov PASS (0 touched lib); fix 0/3 |
 | 19 | SIGNOFF-1 | sign-off: packet + full regression + manual approval (attempt 1) | ⚠ Blocked | 18.16M | 40m 27s (3h 56m) | bs-19 suite 10/10 A, unit 1687/0, cov PASS; full regression surfaced a **bs-17 AC-14** regression (live_frame_view placeholder, proven vs base `11944b6`) → VIEW-4 queued; re-run after. Packet: [signoff/round-1.md](signoff/round-1.md) |
-| 20 | VIEW-4 | behavior-fix: theme the live-view placeholder from AppTheme (D-8); resolve bs-17 AC-14; keep AC-1/AC-4 green | ⬜ Next | | | |
-| 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | ⬜ pending | | | |
+| 20 | VIEW-4 | behavior-fix: theme the live-view placeholder from AppTheme (D-8); resolve bs-17 AC-14; keep AC-1/AC-4 green | ✅ Done | 3.79M | 14m 40s | theme token `AppTheme.cameraPlaceholderSurface`; D-4 capture exemption retired (Matt Quirk, realises D-8); unit 1687/0, cov PASS 2 touched, bs-19 suite green both modes, bs-17 AC-14 27/27; grade A; fix 1/3 |
+| 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | ⬜ Next | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-1 attempt 1 (2026-10-21) found a blocker — VIEW-4 is next, then re-run SIGNOFF-1.** The sign-off
-verification ran clean on bs-19 itself (all 10 ACs green both modes; fresh grade **10 A / 0 below A**; unit
-**1687/0**; coverage gate PASS; feature acceptance suite green). The **full cross-feature regression** (19
-suites) was green **except** 4 off-lane failures: three are **pre-existing carried flakes proven at base
-`11944b6`** (bs-06 palette AC-3/AC-5, bs-08 display AC-9, bs-07 self_assessment AC-4), and one is a **genuine
-bs-19 regression** — bs-17 design-system conformance **AC-14** now fails because VIEW-1's new
-`lib/capture/live_frame_view.dart` hardcodes `Color(0xFF3A3A3A)` outside the D-4 exclusion set.
-- **Next: VIEW-4** — theme the placeholder from `AppTheme` (D-8, Matt Quirk 2026-10-21), removing the
-  literal; keep AC-1 (`TestAC01`) + AC-4 (`TestAC04`) green and the harness `showsPlaceholder` helper
-  (`harness.dart:139`) following the themed colour; restore bs-17 `design_system_test.dart` AC-14 to green.
-  Details in [modules/VIEW.md](modules/VIEW.md) § VIEW-4.
-- **Then re-run SIGNOFF-1** — regenerate the packet with a clean full regression; remaining SIGNOFF to-dos:
-  on-device camera walkthrough (D-5), cost-per-AC refresh; surface the **production-dormant camera** decision
-  (main.dart ships the software source; §9 of the packet).
+**VIEW-4 done — re-run SIGNOFF-1 is the only remaining phase.** VIEW-4 themed the live-view placeholder
+through `AppTheme` (D-8) and resolved the bs-17 AC-14 regression that blocked SIGNOFF-1 attempt 1. All 10
+bs-19 ACs are delivered and green, VIEW module complete.
+- **Next: SIGNOFF-1 (re-run)** — regenerate the packet with a **clean full cross-feature regression** (AC-14
+  is now green). Remaining SIGNOFF to-dos: on-device camera walkthrough (D-5), cost-per-AC refresh; surface
+  the **production-dormant camera** decision (main.dart ships the software source; §9 of the packet). The
+  prior packet [signoff/round-1.md](signoff/round-1.md) was never submitted for a human decision (blocked at
+  attempt 1); the re-run supersedes it.
+- **Expect at SIGNOFF-1:** the 3 carried off-lane flakes still fail off-lane (bs-06 palette AC-3/AC-5, bs-08
+  display AC-9, bs-07 self_assessment AC-4) — pre-existing, proven at base `11944b6`, **not** bs-19's and not
+  blockers. The AC-14 fail must be **gone**.
 - **Carried gotchas:** the whole `integration_test/live_camera/` dir **won't launch at once** — run per-file.
-  macOS has no `timeout`; run bare. The 3 carried off-lane flakes are not bs-19's. Production still opens on
-  the software source; the wired camera plugin is dormant in the shipped build.
+  macOS has no `timeout`; run bare. `AppTheme` is now the sole AC-14 file-level exemption
+  (`kCaptureDeviceLiteralFiles = {}`). Production still opens on the software source; the wired camera plugin
+  is dormant in the shipped build.
 
 ## Token usage
 
@@ -219,7 +217,8 @@ bs-19 regression** — bs-17 design-system conformance **AC-14** now fails becau
 | PERM-3 | 9d0d231d | 2026-10-21 16:54 EDT | 17:11 | 17m 46s | 17m 46s | claude-opus-4-8 | 166 | 268,475 | 10,433,083 | 47,918 | 10,749,642 | AC-8 no-camera fallback live; grade 9A/0; available seam; fix 0/3 |
 | PERM-4 | fb59c5de | 2026-10-21 17:18 EDT | 17:29 | 11m 01s | 11m 01s | claude-opus-4-8 | 112 | 188,840 | 4,994,508 | 27,196 | 5,210,656 | AC-10 platform declarations un-pended; 10/10 ACs delivered; grade 10 A/0; coverage gate PASS (0 touched lib); fix 0/3 |
 | SIGNOFF-1 | 7d5f31da | 2026-10-21 18:26 EDT | 22:23 | 3h 56m | 40m 27s | claude-opus-4-8 | 286 | 475,210 | 17,604,833 | 76,690 | 18,157,019 | attempt 1 BLOCKED: bs-19 suite 10/10 A, unit 1687/0, cov PASS, feature acceptance green both modes; full cross-feature regression found a bs-17 AC-14 regression (live_frame_view placeholder, proven vs base 11944b6) + 3 carried off-lane flakes; VIEW-4 (theme placeholder, D-8) queued before re-run |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 22:23** | **12h 33m** | **7h 25m** |  | **2,638** | **4,580,502** | **170,833,891** | **1,002,621** | **176,419,652** |  |
+| VIEW-4 | 04e94f77 | 2026-10-21 22:55 EDT | 23:24 | 28m 50s | 14m 40s | claude-opus-4-8 | 80 | 92,832 | 3,657,304 | 34,948 | 3,785,164 | themed live-view placeholder (D-8); retired D-4 exemption; resolved bs-17 AC-14; unit 1687/0, cov PASS, bs-19 green both modes, AC-14 27/27; grade A; fix 1/3 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 23:24** | **13h 02m** | **7h 40m** |  | **2,718** | **4,673,334** | **174,491,195** | **1,037,569** | **180,204,816** |  |
 
 ## Sign-off
 

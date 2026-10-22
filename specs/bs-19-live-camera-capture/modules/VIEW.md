@@ -1,6 +1,6 @@
 # Module VIEW — Live preview rendering
 
-**Status:** 🔶 Reopened for VIEW-4 — VIEW-1/2/3 done; VIEW-4 (theme the placeholder, resolve bs-17 AC-14 regression) ⬜ Next
+**Status:** ✅ Complete — VIEW-1/2/3/4 done; VIEW-4 themed the live-view placeholder (D-8) and resolved the bs-17 AC-14 regression. No VIEW phase remains.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_live_view.dart`, a frame-render widget (e.g. `lib/capture/live_frame_view.dart`), widget tests under `test/capture/`.
 **Depends on:** CAM · **Blocks:** SIGNOFF-1
@@ -12,7 +12,7 @@
 | VIEW-1 | shell | — | ✅ Done | | |
 | VIEW-2 | behavior | AC-1 | ✅ Done | 7.74M | 14m 54s |
 | VIEW-3 | behavior | AC-4 | ✅ Done | 3.88M | 11m 59s |
-| VIEW-4 | behavior (fix) | — (keeps AC-1/AC-4; resolves bs-17 AC-14) | ⬜ Next | | |
+| VIEW-4 | behavior (fix) | — (keeps AC-1/AC-4; resolves bs-17 AC-14) | ✅ Done | 3.79M | 14m 40s |
 
 ## Interface reconciliation
 
@@ -155,7 +155,45 @@ Value-only grayscale now greys the **live frame**, not the readings — **AC-4 d
 - **Augments:** none (fix only; must not weaken any AC test).
 
 ### Result
-_pending — VIEW-4 not yet run._
+- **Landed:** themed the live-camera preview placeholder through the theme authority (D-8). Added
+  `AppTheme.cameraPlaceholderSurface` (+ private `_cameraPlaceholder = Color(0xFF3A3A3A)`) to the exempt
+  `lib/app/theme.dart`; `lib/capture/live_frame_view.dart` now reads it — `static Color get placeholderColor
+  => AppTheme.cameraPlaceholderSurface` (was `static const Color = Color(0xFF3A3A3A)`), build paints a
+  non-const `ColoredBox(color: placeholderColor)`. The hex is unchanged, so the un-wired preview looks
+  byte-for-byte identical. No `Color(0x…)` literal remains in `live_frame_view.dart`.
+- **Harness/unit test: unchanged** — both read `LiveFrameView.placeholderColor`, which still exists (now a
+  forwarding getter) and resolves to the same value, so `harness.dart:139` `showsPlaceholder` and
+  `test/capture/live_frame_view_test.dart` track the placeholder with no edit and no dependence on a literal.
+- **D-4 exemption retired (decision: Matt Quirk 2026-10-21, realises D-8).** VIEW-1 had moved the lone
+  camera-device literal out of `capture_live_view.dart` into `live_frame_view.dart`; theming it left the D-4
+  capture carve-out silencing nothing, which broke bs-17 AC-14's *load-bearing* augmentation
+  (`design_system_test.dart:903`). Per Matt's choice (retire the exemption), set
+  `kCaptureDeviceLiteralFiles = {}` in `design_system_source_scan.dart` and rewrote the augmentation
+  (`design_system_test.dart:888–912`) to pin the empty set and assert `AppTheme` is the **sole** file-level
+  exemption (a sweep exempting only the theme authority is empty). Core AC-14 rule unchanged and still fully
+  enforced; no AC test weakened.
+- **Gates:** analyze clean (3 touched items). Unit+coverage **PASS** — `flutter test --coverage test/` =
+  **1687 passed**, exit 0; `coverage_gate.dart fdf794a` = **100% on both touched lib files**
+  (`lib/app/theme.dart`, `lib/capture/live_frame_view.dart`). **bs-19 acceptance green both modes** —
+  `preview_test.dart` 3/3 default + run-pending (AC-1/AC-2/AC-4), `reading/controls/permission/platform` 2/2/2/1
+  default, `smoke_test.dart` 11/11. **bs-17 regression resolved** — `design_system_test.dart` **27/27**
+  (AC-14 green; the three scan-helper tests green). **Grade A** (no AC test weakened; `placeholderColor`
+  preserved as a forwarding getter, so `TestAC01`/`TestAC04` are behaviourally identical). **Fix passes: 1/3**
+  (first full run surfaced AC-14's load-bearing augmentation still red after theming; resolved by the
+  exemption-retirement decision, green thereafter).
+- **Tokens/Time:** see dashboard (VIEW-4 row) and the master ledger.
 
 ### Checkpoint / Handoff
-_pending._
+- **Frozen this phase:** `AppTheme.cameraPlaceholderSurface` is the single source of the live-preview
+  placeholder grey; `LiveFrameView.placeholderColor` forwards to it (the harness/test anchor). `AppTheme` is
+  now the **sole** AC-14 file-level exemption — `kCaptureDeviceLiteralFiles` is empty; re-adding a capture
+  literal must be a deliberate, reviewed decision (D-4/D-8).
+- **Verification commands:** `flutter test --coverage test/`; `dart run tool/coverage_gate.dart <BASE>`;
+  acceptance per-file `flutter test -d flutter-tester integration_test/live_camera/<file>_test.dart`
+  (`--dart-define=BS19_RUN_PENDING=true` for pending mode); regression
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** none introduced. All 10 bs-19 ACs delivered and green; VIEW module complete.
+- **Next:** re-run **SIGNOFF-1** — regenerate the packet with a clean full cross-feature regression (AC-14 now
+  green), refresh cost-per-AC, surface the production-dormant-camera decision (§9) and the on-device
+  walkthrough (D-5). The three carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-08 display AC-9, bs-07
+  self_assessment AC-4) are pre-existing, not bs-19's.
