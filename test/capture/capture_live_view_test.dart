@@ -4,6 +4,7 @@ import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_eyedropper.dart';
 import 'package:paint_color_assistant/capture/capture_live_view.dart';
 import 'package:paint_color_assistant/capture/capture_state.dart';
+import 'package:paint_color_assistant/capture/live_frame_view.dart';
 
 Widget _host(CaptureState state) => MaterialApp(
       home: Scaffold(body: CaptureLiveView(state: state)),
@@ -110,6 +111,56 @@ void main() {
       ),
       findsNothing,
       reason: 'the text readings stay in colour, only the feed is grayscaled',
+    );
+  });
+
+  // ---- bs-19 VIEW-5: native camera preview surface (D-9) ----
+
+  testWidgets('renders the native preview under the live-view key when given '
+      'one (VIEW-5)', (tester) async {
+    const preview = SizedBox(key: ValueKey('native-preview'));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CaptureLiveView(state: CaptureState(), preview: preview),
+        ),
+      ),
+    );
+
+    // The preview is the feed surface, carrying the live-view anchor…
+    expect(
+      find.descendant(
+        of: find.byKey(CaptureLiveView.liveViewKey),
+        matching: find.byKey(const ValueKey('native-preview')),
+      ),
+      findsOneWidget,
+    );
+    // …and it replaces the painted-frame path entirely (no LiveFrameView).
+    expect(find.byType(LiveFrameView), findsNothing,
+        reason: 'the native preview renders instead of painting the frame');
+  });
+
+  testWidgets('wraps the native preview in the grayscale filter while '
+      'value-only is on (VIEW-5/AC-10)', (tester) async {
+    const preview = SizedBox(key: ValueKey('native-preview'));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CaptureLiveView(
+            state: CaptureState(valueOnly: true),
+            preview: preview,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.ancestor(
+        of: find.byKey(CaptureLiveView.liveViewKey),
+        matching: find.byType(ColorFiltered),
+      ),
+      findsOneWidget,
+      reason: 'value-only greys the native preview too',
     );
   });
 

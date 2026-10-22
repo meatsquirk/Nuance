@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/source/camera_capture_source.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
@@ -45,6 +46,13 @@ class _FakeCameraDevice implements CameraDevice {
 
   @override
   Future<void> turnTorchOff() async => torchOffCalls++;
+
+  /// The preview widget this fake hands back — null until a test sets it, as a
+  /// real [PluginCameraDevice] returns null before its controller is live.
+  Widget? preview;
+
+  @override
+  Widget? buildPreview() => preview;
 
   /// Delivers [image] as if the device produced a frame.
   void emit(CameraImage image) => _onImage?.call(image);
@@ -101,6 +109,24 @@ void main() {
 
       await sub.cancel();
       expect(device.stopped, isTrue, reason: 'cancelling releases the device');
+    });
+
+    test('buildPreview forwards the device native preview (VIEW-5/D-9)', () {
+      // The source surfaces the device's native CameraPreview to the view layer
+      // without the plugin leaking into testable code: it just delegates to the
+      // CameraDevice seam.
+      final device = _FakeCameraDevice();
+      final source = CameraCaptureSource(device: device);
+
+      // Before the device controller is live the seam gives null — the view
+      // then falls back to the painted frame / placeholder.
+      expect(source.buildPreview(), isNull,
+          reason: 'no preview before the device controller is live');
+
+      const preview = SizedBox(key: ValueKey('native-preview'));
+      device.preview = preview;
+      expect(source.buildPreview(), same(preview),
+          reason: 'the live device preview is handed straight through');
     });
 
     test('stability is an empty stream (no settle signal yet)', () async {

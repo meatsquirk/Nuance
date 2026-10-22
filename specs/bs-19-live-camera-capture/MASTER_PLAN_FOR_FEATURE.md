@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — next VIEW-5. SIGNOFF-2 returned **changes requested** 2026-10-22 (Matt Quirk): the live preview paints the downsampled 64px sampling `Frame` (rotated/pixelated/laggy on-device) instead of the plugin's native `CameraPreview`; VIEW-5 swaps the render to `CameraPreview(controller)` (keeping the `Frame` for sampling only), then SIGNOFF-3. All 10 ACs still ✅; automated state green at `9345e45`.
+**Status:** In progress — next **SIGNOFF-3** (the only remaining phase). VIEW-5 ✅ done 2026-10-22: the on-device live preview now renders the plugin's native `CameraPreview` (D-9), the 64px `Frame` kept for colour sampling only; all behaviour + presentation complete, all 10 ACs ✅. Automated state green (unit 1699/0, cov PASS, bs-19 acceptance 21/21 both modes, bs-17 AC-14 27/27).
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -135,13 +135,15 @@ phase. Wires the real `camera`-plugin path (built behind the seams in CAM-3/PERM
 denied fallback (realises D-2 fully). Largely device-only code (coverage-ignored, D-5); the real on-device
 behaviour is verified at the SIGNOFF-2 walkthrough. It blocks SIGNOFF-2.
 
-**VIEW-5** (added at SIGNOFF-2, changes requested, 2026-10-22 — Matt Quirk): swap the on-device live-preview
-render from the painted downsampled `Frame` (VIEW-1 `_FramePainter`, rotated/pixelated/laggy on-device) to the
-`camera` plugin's native `CameraPreview(controller)` — full-res, GPU, sensor-orientation-correct (D-9). The
-downsampled `Frame` stream stays wired as the reticle colour-sampling input only (AC-3 unchanged). The scripted
-/ software / no-controller paths keep the `LiveFrameView` frame-paint + themed placeholder, so AC-1/AC-4 under
-`flutter-tester` are behaviourally unchanged; the native preview widget is device-only (coverage-ignored, D-5),
-verified at the SIGNOFF-3 walkthrough. It blocks SIGNOFF-3.
+**VIEW-5** (added at SIGNOFF-2, changes requested, 2026-10-22 — Matt Quirk; ✅ done 2026-10-22): swapped the
+on-device live-preview render from the painted downsampled `Frame` (VIEW-1 `_FramePainter`,
+rotated/pixelated/laggy on-device) to the `camera` plugin's native `CameraPreview(controller)` — full-res, GPU,
+sensor-orientation-correct (D-9), via the `CameraDevice.buildPreview()` →
+`CameraCaptureSource.buildPreview()` → `CaptureController.previewWidget` seam (null unless the active source is a
+`CameraCaptureSource`). The downsampled `Frame` stream stays wired as the reticle colour-sampling input only
+(AC-3 unchanged). The scripted / software / no-controller paths keep the `LiveFrameView` frame-paint + themed
+placeholder, so AC-1/AC-4 under `flutter-tester` are behaviourally unchanged; the native preview widget is
+device-only (coverage-ignored, D-5), verified at the SIGNOFF-3 walkthrough. It blocked SIGNOFF-3.
 
 **Parallel windows:** the three shells (CAM-2 ∥ PERM-1 ∥ VIEW-1) touch disjoint files. ITEST-2 ∥ ITEST-3. After CAM-3, the CAM behavior phases (CAM-4/5/6/7) and VIEW-2 run concurrently; PERM-2/3 form a short chain; PERM-4 (manifests) is independent. Merge-risky pair: CAM-3 and VIEW-2 both read `capture_live_view.dart` — sequence VIEW-2 after CAM-3.
 
@@ -190,27 +192,26 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | 🔁 Changes requested | 6.04M | 26m 36s | clean re-run: unit 1687/0, cov PASS, bs-19 acceptance 21/21 both modes, grade 10 A/0 @ `1d634e3`; regression 340/4 (carried flakes). **Decision 2026-10-22 (Matt Quirk): changes requested — §9 production activation → PERM-5, then SIGNOFF-2.** Packet: [signoff/round-1.md](signoff/round-1.md) |
 | 22 | PERM-5 | behavior: §9 production activation — ship the real camera by default (probe + select in `main.dart`) | ✅ Done | 5.79M | 31m 35s | pure `selectUseCamera` + device probe `_deviceHasCamera` (coverage-exempt, D-5); `assembleDependencies(hasCamera:)` selects the live `CameraCaptureSource` when a camera is present. analyze clean, unit 1694/0, cov PASS (2 touched lib, probe exempt), acceptance 21/21 **both modes** (no AC un-pended), grade holds 10 A/0, cross-feature bs-02/09/11/12 green. Fix 1/3 (main()-boots fake-async probe hang → `_FakeCameraPlatform`) |
 | 23 | SIGNOFF-2 | sign-off: fresh packet after PERM-5 (incl. on-device walkthrough) | 🔁 Changes requested | 5.34M | 21m 04s | packet [signoff/round-2.md](signoff/round-2.md) @ `9345e45`; automated state green (unit 1694/0, cov PASS, acceptance 21/21 both modes, regression 340/4 carried flakes, grade 10 A/0). **Decision 2026-10-22 (Matt Quirk): changes requested — the live preview paints the downsampled 64px `Frame` (rotated/pixelated/laggy on-device) instead of the plugin's native `CameraPreview` → VIEW-5, then SIGNOFF-3.** |
-| 24 | VIEW-5 | behavior (fix): render the on-device preview via native `CameraPreview(controller)` (D-9); keep the `Frame` for sampling only; AC-1/AC-4 stay green | ⬜ Next | | | reopens VIEW; blocks SIGNOFF-3 |
-| 25 | SIGNOFF-3 | sign-off: fresh packet after VIEW-5 | ⬜ | | | |
+| 24 | VIEW-5 | behavior (fix): render the on-device preview via native `CameraPreview(controller)` (D-9); keep the `Frame` for sampling only; AC-1/AC-4 stay green | ✅ Done | 8.22M | 16m 10s | `CameraDevice.buildPreview()` → `CameraCaptureSource.buildPreview()` → `CaptureController.previewWidget` (null unless `source is CameraCaptureSource`); view renders `CameraPreview` when present, else `LiveFrameView` paint/placeholder; `PluginCameraDevice.buildPreview` device-only (D-5). No AC un-pended; AC-1 +non-weakening augmentation. unit 1699/0, cov PASS (4 touched, 100%), acceptance 21/21 both modes, bs-17 AC-14 27/27; grade A; fix 0/3. VIEW module complete |
+| 25 | SIGNOFF-3 | sign-off: fresh packet after VIEW-5 | ⬜ Next | | | fresh packet + full regression + on-device walkthrough (preview fidelity), then human decision |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-2 returned `changes requested` (Matt Quirk, 2026-10-22) → next phase VIEW-5.** Run it in a fresh session:
-`/feature-next-phase bs19 VIEW-5`.
-- **VIEW-5 (behavior/fix, D-9):** replace the on-device preview render — the painted downsampled 64px `Frame`
-  (`live_frame_view.dart` `_FramePainter`, rotated 90° CCW / pixelated / laggy) — with the `camera` plugin's native
-  `CameraPreview(controller)` (full-res, GPU, orientation-correct). Keep the `Frame` stream wired as the reticle
-  colour-sampling input only (AC-3 unchanged). The scripted/software/no-controller paths keep the `LiveFrameView`
-  paint + themed placeholder, so **AC-1 (`TestAC01`) and AC-4 (`TestAC04`) stay green under `flutter-tester`**; the
-  native preview widget is device-only (coverage-ignored, D-5), verified at the SIGNOFF-3 walkthrough.
-- Needs the plugin `CameraController` surfaced from `CameraCaptureSource`/`PluginCameraDevice` to the view layer
-  (new preview seam); grade gate must confirm no AC test was weakened.
-- Then **SIGNOFF-3**: fresh packet + full regression + the on-device walkthrough (now checking preview fidelity:
-  upright, full-res, smooth), and the human decision.
-- Automated state at `9345e45` is green: unit 1694/0, cov PASS, bs-19 acceptance 21/21 both modes, regression 340/4
-  (4 carried off-lane flakes only — bs-06 palette AC-3/AC-5, bs-08 display AC-9, bs-07 self_assessment AC-4).
+**VIEW-5 ✅ done (2026-10-22) → next and last phase is SIGNOFF-3.** Run it in a fresh session:
+`/feature-next-phase bs19` (or `/feature-next-phase --signoff bs19 approved|changes "<items>"` to record the
+decision once the packet is prepared).
+- **SIGNOFF-3 (sign-off):** regenerate the packet (`signoff/round-3.md`) with a clean **full cross-feature
+  regression** and refreshed cost-per-AC, then the human decision. On approval → merge to main via
+  `clean-merged-branches`.
+- The §11 **on-device walkthrough** now also checks **preview fidelity**: on the Pixel the live preview must be
+  upright, full-resolution and smooth (not the 64px block mosaic), value-only greys the live preview, the reticle
+  reading still tracks the scene, and lock/torch work — exercising the `PluginCameraDevice.buildPreview` seam (D-5).
+- Expect only the **3 carried off-lane flakes** in the full regression (bs-06 palette AC-3/AC-5, bs-08 display AC-9,
+  bs-07 self_assessment AC-4); bs-19 itself is 10/10 A.
+- Automated state after VIEW-5 (code committed this session): unit 1699/0, cov PASS, bs-19 acceptance 21/21 both
+  modes, bs-17 `design_system_test.dart` 27/27 (AC-14 green — no new residual literal).
 
 ## Token usage
 
@@ -245,7 +246,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PERM-5 | 8e17ef74 | 2026-10-22 09:31 EDT | 10:02 | 31m 35s | 31m 35s | claude-opus-4-8 | 108 | 107,342 | 5,639,224 | 42,226 | 5,788,900 | §9 production activation shipped — real camera default; unit 1694/0, cov PASS, acceptance 21/21 both modes (no AC un-pended), grade 10 A/0, cross-feature bs-02/09/11/12 green; fix 1/3 |
 | SIGNOFF-2 | 47576b30 | 2026-10-22 10:10 EDT | 10:31 | 21m 04s | 21m 04s | claude-opus-4-8 | 102 | 212,483 | 5,095,947 | 35,641 | 5,344,173 | packet (round-2) prepared @ 9345e45 after PERM-5; unit 1694/0, cov PASS, bs-19 acceptance 21/21 both modes, regression 340/4 (carried flakes only), grade 10 A/0 (fresh independent re-grade); awaiting human decision |
 | SIGNOFF-DECISION | 4d1562f8 | 2026-10-22 10:56 EDT | 10:59 | 3m 33s | 3m 33s | claude-opus-4-8 | 36 | 75,755 | 1,568,892 | 15,164 | 1,659,847 | SIGNOFF-2 changes requested (Matt Quirk, 2026-10-22): on-device preview paints the downsampled 64px Frame (rotated/pixelated/laggy) instead of the plugin's native CameraPreview — new phase VIEW-5 (render via CameraPreview(controller), keep Frame for sampling only, D-9) before a fresh SIGNOFF-3 |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-22 10:59** | **14h 34m** | **9h 10m** |  | **3,124** | **5,378,820** | **195,141,604** | **1,202,014** | **201,725,562** |  |
+| VIEW-5 | b15bbe76 | 2026-10-22 11:08 EDT | 11:24 | 16m 10s | 16m 10s | claude-opus-4-8 | 132 | 136,117 | 8,047,247 | 37,876 | 8,221,372 | native CameraPreview render (D-9); AC-1/AC-3/AC-4 green both modes, grade A, cov PASS, fix 0/3 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-22 11:24** | **14h 50m** | **9h 26m** |  | **3,256** | **5,514,937** | **203,188,851** | **1,239,890** | **209,946,934** |  |
 
 ## Sign-off
 

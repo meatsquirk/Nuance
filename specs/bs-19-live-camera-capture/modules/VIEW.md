@@ -1,6 +1,6 @@
 # Module VIEW — Live preview rendering
 
-**Status:** ⬜ Reopened at SIGNOFF-2 (changes requested, 2026-10-22) — VIEW-1/2/3/4 done; **VIEW-5 ⬜ Next** (native `CameraPreview` render, D-9). Blocks SIGNOFF-3.
+**Status:** ✅ Complete — VIEW-1/2/3/4/5 all done. VIEW-5 (native `CameraPreview` render, D-9) landed 2026-10-22 @ code; SIGNOFF-3 is the only remaining feature phase.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_live_view.dart`, a frame-render widget (e.g. `lib/capture/live_frame_view.dart`), the native-preview seam, widget tests under `test/capture/`.
 **Depends on:** CAM · **Blocks:** SIGNOFF-1 (done), SIGNOFF-3 (via VIEW-5)
@@ -13,7 +13,7 @@
 | VIEW-2 | behavior | AC-1 | ✅ Done | 7.74M | 14m 54s |
 | VIEW-3 | behavior | AC-4 | ✅ Done | 3.88M | 11m 59s |
 | VIEW-4 | behavior (fix) | — (keeps AC-1/AC-4; resolves bs-17 AC-14) | ✅ Done | 3.79M | 14m 40s |
-| VIEW-5 | behavior (fix) | — (D-9 native `CameraPreview`; keeps AC-1/AC-4) | ⬜ Next | | |
+| VIEW-5 | behavior (fix) | — (D-9 native `CameraPreview`; keeps AC-1/AC-4) | ✅ Done | 8.22M | 16m 10s |
 
 ## Interface reconciliation
 
@@ -250,3 +250,50 @@ Value-only grayscale now greys the **live frame**, not the readings — **AC-4 d
 - **Device walkthrough (for SIGNOFF-3):** on the Pixel, the live preview is **upright, full-resolution and
   smooth** (not the 64px block mosaic), the reticle reading still tracks the scene, value-only greys the live
   preview, and lock/torch still work — exercises the `PluginCameraDevice` preview seam (D-5).
+
+### Result
+Rendered the on-device live preview from the camera plugin's native `CameraPreview` (D-9); the painted 64px
+sampling `Frame` is now the reticle colour-sampling input only — **no AC un-pended** (fix), AC-1/AC-3/AC-4 kept
+green, **grade A**.
+- **New preview seam (host-testable, 100% covered):** added `Widget? buildPreview()` to the `CameraDevice`
+  interface (`camera_capture_source.dart`); `CameraCaptureSource.buildPreview()` delegates to the device seam,
+  and `CaptureController.previewWidget` surfaces it to the view **only when `source is CameraCaptureSource`**
+  (the real device camera) — null for the software fallback and for the scripted acceptance source (not a
+  `CameraCaptureSource`), so the painted-frame / placeholder path is unchanged under `flutter-tester`.
+- **View render (`capture_live_view.dart`):** `CaptureLiveView` gained an optional `Widget? preview`; the feed
+  surface is now `preview != null ? KeyedSubtree(key: liveViewKey, child: preview) : LiveFrameView(frame, key:
+  liveViewKey)`. Either surface carries `liveViewKey` and sits inside the value-only saturation-0
+  `ColorFiltered`, so the grayscale filter greys the native preview too (AC-4) and the readings stay outside it.
+  `capture_screen.dart` passes `preview: controller.previewWidget` alongside the existing `frame:`.
+- **Device-only (D-5):** `PluginCameraDevice.buildPreview()` (returns `CameraPreview(_controller)` once the
+  controller is live, else null) is the sole new `// coverage:ignore` block, placed ABOVE `@override` (the
+  VIEW/CAM coverage-ignore gotcha). Verified at the SIGNOFF-3 walkthrough. The `Frame` stream, `currentFrame`
+  and the reticle sampler are untouched — AC-3 stays green.
+- **Augmentations:** AC-1 (`TestAC01_LivePreview`) gained a non-weakening assertion that
+  `h.controller.previewWidget` is null for the scripted source — it documents that AC-1 exercises the
+  painted-frame path (the native path is device-only), without weakening the Then. No other AC test changed.
+- **Gates:** analyze clean; unit+coverage **PASS** — `flutter test --coverage test/` **1699 passed** (1694 +5
+  new), exit 0; `coverage_gate.dart badb334` = **100% on all 4 touched lib files** (`capture_controller.dart`,
+  `capture_live_view.dart`, `capture_screen.dart`, `source/camera_capture_source.dart`). Acceptance **PASS** —
+  bs-19 suite green **both modes**: `preview_test` 3/3, `reading_test` 2/2, `controls_test` 2/2,
+  `permission_test` 2/2, `platform_test` 1/1, `smoke_test` 11/11. Regression **PASS** — bs-17
+  `design_system_test.dart` **27/27** (AC-14 green; no new residual `Color(0x…)` literal). **Grade A**
+  (AC-1/AC-3/AC-4 unweakened). **Fix passes: 0/3** (green on the first full run).
+- **Tokens/Time:** see dashboard (VIEW-5 row) and the master ledger.
+
+### Checkpoint / Handoff
+- **Frozen this phase:** `CameraDevice.buildPreview()` → `CameraCaptureSource.buildPreview()` →
+  `CaptureController.previewWidget` is the native-preview seam; the view renders it through the optional
+  `CaptureLiveView.preview`, falling back to `LiveFrameView` (painted frame / themed placeholder). `liveViewKey`
+  remains the single feed anchor and stays inside the value-only `ColorFiltered`.
+- **Verification commands** (prepend `export PATH="$HOME/development/flutter/bin:$PATH"`; macOS has **no**
+  `timeout`, run bare): `flutter test --coverage test/`; `dart run tool/coverage_gate.dart <BASE>`; acceptance
+  per-file `flutter test -d flutter-tester integration_test/live_camera/<file>.dart`
+  (`--dart-define=BS19_RUN_PENDING=true` for pending mode); regression
+  `flutter test -d flutter-tester integration_test/design_system_test.dart`.
+- **Known gaps:** the native `CameraPreview` render is device-only (coverage-ignored, D-5) — proven under host
+  tests only through the seam; its on-device fidelity (upright / full-res / smooth) is confirmed at the
+  SIGNOFF-3 walkthrough, not under `flutter-tester`.
+- **Next:** **SIGNOFF-3** — fresh packet + full cross-feature regression + the on-device walkthrough (now also
+  checking preview fidelity), then the human decision. Expect only the 3 carried off-lane flakes (bs-06 palette
+  AC-3/AC-5, bs-08 display AC-9, bs-07 self_assessment AC-4).

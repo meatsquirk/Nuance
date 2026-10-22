@@ -28,6 +28,7 @@ class CaptureLiveView extends StatelessWidget {
   const CaptureLiveView({
     required this.state,
     this.frame,
+    this.preview,
     this.downgradeReasons = const <AccuracyDowngradeReason>{},
     super.key,
   });
@@ -69,6 +70,19 @@ class CaptureLiveView extends StatelessWidget {
   /// live source's frames in (bs-19 VIEW-1).
   final Frame? frame;
 
+  /// The active source's native camera preview, rendered as the feed surface
+  /// in place of painting [frame] (bs-19 VIEW-5, D-9).
+  ///
+  /// Non-null only for the real device camera (`CameraCaptureSource` provides a
+  /// `CameraPreview`), so on-device the preview is upright, full-resolution and
+  /// smooth rather than the rotated, pixelated 64px frame-paint. Null — the
+  /// default, and what the scripted acceptance source and the software / no-
+  /// camera fallback give — keeps the [LiveFrameView] frame-paint / placeholder
+  /// path, so AC-1/AC-4 under `flutter-tester` render exactly as before. The
+  /// preview still carries [liveViewKey] and sits inside the value-only
+  /// grayscale filter when active.
+  final Widget? preview;
+
   /// The poor-capture conditions currently in effect (bs-12 AC-9), surfaced as
   /// words over the feed so the painter is told *why* a reading would be
   /// downgraded (never trusting colour alone). Empty — the trustworthy case —
@@ -87,12 +101,18 @@ class CaptureLiveView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The feed surface, rendered through [LiveFrameView]: a flat placeholder
-    // until a source streams frames (VIEW-2), the painted frame thereafter. In
-    // value-only mode (AC-10) the feed is wrapped in a saturation-0
-    // [ColorFiltered] so it renders grayscale, leaving the overlaid readings in
-    // colour.
-    final Widget feedSurface = LiveFrameView(frame: frame, key: liveViewKey);
+    // The feed surface. When the active source supplies a native camera
+    // preview (the real device camera — VIEW-5/D-9), render it directly so the
+    // on-device preview is upright, full-resolution and smooth; otherwise route
+    // through [LiveFrameView], which paints the live frame (the scripted
+    // acceptance source) or shows the flat placeholder (software / no-camera).
+    // Either surface carries [liveViewKey] as the stable anchor. In value-only
+    // mode (AC-10) the feed is wrapped in a saturation-0 [ColorFiltered] so it
+    // renders grayscale, leaving the overlaid readings in colour.
+    final preview = this.preview;
+    final Widget feedSurface = preview != null
+        ? KeyedSubtree(key: liveViewKey, child: preview)
+        : LiveFrameView(frame: frame, key: liveViewKey);
     final Widget feed = state.valueOnly
         ? ColorFiltered(
             colorFilter: const ColorFilter.matrix(_grayscaleMatrix),

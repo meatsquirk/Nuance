@@ -1,7 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
+// `widgets.dart` (for `Widget`, VIEW-5's preview seam) also exports a
+// `LockState`; hide it so the capture state's `LockState` stays unambiguous.
+import 'package:flutter/widgets.dart' hide LockState;
 
 import '../domain/color_coordinates.dart';
 import '../domain/provenance.dart';
@@ -9,6 +11,7 @@ import '../domain/sample.dart';
 import 'camera_permission.dart';
 import 'capture_accuracy.dart';
 import 'capture_state.dart';
+import 'source/camera_capture_source.dart';
 import 'source/capture_source.dart';
 import 'source/frame.dart';
 import 'source/sampling.dart';
@@ -64,6 +67,22 @@ class CaptureController extends ChangeNotifier {
       source.kind == CaptureSourceKind.camera && _recentFrames.isNotEmpty
           ? _recentFrames.last
           : null;
+
+  /// The active source's native preview widget, or null when the source has no
+  /// platform preview (bs-19 VIEW-5, D-9).
+  ///
+  /// Only the live [CameraCaptureSource] — the real device camera — provides a
+  /// native `CameraPreview`; the Capture screen renders it in place of painting
+  /// the downsampled sampling [currentFrame], so on-device the preview is
+  /// upright, full-resolution and smooth. For the deterministic software
+  /// fallback (and the scripted acceptance source, which is not a
+  /// [CameraCaptureSource]) this is null, so the view keeps painting
+  /// [currentFrame] / the flat placeholder exactly as before. The [frames]
+  /// stream continues to drive colour sampling either way.
+  Widget? get previewWidget {
+    final source = this.source;
+    return source is CameraCaptureSource ? source.buildPreview() : null;
+  }
 
   /// Advances the stability settling counter one step per rendered frame while
   /// the reading is unlocked and not yet stable (AC-5): the painter watches

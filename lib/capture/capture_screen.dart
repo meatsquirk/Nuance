@@ -46,9 +46,15 @@ class CaptureScreen extends StatelessWidget {
                 Expanded(
                   child: CaptureLiveView(
                     state: controller.state,
-                    // bs-19 VIEW-2: paint the active source's latest frame as
-                    // the live preview (the camera feed). Null on the software
-                    // / no-camera fallback, which keeps the flat placeholder.
+                    // bs-19 VIEW-5 (D-9): render the real camera's native
+                    // preview (upright, full-res, smooth) when the active source
+                    // provides one; null for the scripted/software/no-camera
+                    // paths, which fall back to the painted frame below.
+                    preview: controller.previewWidget,
+                    // bs-19 VIEW-2: the active source's latest frame, painted as
+                    // the live preview when there is no native preview (scripted
+                    // source), and the reticle colour-sampling input throughout.
+                    // Null on the software / no-camera fallback → flat placeholder.
                     frame: controller.currentFrame,
                     downgradeReasons: controller.activeDowngradeReasons,
                   ),

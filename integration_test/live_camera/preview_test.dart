@@ -159,6 +159,15 @@ void main() {
       // When: the Capture screen opens on the live camera source
       // (givenLiveCamera has pumped it on-screen).
 
+      // The scripted acceptance source is not the real-device camera, so it
+      // surfaces no native CameraPreview (VIEW-5/D-9): this scenario therefore
+      // exercises the painted-frame path, which is exactly what the Then below
+      // asserts. (The native-preview render is device-only, coverage-ignored,
+      // and verified at the SIGNOFF-3 walkthrough.)
+      expect(h.controller.previewWidget, isNull,
+          reason: 'AC-1: the scripted source has no native preview, so the '
+              'painted-frame path is the one under test');
+
       // Then: the live view renders the camera's frames — the frame-render
       // widget carries a real frame — and no longer shows the flat grey
       // placeholder surface. Red until VIEW-2 feeds the source's frames in.

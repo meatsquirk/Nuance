@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:camera/camera.dart';
 import 'package:color_models/color_models.dart';
 import 'package:flutter/material.dart' hide LockState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/capture/capture_accuracy.dart';
 import 'package:paint_color_assistant/capture/capture_controller.dart';
 import 'package:paint_color_assistant/capture/capture_state.dart';
+import 'package:paint_color_assistant/capture/source/camera_capture_source.dart';
 import 'package:paint_color_assistant/capture/source/capture_source.dart';
 import 'package:paint_color_assistant/capture/source/frame.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
@@ -25,6 +27,37 @@ SoftwareCaptureSource _source() => SoftwareCaptureSource(
         groundTruth: ColorCoordinates(lightness: 40, a: -8, b: 24),
       ),
     );
+
+/// A [CameraDevice] that never touches the plugin, so a [CameraCaptureSource]
+/// can be built on the host to drive the native-preview seam (bs-19 VIEW-5):
+/// [buildPreview] hands back whatever [preview] a test has set.
+class _PreviewOnlyDevice implements CameraDevice {
+  Widget? preview;
+
+  @override
+  Widget? buildPreview() => preview;
+
+  @override
+  Future<void> start(void Function(CameraImage image) onImage) async {}
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> lockExposure() async {}
+
+  @override
+  Future<void> lockWhiteBalance() async {}
+
+  @override
+  Future<void> lockFocus() async {}
+
+  @override
+  Future<void> turnTorchOn() async {}
+
+  @override
+  Future<void> turnTorchOff() async {}
+}
 
 /// A [CaptureSource] whose live feed and imported photo the test drives
 /// frame-by-frame, so the photo-import switch (SOURCE-3) can be observed against
@@ -274,6 +307,35 @@ void main() {
           reason: 'the software feed still drives the sampled reading');
       expect(controller.currentFrame, isNull,
           reason: 'but the software / fallback source paints no live preview');
+    });
+  });
+
+  group('previewWidget — the native camera preview (bs-19 VIEW-5, D-9)', () {
+    test('the live camera source surfaces its native preview widget', () {
+      final device = _PreviewOnlyDevice();
+      final controller =
+          CaptureController(source: CameraCaptureSource(device: device));
+      addTearDown(controller.dispose);
+
+      // Before the device controller is live the source gives no preview, so
+      // the view falls back to the painted frame / placeholder.
+      expect(controller.previewWidget, isNull,
+          reason: 'no native preview until the device controller is live');
+
+      const preview = SizedBox(key: ValueKey('native-preview'));
+      device.preview = preview;
+      expect(controller.previewWidget, same(preview),
+          reason: 'the live camera preview is surfaced to the view layer');
+    });
+
+    test('a non-camera source has no native preview (software / scripted path)',
+        () {
+      // The software fallback — and the scripted acceptance source, which is
+      // not a CameraCaptureSource — surface no native preview, so the view
+      // keeps painting currentFrame / the placeholder (AC-1 stays as before).
+      final controller = CaptureController(source: _source());
+      addTearDown(controller.dispose);
+      expect(controller.previewWidget, isNull);
     });
   });
 

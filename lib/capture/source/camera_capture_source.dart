@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../domain/color_coordinates.dart';
 import 'capture_source.dart';
@@ -40,6 +41,17 @@ abstract class CameraDevice {
 
   /// Extinguishes the device torch (CAM-6).
   Future<void> turnTorchOff();
+
+  /// The device's native preview widget (full-resolution, GPU-composited and
+  /// sensor-orientation-correct), or null before the device's controller is
+  /// live (bs-19 VIEW-5, D-9).
+  ///
+  /// The live view renders this instead of painting the 64px sampling [Frame]:
+  /// the downsampled frame is the right, cheap input for the reticle colour
+  /// sample (AC-3) but shows as a rotated, pixelated, laggy preview. The shipped
+  /// [PluginCameraDevice] returns the plugin's `CameraPreview(controller)`; the
+  /// frame stream stays wired to colour sampling only.
+  Widget? buildPreview();
 }
 
 /// The native [CaptureSource] over the device camera (bs-19 SOURCE-2).
@@ -165,6 +177,13 @@ class CameraCaptureSource implements CaptureSource {
     unawaited(_device.turnTorchOff());
   }
 
+  /// The active camera's native preview widget, or null before the device's
+  /// controller is live (bs-19 VIEW-5, D-9). The live view renders this for the
+  /// real camera source so the preview is upright, full-resolution and smooth;
+  /// the [frames] stream stays wired to colour sampling only. Delegates to the
+  /// [CameraDevice] seam, so only [PluginCameraDevice] touches the plugin.
+  Widget? buildPreview() => _device.buildPreview();
+
   @override
   bool get supportsWideGamut => false;
 
@@ -258,6 +277,15 @@ class PluginCameraDevice implements CameraDevice {
   @override
   Future<void> turnTorchOff() async {
     await _controller?.setFlashMode(FlashMode.off);
+  }
+  // coverage:ignore-end
+
+  // coverage:ignore-start
+  @override
+  Widget? buildPreview() {
+    final controller = _controller;
+    if (controller == null) return null;
+    return CameraPreview(controller);
   }
   // coverage:ignore-end
 }
