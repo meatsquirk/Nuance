@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:camera/camera.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -73,14 +74,44 @@ Future<AppDependencies> productionDependencies() async {
   // so it configures bs-03's confusion check / the shared projection seam;
   // absent → the deutan default (behaviour unchanged until a profile is saved).
   final cvdProfile = await loadCvdProfile(CvdProfileStore(store));
+  // bs-19 PERM-5 (§9 production activation): probe the device for a usable
+  // camera so the shipped default opens on the live feed when one is present
+  // (D-2). The runtime permission prompt (PERM-2/AC-7), no-camera fallback
+  // (PERM-3/AC-8) and lifecycle release/resume (CAM-7) already fire from the
+  // Capture host once the selected source is `kind == camera`.
+  final hasCamera = await _deviceHasCamera();
   return assembleDependencies(
     store: store,
     sourcePhotoStore: sourcePhotoStore,
     paletteSource: paletteSource,
     projectSource: projectSource,
     cvdProfile: cvdProfile,
+    hasCamera: hasCamera,
   );
 }
+
+/// Probes whether the device exposes a usable camera (bs-19 PERM-5, D-2/D-5).
+///
+/// The single device call that decides the shipped default source: a camera
+/// present → the production assembly opens on the live [CameraCaptureSource]
+/// (the Capture host then prompts for access, AC-7, and falls back if denied);
+/// none → the deterministic software scene (AC-8). It reads the `camera`
+/// plugin's `availableCameras()`, whose platform channel cannot run under
+/// `flutter-tester`; like [PluginCameraDevice] / [PluginCameraPermission]
+/// (CAM-3 / PERM-2) it is verified only by the on-device walkthrough (plan D-5)
+/// and exempt from the coverage gate. Any plugin or platform error resolves to
+/// "no camera" so a probe failure degrades gracefully to the software scene
+/// (and the host smoke test, with no camera plugin registered, selects it).
+// coverage:ignore-start
+Future<bool> _deviceHasCamera() async {
+  try {
+    final cameras = await availableCameras();
+    return cameras.isNotEmpty;
+  } on Object {
+    return false;
+  }
+}
+// coverage:ignore-end
 
 /// Hands an exported studio sheet's [bytes] to the device's share/print sheet
 /// (bs-06 AC-10, PROJECT-6) under [filename], via `printing`.
@@ -110,21 +141,31 @@ AppDependencies assembleDependencies({
   required PaletteSource paletteSource,
   required ProjectSource projectSource,
   CvdProfile cvdProfile = const CvdProfile(type: CvdType.deutan),
+  bool hasCamera = false,
 }) {
+  // bs-19 PERM-2: the plugin-backed camera-permission seam. Built here so the
+  // same instance both seeds the selection decision below (undetermined until
+  // the Capture host prompts) and backs the host's runtime request (AC-7).
+  final cameraPermission = PluginCameraPermission();
+  // bs-19 PERM-5 (§9 production activation): select the live camera source when
+  // the device probe found a camera (and access is not already denied), else
+  // the deterministic demo scene. [hasCamera] defaults false, so the acceptance
+  // harness — which injects its own `captureSource` through `buildApp` — and any
+  // no-camera device keep the software scene unchanged. The real on-device feed
+  // is verified at the sign-off walkthrough (plan D-5).
+  final useCamera = selectUseCamera(
+    hasCamera: hasCamera,
+    permission: cameraPermission.status,
+  );
   return AppDependencies(
     colorScience: const ColorScienceImpl(),
     speech: const NoopSpeech(),
     haptics: const NoopHaptics(),
-    // bs-19 CAM-2: the capture source is chosen through the `selectCaptureSource`
-    // seam. The seam still returns the software fallback, so the app opens on
-    // the deterministic demo scene exactly as before (the real device camera is
-    // selected on-device, verified at the sign-off walkthrough, plan D-5).
-    captureSource: selectCaptureSource(softwareFallback: demoCaptureSource),
-    // bs-19 PERM-2: wire the plugin-backed camera-permission seam. It is dormant
-    // while the shipped source is the software scene (the Capture host only
-    // prompts for a live camera source, AC-7); it is ready for the on-device
-    // camera selection to request access through.
-    cameraPermission: PluginCameraPermission(),
+    captureSource: selectCaptureSource(
+      softwareFallback: demoCaptureSource,
+      useCamera: useCamera,
+    ),
+    cameraPermission: cameraPermission,
     cvdProfile: cvdProfile,
     store: store,
     sourcePhotoStore: sourcePhotoStore,

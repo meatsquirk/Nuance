@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/a11y/cvd/cvd_profile.dart';
 import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
+import 'package:paint_color_assistant/capture/source/camera_capture_source.dart';
 import 'package:paint_color_assistant/capture/source/software_capture_source.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
 import 'package:paint_color_assistant/main.dart' as app;
@@ -13,6 +14,7 @@ import 'package:paint_color_assistant/projects/project_source.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/store/persistent_store.dart';
 import 'package:paint_color_assistant/store/source_photo_store.dart';
+import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -29,12 +31,28 @@ class _FakePathProvider extends PathProviderPlatform
   Future<String?> getApplicationDocumentsPath() async => root;
 }
 
+/// A camera-plugin substitute returning a fixed camera list, so `main.dart`'s
+/// bs-19 PERM-5 startup probe (`availableCameras()`) resolves as pure Dart
+/// under host `flutter test` — no device, and no platform-channel round trip
+/// that a `testWidgets` fake-async zone would never pump. An empty list models
+/// a no-camera host, so the shipped assembly opens on the software scene, the
+/// same default these smoke tests assert.
+class _FakeCameraPlatform extends CameraPlatform with MockPlatformInterfaceMixin {
+  _FakeCameraPlatform(this.cameras);
+
+  final List<CameraDescription> cameras;
+
+  @override
+  Future<List<CameraDescription>> availableCameras() async => cameras;
+}
+
 void main() {
   late Directory tempDir;
 
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('pca_smoke_');
     PathProviderPlatform.instance = _FakePathProvider(tempDir.path);
+    CameraPlatform.instance = _FakeCameraPlatform(const <CameraDescription>[]);
   });
 
   tearDown(() {
@@ -65,6 +83,23 @@ void main() {
     // bs-07 PROFILE-1 (D-3): with no cvdProfile passed, assembly defaults to the
     // deutan profile — behaviour unchanged until the painter saves an assessment.
     expect(deps.cvdProfile, const CvdProfile(type: CvdType.deutan));
+  });
+
+  test('assembleDependencies opens on the live camera when one is present', () {
+    // bs-19 PERM-5 (§9 production activation): with the device probe reporting a
+    // camera (hasCamera true), the shipped assembly selects the real
+    // CameraCaptureSource so the app opens on the live feed. The Capture host
+    // then prompts for access (AC-7) and falls back on denial. hasCamera
+    // defaults false, so every existing assembly and the acceptance harness
+    // keep the software scene (asserted above).
+    final deps = app.assembleDependencies(
+      store: InMemoryPersistentStore(),
+      sourcePhotoStore: InMemorySourcePhotoStore(),
+      paletteSource: const InMemoryPaletteSource(),
+      projectSource: const InMemoryProjectSource(),
+      hasCamera: true,
+    );
+    expect(deps.captureSource, isA<CameraCaptureSource>());
   });
 
   test('sharePdfToDevice hands the exported bytes to the printing share sheet',
