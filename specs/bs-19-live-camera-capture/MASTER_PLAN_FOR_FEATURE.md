@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — VIEW-4 ✅ done (themed the live-view placeholder, D-8; resolved the bs-17 AC-14 regression). All 10 bs-19 ACs ✅, grade 10 A/0; VIEW module complete. Next: re-run SIGNOFF-1.
+**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 (re-run) packet prepared @ `1d634e3`. All 10 ACs ✅, grade 10 A/0; unit 1687/0; coverage PASS; full regression clean save the 4 carried off-lane flakes (bs-17 AC-14 regression RESOLVED, design_system 27/0). Packet [signoff/round-1.md](signoff/round-1.md) awaits a human decision.
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -101,7 +101,7 @@ Pre-seeded augmentations: AC-3/AC-5/AC-6 may run **green at baseline** against a
 | CAM | [modules/CAM.md](modules/CAM.md) | Real `CameraCaptureSource` over the `camera` plugin: frame stream + conversion, AE·AWB·AF locks, torch, lifecycle | — | ✅ Complete |
 | VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | ✅ Done (VIEW-1/2/3/4) |
 | PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | ✅ Complete |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔶 In progress |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Complete |
 
 ## Dependency graph
 
@@ -168,27 +168,25 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ✅ Done | 5,210,656 | 11m 01s | un-pend + confirm only (no lib); AC-10 live; map now empty; 10×A re-grade; cov PASS (0 touched lib); fix 0/3 |
 | 19 | SIGNOFF-1 | sign-off: packet + full regression + manual approval (attempt 1) | ⚠ Blocked | 18.16M | 40m 27s (3h 56m) | bs-19 suite 10/10 A, unit 1687/0, cov PASS; full regression surfaced a **bs-17 AC-14** regression (live_frame_view placeholder, proven vs base `11944b6`) → VIEW-4 queued; re-run after. Packet: [signoff/round-1.md](signoff/round-1.md) |
 | 20 | VIEW-4 | behavior-fix: theme the live-view placeholder from AppTheme (D-8); resolve bs-17 AC-14; keep AC-1/AC-4 green | ✅ Done | 3.79M | 14m 40s | theme token `AppTheme.cameraPlaceholderSurface`; D-4 capture exemption retired (Matt Quirk, realises D-8); unit 1687/0, cov PASS 2 touched, bs-19 suite green both modes, bs-17 AC-14 27/27; grade A; fix 1/3 |
-| 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | ⬜ Next | | | |
+| 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | ⏸ Awaiting sign-off | 6.04M | 26m 36s | clean re-run: unit 1687/0, cov PASS (0 touched lib), bs-19 acceptance 21/21 both modes, grade 10 A/0 @ `1d634e3`; full regression 340/4 (4 = carried off-lane flakes), bs-17 AC-14 RESOLVED (design_system 27/0). Packet: [signoff/round-1.md](signoff/round-1.md) |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**VIEW-4 done — re-run SIGNOFF-1 is the only remaining phase.** VIEW-4 themed the live-view placeholder
-through `AppTheme` (D-8) and resolved the bs-17 AC-14 regression that blocked SIGNOFF-1 attempt 1. All 10
-bs-19 ACs are delivered and green, VIEW module complete.
-- **Next: SIGNOFF-1 (re-run)** — regenerate the packet with a **clean full cross-feature regression** (AC-14
-  is now green). Remaining SIGNOFF to-dos: on-device camera walkthrough (D-5), cost-per-AC refresh; surface
-  the **production-dormant camera** decision (main.dart ships the software source; §9 of the packet). The
-  prior packet [signoff/round-1.md](signoff/round-1.md) was never submitted for a human decision (blocked at
-  attempt 1); the re-run supersedes it.
-- **Expect at SIGNOFF-1:** the 3 carried off-lane flakes still fail off-lane (bs-06 palette AC-3/AC-5, bs-08
-  display AC-9, bs-07 self_assessment AC-4) — pre-existing, proven at base `11944b6`, **not** bs-19's and not
-  blockers. The AC-14 fail must be **gone**.
+**SIGNOFF-1 (re-run) packet prepared — awaiting a human decision. No further agent phase until then.**
+The clean re-run verification is green: unit 1687/0, coverage PASS, bs-19 acceptance 21/21 both modes, fresh
+whole-suite grade 10 A/0 @ `1d634e3`, full cross-feature regression 340/4 (the 4 are the carried off-lane
+flakes), and the attempt-1 blocker (bs-17 AC-14) is RESOLVED (`design_system_test` 27/0).
+- **Human decision:** `/feature-next-phase --signoff bs19 approved | changes "<items>"`. The standing
+  reviewer call is §9 — accept shipping the real camera **wired-but-dormant** (D-2/D-5; software scene opens,
+  plugin activates on-device), or request production auto-select wiring as a follow-up. §10E is the on-device
+  walkthrough of the real plugin (not automatable under `flutter-tester`).
+- **Approved →** feature `Status: Done`; then merge `feat/bs-19-live-camera-capture` → main (clean-merged-branches).
+- **Changes requested →** each item becomes a phase before a fresh SIGNOFF-2.
 - **Carried gotchas:** the whole `integration_test/live_camera/` dir **won't launch at once** — run per-file.
   macOS has no `timeout`; run bare. `AppTheme` is now the sole AC-14 file-level exemption
-  (`kCaptureDeviceLiteralFiles = {}`). Production still opens on the software source; the wired camera plugin
-  is dormant in the shipped build.
+  (`kCaptureDeviceLiteralFiles = {}`).
 
 ## Token usage
 
@@ -218,10 +216,11 @@ bs-19 ACs are delivered and green, VIEW module complete.
 | PERM-4 | fb59c5de | 2026-10-21 17:18 EDT | 17:29 | 11m 01s | 11m 01s | claude-opus-4-8 | 112 | 188,840 | 4,994,508 | 27,196 | 5,210,656 | AC-10 platform declarations un-pended; 10/10 ACs delivered; grade 10 A/0; coverage gate PASS (0 touched lib); fix 0/3 |
 | SIGNOFF-1 | 7d5f31da | 2026-10-21 18:26 EDT | 22:23 | 3h 56m | 40m 27s | claude-opus-4-8 | 286 | 475,210 | 17,604,833 | 76,690 | 18,157,019 | attempt 1 BLOCKED: bs-19 suite 10/10 A, unit 1687/0, cov PASS, feature acceptance green both modes; full cross-feature regression found a bs-17 AC-14 regression (live_frame_view placeholder, proven vs base 11944b6) + 3 carried off-lane flakes; VIEW-4 (theme placeholder, D-8) queued before re-run |
 | VIEW-4 | 04e94f77 | 2026-10-21 22:55 EDT | 23:24 | 28m 50s | 14m 40s | claude-opus-4-8 | 80 | 92,832 | 3,657,304 | 34,948 | 3,785,164 | themed live-view placeholder (D-8); retired D-4 exemption; resolved bs-17 AC-14; unit 1687/0, cov PASS, bs-19 green both modes, AC-14 27/27; grade A; fix 1/3 |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 23:24** | **13h 02m** | **7h 40m** |  | **2,718** | **4,673,334** | **174,491,195** | **1,037,569** | **180,204,816** |  |
+| SIGNOFF-1 | afe10333 | 2026-10-21 23:28 EDT | 23:54 | 26m 36s | 26m 36s | claude-opus-4-8 | 108 | 235,249 | 5,763,723 | 44,113 | 6,043,193 | re-run: clean full verification; packet awaiting human sign-off (10 A/0, unit 1687/0, cov PASS, regression 340/4 carried flakes, AC-14 resolved); scorecard published |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 23:54** | **13h 29m** | **8h 06m** |  | **2,826** | **4,908,583** | **180,254,918** | **1,081,682** | **186,248,009** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 (attempt) | [signoff/round-1.md](signoff/round-1.md) | `1d01c9d` | bs-19 10 A/0 | ⚠ Blocked 2026-10-21 — full regression surfaced a bs-17 AC-14 regression; VIEW-4 queued, not submitted for human decision |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `1d634e3` | bs-19 10 A/0 | ⏸ Awaiting sign-off 2026-10-21 — clean re-run after VIEW-4 (AC-14 regression resolved; regression 340/4 = carried flakes only). Scorecard https://claude.ai/artifact/4JfXYVUKW6FPoHp3rmJ4Pa. Supersedes attempt 1 (was blocked @ `1d01c9d`) |

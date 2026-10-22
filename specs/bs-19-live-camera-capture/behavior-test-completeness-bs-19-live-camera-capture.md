@@ -590,3 +590,93 @@ Every AC runs by default (no `skip:`), confirming `pendingACs` is empty.
   standard, documented limitation with no plausible wrong implementation that
   escapes the suite.
 - **Fit for sign-off:** the whole suite grades **A** with no fix owed.
+
+## Sign-off re-grade — SIGNOFF-1 re-run (whole suite at HEAD `1d634e3`, after VIEW-4, 2026-10-21)
+
+Fresh, **independent** static grade of the **whole** bs-19 live-camera acceptance
+suite for the sign-off re-run, by a grader who did **not** write these tests or
+the product code. Graded statically (no test execution — the runner is in use by
+other jobs) by reading each AC test and the live `lib/` code it exercises at HEAD
+`1d634e3`. Since the prior SIGNOFF-1 grid (HEAD `1d01c9d`, 10 A / 0 below A), the
+**only** lib change is phase VIEW-4 (commit `1d634e3`): `LiveFrameView`'s
+`placeholderColor` went from `static const Color placeholderColor =
+Color(0xFF3A3A3A)` to a forwarding getter `static Color get placeholderColor =>
+AppTheme.cameraPlaceholderSurface`, where the new token (`theme.dart`) is `static
+const Color _cameraPlaceholder = Color(0xFF3A3A3A)` — the **same hex**, so the
+change is **behaviourally identical**. Verified by `git diff 1d01c9d..1d634e3 --
+lib/` (only `theme.dart` + `live_frame_view.dart`) and `-- integration_test/
+live_camera/` (**no** test file changed): every AC test body and every
+scaffold/smoke/guard test is byte-identical to its prior-A state, so the prior
+grades are carried; any downgrade would be justified against a named rule. **There
+are none.**
+
+**VIEW-4 impact verified against the two tests that touch the placeholder:**
+- The harness `showsPlaceholder` getter (harness.dart:135-143) matches a
+  `ColoredBox` whose `color == LiveFrameView.placeholderColor`. Both the
+  production render (`live_frame_view.dart:35`, the `frame == null` arm returns
+  `ColoredBox(color: placeholderColor)`) and the harness now read the **same
+  getter**, which returns the same `Color(0xFF3A3A3A)` value. `Color` equality is
+  by ARGB value, so the match still holds exactly — the getter indirection does
+  **not** desync the production colour from the one the harness looks for.
+- **AC-1** (`showsPlaceholder isFalse` + `frame isNotNull`): when a frame renders,
+  the view is a `CustomPaint` (never the `ColoredBox`), so `showsPlaceholder` is
+  false and the Then still bites a view that keeps the placeholder — a regression
+  to the placeholder would paint the `ColoredBox(0xFF3A3A3A)` and flip
+  `showsPlaceholder` true, failing the test. **Not weakened.**
+- **AC-4** (frame present + `ColorFiltered` over `liveViewKey`, none over
+  `accuracyKey`): the positive path is the non-null-frame `CustomPaint` and the
+  `ColorFiltered` placement in `capture_live_view.dart`, neither of which involves
+  `placeholderColor`. **Not weakened.**
+
+### Grade — all 10 ACs
+
+| AC | Test | Grade (prior → now) | Rules checked | Justification (verified against live code at HEAD `1d634e3`) |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_LivePreview` | A → **A** | G1,G4,G5,G6 (G2/G3 n/a) | Given `h.activeSourceKind == camera` read through the public endpoint before the When; seed `FRAME_CYAN` flows `source.frames → _onFrame → _recentFrames → currentFrame → LiveFrameView.frame` (camera-only gate in `currentFrame`). Non-vacuous pair: `showsPlaceholder isFalse` (painted path is `CustomPaint`, never `ColoredBox(placeholderColor)`) + `liveView.frame isNotNull` (the `tester.widget<LiveFrameView>` cast throws if the key is absent, so neither Then passes vacuously). **VIEW-4 re-check:** `placeholderColor` getter still returns `0xFF3A3A3A`; harness and production read the same getter → `showsPlaceholder` detection intact. Unchanged test body; holds. |
+| AC-2 | `TestAC02_FrameConversion` | A → **A** | G1,G4,G5,G6 (G2 built-in, G3 n/a) | Pure `frameFromCameraImage` below the source/host — untouched by VIEW-4. Givens assert each raw buffer's bytes (BGRA `[b,g,r,255]`; YUV Y-plane luma). BGRA tol `3` + BGR↔RGB `>100` reject + c1/c2 constant-pixel control (`>100`, L1 450); YUV tol `12` rejects the full-range-vs-limited-range BT.601 mis-decode (correct ≈L1 2, limited ≈L1 21). The ITEST-2 near-miss (30→12) stays fixed. Holds. |
+| AC-3 | `TestAC03_ReadingFollowsFrame` | A → **A** | G1,G2,G3,G4,G5,G6 | Live source-agnostic sampling, untouched by VIEW-4. Given opening reading ≈ `RETICLE_CYAN` (`<45`) + c1/c2 separation control (`>135`). When `whenFrameChangesTo(FRAME_ORANGE)` pushes a real frame + pumps (settle); real `_onFrame`+`sampleAreaAverage` answer (G2). Thens: moved to c2 (`<45`) **and** off stale c1 (`>135`); 10× separation non-vacuous. Textbook G3. Holds. |
+| AC-4 | `TestAC04_ValueOnlyLive` | A → **A** | G1,G3,G4,G5,G6 (G2 n/a) | Both Givens on the public surface (`liveView.frame isNotNull` + `showsPlaceholder isFalse`). When taps real `valueOnlyKey` → `toggleValueOnly()` → `state.valueOnly` → conditional saturation-0 `ColorFiltered`. Discriminating pair: `ancestor(liveViewKey, ColorFiltered) findsOneWidget` + `ancestor(accuracyKey, ColorFiltered) findsNothing` (filter wraps only `feedSurface`; `accuracyKey` a Stack sibling outside). **VIEW-4 re-check:** positive path is the non-null-frame `CustomPaint` + `ColorFiltered` placement, neither involving `placeholderColor` — not weakened. Minor (logged VIEW-3, not a downgrade): doesn't assert the filter absent pre-toggle. Holds. |
+| AC-5 | `TestAC05_LockClearsWarning` | A → **A** | G1,G2,G3,G4,G5,G6 | Strongest G2 row, untouched by VIEW-4: `activeDowngradeReasons` emits `exposureUnlocked` from `if (!source.locks.allLocked)` — the **source's** locks, rendered under `downgradeReasonsKey`. Givens on the public surface; Thens `allLocked isTrue` + the specific `exposureUnlocked` label `findsNothing`. `canLock:false` control (+ `pumpWidget(SizedBox())` fresh-`initState` reset) proves the clear comes from the source, not the UI flag. Holds. |
+| AC-6 | `TestAC06_Torch` | A → **A** | G1,G2,G3,G4,G5,G6 | Shipped torch pipeline, untouched by VIEW-4. Scenario A Givens on the public surface; When real torch tap. Thens incl. load-bearing `torchOnCalls == 1` (kills UI-only toggle) + `torchWarningKey findsOneWidget`; off-path control (`torchOffCalls == 1`, warning gone) kills a one-way toggle. Scenario B torch-on commit → `litByTorch isTrue` + torch-off control (`litByTorch isFalse`) kill always-/never-stamp; `isNotNull` commit checks non-vacuous. Holds. |
+| AC-7 | `TestAC07_PermissionFallback` | A → **A** | G1,G2,G4,G5,G6 (G3 n/a) | Permission flow untouched by VIEW-4: `_applyInitialPermission` requests on first camera entry — granted **keeps** the subscribed controller (protects AC-9's `acquireCount==1`), denied swaps to `cameraFallbackSource()` (software) + affordance. Granted Givens `requestCount == 0`/`undetermined`; Thens `requestCount == 1`, `activeSourceKind == camera`, `permissionState == granted`. **G2 control airtight:** denied branch injects the identical default `kind == camera` source, diverging only on the recorder → camera-vs-software provably permission-driven; also `find.textContaining('Camera access')`, `takeException() isNull`. Holds. |
+| AC-8 | `TestAC08_NoCameraFallback` | A → **A** | G1,G4,G5,G6 (G2 built-in, G3 n/a) | Availability fallback untouched by VIEW-4: host falls to `cameraFallbackSource()` synchronously when `kind == camera && !available`, before any prompt (availability≠permission). Given `source.available isFalse`; Then `activeSourceKind == software` overturns the injected `kind == camera` wrong-impl baseline (discrimination built into the fixture); secondary `currentSample isNotNull`, `takeException() isNull`. Holds. |
+| AC-9 | `TestAC09_Lifecycle` | A → **A** | G1,G3,G4,G5,G6 (G2 n/a) | Lifecycle untouched by VIEW-4: `_CaptureHomeScreenState` is a `WidgetsBindingObserver`; `pauseFeed()` cancels+nulls `_feed` (generator `finally` runs `releaseCount++`), `resumeFeed()` re-subscribes under the `_disposed || _feed != null` guard. Givens `acquireCount == 1`/`releaseCount == 0` + opening reading ≈ c1. `_background` (…→paused + `tester.idle()`, no pump-while-paused) → `releaseCount >= 1`; `_foreground` (…→resumed + pump) → `acquireCount >= 2`; G3 control `whenFrameChangesTo(FRAME_ORANGE)` → resumed ≈ c2 (`<45`) kills a frozen/black feed. Holds. |
+| AC-10 | `TestAC10_PlatformDeclarations` | A → **A** | G1,G4,G5,G6 (G2/G3 n/a) | Source-scan AC, untouched by VIEW-4. Given both files `existsSync()` before inspection; reads the real on-disk files. Three distinct Thens each failing a distinct wrong impl: (1) Android `CAMERA` permission; (2) a separate `<uses-feature android.hardware.camera>` regex (rejects one-but-not-the-other); (3) the augmentation — captures the `NSCameraUsageDescription` value and asserts `isNotNull` **and** `isNotEmpty` (a bare key/empty string fails where `contains` passes). Minor (standard source-scan limit, logged): Android `contains`/regex could match an XML comment; iOS structured check immune. Holds. |
+
+### Grade — scaffold / smoke / guard tests
+
+| Test (in `smoke_test.dart` / `pending.dart` / `harness.dart`) | Verdict | Why |
+|---|---|---|
+| smoke: assembled app boots to Capture, read endpoint answers, feed reaches controller, render path paints | **NON-VACUOUS** | Drives the real `buildApp` over the scripted source; asserts control anchors mounted, `activeSourceKind == camera`, `permissionState == granted`, `currentSample isNotNull` (feed wired end to end), `showsPlaceholder isFalse` (render path live). Each assertion bites a distinct un-wiring. Unchanged by VIEW-4. |
+| pending-gate guard 1 (`pendingACs` holds exactly the undelivered ACs — now none) | **NON-VACUOUS** | Exact set-equality `pendingACs.keys.toSet() == {}` **and** `isEmpty` pins the map (a re-pended AC fails both); each delivered AC's `pendingSkipReason(..., false)` asserted null. No drift to a bare count. |
+| pending-gate guard 2 (every AC runs in either mode; gate never skips a non-pending AC) | **NON-VACUOUS** | A **fixed** `for n=1..10` loop (not over the empty map) asserts `pendingSkipReason` is null in **both** `forceRunPending` false and true — a silently re-pended AC or inverted gate fails. No fixed sleeps; comments match code. |
+| `showsPlaceholder` harness getter (placeholder detection) | **NON-VACUOUS** | Matches `ColoredBox && w.color == LiveFrameView.placeholderColor`. **VIEW-4 re-check:** production render and this getter read the same `placeholderColor` getter (`0xFF3A3A3A`); `Color` value-equality holds, so the placeholder is still detected exactly — the AC-1/AC-4 `showsPlaceholder isFalse` Thens remain decisive. |
+| `ScriptedCameraSource` guards ×6 (lock reaches + settles; can't-lock ignores; torch counted both ways; kind settable; feed replays then forwards; `knownFrame` uniform) | **NON-VACUOUS** | Each asserts the recorder/behaviour the AC tests lean on, with exact counts and both-direction cases. Unchanged by VIEW-4. |
+| `RecordingCameraPermission` guards ×2 (request counted + resolves; denying resolves to denied) | **NON-VACUOUS** | Pin `requestCount` 0→1 and the `resolvesTo` outcome both ways — the seam AC-7 depends on. Unchanged by VIEW-4. |
+
+### Summary — SIGNOFF-1 re-run
+
+- **Grade counts: 10 A / 0 below A** across all ten AC tests, plus **all scaffold /
+  smoke / guard tests NON-VACUOUS** — a clean sign-off grid, holding the prior
+  SIGNOFF-1 result.
+- **No downgrades.** Every AC test body and scaffold/smoke test is byte-identical
+  to the `1d01c9d`-graded state (`git diff 1d01c9d..1d634e3 --
+  integration_test/live_camera/` is empty), so every prior-A grade is carried and
+  re-verified against the live `lib/` code the test names.
+- **VIEW-4's placeholder-getter change did NOT weaken AC-1 or AC-4 (or any test).**
+  `LiveFrameView.placeholderColor` is now a getter forwarding to
+  `AppTheme.cameraPlaceholderSurface`, which is the same `Color(0xFF3A3A3A)` — a
+  behaviour-identical indirection. Both the production `frame == null` render and
+  the harness `showsPlaceholder` getter read that same getter, and `Color`
+  equality is by ARGB value, so placeholder detection is intact: AC-1's
+  `showsPlaceholder isFalse` + `frame isNotNull` and AC-4's frame-present +
+  `ColorFiltered` placement still bite every named wrong impl. AC-4's positive path
+  (`CustomPaint` + `ColorFiltered`) never touches `placeholderColor` at all.
+- **Minor observations carried (none a G-rule break, none a downgrade):** AC-4
+  doesn't assert the filter absent pre-toggle; AC-7/AC-8 branches don't re-assert a
+  freshly-constructed recorder's default pre-state; AC-8's "import/use-rest-of-app"
+  clause rests on bs-02's shipped fallback; AC-10's Android `contains`/regex could
+  in principle match an XML comment (real entries are genuine elements; iOS check
+  structurally immune).
+- **Fit for sign-off:** the whole suite grades **A** with no fix owed; VIEW-4 is a
+  clean, behaviour-preserving theming change.
