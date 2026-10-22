@@ -3,7 +3,7 @@
 **Feature:** [bs-19-live-camera-capture.feature](../../bs-19-live-camera-capture.feature) ·
 **Master plan:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **At code:** `1d634e3` (branch `feat/bs-19-live-camera-capture`) · **Prepared:** 2026-10-21 · **Phase:** SIGNOFF-1 (re-run, after VIEW-4)
-**Decision:** ⏸ **Awaiting human sign-off.**
+**Decision:** 🔁 **Changes requested** — 2026-10-22, Matt Quirk. The standing §9 call (§9 / §12) is resolved toward **production activation**: implement the production auto-probe-and-select wiring so the shipped app ships the real camera by default (probe device camera availability at startup, select `CameraCaptureSource` via `selectCaptureSource(useCamera:)`, with the software scene as the no-camera / denied fallback — realising D-2 fully). This becomes new behavior phase **PERM-5**; a fresh **SIGNOFF-2** packet follows it. This round-1 record stays as history.
 
 > This is the **clean re-run**. SIGNOFF-1 attempt 1 (at `1d01c9d`) was blocked by a bs-17 design-system
 > **AC-14** regression bs-19 introduced (a hardcoded placeholder literal in the new `live_frame_view.dart`).

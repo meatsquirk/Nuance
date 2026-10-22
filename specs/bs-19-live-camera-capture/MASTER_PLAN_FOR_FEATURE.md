@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 (re-run) packet prepared @ `1d634e3`. All 10 ACs ✅, grade 10 A/0; unit 1687/0; coverage PASS; full regression clean save the 4 carried off-lane flakes (bs-17 AC-14 regression RESOLVED, design_system 27/0). Packet [signoff/round-1.md](signoff/round-1.md) awaits a human decision.
+**Status:** In progress — **changes requested** at SIGNOFF-1 (2026-10-22, Matt Quirk): resolve the §9 standing call toward **production activation**. Next phase **PERM-5** (ship the real camera by default), then a fresh **SIGNOFF-2**. All 10 ACs remain ✅ (grade 10 A/0 @ `1d634e3`); round-1 packet [signoff/round-1.md](signoff/round-1.md) kept as history.
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -27,8 +27,8 @@
 | 1 Scaffold | CAM-1 |
 | 2 Component shells | CAM-2, PERM-1, VIEW-1 |
 | 3 Acceptance tests | ITEST-1, ITEST-2, ITEST-3, ITEST-4 (test review, G-2) |
-| 4 Behavior | CAM-3 (*enabler-ish*), VIEW-2, CAM-4, VIEW-3, CAM-5, CAM-6, CAM-7, PERM-2, PERM-3, PERM-4, **VIEW-4** (fix: theme placeholder, added at SIGNOFF-1 attempt 1) |
-| 5 Sign-off | SIGNOFF-1 |
+| 4 Behavior | CAM-3 (*enabler-ish*), VIEW-2, CAM-4, VIEW-3, CAM-5, CAM-6, CAM-7, PERM-2, PERM-3, PERM-4, **VIEW-4** (fix: theme placeholder, added at SIGNOFF-1 attempt 1), **PERM-5** (§9 production activation, added at SIGNOFF-1 changes-requested) |
+| 5 Sign-off | SIGNOFF-1 (changes requested), SIGNOFF-2 |
 
 ## Acceptance criteria coverage
 
@@ -100,7 +100,7 @@ Pre-seeded augmentations: AC-3/AC-5/AC-6 may run **green at baseline** against a
 |---|---|---|---|---|
 | CAM | [modules/CAM.md](modules/CAM.md) | Real `CameraCaptureSource` over the `camera` plugin: frame stream + conversion, AE·AWB·AF locks, torch, lifecycle | — | ✅ Complete |
 | VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | ✅ Done (VIEW-1/2/3/4) |
-| PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | ✅ Complete |
+| PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | ⏳ In progress (PERM-5 §9 activation queued) |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Complete |
 
 ## Dependency graph
@@ -118,11 +118,19 @@ graph LR
   PERM-1 --> PERM-4
   VIEW-3 & CAM-3 --> VIEW-4
   VIEW-2 & VIEW-3 & CAM-4 & CAM-5 & CAM-6 & CAM-7 & PERM-2 & PERM-3 & PERM-4 & VIEW-4 --> SIGNOFF-1
+  SIGNOFF-1 -->|changes requested| PERM-5
+  CAM-3 & PERM-2 & PERM-3 --> PERM-5 --> SIGNOFF-2
 ```
 
 **VIEW-4** (added at SIGNOFF-1 attempt 1, 2026-10-21): a fix phase that themes the live-view placeholder
 colour (D-8), resolving a bs-17 design-system AC-14 regression the full cross-feature regression surfaced. It
 blocks a clean SIGNOFF-1 and must run before the sign-off is re-attempted.
+
+**PERM-5** (added at SIGNOFF-1, changes requested, 2026-10-22 — Matt Quirk): the §9 production-activation
+phase. Wires the real `camera`-plugin path (built behind the seams in CAM-3/PERM-2/PERM-3) into the shipped
+`main.dart` so a device with a camera opens on the live feed by default, software scene as the no-camera /
+denied fallback (realises D-2 fully). Largely device-only code (coverage-ignored, D-5); the real on-device
+behaviour is verified at the SIGNOFF-2 walkthrough. It blocks SIGNOFF-2.
 
 **Parallel windows:** the three shells (CAM-2 ∥ PERM-1 ∥ VIEW-1) touch disjoint files. ITEST-2 ∥ ITEST-3. After CAM-3, the CAM behavior phases (CAM-4/5/6/7) and VIEW-2 run concurrently; PERM-2/3 form a short chain; PERM-4 (manifests) is independent. Merge-risky pair: CAM-3 and VIEW-2 both read `capture_live_view.dart` — sequence VIEW-2 after CAM-3.
 
@@ -168,25 +176,28 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ✅ Done | 5,210,656 | 11m 01s | un-pend + confirm only (no lib); AC-10 live; map now empty; 10×A re-grade; cov PASS (0 touched lib); fix 0/3 |
 | 19 | SIGNOFF-1 | sign-off: packet + full regression + manual approval (attempt 1) | ⚠ Blocked | 18.16M | 40m 27s (3h 56m) | bs-19 suite 10/10 A, unit 1687/0, cov PASS; full regression surfaced a **bs-17 AC-14** regression (live_frame_view placeholder, proven vs base `11944b6`) → VIEW-4 queued; re-run after. Packet: [signoff/round-1.md](signoff/round-1.md) |
 | 20 | VIEW-4 | behavior-fix: theme the live-view placeholder from AppTheme (D-8); resolve bs-17 AC-14; keep AC-1/AC-4 green | ✅ Done | 3.79M | 14m 40s | theme token `AppTheme.cameraPlaceholderSurface`; D-4 capture exemption retired (Matt Quirk, realises D-8); unit 1687/0, cov PASS 2 touched, bs-19 suite green both modes, bs-17 AC-14 27/27; grade A; fix 1/3 |
-| 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | ⏸ Awaiting sign-off | 6.04M | 26m 36s | clean re-run: unit 1687/0, cov PASS (0 touched lib), bs-19 acceptance 21/21 both modes, grade 10 A/0 @ `1d634e3`; full regression 340/4 (4 = carried off-lane flakes), bs-17 AC-14 RESOLVED (design_system 27/0). Packet: [signoff/round-1.md](signoff/round-1.md) |
+| 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | 🔁 Changes requested | 6.04M | 26m 36s | clean re-run: unit 1687/0, cov PASS, bs-19 acceptance 21/21 both modes, grade 10 A/0 @ `1d634e3`; regression 340/4 (carried flakes). **Decision 2026-10-22 (Matt Quirk): changes requested — §9 production activation → PERM-5, then SIGNOFF-2.** Packet: [signoff/round-1.md](signoff/round-1.md) |
+| 22 | PERM-5 | behavior: §9 production activation — ship the real camera by default (probe + select in `main.dart`) | ⬜ Next | — | — | gated by nothing (deps PERM-2/3 + CAM-3 all done); largely device-only (D-5) |
+| 23 | SIGNOFF-2 | sign-off: fresh packet after PERM-5 (incl. on-device walkthrough) | ⬜ Blocked (PERM-5) | — | — | — |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-1 (re-run) packet prepared — awaiting a human decision. No further agent phase until then.**
-The clean re-run verification is green: unit 1687/0, coverage PASS, bs-19 acceptance 21/21 both modes, fresh
-whole-suite grade 10 A/0 @ `1d634e3`, full cross-feature regression 340/4 (the 4 are the carried off-lane
-flakes), and the attempt-1 blocker (bs-17 AC-14) is RESOLVED (`design_system_test` 27/0).
-- **Human decision:** `/feature-next-phase --signoff bs19 approved | changes "<items>"`. The standing
-  reviewer call is §9 — accept shipping the real camera **wired-but-dormant** (D-2/D-5; software scene opens,
-  plugin activates on-device), or request production auto-select wiring as a follow-up. §10E is the on-device
-  walkthrough of the real plugin (not automatable under `flutter-tester`).
-- **Approved →** feature `Status: Done`; then merge `feat/bs-19-live-camera-capture` → main (clean-merged-branches).
-- **Changes requested →** each item becomes a phase before a fresh SIGNOFF-2.
+**PERM-5 — §9 production activation. Startable now** (deps PERM-2/PERM-3/CAM-3 all done; no open gate).
+SIGNOFF-1 was decided **changes requested** (2026-10-22, Matt Quirk): ship the real camera by default.
+- **What PERM-5 does:** wire `main.dart` to probe device camera availability at startup and select the real
+  `CameraCaptureSource` via `selectCaptureSource(useCamera: true)` when a camera is present; software scene
+  stays the no-camera / denied fallback (D-2). The runtime prompt (PERM-2/D-3), no-camera fallback (PERM-3)
+  and lifecycle (CAM-7/D-7) already fire once the source is `kind==camera` — only production *selection* is
+  new. Factor the pure has-camera×permission→kind decision out for a unit test; keep the device probe +
+  plugin calls `// coverage:ignore` (D-5). Leave the default-off path so the acceptance harness is untouched.
+- **Then SIGNOFF-2:** a fresh packet, whose §10E on-device walkthrough now verifies the shipped real-camera
+  default (not just a dev build). `/feature-next-phase --signoff bs-19 ...` only after SIGNOFF-2 is prepared.
 - **Carried gotchas:** the whole `integration_test/live_camera/` dir **won't launch at once** — run per-file.
-  macOS has no `timeout`; run bare. `AppTheme` is now the sole AC-14 file-level exemption
-  (`kCaptureDeviceLiteralFiles = {}`).
+  macOS has no `timeout`; run bare. `AppTheme` is the sole AC-14 file-level exemption
+  (`kCaptureDeviceLiteralFiles = {}`). PERM-5 adds device-only code — expect it coverage-ignored, verified
+  on-device at SIGNOFF-2, not under `flutter-tester`.
 
 ## Token usage
 
@@ -217,10 +228,12 @@ flakes), and the attempt-1 blocker (bs-17 AC-14) is RESOLVED (`design_system_tes
 | SIGNOFF-1 | 7d5f31da | 2026-10-21 18:26 EDT | 22:23 | 3h 56m | 40m 27s | claude-opus-4-8 | 286 | 475,210 | 17,604,833 | 76,690 | 18,157,019 | attempt 1 BLOCKED: bs-19 suite 10/10 A, unit 1687/0, cov PASS, feature acceptance green both modes; full cross-feature regression found a bs-17 AC-14 regression (live_frame_view placeholder, proven vs base 11944b6) + 3 carried off-lane flakes; VIEW-4 (theme placeholder, D-8) queued before re-run |
 | VIEW-4 | 04e94f77 | 2026-10-21 22:55 EDT | 23:24 | 28m 50s | 14m 40s | claude-opus-4-8 | 80 | 92,832 | 3,657,304 | 34,948 | 3,785,164 | themed live-view placeholder (D-8); retired D-4 exemption; resolved bs-17 AC-14; unit 1687/0, cov PASS, bs-19 green both modes, AC-14 27/27; grade A; fix 1/3 |
 | SIGNOFF-1 | afe10333 | 2026-10-21 23:28 EDT | 23:54 | 26m 36s | 26m 36s | claude-opus-4-8 | 108 | 235,249 | 5,763,723 | 44,113 | 6,043,193 | re-run: clean full verification; packet awaiting human sign-off (10 A/0, unit 1687/0, cov PASS, regression 340/4 carried flakes, AC-14 resolved); scorecard published |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 23:54** | **13h 29m** | **8h 06m** |  | **2,826** | **4,908,583** | **180,254,918** | **1,081,682** | **186,248,009** |  |
+| SIGNOFF-DECISION | ce452b36 | 2026-10-22 09:12 EDT | 09:21 | 8m 39s | 7m 33s | claude-opus-4-8 | 52 | 74,657 | 2,582,623 | 27,301 | 2,684,633 | SIGNOFF-1 changes requested (Matt Quirk, 2026-10-22): resolve §9 toward production activation — new phase PERM-5 (ship real camera by default) inserted before a fresh SIGNOFF-2 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-22 09:21** | **13h 37m** | **8h 14m** |  | **2,878** | **4,983,240** | **182,837,541** | **1,108,983** | **188,932,642** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `1d634e3` | bs-19 10 A/0 | ⏸ Awaiting sign-off 2026-10-21 — clean re-run after VIEW-4 (AC-14 regression resolved; regression 340/4 = carried flakes only). Scorecard https://claude.ai/artifact/4JfXYVUKW6FPoHp3rmJ4Pa. Supersedes attempt 1 (was blocked @ `1d01c9d`) |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `1d634e3` | bs-19 10 A/0 | 🔁 **Changes requested** 2026-10-22 — Matt Quirk: resolve §9 toward production activation (ship real camera by default) → PERM-5, then SIGNOFF-2. Clean re-run was green (regression 340/4 = carried flakes only; scorecard https://claude.ai/artifact/4JfXYVUKW6FPoHp3rmJ4Pa); superseded attempt 1 (@ `1d01c9d`) |
+| 2 | _(pending — after PERM-5)_ | — | — | ⬜ Not yet prepared |

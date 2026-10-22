@@ -1,9 +1,9 @@
 # Module PERM — Permission, fallback, wiring & platform declarations
 
-**Status:** Done — all 4 phases complete (AC-7, AC-8, AC-10 live; AC-10 un-pended in PERM-4). Module exits to SIGNOFF-1.
+**Status:** In progress — PERM-1..4 complete (AC-7/8/10 live). **PERM-5 (§9 production activation)** queued (changes requested at SIGNOFF-1, 2026-10-22, Matt Quirk). Module exits to SIGNOFF-2.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/camera_permission.dart` (new), production source selection in `lib/main.dart` (+ `selectCaptureSource` use), the capture-state camera-availability/permission field, `lib/capture/capture_read_endpoint.dart` (extend), `android/app/src/main/AndroidManifest.xml`, `ios/Runner/Info.plist`; tests under `test/capture/` + the AC-10 source-scan.
-**Depends on:** CAM · **Blocks:** SIGNOFF-1
+**Depends on:** CAM · **Blocks:** SIGNOFF-1 (PERM-1..4), SIGNOFF-2 (PERM-5)
 
 ## Dashboard
 
@@ -13,6 +13,7 @@
 | PERM-2 | behavior | AC-7 | ✅ Done | 17.79M | 29m 12s |
 | PERM-3 | behavior | AC-8 | ✅ Done | 10.75M | 17m 46s |
 | PERM-4 | behavior | AC-10 | ✅ Done | 5.21M | 11m 01s |
+| PERM-5 | behavior | — (§9 production activation) | ⬜ Next | — | — |
 
 ## Interface reconciliation
 
@@ -282,3 +283,23 @@ non-empty-usage augmentation already built in ITEST-3) was green-at-baseline, so
   flutter-tester integration_test/live_camera/<file>_test.dart` (**the whole
   `live_camera/` dir fails to launch at once**).
 - **Known gaps:** none. Every AC delivered and graded A.
+
+## Phase PERM-5 — §9 production activation (ship the real camera by default)
+
+- **Kind:** behavior (production activation; **no new AC** — all 10 ACs are already green via the injected scripted source. This wires the real `camera`-plugin path, built behind the seams in CAM-3/PERM-2/PERM-3, into the shipped `main.dart` so the live feed is the default on a device with a camera. Realises D-2 fully; resolves the §9 standing call recorded as *changes requested* at SIGNOFF-1, 2026-10-22, Matt Quirk.)
+- **Target AC:** — (production wiring / enabler)
+- **Depends on:** PERM-2 (permission flow), PERM-3 (availability fallback), CAM-3 (real `CameraCaptureSource` + `PluginCameraDevice`) · **Blocks:** SIGNOFF-2
+- **Files:** `lib/main.dart` (production assembly), `lib/capture/source/capture_source_factory.dart` (and, if needed, a small camera-availability probe seam + a pure selection helper)
+- **Tasks:**
+  1. In the production assembly (`main.dart`), probe real device camera availability at startup and, when a camera is present, assemble over `selectCaptureSource(useCamera: true)` so the shipped default is the real `CameraCaptureSource` (live feed). Keep `demoCaptureSource` as the graceful fallback when no camera is present (D-2). The runtime permission prompt + grant/deny handling (PERM-2, `_CameraAccessAffordance`, D-3), the no-camera synchronous fallback (PERM-3), and lifecycle release/resume (CAM-7, D-7) already fire from the Capture host once the source is `kind==camera`, so no new runtime behaviour is needed — only the production *selection*.
+  2. Factor the **pure** selection decision (has-camera × resolved-permission → source kind) into a unit-testable function; keep only the real device probe and plugin calls behind `// coverage:ignore` (D-5), mirroring `PluginCameraDevice` / `PluginCameraPermission.request()`. The default off (`useCamera:false`) path must remain so the acceptance harness and any no-camera device are unaffected.
+  3. Keep the import-photo / software paths and every existing suite green — the ITEST harness still injects its scripted source at the `captureSource:` seam and must be untouched by the production selection.
+- **Exit criteria:** unit + coverage gate (the pure selection helper covered; the real device probe / plugin calls coverage-ignored per D-5 — the only such code in `lib/`, alongside CAM-3/PERM-2's); the full bs-19 acceptance suite green in both modes (injected-source harness unchanged); the host-pumping cross-feature suites (bs-02/09/11/12) green.
+- **Acceptance gate:** no AC to un-pend; confirm all 10 ACs stay green (default + run-pending) and the grade grid holds 10 A. The real on-device behaviour (live feed, prompt, hardware lock/torch, fallback, lifecycle) is verified by the **SIGNOFF-2 on-device walkthrough** (D-5, packet §10E) — it cannot run under `flutter-tester`.
+- **Augments:** a unit test of the pure selection function (has-camera × permission → kind); no AC-test change.
+
+### Result
+_(to be written when the phase runs)_
+
+### Checkpoint / Handoff
+_(to be written when the phase runs)_
