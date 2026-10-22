@@ -1,6 +1,6 @@
 # Module VIEW — Live preview rendering
 
-**Status:** ✅ Complete — VIEW-1 shell + VIEW-2 (AC-1) + VIEW-3 (AC-4) all done
+**Status:** 🔶 Reopened for VIEW-4 — VIEW-1/2/3 done; VIEW-4 (theme the placeholder, resolve bs-17 AC-14 regression) ⬜ Next
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/capture/capture_live_view.dart`, a frame-render widget (e.g. `lib/capture/live_frame_view.dart`), widget tests under `test/capture/`.
 **Depends on:** CAM · **Blocks:** SIGNOFF-1
@@ -12,6 +12,7 @@
 | VIEW-1 | shell | — | ✅ Done | | |
 | VIEW-2 | behavior | AC-1 | ✅ Done | 7.74M | 14m 54s |
 | VIEW-3 | behavior | AC-4 | ✅ Done | 3.88M | 11m 59s |
+| VIEW-4 | behavior (fix) | — (keeps AC-1/AC-4; resolves bs-17 AC-14) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -114,3 +115,47 @@ Value-only grayscale now greys the **live frame**, not the readings — **AC-4 d
   - Unit + coverage: `flutter test --coverage test/`; gate `dart run tool/coverage_gate.dart <BASE>`.
   - Acceptance (one file per invocation): `flutter test -d flutter-tester integration_test/live_camera/preview_test.dart` (default: AC-1/AC-2/AC-4 green); `… smoke_test.dart` (11/11).
 - **Known gaps:** none introduced.
+
+## Phase VIEW-4 — Theme the live-view placeholder (resolve bs-17 AC-14 regression)
+
+- **Kind:** behavior (fix / conformance) — no bs-19 AC of its own; keeps AC-1 and AC-4 green and restores bs-17's design-system conformance AC-14.
+- **Why:** SIGNOFF-1's full cross-feature regression (2026-10-21) found that bs-19's VIEW-1 put the
+  camera-preview placeholder grey in a **new** file — `lib/capture/live_frame_view.dart:24`
+  `static const Color placeholderColor = Color(0xFF3A3A3A)`. bs-17's design-system conformance test
+  **AC-14** ("no screen may hardcode a palette colour", `integration_test/design_system_test.dart:883`)
+  scans `lib/` for residual `Color(0x…)` literals outside `kThemeAuthorityFile` + the pinned D-4
+  capture-device exclusion set (`kCaptureDeviceLiteralFiles = {'lib/capture/capture_live_view.dart'}`,
+  `integration_test/design_system_source_scan.dart:45`). The new file is not in the set, so the scan flags
+  it. **Proven a real regression, not a flake:** AC-14 **passes at base `11944b6`** (file didn't exist) and
+  **fails deterministically at HEAD `1d01c9d`** (+26 −1, every run). **Decision (Matt Quirk, 2026-10-21):
+  theme the placeholder** — source the colour from `AppTheme` so there is no hardcoded literal and no
+  exemption is needed (master D-8).
+- **Target AC:** — (fix). **Depends on:** VIEW-3, CAM-3 · **Blocks:** SIGNOFF-1
+- **Files:** `lib/capture/live_frame_view.dart` (product); `integration_test/live_camera/harness.dart`
+  (the `showsPlaceholder` helper at `harness.dart:139` reads `w.color == LiveFrameView.placeholderColor` — it
+  must follow whatever the themed placeholder resolves to); possibly `test/capture/live_frame_view_test.dart`.
+  Do **not** add `live_frame_view.dart` to `kCaptureDeviceLiteralFiles` (the chosen fix removes the literal
+  rather than exempting it).
+- **Tasks:**
+  1. Replace the `static const Color placeholderColor = Color(0xFF3A3A3A)` with a placeholder sourced from
+     `AppTheme` at build time (e.g. the neutral surface token the design system already exposes), so
+     `LiveFrameView`'s `frame == null` branch paints a themed `ColoredBox`/surface and `lib/` holds no
+     residual `Color(0x…)` literal in this file. Keep it a neutral camera-surface grey consistent with the
+     prior look; confirm against `AppTheme`'s available tokens.
+  2. Update the harness `showsPlaceholder` detection so AC-1/AC-4 still distinguish the placeholder from a
+     painted frame without depending on a removed `static const` (e.g. match the themed placeholder colour
+     resolved from `AppTheme`, or detect the absence of the `CustomPaint`/frame render under `liveViewKey`).
+  3. Unit-test the themed placeholder branch to 100% of the changed lines/branches.
+- **Exit criteria:** unit + coverage gate on touched lib; **bs-19 acceptance suite stays green** both modes
+  (AC-1 `TestAC01_LivePreview` + AC-4 `TestAC04_ValueOnlyLive` in particular); **bs-17 `design_system_test.dart`
+  AC-14 green**; no new residual-literal offender; the three carried off-lane flakes (palette AC-3/AC-5,
+  display AC-9, self_assessment AC-4) unchanged (off-lane, not VIEW-4's).
+- **Acceptance gate:** no AC to un-pend (all delivered); keep AC-1/AC-4 green; grade gate — re-grade the bs-19
+  suite A (confirm the placeholder-detection change didn't weaken `TestAC01`/`TestAC04`).
+- **Augments:** none (fix only; must not weaken any AC test).
+
+### Result
+_pending — VIEW-4 not yet run._
+
+### Checkpoint / Handoff
+_pending._

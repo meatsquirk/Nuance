@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** In progress — all behaviour complete (10/10 ACs ✅, grade 10 A/0); next SIGNOFF-1
+**Status:** In progress — SIGNOFF-1 attempt 1 blocked by a bs-17 AC-14 cross-feature regression; next VIEW-4 (theme the live-view placeholder), then re-run SIGNOFF-1. All 10 bs-19 ACs ✅, grade 10 A/0.
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -27,7 +27,7 @@
 | 1 Scaffold | CAM-1 |
 | 2 Component shells | CAM-2, PERM-1, VIEW-1 |
 | 3 Acceptance tests | ITEST-1, ITEST-2, ITEST-3, ITEST-4 (test review, G-2) |
-| 4 Behavior | CAM-3 (*enabler-ish*), VIEW-2, CAM-4, VIEW-3, CAM-5, CAM-6, CAM-7, PERM-2, PERM-3, PERM-4 |
+| 4 Behavior | CAM-3 (*enabler-ish*), VIEW-2, CAM-4, VIEW-3, CAM-5, CAM-6, CAM-7, PERM-2, PERM-3, PERM-4, **VIEW-4** (fix: theme placeholder, added at SIGNOFF-1 attempt 1) |
 | 5 Sign-off | SIGNOFF-1 |
 
 ## Acceptance criteria coverage
@@ -56,6 +56,7 @@
 | D-5 | Acceptance tests inject a scripted `CaptureSource` (known frames + lock/torch/permission/availability state) at the `AppDependencies.captureSource` seam — no real hardware on `flutter-tester`; the real plugin is verified by a device walkthrough at sign-off | Mirrors `FakeCaptureSource`; the plugin's platform channels can't run under `flutter-tester` |
 | D-6 | **Deferred (out of scope):** real reference-card calibration/`normaliseAgainstCard` against the live camera, RAW capture, and wide-gamut selection — the camera source reports the processed sRGB pipeline and leaves card-normalisation on the software path | Those need camera-specific CV / device tuning; this feature delivers the live feed + sampling. Listed at sign-off as a known gap |
 | D-7 | Camera lifecycle tied to `WidgetsBindingObserver` + screen dispose: release on `inactive`/`paused`, re-init on `resumed` | AC-9; avoids a leaked/locked controller and black frames |
+| D-8 | The live-view **placeholder colour** is sourced from `AppTheme`, not a hardcoded `Color(0x…)` literal (VIEW-4) | Matt Quirk, 2026-10-21. VIEW-1 relocated the placeholder grey into the new `live_frame_view.dart`, which bs-17's design-system conformance AC-14 flags as a residual palette literal (it is outside the pinned D-4 capture-device exclusion set). Chosen over exempting the new file: theming removes the literal entirely, aligning with the design system rather than growing the exclusion set |
 
 ## Acceptance integration test plan
 
@@ -98,7 +99,7 @@ Pre-seeded augmentations: AC-3/AC-5/AC-6 may run **green at baseline** against a
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | CAM | [modules/CAM.md](modules/CAM.md) | Real `CameraCaptureSource` over the `camera` plugin: frame stream + conversion, AE·AWB·AF locks, torch, lifecycle | — | ✅ Complete |
-| VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | ✅ Complete |
+| VIEW | [modules/VIEW.md](modules/VIEW.md) | Render the active source's frames in the live view (replace the placeholder); value-only grayscale over real frames | CAM | 🔶 Reopened — VIEW-4 (theme placeholder) next |
 | PERM | [modules/PERM.md](modules/PERM.md) | Permission request + graceful fallback + production source selection + platform declarations + read endpoint | CAM | ✅ Complete |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔶 In progress |
 
@@ -115,8 +116,13 @@ graph LR
   PERM-1 --> PERM-2
   CAM-3 --> PERM-2 --> PERM-3
   PERM-1 --> PERM-4
-  VIEW-2 & VIEW-3 & CAM-4 & CAM-5 & CAM-6 & CAM-7 & PERM-2 & PERM-3 & PERM-4 --> SIGNOFF-1
+  VIEW-3 & CAM-3 --> VIEW-4
+  VIEW-2 & VIEW-3 & CAM-4 & CAM-5 & CAM-6 & CAM-7 & PERM-2 & PERM-3 & PERM-4 & VIEW-4 --> SIGNOFF-1
 ```
+
+**VIEW-4** (added at SIGNOFF-1 attempt 1, 2026-10-21): a fix phase that themes the live-view placeholder
+colour (D-8), resolving a bs-17 design-system AC-14 regression the full cross-feature regression surfaced. It
+blocks a clean SIGNOFF-1 and must run before the sign-off is re-attempted.
 
 **Parallel windows:** the three shells (CAM-2 ∥ PERM-1 ∥ VIEW-1) touch disjoint files. ITEST-2 ∥ ITEST-3. After CAM-3, the CAM behavior phases (CAM-4/5/6/7) and VIEW-2 run concurrently; PERM-2/3 form a short chain; PERM-4 (manifests) is independent. Merge-risky pair: CAM-3 and VIEW-2 both read `capture_live_view.dart` — sequence VIEW-2 after CAM-3.
 
@@ -136,6 +142,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | bs-06 palette AC-3 | provenance-legend "Found 0 widgets" off the exclusive iOS-sim lane | carried | `c00422f` | bs-06 (off-lane viewport) | Open |
 | bs-06 palette AC-5 | travel-set selection off-lane | carried | `c00422f` | bs-06 (device-independent) | Open |
 | bs-08 display AC-9 | spoken-phrasing off-lane | carried | `c00422f` | bs-08 (off-lane viewport) | Open |
+| bs-07 self_assessment AC-4 | intake-seeds-prior off-lane (`Expected CvdType.deutan, Actual null`) | carried | `11944b6` (base) | bs-07 (off-lane interaction) | Open — confirmed at bs-19 base, not a regression |
 
 ## Session log
 
@@ -159,16 +166,31 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 16 | PERM-2 | AC-7 permission request + denial fallback + state | ✅ Done | 17,788,884 | 29m 12s | host requests on entry (camera source + seam); granted keeps camera, denied swaps to software fallback + affordance; 8×A; unit 1684; cov 100% 4 touched; fix 1/3 |
 | 17 | PERM-3 | AC-8 no-camera fallback | ✅ Done | 10,749,642 | 17m 46s | 9×A re-grade; AC-8 live; `available` seam; fix 0/3 |
 | 18 | PERM-4 | AC-10 platform declarations (Android + iOS) | ✅ Done | 5,210,656 | 11m 01s | un-pend + confirm only (no lib); AC-10 live; map now empty; 10×A re-grade; cov PASS (0 touched lib); fix 0/3 |
-| 19 | SIGNOFF-1 | sign-off: packet + summary page + manual approval | ⬜ Next | | | all behaviour done — full cross-feature regression + on-device walkthrough |
+| 19 | SIGNOFF-1 | sign-off: packet + full regression + manual approval (attempt 1) | ⚠ Blocked | 18.16M | 40m 27s (3h 56m) | bs-19 suite 10/10 A, unit 1687/0, cov PASS; full regression surfaced a **bs-17 AC-14** regression (live_frame_view placeholder, proven vs base `11944b6`) → VIEW-4 queued; re-run after. Packet: [signoff/round-1.md](signoff/round-1.md) |
+| 20 | VIEW-4 | behavior-fix: theme the live-view placeholder from AppTheme (D-8); resolve bs-17 AC-14; keep AC-1/AC-4 green | ⬜ Next | | | |
+| 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | ⬜ pending | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**PERM-4 done — AC-10 platform declarations (grade A); ALL 10 ACs delivered (AC-1..AC-10).** Un-pend + confirm only: AC-10's declarations shipped in PERM-1 and its test was green-at-baseline, so **no lib/ changed** — only un-pended AC-10 (the `pendingACs` map is now empty) and rewrote the two smoke guards to the terminal all-delivered state. Confirmed on disk: Android `CAMERA` + `<uses-feature required=false>`, iOS non-empty `NSCameraUsageDescription`. Whole suite re-graded **10 A / 0 below A**; coverage gate PASS (0 touched lib); fix 0/3. **Feature behaviour is COMPLETE.**
-- **Next: SIGNOFF-1** (the only remaining phase) — sign-off packet + summary page + human approval.
-- **SIGNOFF-1 to-dos:** run the **full cross-feature regression** (every feature's acceptance suite + whole unit target); the **on-device camera walkthrough** (D-5 manual item — the real `PluginCameraDevice` / `PluginCameraPermission` are the only `// coverage:ignore` in lib/, exercised only on a physical device); tally cost-per-AC.
-- **Carried gotchas:** the whole `integration_test/live_camera/` dir **won't launch at once** — run per-file (`flutter test -d flutter-tester integration_test/live_camera/<file>_test.dart`). macOS has no `timeout`; run bare. 2 carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-08 display AC-9) reproduce at merge-base — not bs-19 regressions. Production still opens on the software source; the wired plugin is dormant in the shipped flutter-tester build.
+**SIGNOFF-1 attempt 1 (2026-10-21) found a blocker — VIEW-4 is next, then re-run SIGNOFF-1.** The sign-off
+verification ran clean on bs-19 itself (all 10 ACs green both modes; fresh grade **10 A / 0 below A**; unit
+**1687/0**; coverage gate PASS; feature acceptance suite green). The **full cross-feature regression** (19
+suites) was green **except** 4 off-lane failures: three are **pre-existing carried flakes proven at base
+`11944b6`** (bs-06 palette AC-3/AC-5, bs-08 display AC-9, bs-07 self_assessment AC-4), and one is a **genuine
+bs-19 regression** — bs-17 design-system conformance **AC-14** now fails because VIEW-1's new
+`lib/capture/live_frame_view.dart` hardcodes `Color(0xFF3A3A3A)` outside the D-4 exclusion set.
+- **Next: VIEW-4** — theme the placeholder from `AppTheme` (D-8, Matt Quirk 2026-10-21), removing the
+  literal; keep AC-1 (`TestAC01`) + AC-4 (`TestAC04`) green and the harness `showsPlaceholder` helper
+  (`harness.dart:139`) following the themed colour; restore bs-17 `design_system_test.dart` AC-14 to green.
+  Details in [modules/VIEW.md](modules/VIEW.md) § VIEW-4.
+- **Then re-run SIGNOFF-1** — regenerate the packet with a clean full regression; remaining SIGNOFF to-dos:
+  on-device camera walkthrough (D-5), cost-per-AC refresh; surface the **production-dormant camera** decision
+  (main.dart ships the software source; §9 of the packet).
+- **Carried gotchas:** the whole `integration_test/live_camera/` dir **won't launch at once** — run per-file.
+  macOS has no `timeout`; run bare. The 3 carried off-lane flakes are not bs-19's. Production still opens on
+  the software source; the wired camera plugin is dormant in the shipped build.
 
 ## Token usage
 
@@ -196,10 +218,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | PERM-2 | 524c73db | 2026-10-21 16:14 EDT | 16:43 | 29m 12s | 29m 12s | claude-opus-4-8 | 196 | 371,418 | 17,328,340 | 88,930 | 17,788,884 | AC-7 permission request + denial fallback live (grade A); 8 ACs delivered (AC-1..AC-7,AC-9); unit 1684, cov 100% 4 touched, 8 A/0 below; fix 1/3 |
 | PERM-3 | 9d0d231d | 2026-10-21 16:54 EDT | 17:11 | 17m 46s | 17m 46s | claude-opus-4-8 | 166 | 268,475 | 10,433,083 | 47,918 | 10,749,642 | AC-8 no-camera fallback live; grade 9A/0; available seam; fix 0/3 |
 | PERM-4 | fb59c5de | 2026-10-21 17:18 EDT | 17:29 | 11m 01s | 11m 01s | claude-opus-4-8 | 112 | 188,840 | 4,994,508 | 27,196 | 5,210,656 | AC-10 platform declarations un-pended; 10/10 ACs delivered; grade 10 A/0; coverage gate PASS (0 touched lib); fix 0/3 |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 17:29** | **8h 37m** | **6h 44m** |  | **2,352** | **4,105,292** | **153,229,058** | **925,931** | **158,262,633** |  |
+| SIGNOFF-1 | 7d5f31da | 2026-10-21 18:26 EDT | 22:23 | 3h 56m | 40m 27s | claude-opus-4-8 | 286 | 475,210 | 17,604,833 | 76,690 | 18,157,019 | attempt 1 BLOCKED: bs-19 suite 10/10 A, unit 1687/0, cov PASS, feature acceptance green both modes; full cross-feature regression found a bs-17 AC-14 regression (live_frame_view placeholder, proven vs base 11944b6) + 3 carried off-lane flakes; VIEW-4 (theme placeholder, D-8) queued before re-run |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-21 22:23** | **12h 33m** | **7h 25m** |  | **2,638** | **4,580,502** | **170,833,891** | **1,002,621** | **176,419,652** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| — | _not yet_ | | | |
+| 1 (attempt) | [signoff/round-1.md](signoff/round-1.md) | `1d01c9d` | bs-19 10 A/0 | ⚠ Blocked 2026-10-21 — full regression surfaced a bs-17 AC-14 regression; VIEW-4 queued, not submitted for human decision |

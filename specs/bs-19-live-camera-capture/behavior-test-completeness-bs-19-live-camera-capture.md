@@ -515,3 +515,78 @@ assertions against the real on-disk files (`AndroidManifest.xml:5-6`,
 - **Grade counts: 10 A / 0 below A** — the complete delivered suite. No downgrade from any prior grid; every prior-A row holds by inspection (no lib / no AC body changed); no fix owed.
 - **AC-10 grades A** as a source-scan AC: Given (files exist) on the public surface, When (inspect the real on-disk manifests), three Thens rejecting three distinct wrong impls, the non-empty-usage augmentation in place.
 - **Both rewritten smoke guards are NON-VACUOUS.** Guard 1: exact set-equality `pendingACs.keys.toSet() == {}` + `isEmpty` pins the map's contents (a re-pended AC fails it), each delivered AC's null skip-reason asserted. Guard 2: a **fixed** `for n=1..10` loop (not over the empty map) asserts every AC runs in **both** modes — a silently re-pended AC or an inverted gate fails. No drift to a bare count; no fixed sleeps; comments match code.
+
+## Sign-off re-grade — SIGNOFF-1 (whole suite at HEAD `1d01c9d`, all 10 ACs un-pended, 2026-10-21)
+
+Fresh, **independent** grade of the **whole** bs-19 live-camera acceptance suite
+for sign-off, by a grader who did **not** write these tests or the product code.
+Re-grades every AC test plus every scaffold / smoke / guard test, now that all 10
+ACs are un-pended and the behaviour is coded. **Prior grid:** the PERM-4 grid
+above (10 A / 0 below A) — carried as the prior grades; any downgrade would be
+justified against a named rule (G1–G6). **There are none.**
+
+This grade is independent of the prior per-phase re-grades: the grader (a) ran the
+full suite per file at HEAD `1d01c9d` and confirmed every AC test green with
+**zero skips** (all un-pended, all run in the default mode), and (b) verified each
+load-bearing discrimination against the **live** `lib/` code it names, not against
+the prior grid's text.
+
+**Suite execution (HEAD `1d01c9d`, `-d flutter-tester`, per file — default mode,
+identical to run-pending now):**
+
+| File | Tests | Result |
+|---|---|---|
+| `smoke_test.dart` | 11 (smoke + 2 pending-gate guards + 6 source guards + 2 permission guards) | ✅ all passed |
+| `preview_test.dart` | AC-1, AC-2, AC-4 | ✅ 3/3, 0 skip |
+| `reading_test.dart` | AC-3, AC-5 | ✅ 2/2, 0 skip |
+| `controls_test.dart` | AC-6, AC-9 | ✅ 2/2, 0 skip |
+| `permission_test.dart` | AC-7, AC-8 | ✅ 2/2, 0 skip |
+| `platform_test.dart` | AC-10 | ✅ 1/1, 0 skip |
+
+Every AC runs by default (no `skip:`), confirming `pendingACs` is empty.
+
+### Grade — all 10 ACs
+
+| AC | Test | Grade (prior → now) | Rules checked | Justification (verified against live code at HEAD `1d01c9d`) |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_LivePreview` | A → **A** | G1,G4,G5,G6 (G2/G3 n/a) | Given `h.activeSourceKind == camera` read through the public endpoint before the When. Verified the live render path: `CaptureController.currentFrame` (capture_controller.dart:63) returns `_recentFrames.last` **only** when `source.kind == camera` and frames exist — the seed `FRAME_CYAN` flows `source.frames → _onFrame → _recentFrames → currentFrame → LiveFrameView.frame`. The two Thens are a non-vacuous pair killing both catalogue Rejects: `showsPlaceholder isFalse` (the painted path is a `CustomPaint`, never `ColoredBox(LiveFrameView.placeholderColor)` = `0xFF3A3A3A`, confirmed live_frame_view.dart:24,30) and `liveView.frame isNotNull` (a wiring that ignores frames fails; the `tester.widget<LiveFrameView>` cast throws if the key is absent, so neither Then passes vacuously). Grain right (preview-vs-placeholder; colour is AC-2). Green by default. |
+| AC-2 | `TestAC02_FrameConversion` | A → **A** | G1,G4,G5,G6 (G2 built-in, G3 n/a) | Pure `frameFromCameraImage` conversion below the source/host. Givens assert each raw buffer's documented bytes before converting (BGRA `[b,g,r,255]`; YUV Y-plane luma) — G1. BGRA tol `_bgraToleranceL1 = 3` with a BGR↔RGB-swap reject (`>100`) and a c1-vs-c2 constant-pixel control (`>100`, L1 450 apart); YUV tol `_yuvToleranceL1 = 12` which rejects the canonical full-range-vs-limited-range BT.601 mis-decode (correct ≈ L1 2, limited-range ≈ L1 21) — the near-miss the first grader downgraded was fixed in ITEST-2 (30→12) and holds. G5 controls all bite; one AC. Green by default. |
+| AC-3 | `TestAC03_ReadingFollowsFrame` | A → **A** | G1,G2,G3,G4,G5,G6 | Live, source-agnostic sampling. Given: opening reading ≈ `RETICLE_CYAN` (`<45` via the real `ColorScienceImpl.toSRGB` round-trip) + a c1/c2 separation control (`>135`). When `whenFrameChangesTo(FRAME_ORANGE)` pushes a real frame onto the broadcast feed and pumps (settle point); the real `CaptureController._onFrame` + `sampleAreaAverage` produce the reading — the fake supplies only the frame buffer (G2). Thens assert the raw observable at grain: reading moved to c2 (`<45`) **and** away from stale c1 (`>135`); the 450-L1 vs 45-tol separation (10×) makes both non-vacuous. Textbook G3 (negative after settle + demonstrated before→after change). Green by default. |
+| AC-4 | `TestAC04_ValueOnlyLive` | A → **A** | G1,G3,G4,G5,G6 (G2 n/a) | Both Givens on the public surface before the When (`liveView.frame isNotNull` + `showsPlaceholder isFalse`). When taps the real `valueOnlyKey` → `toggleValueOnly()` → `state.valueOnly` → the conditional saturation-0 `ColorFiltered` (nothing scripted supplies the greying — G2 n/a). Discriminating pair: `ancestor(liveViewKey, ColorFiltered) findsOneWidget` + `ancestor(accuracyKey, ColorFiltered) findsNothing` — the filter wraps only `feedSurface`, with `accuracyKey` a Stack sibling outside it. Kills both Rejects (grey-whole-screen incl. readings; grey-nothing). Negative Then non-vacuous (paired with the positive). Green by default. Grader note (not a downgrade, logged at VIEW-3): does not assert the filter is *absent* pre-toggle — implausible always-grayscale build; not a clean G-rule break. |
+| AC-5 | `TestAC05_LockClearsWarning` | A → **A** | G1,G2,G3,G4,G5,G6 | The strongest G2 row — verified live: `lock()` unconditionally flips the UI `lockState` **and** calls `source.lock*`, while `activeDowngradeReasons` (capture_controller.dart:464-467) emits `exposureUnlocked` from `if (!source.locks.allLocked)` — the **source's** locks, rendered under `downgradeReasonsKey`. Givens on the public surface (`source.locks.allLocked isFalse`; the `exposureUnlocked` label present). Thens at grain: `allLocked isTrue` + the specific `exposureUnlocked` label `findsNothing` (not a whole-region finder — the region persists with `missingReferenceCard`). **Control (`canLock:false` + `pumpWidget(SizedBox())` reset to a fresh `initState` controller):** `lock()` still flips the UI flag yet `allLocked` stays false → warning **stays**, proving it clears from the source, not the UI flag. Kills both named Rejects. Green by default. |
+| AC-6 | `TestAC06_Torch` | A → **A** | G1,G2,G3,G4,G5,G6 | Live, shipped torch pipeline. Scenario A Givens all on the public surface (`torchOn`/`state.torchOn` false, `torchOnCalls == 0`, 'Torch' label, no `torchWarningKey`). When = real torch tap → `controller.turnTorchOn` → `source.turnTorchOn`. Thens at grain incl. the load-bearing **`torchOnCalls == 1`** augmentation (kills a UI-only toggle that never reaches the device) + `torchWarningKey findsOneWidget`; off-path control (`torchOffCalls == 1`, warning gone) kills a one-way toggle. Scenario B (fresh app, torch-on commit → `litByTorch isTrue`) + torch-off-commit control (`litByTorch isFalse`) kill always-stamp and never-stamp; `isNotNull` checks confirm non-vacuous commits. Driving the scripted source (not the un-runnable plugin) is the correct D-5 seam convention; real forwarding covered by unit tests. Green by default. |
+| AC-7 | `TestAC07_PermissionFallback` | A → **A** | G1,G2,G4,G5,G6 (G3 n/a) | Live permission flow verified: `_applyInitialPermission` (build_app.dart:1240) requests on first camera entry — granted **keeps** the already-subscribed controller (records the grant, protecting AC-9's `acquireCount==1`), denied `_replaceController(cameraFallbackSource(), denied)` (a `SoftwareCaptureSource`, kind software) + `_CameraAccessAffordance`. Granted branch: Givens `requestCount == 0` / `status == undetermined`; Thens `requestCount == 1` (rejects never- and double-request), `activeSourceKind == camera`, `permissionState == granted`. **G2 control — airtight:** denied branch (fresh app) injects the **identical** default `kind == camera` source, diverging only on the recorder → the camera-vs-software outcome is **provably** permission-driven, killing a dead-camera-kept impl / a kind-echo impl; also asserts `requestCount == 1`, `find.textContaining('Camera access')`, `takeException() isNull`. Green by default. Minor (not a downgrade, logged): denied branch does not re-assert pre-`requestCount == 0` (freshly constructed recorder, field defaults 0). |
+| AC-8 | `TestAC08_NoCameraFallback` | A → **A** | G1,G4,G5,G6 (G2 built-in, G3 n/a) | Live availability fallback verified: build_app.dart:1210 falls to `cameraFallbackSource()` synchronously when `source.kind == camera && !source.available`, **before** any prompt (availability≠permission, D-3). Given `source.available isFalse` on the public surface. Then `activeSourceKind == software` overturns the injected `kind == camera` wrong-impl baseline — so the discrimination is **built into the fixture** (the injected kind *is* the dead-camera-echo baseline the `== software` assertion must overturn), no separate control needed. Secondary Thens reject the other Rejects: `currentSample isNotNull` (can still read), `takeException() isNull` (no crash). Green by default. Minor (logged, not a downgrade): "import a photo / use the rest of the app" clause not separately asserted — the fallback is bs-02's shipped source, no distinct wrong-impl escapes. |
+| AC-9 | `TestAC09_Lifecycle` | A → **A** | G1,G3,G4,G5,G6 (G2 n/a) | Live lifecycle verified: `_CaptureHomeScreenState` is a `WidgetsBindingObserver` (build_app.dart:1141) whose `didChangeAppLifecycleState` calls `pauseFeed()` on inactive/hidden/paused/detached and `resumeFeed()` on resumed; `pauseFeed` cancels+nulls `_feed` (the `frames async*` `finally` runs `releaseCount++`), `resumeFeed` re-subscribes under the `_disposed || _feed != null` guard. Givens `acquireCount == 1` / `releaseCount == 0` + opening reading ≈ c1. Pre-`pumpAndSettle` stops the settle tick; `_background` (…→paused + `tester.idle()`, no pump-while-paused) → `releaseCount >= 1` (bites a leak); `_foreground` (…→resumed + pump) → `acquireCount >= 2` (bites a no-re-acquire); G3 control `whenFrameChangesTo(FRAME_ORANGE)` → resumed reading ≈ c2 (`<45`) kills a frozen/black feed. Green by default. |
+| AC-10 | `TestAC10_PlatformDeclarations` | A → **A** | G1,G4,G5,G6 (G2/G3 n/a) | Source-scan AC, verified against the real on-disk files. Given: both files' `existsSync()` before inspection. Three distinct Thens each failing a distinct wrong impl (G5): (1) `AndroidManifest.xml:5` `android.permission.CAMERA`; (2) a **separate** `<uses-feature android:name="android.hardware.camera"` regex (AndroidManifest.xml:6 — rejects one-but-not-the-other); (3) the **augmentation** — captures the `NSCameraUsageDescription` value via a key→string regex (Info.plist:7-8, a real non-empty explanation) and asserts `isNotNull` **and** `isNotEmpty` (a bare key or empty string fails where `contains` would pass). Green by default. Minor (standard source-scan limit, logged): the Android `contains`/regex could match a literal inside an XML comment; the real entries are genuine elements and the iOS structured check is immune. |
+
+### Grade — scaffold / smoke / guard tests
+
+| Test (in `smoke_test.dart` / `pending.dart`) | Verdict | Why |
+|---|---|---|
+| smoke: assembled app boots to Capture, read endpoint answers, feed reaches controller, render path paints | **NON-VACUOUS** | Drives the real `buildApp` over the scripted source; asserts all control anchors mounted, `activeSourceKind == camera`, `permissionState == granted`, `currentSample isNotNull` (feed wired end to end), `showsPlaceholder isFalse` (render path live). Each assertion bites a distinct un-wiring. |
+| pending-gate guard 1 (`pendingACs` holds exactly the undelivered ACs) | **NON-VACUOUS** | Exact set-equality `pendingACs.keys.toSet() == {}` **and** `isEmpty` pins the map (a re-pended AC fails both); each delivered AC's `pendingSkipReason(..., false)` asserted null; every remaining owner checked against `behaviorPhases`. No drift to a bare count. |
+| pending-gate guard 2 (every AC runs in either mode; gate never skips a non-pending AC) | **NON-VACUOUS** | A **fixed** `for n=1..10` loop (not over the now-empty map) asserts `pendingSkipReason` is null in **both** `forceRunPending` false and true — a silently re-pended AC or an inverted gate fails; also pins the unmapped-AC-always-runs and ambient-mode-agreement cases. |
+| `ScriptedCameraSource` guards ×6 (lock reaches + settles; can't-lock ignores; torch counted both ways; kind settable; feed replays then forwards; `knownFrame` uniform) | **NON-VACUOUS** | Each asserts the recorder/behaviour the AC tests lean on, with exact counts and both-direction cases (e.g. `lockCalls` 0 vs 3; `torchOnCalls`/`torchOffCalls == 1`; seed-then-pushed frame order). |
+| `RecordingCameraPermission` guards ×2 (request counted + resolves; denying resolves to denied) | **NON-VACUOUS** | Pin `requestCount` 0→1 and the `resolvesTo` outcome both ways — the seam AC-7 depends on. |
+
+### Summary — SIGNOFF-1
+
+- **Grade counts: 10 A / 0 below A** across all ten AC tests, plus **all 11
+  scaffold / smoke / guard tests NON-VACUOUS** — a clean sign-off grid.
+- **No downgrades from the PERM-4 prior grid.** Every prior-A row holds; the grade
+  was re-derived independently against the live `lib/` code (not inherited from the
+  prior text), and corroborated by a green per-file run of the whole suite at HEAD
+  `1d01c9d` with zero skips.
+- **The AC-2 near-miss the first ITEST-2 grader flagged (G5, loose YUV tolerance)
+  stays fixed** (`_yuvToleranceL1` 30→12); it is the only historical sub-A row in
+  the feature and was closed in-phase, not deferred.
+- **Minor observations logged and carried (none a G-rule break, none a downgrade):**
+  AC-4 doesn't assert the filter absent pre-toggle; AC-7/AC-8 denied/fixture
+  branches don't re-assert a freshly-constructed recorder's default pre-state;
+  AC-8's "import/use-rest-of-app" clause rests on bs-02's shipped fallback; AC-10's
+  Android `contains`/regex could in principle match an XML comment (the real
+  entries are genuine elements; the iOS check is structurally immune). Each is a
+  standard, documented limitation with no plausible wrong implementation that
+  escapes the suite.
+- **Fit for sign-off:** the whole suite grades **A** with no fix owed.
