@@ -680,3 +680,59 @@ are none.**
   structurally immune).
 - **Fit for sign-off:** the whole suite grades **A** with no fix owed; VIEW-4 is a
   clean, behaviour-preserving theming change.
+
+## Sign-off re-grade — SIGNOFF-2 (whole suite at HEAD `9345e45`, code @ `9c8d697`, after PERM-5, 2026-10-22)
+
+Fresh, **independent** static grade of the whole bs-19 live-camera acceptance suite
+for SIGNOFF-2, by a grader who did **not** write these tests or the product code
+(graded statically by reading each AC test and the live `lib/` it exercises — no
+execution; the runner was busy with the regression). Since the prior grid
+(SIGNOFF-1 re-run, HEAD `1d634e3`, 10 A / 0 below A), exactly one behavior phase
+ran — **PERM-5** (§9 production activation). `git diff --name-only 1d634e3 HEAD`
+changed **only** `lib/main.dart`, `lib/capture/source/capture_source_factory.dart`,
+their **unit** tests, and plan/signoff docs; **`git diff --name-only 1d634e3 HEAD
+-- integration_test/` is empty** — every AC test, the harness, the smoke/pending
+guards and `scripted_camera_source.dart` are **byte-identical** to the 10-A state.
+Every other lib path the AC tests exercise (`live_frame_view.dart`,
+`capture_live_view.dart`, controller/host, `camera_capture_source.dart`,
+`frame_conversion.dart`, `camera_permission.dart`, capture state/read endpoint) is
+unchanged by PERM-5; PERM-5 touched only the startup probe (`main.dart`
+`_deviceHasCamera` + threading `hasCamera`) and the new pure `selectUseCamera` —
+**neither on any AC test's code path**. So the prior grades are carried and
+re-verified against the current `lib/`; any downgrade would be justified against a
+named rule. **There are none.**
+
+### Grade — all 10 ACs
+
+| AC | Test | Grade (prior → now) | Rules | Justification (verified against live code at HEAD `9345e45`) |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_LivePreview` | A → **A** | G1,G4,G5,G6 | Given `activeSourceKind == camera` via the public endpoint before the screen is inspected (`preview_test.dart:156`). Non-vacuous Then pair `showsPlaceholder isFalse` (`:165`) + `liveView.frame isNotNull` (`:169`), verified against `live_frame_view.dart:34-40` (`frame == null → ColoredBox(placeholderColor)` else `CustomPaint`). `widget<LiveFrameView>` cast throws if the key is absent → neither Then vacuous. Placeholder detection intact (harness + production both read `placeholderColor → AppTheme.cameraPlaceholderSurface → 0xFF3A3A3A`). Unchanged by PERM-5. |
+| AC-2 | `TestAC02_FrameConversion` | A → **A** | G1,G4,G5,G6 (G2 built-in) | Pure `frameFromCameraImage` below source/host, untouched. BGRA tol L1≤3 (`:197`) + BGR↔RGB swap reject `>100` (`:202`) + distinct-colour control `>100` (`:215`); YUV tol L1≤12 (`:206`) rejects the full-range-vs-limited BT.601 mis-decode. The ITEST-2 30→12 tightening holds. |
+| AC-3 | `TestAC03_ReadingFollowsFrame` | A → **A** | G1,G2,G3,G4,G5,G6 | Source-agnostic live sampling, untouched. Given reading ≈ `RETICLE_CYAN` L1<45 + c1/c2 separation `>135`; When `whenFrameChangesTo(FRAME_ORANGE)` pushes a real frame through `emitFrame`+pump; Thens moved to c2 `<45` **and** off stale c1 `>135`. Textbook discriminating G3. |
+| AC-4 | `TestAC04_ValueOnlyLive` | A → **A** | G1,G3,G4,G5,G6 | Both Givens public. Discriminating pair `ancestor(liveViewKey, ColorFiltered) findsOneWidget` + `ancestor(accuracyKey, ColorFiltered) findsNothing` — filter wraps only the feed, readings stay in colour. Positive path (`CustomPaint`+`ColorFiltered`) never touches `placeholderColor`. Minor (logged VIEW-3, not a downgrade): no pre-toggle filter-absent assertion. |
+| AC-5 | `TestAC05_LockClearsWarning` | A → **A** | G1,G2,G3,G4,G5,G6 | Strongest G2 row. `exposureUnlocked` from `if (!source.locks.allLocked)` rendered under `downgradeReasonsKey`. Thens `allLocked isTrue` + the specific label `findsNothing`; the `canLock:false` control (+ `pumpWidget(SizedBox())` fresh-`initState`) proves the clear comes from the source. |
+| AC-6 | `TestAC06_Torch` | A → **A** | G1,G2,G3,G4,G5,G6 | Shipped torch pipeline. Load-bearing `torchOnCalls == 1` kills a UI-only toggle; off-path control `torchOffCalls == 1` + warning gone kills a one-way toggle. Scenario B lit-commit `litByTorch isTrue` + torch-off `litByTorch isFalse` control kill always-/never-stamp. |
+| AC-7 | `TestAC07_PermissionFallback` | A → **A** | G1,G2,G4,G5,G6 | Permission flow untouched. Granted Thens `requestCount == 1`, `activeSourceKind == camera`, `permissionState == granted`. **G2 control airtight:** denied branch injects the identical `kind == camera` source diverging only on the recorder → camera-vs-software provably permission-driven; `find.textContaining('Camera access')`, `takeException() isNull`. |
+| AC-8 | `TestAC08_NoCameraFallback` | A → **A** | G1,G4,G5,G6 (G2 built-in) | Availability fallback untouched. Given `source.available isFalse` on an injected `kind == camera` source; Then `activeSourceKind == software` overturns the wrong-impl baseline (availability≠permission); secondary `currentSample isNotNull`, `takeException() isNull`. |
+| AC-9 | `TestAC09_Lifecycle` | A → **A** | G1,G3,G4,G5,G6 | Lifecycle untouched. `_background` (…→paused + `tester.idle()`, no pump-while-paused) → `releaseCount >= 1`; `_foreground` → `acquireCount >= 2`; G3 control `whenFrameChangesTo(FRAME_ORANGE)` → resumed ≈ c2 `<45` kills a frozen/black feed. Verified against `ScriptedCameraSource.frames` async* (`acquireCount++` on subscribe, `releaseCount++` in `finally`). |
+| AC-10 | `TestAC10_PlatformDeclarations` | A → **A** | G1,G4,G5,G6 | Source-scan AC, untouched. Three distinct Thens: Android `CAMERA` permission; a separate `<uses-feature android.hardware.camera>` regex (rejects one-but-not-other); iOS augmentation captures the `NSCameraUsageDescription` value and asserts `isNotNull` + `isNotEmpty`. Minor (standard source-scan limit, logged): Android `contains` could match an XML comment; iOS structured check immune. |
+
+### Grade — scaffold / smoke / guard tests
+
+All **NON-VACUOUS**, each byte-identical to the `1d634e3` state and re-verified:
+acceptance smoke (drives real `buildApp`, asserts control anchors + `activeSourceKind == camera` + `permissionState == granted` + `currentSample isNotNull` + `showsPlaceholder isFalse`); pending-gate guard 1 (exact set-equality `pendingACs.keys.toSet() == {}` **and** `isEmpty` — matches the now-empty `pending.dart` map); pending-gate guard 2 (fixed `for n=1..10` loop asserts `pendingSkipReason` null in **both** modes); the `showsPlaceholder` harness getter; the `ScriptedCameraSource` ×6 and `RecordingCameraPermission` ×2 guards.
+
+### PERM-5 production-activation coverage
+
+PERM-5 shipped the real camera as the default via a startup probe. Its two lib paths:
+- **`selectUseCamera({hasCamera, permission})`** (`capture_source_factory.dart:42-46`), the pure decision `hasCamera && permission != denied`, is covered by its own unit tests (`capture_source_factory_test.dart:32-71`): the **complete truth table** — `hasCamera:false` → false across all `CameraPermissionState.values`, and `hasCamera:true` × {undetermined→true, granted→true, denied→false}. No AC test exercises it and none needs to (pure function with exhaustive unit coverage; the acceptance harness injects `captureSource` at the seam by design, `hasCamera` defaulting false so the harness / no-camera devices keep software).
+- **`_deviceHasCamera()`** (`main.dart`, the `availableCameras()` probe) is a device-only platform-channel seam wrapped `// coverage:ignore`, like `PluginCameraDevice` / `PluginCameraPermission.request()`; per **D-5** it is verified by the on-device walkthrough (now covering the shipped real-camera default), not by flutter-tester.
+
+**Posture: acceptable for sign-off, no grader-flagged gap** — the only shipped behaviour outside an automated AC test is the device-channel probe (unreachable under flutter-tester, covered by the D-5 walkthrough), the same coverage-ignore + walkthrough contract accepted for CAM-3/PERM-2 at prior gates. No acceptance test became stale or weaker because of PERM-5 (zero `integration_test/` churn, zero churn on any AC code path).
+
+### Summary — SIGNOFF-2
+
+- **Grade counts: 10 A / 0 below A** across all ten AC tests, plus **all scaffold / smoke / guard tests NON-VACUOUS** — a clean sign-off grid, holding the prior SIGNOFF-1 re-run result.
+- **No downgrades.** Every AC test body and scaffold/guard is byte-identical to the `1d634e3` 10-A state (`git diff 1d634e3..9345e45 -- integration_test/` empty); each prior-A grade re-verified against the current `lib/` it names (all unchanged except the untouched-by-ACs factory).
+- **PERM-5 introduces no acceptance-suite gap:** the production probe is a D-5 device-only `// coverage:ignore` seam; its pure consumer `selectUseCamera` carries an exhaustive unit truth-table.
+- **Fit for sign-off (SIGNOFF-2): PASS** — the whole suite grades A with no fix owed, and PERM-5's production activation is a clean, test-backed (unit + D-5 walkthrough) change that neither weakens nor bypasses any acceptance test.
