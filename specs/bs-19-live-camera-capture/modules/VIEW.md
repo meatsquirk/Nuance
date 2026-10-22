@@ -1,9 +1,9 @@
 # Module VIEW — Live preview rendering
 
-**Status:** ✅ Complete — VIEW-1/2/3/4 done; VIEW-4 themed the live-view placeholder (D-8) and resolved the bs-17 AC-14 regression. No VIEW phase remains.
+**Status:** ⬜ Reopened at SIGNOFF-2 (changes requested, 2026-10-22) — VIEW-1/2/3/4 done; **VIEW-5 ⬜ Next** (native `CameraPreview` render, D-9). Blocks SIGNOFF-3.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
-**Owns (files/areas):** `lib/capture/capture_live_view.dart`, a frame-render widget (e.g. `lib/capture/live_frame_view.dart`), widget tests under `test/capture/`.
-**Depends on:** CAM · **Blocks:** SIGNOFF-1
+**Owns (files/areas):** `lib/capture/capture_live_view.dart`, a frame-render widget (e.g. `lib/capture/live_frame_view.dart`), the native-preview seam, widget tests under `test/capture/`.
+**Depends on:** CAM · **Blocks:** SIGNOFF-1 (done), SIGNOFF-3 (via VIEW-5)
 
 ## Dashboard
 
@@ -13,6 +13,7 @@
 | VIEW-2 | behavior | AC-1 | ✅ Done | 7.74M | 14m 54s |
 | VIEW-3 | behavior | AC-4 | ✅ Done | 3.88M | 11m 59s |
 | VIEW-4 | behavior (fix) | — (keeps AC-1/AC-4; resolves bs-17 AC-14) | ✅ Done | 3.79M | 14m 40s |
+| VIEW-5 | behavior (fix) | — (D-9 native `CameraPreview`; keeps AC-1/AC-4) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -197,3 +198,55 @@ Value-only grayscale now greys the **live frame**, not the readings — **AC-4 d
   green), refresh cost-per-AC, surface the production-dormant-camera decision (§9) and the on-device
   walkthrough (D-5). The three carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-08 display AC-9, bs-07
   self_assessment AC-4) are pre-existing, not bs-19's.
+
+## Phase VIEW-5 — Native `CameraPreview` render (D-9)
+
+- **Kind:** behavior (fix / fidelity) — **no new bs-19 AC of its own**; keeps AC-1 (`TestAC01_LivePreview`)
+  and AC-4 (`TestAC04_ValueOnlyLive`) green, improves the on-device preview fidelity.
+- **Why:** SIGNOFF-2's human review (Matt Quirk, 2026-10-22) found the on-device live preview is
+  **rotated 90° CCW, super-pixelated and laggy**. Root cause: VIEW-1 renders the preview by *painting* the
+  downsampled 64px sampling `Frame` through `_FramePainter` (`lib/capture/live_frame_view.dart`) — thousands
+  of per-pixel `drawRect`s per frame on a CPU-converted 64×64 buffer with no sensor-orientation applied. The
+  64px frame is the right, cheap input for the **reticle colour sample** (AC-3) but the wrong thing to show as
+  the preview. **Decision (master D-9):** render the preview from the `camera` plugin's native
+  `CameraPreview(controller)` (full-res, GPU-composited, orientation-correct); keep the `Frame` stream for
+  colour sampling only.
+- **Target AC:** — (fix). **Depends on:** VIEW-2, CAM-3, PERM-5 · **Blocks:** SIGNOFF-3
+- **Files:** `lib/capture/capture_live_view.dart`, `lib/capture/live_frame_view.dart` (product); the
+  `CameraCaptureSource` / `PluginCameraDevice` seam in `lib/capture/source/` (surface the plugin
+  `CameraController` / a `Widget buildPreview()` seam to the view); possibly `lib/capture/capture_screen.dart`
+  (thread the preview widget); `integration_test/live_camera/harness.dart` + `test/capture/*` as needed.
+- **Tasks:**
+  1. Expose the active camera's native preview to the view layer **without leaking the plugin into testable
+     code**: add a seam on `CameraCaptureSource` (e.g. `Widget? buildPreview()` / `CameraController? get
+     previewController`) that only `PluginCameraDevice` (the device-only, coverage-ignored implementation, D-5)
+     fulfils with a real `CameraController`; the `ScriptedCameraSource` and `SoftwareCaptureSource` return null.
+  2. In the live view, render `CameraPreview(controller)` (orientation handled by the plugin) **when** the
+     active source provides a preview; otherwise fall back to the existing `LiveFrameView` frame-paint
+     (scripted source → painted frame; software / no-camera → themed placeholder). Keep `liveViewKey` as the
+     single stable anchor and keep the value-only saturation-0 `ColorFiltered` wrapping whichever surface
+     renders (AC-4 invariant), with the readings/overlays as untouched outside-the-filter siblings.
+  3. **Keep the `Frame` stream wired to sampling only** — `CaptureController.currentFrame` / the reticle
+     sampler are unchanged; AC-3 (`reading follows the live frame`) must stay green. The preview no longer
+     *depends* on `_FramePainter` for the real camera, but the painter stays for the scripted/fallback path.
+  4. Fit the native preview to the view box (cover/fill) so it is not letterboxed, and confirm the grayscale
+     filter still applies over it.
+  5. The native-preview construction (`CameraPreview`, controller access) is device-only → `// coverage:ignore`
+     (D-5), placed ABOVE any `@override` (the VIEW/CAM coverage-ignore gotcha). Unit-test every testable branch
+     (seam returns null → paint path; non-null → preview path, exercised via a host fake, not the real plugin).
+- **Exit criteria:** analyze clean; unit + coverage gate on touched lib (100% of testable lines; the
+  `PluginCameraDevice` preview construction coverage-ignored, D-5). **bs-19 acceptance suite green both modes** —
+  AC-1 `TestAC01_LivePreview` (scripted source still renders the painted frame, **no** placeholder, under
+  `liveViewKey`) and AC-4 `TestAC04_ValueOnlyLive` in particular; AC-3 `TestAC03_ReadingFollowsFrame` still
+  green (sampling unchanged). No new residual-literal offender (bs-17 AC-14 stays green). The carried off-lane
+  flakes unchanged.
+- **Acceptance gate:** no AC to un-pend (all delivered); keep AC-1/AC-3/AC-4 green; grade gate — re-grade the
+  bs-19 suite A (confirm the render-path change did **not** weaken `TestAC01`/`TestAC04`: the scripted path must
+  still assert the painted frame, and any new native-preview assertion that can't run under `flutter-tester`
+  belongs in the device walkthrough, not a weakened test).
+- **Augments:** none required (fix only; must not weaken any AC test). Optional: assert the preview seam is
+  null for the scripted/software sources so the painted-frame path is the one AC-1 exercises (documents the
+  test/device split without weakening the Then).
+- **Device walkthrough (for SIGNOFF-3):** on the Pixel, the live preview is **upright, full-resolution and
+  smooth** (not the 64px block mosaic), the reticle reading still tracks the scene, value-only greys the live
+  preview, and lock/torch still work — exercises the `PluginCameraDevice` preview seam (D-5).

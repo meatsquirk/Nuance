@@ -1,7 +1,7 @@
 # Master Plan — bs-19 Live camera capture source
 
 **Spec:** [bs-19-live-camera-capture.feature](../bs-19-live-camera-capture.feature)
-**Status:** ⏸ Awaiting sign-off — SIGNOFF-2 packet prepared @ `9345e45` (code `9c8d697`); awaiting Matt Quirk's decision. All 10 ACs ✅ (10 A/0, fresh independent re-grade after PERM-5); unit 1694/0, cov PASS, bs-19 acceptance 21/21 both modes, regression 340/4 (carried flakes only). Real camera is the shipped default. Last human step: §10E on-device walkthrough.
+**Status:** In progress — next VIEW-5. SIGNOFF-2 returned **changes requested** 2026-10-22 (Matt Quirk): the live preview paints the downsampled 64px sampling `Frame` (rotated/pixelated/laggy on-device) instead of the plugin's native `CameraPreview`; VIEW-5 swaps the render to `CameraPreview(controller)` (keeping the `Frame` for sampling only), then SIGNOFF-3. All 10 ACs still ✅; automated state green at `9345e45`.
 **Architecture:** `lib/capture/source/` (`CaptureSource`, `Frame`, `SoftwareCaptureSource`), `lib/capture/capture_live_view.dart` (placeholder feed), `lib/app/build_app.dart` + `lib/main.dart` (`AppDependencies.captureSource` injection seam); `docs/paint-color-app-solution-intent.md` (SI D2 capture). Wireframe: the Capture live-view region.
 **Code home:** /Users/matthew.quirk/Nuance · https://github.com/meatsquirk/Nuance.git · base `main` · extends existing (confirmed by Matt Quirk, 2026-10-20)
 
@@ -27,8 +27,8 @@
 | 1 Scaffold | CAM-1 |
 | 2 Component shells | CAM-2, PERM-1, VIEW-1 |
 | 3 Acceptance tests | ITEST-1, ITEST-2, ITEST-3, ITEST-4 (test review, G-2) |
-| 4 Behavior | CAM-3 (*enabler-ish*), VIEW-2, CAM-4, VIEW-3, CAM-5, CAM-6, CAM-7, PERM-2, PERM-3, PERM-4, **VIEW-4** (fix: theme placeholder, added at SIGNOFF-1 attempt 1), **PERM-5** (§9 production activation, added at SIGNOFF-1 changes-requested) |
-| 5 Sign-off | SIGNOFF-1 (changes requested), SIGNOFF-2 |
+| 4 Behavior | CAM-3 (*enabler-ish*), VIEW-2, CAM-4, VIEW-3, CAM-5, CAM-6, CAM-7, PERM-2, PERM-3, PERM-4, **VIEW-4** (fix: theme placeholder, added at SIGNOFF-1 attempt 1), **PERM-5** (§9 production activation, added at SIGNOFF-1 changes-requested), **VIEW-5** (fix: native `CameraPreview` render, added at SIGNOFF-2 changes-requested) |
+| 5 Sign-off | SIGNOFF-1 (changes requested), SIGNOFF-2 (changes requested), SIGNOFF-3 |
 
 ## Acceptance criteria coverage
 
@@ -56,6 +56,7 @@
 | D-5 | Acceptance tests inject a scripted `CaptureSource` (known frames + lock/torch/permission/availability state) at the `AppDependencies.captureSource` seam — no real hardware on `flutter-tester`; the real plugin is verified by a device walkthrough at sign-off | Mirrors `FakeCaptureSource`; the plugin's platform channels can't run under `flutter-tester` |
 | D-6 | **Deferred (out of scope):** real reference-card calibration/`normaliseAgainstCard` against the live camera, RAW capture, and wide-gamut selection — the camera source reports the processed sRGB pipeline and leaves card-normalisation on the software path | Those need camera-specific CV / device tuning; this feature delivers the live feed + sampling. Listed at sign-off as a known gap |
 | D-7 | Camera lifecycle tied to `WidgetsBindingObserver` + screen dispose: release on `inactive`/`paused`, re-init on `resumed` | AC-9; avoids a leaked/locked controller and black frames |
+| D-9 | The on-device live **preview** renders through the `camera` plugin's native `CameraPreview(controller)` (full-res, GPU, sensor-orientation-correct), **not** the painted downsampled `Frame`. The downsampled `Frame` stream stays as the reticle **colour-sampling** source only (AC-3). The scripted-source / software-fallback / no-controller paths keep the `LiveFrameView` frame-paint (and themed placeholder) render — so AC-1 under `flutter-tester` is unchanged — and the native `CameraPreview` widget construction is device-only, coverage-ignored (D-5), verified at the sign-off walkthrough | Matt Quirk, 2026-10-22 (SIGNOFF-2 changes-requested). The VIEW-1 `_FramePainter` per-pixel `drawRect` over the 64px D-4 frame is rotated 90° CCW, super-pixelated and laggy on a real device; the plugin preview fixes orientation, resolution and performance while the 64px frame remains the right, cheap input for the reticle average |
 | D-8 | The live-view **placeholder colour** is sourced from `AppTheme`, not a hardcoded `Color(0x…)` literal (VIEW-4); **the D-4 capture-device exemption is retired** (`kCaptureDeviceLiteralFiles = {}`), leaving `AppTheme` the sole AC-14 file-level exemption | Matt Quirk, 2026-10-21. VIEW-1 relocated the placeholder grey into the new `live_frame_view.dart`, which bs-17's design-system AC-14 flags as a residual palette literal. Chosen over exempting the new file: theming removes the literal entirely (`AppTheme.cameraPlaceholderSurface`), aligning with the design system. VIEW-4 found VIEW-1 had moved the lone camera-device literal **out of** the D-4-exempt `capture_live_view.dart`, so theming it left the carve-out silencing nothing and broke AC-14's load-bearing augmentation; Matt chose to retire the now-moot exemption and rewrite that augmentation (empty set + `AppTheme` as sole authority). Core AC-14 rule unchanged; D-4's frame-conversion decision is otherwise untouched |
 
 ## Acceptance integration test plan
@@ -120,6 +121,8 @@ graph LR
   VIEW-2 & VIEW-3 & CAM-4 & CAM-5 & CAM-6 & CAM-7 & PERM-2 & PERM-3 & PERM-4 & VIEW-4 --> SIGNOFF-1
   SIGNOFF-1 -->|changes requested| PERM-5
   CAM-3 & PERM-2 & PERM-3 --> PERM-5 --> SIGNOFF-2
+  SIGNOFF-2 -->|changes requested| VIEW-5
+  VIEW-2 & CAM-3 & PERM-5 --> VIEW-5 --> SIGNOFF-3
 ```
 
 **VIEW-4** (added at SIGNOFF-1 attempt 1, 2026-10-21): a fix phase that themes the live-view placeholder
@@ -131,6 +134,14 @@ phase. Wires the real `camera`-plugin path (built behind the seams in CAM-3/PERM
 `main.dart` so a device with a camera opens on the live feed by default, software scene as the no-camera /
 denied fallback (realises D-2 fully). Largely device-only code (coverage-ignored, D-5); the real on-device
 behaviour is verified at the SIGNOFF-2 walkthrough. It blocks SIGNOFF-2.
+
+**VIEW-5** (added at SIGNOFF-2, changes requested, 2026-10-22 — Matt Quirk): swap the on-device live-preview
+render from the painted downsampled `Frame` (VIEW-1 `_FramePainter`, rotated/pixelated/laggy on-device) to the
+`camera` plugin's native `CameraPreview(controller)` — full-res, GPU, sensor-orientation-correct (D-9). The
+downsampled `Frame` stream stays wired as the reticle colour-sampling input only (AC-3 unchanged). The scripted
+/ software / no-controller paths keep the `LiveFrameView` frame-paint + themed placeholder, so AC-1/AC-4 under
+`flutter-tester` are behaviourally unchanged; the native preview widget is device-only (coverage-ignored, D-5),
+verified at the SIGNOFF-3 walkthrough. It blocks SIGNOFF-3.
 
 **Parallel windows:** the three shells (CAM-2 ∥ PERM-1 ∥ VIEW-1) touch disjoint files. ITEST-2 ∥ ITEST-3. After CAM-3, the CAM behavior phases (CAM-4/5/6/7) and VIEW-2 run concurrently; PERM-2/3 form a short chain; PERM-4 (manifests) is independent. Merge-risky pair: CAM-3 and VIEW-2 both read `capture_live_view.dart` — sequence VIEW-2 after CAM-3.
 
@@ -178,21 +189,27 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 20 | VIEW-4 | behavior-fix: theme the live-view placeholder from AppTheme (D-8); resolve bs-17 AC-14; keep AC-1/AC-4 green | ✅ Done | 3.79M | 14m 40s | theme token `AppTheme.cameraPlaceholderSurface`; D-4 capture exemption retired (Matt Quirk, realises D-8); unit 1687/0, cov PASS 2 touched, bs-19 suite green both modes, bs-17 AC-14 27/27; grade A; fix 1/3 |
 | 21 | SIGNOFF-1 | sign-off (re-run after VIEW-4) | 🔁 Changes requested | 6.04M | 26m 36s | clean re-run: unit 1687/0, cov PASS, bs-19 acceptance 21/21 both modes, grade 10 A/0 @ `1d634e3`; regression 340/4 (carried flakes). **Decision 2026-10-22 (Matt Quirk): changes requested — §9 production activation → PERM-5, then SIGNOFF-2.** Packet: [signoff/round-1.md](signoff/round-1.md) |
 | 22 | PERM-5 | behavior: §9 production activation — ship the real camera by default (probe + select in `main.dart`) | ✅ Done | 5.79M | 31m 35s | pure `selectUseCamera` + device probe `_deviceHasCamera` (coverage-exempt, D-5); `assembleDependencies(hasCamera:)` selects the live `CameraCaptureSource` when a camera is present. analyze clean, unit 1694/0, cov PASS (2 touched lib, probe exempt), acceptance 21/21 **both modes** (no AC un-pended), grade holds 10 A/0, cross-feature bs-02/09/11/12 green. Fix 1/3 (main()-boots fake-async probe hang → `_FakeCameraPlatform`) |
-| 23 | SIGNOFF-2 | sign-off: fresh packet after PERM-5 (incl. on-device walkthrough) | ⏸ Awaiting sign-off | 5.34M | 21m 04s | packet [signoff/round-2.md](signoff/round-2.md) @ `9345e45`; unit 1694/0, cov PASS, bs-19 acceptance 21/21 both modes, regression 340/4 (carried flakes), grade 10 A/0; awaiting human decision; §10E on-device walkthrough is the last human step |
+| 23 | SIGNOFF-2 | sign-off: fresh packet after PERM-5 (incl. on-device walkthrough) | 🔁 Changes requested | 5.34M | 21m 04s | packet [signoff/round-2.md](signoff/round-2.md) @ `9345e45`; automated state green (unit 1694/0, cov PASS, acceptance 21/21 both modes, regression 340/4 carried flakes, grade 10 A/0). **Decision 2026-10-22 (Matt Quirk): changes requested — the live preview paints the downsampled 64px `Frame` (rotated/pixelated/laggy on-device) instead of the plugin's native `CameraPreview` → VIEW-5, then SIGNOFF-3.** |
+| 24 | VIEW-5 | behavior (fix): render the on-device preview via native `CameraPreview(controller)` (D-9); keep the `Frame` for sampling only; AC-1/AC-4 stay green | ⬜ Next | | | reopens VIEW; blocks SIGNOFF-3 |
+| 25 | SIGNOFF-3 | sign-off: fresh packet after VIEW-5 | ⬜ | | | |
 
 *Tokens* / *Time* = the phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-2 packet prepared @ `9345e45` — awaiting Matt Quirk's decision.** No further phase until a decision:
-- **Approve:** `/feature-next-phase --signoff bs19 approved` → feature Done; then merge via `clean-merged-branches`.
-- **Changes:** `/feature-next-phase --signoff bs19 changes "<items>"` → each item becomes a phase before a fresh SIGNOFF-3.
-- **The last human verification is the §10E on-device walkthrough** (packet [signoff/round-2.md](signoff/round-2.md) §11E):
-  the shipped build now opens on the **real camera by default** — launch→live feed, first-entry prompt, grant→feed /
-  deny→software + affordance, no-camera→software, lock + torch, lifecycle. Exercises the three D-5 `// coverage:ignore`
-  seams (`_deviceHasCamera`, `PluginCameraDevice`, `PluginCameraPermission.request`). APK: flutter 3.47.6 at
-  `~/development/flutter/bin`; `flutter build apk --release`; `adb install -r`; Pixel=38180DLJG000RF.
-- Automated state is fully green: unit 1694/0, cov PASS, bs-19 acceptance 21/21 both modes, regression 340/4
+**SIGNOFF-2 returned `changes requested` (Matt Quirk, 2026-10-22) → next phase VIEW-5.** Run it in a fresh session:
+`/feature-next-phase bs19 VIEW-5`.
+- **VIEW-5 (behavior/fix, D-9):** replace the on-device preview render — the painted downsampled 64px `Frame`
+  (`live_frame_view.dart` `_FramePainter`, rotated 90° CCW / pixelated / laggy) — with the `camera` plugin's native
+  `CameraPreview(controller)` (full-res, GPU, orientation-correct). Keep the `Frame` stream wired as the reticle
+  colour-sampling input only (AC-3 unchanged). The scripted/software/no-controller paths keep the `LiveFrameView`
+  paint + themed placeholder, so **AC-1 (`TestAC01`) and AC-4 (`TestAC04`) stay green under `flutter-tester`**; the
+  native preview widget is device-only (coverage-ignored, D-5), verified at the SIGNOFF-3 walkthrough.
+- Needs the plugin `CameraController` surfaced from `CameraCaptureSource`/`PluginCameraDevice` to the view layer
+  (new preview seam); grade gate must confirm no AC test was weakened.
+- Then **SIGNOFF-3**: fresh packet + full regression + the on-device walkthrough (now checking preview fidelity:
+  upright, full-res, smooth), and the human decision.
+- Automated state at `9345e45` is green: unit 1694/0, cov PASS, bs-19 acceptance 21/21 both modes, regression 340/4
   (4 carried off-lane flakes only — bs-06 palette AC-3/AC-5, bs-08 display AC-9, bs-07 self_assessment AC-4).
 
 ## Token usage
@@ -227,11 +244,13 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | SIGNOFF-DECISION | ce452b36 | 2026-10-22 09:12 EDT | 09:21 | 8m 39s | 7m 33s | claude-opus-4-8 | 52 | 74,657 | 2,582,623 | 27,301 | 2,684,633 | SIGNOFF-1 changes requested (Matt Quirk, 2026-10-22): resolve §9 toward production activation — new phase PERM-5 (ship real camera by default) inserted before a fresh SIGNOFF-2 |
 | PERM-5 | 8e17ef74 | 2026-10-22 09:31 EDT | 10:02 | 31m 35s | 31m 35s | claude-opus-4-8 | 108 | 107,342 | 5,639,224 | 42,226 | 5,788,900 | §9 production activation shipped — real camera default; unit 1694/0, cov PASS, acceptance 21/21 both modes (no AC un-pended), grade 10 A/0, cross-feature bs-02/09/11/12 green; fix 1/3 |
 | SIGNOFF-2 | 47576b30 | 2026-10-22 10:10 EDT | 10:31 | 21m 04s | 21m 04s | claude-opus-4-8 | 102 | 212,483 | 5,095,947 | 35,641 | 5,344,173 | packet (round-2) prepared @ 9345e45 after PERM-5; unit 1694/0, cov PASS, bs-19 acceptance 21/21 both modes, regression 340/4 (carried flakes only), grade 10 A/0 (fresh independent re-grade); awaiting human decision |
-| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-22 10:31** | **14h 30m** | **9h 06m** |  | **3,088** | **5,303,065** | **193,572,712** | **1,186,850** | **200,065,715** |  |
+| SIGNOFF-DECISION | 4d1562f8 | 2026-10-22 10:56 EDT | 10:59 | 3m 33s | 3m 33s | claude-opus-4-8 | 36 | 75,755 | 1,568,892 | 15,164 | 1,659,847 | SIGNOFF-2 changes requested (Matt Quirk, 2026-10-22): on-device preview paints the downsampled 64px Frame (rotated/pixelated/laggy) instead of the plugin's native CameraPreview — new phase VIEW-5 (render via CameraPreview(controller), keep Frame for sampling only, D-9) before a fresh SIGNOFF-3 |
+| **Feature total** |  | **2026-10-20 20:38 EDT** | **2026-10-22 10:59** | **14h 34m** | **9h 10m** |  | **3,124** | **5,378,820** | **195,141,604** | **1,202,014** | **201,725,562** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
 | 1 | [signoff/round-1.md](signoff/round-1.md) | `1d634e3` | bs-19 10 A/0 | 🔁 **Changes requested** 2026-10-22 — Matt Quirk: resolve §9 toward production activation (ship real camera by default) → PERM-5, then SIGNOFF-2. Clean re-run was green (regression 340/4 = carried flakes only; scorecard https://claude.ai/artifact/4JfXYVUKW6FPoHp3rmJ4Pa); superseded attempt 1 (@ `1d01c9d`) |
-| 2 | [signoff/round-2.md](signoff/round-2.md) | `9345e45` (code `9c8d697`) | bs-19 10 A/0 | ⬜ **Awaiting decision** 2026-10-22 — prepared after PERM-5 (real camera shipped by default). Unit 1694/0, cov PASS, acceptance 21/21 both modes, regression 340/4 (carried flakes only); `design_system` 27/0 (AC-14 holds). §10E on-device walkthrough is the last human step |
+| 2 | [signoff/round-2.md](signoff/round-2.md) | `9345e45` (code `9c8d697`) | bs-19 10 A/0 | 🔁 **Changes requested** 2026-10-22 — Matt Quirk: the live preview paints the downsampled 64px `Frame` (rotated 90° CCW / pixelated / laggy on-device) instead of the plugin's native `CameraPreview` → render via `CameraPreview(controller)`, keep the `Frame` for sampling only (VIEW-5, D-9), then SIGNOFF-3. Automated state was green (regression 340/4 = carried flakes only) |
+| 3 | _pending_ | — | — | ⬜ **Not yet prepared** — SIGNOFF-3 runs after VIEW-5 |

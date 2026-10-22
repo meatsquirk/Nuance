@@ -3,7 +3,7 @@
 **Feature:** [bs-19-live-camera-capture.feature](../../bs-19-live-camera-capture.feature) ·
 **Master plan:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **At code:** `9345e45` (plans; code @ `9c8d697`) · branch `feat/bs-19-live-camera-capture` · **Prepared:** 2026-10-22 · **Phase:** SIGNOFF-2 (fresh packet after PERM-5)
-**Decision:** ⬜ _Awaiting human decision._
+**Decision:** 🔁 **Changes requested** — 2026-10-22, Matt Quirk. The live preview renders the downsampled 64px sampling `Frame` via a per-cell `CustomPainter` (`_FramePainter`, per-pixel `drawRect`) rather than a real camera preview: on-device it is rotated 90° CCW (sensor orientation not applied), super-pixelated (64px upscaled), and laggy (per-frame CPU convert + thousands of `drawRect`s). **Fix:** render the preview with the plugin's native `CameraPreview(controller)` (full-res, correctly oriented, GPU); keep the downsampled `Frame` only for reticle colour sampling. → new behavior phase **VIEW-5** before a fresh **SIGNOFF-3**. This round-2 packet stays as history.
 
 > **What changed since Round 1.** SIGNOFF-1 was returned **changes requested** (2026-10-22, Matt Quirk): resolve §9
 > toward **production activation** — ship the real camera by default rather than wiring it dormant. Phase **PERM-5**
