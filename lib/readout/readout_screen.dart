@@ -7,7 +7,6 @@ import 'all_spaces_region.dart';
 import 'name_header.dart';
 import 'provenance_region.dart';
 import 'readout_controller.dart';
-import 'space_selector.dart';
 import 'temperature_line.dart';
 import 'value_region.dart';
 import 'value_scale.dart';
@@ -16,12 +15,10 @@ import 'value_scale.dart';
 ///
 /// It owns a [ReadoutController] built from the app-injected services
 /// ([AppScope]) and lays out every region — name, value + grayscale, the 0–10
-/// value scale, temperature, the colour-space selector, the all-spaces region,
+/// value scale, temperature, the all-spaces region (every colour space at once),
 /// provenance and the actions bar — so the acceptance finders and the behaviour
-/// phases have stable anchors. The [ValueScale] and [AllSpacesRegion] regions
-/// are READOUT-2 shells wired in behind the existing regions (behaviour
-/// unchanged, the selector still present); their real readings land in their
-/// behaviour phases.
+/// phases have stable anchors. [AllSpacesRegion] shows all four colour spaces
+/// together (AC-4); the one-at-a-time selector it replaced is gone.
 class ReadoutScreen extends StatefulWidget {
   const ReadoutScreen({required this.sample, super.key});
 
@@ -89,12 +86,10 @@ class _ReadoutScreenState extends State<ReadoutScreen> {
                 const SizedBox(height: 12),
                 TemperatureLine(controller: controller),
                 const SizedBox(height: 12),
-                // The one-at-a-time selector stays until READOUT-3 removes it.
-                SpaceSelector(controller: controller),
-                const SizedBox(height: 12),
-                // READOUT-2 shell: the all-spaces region anchor (AC-4/AC-5);
-                // READOUT-3 renders every space's values and drops the selector.
-                const AllSpacesRegion(),
+                // Every colour space shown together — CIELCh, Munsell, sRGB and
+                // CIELAB — with no one-at-a-time selector (AC-4). READOUT-6 makes
+                // each space name tappable to reveal its definition.
+                AllSpacesRegion(controller: controller),
                 const SizedBox(height: 12),
                 ProvenanceRegion(controller: controller),
                 const SizedBox(height: 16),

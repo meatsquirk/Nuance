@@ -54,7 +54,9 @@ const Map<String, String> pendingACs = {
   'AC-1': 'READOUT-4',
   'AC-2': 'READOUT-5',
   'AC-3': 'READOUT-4',
-  'AC-4': 'READOUT-3',
+  // AC-4 un-pended by READOUT-3 (2026-10-25): every colour space shown together
+  // in the all-spaces region, the one-at-a-time selector removed — proven green
+  // by `TestAC04_AllSpaces`.
   'AC-5': 'READOUT-6',
   // AC-6 un-pended by A11Y-2 (2026-10-25): accessibility features off by
   // default — satisfied by the A11Y-1 shell's `DisplaySettings` default and
@@ -87,6 +89,7 @@ const Set<String> behaviorPhases = {
 /// un-pends its last AC.
 const Set<String> completedBehaviorPhases = {
   'A11Y-2', // un-pended AC-6 (accessibility features off by default)
+  'READOUT-3', // un-pended AC-4 (every colour space shown together, no selector)
 };
 
 /// Every AC id the bs-20 acceptance suite covers (the master plan's 9 ACs).

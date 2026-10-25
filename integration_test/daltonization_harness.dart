@@ -53,7 +53,7 @@ import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/palette/palette_controller.dart';
-import 'package:paint_color_assistant/readout/space_selector.dart';
+import 'package:paint_color_assistant/readout/all_spaces_region.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/store/cvd_profile_store.dart';
@@ -424,17 +424,23 @@ class DaltonizationHarness {
   /// Readout, carrying [screenSample]'s provenance label.
   Finder get provenanceBadge => find.byType(ProvenanceBadge);
 
-  /// The Readout's numeric colour reading for the selected space (AC-8) — a
-  /// public read of the sample's **stored** colour values as rendered text
-  /// (`SpaceSelector.valuesKey`).
+  /// The Readout's numeric colour readings (AC-8) — a public read of the
+  /// sample's **stored** colour values as rendered text, the joined values of
+  /// every colour space shown together in the all-spaces region
+  /// (`AllSpacesRegion.regionKey`; bs-20 READOUT-3 replaced the one-at-a-time
+  /// selector this used to read with that region).
   ///
-  /// It is derived from the stored `Sample.coordinates` only — never from the
-  /// display remap, which transforms the swatch colour alone — so a daltonized
-  /// render must leave it unchanged. AC-8 captures it off and asserts it holds
-  /// while the remap is on (the stored values are untouched) with the swatch as
-  /// the control that the display did change.
-  String get storedValuesText =>
-      tester.widget<Text>(find.byKey(SpaceSelector.valuesKey)).data!;
+  /// Every space's values are derived from the stored `Sample.coordinates` only
+  /// — never from the display remap, which transforms the swatch colour alone —
+  /// so a daltonized render must leave them unchanged. AC-8 captures them off and
+  /// asserts they hold while the remap is on (the stored values are untouched)
+  /// with the swatch as the control that the display did change.
+  String get storedValuesText => tester
+      .widgetList<Text>(find.descendant(
+          of: find.byKey(AllSpacesRegion.regionKey),
+          matching: find.byType(Text)))
+      .map((t) => t.data ?? '')
+      .join(' ');
 
   /// Opens the display and simulation settings panel from the current screen
   /// (the E2 entry the shared chrome shows on every screen).

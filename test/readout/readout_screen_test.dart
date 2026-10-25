@@ -43,6 +43,10 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   Sample sample = _sample,
 }) {
+  // The readout now shows every colour space at once (READOUT-3), so its
+  // scrollable body is taller than the default 600px test surface — give the
+  // tests a tall viewport so every region (down to the actions bar) is laid out.
+  _useTallView(tester);
   return tester.pumpWidget(
     AppScope(
       dependencies: _deps(),
@@ -51,9 +55,21 @@ Future<void> _pumpScreen(
   );
 }
 
-/// The text currently rendered in the colour-space values region.
-String _spaceValues(WidgetTester tester) =>
-    tester.widget<Text>(find.byKey(SpaceSelector.valuesKey)).data ?? '';
+/// Sizes the test surface tall enough to lay out the whole readout body, so a
+/// region near the bottom (the actions bar) is rendered without scrolling.
+void _useTallView(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+}
+
+/// The joined text currently rendered in the all-spaces region (every colour
+/// space is shown together — AC-4).
+String _spaceValues(WidgetTester tester) => tester
+    .widgetList<Text>(find.descendant(
+        of: find.byKey(AllSpacesRegion.regionKey), matching: find.byType(Text)))
+    .map((t) => t.data ?? '')
+    .join(' ');
 
 void main() {
   testWidgets('lays out every region with a stable anchor', (tester) async {
@@ -71,9 +87,8 @@ void main() {
       expect(find.byKey(SpaceDefinition.nameKey(space)), findsOneWidget);
     }
     expect(find.byKey(TemperatureLine.lineKey), findsOneWidget);
-    // The one-at-a-time selector is still present (removed in READOUT-3).
-    expect(find.byKey(SpaceSelector.selectorKey), findsOneWidget);
-    expect(find.byKey(SpaceSelector.valuesKey), findsOneWidget);
+    // The one-at-a-time selector is gone (READOUT-3): every space shows at once.
+    expect(find.byType(SpaceSelector), findsNothing);
     expect(find.byKey(ProvenanceRegion.regionKey), findsOneWidget);
     expect(find.byKey(ActionsBar.barKey), findsOneWidget);
     expect(find.byKey(ActionsBar.speakKey), findsOneWidget);
@@ -108,25 +123,22 @@ void main() {
     );
   });
 
-  testWidgets('offers the four colour spaces and starts on CIELCh',
+  testWidgets('shows every colour space together, with no selector (AC-4)',
       (tester) async {
     await _pumpScreen(tester);
+    // Every space is labelled...
     for (final space in ReadoutSpace.values) {
       expect(find.text(SpaceSelector.labelFor(space)), findsOneWidget);
     }
-    // Starts on CIELCh: the values region shows the cylindrical readout (the
-    // degree-marked hue identifies it) and nothing from the other spaces.
-    expect(_spaceValues(tester), contains('°'));
-  });
-
-  testWidgets('selecting a space shows it and hides the previous one',
-      (tester) async {
-    await _pumpScreen(tester);
-    await tester.tap(find.text('Munsell'));
-    await tester.pump();
-    // Munsell notation is now shown; the CIELCh degree marker is gone.
-    expect(_spaceValues(tester), contains('10R'));
-    expect(_spaceValues(tester), isNot(contains('°')));
+    // ...and all four spaces' values are shown at once — CIELCh (degree-marked),
+    // Munsell (10R), the sRGB hex and the CIELAB a*/b* — not one at a time.
+    final shown = _spaceValues(tester);
+    expect(shown, contains('°'), reason: 'CIELCh is shown');
+    expect(shown, contains('10R'), reason: 'Munsell is shown');
+    expect(shown, matches(RegExp(r'#[0-9a-fA-F]{6}')), reason: 'sRGB is shown');
+    expect(shown, contains('34'), reason: 'the CIELAB b* reading is shown');
+    // No one-at-a-time selector remains.
+    expect(find.byType(SpaceSelector), findsNothing);
   });
 
   testWidgets('enables the navigation and speak actions; acknowledge only for '
@@ -182,19 +194,33 @@ void main() {
 
   testWidgets('keeps its controller across a dependency change',
       (tester) async {
+    const fresh = Sample(
+      name: 'Deep Olive Green',
+      coordinates: ColorCoordinates(lightness: 40, a: -8, b: 24),
+      provenance: Provenance(ProvenanceTier.measured),
+      justCaptured: true,
+    );
+    _useTallView(tester);
     Widget tree(AppDependencies deps) => AppScope(
           dependencies: deps,
-          child: const MaterialApp(home: ReadoutScreen(sample: _sample)),
+          child: const MaterialApp(home: ReadoutScreen(sample: fresh)),
         );
     await tester.pumpWidget(tree(_freshDeps()));
-    // Change a selection, then push a new (distinct) scope so the screen's
-    // didChangeDependencies runs again without rebuilding the controller.
-    await tester.tap(find.text('Munsell'));
+    expect(find.byKey(ActionsBar.justCapturedKey), findsOneWidget);
+
+    // Acknowledge the capture — mutable controller state (the marker clears).
+    await tester.ensureVisible(find.byKey(ActionsBar.acknowledgeKey));
     await tester.pump();
+    await tester.tap(find.byKey(ActionsBar.acknowledgeKey));
+    await tester.pump();
+    expect(find.byKey(ActionsBar.justCapturedKey), findsNothing);
+
+    // Push a new (distinct) scope so didChangeDependencies runs again. The
+    // acknowledged state survives, proving the controller was not re-created
+    // from the still-just-captured widget sample.
     await tester.pumpWidget(tree(_freshDeps()));
     await tester.pump();
-    // The selection survives, proving the controller was not re-created.
-    expect(_spaceValues(tester), contains('10R'));
+    expect(find.byKey(ActionsBar.justCapturedKey), findsNothing);
   });
 
   testWidgets('disposes its controller when removed', (tester) async {

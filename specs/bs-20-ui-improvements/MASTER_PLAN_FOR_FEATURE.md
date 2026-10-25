@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** In progress — G-2 approved 2026-10-25 (Matt Quirk); behavior stage open. Next A11Y-2.
+**Status:** In progress — behavior stage; READOUT-3 done (AC-4). Next READOUT-4.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -36,7 +36,7 @@
 | AC-1 | The lightness value is shown in a prominent bordered card | ITEST-2 `TestAC01_HeroCard` | READOUT-4 | ⬜ Todo |
 | AC-2 | The Munsell value reads on a 0-10 scale with the sample marked | ITEST-2 `TestAC02_ValueScale` | READOUT-5 | ⬜ Todo |
 | AC-3 | The true-colour swatch is as large as the grayscale swatch | ITEST-2 `TestAC03_EqualSwatches` | READOUT-4 | ⬜ Todo |
-| AC-4 | Every colour space is shown together on the readout | ITEST-2 `TestAC04_AllSpaces` | READOUT-3 | ⬜ Todo |
+| AC-4 | Every colour space is shown together on the readout | ITEST-2 `TestAC04_AllSpaces` | READOUT-3 | ✅ Done |
 | AC-5 | The painter opens a colour space's name to learn what it means | ITEST-2 `TestAC05_Definitions` | READOUT-6 | ⬜ Todo |
 | AC-6 | Accessibility features are off by default | ITEST-3 `TestAC06_DefaultOff` | A11Y-2 | ✅ Done |
 | AC-7 | With accessibility features off, Speak is hidden | ITEST-3 `TestAC07_SpeakHidden` | READOUT-7 | ⬜ Todo |
@@ -137,8 +137,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 6 | ITEST-3 | acceptance-tests: AC-6/7/8 (pending) + red baseline | ✅ Done | 4,608,096 | 14m 06s | 3/3 skip default; run-pending AC-7/AC-8 red (Speak gate, READOUT-7), AC-6 green at baseline; grade 3 A; no lib change |
 | 7 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,196,206 | 3m 54s | packet assembled in modules/ITEST.md; suite 9 A; G-2 approved 2026-10-25 (Matt Quirk): keep A11Y-2, bs-01 reconciliation confirmed |
 | 8 | A11Y-2 | AC-6 accessibility off by default | ✅ Done | 3,324,077 | 7m 35s | un-pended AC-6 (green at baseline, shell-satisfied); no lib change; smoke 7/7, unit 1654/0, cov PASS (none touched); grade A |
-| 9 | READOUT-3 | AC-4 all spaces at once; retire bs-01 AC-5 selector test (D-3) | ⬜ Next | | | startable now; serial with other READOUT-* |
-| 10 | READOUT-4 | AC-1 hero card + AC-3 equal swatches | ⬜ Todo | | | |
+| 9 | READOUT-3 | AC-4 all spaces at once; retire bs-01 AC-5 selector test (D-3) | ✅ Done | 19,357,101 | 43m 15s | AC-4 green; selector removed (class kept, un-rendered); bs-01/bs-08/bs-10 harnesses + screen unit test reconciled; unit 1653/0, cov 100% 2 touched, grade A |
+| 10 | READOUT-4 | AC-1 hero card + AC-3 equal swatches | ⬜ Next | | | startable now; serial with other READOUT-* |
 | 11 | READOUT-5 | AC-2 0–10 value scale | ⬜ Todo | | | |
 | 12 | READOUT-6 | AC-5 per-space definitions | ⬜ Todo | | | |
 | 13 | READOUT-7 | AC-7 + AC-8 Speak gating; reconcile bs-01 AC-8 test (D-3); G-3 | ⬜ Todo | | | |
@@ -149,11 +149,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**G-2 approved** (2026-10-25, Matt Quirk: keep A11Y-2). **A11Y-2 un-pended AC-6** — accessibility off by default, already satisfied by the A11Y-1 shell, so no `lib/` change: deleted the AC-6 row from the pending gate, recorded A11Y-2 complete. AC-6 now runs and passes in the default settings run; smoke 7/7, unit 1654/0, coverage PASS (no touched lib), grade A. A11Y + ITEST modules complete.
-- **Next: the READOUT behavior stage** — READOUT-3/4/5/6/7/8 remain. They share `lib/readout/` so run **serially** (merge-risky). Suggested order follows the session log (READOUT-3 first).
-- **READOUT-7 also needs G-3** (confirm hiding Speak by default is OK for bs-11 conformance) and does the bs-01 AC-8 Speak reconciliation; READOUT-3 does the bs-01 AC-5 selector reconciliation.
-- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart`, a merge-risk for the behavior stage.
-- 8 ACs still pending (AC-1/2/3/4/5/7/8/9); pending-gate `isNotEmpty` still holds.
+**READOUT-3 done — AC-4 green** (every colour space shown together; the one-at-a-time selector removed from the screen). The `SpaceSelector` class is kept un-rendered (the G-2-approved AC-4/AC-5 tests reference the type). Removing the selector cascaded wider than the plan's bs-01-AC-5 line: reconciled bs-01 (`harness`/`harness_test`/AC-12 → `whenForceRebuild`), bs-10 (`storedValuesText` → all-spaces region), bs-08 + bs-01 readout harnesses (tall viewport, since the taller readout pushed the actions bar off 800×600), and the readout screen unit test. unit 1653/0, cov 100% on 2 touched, grade A; regression green (bs-01 11/11+5/5, bs-10 25, bs-08 21, bs-05 26, bs-02 19).
+- **Next: READOUT-4** (AC-1 hero card + AC-3 equal swatches). READOUT-4/5/6/7/8 remain; share `lib/readout/` → run **serially**.
+- **Shared-screen note:** the readout body is now taller than the default test surface — any remaining phase whose harness taps the actions bar or a bottom region must size a tall viewport (bs-01/bs-08 pattern). READOUT-7 (Speak) will hit this and still needs **G-3** + the bs-01 AC-8 Speak reconciliation.
+- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart` (READOUT-3 did **not** touch it).
+- 7 ACs still pending (AC-1/2/3/5/7/8/9); pending-gate `isNotEmpty` still holds.
 
 ## Token usage
 
@@ -171,7 +171,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | ITEST-3 | 72736d58 | 2026-10-25 02:24 EDT | 02:38 | 14m 06s | 14m 06s | claude-opus-4-8 | 70 | 202,835 | 4,348,549 | 56,642 | 4,608,096 | settings/Speak AC tests AC-6/7/8 pending + red baseline (AC-7/AC-8 red, AC-6 green at baseline), grade 3 A; no lib change |
 | ITEST-4 | 1a1a706f | 2026-10-25 02:50 EDT | 02:54 | 3m 54s | 3m 54s | claude-opus-4-8 | 28 | 64,628 | 1,121,790 | 9,760 | 1,196,206 | test-review packet assembled; suite 9 A, green at HEAD; G-2 awaiting human decision |
 | A11Y-2 | 16462f51 | 2026-10-25 02:56 EDT | 03:12 | 15m 52s | 7m 35s | claude-opus-4-8 | 76 | 82,001 | 3,218,252 | 23,748 | 3,324,077 | AC-6 un-pended (accessibility off by default, shell-satisfied; no lib change); smoke 7/7, unit 1654/0, cov PASS, grade A. G-2 (ITEST-4 test review) approved by Matt Quirk inside this session. |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 03:12** | **42h 55m** | **1h 43m** |  | **626** | **1,655,602** | **34,356,990** | **364,366** | **36,377,584** |  |
+| READOUT-3 | 99f0cc0a | 2026-10-25 03:15 EDT | 03:58 | 43m 15s | 43m 15s | claude-opus-4-8 | 188 | 297,157 | 18,940,098 | 119,658 | 19,357,101 | AC-4 un-pended + green (all spaces together, selector removed; SpaceSelector class kept un-rendered per approved tests); bs-01/bs-08/bs-10 harnesses + readout screen unit test reconciled; unit 1653/0, cov 100% on 2 touched, grade A (AC-4+AC-6); full readout-touching regression green |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 03:58** | **43h 38m** | **2h 27m** |  | **814** | **1,952,759** | **53,297,088** | **484,024** | **55,734,685** |  |
 
 ## Sign-off
 

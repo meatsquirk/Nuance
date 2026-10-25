@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** In progress — shells done (A11Y-1, READOUT-2); next the acceptance stage (ITEST-1)
+**Status:** In progress — behavior stage; READOUT-3 done (AC-4). Next READOUT-4.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | READOUT-1 | scaffold | — | ✅ Done | 3,024,669 | 6m 06s |
 | READOUT-2 | shell | — | ✅ Done | 5,244,417 | 11m 09s |
-| READOUT-3 | behavior | AC-4 | ⬜ Todo | | |
+| READOUT-3 | behavior | AC-4 | ✅ Done | 19,357,101 | 43m 15s |
 | READOUT-4 | behavior | AC-1, AC-3 | ⬜ Todo | | |
 | READOUT-5 | behavior | AC-2 | ⬜ Todo | | |
 | READOUT-6 | behavior | AC-5 | ⬜ Todo | | |
@@ -20,7 +20,7 @@
 
 ## Interface reconciliation
 
-- **Supersedes bs-01 AC-5** (one-space-at-a-time selector). READOUT-3 removes `SpaceSelector` and **retires the bs-01 AC-5 integration test** (`integration_test/bs01/.../*ac05*`): the one-at-a-time behaviour no longer exists. Record the retirement in READOUT-3's Result with reason (superseded by bs-20 AC-4).
+- **Supersedes bs-01 AC-5** (one-space-at-a-time selector). READOUT-3 removes the selector from the screen and **retired the bs-01 AC-5 integration test** (`integration_test/readout_test.dart`): the one-at-a-time behaviour no longer exists (superseded by bs-20 AC-4). **DONE 2026-10-25 — the removal cascaded wider than planned** (recorded in the READOUT-3 Result). The `SpaceSelector` *class* is **kept** (un-rendered) because the G-2-approved bs-20 AC-4 test asserts `find.byType(SpaceSelector) findsNothing` and AC-5 uses `SpaceSelector.labelFor` — both need the type importable, so deleting the file would weaken the approved tests. Reconciled consumers: bs-01 `harness_test` (selector-anchor smoke → all-spaces anchor), bs-01 AC-12 (its rebuild via the removed selector → new `whenForceRebuild` that re-pumps the app), bs-10 `daltonization_harness.storedValuesText` (read `SpaceSelector.valuesKey` → joined text under `AllSpacesRegion.regionKey`), and `test/readout/readout_screen_test.dart` (selector tests → all-spaces). The taller all-spaces readout pushed the actions bar below the 800×600 test surface, so bs-01's and bs-08's readout harnesses now size a tall viewport.
 - **Re-gates bs-01 AC-8** (Speak). READOUT-7 hides Speak when accessibility is off (default). bs-01's AC-8 test must be reconciled to **enable accessibility in its setup** so Speak is present; record the edit in READOUT-7's Result.
 - **bs-01 AC-1 / AC-12 unchanged in meaning**: the value is still the prominent reading (now in a card) and the capture banner / Acknowledge stay as-is.
 - Reads `DisplaySettings.accessibilityFeatures` through the existing `DisplayScope` (A11Y-1).
@@ -122,7 +122,74 @@ AC-5 selector and AC-8 Speak unchanged. No AC (shell). Fix passes: 0/3.
 - **Acceptance gate:** un-pend AC-4; `TestAC04_AllSpaces` green; **retire bs-01 AC-5 test** (D-3) and keep bs-01 suite green.
 - **Augments:** none
 
-## Phase READOUT-4 — Hero value card + equal swatches (AC-1, AC-3)
+### Result — READOUT-3
+
+AC-4 delivered: every colour space shown together, the one-at-a-time selector gone. Landed:
+- **`all_spaces_region.dart`** — `AllSpacesRegion` now takes the `ReadoutController` and renders, per
+  `ReadoutSpace`, the space label (`SpaceSelector.labelFor`) + its `controller.readoutForSpace(space)`
+  values; each space keeps a `SpaceDefinition` nameKey host (empty until READOUT-6).
+- **`readout_screen.dart`** — removed the `SpaceSelector` from the screen; passes the controller to
+  `AllSpacesRegion`; doc updated.
+- **`space_selector.dart` kept (un-rendered).** The G-2-approved bs-20 AC-4 test asserts
+  `find.byType(SpaceSelector) findsNothing` and AC-5 uses `SpaceSelector.labelFor`, so the type must stay
+  importable — deleting it would weaken the approved tests. Its `build` is now dead in production
+  (known gap below).
+- **Pending gate:** AC-4 row removed; READOUT-3 added to `completedBehaviorPhases`.
+
+Cross-feature reconciliation (the removal cascaded beyond the planned bs-01 AC-5 retirement — all forced by
+AC-4, all assertion-preserving):
+- bs-01 `integration_test/readout_test.dart` — **retired AC-5** (selector scenario; replaced by a
+  retirement note citing bs-20 `TestAC04_AllSpaces`); AC-12's forced rebuild switched from the removed
+  selector to the new `whenForceRebuild`; dropped the now-unused `_SpaceCase` + selector/controller imports.
+- bs-01 `integration_test/harness.dart` — dropped `whenSelectSpace`; added `whenForceRebuild` (re-pumps
+  `buildApp(deps)`, reusing the screen State → `build` re-runs over the same still-fresh sample, so a
+  confirm-in-build would reach 2); stored `deps`; **tall viewport** in `givenReadoutOf` (the taller readout
+  pushed the actions bar below 800×600).
+- bs-01 `integration_test/harness_test.dart` — selector-anchor smoke → `AllSpacesRegion.regionKey`.
+- bs-10 `integration_test/daltonization_harness.dart` — `storedValuesText` reads the joined text under
+  `AllSpacesRegion.regionKey` (stored-derived values, unchanged by the display remap) instead of
+  `SpaceSelector.valuesKey`; AC-8 meaning preserved.
+- bs-08 `integration_test/display_harness.dart` — tall viewport in `givenDisplay` / `givenComparison` (the
+  readout Speak control sat below the surface).
+- `test/readout/readout_screen_test.dart` — selector layout/selection tests → "all spaces together, no
+  selector"; controller-persistence test re-proved via acknowledge state; tall viewport helper.
+  `all_spaces_region_test.dart` rewritten for the controller signature + values.
+
+Gates: `flutter analyze` clean. Unit **1653/0** (net −1: merged two selector unit tests, dropped a
+redundant all-spaces test). Coverage gate **100% on both touched lib files** (`all_spaces_region.dart`,
+`readout_screen.dart`). Acceptance: bs-20 `TestAC04_AllSpaces` **green** (default run; AC-1/2/3/5/9 still
+pending-skipped), smoke 7/7. Regression (every integration suite that reaches the Readout): bs-01 readout
+11/11 + harness 5/5, bs-10 daltonization 25/25, bs-08 display 21/21, bs-05 comparison 26/26, bs-02 capture
+19/19, design_system 27/27, correction 22/22, bs-11 accessibility 19/19, bs-12 nfr 33/33 — all green.
+Grade gate (fresh independent grader): **AC-4 A, AC-6 A** — both discriminate (a one-space impl or a
+lingering selector fails AC-4). Fix passes: 1/3 (the taller-readout viewport fix, applied across bs-01 +
+bs-08 harnesses + the screen unit test). Tokens / time: see dashboard row.
+
+**Known gap:** `SpaceSelector.build` is dead production code (no longer rendered), retained only as the
+type/`labelFor` the approved AC-4/AC-5 tests reference. A later cleanup could move `labelFor` and delete the
+widget if those tests are updated. Its lines are untouched this phase, so the coverage gate does not apply.
+
+### Checkpoint / Handoff — READOUT-3
+
+- **Frozen interfaces:** `AllSpacesRegion({required ReadoutController controller})` renders every space's
+  label + values under `regionKey`, keeping one `SpaceDefinition` host per space. READOUT-6 (owns
+  `space_definition.dart` + `all_spaces_region.dart`) makes each space name tappable inside its
+  `SpaceDefinition.nameKey` and reveals the definition/example under `definitionKey` — it will move the
+  plain-text label into the tappable name and reconcile AC-5's Given (`find.descendant(of: nameKey,
+  matching: textContaining(label))`), which is still red/pending until then.
+- **Verification commands (reuse):** `flutter test test/ --coverage`; `dart run tool/coverage_gate.dart
+  <BASE>`; per-file `flutter test -d flutter-tester integration_test/ui_improvements/<file>_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` to run pending). `flutter` at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH); no `timeout` on macOS; integration runs
+  under `coord.sh with-lock`.
+- **Shared-screen note for the remaining READOUT-* phases:** the readout body is now taller than the
+  default 800×600 test surface. Any readout harness that taps the actions bar (Speak/compare/recipes/
+  acknowledge) or asserts a bottom region must size a tall viewport (the bs-01 / bs-08 pattern:
+  `tester.view.physicalSize = const Size(1200, 3000)` + `devicePixelRatio = 1.0` + `addTearDown(tester.view
+  .reset)`). READOUT-7 (Speak gating) and the bs-20 harness will hit this.
+- **Known gaps:** `SpaceSelector.build` dead (above). No open regressions — every readout-touching suite
+  was run green (see Result).
+- **Next:** READOUT-4 (hero card AC-1 + equal swatches AC-3) — shares `lib/readout/`, run serially.
 
 - **Kind:** behavior · **Target AC:** AC-1 (full), AC-3 (full)
 - **Depends on:** ITEST-4 (G-2) · **Blocks:** SIGNOFF-1
