@@ -62,7 +62,9 @@ const Map<String, String> pendingACs = {
   // AC-4 un-pended by READOUT-3 (2026-10-25): every colour space shown together
   // in the all-spaces region, the one-at-a-time selector removed — proven green
   // by `TestAC04_AllSpaces`.
-  'AC-5': 'READOUT-6',
+  // AC-5 un-pended by READOUT-6 (2026-10-25): each colour space's name is
+  // tappable and opening it reveals a fuller plain-language definition with an
+  // example — proven green by `TestAC05_Definitions`.
   // AC-6 un-pended by A11Y-2 (2026-10-25): accessibility features off by
   // default — satisfied by the A11Y-1 shell's `DisplaySettings` default and
   // proven green by `TestAC06_DefaultOff`.
@@ -97,6 +99,7 @@ const Set<String> completedBehaviorPhases = {
   'READOUT-3', // un-pended AC-4 (every colour space shown together, no selector)
   'READOUT-4', // un-pended AC-1 (bordered hero card) + AC-3 (equal-size swatches)
   'READOUT-5', // un-pended AC-2 (0–10 Munsell value scale with the value marked)
+  'READOUT-6', // un-pended AC-5 (per-space openable definitions with examples)
 };
 
 /// Every AC id the bs-20 acceptance suite covers (the master plan's 9 ACs).

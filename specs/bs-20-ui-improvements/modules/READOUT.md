@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** In progress — behavior stage; READOUT-5 done (AC-2). Next READOUT-6.
+**Status:** In progress — behavior stage; READOUT-6 done (AC-5). Next READOUT-7.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -14,7 +14,7 @@
 | READOUT-3 | behavior | AC-4 | ✅ Done | 19,357,101 | 43m 15s |
 | READOUT-4 | behavior | AC-1, AC-3 | ✅ Done | 6,914,808 | 21m 02s |
 | READOUT-5 | behavior | AC-2 | ✅ Done | 9,657,902 | 26m 19s |
-| READOUT-6 | behavior | AC-5 | ⬜ Todo | | |
+| READOUT-6 | behavior | AC-5 | ✅ Done | 6,235,338 | 17m 37s |
 | READOUT-7 | behavior | AC-7, AC-8 | ⬜ Todo | | |
 | READOUT-8 | behavior | AC-9 | ⬜ Todo | | |
 
@@ -337,6 +337,76 @@ Tokens / time: see dashboard row.
 - **Files:** `space_definition.dart`, `all_spaces_region.dart`
 - **Tasks:** make each space name tappable → reveal the fuller definition + example (copy from the spec's B2 draft; owner may edit). No tap needed to see the values.
 - **Acceptance gate:** un-pend AC-5; `TestAC05_Definitions` green.
+
+### Result — READOUT-6
+
+AC-5 delivered: each colour space's name is tappable and opening it reveals a
+fuller plain-language definition with an example; the values stay always
+visible (no tap needed). Landed:
+- **`space_definition.dart`** — the READOUT-2 `SizedBox.shrink` shell is now a
+  real control. `SpaceDefinition` is a `StatefulWidget` whose root is an
+  `InkWell` keyed `nameKey(space)` wrapping the space's label (`Text(label)`,
+  via `SpaceSelector.labelFor`) + an expand/collapse `Icon`; tapping toggles
+  `_open`. While open it renders the definition under `definitionKey(space)`,
+  so it is **hidden until the name is opened** (before/after). New static
+  `SpaceDefinition.definitionFor(space)` holds the per-space plain-language copy,
+  each with an example (D-4 presentation help text, owner may edit).
+- **`all_spaces_region.dart`** — dropped the separate plain-text label `Text`
+  (the label now lives inside the tappable name) and the now-unused
+  `space_selector.dart` import; keeps `Text(controller.readoutForSpace(space))`
+  so every space's **values stay always visible**. The label still appears
+  exactly once per space (inside the name), so the AC-4 unit/integration
+  assertions hold.
+- **Pending gate:** AC-5 row removed; READOUT-6 added to
+  `completedBehaviorPhases`.
+
+Gates: `flutter analyze lib/readout test/readout integration_test/ui_improvements`
+clean. Unit **1660/0** (+2: new open/close-reveal + all-spaces-definitions
+`space_definition_test.dart` cases; the shell anchor test strengthened).
+Coverage gate **100% on both touched lib files** (`space_definition.dart`,
+`all_spaces_region.dart`). Acceptance: bs-20 `TestAC05_Definitions` **green** in
+the default run; run-pending leaves only AC-7/AC-8 (READOUT-7) and AC-9
+(READOUT-8) red at their baselines — exactly their owning phases. Smoke 7/7 both
+modes; settings default green. Regression (every readout-touching suite): bs-01
+readout 11/11 + harness 5/5, bs-08 display 21/21, bs-10 daltonization 25/25,
+correction 22/22, design_system 27/27 — all green. (The 3 documented carried
+off-lane flakes — bs-06 palette AC-3/5, bs-07 self_assessment AC-4 — are
+unrelated to the readout and reproduce at merge-base `c00422f`.) Grade gate
+(fresh independent subagent over every un-pended AC test, adversarial on AC-5):
+**AC-1, AC-2, AC-3, AC-4, AC-5, AC-6 — 6 A / 0 B**. Fix passes: 0/3.
+Tokens / time: see dashboard row.
+
+**Known gap:** none introduced. `SpaceSelector.build` stays dead (READOUT-3 gap);
+`SpaceSelector.labelFor` is still the live label source (now called from
+`SpaceDefinition`). No tall viewport was needed — the bs-20 readout harness renders
+every space name hittable on the default surface (the all-spaces region sits above
+the lazy-ListView fold that bit READOUT-5's bottom provenance region).
+
+### Checkpoint / Handoff — READOUT-6
+
+- **Frozen interfaces:** `SpaceDefinition({required ReadoutSpace space})` renders
+  the tappable name under `SpaceDefinition.nameKey(space)` (contains the label)
+  and, while open, the definition under `SpaceDefinition.definitionKey(space)`;
+  `SpaceDefinition.definitionFor(space)` is the per-space copy (owner-editable).
+  `AllSpacesRegion` renders, per space, one `SpaceDefinition` then the space's
+  always-visible values; it no longer renders a separate label `Text`.
+- **Verification commands (reuse):** `flutter test test/ --coverage`;
+  `dart run tool/coverage_gate.dart <BASE>`; per-file
+  `flutter test -d flutter-tester integration_test/ui_improvements/<file>_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` to run pending). `flutter` at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH); no `timeout` on
+  macOS; integration under `coord.sh with-lock <feature> <PHASE> -- …`.
+- **Shared-screen note (still applies):** the readout `ListView` is lazy — a Then
+  on a **bottom** region (provenance, actions bar) must size a tall viewport
+  (bs-01/bs-08 pattern). READOUT-7 adds the Speak control to the bottom actions
+  bar and **will** hit this; its bs-01 AC-8 reconciliation already enables
+  accessibility. (READOUT-6's names/definitions sit above the fold, so no viewport
+  change was needed.)
+- **Known gaps:** none from this phase. Carried flakes unchanged.
+- **Next:** READOUT-7 (AC-7, AC-8 Speak gating) — **gate-blocked by G-3**; also
+  needs the bs-01 AC-8 reconciliation (enable accessibility in its setup).
+  READOUT-8 (AC-9 "Color" copy) is startable and independent, but shares
+  `lib/readout/` → run serially.
 
 ## Phase READOUT-7 — Speak gating (AC-7, AC-8)
 

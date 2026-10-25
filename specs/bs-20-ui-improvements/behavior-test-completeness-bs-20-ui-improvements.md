@@ -123,3 +123,34 @@ above. AC-2 is the newly un-pended one and earns A on the same rubric.
 - **AC-1 / AC-3 / AC-4 / AC-6** A (unchanged) — see the READOUT-4 re-grade above;
   READOUT-5 touched only `value_scale.dart` + `readout_screen.dart` (and two
   sibling-feature harness viewports), so none of these tests' behaviour moved.
+
+# READOUT-6 re-grade — un-pended tests against built behaviour (2026-10-25)
+
+Fresh independent re-grade of every **un-pended** AC test now that AC-5's
+behaviour is built — AC-1, AC-2, AC-3, AC-4, AC-5 (READOUT-6), AC-6. Graded by a
+fresh subagent reading the built `lib/readout/space_definition.dart` /
+`all_spaces_region.dart` and the tests, given the grids above as the baseline,
+with adversarial scrutiny on AC-5.
+
+**Result: 6 A, 0 B.** No downgrades against G1–G6; consistent with the grids
+above. AC-5 is the newly un-pended one and earns A.
+
+- **AC-5** A — `space_definition.dart` renders each space's name as a production
+  `InkWell` keyed `nameKey` wrapping `Text(label)`, and reveals the
+  `definitionFor(space)` copy under `definitionKey` only while `_open`. The test
+  loops all four `ReadoutSpace.values` (matches the 4 Examples), checks the
+  openable-name Given (`find.descendant(of: nameKey, matching: textContaining(label))`)
+  and the definition-hidden precondition (`findsNothing`) before the tap, then
+  asserts the definition is shown (`findsOneWidget`), non-empty, and carries an
+  example marker after the tap. Rejects all three named wrong impls: name not
+  tappable (no toggle → definition never built → `findsOneWidget` fails), tapping
+  shows nothing (before/after pair), and a definition with no example (the
+  `e.g.|example|for instance` regex). G2 clean — the definition comes from
+  production `definitionFor`, not a script. The example-marker is a bounded
+  heuristic proxy (the prior grid accepted it at A); all four built definitions
+  carry a real example.
+- **AC-1 / AC-2 / AC-3 / AC-4 / AC-6** A (unchanged) — see the re-grades above;
+  READOUT-6 touched only `space_definition.dart` + `all_spaces_region.dart`
+  (moved the plain-text label into the tappable name; values still rendered per
+  space), so none of these tests' behaviour moved. AC-4's signatures still
+  resolve under the all-spaces region and `SpaceSelector` is still absent.

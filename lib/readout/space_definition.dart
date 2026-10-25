@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
+import 'space_selector.dart' show SpaceSelector;
 import 'readout_controller.dart';
 
 /// A single colour space's name, openable to reveal a fuller plain-language
 /// definition and an example (AC-5).
 ///
-/// READOUT-2 shell — introduces the per-space [nameKey] / [definitionKey]
-/// anchors so the AC-5 acceptance test can find a space's name and its (yet
-/// unrevealed) definition. It renders an empty, findable placeholder for the
-/// named [space]; the still-present [SpaceSelector] keeps rendering the visible
-/// space labels until READOUT-3, so the shell adds no duplicate name text.
-/// READOUT-6 renders the tappable name and reveals the real definition + example
-/// under [definitionKey].
-class SpaceDefinition extends StatelessWidget {
+/// The space's *values* are always shown by [AllSpacesRegion]; this widget adds
+/// the educational layer on top: the space's name is a tappable control
+/// ([nameKey]) and opening it reveals a fuller plain-language definition with an
+/// example ([definitionKey]), tapping again hides it. The definition text is
+/// presentation-level help copy (D-4) — not new colour science — authored from
+/// the spec's B2 draft; the owner may edit [definitionFor].
+///
+/// READOUT-6 — renders the real tappable name and the revealed definition. (The
+/// READOUT-2 shell rendered only an empty [nameKey] placeholder.)
+class SpaceDefinition extends StatefulWidget {
   const SpaceDefinition({required this.space, super.key});
 
   /// Stable anchor for [space]'s tappable name.
@@ -27,10 +30,86 @@ class SpaceDefinition extends StatelessWidget {
   /// The colour space this definition is for.
   final ReadoutSpace space;
 
+  /// The fuller plain-language definition of [space], with an example (AC-5).
+  ///
+  /// Presentation-level help copy (D-4), authored from the spec's B2 draft; the
+  /// owner may edit it. Each definition names an everyday example ("e.g. …") so
+  /// a painter unfamiliar with the space learns what it means.
+  static String definitionFor(ReadoutSpace space) {
+    switch (space) {
+      case ReadoutSpace.cielch:
+        return 'A perceptual space that describes a colour by its lightness, '
+            'its chroma (how vivid it is) and its hue angle — close to how the '
+            'eye judges colour. E.g. a bright red and a muted red share a hue '
+            'but differ in chroma.';
+      case ReadoutSpace.munsell:
+        return 'An artist’s notation that names a colour by Hue, Value '
+            '(lightness from 0 to 10) and Chroma (strength). For example, '
+            '10R 5/6 is a medium-light, moderately strong red.';
+      case ReadoutSpace.srgb:
+        return 'The red, green and blue a screen mixes to display the colour, '
+            'each from 0 to 255 and often written as a hex code. E.g. #C65D3B '
+            'is a warm terracotta.';
+      case ReadoutSpace.cielab:
+        return 'A device-independent space that places a colour by its '
+            'lightness and two axes: a* from green to red and b* from blue to '
+            'yellow. For instance, a positive a* and b* fall in the warm '
+            'orange-red region.';
+    }
+  }
+
+  @override
+  State<SpaceDefinition> createState() => _SpaceDefinitionState();
+}
+
+class _SpaceDefinitionState extends State<SpaceDefinition> {
+  /// Whether the fuller definition is revealed (the name has been opened).
+  bool _open = false;
+
+  void _toggle() => setState(() => _open = !_open);
+
   @override
   Widget build(BuildContext context) {
-    // Shell placeholder: the name anchor is present and findable; the tappable
-    // name and the revealed definition + example land in READOUT-6.
-    return SizedBox.shrink(key: nameKey(space));
+    final theme = Theme.of(context);
+    final label = SpaceSelector.labelFor(widget.space);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // The tappable space name (AC-5): opening it reveals the definition,
+        // tapping again hides it. The label text lives inside [nameKey] so the
+        // acceptance test finds the name as an openable label.
+        InkWell(
+          key: SpaceDefinition.nameKey(widget.space),
+          onTap: _toggle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label, style: theme.textTheme.labelLarge),
+                const SizedBox(width: 4),
+                Icon(
+                  _open ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                  semanticLabel:
+                      _open ? 'Hide $label definition' : 'Show $label definition',
+                ),
+              ],
+            ),
+          ),
+        ),
+        // The revealed definition + example (AC-5): present only while open, so
+        // it is hidden until the name is tapped.
+        if (_open)
+          Padding(
+            key: SpaceDefinition.definitionKey(widget.space),
+            padding: const EdgeInsets.only(top: 2, bottom: 4),
+            child: Text(
+              SpaceDefinition.definitionFor(widget.space),
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+      ],
+    );
   }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'readout_controller.dart';
 import 'space_definition.dart';
-import 'space_selector.dart';
 
 /// The all-colour-spaces region: every colour space shown together — CIELCh,
 /// Munsell, sRGB and CIELAB — with no one-at-a-time selector (AC-4), each name
@@ -26,7 +25,6 @@ class AllSpacesRegion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelStyle = Theme.of(context).textTheme.labelLarge;
     return Column(
       key: regionKey,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,12 +35,13 @@ class AllSpacesRegion extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // The per-space definition host: an (empty) findable anchor until
-                // READOUT-6 makes the name tappable and reveals its definition.
+                // The space's tappable name (carrying the space's label) and,
+                // when opened, its fuller definition + example (AC-5). The name
+                // is always shown; READOUT-6 makes it openable.
                 SpaceDefinition(space: space),
-                // The space's label and its values, shown together with every
-                // other space — the readout is no longer one space at a time.
-                Text(SpaceSelector.labelFor(space), style: labelStyle),
+                // The space's values, shown together with every other space —
+                // the readout is no longer one space at a time. Always visible,
+                // with no tap needed.
                 Text(controller.readoutForSpace(space)),
               ],
             ),
