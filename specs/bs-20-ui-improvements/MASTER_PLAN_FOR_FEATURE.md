@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** In progress — behavior stage; READOUT-6 done (AC-5). Next READOUT-8 (READOUT-7 gate-blocked by G-3).
+**Status:** In progress — behavior stage; READOUT-8 done (AC-9). Remaining READOUT-7 + SIGNOFF-1 both gate-blocked by G-3.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -41,7 +41,7 @@
 | AC-6 | Accessibility features are off by default | ITEST-3 `TestAC06_DefaultOff` | A11Y-2 | ✅ Done |
 | AC-7 | With accessibility features off, Speak is hidden | ITEST-3 `TestAC07_SpeakHidden` | READOUT-7 | ⬜ Todo |
 | AC-8 | Turning accessibility features on reveals Speak | ITEST-3 `TestAC08_SpeakShown` | READOUT-7 | ⬜ Todo |
-| AC-9 | The readout uses "Color" rather than "Colour" | ITEST-2 `TestAC09_ColorSpelling` | READOUT-8 | ⬜ Todo |
+| AC-9 | The readout uses "Color" rather than "Colour" | ITEST-2 `TestAC09_ColorSpelling` | READOUT-8 | ✅ Done |
 
 ## Design decisions
 
@@ -141,19 +141,21 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 10 | READOUT-4 | AC-1 hero card + AC-3 equal swatches | ✅ Done | 6,914,808 | 21m 02s | AC-1+AC-3 green; value in bordered SurfaceCard, swatches equal at 48px; ColorChip gained swatchSize param (default 16); unit 1654/0, cov 100% 2 touched, grade 4 A |
 | 11 | READOUT-5 | AC-2 0–10 value scale | ✅ Done | 9,657,902 | 26m 19s | AC-2 green; real 0–10 scale marks `munsell.value`; +2 sibling tall-viewports (lazy-ListView provenance); unit 1658/0, cov 100% 2 touched, grade 5 A |
 | 12 | READOUT-6 | AC-5 per-space definitions | ✅ Done | 6,235,338 | 17m 37s | AC-5 green; space name a tappable `InkWell` revealing a plain-language definition + example; values stay visible; unit 1660/0, cov 100% 2 touched, grade 6 A; no viewport change |
-| 13 | READOUT-7 | AC-7 + AC-8 Speak gating; reconcile bs-01 AC-8 test (D-3); G-3 | ⬜ Todo | | | gate-blocked by G-3 |
-| 14 | READOUT-8 | AC-9 "Color" copy | ⬜ Next | | | startable (independent); serial with READOUT-* |
+| 13 | READOUT-7 | AC-7 + AC-8 Speak gating; reconcile bs-01 AC-8 test (D-3); G-3 | ⬜ Next | | | gate-blocked by G-3 |
+| 14 | READOUT-8 | AC-9 "Color" copy | ✅ Done | 6,017,977 | 15m 01s | AC-9 green; `'Displayed colour'`→`'Displayed color'` + space-definition copy American; bs-10/unit label assertions reconciled; unit 1660/0, cov 100% 2 touched, grade 7 A |
 | 15 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ⬜ Todo | | | |
 
 *Tokens* / *Time* = phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**READOUT-6 done — AC-5 green.** Each colour space name is now a tappable `InkWell` (`space_definition.dart`) that reveals a fuller plain-language definition with an example (`SpaceDefinition.definitionFor`, owner-editable D-4 help copy); the space values stay always visible. `all_spaces_region.dart` dropped its separate label `Text` (the label moved into the tappable name). unit 1660/0, cov 100% on 2 touched, grade 6 A (fresh grader, adversarial on AC-5). Full readout-rendering regression green; no tall-viewport change needed (the names/definitions sit above the lazy-`ListView` fold).
-- **Next: READOUT-8** (AC-9 "Color" copy) — the only **startable** behavior phase; independent but shares `lib/readout/` → run serially.
-- **READOUT-7 (AC-7/AC-8 Speak gating) is gate-blocked by G-3** (confirm default-hidden Speak doesn't regress bs-11 accessibility-conformance). It also needs the bs-01 AC-8 Speak reconciliation (enable accessibility in setup) and will hit the lazy-`ListView` bottom-region limit (tall viewport, bs-01/bs-08 pattern).
-- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart` (READOUT-6 did **not** touch it).
-- 3 ACs still pending (AC-7/8/9); pending-gate `isNotEmpty` still holds.
+**READOUT-8 done — AC-9 green.** The readout's user-facing copy now uses the American "Color": the `'Displayed colour'` chip label and the four per-space definition strings (`space_definition.dart`) changed "colour"→"color"; no `Color` type or identifier touched. bs-10 daltonization + the `value_region` unit test's `'Displayed colour'` assertions were reconciled to `'Displayed color'`. unit 1660/0, cov 100% on 2 touched, grade 7 A (fresh grader, adversarial on AC-9). bs-10 25/25, bs-01 readout 11/11, bs-08 display 21/21, correction 22/22 all green.
+- **No startable behavior phase remains.** Both remaining phases wait on **G-3**:
+  - **READOUT-7** (AC-7/AC-8 Speak gating) — gate-blocked by G-3 (confirm default-hidden Speak doesn't regress bs-11 accessibility-conformance). Also needs the bs-01 AC-8 reconciliation (enable accessibility in setup) and will hit the lazy-`ListView` bottom-region limit (tall viewport, bs-01/bs-08 pattern — Speak sits in the bottom actions bar).
+  - **SIGNOFF-1** — blocked by G-3 and by READOUT-7.
+- **To unblock:** resolve G-3 via `/feature-next-phase --gate bs-20-ui-improvements G-3 approved|"<decision>"`.
+- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart` (READOUT-8 did **not** touch it).
+- 2 ACs still pending (AC-7/8); pending-gate `isNotEmpty` still holds.
 
 ## Token usage
 
@@ -175,7 +177,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | READOUT-4 | b7540bdd | 2026-10-25 04:03 EDT | 04:24 | 21m 02s | 21m 02s | claude-opus-4-8 | 118 | 211,720 | 6,654,770 | 48,200 | 6,914,808 | AC-1 + AC-3 un-pended & green: bordered SurfaceCard hero card (lightness largest reading), swatches equal at 48px; ColorChip swatchSize param added (default 16); unit 1654/0, cov 100% on 2 touched, grade 4 A; readout+ColorChip regression green |
 | READOUT-5 | c39d004f | 2026-10-25 04:38 EDT | 05:05 | 26m 19s | 26m 19s | claude-opus-4-8 | 148 | 202,457 | 9,403,241 | 52,056 | 9,657,902 | AC-2 un-pended & green: real 0–10 Munsell value scale marks the sample's step (colour-independent cue + Semantics selected); +2 sibling tall-viewports (lazy-ListView provenance regression, bs-10 AC-4 / correction AC-10); unit 1658/0, cov 100% on 2 touched, grade 5 A; readout-rendering regression green |
 | READOUT-6 | 41cb8a72 | 2026-10-25 05:14 EDT | 05:32 | 17m 37s | 17m 37s | claude-opus-4-8 | 114 | 200,065 | 5,994,129 | 41,030 | 6,235,338 | AC-5 green; tappable space name reveals plain-language definition + example; unit 1660/0, cov 100% 2 touched, grade 6 A; no viewport change |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 05:32** | **44h 43m** | **3h 32m** |  | **1,194** | **2,567,001** | **75,349,228** | **625,310** | **78,542,733** |  |
+| READOUT-8 | 709c912c | 2026-10-25 05:35 EDT | 05:50 | 15m 01s | 15m 01s | claude-opus-4-8 | 112 | 177,132 | 5,804,391 | 36,342 | 6,017,977 | AC-9 un-pended & green: readout copy American 'Color' ('Displayed colour'→'Displayed color' + 4 space definitions); bs-10/unit label assertions reconciled; unit 1660/0, cov 100% on 2 touched, grade 7 A; readout+bs-10 regression green |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 05:50** | **44h 58m** | **3h 47m** |  | **1,306** | **2,744,133** | **81,153,619** | **661,652** | **84,560,710** |  |
 
 ## Sign-off
 

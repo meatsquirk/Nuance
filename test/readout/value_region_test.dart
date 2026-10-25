@@ -102,7 +102,7 @@ void main() {
     // One display ColorChip, labelled (never a bare swatch) and not repeating
     // the colour name (which the name header owns).
     final chip = tester.widget<ColorChip>(find.byType(ColorChip));
-    expect(chip.label, 'Displayed colour');
+    expect(chip.label, 'Displayed color');
     final rgb = controller.displayColor;
     expect(chip.color, Color.fromARGB(255, rgb.red, rgb.green, rgb.blue),
         reason: 'the chip carries the sample true colour (trichromat view)');

@@ -447,7 +447,7 @@ void main() {
       // value and the original (unremapped) swatch colour — captured so the
       // "on" state can be compared against it (the swatch colour must move; the
       // label and value must not).
-      expect(find.text('Displayed colour'), findsOneWidget,
+      expect(find.text('Displayed color'), findsOneWidget,
           reason: 'AC-3 baseline: the swatch keeps its text label off');
       expect(find.text('55'), findsWidgets,
           reason: 'AC-3 baseline: the numeric lightness value is shown off');
@@ -464,11 +464,11 @@ void main() {
 
       // Then: the swatch colour changed — it is now the remap and no swatch is
       // still the original (`_expectKnownSwatchRemapped`) — WHILE the label and
-      // numeric value stayed: the same 'Displayed colour' label and '55' reading
+      // numeric value stayed: the same 'Displayed color' label and '55' reading
       // are still present. Only the swatch colour changes (SI Accessibility:
       // meaning is never carried by colour alone).
       _expectKnownSwatchRemapped(tester, h.storedProfile, screen: 'AC-3');
-      expect(find.text('Displayed colour'), findsOneWidget,
+      expect(find.text('Displayed color'), findsOneWidget,
           reason: 'AC-3: the label stays while the swatch colour changes');
       expect(find.text('55'), findsWidgets,
           reason: 'AC-3: the numeric value stays while the swatch colour changes');

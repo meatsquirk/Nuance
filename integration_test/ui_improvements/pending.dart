@@ -68,9 +68,11 @@ const Map<String, String> pendingACs = {
   // AC-6 un-pended by A11Y-2 (2026-10-25): accessibility features off by
   // default — satisfied by the A11Y-1 shell's `DisplaySettings` default and
   // proven green by `TestAC06_DefaultOff`.
+  // AC-9 un-pended by READOUT-8 (2026-10-25): the readout copy uses the
+  // American "Color" and no "Colour"/"colour" appears — proven green by
+  // `TestAC09_ColorSpelling`.
   'AC-7': 'READOUT-7',
   'AC-8': 'READOUT-7',
-  'AC-9': 'READOUT-8',
 };
 
 /// The behaviour phases allowed to own a pending AC.
@@ -100,6 +102,7 @@ const Set<String> completedBehaviorPhases = {
   'READOUT-4', // un-pended AC-1 (bordered hero card) + AC-3 (equal-size swatches)
   'READOUT-5', // un-pended AC-2 (0–10 Munsell value scale with the value marked)
   'READOUT-6', // un-pended AC-5 (per-space openable definitions with examples)
+  'READOUT-8', // un-pended AC-9 ("Color" rather than "Colour" in readout copy)
 };
 
 /// Every AC id the bs-20 acceptance suite covers (the master plan's 9 ACs).

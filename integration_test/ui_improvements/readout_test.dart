@@ -244,7 +244,7 @@ void main() {
 
   // AC-9 (TestAC09_ColorSpelling, owner READOUT-8) — the readout copy uses
   // "Color", and the word "Colour" does not appear. Rejects any British "Colour"
-  // left in the readout copy (the shell renders "Displayed colour" today).
+  // left in the readout copy (the pre-READOUT-8 shell rendered "Displayed colour").
   acTestWidgets('AC-9', 'The readout copy uses "Color", not "Colour"', (tester) async {
     // Given: the painter is reading a sample.
     final harness = await givenReadoutOf(tester, warmTerracotta);

@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** In progress — behavior stage; READOUT-6 done (AC-5). Next READOUT-7.
+**Status:** In progress — behavior stage; READOUT-8 done (AC-9). Next READOUT-7 (gate-blocked by G-3).
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -16,7 +16,7 @@
 | READOUT-5 | behavior | AC-2 | ✅ Done | 9,657,902 | 26m 19s |
 | READOUT-6 | behavior | AC-5 | ✅ Done | 6,235,338 | 17m 37s |
 | READOUT-7 | behavior | AC-7, AC-8 | ⬜ Todo | | |
-| READOUT-8 | behavior | AC-9 | ⬜ Todo | | |
+| READOUT-8 | behavior | AC-9 | ✅ Done | 6,017,977 | 15m 01s |
 
 ## Interface reconciliation
 
@@ -425,5 +425,69 @@ the lazy-ListView fold that bit READOUT-5's bottom provenance region).
 - **Tasks:** replace "Colour"/"colour" with "Color"/"color" in readout-screen copy; leave Dart `Color` type and code identifiers alone.
 - **Acceptance gate:** un-pend AC-9; `TestAC09_ColorSpelling` green.
 
-### Result  <!-- filled on completion -->
-### Checkpoint / Handoff  <!-- filled on completion -->
+### Result — READOUT-8
+
+AC-9 delivered: the readout's user-facing copy uses the American "Color" and no
+"Colour"/"colour" appears. Landed (user-facing copy only — no logic, no `Color`
+type or identifier touched):
+- **`value_region.dart`** — the displayed-colour `ColorChip` label
+  `'Displayed colour'` → `'Displayed color'`. This is the always-visible readout
+  line; it renders as `Flexible(child: Text(label))`, so the American spelling is
+  real visible text and gives the AC's positive `\bcolor\b` control.
+- **`space_definition.dart`** — the four per-space definition strings
+  (`definitionFor`) changed "colour" → "color" (5 occurrences). These are
+  reveal-on-tap readout copy (D-4 help text); each keeps its example marker so
+  AC-5 is unaffected.
+- **Pending gate:** AC-9 row removed from `pendingACs`; READOUT-8 added to
+  `completedBehaviorPhases`. Only AC-7/AC-8 remain pending (READOUT-7).
+
+Cross-feature / test reconciliation (forced by the chip-label change,
+assertion-preserving):
+- `test/readout/value_region_test.dart` — the unit assertion `chip.label ==
+  'Displayed colour'` → `'Displayed color'`.
+- `integration_test/daltonization_test.dart` (bs-10 AC-3) — two
+  `find.text('Displayed colour')` → `find.text('Displayed color')` (the swatch
+  label that must stay while the swatch colour remaps); meaning preserved.
+- The AC-9 test's now-stale "shell renders 'Displayed colour' today" comment
+  updated to past tense (comment only; no assertion changed).
+
+Gates: `flutter analyze lib/readout test/readout integration_test/ui_improvements
+integration_test/daltonization_test.dart` clean. Unit **1660/0** (no count
+change — copy edit). Coverage gate **100% on both touched lib files**
+(`value_region.dart`, `space_definition.dart`). Acceptance: bs-20
+`TestAC09_ColorSpelling` **green** in the default run **and** run-pending; readout
+suite 6/6 both modes; smoke 7/7; settings green (AC-6 pass, AC-7/AC-8
+pending-skipped). Regression (readout-rendering + the touched bs-10 suite):
+bs-10 daltonization 25/25, bs-01 readout 11/11, bs-08 display 21/21, correction
+22/22 — all green. (The 3 documented carried off-lane flakes — bs-06 palette
+AC-3/5, bs-07 self_assessment AC-4 — are unrelated and reproduce at merge-base
+`c00422f`.) Grade gate (fresh independent subagent over every un-pended AC test,
+adversarial on AC-9): **AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-9 — 7 A / 0 B**.
+Fix passes: 0/3.
+
+**Known gap:** none introduced. `SpaceSelector.build` stays dead (READOUT-3 gap).
+The code-comment British spellings under `lib/readout/` are developer comments,
+never rendered — out of AC-9's user-facing scope, left unchanged.
+
+### Checkpoint / Handoff — READOUT-8
+
+- **Frozen interfaces:** the displayed-colour swatch label is `'Displayed color'`
+  (`value_region.dart`); `SpaceDefinition.definitionFor(space)` copy is American
+  ("color"). A sibling suite that asserts the swatch label must use `find.text(
+  'Displayed color')` (bs-10 reconciled this phase).
+- **Verification commands (reuse):** `flutter test test/ --coverage`;
+  `dart run tool/coverage_gate.dart <BASE>`; per-file
+  `flutter test -d flutter-tester integration_test/ui_improvements/<file>_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` to run pending). `flutter` at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH); no `timeout` on
+  macOS; integration under `coord.sh with-lock <feature> <PHASE> -- …`. **Run
+  integration files one at a time** — passing two files to one `flutter test`
+  reproduces the house "whole dir won't launch at once" load failure (hit this
+  phase on `smoke+settings` together; each passed run alone).
+- **Known gaps:** none from this phase. Carried flakes unchanged.
+- **Next:** READOUT-7 (AC-7, AC-8 Speak gating) — **gate-blocked by G-3** (confirm
+  default-hidden Speak doesn't regress bs-11 accessibility-conformance). It also
+  needs the bs-01 AC-8 reconciliation (enable accessibility in its setup) and will
+  hit the lazy-`ListView` bottom-region limit (tall viewport, bs-01/bs-08
+  pattern), since Speak sits in the bottom actions bar. SIGNOFF-1 is also
+  G-3-blocked. No startable behavior phase remains until G-3 resolves.

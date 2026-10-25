@@ -38,20 +38,20 @@ class SpaceDefinition extends StatefulWidget {
   static String definitionFor(ReadoutSpace space) {
     switch (space) {
       case ReadoutSpace.cielch:
-        return 'A perceptual space that describes a colour by its lightness, '
+        return 'A perceptual space that describes a color by its lightness, '
             'its chroma (how vivid it is) and its hue angle — close to how the '
-            'eye judges colour. E.g. a bright red and a muted red share a hue '
+            'eye judges color. E.g. a bright red and a muted red share a hue '
             'but differ in chroma.';
       case ReadoutSpace.munsell:
-        return 'An artist’s notation that names a colour by Hue, Value '
+        return 'An artist’s notation that names a color by Hue, Value '
             '(lightness from 0 to 10) and Chroma (strength). For example, '
             '10R 5/6 is a medium-light, moderately strong red.';
       case ReadoutSpace.srgb:
-        return 'The red, green and blue a screen mixes to display the colour, '
+        return 'The red, green and blue a screen mixes to display the color, '
             'each from 0 to 255 and often written as a hex code. E.g. #C65D3B '
             'is a warm terracotta.';
       case ReadoutSpace.cielab:
-        return 'A device-independent space that places a colour by its '
+        return 'A device-independent space that places a color by its '
             'lightness and two axes: a* from green to red and b* from blue to '
             'yellow. For instance, a positive a* and b* fall in the warm '
             'orange-red region.';

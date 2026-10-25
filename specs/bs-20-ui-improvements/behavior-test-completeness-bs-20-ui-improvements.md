@@ -154,3 +154,37 @@ above. AC-5 is the newly un-pended one and earns A.
   (moved the plain-text label into the tappable name; values still rendered per
   space), so none of these tests' behaviour moved. AC-4's signatures still
   resolve under the all-spaces region and `SpaceSelector` is still absent.
+
+# READOUT-8 re-grade — un-pended tests against built behaviour (2026-10-25)
+
+Fresh independent re-grade of every **un-pended** AC test now that AC-9's
+behaviour is built — AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-9 (READOUT-8).
+AC-7/AC-8 stay pending (owner READOUT-7, gate-blocked by G-3). Graded by a fresh
+subagent reading the built `lib/readout/value_region.dart` (`ColorChip(label:
+'Displayed color')`) / `space_definition.dart` (now American "color" copy) /
+`color_chip.dart` and the tests, given the grids above as the baseline, with
+adversarial scrutiny on AC-9.
+
+**Result: 7 A, 0 B.** No downgrades against G1–G6; consistent with the grids
+above. AC-9 is the newly un-pended one and earns A.
+
+- **AC-9** A — `TestAC09_ColorSpelling` scopes to the readout `Scaffold` (ancestor
+  of `valueRegion`) and reads the aggregate rendered plain text — the right grain
+  for a "user-facing copy" step (G4). `isNot(contains('colou'))` rejects any
+  lingering British "colour/colours/coloured" (fails the pre-READOUT-8 shell's
+  `'Displayed colour'` — the named Reject); `\bcolor\b` (word-boundary,
+  case-insensitive) positively proves "Color" renders, so deleting every colour
+  word would **not** pass (rejects the vacuous-pass impl) and doubles as the
+  non-vacuity control (G3). Given ("reading a sample") checked via
+  `find.text('Warm Terracotta')` (G1); When drives the real `buildApp`; the copy
+  comes from the production `ColorChip(label: 'Displayed color')` →
+  `Flexible(child: Text(label))` → RenderParagraph, not a script (G2); one AC per
+  test (G6). The grader verified every remaining "colou" under `lib/readout/` sits
+  in a `///`/`//` comment or an `assert()` message (`color_chip.dart:36`,
+  `status_badge.dart:16`) — never added to the widget tree.
+- **AC-1 / AC-2 / AC-3 / AC-4 / AC-5 / AC-6** A (unchanged) — READOUT-8 changed
+  only user-facing copy spelling (`value_region.dart` chip label +
+  `space_definition.dart` definition prose), no font size, no box size, no
+  structure; AC-5's example-marker regex is still satisfied by the now-American
+  definition copy and AC-5 never asserts spelling, so none of these tests'
+  behaviour moved.

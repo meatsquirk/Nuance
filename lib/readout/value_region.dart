@@ -110,7 +110,7 @@ class ValueRegion extends StatelessWidget {
                   // header — the swatch is decorative; its meaning is in the text.
                   // Its swatch is sized equal to the grayscale swatch (AC-3).
                   ColorChip(
-                    label: 'Displayed colour',
+                    label: 'Displayed color',
                     color: Color.fromARGB(
                       255,
                       color.red,
