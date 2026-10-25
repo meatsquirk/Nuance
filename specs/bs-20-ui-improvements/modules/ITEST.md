@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** In progress — ITEST-4 review packet assembled; ⏸ awaiting the human's G-2 decision
+**Status:** ✅ Done — G-2 approved 2026-10-25 (Matt Quirk); all four ITEST phases complete, behavior stage open
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/ui_improvements/` (new), the `BS20_RUN_PENDING` pending gate for this suite
 **Depends on:** all shell phases (A11Y-1, READOUT-2) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 6,189,165 | 11m 09s |
 | ITEST-2 | acceptance-tests | AC-1/2/3/4/5/9 | ✅ Done | 4,295,303 | 18m 44s |
 | ITEST-3 | acceptance-tests | AC-6/7/8 | ✅ Done | 4,608,096 | 14m 06s |
-| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | | |
+| ITEST-4 | test-review | — (G-2) | ✅ Done | 1,196,206 | 3m 54s |
 
 ## Interface reconciliation
 
@@ -22,7 +22,7 @@
 
 ## Open gates
 
-- **G-2** (test review, ITEST-4) blocks every behavior phase.
+- **G-2** (test review, ITEST-4) — ✅ Resolved 2026-10-25: approved by Matt Quirk. Keep A11Y-2 (un-pends AC-6); bs-01 AC-5/AC-8 reconciliation plan confirmed. Behavior stage open.
 
 ## Phase ITEST-1 — Harness
 
@@ -235,9 +235,9 @@ per settings/Speak AC (AC-6/7/8) over the real `buildApp` via the ITEST-1 harnes
 - **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
 - **Tasks:** assemble the review packet (catalogue vs tests, red baseline, Rejects, augmentations, the bs-01 AC-5/AC-8 reconciliations D-3 called out for the reviewer); human decides **G-2**.
 - **Exit criteria:** human records approved (or changes requested → ITEST change phases + re-review).
-- **Status:** ⏸ Awaiting review — packet below; G-2 awaiting the reviewer's decision.
+- **Status:** ✅ Done — G-2 approved 2026-10-25 by Matt Quirk: keep A11Y-2 (un-pends AC-6); bs-01 AC-5/AC-8 reconciliation plan confirmed as intended.
 
-### Review packet — G-2 (⏸ Awaiting decision)
+### Review packet — G-2 (✅ Approved 2026-10-25 — Matt Quirk)
 
 The nine acceptance tests that guard the behavior stage, put in front of a human before any
 product code is written. Suite re-confirmed green at HEAD (`74a8477`): smoke **7/7**; default mode

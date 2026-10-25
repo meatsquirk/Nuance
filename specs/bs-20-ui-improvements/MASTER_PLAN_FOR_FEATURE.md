@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** ⏸ Awaiting G-2 — ITEST-4 review packet assembled (suite 9 A); the human decides the acceptance tests before the behavior stage opens. Spec approved (G-1) 2026-10-24 by Matt Quirk.
+**Status:** In progress — G-2 approved 2026-10-25 (Matt Quirk); behavior stage open. Next A11Y-2.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -38,7 +38,7 @@
 | AC-3 | The true-colour swatch is as large as the grayscale swatch | ITEST-2 `TestAC03_EqualSwatches` | READOUT-4 | ⬜ Todo |
 | AC-4 | Every colour space is shown together on the readout | ITEST-2 `TestAC04_AllSpaces` | READOUT-3 | ⬜ Todo |
 | AC-5 | The painter opens a colour space's name to learn what it means | ITEST-2 `TestAC05_Definitions` | READOUT-6 | ⬜ Todo |
-| AC-6 | Accessibility features are off by default | ITEST-3 `TestAC06_DefaultOff` | A11Y-2 | ⬜ Todo |
+| AC-6 | Accessibility features are off by default | ITEST-3 `TestAC06_DefaultOff` | A11Y-2 | ✅ Done |
 | AC-7 | With accessibility features off, Speak is hidden | ITEST-3 `TestAC07_SpeakHidden` | READOUT-7 | ⬜ Todo |
 | AC-8 | Turning accessibility features on reveals Speak | ITEST-3 `TestAC08_SpeakShown` | READOUT-7 | ⬜ Todo |
 | AC-9 | The readout uses "Color" rather than "Colour" | ITEST-2 `TestAC09_ColorSpelling` | READOUT-8 | ⬜ Todo |
@@ -91,8 +91,8 @@ Pre-seeded augmentations: AC-7's "hidden" assertion can pass vacuously until Spe
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | READOUT | [modules/READOUT.md](modules/READOUT.md) | Re-compose the Readout to the wireframe (hero card, 0–10 scale, equal swatches, all-spaces-at-once, per-space definitions), gate Speak, "Color" copy | A11Y (reads the flag) | 🔄 In progress |
-| A11Y | [modules/A11Y.md](modules/A11Y.md) | The accessibility-features setting: `DisplaySettings` flag (default off), controller setter, settings-panel toggle | — | 🔄 In progress |
-| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | 🔄 In progress |
+| A11Y | [modules/A11Y.md](modules/A11Y.md) | The accessibility-features setting: `DisplaySettings` flag (default off), controller setter, settings-panel toggle | — | ✅ Done |
+| ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done |
 
 ## Dependency graph
 
@@ -112,7 +112,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec | READOUT-1 | ✅ Resolved 2026-10-24: approved — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision — packet in [modules/ITEST.md](modules/ITEST.md) § Review packet |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-25: approved — Matt Quirk. Keep A11Y-2 (keep-green + unit-coverage; un-pends AC-6); bs-01 reconciliation plan (READOUT-3 retires AC-5 selector test, READOUT-7 turns accessibility on in AC-8 Speak test) confirmed as intended, not a regression |
 | G-3 | decision | Confirm hiding Speak by default (accessibility off) does not violate bs-11 accessibility-conformance; if it does, run bs-11's conformance with accessibility on | READOUT-7, SIGNOFF-1 | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -135,9 +135,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (9 pending), smoke | ✅ Done | 6,189,165 | 11m 09s | 7/7 smoke both modes; no lib change |
 | 5 | ITEST-2 | acceptance-tests: AC-1/2/3/4/5/9 (pending) + red baseline | ✅ Done | 4,295,303 | 18m 44s | 6/6 skip default, 6/6 red run-pending; grade 6 A |
 | 6 | ITEST-3 | acceptance-tests: AC-6/7/8 (pending) + red baseline | ✅ Done | 4,608,096 | 14m 06s | 3/3 skip default; run-pending AC-7/AC-8 red (Speak gate, READOUT-7), AC-6 green at baseline; grade 3 A; no lib change |
-| 7 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,196,206 | 3m 54s | packet assembled in modules/ITEST.md; suite 9 A; flags AC-6 green-at-baseline + bs-01 AC-5/AC-8 reconciliations; G-2 awaiting decision |
-| 8 | A11Y-2 | AC-6 accessibility off by default | ⬜ Next | | | startable after G-2; ∥ one READOUT phase |
-| 9 | READOUT-3 | AC-4 all spaces at once; retire bs-01 AC-5 selector test (D-3) | ⬜ Todo | | | |
+| 7 | ITEST-4 | test-review: packet; G-2 | ✅ Done | 1,196,206 | 3m 54s | packet assembled in modules/ITEST.md; suite 9 A; G-2 approved 2026-10-25 (Matt Quirk): keep A11Y-2, bs-01 reconciliation confirmed |
+| 8 | A11Y-2 | AC-6 accessibility off by default | ✅ Done | 3,324,077 | 7m 35s | un-pended AC-6 (green at baseline, shell-satisfied); no lib change; smoke 7/7, unit 1654/0, cov PASS (none touched); grade A |
+| 9 | READOUT-3 | AC-4 all spaces at once; retire bs-01 AC-5 selector test (D-3) | ⬜ Next | | | startable now; serial with other READOUT-* |
 | 10 | READOUT-4 | AC-1 hero card + AC-3 equal swatches | ⬜ Todo | | | |
 | 11 | READOUT-5 | AC-2 0–10 value scale | ⬜ Todo | | | |
 | 12 | READOUT-6 | AC-5 per-space definitions | ⬜ Todo | | | |
@@ -149,10 +149,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**ITEST-4 assembled the G-2 review packet** (in [modules/ITEST.md](modules/ITEST.md) § Review packet) and set it ⏸ awaiting the human. Suite re-confirmed green at HEAD (smoke 7/7; default `readout` 6/6 skipped, `settings` 3/3 skipped — per-file). Grid 9 A / 0 B. No `lib/` change this phase.
-- **Blocked on G-2** — nothing in the behavior stage can start until the human decides. Two items the packet puts first: (1) **AC-6 green-at-baseline** — keep A11Y-2 as a keep-green + unit-coverage phase (recommended) or accept AC-6 as shell-satisfied; (2) the **bs-01 AC-5 selector / AC-8 Speak reconciliations** (D-3, READOUT-3 / READOUT-7).
-- Decide with `/feature-next-phase --gate bs-20-ui-improvements G-2 approved | "changes: …"`.
-- After approval the behavior stage opens: **A11Y-2 ∥ one READOUT phase**; READOUT-* serial (shared `lib/readout/` files). Carry: D-1 — bs-19 still unmerged, both edit `build_app.dart` (bites behavior phases, not ITEST).
+**G-2 approved** (2026-10-25, Matt Quirk: keep A11Y-2). **A11Y-2 un-pended AC-6** — accessibility off by default, already satisfied by the A11Y-1 shell, so no `lib/` change: deleted the AC-6 row from the pending gate, recorded A11Y-2 complete. AC-6 now runs and passes in the default settings run; smoke 7/7, unit 1654/0, coverage PASS (no touched lib), grade A. A11Y + ITEST modules complete.
+- **Next: the READOUT behavior stage** — READOUT-3/4/5/6/7/8 remain. They share `lib/readout/` so run **serially** (merge-risky). Suggested order follows the session log (READOUT-3 first).
+- **READOUT-7 also needs G-3** (confirm hiding Speak by default is OK for bs-11 conformance) and does the bs-01 AC-8 Speak reconciliation; READOUT-3 does the bs-01 AC-5 selector reconciliation.
+- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart`, a merge-risk for the behavior stage.
+- 8 ACs still pending (AC-1/2/3/4/5/7/8/9); pending-gate `isNotEmpty` still holds.
 
 ## Token usage
 
@@ -169,7 +170,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | ITEST-2 | dfa2a54e | 2026-10-25 01:45 EDT | 02:04 | 18m 44s | 18m 44s | claude-opus-4-8 | 66 | 233,302 | 3,986,784 | 75,151 | 4,295,303 | readout AC tests AC-1/2/3/4/5/9 pending + red baseline (6/6 skip default, 6/6 red run-pending), grade 6 A; no lib change (coverage N/A) |
 | ITEST-3 | 72736d58 | 2026-10-25 02:24 EDT | 02:38 | 14m 06s | 14m 06s | claude-opus-4-8 | 70 | 202,835 | 4,348,549 | 56,642 | 4,608,096 | settings/Speak AC tests AC-6/7/8 pending + red baseline (AC-7/AC-8 red, AC-6 green at baseline), grade 3 A; no lib change |
 | ITEST-4 | 1a1a706f | 2026-10-25 02:50 EDT | 02:54 | 3m 54s | 3m 54s | claude-opus-4-8 | 28 | 64,628 | 1,121,790 | 9,760 | 1,196,206 | test-review packet assembled; suite 9 A, green at HEAD; G-2 awaiting human decision |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 02:54** | **42h 39m** | **1h 36m** |  | **550** | **1,573,601** | **31,138,738** | **340,618** | **33,053,507** |  |
+| A11Y-2 | 16462f51 | 2026-10-25 02:56 EDT | 03:12 | 15m 52s | 7m 35s | claude-opus-4-8 | 76 | 82,001 | 3,218,252 | 23,748 | 3,324,077 | AC-6 un-pended (accessibility off by default, shell-satisfied; no lib change); smoke 7/7, unit 1654/0, cov PASS, grade A. G-2 (ITEST-4 test review) approved by Matt Quirk inside this session. |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 03:12** | **42h 55m** | **1h 43m** |  | **626** | **1,655,602** | **34,356,990** | **364,366** | **36,377,584** |  |
 
 ## Sign-off
 

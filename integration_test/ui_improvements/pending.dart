@@ -56,7 +56,9 @@ const Map<String, String> pendingACs = {
   'AC-3': 'READOUT-4',
   'AC-4': 'READOUT-3',
   'AC-5': 'READOUT-6',
-  'AC-6': 'A11Y-2',
+  // AC-6 un-pended by A11Y-2 (2026-10-25): accessibility features off by
+  // default — satisfied by the A11Y-1 shell's `DisplaySettings` default and
+  // proven green by `TestAC06_DefaultOff`.
   'AC-7': 'READOUT-7',
   'AC-8': 'READOUT-7',
   'AC-9': 'READOUT-8',
@@ -82,8 +84,10 @@ const Set<String> behaviorPhases = {
 /// A completed phase legitimately owns no row in [pendingACs] any more, so the
 /// smoke test's "no dead phase" guard treats a phase as valid when it is still a
 /// pending owner **or** listed here. Each behaviour phase adds itself here as it
-/// un-pends its last AC. None have run yet.
-const Set<String> completedBehaviorPhases = {};
+/// un-pends its last AC.
+const Set<String> completedBehaviorPhases = {
+  'A11Y-2', // un-pended AC-6 (accessibility features off by default)
+};
 
 /// Every AC id the bs-20 acceptance suite covers (the master plan's 9 ACs).
 ///
