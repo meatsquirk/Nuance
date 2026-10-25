@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** In progress — scaffold (READOUT-1) done; next A11Y-1 ∥ READOUT-2 (shells). Spec approved (G-1) 2026-10-24 by Matt Quirk.
+**Status:** In progress — shells underway; A11Y-1 done, next READOUT-2 (the other shell). Spec approved (G-1) 2026-10-24 by Matt Quirk.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -91,7 +91,7 @@ Pre-seeded augmentations: AC-7's "hidden" assertion can pass vacuously until Spe
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
 | READOUT | [modules/READOUT.md](modules/READOUT.md) | Re-compose the Readout to the wireframe (hero card, 0–10 scale, equal swatches, all-spaces-at-once, per-space definitions), gate Speak, "Color" copy | A11Y (reads the flag) | 🔄 In progress |
-| A11Y | [modules/A11Y.md](modules/A11Y.md) | The accessibility-features setting: `DisplaySettings` flag (default off), controller setter, settings-panel toggle | — | ⬜ Todo |
+| A11Y | [modules/A11Y.md](modules/A11Y.md) | The accessibility-features setting: `DisplaySettings` flag (default off), controller setter, settings-panel toggle | — | 🔄 In progress |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
 ## Dependency graph
@@ -130,7 +130,7 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
 | 1 | READOUT-1 | scaffold: branch, baseline, coverage gate, suite skeleton | ✅ Done | 3,024,669 | 6m 06s | 1643 unit pass; gate clean-PASS/planted-FAIL; flutter-tester OK; no lib/ change |
-| 2 | A11Y-1 | shell: `accessibilityFeatures` flag + controller setter + panel toggle | ⬜ Next | | | ∥ READOUT-2 |
+| 2 | A11Y-1 | shell: `accessibilityFeatures` flag + controller setter + panel toggle | ✅ Done | 3,730,986 | 6m 00s | 1648 unit pass (+5); cov 100% on 3 touched; toggle inert |
 | 3 | READOUT-2 | shell: readout widget skeletons (hero/scale/all-spaces/definition), wired, behaviour unchanged | ⬜ Next | | | ∥ A11Y-1 |
 | 4 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (9 pending), smoke | ⬜ Todo | | | |
 | 5 | ITEST-2 | acceptance-tests: AC-1/2/3/4/5/9 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
@@ -149,11 +149,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-Scaffold (READOUT-1) done on `feat/bs-20-ui-improvements` (off `main` @ `0551d5c`). Two shell phases are now startable and **run concurrently** (disjoint dirs — separate sessions):
-- **A11Y-1** — `accessibilityFeatures` flag on `DisplaySettings`/`DisplayController` (default off) + settings-panel toggle (`lib/display/`).
-- **READOUT-2** — readout widget shells (hero card, `ValueScale`, `AllSpacesRegion`, `SpaceDefinition`), wired, behaviour unchanged (`lib/readout/`).
+A11Y-1 shell done (`accessibilityFeatures` axis on `DisplaySettings`/`DisplayController` + panel toggle, inert). One shell left, startable now:
+- **READOUT-2** — readout widget shells (hero card, `ValueScale`, `AllSpacesRegion`, `SpaceDefinition`), wired, behaviour unchanged (`lib/readout/`). Gates on unit + coverage + existing-suite-green only (no AC yet).
 
-Both gate on unit + coverage + existing-suite-green only (no AC yet). Carry: D-1 — bs-19 still unmerged and both features edit `build_app.dart`; the overlap bites in later behavior phases, not these shells.
+Once READOUT-2 lands, the acceptance stage opens: ITEST-1, then ITEST-2 ∥ ITEST-3, then ITEST-4 (test review, G-2). Carry: D-1 — bs-19 still unmerged and both features edit `build_app.dart`; the overlap bites in later behavior phases.
 
 ## Token usage
 
@@ -164,7 +163,8 @@ Both gate on unit + coverage + existing-suite-green only (no AC yet). Carry: D-1
 | PLAN | (this session) | | | | | claude-opus-4-8 | | | | | | plan written |
 | PLAN | a6d95575 | 2026-10-23 05:35 EDT | 2026-10-24 23:04 | 41h 28m | 25m 15s | claude-opus-4-8 | 62 | 628,351 | 4,051,863 | 84,389 | 4,764,665 | plan written: spec (G-1 approved) + READOUT/A11Y/ITEST modules |
 | READOUT-1 | 6c00cb72 | 2026-10-24 23:51 EDT | 23:57 | 6m 06s | 6m 06s | claude-opus-4-8 | 72 | 72,101 | 2,933,446 | 19,050 | 3,024,669 | scaffold done: 1643 unit pass; coverage gate clean-PASS/planted-FAIL; flutter-tester runner confirmed; no lib change |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-24 23:57** | **41h 34m** | **31m 21s** |  | **134** | **700,452** | **6,985,309** | **103,439** | **7,789,334** |  |
+| A11Y-1 | 19e8c8cf | 2026-10-25 00:15 EDT | 00:21 | 6m 00s | 6m 00s | claude-opus-4-8 | 86 | 77,294 | 3,635,723 | 17,883 | 3,730,986 | shell done: accessibilityFeatures axis + panel toggle (inert); 1648 unit pass (+5), coverage 100% on 3 touched files |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 00:21** | **41h 40m** | **37m 21s** |  | **220** | **777,746** | **10,621,032** | **121,322** | **11,520,320** |  |
 
 ## Sign-off
 

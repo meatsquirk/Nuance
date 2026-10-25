@@ -22,6 +22,7 @@ class DisplaySettings {
     this.simulationSeverity = 1.0,
     this.grayscale = false,
     this.daltonization = false,
+    this.accessibilityFeatures = false,
   });
 
   /// The CVD class the painter is viewing the app through, or null when
@@ -49,6 +50,16 @@ class DisplaySettings {
   /// stored profile (bs-10 D-3). Off by default — the shipped view is untouched.
   final bool daltonization;
 
+  /// Whether the painter has opted into the accessibility-features set (bs-20).
+  ///
+  /// An independent axis (like [daltonization]): it gates presentation of
+  /// accessibility affordances the readout reveals only on request — the Speak
+  /// control (bs-20 AC-7/AC-8). Off by default so the shipped readout stays
+  /// uncluttered; turning it on changes no colour rendering. Inert in this
+  /// shell — the consequence (showing Speak) lands in the READOUT behaviour
+  /// phases.
+  final bool accessibilityFeatures;
+
   /// Whether a CVD simulation is active (⇔ [simulationType] is non-null).
   bool get simulationOn => simulationType != null;
 
@@ -58,15 +69,17 @@ class DisplaySettings {
       other.simulationType == simulationType &&
       other.simulationSeverity == simulationSeverity &&
       other.grayscale == grayscale &&
-      other.daltonization == daltonization;
+      other.daltonization == daltonization &&
+      other.accessibilityFeatures == accessibilityFeatures;
 
   @override
-  int get hashCode =>
-      Object.hash(simulationType, simulationSeverity, grayscale, daltonization);
+  int get hashCode => Object.hash(simulationType, simulationSeverity, grayscale,
+      daltonization, accessibilityFeatures);
 
   @override
   String toString() =>
       'DisplaySettings(simulationType: $simulationType, '
       'simulationSeverity: $simulationSeverity, grayscale: $grayscale, '
-      'daltonization: $daltonization)';
+      'daltonization: $daltonization, '
+      'accessibilityFeatures: $accessibilityFeatures)';
 }
