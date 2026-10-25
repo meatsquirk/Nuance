@@ -25,6 +25,14 @@ class ValueRegion extends StatelessWidget {
   /// Stable anchor for the region.
   static const Key regionKey = ValueKey('readout-value-region');
 
+  /// Stable anchor for the value-hero card (AC-1).
+  ///
+  /// READOUT-2 shell anchor: the value content is wrapped in a keyed subtree so
+  /// the hero card is findable, with no visible change (behaviour unchanged).
+  /// READOUT-4 turns it into a real bordered card making the lightness the
+  /// largest reading on the screen.
+  static const Key heroCardKey = ValueKey('readout-value-hero-card');
+
   /// Stable anchor for the grayscale preview slot.
   static const Key grayscaleKey = ValueKey('readout-grayscale-preview');
 
@@ -42,64 +50,76 @@ class ValueRegion extends StatelessWidget {
   Widget build(BuildContext context) {
     final grayscale = controller.grayscale;
     final color = controller.displayColor;
-    return Padding(
-      key: regionKey,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // The grayscale preview: the sample's lightness as a neutral swatch,
-          // so the value reads without colour (SI Accessibility, AC-1).
-          Container(
-            key: grayscaleKey,
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Color.fromARGB(
-                255,
-                grayscale.red,
-                grayscale.green,
-                grayscale.blue,
+    // The value content is wrapped in the keyed hero-card anchor (READOUT-2
+    // shell); READOUT-4 replaces the plain subtree with a bordered card.
+    return KeyedSubtree(
+      key: heroCardKey,
+      child: Padding(
+        key: regionKey,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // The grayscale preview: the sample's lightness as a neutral swatch,
+            // so the value reads without colour (SI Accessibility, AC-1).
+            Container(
+              key: grayscaleKey,
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Color.fromARGB(
+                  255,
+                  grayscale.red,
+                  grayscale.green,
+                  grayscale.blue,
+                ),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
-              border: Border.all(color: Theme.of(context).dividerColor),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Lightness as the prominent reading, paired with its value word.
-                ValueReading(
-                  number: _formatLightness(controller.lightness),
-                  word: controller.valueWord,
-                  numberStyle: const TextStyle(
-                    fontSize: prominentFontSize,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Lightness as the prominent reading, paired with its value word.
+                  ValueReading(
+                    number: _formatLightness(controller.lightness),
+                    word: controller.valueWord,
+                    numberStyle: const TextStyle(
+                      fontSize: prominentFontSize,
+                      fontWeight: FontWeight.bold,
+                      height: 1,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                // The Munsell value beside the lightness (AC-1).
-                Text('Munsell value ${_formatMunsellValue(controller.munsell.value)}'),
-                const SizedBox(height: 4),
-                // The sample's true displayed colour, routed through the shared
-                // ColorChip (the bs-08 simulation chokepoint). Simulation off =
-                // the colour a trichromat sees, unchanged (AC-2). The label is
-                // generic so it never repeats the colour name shown in the
-                // header — the swatch is decorative; its meaning is in the text.
-                ColorChip(
-                  label: 'Displayed colour',
-                  color: Color.fromARGB(255, color.red, color.green, color.blue),
-                ),
-                // The one standing reminder that the swatch is a screen
-                // approximation and the numbers are authoritative (bs-17 AC-15);
-                // rendered once beside the region's single swatch.
-                const SwatchCaption(),
-              ],
+                  const SizedBox(height: 4),
+                  // The Munsell value beside the lightness (AC-1).
+                  Text(
+                    'Munsell value ${_formatMunsellValue(controller.munsell.value)}',
+                  ),
+                  const SizedBox(height: 4),
+                  // The sample's true displayed colour, routed through the shared
+                  // ColorChip (the bs-08 simulation chokepoint). Simulation off =
+                  // the colour a trichromat sees, unchanged (AC-2). The label is
+                  // generic so it never repeats the colour name shown in the
+                  // header — the swatch is decorative; its meaning is in the text.
+                  ColorChip(
+                    label: 'Displayed colour',
+                    color: Color.fromARGB(
+                      255,
+                      color.red,
+                      color.green,
+                      color.blue,
+                    ),
+                  ),
+                  // The one standing reminder that the swatch is a screen
+                  // approximation and the numbers are authoritative (bs-17 AC-15);
+                  // rendered once beside the region's single swatch.
+                  const SwatchCaption(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -111,5 +131,6 @@ String _formatLightness(double lightness) => lightness.round().toString();
 
 /// Formats a Munsell [value] for display, dropping a redundant ".0" (so a value
 /// of 5.5 reads "5.5" and 6.0 reads "6").
-String _formatMunsellValue(double value) =>
-    value == value.roundToDouble() ? value.toInt().toString() : value.toString();
+String _formatMunsellValue(double value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toString();

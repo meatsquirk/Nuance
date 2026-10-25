@@ -3,20 +3,25 @@ import 'package:flutter/material.dart';
 import '../app/build_app.dart';
 import '../domain/sample.dart';
 import 'actions_bar.dart';
+import 'all_spaces_region.dart';
 import 'name_header.dart';
 import 'provenance_region.dart';
 import 'readout_controller.dart';
 import 'space_selector.dart';
 import 'temperature_line.dart';
 import 'value_region.dart';
+import 'value_scale.dart';
 
 /// The Readout screen: the single surface the painter reads a sample through.
 ///
 /// It owns a [ReadoutController] built from the app-injected services
-/// ([AppScope]) and lays out every region — name, value + grayscale, temperature,
-/// colour-space selector, provenance and the actions bar — so the acceptance
-/// finders and the behaviour phases have stable anchors. This shell renders
-/// placeholders; each region's real reading lands in its behaviour phase.
+/// ([AppScope]) and lays out every region — name, value + grayscale, the 0–10
+/// value scale, temperature, the colour-space selector, the all-spaces region,
+/// provenance and the actions bar — so the acceptance finders and the behaviour
+/// phases have stable anchors. The [ValueScale] and [AllSpacesRegion] regions
+/// are READOUT-2 shells wired in behind the existing regions (behaviour
+/// unchanged, the selector still present); their real readings land in their
+/// behaviour phases.
 class ReadoutScreen extends StatefulWidget {
   const ReadoutScreen({required this.sample, super.key});
 
@@ -78,9 +83,18 @@ class _ReadoutScreenState extends State<ReadoutScreen> {
                 const SizedBox(height: 12),
                 ValueRegion(controller: controller),
                 const SizedBox(height: 12),
+                // READOUT-2 shell: the 0–10 value scale anchor (AC-2);
+                // READOUT-5 renders the strip.
+                const ValueScale(),
+                const SizedBox(height: 12),
                 TemperatureLine(controller: controller),
                 const SizedBox(height: 12),
+                // The one-at-a-time selector stays until READOUT-3 removes it.
                 SpaceSelector(controller: controller),
+                const SizedBox(height: 12),
+                // READOUT-2 shell: the all-spaces region anchor (AC-4/AC-5);
+                // READOUT-3 renders every space's values and drops the selector.
+                const AllSpacesRegion(),
                 const SizedBox(height: 12),
                 ProvenanceRegion(controller: controller),
                 const SizedBox(height: 16),

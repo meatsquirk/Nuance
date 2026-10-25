@@ -8,13 +8,16 @@ import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/actions_bar.dart';
+import 'package:paint_color_assistant/readout/all_spaces_region.dart';
 import 'package:paint_color_assistant/readout/name_header.dart';
 import 'package:paint_color_assistant/readout/provenance_region.dart';
 import 'package:paint_color_assistant/readout/readout_controller.dart';
 import 'package:paint_color_assistant/readout/readout_screen.dart';
+import 'package:paint_color_assistant/readout/space_definition.dart';
 import 'package:paint_color_assistant/readout/space_selector.dart';
 import 'package:paint_color_assistant/readout/temperature_line.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
+import 'package:paint_color_assistant/readout/value_scale.dart';
 
 const _sample = Sample(
   name: 'Warm Terracotta',
@@ -59,8 +62,16 @@ void main() {
     expect(find.text('Readout'), findsOneWidget); // app bar title
     expect(find.byKey(NameHeader.headerKey), findsOneWidget);
     expect(find.byKey(ValueRegion.regionKey), findsOneWidget);
+    expect(find.byKey(ValueRegion.heroCardKey), findsOneWidget);
     expect(find.byKey(ValueRegion.grayscaleKey), findsOneWidget);
+    // READOUT-2 shells wired in behind the existing regions.
+    expect(find.byKey(ValueScale.scaleKey), findsOneWidget);
+    expect(find.byKey(AllSpacesRegion.regionKey), findsOneWidget);
+    for (final space in ReadoutSpace.values) {
+      expect(find.byKey(SpaceDefinition.nameKey(space)), findsOneWidget);
+    }
     expect(find.byKey(TemperatureLine.lineKey), findsOneWidget);
+    // The one-at-a-time selector is still present (removed in READOUT-3).
     expect(find.byKey(SpaceSelector.selectorKey), findsOneWidget);
     expect(find.byKey(SpaceSelector.valuesKey), findsOneWidget);
     expect(find.byKey(ProvenanceRegion.regionKey), findsOneWidget);

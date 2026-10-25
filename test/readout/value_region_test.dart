@@ -131,6 +131,21 @@ void main() {
     expect(find.byType(SwatchCaption), findsOneWidget);
   });
 
+  testWidgets('exposes the hero-card anchor around the value content '
+      '(READOUT-2 shell)', (tester) async {
+    await _pumpRegion(tester);
+    // The hero-card anchor is findable and wraps the value reading (READOUT-4
+    // turns it into a real bordered card).
+    expect(find.byKey(ValueRegion.heroCardKey), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(ValueRegion.heroCardKey),
+        matching: find.text('58'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('formats a whole Munsell value without a trailing .0',
       (tester) async {
     // A black sample has Munsell value 0 — a whole number, which must render as

@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** In progress — scaffold done; next A11Y-1 ∥ READOUT-2 (shells)
+**Status:** In progress — shells done (A11Y-1, READOUT-2); next the acceptance stage (ITEST-1)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | READOUT-1 | scaffold | — | ✅ Done | 3,024,669 | 6m 06s |
-| READOUT-2 | shell | — | ⬜ Todo | | |
+| READOUT-2 | shell | — | ✅ Done | 5,244,417 | 11m 09s |
 | READOUT-3 | behavior | AC-4 | ⬜ Todo | | |
 | READOUT-4 | behavior | AC-1, AC-3 | ⬜ Todo | | |
 | READOUT-5 | behavior | AC-2 | ⬜ Todo | | |
@@ -73,6 +73,45 @@ Coverage gate: N/A (no `lib/` touched). Fix passes: 0/3. Tokens / time: see dash
   1. Introduce keyed shell widgets: value-hero card, `ValueScale` (0–10), `AllSpacesRegion` (renders every space), per-space `SpaceDefinition` reveal. Render honest placeholders; behaviour unchanged (selector still present until READOUT-3).
   2. Wire them into `ReadoutScreen` behind the existing regions without removing current behaviour.
 - **Exit criteria:** unit gate passes; existing suites stay green; anchors findable.
+
+### Result — READOUT-2
+
+Shell complete; behaviour unchanged (the one-at-a-time `SpaceSelector` and every bs-01 reading stay).
+Landed, following the capture-shell idiom (findable keyed placeholders; real content named for its
+behaviour phase):
+- **New `value_scale.dart`** — `ValueScale` shell (`scaleKey`); renders `SizedBox.shrink`. READOUT-5
+  renders the 11-step 0..10 strip + marks the sample's step.
+- **New `all_spaces_region.dart`** — `AllSpacesRegion` shell (`regionKey`); hosts one `SpaceDefinition`
+  per `ReadoutSpace`. No space *values* and no duplicate name text yet (so the still-present selector's
+  `find.text('Munsell')`-style finders stay unique). READOUT-3 renders the values + drops the selector.
+- **New `space_definition.dart`** — `SpaceDefinition` shell (`nameKey(space)` / `definitionKey(space)`);
+  renders an empty per-space anchor. READOUT-6 makes the name tappable + reveals definition + example.
+- **`value_region.dart`** — added `heroCardKey`; wrapped the value content in a `KeyedSubtree` anchor
+  (no visible change). READOUT-4 turns it into a real bordered card.
+- **`readout_screen.dart`** — wired `ValueScale` (after the value region) and `AllSpacesRegion` (after
+  the selector) into the `ListView`; updated the screen doc.
+
+Gates: `flutter analyze lib/readout test/readout` clean; unit **1654 pass / 0** (+6 new readout tests);
+coverage gate **100% on all 5 touched `lib/` files**. Existing-suite check: bs-01 readout integration
+suite (`integration_test/readout_test.dart`, flutter-tester, under the verify lock) **12/12 green** —
+AC-5 selector and AC-8 Speak unchanged. No AC (shell). Fix passes: 0/3.
+
+### Checkpoint / Handoff — READOUT-2
+
+- **Frozen anchors (for ITEST finders):** `ValueRegion.heroCardKey` (AC-1), `ValueScale.scaleKey`
+  (AC-2), `AllSpacesRegion.regionKey` (AC-4), `SpaceDefinition.nameKey(space)` /
+  `definitionKey(space)` (AC-5). The displayed-colour swatch (AC-3) stays the single `ColorChip` in
+  `value_region.dart`; the grayscale swatch is `ValueRegion.grayscaleKey`.
+- **Verification commands (reuse):** `flutter test test/ --coverage`; `dart run tool/coverage_gate.dart <BASE>`;
+  per-file `flutter test -d flutter-tester integration_test/ui_improvements/<file>_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` to run pending). `flutter` at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend to PATH); no `timeout` on macOS.
+- **Shells carry no real behaviour** — each new widget renders an empty/invisible keyed placeholder; the
+  acceptance tests for them are *pending* until their behaviour phase un-pends them. `AllSpacesRegion` and
+  `ValueScale` take no controller yet (READOUT-3 / READOUT-5 add the inputs they read).
+- **Next:** the acceptance stage opens — ITEST-1 (harness + fixtures + `BS20_RUN_PENDING` gate), then
+  ITEST-2 ∥ ITEST-3 (the pending AC tests + red baseline), then ITEST-4 (test review, G-2). Carry: D-1 —
+  bs-19 still unmerged, both features edit `build_app.dart` (bites later behavior phases, not ITEST).
 
 ## Phase READOUT-3 — All colour spaces at once (AC-4)
 
