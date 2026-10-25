@@ -80,9 +80,9 @@ class _ReadoutScreenState extends State<ReadoutScreen> {
                 const SizedBox(height: 12),
                 ValueRegion(controller: controller),
                 const SizedBox(height: 12),
-                // READOUT-2 shell: the 0–10 value scale anchor (AC-2);
-                // READOUT-5 renders the strip.
-                const ValueScale(),
+                // The 0–10 Munsell value scale with the sample's value marked
+                // (AC-2).
+                ValueScale(value: controller.munsell.value),
                 const SizedBox(height: 12),
                 TemperatureLine(controller: controller),
                 const SizedBox(height: 12),

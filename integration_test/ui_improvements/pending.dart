@@ -53,7 +53,9 @@ import 'package:flutter_test/flutter_test.dart';
 const Map<String, String> pendingACs = {
   // AC-1 un-pended by READOUT-4 (2026-10-25): the lightness reads in a bordered
   // hero card as the largest reading — proven green by `TestAC01_HeroCard`.
-  'AC-2': 'READOUT-5',
+  // AC-2 un-pended by READOUT-5 (2026-10-25): the Munsell value reads on a
+  // labelled 0–10 scale with the sample's step marked — proven green by
+  // `TestAC02_ValueScale`.
   // AC-3 un-pended by READOUT-4 (2026-10-25): the displayed-colour swatch is
   // sized equal to the grayscale value swatch — proven green by
   // `TestAC03_EqualSwatches`.
@@ -94,6 +96,7 @@ const Set<String> completedBehaviorPhases = {
   'A11Y-2', // un-pended AC-6 (accessibility features off by default)
   'READOUT-3', // un-pended AC-4 (every colour space shown together, no selector)
   'READOUT-4', // un-pended AC-1 (bordered hero card) + AC-3 (equal-size swatches)
+  'READOUT-5', // un-pended AC-2 (0–10 Munsell value scale with the value marked)
 };
 
 /// Every AC id the bs-20 acceptance suite covers (the master plan's 9 ACs).

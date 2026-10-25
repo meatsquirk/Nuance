@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** In progress — behavior stage; READOUT-4 done (AC-1, AC-3). Next READOUT-5.
+**Status:** In progress — behavior stage; READOUT-5 done (AC-2). Next READOUT-6.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -13,7 +13,7 @@
 | READOUT-2 | shell | — | ✅ Done | 5,244,417 | 11m 09s |
 | READOUT-3 | behavior | AC-4 | ✅ Done | 19,357,101 | 43m 15s |
 | READOUT-4 | behavior | AC-1, AC-3 | ✅ Done | 6,914,808 | 21m 02s |
-| READOUT-5 | behavior | AC-2 | ⬜ Todo | | |
+| READOUT-5 | behavior | AC-2 | ✅ Done | 9,657,902 | 26m 19s |
 | READOUT-6 | behavior | AC-5 | ⬜ Todo | | |
 | READOUT-7 | behavior | AC-7, AC-8 | ⬜ Todo | | |
 | READOUT-8 | behavior | AC-9 | ⬜ Todo | | |
@@ -262,6 +262,73 @@ regression (neither test renders the readout or a 48px chip swatch).
 - **Files:** `value_scale.dart`, `value_region.dart`
 - **Tasks:** render an 11-step 0..10 scale with labels; mark the sample's Munsell value step.
 - **Acceptance gate:** un-pend AC-2; `TestAC02_ValueScale` green.
+
+### Result — READOUT-5
+
+AC-2 delivered: the Munsell value reads on a labelled 0–10 scale with the sample's
+step marked. Landed:
+- **`value_scale.dart`** — the READOUT-2 `SizedBox.shrink` shell is now a real
+  scale. `ValueScale({required double value})` renders the eleven whole steps
+  0..10 (left=darkest, right=lightest) as a `Row` of equal `Expanded` cells, and
+  marks the step nearest the sample's Munsell value
+  (`markedStep = value.round().clamp(0, 10)`). The marked step is distinguished
+  **without relying on colour** (CVD/SI-accessibility): a filled, bordered cell
+  with a bold label and a caret `Icon`, plus a `Semantics(selected: true,
+  label: 'Value N, this sample')`. `scaleKey` is preserved on the root.
+- **`readout_screen.dart`** — `const ValueScale()` → `ValueScale(value:
+  controller.munsell.value)`; rebuilds reactively under the existing
+  `ListenableBuilder`.
+- **Pending gate:** AC-2 row removed; READOUT-5 added to `completedBehaviorPhases`.
+
+Cross-feature reconciliation (forced by the taller readout, assertion-preserving):
+the readout `ListView` builds lazily (`SliverChildListDelegate`), so the new
+scale's height pushed the bottom **provenance region** past the viewport cache on
+the default 800×600 surface — two sibling suites that assert that bottom region
+without a tall viewport went red. Fixed with the bs-01/bs-08 tall-viewport pattern
+(`physicalSize = Size(1200, 3000)`, `devicePixelRatio = 1.0`, `addTearDown(reset)`):
+`integration_test/daltonization_harness.dart` `_assembleDaltonization` (bs-10
+AC-4) and `integration_test/correction_test.dart` `_showInLaterReadout` (bs-05/
+correction AC-10). No assertion changed; the shell scale (0 height) had hidden the
+limit in READOUT-3/4.
+
+Gates: `flutter analyze` clean (lib/readout, test/readout, the two touched test
+files). Unit **1658/0** (+4: new 0..10-steps / marked-step / clamp / value-0
+`value_scale_test.dart` cases). Coverage gate **100% on both touched lib files**
+(`value_scale.dart`, `readout_screen.dart`). Acceptance: bs-20 `TestAC02_ValueScale`
+**green** in the default run; run-pending leaves only AC-5 (READOUT-6) and AC-9
+(READOUT-8) red at their baselines. Regression (every readout-rendering suite):
+bs-01 readout 11/11 + harness 5/5, bs-08 display 21/21, bs-10 daltonization 25/25,
+bs-05 comparison 26/26, bs-02 capture 19/19, correction 22/22, advanced_capture
+21/21, recipes 24/24, design_system 27/27, bs-20 smoke 7/7 + settings — all green.
+Only the 3 documented carried off-lane flakes still fail (bs-06 palette AC-3/AC-5,
+bs-07 self_assessment AC-4) — unrelated to the readout, reproduce at merge-base
+`c00422f`. Grade gate (fresh independent subagent over every un-pended AC test):
+**AC-1, AC-2, AC-3, AC-4, AC-6 — 5 A / 0 B**. Fix passes: 1/3 (the
+lazy-ListView provenance-region regression → the two sibling tall-viewports).
+Tokens / time: see dashboard row.
+
+**Known gap:** none introduced.
+
+### Checkpoint / Handoff — READOUT-5
+
+- **Frozen interface:** `ValueScale({required double value})` renders the 0..10
+  scale and marks `value.round().clamp(0, 10)` with a `Semantics(selected: true)`
+  cell; `ValueScale.scaleKey` is the anchor, `minStep`/`maxStep` the bounds.
+- **Verification commands (reuse):** `flutter test test/ --coverage`;
+  `dart run tool/coverage_gate.dart <BASE>`; per-file
+  `flutter test -d flutter-tester integration_test/ui_improvements/<file>_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` to run pending). `flutter` at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH); no `timeout` on
+  macOS; integration under `coord.sh with-lock`.
+- **Shared-screen note (reinforced):** the readout body is now taller again. The
+  readout `ListView` is **lazy** — a Then that asserts a bottom region (provenance,
+  actions bar) must size a tall viewport, or the region is simply not built (0
+  found / empty text), not merely off-screen. READOUT-7 (Speak, bottom actions bar)
+  will hit this; its bs-01 AC-8 reconciliation already enables accessibility.
+- **Known gaps:** none from this phase. `SpaceSelector.build` stays dead (READOUT-3
+  gap). Carried flakes unchanged.
+- **Next:** READOUT-6 (AC-5 per-space definitions) — shares `lib/readout/`, run
+  serially.
 
 ## Phase READOUT-6 — Per-space definitions (AC-5)
 

@@ -576,6 +576,15 @@ Future<DaltonizationHarness> _assembleDaltonization(
   PaletteSource paletteSource = const InMemoryPaletteSource(),
   _SettleMode settle = _SettleMode.pumpAndSettle,
 }) async {
+  // The bs-20 readout grew taller than the default 800×600 test surface (the
+  // 0–10 value scale, READOUT-5), so the readout `ListView` lazily skips the
+  // bottom provenance region and AC-4's `find.byKey` misses it. Size a tall
+  // viewport so every readout region is built (the bs-01/bs-08 pattern
+  // READOUT-3 established; value here is harmless to the display-remap Thens).
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
   // Open a fresh app each time, so a repeated `given…` in one test does not
   // reuse the previous screen's State (mirrors the other bs harnesses).
   await tester.pumpWidget(const SizedBox());

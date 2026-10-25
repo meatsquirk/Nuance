@@ -99,3 +99,27 @@ grid above.
 - **AC-6** A (still holds) — keyed `SwitchListTile` defaults `false`, re-asserted
   through the live controller, with an on-control that rejects a constant-off
   render.
+
+# READOUT-5 re-grade — un-pended tests against built behaviour (2026-10-25)
+
+Fresh independent re-grade of every **un-pended** AC test now that AC-2's
+behaviour is built — AC-1, AC-2 (READOUT-5), AC-3 (READOUT-4), AC-4 (READOUT-3),
+AC-6 (A11Y-2). Graded by a fresh subagent reading the built
+`lib/readout/value_scale.dart` / `readout_screen.dart` and the tests, given the
+re-grades above as the baseline.
+
+**Result: 5 A, 0 B.** No downgrades against G1–G6; consistent with the grids
+above. AC-2 is the newly un-pended one and earns A on the same rubric.
+
+- **AC-2** A — `value_scale.dart` renders all 11 steps 0..10 (each `find.text`
+  checked individually) and marks exactly the sample's step via
+  `markedStep = value.round().clamp(0,10)` wrapped in the single
+  `Semantics(selected: true, label: 'Value N, this sample')`, driven by the real
+  `controller.munsell.value` (G1/G2 clean — the derived value answers, not a
+  script). Rejects all three named wrong impls: a bare "Munsell value 2" with no
+  scale (the 11 labelled steps must exist under `valueScale`), no marked step
+  (`findsOneWidget` on the selected Semantics), and a wrong marked step
+  (`contains('2')` is unique over the bounded 0..10 label domain).
+- **AC-1 / AC-3 / AC-4 / AC-6** A (unchanged) — see the READOUT-4 re-grade above;
+  READOUT-5 touched only `value_scale.dart` + `readout_screen.dart` (and two
+  sibling-feature harness viewports), so none of these tests' behaviour moved.

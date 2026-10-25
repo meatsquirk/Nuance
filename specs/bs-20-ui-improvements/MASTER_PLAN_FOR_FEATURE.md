@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** In progress — behavior stage; READOUT-4 done (AC-1, AC-3). Next READOUT-5.
+**Status:** In progress — behavior stage; READOUT-5 done (AC-2). Next READOUT-6.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -34,7 +34,7 @@
 | AC | Scenario | Integration test (ITEST) | Behavior phases | Status |
 |---|---|---|---|---|
 | AC-1 | The lightness value is shown in a prominent bordered card | ITEST-2 `TestAC01_HeroCard` | READOUT-4 | ✅ Done |
-| AC-2 | The Munsell value reads on a 0-10 scale with the sample marked | ITEST-2 `TestAC02_ValueScale` | READOUT-5 | ⬜ Todo |
+| AC-2 | The Munsell value reads on a 0-10 scale with the sample marked | ITEST-2 `TestAC02_ValueScale` | READOUT-5 | ✅ Done |
 | AC-3 | The true-colour swatch is as large as the grayscale swatch | ITEST-2 `TestAC03_EqualSwatches` | READOUT-4 | ✅ Done |
 | AC-4 | Every colour space is shown together on the readout | ITEST-2 `TestAC04_AllSpaces` | READOUT-3 | ✅ Done |
 | AC-5 | The painter opens a colour space's name to learn what it means | ITEST-2 `TestAC05_Definitions` | READOUT-6 | ⬜ Todo |
@@ -139,8 +139,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 8 | A11Y-2 | AC-6 accessibility off by default | ✅ Done | 3,324,077 | 7m 35s | un-pended AC-6 (green at baseline, shell-satisfied); no lib change; smoke 7/7, unit 1654/0, cov PASS (none touched); grade A |
 | 9 | READOUT-3 | AC-4 all spaces at once; retire bs-01 AC-5 selector test (D-3) | ✅ Done | 19,357,101 | 43m 15s | AC-4 green; selector removed (class kept, un-rendered); bs-01/bs-08/bs-10 harnesses + screen unit test reconciled; unit 1653/0, cov 100% 2 touched, grade A |
 | 10 | READOUT-4 | AC-1 hero card + AC-3 equal swatches | ✅ Done | 6,914,808 | 21m 02s | AC-1+AC-3 green; value in bordered SurfaceCard, swatches equal at 48px; ColorChip gained swatchSize param (default 16); unit 1654/0, cov 100% 2 touched, grade 4 A |
-| 11 | READOUT-5 | AC-2 0–10 value scale | ⬜ Next | | | startable now; serial with other READOUT-* |
-| 12 | READOUT-6 | AC-5 per-space definitions | ⬜ Todo | | | |
+| 11 | READOUT-5 | AC-2 0–10 value scale | ✅ Done | 9,657,902 | 26m 19s | AC-2 green; real 0–10 scale marks `munsell.value`; +2 sibling tall-viewports (lazy-ListView provenance); unit 1658/0, cov 100% 2 touched, grade 5 A |
+| 12 | READOUT-6 | AC-5 per-space definitions | ⬜ Next | | | startable now; serial with other READOUT-* |
 | 13 | READOUT-7 | AC-7 + AC-8 Speak gating; reconcile bs-01 AC-8 test (D-3); G-3 | ⬜ Todo | | | |
 | 14 | READOUT-8 | AC-9 "Color" copy | ⬜ Todo | | | |
 | 15 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ⬜ Todo | | | |
@@ -149,11 +149,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-**READOUT-4 done — AC-1 + AC-3 green.** The value now sits in a bordered `SurfaceCard` hero card (lightness the largest reading at 48px), and the displayed-colour swatch is sized equal to the grayscale swatch (both 48px) via a new `ValueRegion.swatchSize` constant. One shared-widget change beyond the plan's Files line: `ColorChip` gained a `swatchSize` param (default 16, every other call site unchanged) so the chip — which must stay the bs-08 display chokepoint — can match the grayscale size. unit 1654/0, cov 100% on 2 touched (`value_region.dart`, `color_chip.dart`), grade 4 A; regression green (bs-01 11/11+5/5, bs-08 21, bs-10 25, design_system 27, bs-02 19, bs-05 26).
-- **Next: READOUT-5** (AC-2 0–10 value scale). READOUT-5/6/7/8 remain; share `lib/readout/` → run **serially**.
-- **Shared-screen note:** the readout body is taller than the default 800×600 test surface — any remaining phase whose harness taps the actions bar or a bottom region must size a tall viewport (bs-01/bs-08 pattern). READOUT-7 (Speak) will hit this and still needs **G-3** + the bs-01 AC-8 Speak reconciliation.
-- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart` (READOUT-4 did **not** touch it).
-- 5 ACs still pending (AC-2/5/7/8/9); pending-gate `isNotEmpty` still holds.
+**READOUT-5 done — AC-2 green.** The Munsell value now reads on a real labelled 0–10 scale (`value_scale.dart`) that marks the sample's step (`munsell.value.round().clamp(0,10)`) with a colour-independent cue (filled bordered cell + bold + caret + `Semantics(selected: true)`). unit 1658/0, cov 100% on 2 touched (`value_scale.dart`, `readout_screen.dart`), grade 5 A. The taller scale exposed a **lazy-`ListView`** limit — the bottom provenance region stopped being built on the default 800×600 surface, reddening two sibling suites; fixed with the bs-01/bs-08 tall-viewport pattern in `daltonization_harness.dart` (bs-10 AC-4) and `correction_test.dart` `_showInLaterReadout` (correction AC-10), no assertion changed. Full readout-rendering regression green (only the 3 documented carried off-lane flakes still fail: bs-06 palette AC-3/5, bs-07 self_assessment AC-4).
+- **Next: READOUT-6** (AC-5 per-space definitions). READOUT-6/7/8 remain; share `lib/readout/` → run **serially**.
+- **Shared-screen note (reinforced):** the readout `ListView` is lazy — a Then on a bottom region (provenance, actions bar) must size a tall viewport or the region is simply *not built* (0 found / empty text). READOUT-7 (Speak, bottom actions bar) will hit this and still needs **G-3** + the bs-01 AC-8 Speak reconciliation (which already turns accessibility on).
+- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart` (READOUT-5 did **not** touch it).
+- 4 ACs still pending (AC-5/7/8/9); pending-gate `isNotEmpty` still holds.
 
 ## Token usage
 
@@ -173,7 +173,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | A11Y-2 | 16462f51 | 2026-10-25 02:56 EDT | 03:12 | 15m 52s | 7m 35s | claude-opus-4-8 | 76 | 82,001 | 3,218,252 | 23,748 | 3,324,077 | AC-6 un-pended (accessibility off by default, shell-satisfied; no lib change); smoke 7/7, unit 1654/0, cov PASS, grade A. G-2 (ITEST-4 test review) approved by Matt Quirk inside this session. |
 | READOUT-3 | 99f0cc0a | 2026-10-25 03:15 EDT | 03:58 | 43m 15s | 43m 15s | claude-opus-4-8 | 188 | 297,157 | 18,940,098 | 119,658 | 19,357,101 | AC-4 un-pended + green (all spaces together, selector removed; SpaceSelector class kept un-rendered per approved tests); bs-01/bs-08/bs-10 harnesses + readout screen unit test reconciled; unit 1653/0, cov 100% on 2 touched, grade A (AC-4+AC-6); full readout-touching regression green |
 | READOUT-4 | b7540bdd | 2026-10-25 04:03 EDT | 04:24 | 21m 02s | 21m 02s | claude-opus-4-8 | 118 | 211,720 | 6,654,770 | 48,200 | 6,914,808 | AC-1 + AC-3 un-pended & green: bordered SurfaceCard hero card (lightness largest reading), swatches equal at 48px; ColorChip swatchSize param added (default 16); unit 1654/0, cov 100% on 2 touched, grade 4 A; readout+ColorChip regression green |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 04:24** | **43h 59m** | **2h 48m** |  | **932** | **2,164,479** | **59,951,858** | **532,224** | **62,649,493** |  |
+| READOUT-5 | c39d004f | 2026-10-25 04:38 EDT | 05:05 | 26m 19s | 26m 19s | claude-opus-4-8 | 148 | 202,457 | 9,403,241 | 52,056 | 9,657,902 | AC-2 un-pended & green: real 0–10 Munsell value scale marks the sample's step (colour-independent cue + Semantics selected); +2 sibling tall-viewports (lazy-ListView provenance regression, bs-10 AC-4 / correction AC-10); unit 1658/0, cov 100% on 2 touched, grade 5 A; readout-rendering regression green |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 05:05** | **44h 25m** | **3h 14m** |  | **1,080** | **2,366,936** | **69,355,099** | **584,280** | **72,307,395** |  |
 
 ## Sign-off
 
