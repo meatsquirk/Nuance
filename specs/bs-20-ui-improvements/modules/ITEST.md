@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** Not started
+**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/ui_improvements/` (new), the `BS20_RUN_PENDING` pending gate for this suite
 **Depends on:** all shell phases (A11Y-1, READOUT-2) · **Blocks:** every behavior phase (via G-2)
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| ITEST-1 | acceptance-tests | — (harness) | ⬜ Todo | | |
+| ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 6,189,165 | 11m 09s |
 | ITEST-2 | acceptance-tests | AC-1/2/3/4/5/9 | ⬜ Todo | | |
 | ITEST-3 | acceptance-tests | AC-6/7/8 | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
@@ -31,6 +31,64 @@
 - **Files:** `integration_test/ui_improvements/harness.dart`, `pending.dart`, `smoke_test.dart`
 - **Tasks:** shared pump harness (readout + settings via production wiring, fixtures); pending map with all **9** ACs pending; default (skip) + `BS20_RUN_PENDING=true` targets; a non-vacuous smoke test (asserts the readout pumps and the pending map is exactly the 9 ACs with real owners).
 - **Exit criteria:** smoke green in both modes; whole dir / per-file launch confirmed.
+
+### Result — ITEST-1 (✅ Done)
+
+Landed the bs-20 acceptance-suite plumbing — **no `lib/` change**, so the
+coverage gate is N/A ("nothing to gate" PASS vs `b905acb`).
+
+- **`pending.dart`** — the `BS20_RUN_PENDING` gate mirroring `bs14/pending.dart`:
+  `pendingACs` (all 9 ACs → owning phase, per the AC-coverage table),
+  `behaviorPhases`, `completedBehaviorPhases` (empty), `allACs`,
+  `pendingSkipReason(forceRunPending:)` and `acTestWidgets` (ITEST-2/3 register
+  every AC through it).
+- **`harness.dart`** — fixtures `warmTerracotta` (L58/10R 5.5/6; AC-1/4/5/9),
+  `value2Sample` (L20 → Munsell value 2; AC-2), `anySample` (AC-3/7/8); the
+  `UiHarness` driver (`givenReadoutOf` pumps the real app via `buildApp` with an
+  injected `DisplayController` + faked `FakeSpeech`/`FakeHaptics`, real
+  `ColorScienceImpl`; `whenOpenSettings`, `whenSetAccessibilityFeatures`, and the
+  keyed finders from the READOUT-2 / A11Y-1 shells). Re-exports the gate, the
+  fakes and `ReadoutSpace`.
+- **`smoke_test.dart`** — 7 never-pending checks: readout renders every shell
+  anchor through production wiring; the chrome opens the settings panel to the
+  accessibility toggle; the AC universe is exactly AC-1..AC-9; the canonical
+  owner map is nine ACs with real owners; every pending row names a real phase +
+  the planned owner; no behaviour phase is dead/typo'd; the gate skips by default
+  and runs under run-pending (both asserted via `forceRunPending`).
+- **Grade:** scaffold self-check (no AC tests this phase — the AC grade grid
+  lands in ITEST-2/3). Non-vacuous (asserts the stable AC universe + owner
+  validity, holds as the gate empties — no "all 9 still pending" assertion);
+  comments claim only what is checked; deterministic (pumpAndSettle, no sleeps).
+- **Verification:** `flutter analyze integration_test/ui_improvements/` clean;
+  smoke **7/7** default **and** `--dart-define=BS20_RUN_PENDING=true`; whole-dir
+  launch green (one file today); coverage gate PASS. **Fix passes: 0/3.**
+  **Tokens 6,189,165 · Time 11m 09s.**
+
+### Checkpoint / Handoff — ITEST-1
+
+- **Import surface:** an AC test imports only `harness.dart` (it re-exports
+  `pending.dart`, the fakes and `ReadoutSpace`). `main()` begins with
+  `IntegrationTestWidgetsFlutterBinding.ensureInitialized()`.
+- **Frozen vocabulary:** `givenReadoutOf(tester, sample, {initialSettings})` →
+  `UiHarness{ speech, haptics, controller, settings }`; `whenOpenSettings`,
+  `whenCloseSettings`, `whenSetAccessibilityFeatures({required bool on})`;
+  finders `valueRegion / heroCard / grayscaleSwatch / displayedColorChip /
+  valueScale / allSpaces / spaceName(space) / spaceDefinition(space) /
+  speakControl / settingsEntry / settingsPanel / accessibilityToggle`.
+- **Fixtures:** `warmTerracotta`, `value2Sample`, `anySample` (above). ITEST-2/3
+  must re-assert each fixture's derived Given (e.g. `value2Sample`'s Munsell
+  value 2) through the public readout before the Then — not assume it.
+- **Pending gate:** un-pend an AC = delete its row from `pendingACs`; a phase
+  that un-pends its last AC adds itself to `completedBehaviorPhases` (keeps the
+  smoke "no dead phase" guard green).
+- **Verification (reuse):** `flutter` at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH; no `timeout` on
+  macOS); per-file `flutter test -d flutter-tester
+  integration_test/ui_improvements/<file>_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` to run pending).
+- **Next:** ITEST-2 (`readout_test.dart`, AC-1/2/3/4/5/9) ∥ ITEST-3
+  (`settings_test.dart`, AC-6/7/8) — pending AC tests + red baseline, then
+  ITEST-4 (test review, G-2).
 
 ## Phase ITEST-2 — Readout AC tests
 

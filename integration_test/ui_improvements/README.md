@@ -1,11 +1,12 @@
 # bs-20 UI-improvements acceptance suite
 
-Seeded empty by READOUT-1 (scaffold). No tests live here yet.
-
 **What lands here (stage 3):**
-- ITEST-1 — the harness (Given/When/Then vocabulary + fixtures) and the
-  `BS20_RUN_PENDING` pending gate (`pending.dart`), mirroring the sibling
-  per-feature gates (`integration_test/bs17/pending.dart`, …).
+- ITEST-1 ✅ — the harness (`harness.dart`: the `givenReadoutOf` /
+  `whenOpenSettings` / `whenSetAccessibilityFeatures` vocabulary and the
+  `warmTerracotta` / `value2Sample` / `anySample` fixtures), the
+  `BS20_RUN_PENDING` pending gate (`pending.dart`, mirroring the sibling
+  per-feature gates `integration_test/bs14/pending.dart`, …), and a
+  never-pending `smoke_test.dart`.
 - ITEST-2 — AC-1/AC-2/AC-3/AC-4/AC-5/AC-9 as *pending* tests.
 - ITEST-3 — AC-6/AC-7/AC-8 as *pending* tests.
 - ITEST-4 — the test-review packet (gate G-2).
