@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** Not started
+**Status:** In progress — scaffold done; next A11Y-1 ∥ READOUT-2 (shells)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -9,7 +9,7 @@
 
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
-| READOUT-1 | scaffold | — | ⬜ Next | | |
+| READOUT-1 | scaffold | — | ✅ Done | 3,024,669 | 6m 06s |
 | READOUT-2 | shell | — | ⬜ Todo | | |
 | READOUT-3 | behavior | AC-4 | ⬜ Todo | | |
 | READOUT-4 | behavior | AC-1, AC-3 | ⬜ Todo | | |
@@ -40,6 +40,28 @@
   2. Baseline unit run (`flutter test test/`) + confirm the coverage gate passes clean and fails on a planted gap; confirm the `flutter-tester` integration runner.
   3. Create the empty suite dir `integration_test/ui_improvements/` (no tests yet).
 - **Exit criteria:** branch pushed; baseline recorded; gate tooling verified; no `lib/` change.
+
+### Result — READOUT-1
+
+Scaffold complete; no `lib/` change. Landed:
+- Branched `feat/bs-20-ui-improvements` off `main` (`BASE = 0551d5c`, the PLAN commit). D-1 advisory (branch after bs-19 merges) **not** honoured — bs-19 is still awaiting SIGNOFF-3; proceeded because this phase writes no `lib/` and so cannot collide on `build_app.dart`. bs-19 and bs-20 both touch `build_app.dart` in later phases — carry D-1 forward.
+- **Baseline unit run:** `flutter test test/ --coverage` → **1643 pass / 0 fail**; `coverage/lcov.info` produced.
+- **Coverage gate verified:** `dart run tool/coverage_gate.dart 0551d5c` → clean tree **PASS** (exit 0, "nothing to gate"); planted an untracked `lib/_planted_gap_bs20.dart` → **FAIL** (exit 1, "NO COVERAGE DATA"); planted file removed.
+- **flutter-tester integration runner confirmed:** `flutter test -d flutter-tester integration_test/harness_test.dart` → exit 0, all passed.
+- Created the empty suite dir `integration_test/ui_improvements/` with a `README.md` placeholder (git won't track an empty dir) documenting the per-file run command and the `BS20_RUN_PENDING` gate key.
+
+Coverage gate: N/A (no `lib/` touched). Fix passes: 0/3. Tokens / time: see dashboard row.
+
+### Checkpoint / Handoff — READOUT-1
+
+- **Toolchain (reuse these):** `flutter` at `/Users/matthew.quirk/development/flutter/bin` (not on PATH — prepend it). Flutter 3.47.6 / Dart 3.13.5.
+  - Unit + coverage: `flutter test test/ --coverage`
+  - Coverage gate: `dart run tool/coverage_gate.dart <BASE>` (line coverage on touched `lib/**`; `COVERAGE_GATE_BASE` env or arg; `main` default). **Per-branch exercise is a phase/review duty, not enforced by the tool.**
+  - This feature's acceptance suite (once it exists): `flutter test -d flutter-tester integration_test/ui_improvements/<file>_test.dart` **per file** (whole dir won't launch at once — house gotcha); pending gate `--dart-define=BS20_RUN_PENDING=true`.
+  - No `timeout` on macOS (house gotcha) — run pushes/commands bare.
+- **BASE for the next phase:** branch HEAD after this commit (A11Y-1 / READOUT-2 set their own `BASE=$(git rev-parse HEAD)`).
+- **Known gaps:** none introduced. Carry: D-1 build_app.dart overlap with bs-19 (unmerged); 3 carried off-lane sibling flakes (bs-06 palette AC-3/5, bs-08 display AC-9, bs-07 self_assessment AC-4) per Known flakes.
+- **Next:** A11Y-1 (flag + controller setter + panel toggle) ∥ READOUT-2 (readout widget shells) — different dirs, may run concurrently in separate sessions.
 
 ## Phase READOUT-2 — Readout widget shells
 

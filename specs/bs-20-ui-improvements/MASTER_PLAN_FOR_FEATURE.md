@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** Not started — next READOUT-1 (scaffold). Spec approved (G-1) 2026-10-24 by Matt Quirk.
+**Status:** In progress — scaffold (READOUT-1) done; next A11Y-1 ∥ READOUT-2 (shells). Spec approved (G-1) 2026-10-24 by Matt Quirk.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -90,7 +90,7 @@ Pre-seeded augmentations: AC-7's "hidden" assertion can pass vacuously until Spe
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| READOUT | [modules/READOUT.md](modules/READOUT.md) | Re-compose the Readout to the wireframe (hero card, 0–10 scale, equal swatches, all-spaces-at-once, per-space definitions), gate Speak, "Color" copy | A11Y (reads the flag) | ⬜ Todo |
+| READOUT | [modules/READOUT.md](modules/READOUT.md) | Re-compose the Readout to the wireframe (hero card, 0–10 scale, equal swatches, all-spaces-at-once, per-space definitions), gate Speak, "Color" copy | A11Y (reads the flag) | 🔄 In progress |
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | The accessibility-features setting: `DisplaySettings` flag (default off), controller setter, settings-panel toggle | — | ⬜ Todo |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ⬜ Todo |
 
@@ -129,9 +129,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 | # | Phase | Target | Status | Tokens | Time | Notes |
 |---|---|---|---|---|---|---|
-| 1 | READOUT-1 | scaffold: branch, baseline, coverage gate, suite skeleton | ⬜ Next | | | |
-| 2 | A11Y-1 | shell: `accessibilityFeatures` flag + controller setter + panel toggle | ⬜ Todo | | | ∥ READOUT-2 |
-| 3 | READOUT-2 | shell: readout widget skeletons (hero/scale/all-spaces/definition), wired, behaviour unchanged | ⬜ Todo | | | ∥ A11Y-1 |
+| 1 | READOUT-1 | scaffold: branch, baseline, coverage gate, suite skeleton | ✅ Done | 3,024,669 | 6m 06s | 1643 unit pass; gate clean-PASS/planted-FAIL; flutter-tester OK; no lib/ change |
+| 2 | A11Y-1 | shell: `accessibilityFeatures` flag + controller setter + panel toggle | ⬜ Next | | | ∥ READOUT-2 |
+| 3 | READOUT-2 | shell: readout widget skeletons (hero/scale/all-spaces/definition), wired, behaviour unchanged | ⬜ Next | | | ∥ A11Y-1 |
 | 4 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (9 pending), smoke | ⬜ Todo | | | |
 | 5 | ITEST-2 | acceptance-tests: AC-1/2/3/4/5/9 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-3 |
 | 6 | ITEST-3 | acceptance-tests: AC-6/7/8 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
@@ -149,7 +149,11 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-READOUT-1 (scaffold) is next and startable now (G-1 resolved). Branch `feat/bs-20-ui-improvements` off `main` — ideally after bs-19 merges (D-1). It writes no product code: branch, baseline unit run, confirm the coverage gate + `flutter-tester` integration runner, create the empty `integration_test/ui_improvements/` suite skeleton. Then A11Y-1 ∥ READOUT-2 (shells).
+Scaffold (READOUT-1) done on `feat/bs-20-ui-improvements` (off `main` @ `0551d5c`). Two shell phases are now startable and **run concurrently** (disjoint dirs — separate sessions):
+- **A11Y-1** — `accessibilityFeatures` flag on `DisplaySettings`/`DisplayController` (default off) + settings-panel toggle (`lib/display/`).
+- **READOUT-2** — readout widget shells (hero card, `ValueScale`, `AllSpacesRegion`, `SpaceDefinition`), wired, behaviour unchanged (`lib/readout/`).
+
+Both gate on unit + coverage + existing-suite-green only (no AC yet). Carry: D-1 — bs-19 still unmerged and both features edit `build_app.dart`; the overlap bites in later behavior phases, not these shells.
 
 ## Token usage
 
@@ -159,7 +163,8 @@ READOUT-1 (scaffold) is next and startable now (G-1 resolved). Branch `feat/bs-2
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | PLAN | (this session) | | | | | claude-opus-4-8 | | | | | | plan written |
 | PLAN | a6d95575 | 2026-10-23 05:35 EDT | 2026-10-24 23:04 | 41h 28m | 25m 15s | claude-opus-4-8 | 62 | 628,351 | 4,051,863 | 84,389 | 4,764,665 | plan written: spec (G-1 approved) + READOUT/A11Y/ITEST modules |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-24 23:04** | **41h 28m** | **25m 15s** |  | **62** | **628,351** | **4,051,863** | **84,389** | **4,764,665** |  |
+| READOUT-1 | 6c00cb72 | 2026-10-24 23:51 EDT | 23:57 | 6m 06s | 6m 06s | claude-opus-4-8 | 72 | 72,101 | 2,933,446 | 19,050 | 3,024,669 | scaffold done: 1643 unit pass; coverage gate clean-PASS/planted-FAIL; flutter-tester runner confirmed; no lib change |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-24 23:57** | **41h 34m** | **31m 21s** |  | **134** | **700,452** | **6,985,309** | **103,439** | **7,789,334** |  |
 
 ## Sign-off
 
