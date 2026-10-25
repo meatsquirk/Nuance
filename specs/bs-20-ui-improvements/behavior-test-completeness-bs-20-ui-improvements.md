@@ -38,3 +38,38 @@ adequate within their bounded domains (see Notes).
   only in step 2's own label, so the marked-step assertion rejects a wrong marked
   step. It would be looser on a larger numeric range, but the scale is bounded to
   0..10, so it is sound here.
+
+---
+
+# ITEST-3 — settings / Speak (settings_test.dart)
+
+Three settings/Speak acceptance tests graded against the same rubric by a fresh
+independent grader: AC-6, AC-7, AC-8. All PENDING.
+
+**Result: 3 A, 0 B** (cumulative suite: **9 A, 0 B**). All drive the real
+assembled app via `givenReadoutOf` → `buildApp`, configure state through the live
+`DisplayController` (the same `setAccessibilityFeatures` the shipped panel
+drives — G2 clean), and anchor Thens on real keyed surfaces (the shipped
+`SwitchListTile`, the real `ActionsBar` Speak control).
+
+| AC | Test | Grade | Rule(s) if B | Note |
+|---|---|---|---|---|
+| AC-6 | `AC-6` accessibility off by default | A | — | **Green at baseline** (the A11Y-1 shell already ships `accessibilityFeatures = false`). Not downgraded: Given re-asserted through the controller (`settings.accessibilityFeatures isFalse`) before the When; Then is the exact raw observable (`SwitchListTile.value isFalse`, `findsOneWidget`); the in-test control drives the set on and asserts the toggle reads `isTrue`, rejecting a constant-off render. Rejects toggle-defaulting-on, toggle-absent, hardcoded-off. Kept pending (owner A11Y-2), flagged for the G-2 review. |
+| AC-7 | `AC-7` Speak hidden while off | A | — | Off Given re-asserted; readout-shown When via real render. Negative Then (`speakControl findsNothing`) after `pumpAndSettle`, paired with a control that turns accessibility on and asserts Speak appears (G3) — so off→hidden is not vacuous. Primary rejects the always-shown `ActionsBar` (the baseline red); control rejects a never-rendered Speak. Keeps its own AC (on→shown is the control). |
+| AC-8 | `AC-8` Speak shown when on | A | — | Off Given re-asserted; When verified to have taken (`settings.accessibilityFeatures isTrue`) and readout shown. Primary `speakControl findsOneWidget` after turning the named setting on via the real controller; in-test control `findsNothing` while off (the baseline red) rejects an always-shown Speak. Binding is to the named flag specifically (a Speak gated on a different flag would fail). Keeps its own AC (off→hidden is the control). |
+
+## Notes — ITEST-3
+
+- **AC-6 green at baseline.** The "off by default" behaviour is already satisfied
+  by the A11Y-1 shell's `DisplaySettings.accessibilityFeatures = false`. The test
+  is tight and discriminating (a constant-off render fails the control), so the
+  grade stands at A, but it passes at the red baseline rather than failing. It is
+  **not** un-pended here: doing so would leave its owner A11Y-2 with no pending AC
+  against the smoke "no dead phase" guard (and no honest basis to mark A11Y-2
+  complete). Whether A11Y-2 is still needed (keep-green + unit coverage) or the AC
+  should be accepted as shell-satisfied is a decision for the ITEST-4 test review
+  (G-2).
+- **AC-7 / AC-8 pair.** Each asserts its own direction as the primary Then and
+  carries the opposite as an in-test control, so neither is vacuous. The pairing
+  is complete in this phase — the pre-seeded READOUT-7 augmentation ("pair both
+  directions") is therefore satisfied in-phase and not carried forward.

@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** In progress — ITEST-2 (readout AC tests) done; next ITEST-3 (settings/Speak AC tests), then ITEST-4 test review (G-2)
+**Status:** In progress — ITEST-3 (settings/Speak AC tests) done; next ITEST-4 test review (G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/ui_improvements/` (new), the `BS20_RUN_PENDING` pending gate for this suite
 **Depends on:** all shell phases (A11Y-1, READOUT-2) · **Blocks:** every behavior phase (via G-2)
@@ -11,8 +11,8 @@
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 6,189,165 | 11m 09s |
 | ITEST-2 | acceptance-tests | AC-1/2/3/4/5/9 | ✅ Done | 4,295,303 | 18m 44s |
-| ITEST-3 | acceptance-tests | AC-6/7/8 | ⬜ Todo | | |
-| ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
+| ITEST-3 | acceptance-tests | AC-6/7/8 | ✅ Done | 4,608,096 | 14m 06s |
+| ITEST-4 | test-review | — (G-2) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -166,6 +166,69 @@ per readout AC (AC-1/2/3/4/5/9) over the real `buildApp` via the ITEST-1 harness
 - **Tasks:** pending tests for default-off (AC-6), Speak-hidden-when-off (AC-7), Speak-shown-when-on (AC-8); AC-7/AC-8 written as a pair so "hidden" isn't vacuous (augmentation closed by READOUT-7).
 - **Exit criteria:** suite green with these pending; red baseline recorded; grade gate passed.
 
+### Result — ITEST-3 (✅ Done)
+
+Landed `integration_test/ui_improvements/settings_test.dart` — one **pending** test
+per settings/Speak AC (AC-6/7/8) over the real `buildApp` via the ITEST-1 harness.
+**No `lib/` change**, so the coverage gate is N/A ("nothing to gate" PASS vs
+`148df14`).
+
+- **Tests & Rejects (all grade A):**
+  - **AC-6** default-off — opens the settings panel; Given re-asserted
+    (`settings.accessibilityFeatures isFalse`); Then the keyed `SwitchListTile`
+    is present (`findsOneWidget`) and `value isFalse`; **control** drives the set
+    on and asserts the toggle reads `isTrue`. Rejects toggle-defaulting-on,
+    toggle-absent, and a constant-off render.
+  - **AC-7** Speak hidden while off — Given off re-asserted; Then
+    `speakControl findsNothing`; **control** turns accessibility on and asserts
+    Speak appears (pairs AC-8's direction, so off→hidden isn't vacuous). Rejects
+    the always-shown actions bar and a never-rendered Speak.
+  - **AC-8** Speak shown when on — Given off re-asserted; **control**
+    `speakControl findsNothing` while off; When turns the named flag on (verified
+    `isTrue`); Then `speakControl findsOneWidget`. Rejects Speak-absent-after-on
+    and an always-shown Speak; binds to the named flag specifically.
+- **Verification:** `flutter analyze` clean; default run **3/3 skipped** (suite
+  green); run-pending (`--dart-define=BS20_RUN_PENDING=true`) **1 pass / 2 fail**:
+  AC-7 fails on its primary Then and AC-8 on its control (both Speak-present-while-off,
+  owner READOUT-7, no panic) — the red baseline. **AC-6 passes at baseline**
+  (green at baseline — the A11Y-1 shell already ships default-off).
+- **Grade gate:** fresh-subagent grade vs G1–G6 → **3 A / 0 B** (cumulative suite
+  9 A / 0 B); grid `behavior-test-completeness-bs-20-ui-improvements.md`.
+- **AC-6 green-at-baseline — kept pending, raised for G-2.** The "off by default"
+  behaviour is already satisfied by the A11Y-1 shell. Per the red-baseline rule a
+  green-at-baseline test is normally un-pended, but un-pending AC-6 would leave
+  its owner A11Y-2 with no pending AC against the smoke "no dead phase" guard (and
+  no honest basis to mark A11Y-2 complete before it runs). So AC-6 is left pending
+  and surfaced to the ITEST-4 test review (G-2) to decide: keep A11Y-2 as a
+  keep-green + unit-coverage phase, or accept AC-6 as shell-satisfied. This is a
+  plan-shaping call for the human, not an AC-test-phase decision.
+- **Augmentation closed in-phase.** The pre-seeded TestAC07_SpeakHidden
+  augmentation is satisfied now — AC-7/AC-8 assert both directions as a pair, so
+  no READOUT-7 test change is scheduled.
+- **Fix passes: 0/3.** **Tokens 4,608,096 · Time 14m 06s.**
+
+### Checkpoint / Handoff — ITEST-3
+
+- **Frozen:** `settings_test.dart` is the settings/Speak AC contract. The
+  contracts a behaviour phase must satisfy: AC-6 the accessibility toggle present
+  and `value false` on a fresh app (already true in the shell); AC-7 no
+  `ActionsBar.speakKey` while `accessibilityFeatures` is off; AC-8 the
+  `ActionsBar.speakKey` present once it is on. Un-pend = delete the AC's row from
+  `pendingACs` (and A11Y-2 / READOUT-7 add themselves to
+  `completedBehaviorPhases` when they un-pend their last AC).
+- **READOUT-7** owns AC-7 **and** AC-8 (the Speak gate, both directions). It must
+  make the readout read `DisplayScope`'s `accessibilityFeatures` to show/hide
+  `ActionsBar`'s Speak control; both tests then go green together. It also carries
+  the bs-01 AC-8 reconciliation (D-3) and G-3.
+- **A11Y-2** owns AC-6 (green at baseline) — pending the G-2 decision above.
+- **Verification (reuse):** per-file `flutter test -d flutter-tester
+  integration_test/ui_improvements/settings_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` for the red/un-pend run); flutter at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH; no `timeout`).
+- **Next:** ITEST-4 (test review, **G-2**) — now unblocked (ITEST-2 + ITEST-3
+  both done). The packet must flag AC-6's green-at-baseline decision and the
+  bs-01 AC-5/AC-8 reconciliations (D-3) for the reviewer.
+
 ## Phase ITEST-4 — Test review (G-2)
 
 - **Kind:** test-review · **Target AC:** —
@@ -185,13 +248,13 @@ per readout AC (AC-1/2/3/4/5/9) over the real `buildApp` via the ITEST-1 harness
 | AC-3 | TestAC03_EqualSwatches | ✅ fails (run-pending) | Then: swatch sizes unequal — displayed 16×16 vs grayscale 48×48 | READOUT-4 | A |
 | AC-4 | TestAC04_AllSpaces | ✅ fails (run-pending) | Then: CIELCh signature absent in the all-spaces region (shell region empty; `SpaceSelector` still present) | READOUT-3 | A |
 | AC-5 | TestAC05_Definitions | ✅ fails (run-pending) | Given-precond (names READOUT-3/6): CIELCh name not shown as an openable label (shell `SpaceDefinition` is empty) — fails before the tap, no panic | READOUT-6 | A |
-| AC-6 | TestAC06_DefaultOff | (ITEST-3) | Then: toggle value false | A11Y-2 | |
-| AC-7 | TestAC07_SpeakHidden | (ITEST-3) | Then: Speak absent while off | READOUT-7 | |
-| AC-8 | TestAC08_SpeakShown | (ITEST-3) | Then: Speak present when on | READOUT-7 | |
+| AC-6 | TestAC06_DefaultOff | ⚠ **green at baseline** (passes) | — the shell already ships `accessibilityFeatures = false`, so "off by default" holds today; kept pending for the G-2 review (see note) | A11Y-2 | A |
+| AC-7 | TestAC07_SpeakHidden | ✅ fails (run-pending) | Then (primary): Speak present while off (`ActionsBar` is always shown, `readout_screen.dart:101`) — fails `findsNothing` | READOUT-7 | A |
+| AC-8 | TestAC08_SpeakShown | ✅ fails (run-pending) | Then (control): Speak present while off — fails the `findsNothing` control that pairs the on→shown primary | READOUT-7 | A |
 | AC-9 | TestAC09_ColorSpelling | ✅ fails (run-pending) | Then: readout copy still contains "colou" ("Displayed colour" present) | READOUT-8 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode -->
 
 | AC test | Limited because | Augmented by | Add | Status |
 |---|---|---|---|---|
-| TestAC07_SpeakHidden | with no Speak control in the new layout yet, "absent while off" can pass vacuously | READOUT-7 | assert Speak present when on (pair both directions) | ⬜ Open |
+| TestAC07_SpeakHidden | with no Speak control in the new layout yet, "absent while off" can pass vacuously | ~~READOUT-7~~ (closed in ITEST-3) | assert Speak present when on (pair both directions) | ✅ Closed in ITEST-3 — AC-7 carries the on→shown control in-test and AC-8 the off→hidden control, so the pair is non-vacuous now; no READOUT-7 test change needed (READOUT-7 just makes both go green). |
