@@ -73,3 +73,29 @@ drives — G2 clean), and anchor Thens on real keyed surfaces (the shipped
   carries the opposite as an in-test control, so neither is vacuous. The pairing
   is complete in this phase — the pre-seeded READOUT-7 augmentation ("pair both
   directions") is therefore satisfied in-phase and not carried forward.
+
+---
+
+# READOUT-4 re-grade — un-pended tests against built behaviour (2026-10-25)
+
+Fresh independent re-grade of every **un-pended** AC test now that its behaviour
+is built — AC-1, AC-3 (READOUT-4), AC-4 (READOUT-3), AC-6 (A11Y-2). Graded by
+reading the built `lib/readout/value_region.dart` / `color_chip.dart` /
+`surface_card.dart` and the tests.
+
+**Result: 4 A, 0 B.** No downgrades against G1–G6; consistent with the pending
+grid above.
+
+- **AC-1** A — "58" is inside the keyed, bordered `SurfaceCard`
+  (`Border.all(outlineVariant, 2px)` → `_isBordered`) at `prominentFontSize` 48,
+  and strictly out-sizes every other readout paragraph (AppBar ~22pt, body ~14pt;
+  header + actions-bar + lightness paras excluded). Rejects a plain row and a
+  value not rendered largest (strict `greaterThan`).
+- **AC-3** A — `ValueRegion.swatchSize = 48` feeds both the grayscale `Container`
+  and `ColorChip(swatchSize: 48)`; the single simulation-off `DecoratedBox`
+  measures 48×48 == the grayscale box. Rejects the baseline 48-vs-16 mismatch.
+- **AC-4** A (still holds) — all four space signatures asserted simultaneously in
+  the all-spaces region; `SpaceSelector findsNothing`.
+- **AC-6** A (still holds) — keyed `SwitchListTile` defaults `false`, re-asserted
+  through the live controller, with an on-control that rejects a constant-off
+  render.

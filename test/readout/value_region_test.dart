@@ -11,6 +11,7 @@ import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/readout_controller.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
 import 'package:paint_color_assistant/widgets/color_chip.dart';
+import 'package:paint_color_assistant/widgets/surface_card.dart';
 import 'package:paint_color_assistant/widgets/swatch_caption.dart';
 
 // Terracotta: CIELAB L58 → Munsell value 5.5, grayscale a neutral.
@@ -131,19 +132,34 @@ void main() {
     expect(find.byType(SwatchCaption), findsOneWidget);
   });
 
-  testWidgets('exposes the hero-card anchor around the value content '
-      '(READOUT-2 shell)', (tester) async {
+  testWidgets('shows the value in a bordered hero card (READOUT-4, AC-1)',
+      (tester) async {
     await _pumpRegion(tester);
-    // The hero-card anchor is findable and wraps the value reading (READOUT-4
-    // turns it into a real bordered card).
-    expect(find.byKey(ValueRegion.heroCardKey), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(ValueRegion.heroCardKey),
-        matching: find.text('58'),
-      ),
-      findsOneWidget,
+    // The hero-card anchor is a real bordered SurfaceCard wrapping the value
+    // reading (not the plain subtree the READOUT-2 shell rendered).
+    final heroCard = find.byKey(ValueRegion.heroCardKey);
+    expect(heroCard, findsOneWidget);
+    expect(tester.widget(heroCard), isA<SurfaceCard>(),
+        reason: 'the value sits in a SurfaceCard — a bordered hero card');
+    expect(find.descendant(of: heroCard, matching: find.text('58')),
+        findsOneWidget);
+  });
+
+  testWidgets('sizes the displayed-colour swatch equal to the grayscale swatch '
+      '(READOUT-4, AC-3)', (tester) async {
+    await _pumpRegion(tester);
+    // The grayscale value swatch and the displayed-colour chip swatch render at
+    // the same square size, so the colour reads as large as the value swatch.
+    final graySize = tester.getSize(find.byKey(ValueRegion.grayscaleKey));
+    final chip = tester.widget<ColorChip>(find.byType(ColorChip));
+    expect(chip.swatchSize, ValueRegion.swatchSize,
+        reason: 'the chip swatch is sized to the shared value-swatch size');
+    final colourSwatch = tester.getSize(
+      find.descendant(of: find.byType(ColorChip), matching: find.byType(DecoratedBox)),
     );
+    expect(colourSwatch, equals(graySize),
+        reason: 'displayed-colour swatch ($colourSwatch) == grayscale ($graySize)');
+    expect(graySize, const Size(ValueRegion.swatchSize, ValueRegion.swatchSize));
   });
 
   testWidgets('formats a whole Munsell value without a trailing .0',

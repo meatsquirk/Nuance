@@ -51,9 +51,12 @@ import 'package:flutter_test/flutter_test.dart';
 ///   AC-8 → READOUT-7   (Speak shown when accessibility on)
 ///   AC-9 → READOUT-8   ("Color" rather than "Colour")
 const Map<String, String> pendingACs = {
-  'AC-1': 'READOUT-4',
+  // AC-1 un-pended by READOUT-4 (2026-10-25): the lightness reads in a bordered
+  // hero card as the largest reading — proven green by `TestAC01_HeroCard`.
   'AC-2': 'READOUT-5',
-  'AC-3': 'READOUT-4',
+  // AC-3 un-pended by READOUT-4 (2026-10-25): the displayed-colour swatch is
+  // sized equal to the grayscale value swatch — proven green by
+  // `TestAC03_EqualSwatches`.
   // AC-4 un-pended by READOUT-3 (2026-10-25): every colour space shown together
   // in the all-spaces region, the one-at-a-time selector removed — proven green
   // by `TestAC04_AllSpaces`.
@@ -90,6 +93,7 @@ const Set<String> behaviorPhases = {
 const Set<String> completedBehaviorPhases = {
   'A11Y-2', // un-pended AC-6 (accessibility features off by default)
   'READOUT-3', // un-pended AC-4 (every colour space shown together, no selector)
+  'READOUT-4', // un-pended AC-1 (bordered hero card) + AC-3 (equal-size swatches)
 };
 
 /// Every AC id the bs-20 acceptance suite covers (the master plan's 9 ACs).

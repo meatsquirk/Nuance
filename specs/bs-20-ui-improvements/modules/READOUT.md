@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** In progress — behavior stage; READOUT-3 done (AC-4). Next READOUT-4.
+**Status:** In progress — behavior stage; READOUT-4 done (AC-1, AC-3). Next READOUT-5.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -12,7 +12,7 @@
 | READOUT-1 | scaffold | — | ✅ Done | 3,024,669 | 6m 06s |
 | READOUT-2 | shell | — | ✅ Done | 5,244,417 | 11m 09s |
 | READOUT-3 | behavior | AC-4 | ✅ Done | 19,357,101 | 43m 15s |
-| READOUT-4 | behavior | AC-1, AC-3 | ⬜ Todo | | |
+| READOUT-4 | behavior | AC-1, AC-3 | ✅ Done | 6,914,808 | 21m 02s |
 | READOUT-5 | behavior | AC-2 | ⬜ Todo | | |
 | READOUT-6 | behavior | AC-5 | ⬜ Todo | | |
 | READOUT-7 | behavior | AC-7, AC-8 | ⬜ Todo | | |
@@ -191,11 +191,69 @@ widget if those tests are updated. Its lines are untouched this phase, so the co
   was run green (see Result).
 - **Next:** READOUT-4 (hero card AC-1 + equal swatches AC-3) — shares `lib/readout/`, run serially.
 
+## Phase READOUT-4 — Hero card + equal swatches (AC-1, AC-3)
+
 - **Kind:** behavior · **Target AC:** AC-1 (full), AC-3 (full)
 - **Depends on:** ITEST-4 (G-2) · **Blocks:** SIGNOFF-1
 - **Files:** `value_region.dart`
 - **Tasks:** wrap the value in a bordered hero card with the value as the largest reading; size the displayed-colour swatch equal to the grayscale swatch.
 - **Acceptance gate:** un-pend AC-1, AC-3; `TestAC01_HeroCard`, `TestAC03_EqualSwatches` green.
+
+### Result — READOUT-4
+
+AC-1 + AC-3 delivered. Landed in `lib/readout/value_region.dart`:
+- **Bordered hero card (AC-1):** the value content is wrapped in a `SurfaceCard`
+  (the app's ordinary bordered panel — `Border.all(outlineVariant, 2px)`, one-theme
+  colours) keyed `heroCardKey`, replacing the READOUT-2 plain `KeyedSubtree`. The
+  lightness stays at `prominentFontSize` (48), the largest reading on the screen.
+- **Equal swatches (AC-3):** new `ValueRegion.swatchSize = 48` constant sizes both
+  the grayscale preview `Container` and the displayed-colour swatch, so they render
+  the same size.
+- **One shared-widget change (beyond the plan's `value_region.dart` Files line):**
+  `lib/widgets/color_chip.dart` gained a `double swatchSize = 16` parameter (the
+  chip hard-coded 16). The displayed-colour swatch must be a `ColorChip` (the bs-08
+  display chokepoint the harness finder requires), so matching the grayscale size
+  needs the chip's swatch sizable. The **default is unchanged (16)**, so every other
+  ColorChip call site is untouched; only the value region passes 48. No new branch
+  (a plain field), so coverage stays 100%.
+- **Pending gate:** AC-1 and AC-3 rows removed; READOUT-4 added to
+  `completedBehaviorPhases`.
+
+Gates: `flutter analyze` (3 touched files) clean. Unit **1654/0** (+1 net: strengthened
+the hero-card unit test to assert the bordered `SurfaceCard`, added an equal-swatch-size
+unit test). Coverage gate **100% on both touched lib files** (`value_region.dart`,
+`color_chip.dart`). Acceptance: bs-20 `TestAC01_HeroCard` + `TestAC03_EqualSwatches`
+**green** in the default run and the run-pending run; the only run-pending failures are
+the still-pending AC-2/AC-5/AC-9 (+ AC-7/AC-8 in settings) at their red baselines —
+exactly their owning phases. Smoke 7/7 both modes. Regression (readout-touching +
+ColorChip-rendering suites): bs-01 readout 11/11 + harness 5/5, bs-08 display 21/21,
+bs-10 daltonization 25/25, design_system 27/27, bs-02 capture 19/19, bs-05 comparison
+26/26 — all green. Grade gate (fresh independent grader over every un-pended test):
+**AC-1 A, AC-3 A, AC-4 A, AC-6 A** — 4 A / 0 B. Fix passes: 1/3 (the hero-card unit test
+used a `find.descendant` for the SurfaceCard, which excludes the root the key sits on;
+switched to `isA<SurfaceCard>()`). Tokens / time: see dashboard row.
+
+**Known gap:** none introduced. Palette integration still shows the carried off-lane
+flakes (bs-06 palette AC-3/AC-5) that reproduce at merge-base `c00422f` — not a
+regression (neither test renders the readout or a 48px chip swatch).
+
+### Checkpoint / Handoff — READOUT-4
+
+- **Frozen interfaces:** `ValueRegion` renders the value inside a bordered
+  `SurfaceCard` keyed `heroCardKey`; `ValueRegion.swatchSize = 48` is the shared size
+  of the grayscale and displayed-colour swatches. `ColorChip({… double swatchSize =
+  16})` — the swatch square side; leave the default for every call site except a
+  deliberately enlarged one.
+- **Verification commands (reuse):** `flutter test test/ --coverage`;
+  `dart run tool/coverage_gate.dart <BASE>`; per-file
+  `flutter test -d flutter-tester integration_test/ui_improvements/<file>_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` to run pending). `flutter` at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH); no `timeout` on macOS;
+  integration under `coord.sh with-lock`. The readout body is taller than 800×600 — a
+  harness that taps the actions bar must size a tall viewport (bs-01/bs-08 pattern).
+- **Known gaps:** none from this phase. `SpaceSelector.build` stays dead (READOUT-3
+  gap). Carried flakes unchanged.
+- **Next:** READOUT-5 (AC-2 0–10 value scale) — shares `lib/readout/`, run serially.
 
 ## Phase READOUT-5 — 0–10 value scale (AC-2)
 

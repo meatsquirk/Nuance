@@ -26,8 +26,12 @@ import '../display/display_settings.dart';
 /// appears to them and its true colour side by side (AC-3). The label still
 /// carries all the meaning; the swatches stay decorative.
 class ColorChip extends StatelessWidget {
-  const ColorChip({required this.label, this.color, super.key})
-      : assert(
+  const ColorChip({
+    required this.label,
+    this.color,
+    this.swatchSize = 16,
+    super.key,
+  }) : assert(
           label != '',
           'ColorChip requires descriptive text; colour alone conveys no '
           'meaning (SI Accessibility).',
@@ -38,6 +42,11 @@ class ColorChip extends StatelessWidget {
 
   /// The swatch colour, if any. Decorative only — [label] carries the meaning.
   final Color? color;
+
+  /// The side length of each swatch square, in logical pixels. Defaults to the
+  /// compact 16px used throughout the app; the readout's displayed-colour swatch
+  /// passes a larger size so it matches the grayscale value swatch (bs-20 AC-3).
+  final double swatchSize;
 
   @override
   Widget build(BuildContext context) {
@@ -66,8 +75,8 @@ class ColorChip extends StatelessWidget {
         children: [
           for (final swatch in swatches)
             Container(
-              width: 16,
-              height: 16,
+              width: swatchSize,
+              height: swatchSize,
               margin: const EdgeInsets.only(right: 8),
               decoration: BoxDecoration(color: swatch, shape: BoxShape.circle),
             ),

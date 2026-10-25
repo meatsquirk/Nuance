@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/color_chip.dart';
+import '../widgets/surface_card.dart';
 import '../widgets/swatch_caption.dart';
 import '../widgets/value_reading.dart';
 import 'readout_controller.dart';
@@ -27,14 +28,18 @@ class ValueRegion extends StatelessWidget {
 
   /// Stable anchor for the value-hero card (AC-1).
   ///
-  /// READOUT-2 shell anchor: the value content is wrapped in a keyed subtree so
-  /// the hero card is findable, with no visible change (behaviour unchanged).
-  /// READOUT-4 turns it into a real bordered card making the lightness the
-  /// largest reading on the screen.
+  /// The value content sits inside a bordered [SurfaceCard] (READOUT-4) so the
+  /// lightness is presented as a prominent hero card — the largest reading on
+  /// the screen through [prominentFontSize].
   static const Key heroCardKey = ValueKey('readout-value-hero-card');
 
   /// Stable anchor for the grayscale preview slot.
   static const Key grayscaleKey = ValueKey('readout-grayscale-preview');
+
+  /// Side length of the two value swatches — the grayscale preview and the
+  /// displayed-colour swatch — kept equal so the displayed colour reads as
+  /// large as the grayscale value swatch (AC-3).
+  static const double swatchSize = 48;
 
   /// Font size of the prominent lightness figure.
   ///
@@ -50,13 +55,14 @@ class ValueRegion extends StatelessWidget {
   Widget build(BuildContext context) {
     final grayscale = controller.grayscale;
     final color = controller.displayColor;
-    // The value content is wrapped in the keyed hero-card anchor (READOUT-2
-    // shell); READOUT-4 replaces the plain subtree with a bordered card.
-    return KeyedSubtree(
+    // The value content sits inside a bordered hero card (READOUT-4, AC-1): a
+    // SurfaceCard draws the one-theme line border, so the lightness reads as a
+    // prominent card rather than a plain row.
+    return SurfaceCard(
       key: heroCardKey,
       child: Padding(
         key: regionKey,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -64,8 +70,8 @@ class ValueRegion extends StatelessWidget {
             // so the value reads without colour (SI Accessibility, AC-1).
             Container(
               key: grayscaleKey,
-              width: 48,
-              height: 48,
+              width: swatchSize,
+              height: swatchSize,
               decoration: BoxDecoration(
                 color: Color.fromARGB(
                   255,
@@ -102,6 +108,7 @@ class ValueRegion extends StatelessWidget {
                   // the colour a trichromat sees, unchanged (AC-2). The label is
                   // generic so it never repeats the colour name shown in the
                   // header — the swatch is decorative; its meaning is in the text.
+                  // Its swatch is sized equal to the grayscale swatch (AC-3).
                   ColorChip(
                     label: 'Displayed colour',
                     color: Color.fromARGB(
@@ -110,6 +117,7 @@ class ValueRegion extends StatelessWidget {
                       color.green,
                       color.blue,
                     ),
+                    swatchSize: swatchSize,
                   ),
                   // The one standing reminder that the swatch is a screen
                   // approximation and the numbers are authoritative (bs-17 AC-15);
