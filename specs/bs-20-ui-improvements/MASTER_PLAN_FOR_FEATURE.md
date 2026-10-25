@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** In progress — ITEST-1 harness done; next the pending AC tests (ITEST-2 ∥ ITEST-3). Spec approved (G-1) 2026-10-24 by Matt Quirk.
+**Status:** In progress — ITEST-2 readout AC tests done (6 A); next ITEST-3 (settings/Speak AC tests), then ITEST-4 test review (G-2). Spec approved (G-1) 2026-10-24 by Matt Quirk.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -133,8 +133,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 2 | A11Y-1 | shell: `accessibilityFeatures` flag + controller setter + panel toggle | ✅ Done | 3,730,986 | 6m 00s | 1648 unit pass (+5); cov 100% on 3 touched; toggle inert |
 | 3 | READOUT-2 | shell: readout widget skeletons (hero/scale/all-spaces/definition), wired, behaviour unchanged | ✅ Done | 5,244,417 | 11m 09s | 1654 unit (+6); cov 100% on 5 touched; bs-01 readout itest 12/12; selector kept |
 | 4 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (9 pending), smoke | ✅ Done | 6,189,165 | 11m 09s | 7/7 smoke both modes; no lib change |
-| 5 | ITEST-2 | acceptance-tests: AC-1/2/3/4/5/9 (pending) + red baseline | ⬜ Next | | | ∥ ITEST-3 |
-| 6 | ITEST-3 | acceptance-tests: AC-6/7/8 (pending) + red baseline | ⬜ Todo | | | ∥ ITEST-2 |
+| 5 | ITEST-2 | acceptance-tests: AC-1/2/3/4/5/9 (pending) + red baseline | ✅ Done | 4,295,303 | 18m 44s | 6/6 skip default, 6/6 red run-pending; grade 6 A |
+| 6 | ITEST-3 | acceptance-tests: AC-6/7/8 (pending) + red baseline | ⬜ Next | | | startable now; ∥-safe, disjoint file |
 | 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Todo | | | |
 | 8 | A11Y-2 | AC-6 accessibility off by default | ⬜ Todo | | | ∥ one READOUT phase |
 | 9 | READOUT-3 | AC-4 all spaces at once; retire bs-01 AC-5 selector test (D-3) | ⬜ Todo | | | |
@@ -149,10 +149,9 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-1 landed the harness (`integration_test/ui_improvements/harness.dart`), the `BS20_RUN_PENDING` gate (`pending.dart`) and a 7-check `smoke_test.dart` (green both modes; no `lib/` change). The acceptance stage continues — these two can run concurrently (disjoint files):
-- **ITEST-2** (startable now) — `readout_test.dart`: the pending AC tests AC-1/2/3/4/5/9 + red baseline + grade gate.
-- **ITEST-3** (startable now) — `settings_test.dart`: the pending AC tests AC-6/7/8 (AC-7/AC-8 as a Speak off→hidden / on→shown pair) + red baseline + grade gate.
-- Then **ITEST-4** (test review, **G-2**).
+ITEST-2 landed `readout_test.dart` — one pending test per readout AC (AC-1/2/3/4/5/9), all grade **A**, red baseline recorded (6/6 fail run-pending on the intended Then/precondition; 6/6 skip default). No `lib/` change.
+- **ITEST-3** (⬜ Next, startable now) — `settings_test.dart`: pending AC tests AC-6/7/8 (AC-7/AC-8 as a Speak off→hidden / on→shown pair) + red baseline + grade gate. Disjoint file from ITEST-2, so it could have run concurrently; run it next.
+- Then **ITEST-4** (test review, **G-2**) — unblocked once ITEST-3 lands.
 
 AC tests import only `harness.dart`; frozen vocabulary + fixtures are in the ITEST-1 Checkpoint. Carry: D-1 — bs-19 still unmerged, both edit `build_app.dart` (bites later behavior phases, not ITEST).
 
@@ -168,7 +167,8 @@ AC tests import only `harness.dart`; frozen vocabulary + fixtures are in the ITE
 | A11Y-1 | 19e8c8cf | 2026-10-25 00:15 EDT | 00:21 | 6m 00s | 6m 00s | claude-opus-4-8 | 86 | 77,294 | 3,635,723 | 17,883 | 3,730,986 | shell done: accessibilityFeatures axis + panel toggle (inert); 1648 unit pass (+5), coverage 100% on 3 touched files |
 | READOUT-2 | 8912fdfe | 2026-10-25 00:46 EDT | 00:57 | 11m 09s | 11m 09s | claude-opus-4-8 | 92 | 112,921 | 5,095,535 | 35,869 | 5,244,417 | shell done: value_scale/all_spaces_region/space_definition + hero-card anchor, wired; 1654 unit (+6), cov 100% on 5 touched; bs-01 readout itest 12/12; selector kept |
 | ITEST-1 | 1e6edae6 | 2026-10-25 01:12 EDT | 01:23 | 11m 09s | 11m 09s | claude-opus-4-8 | 74 | 182,169 | 5,965,048 | 41,874 | 6,189,165 | harness + BS20_RUN_PENDING gate + smoke: 7/7 default & run-pending, no lib change (coverage N/A), analyze clean |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 01:23** | **42h 02m** | **59m 39s** |  | **386** | **1,072,836** | **21,681,615** | **199,065** | **22,953,902** |  |
+| ITEST-2 | dfa2a54e | 2026-10-25 01:45 EDT | 02:04 | 18m 44s | 18m 44s | claude-opus-4-8 | 66 | 233,302 | 3,986,784 | 75,151 | 4,295,303 | readout AC tests AC-1/2/3/4/5/9 pending + red baseline (6/6 skip default, 6/6 red run-pending), grade 6 A; no lib change (coverage N/A) |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 02:04** | **42h 21m** | **1h 18m** |  | **452** | **1,306,138** | **25,668,399** | **274,216** | **27,249,205** |  |
 
 ## Sign-off
 

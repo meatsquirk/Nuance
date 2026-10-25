@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** In progress — ITEST-1 (harness) done; next ITEST-2 ∥ ITEST-3
+**Status:** In progress — ITEST-2 (readout AC tests) done; next ITEST-3 (settings/Speak AC tests), then ITEST-4 test review (G-2)
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/ui_improvements/` (new), the `BS20_RUN_PENDING` pending gate for this suite
 **Depends on:** all shell phases (A11Y-1, READOUT-2) · **Blocks:** every behavior phase (via G-2)
@@ -10,7 +10,7 @@
 | Phase | Kind | Target AC | Status | Tokens | Time |
 |---|---|---|---|---|---|
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 6,189,165 | 11m 09s |
-| ITEST-2 | acceptance-tests | AC-1/2/3/4/5/9 | ⬜ Todo | | |
+| ITEST-2 | acceptance-tests | AC-1/2/3/4/5/9 | ✅ Done | 4,295,303 | 18m 44s |
 | ITEST-3 | acceptance-tests | AC-6/7/8 | ⬜ Todo | | |
 | ITEST-4 | test-review | — (G-2) | ⬜ Todo | | |
 
@@ -98,6 +98,66 @@ coverage gate is N/A ("nothing to gate" PASS vs `b905acb`).
 - **Tasks:** one pending test per AC per the master catalogue (Given/When/Then/Rejects); record the red baseline (each fails on its Then at `BS20_RUN_PENDING=true`, skips by default).
 - **Exit criteria:** suite green with these pending; red baseline recorded; grade gate passed (each test rejects its plausible wrong impl).
 
+### Result — ITEST-2 (✅ Done)
+
+Landed `integration_test/ui_improvements/readout_test.dart` — one **pending** test
+per readout AC (AC-1/2/3/4/5/9) over the real `buildApp` via the ITEST-1 harness.
+**No `lib/` change**, so the coverage gate is N/A ("nothing to gate" PASS vs
+`d1fa315`).
+
+- **Tests & Rejects (all grade A):**
+  - **AC-1** hero card — asserts Lightness 58 sits in a **bordered** ancestor
+    (`_isBordered`: BoxDecoration border / ShapeDecoration side / Card) *and* is
+    the strictly largest reading paragraph in the readout Scaffold (NameHeader +
+    ActionsBar excluded). Rejects both: plain row no card, and a card not largest.
+  - **AC-2** value scale — all eleven `0..10` step labels present under
+    `valueScale`, and exactly one **selected `Semantics`** step whose label/text
+    contains `2`. Rejects bare text (no scale), no marked step, wrong step.
+    Given re-asserts `find.text('Munsell value 2')` (fixture → value 2, confirmed
+    live at baseline).
+  - **AC-3** equal swatches — `tester.getSize` of the grayscale keyed square vs
+    the single `DecoratedBox` inside the displayed-colour `ColorChip` (margin-free
+    painted boxes); `equals()` rejects different size (16×16 vs 48×48 baseline).
+  - **AC-4** all spaces — four mutually-distinct signatures (°, `10R`, hex,
+    r,g,b triplet, CIELAB `25.27`/`22.75`) **inside the all-spaces region only**
+    + `SpaceSelector findsNothing`. Rejects only-one-shown and selector-present.
+  - **AC-5** definitions — Scenario Outline over all four `ReadoutSpace.values`;
+    openable-name precondition (checked before the tap → clean pending failure,
+    no zero-size tap panic), definition hidden→shown before/after pair, and an
+    `e.g.|example|for instance` example cue. Rejects un-tappable name, tap shows
+    nothing, definition without example.
+  - **AC-9** "Color" copy — scoped to the readout `Scaffold`:
+    `isNot(contains('colou'))` (rejects any Colour left) + `\bcolor\b` positive
+    control.
+- **Verification:** `flutter analyze` clean; default run **6/6 skipped** (suite
+  green); run-pending (`--dart-define=BS20_RUN_PENDING=true`) **6/6 fail** each on
+  the intended Then (AC-1/2/3/4/9) or Given-precondition naming its owner (AC-5) —
+  no panics/compile/harness errors. Red baseline recorded above.
+- **Grade gate:** fresh-subagent `/behavior-test-check`-style grade vs G1–G6 →
+  **6 A / 0 B**; grid `behavior-test-completeness-bs-20-ui-improvements.md`.
+- **Fix passes: 0/3.** **Tokens 4,295,303 · Time 18m 44s.**
+
+### Checkpoint / Handoff — ITEST-2
+
+- **Frozen:** `readout_test.dart` is the readout AC contract. Behaviour phases
+  un-pend by deleting the AC's row from `pendingACs` (harness). The contracts a
+  behaviour phase must satisfy: AC-1 a **bordered** card around L58 that is the
+  largest reading; AC-2 eleven `0..10` labels + one **selected `Semantics`** step
+  labelled/containing the sample's value; AC-3 the displayed swatch `DecoratedBox`
+  == the grayscale square size; AC-4 all four spaces' values **in the all-spaces
+  region** and the `SpaceSelector` gone; AC-5 each space name an openable label
+  revealing a definition whose text carries an `e.g.|example|for instance` cue;
+  AC-9 no "colou" anywhere in the readout Scaffold copy.
+- **Reused helpers:** ported `_parasUnder`/`_fontSize`/`_plainTextUnder`/
+  `_isBordered` (bs-01 readout suite style).
+- **Verification (reuse):** per-file `flutter test -d flutter-tester
+  integration_test/ui_improvements/readout_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` for the red/un-pend run); flutter at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH; no `timeout`).
+- **Next:** ITEST-3 (`settings_test.dart`, AC-6/7/8) — still startable, disjoint
+  file; then ITEST-4 (test review, **G-2**). ITEST-4's packet is unblocked once
+  ITEST-3 lands.
+
 ## Phase ITEST-3 — Settings / Speak AC tests
 
 - **Kind:** acceptance-tests · **Target AC:** AC-6, AC-7, AC-8 (pending)
@@ -120,15 +180,15 @@ coverage gate is N/A ("nothing to gate" PASS vs `b905acb`).
 
 | AC | Test | Baseline outcome (run-pending) | Fails at | Owning phase | Grade |
 |---|---|---|---|---|---|
-| AC-1 | TestAC01_HeroCard | (to record) | Then: hero card is largest | READOUT-4 | |
-| AC-2 | TestAC02_ValueScale | (to record) | Then: 0–10 scale + marked step | READOUT-5 | |
-| AC-3 | TestAC03_EqualSwatches | (to record) | Then: equal swatch size | READOUT-4 | |
-| AC-4 | TestAC04_AllSpaces | (to record) | Then: all four + no selector | READOUT-3 | |
-| AC-5 | TestAC05_Definitions | (to record) | When: name not tappable | READOUT-6 | |
-| AC-6 | TestAC06_DefaultOff | (to record) | Then: toggle value false | A11Y-2 | |
-| AC-7 | TestAC07_SpeakHidden | (to record) | Then: Speak absent while off | READOUT-7 | |
-| AC-8 | TestAC08_SpeakShown | (to record) | Then: Speak present when on | READOUT-7 | |
-| AC-9 | TestAC09_ColorSpelling | (to record) | Then: no "Colour" in copy | READOUT-8 | |
+| AC-1 | TestAC01_HeroCard | ✅ fails (run-pending) | Then: Lightness 58 not in a *bordered* card (ancestor-border predicate found 0; shell renders a plain `KeyedSubtree` row) | READOUT-4 | A |
+| AC-2 | TestAC02_ValueScale | ✅ fails (run-pending) | Then: scale step label `0` absent (shell `ValueScale` is `SizedBox.shrink`; also no selected-`Semantics` marked step) — Given "Munsell value 2" passes | READOUT-5 | A |
+| AC-3 | TestAC03_EqualSwatches | ✅ fails (run-pending) | Then: swatch sizes unequal — displayed 16×16 vs grayscale 48×48 | READOUT-4 | A |
+| AC-4 | TestAC04_AllSpaces | ✅ fails (run-pending) | Then: CIELCh signature absent in the all-spaces region (shell region empty; `SpaceSelector` still present) | READOUT-3 | A |
+| AC-5 | TestAC05_Definitions | ✅ fails (run-pending) | Given-precond (names READOUT-3/6): CIELCh name not shown as an openable label (shell `SpaceDefinition` is empty) — fails before the tap, no panic | READOUT-6 | A |
+| AC-6 | TestAC06_DefaultOff | (ITEST-3) | Then: toggle value false | A11Y-2 | |
+| AC-7 | TestAC07_SpeakHidden | (ITEST-3) | Then: Speak absent while off | READOUT-7 | |
+| AC-8 | TestAC08_SpeakShown | (ITEST-3) | Then: Speak present when on | READOUT-7 | |
+| AC-9 | TestAC09_ColorSpelling | ✅ fails (run-pending) | Then: readout copy still contains "colou" ("Displayed colour" present) | READOUT-8 | A |
 
 ## Test augmentations  <!-- pre-seeded in plan mode -->
 
