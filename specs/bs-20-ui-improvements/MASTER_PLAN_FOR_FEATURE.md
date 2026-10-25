@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** In progress — ITEST-3 settings/Speak AC tests done (3 A; suite 9 A); next ITEST-4 test review (G-2). Spec approved (G-1) 2026-10-24 by Matt Quirk.
+**Status:** ⏸ Awaiting G-2 — ITEST-4 review packet assembled (suite 9 A); the human decides the acceptance tests before the behavior stage opens. Spec approved (G-1) 2026-10-24 by Matt Quirk.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -112,7 +112,7 @@ graph LR
 | Gate | Kind | Decision needed | Blocks | Status |
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec | READOUT-1 | ✅ Resolved 2026-10-24: approved — Matt Quirk |
-| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | Open |
+| G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ⏸ Awaiting decision — packet in [modules/ITEST.md](modules/ITEST.md) § Review packet |
 | G-3 | decision | Confirm hiding Speak by default (accessibility off) does not violate bs-11 accessibility-conformance; if it does, run bs-11's conformance with accessibility on | READOUT-7, SIGNOFF-1 | Open |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
@@ -135,8 +135,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 4 | ITEST-1 | acceptance-tests: harness, fixtures, pending gate (9 pending), smoke | ✅ Done | 6,189,165 | 11m 09s | 7/7 smoke both modes; no lib change |
 | 5 | ITEST-2 | acceptance-tests: AC-1/2/3/4/5/9 (pending) + red baseline | ✅ Done | 4,295,303 | 18m 44s | 6/6 skip default, 6/6 red run-pending; grade 6 A |
 | 6 | ITEST-3 | acceptance-tests: AC-6/7/8 (pending) + red baseline | ✅ Done | 4,608,096 | 14m 06s | 3/3 skip default; run-pending AC-7/AC-8 red (Speak gate, READOUT-7), AC-6 green at baseline; grade 3 A; no lib change |
-| 7 | ITEST-4 | test-review: packet; G-2 | ⬜ Next | | | unblocked (ITEST-2+ITEST-3 done); packet must flag AC-6 green-at-baseline + bs-01 AC-5/AC-8 reconciliations |
-| 8 | A11Y-2 | AC-6 accessibility off by default | ⬜ Todo | | | ∥ one READOUT phase |
+| 7 | ITEST-4 | test-review: packet; G-2 | ⏸ Awaiting review | 1,196,206 | 3m 54s | packet assembled in modules/ITEST.md; suite 9 A; flags AC-6 green-at-baseline + bs-01 AC-5/AC-8 reconciliations; G-2 awaiting decision |
+| 8 | A11Y-2 | AC-6 accessibility off by default | ⬜ Next | | | startable after G-2; ∥ one READOUT phase |
 | 9 | READOUT-3 | AC-4 all spaces at once; retire bs-01 AC-5 selector test (D-3) | ⬜ Todo | | | |
 | 10 | READOUT-4 | AC-1 hero card + AC-3 equal swatches | ⬜ Todo | | | |
 | 11 | READOUT-5 | AC-2 0–10 value scale | ⬜ Todo | | | |
@@ -149,11 +149,10 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
 ## Next phase
 
-ITEST-3 landed `settings_test.dart` — pending AC tests AC-6/7/8, all grade **A** (suite 9 A). Red baseline: AC-7/AC-8 red run-pending (Speak always shown today → both fail Speak-present-while-off, owner READOUT-7); **AC-6 green at baseline** (the A11Y-1 shell already ships `accessibilityFeatures = false`). 3/3 skip default. No `lib/` change.
-- **ITEST-4** (⬜ Next, test review, **G-2**) — now unblocked (both AC-test phases done). The packet must put two items in front of the reviewer: (1) **AC-6 green-at-baseline** — decide whether A11Y-2 stays a keep-green + unit-coverage phase or AC-6 is accepted as shell-satisfied (not un-pended here to avoid orphaning A11Y-2 against the smoke dead-phase guard); (2) the **bs-01 AC-5 (selector) / AC-8 (Speak) reconciliations** (D-3).
-- After G-2 approval, the behavior stage opens: A11Y-2 ∥ one READOUT phase; READOUT-* serial (shared `lib/readout/` files).
-
-AC tests import only `harness.dart`; frozen vocabulary + fixtures are in the ITEST-1 Checkpoint. The TestAC07 augmentation is **closed in ITEST-3** (AC-7/AC-8 pair both directions in-test — no READOUT-7 test change). Carry: D-1 — bs-19 still unmerged, both edit `build_app.dart` (bites later behavior phases, not ITEST).
+**ITEST-4 assembled the G-2 review packet** (in [modules/ITEST.md](modules/ITEST.md) § Review packet) and set it ⏸ awaiting the human. Suite re-confirmed green at HEAD (smoke 7/7; default `readout` 6/6 skipped, `settings` 3/3 skipped — per-file). Grid 9 A / 0 B. No `lib/` change this phase.
+- **Blocked on G-2** — nothing in the behavior stage can start until the human decides. Two items the packet puts first: (1) **AC-6 green-at-baseline** — keep A11Y-2 as a keep-green + unit-coverage phase (recommended) or accept AC-6 as shell-satisfied; (2) the **bs-01 AC-5 selector / AC-8 Speak reconciliations** (D-3, READOUT-3 / READOUT-7).
+- Decide with `/feature-next-phase --gate bs-20-ui-improvements G-2 approved | "changes: …"`.
+- After approval the behavior stage opens: **A11Y-2 ∥ one READOUT phase**; READOUT-* serial (shared `lib/readout/` files). Carry: D-1 — bs-19 still unmerged, both edit `build_app.dart` (bites behavior phases, not ITEST).
 
 ## Token usage
 
@@ -169,7 +168,8 @@ AC tests import only `harness.dart`; frozen vocabulary + fixtures are in the ITE
 | ITEST-1 | 1e6edae6 | 2026-10-25 01:12 EDT | 01:23 | 11m 09s | 11m 09s | claude-opus-4-8 | 74 | 182,169 | 5,965,048 | 41,874 | 6,189,165 | harness + BS20_RUN_PENDING gate + smoke: 7/7 default & run-pending, no lib change (coverage N/A), analyze clean |
 | ITEST-2 | dfa2a54e | 2026-10-25 01:45 EDT | 02:04 | 18m 44s | 18m 44s | claude-opus-4-8 | 66 | 233,302 | 3,986,784 | 75,151 | 4,295,303 | readout AC tests AC-1/2/3/4/5/9 pending + red baseline (6/6 skip default, 6/6 red run-pending), grade 6 A; no lib change (coverage N/A) |
 | ITEST-3 | 72736d58 | 2026-10-25 02:24 EDT | 02:38 | 14m 06s | 14m 06s | claude-opus-4-8 | 70 | 202,835 | 4,348,549 | 56,642 | 4,608,096 | settings/Speak AC tests AC-6/7/8 pending + red baseline (AC-7/AC-8 red, AC-6 green at baseline), grade 3 A; no lib change |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 02:38** | **42h 35m** | **1h 32m** |  | **522** | **1,508,973** | **30,016,948** | **330,858** | **31,857,301** |  |
+| ITEST-4 | 1a1a706f | 2026-10-25 02:50 EDT | 02:54 | 3m 54s | 3m 54s | claude-opus-4-8 | 28 | 64,628 | 1,121,790 | 9,760 | 1,196,206 | test-review packet assembled; suite 9 A, green at HEAD; G-2 awaiting human decision |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 02:54** | **42h 39m** | **1h 36m** |  | **550** | **1,573,601** | **31,138,738** | **340,618** | **33,053,507** |  |
 
 ## Sign-off
 

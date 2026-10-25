@@ -1,6 +1,6 @@
 # Module ITEST — Acceptance integration suite
 
-**Status:** In progress — ITEST-3 (settings/Speak AC tests) done; next ITEST-4 test review (G-2)
+**Status:** In progress — ITEST-4 review packet assembled; ⏸ awaiting the human's G-2 decision
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `integration_test/ui_improvements/` (new), the `BS20_RUN_PENDING` pending gate for this suite
 **Depends on:** all shell phases (A11Y-1, READOUT-2) · **Blocks:** every behavior phase (via G-2)
@@ -12,7 +12,7 @@
 | ITEST-1 | acceptance-tests | — (harness) | ✅ Done | 6,189,165 | 11m 09s |
 | ITEST-2 | acceptance-tests | AC-1/2/3/4/5/9 | ✅ Done | 4,295,303 | 18m 44s |
 | ITEST-3 | acceptance-tests | AC-6/7/8 | ✅ Done | 4,608,096 | 14m 06s |
-| ITEST-4 | test-review | — (G-2) | ⬜ Next | | |
+| ITEST-4 | test-review | — (G-2) | ⏸ Awaiting review | | |
 
 ## Interface reconciliation
 
@@ -235,6 +235,68 @@ per settings/Speak AC (AC-6/7/8) over the real `buildApp` via the ITEST-1 harnes
 - **Depends on:** ITEST-2, ITEST-3 · **Blocks:** every behavior phase
 - **Tasks:** assemble the review packet (catalogue vs tests, red baseline, Rejects, augmentations, the bs-01 AC-5/AC-8 reconciliations D-3 called out for the reviewer); human decides **G-2**.
 - **Exit criteria:** human records approved (or changes requested → ITEST change phases + re-review).
+- **Status:** ⏸ Awaiting review — packet below; G-2 awaiting the reviewer's decision.
+
+### Review packet — G-2 (⏸ Awaiting decision)
+
+The nine acceptance tests that guard the behavior stage, put in front of a human before any
+product code is written. Suite re-confirmed green at HEAD (`74a8477`): smoke **7/7**; default mode
+`readout_test` **6/6 skipped**, `settings_test` **3/3 skipped** (per-file — the whole dir won't launch
+at once, house gotcha). Grade grid **9 A / 0 B** —
+[`behavior-test-completeness-bs-20-ui-improvements.md`](../behavior-test-completeness-bs-20-ui-improvements.md).
+
+**⚑ Look at these two first (decisions this review must settle):**
+
+1. **AC-6 is green at baseline.** The A11Y-1 shell already ships
+   `DisplaySettings.accessibilityFeatures = false`, so "off by default" holds today. The test is
+   tight (its in-test control drives the flag on and asserts the toggle reads `true`, rejecting a
+   constant-off render — grade A), but it passes now rather than failing red. It was **kept pending**
+   rather than un-pended, because un-pending it would leave its owner **A11Y-2** with no pending AC
+   against the smoke "no dead phase" guard and no honest basis to mark A11Y-2 done before it runs.
+   **Decide:** keep A11Y-2 as a keep-green + unit-coverage phase (default — un-pends AC-6, adds the
+   controller-setter unit coverage the shell still lacks), **or** accept AC-6 as shell-satisfied and
+   drop A11Y-2. Recommendation: **keep A11Y-2** — the shell toggle is inert; A11Y-2 is where its wiring
+   earns unit coverage.
+2. **The bs-01 reconciliations (D-3).** bs-20 supersedes two already-shipped bs-01 ACs, so the merged
+   bs-01 suite must be reconciled as those phases land, or it reds:
+   - **bs-01 AC-5 (space selector)** — AC-4 removes the one-at-a-time `SpaceSelector`. **READOUT-3**
+     retires bs-01's selector acceptance test when it shows all four spaces at once.
+   - **bs-01 AC-8 (Speak)** — AC-7 hides Speak while accessibility is off. **READOUT-7** updates bs-01's
+     Speak test to turn accessibility on first. Tied to **G-3** (confirm hiding Speak by default does
+     not violate bs-11 accessibility-conformance).
+   **Decide:** confirm this reconciliation plan is the intended treatment of the bs-01 ACs (not a
+   regression to flag).
+
+**Per-AC catalogue vs test** (Given checked · When · Then / Rejects — all grade A):
+
+| AC | Test | Given (checked via public surface) | When | Then / Rejects |
+|---|---|---|---|---|
+| AC-1 | `TestAC01_HeroCard` (READOUT-4) | `warmTerracotta` pumped via `buildApp`; readout renders | readout shown | L58 sits in a **bordered** ancestor **and** is the strictly largest reading paragraph (header + action-bar excluded). Rejects: plain row no card; a card not largest. |
+| AC-2 | `TestAC02_ValueScale` (READOUT-5) | `value2Sample`; `find.text('Munsell value 2')` re-asserted | readout shown | eleven `0..10` step labels present; exactly one **selected `Semantics`** step containing `2`. Rejects: bare text no scale; no marked step; wrong step. |
+| AC-3 | `TestAC03_EqualSwatches` (READOUT-4) | `anySample`; readout renders | readout shown | grayscale square size `equals` the displayed-colour `ColorChip`'s single `DecoratedBox`. Rejects: different size (16×16 vs 48×48 baseline). |
+| AC-4 | `TestAC04_AllSpaces` (READOUT-3) | `warmTerracotta`; readout renders | readout shown | CIELCh, Munsell, sRGB **and** CIELAB signatures all present **in the all-spaces region** + `SpaceSelector findsNothing`. Rejects: only one shown; selector present. |
+| AC-5 | `TestAC05_Definitions` (READOUT-6) | `warmTerracotta`, all four `ReadoutSpace.values`; openable-name precondition (names READOUT-3/6) | tap a space name | definition hidden→shown before/after pair + an `e.g.\|example\|for instance` example cue. Rejects: name not tappable; tap shows nothing; definition without example. |
+| AC-6 | `TestAC06_DefaultOff` (A11Y-2) | fresh app; `settings.accessibilityFeatures isFalse` re-asserted | settings panel shown | keyed `SwitchListTile` present, `value isFalse`; **control** drives set-on → `isTrue`. Rejects: toggle-defaulting-on; toggle-absent; constant-off render. **⚑ green at baseline.** |
+| AC-7 | `TestAC07_SpeakHidden` (READOUT-7) | off re-asserted | readout shown | `speakControl findsNothing`; **control** turns on → Speak appears (pairs AC-8, so off→hidden not vacuous). Rejects: always-shown actions bar; never-rendered Speak. |
+| AC-8 | `TestAC08_SpeakShown` (READOUT-7) | off re-asserted; **control** `findsNothing` while off | turn named flag on (`isTrue` verified) | `speakControl findsOneWidget`. Rejects: Speak-absent-after-on; always-shown Speak; binds to the **named** flag. |
+| AC-9 | `TestAC09_ColorSpelling` (READOUT-8) | `warmTerracotta`; readout renders | readout shown | scoped to readout `Scaffold`: `isNot(contains('colou'))` + `\bcolor\b` positive control. Rejects: any "Colour" left. |
+
+**Red baseline** (run-pending, `--dart-define=BS20_RUN_PENDING=true`): AC-1/2/3/4/7/8/9 and AC-5 all
+fail on their intended Then (or Given-precondition naming the owner) with no panics/compile errors;
+AC-6 **green at baseline**. Full per-test table above under *Red baseline*.
+
+**Augmentations:** one pre-seeded — `TestAC07_SpeakHidden` ("absent while off" could pass vacuously).
+**Closed in ITEST-3**: AC-7 carries the on→shown control and AC-8 the off→hidden control in-test, so the
+pair is non-vacuous now and **READOUT-7 makes no test change** — it just makes both go green. No open
+augmentation rows remain.
+
+**Two heuristic Thens the grader examined** (both held A): AC-5's example-marker regex (tightest proxy
+for "an example accompanies the definition"; rejects a bare definition) and AC-2's `contains('2')`
+(unique over the bounded 0..10 label domain). See the grid's Notes.
+
+**Decision command:** `/feature-next-phase --gate bs-20-ui-improvements G-2 approved` — or
+`/feature-next-phase --gate bs-20-ui-improvements G-2 "changes: <items>"` (each item becomes an ITEST
+change phase before the behavior stage, then a fresh review).
 
 ## Interface reconciliation (extras)
 - **Boundary / Observation / Pending gate:** above.
