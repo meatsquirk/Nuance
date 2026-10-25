@@ -71,8 +71,12 @@ const Map<String, String> pendingACs = {
   // AC-9 un-pended by READOUT-8 (2026-10-25): the readout copy uses the
   // American "Color" and no "Colour"/"colour" appears — proven green by
   // `TestAC09_ColorSpelling`.
-  'AC-7': 'READOUT-7',
-  'AC-8': 'READOUT-7',
+  // AC-7 un-pended by READOUT-7 (2026-10-25): the "Speak this readout" control
+  // is hidden while accessibility features are off — proven green by
+  // `TestAC07_SpeakHidden`.
+  // AC-8 un-pended by READOUT-7 (2026-10-25): turning accessibility features on
+  // reveals the Speak control — proven green by `TestAC08_SpeakShown`.
+  // All nine bs-20 ACs are now delivered; the gate is empty.
 };
 
 /// The behaviour phases allowed to own a pending AC.
@@ -102,6 +106,7 @@ const Set<String> completedBehaviorPhases = {
   'READOUT-4', // un-pended AC-1 (bordered hero card) + AC-3 (equal-size swatches)
   'READOUT-5', // un-pended AC-2 (0–10 Munsell value scale with the value marked)
   'READOUT-6', // un-pended AC-5 (per-space openable definitions with examples)
+  'READOUT-7', // un-pended AC-7 + AC-8 (Speak gated on accessibility features)
   'READOUT-8', // un-pended AC-9 ("Color" rather than "Colour" in readout copy)
 };
 

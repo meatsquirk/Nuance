@@ -18,6 +18,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/display/display_controller.dart';
+import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -239,8 +241,9 @@ class ReadoutHarness {
 /// [ReadoutHarness] over the booted app.
 Future<ReadoutHarness> givenReadoutOf(
   WidgetTester tester,
-  Sample sample,
-) async {
+  Sample sample, {
+  bool accessibilityFeatures = false,
+}) async {
   // The readout now shows every colour space at once (bs-20 READOUT-3), so its
   // scrollable body is taller than the default 800×600 test surface and the
   // actions bar would sit below it. Size the surface tall enough to lay out the
@@ -252,11 +255,22 @@ Future<ReadoutHarness> givenReadoutOf(
 
   final speech = FakeSpeech();
   final haptics = FakeHaptics();
+  // bs-20 READOUT-7 gates the readout's "Speak this readout" control on the
+  // accessibility-features setting (default off → Speak hidden). A scenario that
+  // taps Speak (AC-8) boots the app with the setting on by passing
+  // [accessibilityFeatures]; the injected controller is the one the shipped
+  // panel also drives.
   final deps = AppDependencies(
     colorScience: const ColorScienceImpl(),
     speech: speech,
     haptics: haptics,
     initialSample: sample,
+    displayController: accessibilityFeatures
+        ? DisplayController(
+            initialSettings:
+                const DisplaySettings(accessibilityFeatures: true),
+          )
+        : null,
   );
   await tester.pumpWidget(buildApp(deps));
   await tester.pumpAndSettle();

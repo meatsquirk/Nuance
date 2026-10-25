@@ -486,9 +486,19 @@ Future<DisplayHarness> givenDisplay(
 
   final speech = FakeSpeech();
   final haptics = FakeHaptics();
+  // bs-20 READOUT-7 gates the readout's "Speak this readout" control (the one
+  // the bs-08 spoken-output ACs tap) on the accessibility-features setting, off
+  // by default. Boot with it on so Speak is present, preserving any simulation /
+  // grayscale / daltonization the scenario seeded through [initialSettings].
   final controller = DisplayController(
     defaultSimulationType: cvdProfile.type,
-    initialSettings: initialSettings,
+    initialSettings: DisplaySettings(
+      simulationType: initialSettings.simulationType,
+      simulationSeverity: initialSettings.simulationSeverity,
+      grayscale: initialSettings.grayscale,
+      daltonization: initialSettings.daltonization,
+      accessibilityFeatures: true,
+    ),
   );
   final deps = AppDependencies(
     colorScience: const ColorScienceImpl(),
@@ -531,7 +541,13 @@ Future<DisplayHarness> givenComparison(
 
   final speech = FakeSpeech();
   final haptics = FakeHaptics();
-  final controller = DisplayController(defaultSimulationType: cvdProfile.type);
+  // Accessibility features on so the readout's Speak control is present when
+  // AC-9 opens a slot's readout and taps it (bs-20 READOUT-7 gates it on this
+  // setting, off by default).
+  final controller = DisplayController(
+    defaultSimulationType: cvdProfile.type,
+    initialSettings: const DisplaySettings(accessibilityFeatures: true),
+  );
   final deps = AppDependencies(
     colorScience: const ColorScienceImpl(),
     speech: speech,

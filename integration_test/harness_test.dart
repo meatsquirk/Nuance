@@ -26,7 +26,12 @@ void main() {
   testWidgets(
     'smoke: the assembled app boots to a Readout showing every region',
     (tester) async {
-      final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA);
+      // bs-20 READOUT-7 gates the readout's Speak control on the
+      // accessibility-features setting; boot with it on so the smoke test's
+      // "every action-bar control is rendered" check (which includes Speak)
+      // holds.
+      final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA,
+          accessibilityFeatures: true);
 
       // Booted to the Readout route with the injected fixture loaded.
       expect(find.text('Readout'), findsOneWidget); // app-bar title

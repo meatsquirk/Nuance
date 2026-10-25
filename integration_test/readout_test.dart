@@ -309,7 +309,10 @@ void main() {
     //  - the sample is loaded: its name renders on the readout (public surface);
     //  - the FakeSpeech log is empty — the before state the When changes;
     //  - the fixture's inputs are the values the Then's substrings are about.
-    final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA);
+    // bs-20 READOUT-7 gates Speak on the accessibility-features setting; boot
+    // with it on so the Speak control the painter taps is present.
+    final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA,
+        accessibilityFeatures: true);
     expect(find.text('Warm Terracotta'), findsOneWidget,
         reason: 'AC-8 Given: the terracotta sample must be the one shown');
     expect(harness.speech.utterances, isEmpty,

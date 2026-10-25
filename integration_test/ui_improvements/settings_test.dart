@@ -22,6 +22,17 @@ import 'package:integration_test/integration_test.dart';
 
 import 'harness.dart';
 
+/// Sizes the test surface tall enough that the whole readout `ListView` — down
+/// to the bottom actions bar where Speak lives — is laid out, so a Then on the
+/// Speak control is not defeated by the lazy list skipping an off-screen child
+/// (the bs-01/bs-08 tall-viewport pattern READOUT-5 established). Reset after the
+/// test.
+void _useTallReadoutView(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -76,6 +87,13 @@ void main() {
   // never rendering Speak (pairs AC-8's direction).
   acTestWidgets('AC-7', 'With accessibility features off, Speak is hidden',
       (tester) async {
+    // The readout's actions bar (where Speak lives) sits at the bottom of a lazy
+    // ListView, below the default 800×600 fold, so size a tall surface to lay the
+    // whole readout out — otherwise the "Speak revealed when on" control below
+    // would find nothing merely because the bar was never built (the bs-01/bs-08
+    // tall-viewport pattern READOUT-5 established).
+    _useTallReadoutView(tester);
+
     // Given: accessibility features are off (the default) — re-asserted.
     final harness = await givenReadoutOf(tester, anySample);
     expect(harness.settings.accessibilityFeatures, isFalse,
@@ -105,6 +123,10 @@ void main() {
   // satisfied by an always-shown control (pairs AC-7's direction).
   acTestWidgets('AC-8', 'Turning accessibility features on reveals Speak',
       (tester) async {
+    // Size a tall surface so the bottom actions bar (where Speak lives) is laid
+    // out, not skipped by the lazy ListView (see AC-7 above / READOUT-5 pattern).
+    _useTallReadoutView(tester);
+
     // Given: accessibility features are off — re-asserted.
     final harness = await givenReadoutOf(tester, anySample);
     expect(harness.settings.accessibilityFeatures, isFalse,

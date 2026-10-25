@@ -156,20 +156,22 @@ void main() {
   // The gate skips vs. runs correctly in both modes
   // -------------------------------------------------------------------------
 
-  test('smoke: the pending gate skips by default and runs under run-pending',
+  test('smoke: every AC is delivered — the gate is empty and all ACs run',
       () {
-    // A pending AC: skipped by default (a skip reason), executed under the
-    // run-pending override — asserted deterministically via `forceRunPending`,
-    // independent of the ambient mode this run was launched in.
-    expect(pendingACs, isNotEmpty,
-        reason: 'smoke: ITEST-1 seeds the gate with every AC pending');
-    final pendingAc = pendingACs.keys.first;
-    expect(pendingSkipReason(pendingAc, forceRunPending: false), isNotNull,
-        reason: 'smoke: a pending AC is skipped in the default run');
-    expect(pendingSkipReason(pendingAc, forceRunPending: true), isNull,
-        reason: 'smoke: a pending AC executes under run-pending');
+    // READOUT-7 un-pended the last two ACs (AC-7/AC-8), so no AC remains
+    // pending: every behaviour phase has landed. The gate is empty, so every AC
+    // runs in both the default and the run-pending mode (asserted
+    // deterministically via `forceRunPending`, independent of this run's mode).
+    expect(pendingACs, isEmpty,
+        reason: 'smoke: all nine bs-20 ACs are delivered; the gate is empty');
+    for (final ac in allACs) {
+      expect(pendingSkipReason(ac, forceRunPending: false), isNull,
+          reason: 'smoke: un-pended $ac runs in the default run');
+      expect(pendingSkipReason(ac, forceRunPending: true), isNull,
+          reason: 'smoke: un-pended $ac runs under run-pending too');
+    }
 
-    // A non-pending AC (never in the map): always runs, in either mode.
+    // A non-pending id (never in the map): always runs, in either mode.
     const unpended = '__never-pending__';
     expect(pendingSkipReason(unpended, forceRunPending: false), isNull,
         reason: 'smoke: an un-pended AC always runs (default)');

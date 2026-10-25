@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** In progress — behavior stage; READOUT-8 done (AC-9). Next READOUT-7 (gate-blocked by G-3).
+**Status:** Behavior stage complete — all READOUT phases done (every AC un-pended). Next SIGNOFF-1.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -15,7 +15,7 @@
 | READOUT-4 | behavior | AC-1, AC-3 | ✅ Done | 6,914,808 | 21m 02s |
 | READOUT-5 | behavior | AC-2 | ✅ Done | 9,657,902 | 26m 19s |
 | READOUT-6 | behavior | AC-5 | ✅ Done | 6,235,338 | 17m 37s |
-| READOUT-7 | behavior | AC-7, AC-8 | ⬜ Todo | | |
+| READOUT-7 | behavior | AC-7, AC-8 | ✅ Done | 15,442,290 | 25m 09s |
 | READOUT-8 | behavior | AC-9 | ✅ Done | 6,017,977 | 15m 01s |
 
 ## Interface reconciliation
@@ -27,7 +27,7 @@
 
 ## Open gates
 
-- **G-3** blocks READOUT-7: confirm default-hidden Speak doesn't regress bs-11 accessibility-conformance.
+- ~~**G-3** blocks READOUT-7~~ — ✅ Resolved 2026-10-25: default-hidden Speak does **not** regress bs-11 accessibility-conformance. bs-11 explicitly scopes spoken output out to bs-08 (bs-11.feature lines 11-12); its screen-reader rule relies on the OS screen reader reading the always-present, labelled readout text, not on the in-app Speak button, which stays reachable whether or not accessibility features are on. — Matt Quirk
 
 ## Phase READOUT-1 — Scaffold
 
@@ -416,6 +416,74 @@ the lazy-ListView fold that bit READOUT-5's bottom provenance region).
 - **Tasks:** show the Speak control only when `accessibilityFeatures` is on (read via `DisplayScope`); hidden when off. Acknowledge/capture banner untouched.
 - **Acceptance gate:** un-pend AC-7, AC-8; `TestAC07_SpeakHidden`, `TestAC08_SpeakShown` green; **reconcile bs-01 AC-8 test** (enable accessibility in setup) keeping bs-01 green.
 - **Augments:** `TestAC07`: add the on→shown control so "hidden" isn't vacuous.
+
+### Result — READOUT-7
+
+AC-7 + AC-8 delivered — **behavior stage complete; every bs-20 AC un-pended**.
+G-3 resolved first (approved by Matt Quirk: default-hidden Speak does not regress
+bs-11, which scopes spoken output to bs-08 and relies on the OS screen reader over
+the always-present readout text).
+
+Landed (one touched `lib/` file):
+- **`lib/readout/actions_bar.dart`** — the "Speak this readout" button is now
+  `if (showSpeak)`, where `showSpeak = DisplayScope.maybeOf(context)?.settings
+  .accessibilityFeatures ?? false`. On the readout screen (always under a
+  `DisplayScope`) Speak is hidden while accessibility features are off (default)
+  and revealed in place when turned on — the bar is a DisplayScope dependent, so
+  the toggle rebuilds it. No `AppScope`/standalone render has a scope, so the
+  `?? false` fallback keeps Speak hidden there (mirrors the shipped default). The
+  other actions (compare/recipes/acknowledge) and the capture banner are untouched.
+
+Acceptance gate — un-pended AC-7, AC-8 (the last two pending rows; gate now empty):
+- bs-20 suite green both modes: `settings_test` AC-6/AC-7/AC-8 pass default **and**
+  `--dart-define=BS20_RUN_PENDING=true`; `smoke_test` 7/7 (its mechanism guard
+  rewritten to assert the gate is now empty — all delivered); `readout_test`
+  AC-1/2/3/4/5/9 6/6.
+- **Augmentation (viewport):** AC-7/AC-8 size a tall surface (`_useTallReadoutView`,
+  1200×3000) before `givenReadoutOf`, so the bottom actions bar is laid out and
+  `speakControl findsNothing` is a genuine "hidden", not an off-screen lazy-list
+  skip (the bs-01/bs-08/READOUT-5 pattern). The pre-seeded `TestAC07` on→shown
+  augmentation was already satisfied in ITEST-3 (the pair carries both directions).
+
+bs-01 / bs-08 reconciliation (D-3; forced by gating the readout Speak control):
+- **bs-01** `harness.dart` `givenReadoutOf` gained `{bool accessibilityFeatures =
+  false}` (boots a `DisplayController` with it on when set); AC-8 (`readout_test`)
+  and the `harness_test` smoke now pass `accessibilityFeatures: true`. bs-01
+  `harness_test` 5/5, `readout_test` 11/11.
+- **bs-08** `display_harness.dart` `givenDisplay`/`givenComparison` boot with
+  accessibility on (preserving any seeded simulation), since the spoken-output ACs
+  tap the readout Speak control. bs-08 `display_test` 21/21 (speech AC-8/9/10).
+- Unit tests: `actions_bar_test.dart` pump helpers wrap a `DisplayScope` (new
+  `accessibility` param; `null` = no scope for the fallback branch) + 3 new gating
+  tests (hidden-off / shown-on / hidden-no-scope); `readout_screen_test.dart`
+  wraps a `DisplayScope` (accessibility on) so its Speak anchors hold.
+
+Gates: `flutter analyze lib/readout test/readout integration_test` clean; unit
+**1663/0**; coverage gate **100%** on the one touched `lib/` file
+(`actions_bar.dart`), both new branches (show/hide) + the null-scope fallback
+covered. **Grade 9 A / 0 B** (fresh adversarial grader, full suite; no grade
+changed from the prior grid). **Fix passes: 0/3.** Carried off-lane flakes
+unchanged (not run this phase).
+
+### Checkpoint / Handoff — READOUT-7
+
+- **Frozen interface:** the readout actions bar renders the Speak control only
+  when `DisplayScope`'s `accessibilityFeatures` is on; it is a DisplayScope
+  dependent so toggling rebuilds it. Any test or screen that expects the readout
+  Speak control present must boot/pump with accessibility on (bs-01 via
+  `givenReadoutOf(..., accessibilityFeatures: true)`; bs-08 harness boots it on).
+- **Verification commands (reuse):** `flutter test test/ --coverage`;
+  `dart run tool/coverage_gate.dart <BASE>`; per-file
+  `flutter test -d flutter-tester integration_test/ui_improvements/<file>_test.dart`
+  (`--dart-define=BS20_RUN_PENDING=true` to run pending). `flutter` at
+  `/Users/matthew.quirk/development/flutter/bin` (prepend PATH); no `timeout` on
+  macOS; integration under `coord.sh with-lock <feature> <PHASE> -- …`. **Run
+  integration files one at a time** (whole dir won't launch at once).
+- **Known gaps:** none from this phase. The bs-20 pending gate is now empty (all 9
+  ACs delivered); `pendingACs isEmpty`.
+- **Next:** SIGNOFF-1 — the only remaining phase, now startable (G-3 resolved,
+  every READOUT phase done). Carry D-1 (bs-19 still unmerged; it and these phases
+  both edit `build_app.dart` — READOUT-7 did **not** touch it).
 
 ## Phase READOUT-8 — "Color" copy (AC-9)
 

@@ -188,3 +188,40 @@ above. AC-9 is the newly un-pended one and earns A.
   structure; AC-5's example-marker regex is still satisfied by the now-American
   definition copy and AC-5 never asserts spelling, so none of these tests'
   behaviour moved.
+
+## READOUT-7 re-grade (2026-10-25) — full suite, AC-7/AC-8 now delivered
+
+Fresh independent re-grade of the **full** bs-20 acceptance suite now that
+READOUT-7 has delivered the Speak-gating behaviour for AC-7 and AC-8 (all 9 ACs
+un-pended). Graded by reading the built `lib/readout/actions_bar.dart` (Speak
+wrapped in `if (showSpeak)`, `showSpeak = DisplayScope.maybeOf(context)?.settings
+.accessibilityFeatures ?? false`), `lib/display/display_scope.dart` /
+`display_controller.dart` (the live `accessibilityFeatures` field + its setter),
+and the two test files, with adversarial scrutiny on AC-7/AC-8 per the phase
+deltas.
+
+**Result: 9 A, 0 B.** No downgrades against G1–G6; consistent with every grid
+above. AC-7 and AC-8 are the newly un-pended pair and each earns A on the same
+rubric.
+
+| AC | Test | Grade | Rule if B | Note |
+|---|---|---|---|---|
+| AC-1 | `AC-1` hero card as largest reading | A | — | Unchanged by READOUT-7 (`actions_bar.dart` only). Bordered-ancestor check + strict `greaterThan` size loop over all scaffold paras (header + bar excluded) reject both Rejects. |
+| AC-2 | `AC-2` 0–10 scale, value 2 marked | A | — | Unchanged. 11 steps checked individually; exactly one selected `Semantics`; `contains('2')` unique over the bounded 0..10 label domain. |
+| AC-3 | `AC-3` equal swatches | A | — | Unchanged. `equals(graySize)` on the grayscale box vs the single simulation-off `DecoratedBox` rejects the 48-vs-16 baseline mismatch. |
+| AC-4 | `AC-4` all spaces, no selector | A | — | Unchanged. Four mutually-distinct signatures asserted together under the all-spaces region; `SpaceSelector findsNothing`. |
+| AC-5 | `AC-5` open space name → definition + example | A | — | Unchanged. Loops all four spaces; before/after reveal pair; example-marker regex rejects a definition with no example. |
+| AC-6 | `AC-6` accessibility off by default | A | — | Unchanged. Keyed `SwitchListTile` defaults `false` (re-asserted through the live controller); on-control rejects a constant-off render. |
+| AC-9 | `AC-9` "Color" not "Colour" | A | — | Unchanged. `isNot(contains('colou'))` rejects any British spelling; `\bcolor\b` positive control proves "Color" renders and defeats a vacuous delete-all-colour-words pass. |
+| AC-7 | `AC-7` Speak hidden while off | A | — | **Newly delivered.** Off Given re-asserted (`settings.accessibilityFeatures isFalse`, G1); When via the real `buildApp` readout render (`find.text('Any Sample')`). `_useTallReadoutView` (1200×3000) lays the whole lazy `ListView` out so the actions bar IS built — the negative Then `speakControl findsNothing` therefore means Speak is genuinely absent, not merely below the fold (G3). Paired in-test control turns accessibility on via the real controller and asserts `findsOneWidget`, so off→hidden is non-vacuous (G3/G5, rejects a never-rendered Speak). The control flips only `accessibilityFeatures`, so a Speak gated on any other flag would not appear — binding to the named flag is proved (G2/G4). Rejects the always-shown baseline bar. |
+| AC-8 | `AC-8` Speak shown when on | A | — | **Newly delivered.** Off Given re-asserted (G1); in-test control asserts `speakControl findsNothing` while off (rejects an always-shown Speak); When drives the real `setAccessibilityFeatures(on:true)` and verifies it took (`settings.accessibilityFeatures isTrue`, G2) with the readout shown; primary Then `speakControl findsOneWidget` keyed on the real `ActionsBar.speakKey`. `_useTallReadoutView` guarantees the bar is laid out so the control's `findsNothing` is meaningful (G3). Binds to the specific `accessibilityFeatures` flag — flipping only that field reveals Speak, so a different-flag gate fails (G2/G4). Rejects Speak-absent-after-on. |
+
+**Result: 9 A, 0 B.** No grade changed from the previous (pending / READOUT-8)
+grids. AC-7 and AC-8 were graded A as pending tests and remain A now that their
+behaviour is built: the adversarial checks the phase called out all hold — the
+tall-viewport addition makes `findsNothing` a real "hidden" (not off-screen), each
+direction is paired with a real opposite-direction control (neither passes
+vacuously), and the gate binds to the named `accessibilityFeatures` flag through
+the live controller + `DisplayScope`, not a script or fake. AC-1–AC-6/AC-9 are
+untouched by READOUT-7 (it edits only `actions_bar.dart`), so their A grades carry
+forward unchanged.

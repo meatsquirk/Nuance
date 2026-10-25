@@ -4,6 +4,9 @@ import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/display/display_controller.dart';
+import 'package:paint_color_assistant/display/display_scope.dart';
+import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -48,9 +51,18 @@ Future<void> _pumpScreen(
   // tests a tall viewport so every region (down to the actions bar) is laid out.
   _useTallView(tester);
   return tester.pumpWidget(
-    AppScope(
-      dependencies: _deps(),
-      child: MaterialApp(home: ReadoutScreen(sample: sample)),
+    // A DisplayScope wraps the app in production (buildApp); provide one here
+    // with accessibility features on so the readout's Speak control is shown
+    // (bs-20 AC-7/AC-8 gate it on this setting). The gating itself is unit-tested
+    // on `ActionsBar` directly in `actions_bar_test.dart`.
+    DisplayScope(
+      controller: DisplayController(
+        initialSettings: const DisplaySettings(accessibilityFeatures: true),
+      ),
+      child: AppScope(
+        dependencies: _deps(),
+        child: MaterialApp(home: ReadoutScreen(sample: sample)),
+      ),
     ),
   );
 }
