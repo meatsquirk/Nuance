@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** Behavior stage complete — all READOUT phases done (every AC un-pended). Next SIGNOFF-1.
+**Status:** 🔄 In progress — all bs-20 ACs un-pended, but SIGNOFF-1's full cross-feature regression found bs-20 regressed the signed-off **bs-11 accessibility suite** (AC-4 48dp tap target; AC-7 eyes-free Speak). READOUT-9 remediates, then SIGNOFF-1.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -17,6 +17,7 @@
 | READOUT-6 | behavior | AC-5 | ✅ Done | 6,235,338 | 17m 37s |
 | READOUT-7 | behavior | AC-7, AC-8 | ✅ Done | 15,442,290 | 25m 09s |
 | READOUT-8 | behavior | AC-9 | ✅ Done | 6,017,977 | 15m 01s |
+| READOUT-9 | behavior (regression fix) | — (restores bs-11 AC-4/AC-7) | ⬜ Next | | |
 
 ## Interface reconciliation
 
@@ -24,10 +25,14 @@
 - **Re-gates bs-01 AC-8** (Speak). READOUT-7 hides Speak when accessibility is off (default). bs-01's AC-8 test must be reconciled to **enable accessibility in its setup** so Speak is present; record the edit in READOUT-7's Result.
 - **bs-01 AC-1 / AC-12 unchanged in meaning**: the value is still the prominent reading (now in a card) and the capture banner / Acknowledge stay as-is.
 - Reads `DisplaySettings.accessibilityFeatures` through the existing `DisplayScope` (A11Y-1).
+- **Also re-gates bs-11 accessibility-conformance (found in SIGNOFF-1 verification, 2026-10-25; owner chose to remediate).** bs-20's `lib/` changes regressed two **already-signed-off** bs-11 ACs — green at the merge-base `0551d5c`, red at HEAD `a959dca`:
+  - **bs-11 AC-4 (48dp tap targets)** — READOUT-6's tappable space-name `InkWell` (`space_definition.dart:81`, `EdgeInsets.symmetric(vertical: 2)` around a `labelLarge` Text + 18px icon) has a tap target < 48dp; bs-11's conformance sweep flags the Readout. **Genuine product defect** → READOUT-9 gives each space-name control a ≥48dp tap target (code fix), without disturbing AC-5's tap-to-reveal or AC-1/2/3/4 layout.
+  - **bs-11 AC-7 (eyes-free screen-reader task)** — bs-11's eyes-free walkthrough uses `find.bySemanticsLabel('Speak this readout')` as the task entry control (`accessibility_test.dart:514`); bs-20 hides Speak by default, so it is absent. The G-3 resolution's stated reasoning ("bs-11 relies on the OS screen reader, not the in-app Speak button") is **contradicted** by this test. **Remediation = reconcile bs-11's AC-7 harness to enable `accessibilityFeatures`** (an eyes-free screen-reader user is the accessibility-on case) so Speak is present — **parallels the approved D-3 bs-01 AC-8 reconciliation**. Record the edit + reason in READOUT-9's Result; the assertion is preserved.
 
 ## Open gates
 
 - ~~**G-3** blocks READOUT-7~~ — ✅ Resolved 2026-10-25: default-hidden Speak does **not** regress bs-11 accessibility-conformance. bs-11 explicitly scopes spoken output out to bs-08 (bs-11.feature lines 11-12); its screen-reader rule relies on the OS screen reader reading the always-present, labelled readout text, not on the in-app Speak button, which stays reachable whether or not accessibility features are on. — Matt Quirk
+  - ⚠️ **Correction (2026-10-25, SIGNOFF-1 verification):** the G-3 reasoning is partly inaccurate — bs-11's **AC-7** test *does* drive the in-app "Speak this readout" control (not only the OS screen reader), so default-hidden Speak **did** red bs-11 AC-7. The owner chose (2026-10-25) to remediate via READOUT-9 (reconcile bs-11 AC-7 to run accessibility-on), not to reverse the Speak gating. bs-20's AC-7/AC-8 (Speak gated on the flag) stand.
 
 ## Phase READOUT-1 — Scaffold
 
@@ -559,3 +564,30 @@ never rendered — out of AC-9's user-facing scope, left unchanged.
   hit the lazy-`ListView` bottom-region limit (tall viewport, bs-01/bs-08
   pattern), since Speak sits in the bottom actions bar. SIGNOFF-1 is also
   G-3-blocked. No startable behavior phase remains until G-3 resolves.
+
+## Phase READOUT-9 — Restore bs-11 accessibility (48dp tap target + eyes-free Speak)
+
+- **Kind:** behavior (regression fix — no new bs-20 AC; restores the signed-off bs-11 AC-4 and AC-7, which bs-20's `lib/` changes regressed, found in SIGNOFF-1 verification 2026-10-25)
+- **Target AC:** — (guarded by the existing sibling tests `bs11/accessibility_test.dart` AC-4 + AC-7)
+- **Depends on:** READOUT-6 (owns `space_definition.dart`), READOUT-7 (Speak gating) · **Blocks:** SIGNOFF-1
+- **Files:** `lib/readout/space_definition.dart` (tap-target size); `integration_test/bs11/accessibility_harness.dart` and/or `integration_test/bs11/accessibility_test.dart` (AC-7 reconcile — enable `accessibilityFeatures` for the eyes-free Readout Given). Do **not** touch bs-11's `lib/` or other bs-11 ACs.
+- **Tasks:**
+  1. **AC-4 code fix.** Give each tappable space-name control a **≥48dp** tap target (e.g. `ConstrainedBox(minHeight: 48)` / `MergeSemantics` + sufficient padding / an `InkResponse`/`SizedBox` wrapper), preserving: AC-5 (tap still toggles the definition), AC-4 (all four space values still rendered in the all-spaces region; no `SpaceSelector`), AC-1/2/3 layout, and AC-9 copy. Keep `SpaceDefinition.nameKey` on the tappable control so bs-20 AC-5 still finds it.
+  2. **AC-7 test reconcile (D-3-style).** Make bs-11's eyes-free AC-7 Given launch the Readout with `accessibilityFeatures` **on** (via the bs-11 harness's `givenScreen`/initial `DisplaySettings`, the same mechanism bs-01/bs-08 harnesses used in READOUT-7), so `find.bySemanticsLabel('Speak this readout')` is present and the eyes-free walkthrough runs. The assertion (task completes eyes-free via semantic labels; the no-label control stays unreachable) is **unchanged** — only the Given's settings change. Record the edit + reason in the Result (never weaken the AC).
+- **Exit criteria / Acceptance gate:**
+  - `bs11/accessibility_test.dart` **19/19 green** (AC-4 + AC-7 restored), run under the verify lock on `flutter-tester`.
+  - bs-20 own suite still green **both modes** (smoke 7/7, readout 6/6, settings 3/3) — AC-5 tap-to-reveal unaffected.
+  - Readout-touching cross-feature regression green (bs-01 readout, bs-08 display, bs-10 daltonization).
+  - Unit + coverage: 100% line coverage on the touched `lib/` lines (the `space_definition.dart` change).
+  - Grade gate: re-grade the touched bs-20 tests A (none should change); the bs-11 AC-7 reconcile is assertion-preserving (note it, not a re-grade of bs-11).
+- **Augments:** none (no new bs-20 AC). **Known risk:** the 48dp wrapper must not reorder/resize the all-spaces region enough to break AC-4's region-scoped signatures or the tall-viewport assumptions; re-run bs-20 readout both modes to confirm.
+
+### Result — READOUT-9
+
+<!-- filled when the phase runs -->
+
+### Checkpoint / Handoff — READOUT-9
+
+<!-- filled when the phase runs; then SIGNOFF-1 re-runs the full cross-feature regression (must be green but
+     for the carried bs-06 palette AC-3/AC-5 and bs-07 self_assessment AC-4 off-lane flakes). -->
+

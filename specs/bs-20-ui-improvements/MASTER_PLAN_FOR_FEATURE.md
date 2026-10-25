@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** In progress — behavior stage complete (all 9 ACs delivered). Next SIGNOFF-1 (now startable; G-3 resolved).
+**Status:** In progress — all 9 ACs delivered, but SIGNOFF-1's full regression found bs-20 regressed the signed-off **bs-11 accessibility suite** (AC-4, AC-7). Next READOUT-9 (remediation), then SIGNOFF-1.
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -26,7 +26,7 @@
 | 1 Scaffold | READOUT-1 |
 | 2 Component shells | A11Y-1, READOUT-2 |
 | 3 Acceptance tests | ITEST-1, ITEST-2, ITEST-3, ITEST-4 (test review, G-2) |
-| 4 Behavior | A11Y-2, READOUT-3, READOUT-4, READOUT-5, READOUT-6, READOUT-7, READOUT-8 |
+| 4 Behavior | A11Y-2, READOUT-3, READOUT-4, READOUT-5, READOUT-6, READOUT-7, READOUT-8, **READOUT-9** (regression fix: bs-11 AC-4/AC-7) |
 | 5 Sign-off | SIGNOFF-1 |
 
 ## Acceptance criteria coverage
@@ -52,6 +52,7 @@
 | D-3 | bs-20 supersedes bs-01 AC-5 (space selector) and re-gates bs-01 AC-8 (Speak). The bs-01 acceptance tests for AC-5 and AC-8 are **reconciled** (AC-5 selector test retired; AC-8 test sets accessibility on) in the phases that change them | Removing the selector and hiding Speak by default would otherwise red the merged bs-01 suite |
 | D-4 | B2 definitions are an owner-authorized educational addition beyond the SI/wireframe; SI not amended | They are presentation-level help text, not new colour science; the SI authority (owner) requested them live |
 | D-5 | Speak is hidden by default (accessibility off); Acknowledge / capture banner stays always visible | Owner decision 2026-10-24; see G-3 for the bs-11 conformance check |
+| D-6 | bs-20's `lib/` changes regressed signed-off **bs-11** AC-4 (48dp) + AC-7 (eyes-free Speak) — green at merge-base `0551d5c`, red at `a959dca`. Remediate in READOUT-9: a code fix for the sub-48dp space-name tap target, and a D-3-style reconcile of bs-11's AC-7 harness to run accessibility-on | Found in SIGNOFF-1 verification 2026-10-25; owner chose "add fix + reconcile phases, then re-sign-off". AC-4 is a real defect (fix code); AC-7 is the G-3 case handled by test reconcile (eyes-free ⇒ accessibility on), parallel to the approved bs-01 AC-8 reconcile. G-3 reasoning corrected in the gates table. bs-20 AC-7/AC-8 (Speak gated on the flag) stand |
 
 ## Acceptance integration test plan
 
@@ -90,7 +91,7 @@ Pre-seeded augmentations: AC-7's "hidden" assertion can pass vacuously until Spe
 
 | Module | Plan | Purpose | Depends on | Status |
 |---|---|---|---|---|
-| READOUT | [modules/READOUT.md](modules/READOUT.md) | Re-compose the Readout to the wireframe (hero card, 0–10 scale, equal swatches, all-spaces-at-once, per-space definitions), gate Speak, "Color" copy | A11Y (reads the flag) | 🔄 In progress |
+| READOUT | [modules/READOUT.md](modules/READOUT.md) | Re-compose the Readout to the wireframe (hero card, 0–10 scale, equal swatches, all-spaces-at-once, per-space definitions), gate Speak, "Color" copy; READOUT-9 restores bs-11 AC-4/AC-7 | A11Y (reads the flag) | 🔄 In progress (READOUT-9 pending) |
 | A11Y | [modules/A11Y.md](modules/A11Y.md) | The accessibility-features setting: `DisplaySettings` flag (default off), controller setter, settings-panel toggle | — | ✅ Done |
 | ITEST | [modules/ITEST.md](modules/ITEST.md) | Acceptance integration suite: one pending test per AC, and its review | all shell phases | ✅ Done |
 
@@ -102,7 +103,8 @@ graph LR
   A11Y-1 & READOUT-2 --> ITEST-1 --> ITEST-2 & ITEST-3
   ITEST-2 & ITEST-3 --> ITEST-4
   ITEST-4 --> A11Y-2 & READOUT-3 & READOUT-4 & READOUT-5 & READOUT-6 & READOUT-7 & READOUT-8
-  A11Y-2 & READOUT-3 & READOUT-4 & READOUT-5 & READOUT-6 & READOUT-7 & READOUT-8 --> SIGNOFF-1
+  READOUT-6 & READOUT-7 --> READOUT-9
+  A11Y-2 & READOUT-3 & READOUT-4 & READOUT-5 & READOUT-8 & READOUT-9 --> SIGNOFF-1
 ```
 
 **Parallel windows:** A11Y-1 ∥ READOUT-2 (different dirs). ITEST-2 ∥ ITEST-3. In the behavior stage the READOUT-* phases touch overlapping files in `lib/readout/` — run them **serially** (merge-risky); A11Y-2 (settings) is disjoint and may run alongside any one READOUT phase.
@@ -113,7 +115,7 @@ graph LR
 |---|---|---|---|---|
 | G-1 | decision | Approve the spec | READOUT-1 | ✅ Resolved 2026-10-24: approved — Matt Quirk |
 | G-2 | decision | Approve the acceptance tests (ITEST-4's packet) | every behavior phase | ✅ Resolved 2026-10-25: approved — Matt Quirk. Keep A11Y-2 (keep-green + unit-coverage; un-pends AC-6); bs-01 reconciliation plan (READOUT-3 retires AC-5 selector test, READOUT-7 turns accessibility on in AC-8 Speak test) confirmed as intended, not a regression |
-| G-3 | decision | Confirm hiding Speak by default (accessibility off) does not violate bs-11 accessibility-conformance; if it does, run bs-11's conformance with accessibility on | READOUT-7, SIGNOFF-1 | ✅ Resolved 2026-10-25: approved — Matt Quirk. No regression: bs-11 explicitly scopes spoken output to bs-08 (bs-11.feature L11-12); its screen-reader rule relies on the OS screen reader over the always-present labelled readout text, not the in-app Speak button, so default-hidden Speak leaves the conformance path intact |
+| G-3 | decision | Confirm hiding Speak by default (accessibility off) does not violate bs-11 accessibility-conformance; if it does, run bs-11's conformance with accessibility on | READOUT-7, SIGNOFF-1 | ✅ Resolved 2026-10-25: approved — Matt Quirk. ⚠️ **Corrected 2026-10-25 (SIGNOFF-1 verification):** the "no regression" reasoning was partly inaccurate — bs-11 **AC-7** drives the in-app Speak control, so default-hidden Speak **did** red bs-11 AC-7 (and AC-4's 48dp rule also reds, unrelated to Speak). Owner chose to remediate (not reverse): READOUT-9 runs bs-11's conformance with accessibility on (the gate's own fallback) + fixes the 48dp target. See D-6 |
 
 Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 
@@ -143,15 +145,18 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 12 | READOUT-6 | AC-5 per-space definitions | ✅ Done | 6,235,338 | 17m 37s | AC-5 green; space name a tappable `InkWell` revealing a plain-language definition + example; values stay visible; unit 1660/0, cov 100% 2 touched, grade 6 A; no viewport change |
 | 13 | READOUT-7 | AC-7 + AC-8 Speak gating; reconcile bs-01 AC-8 test (D-3); G-3 | ✅ Done | 15,442,290 | 25m 09s | G-3 resolved; Speak gated on `accessibilityFeatures` (hidden default, shown on); AC-7/AC-8 un-pended (gate now empty); bs-01+bs-08 harnesses boot accessibility on; unit 1663/0, cov 100% 1 touched, grade 9 A, fix 0/3 |
 | 14 | READOUT-8 | AC-9 "Color" copy | ✅ Done | 6,017,977 | 15m 01s | AC-9 green; `'Displayed colour'`→`'Displayed color'` + space-definition copy American; bs-10/unit label assertions reconciled; unit 1660/0, cov 100% 2 touched, grade 7 A |
-| 15 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ⬜ Next | | | startable — all behavior done, G-3 resolved |
+| 15 | READOUT-9 | regression fix: restore bs-11 AC-4 (48dp) + AC-7 (eyes-free Speak) | ⬜ Next | | | startable — remediates the SIGNOFF-1 finding (D-6); 48dp code fix + D-3-style bs-11 AC-7 reconcile |
+| 16 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ⬜ blocked by READOUT-9 | | | **verification attempted 2026-10-25** (unit 1663/0, cov PASS, grade 9 A, bs-20 suite green both modes) but the full cross-feature regression found bs-20 **regressed signed-off bs-11** AC-4 + AC-7 — stopped, reshaped the plan (READOUT-9). Re-runs after READOUT-9 |
 
 *Tokens* / *Time* = phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**READOUT-7 done — AC-7/AC-8 delivered; behavior stage complete.** G-3 resolved (approved — default-hidden Speak doesn't regress bs-11). The readout's "Speak this readout" control is now gated on `accessibilityFeatures` (hidden by default, revealed when on) via `DisplayScope` in `actions_bar.dart`. All 9 ACs un-pended — the bs-20 pending gate is now **empty**. bs-01 (`harness`/`readout_test`/`harness_test`) and bs-08 (`display_harness`) reconciled to boot accessibility on so the readout Speak control they tap is present. unit 1663/0, cov 100% on 1 touched, grade 9 A (fresh grader), fix 0/3. Green: bs-20 settings/smoke/readout (both modes), bs-01 harness 5/5 + readout 11/11, bs-08 display 21/21.
-- **Next: SIGNOFF-1** — the only remaining phase, now **startable** (G-3 resolved, every behavior phase done). Build the sign-off packet + summary page, then a human decides.
-- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart` (READOUT-7 did **not** touch it).
+**SIGNOFF-1 verification (2026-10-25) found a blocker — bs-20 regressed the signed-off bs-11 accessibility suite.** All bs-20 ACs are delivered and its own suite is green, but the full cross-feature regression (sign-off duty) red'd two bs-11 ACs that are green at the merge-base `0551d5c` and red at `a959dca` → **bs-20 caused them** (confirmed via a merge-base worktree: bs-11 19/19 there, 17/2 at HEAD; deterministic on re-run). The owner chose to remediate, not reverse.
+- **Next: READOUT-9** (startable, regression fix) — (1) give each tappable space-name control (`space_definition.dart:81`) a ≥48dp tap target to restore **bs-11 AC-4**; (2) reconcile bs-11's **AC-7** eyes-free harness to run accessibility-on so the "Speak this readout" entry control is present (D-3-style, assertion-preserving). See D-6 and the READOUT-9 phase section.
+- **Then: SIGNOFF-1** — re-run the full regression (must be green but for the carried off-lane flakes), then packet + summary + human decision.
+- **Verification already banked for SIGNOFF-1 reuse (2026-10-25):** unit **1663/0** + coverage gate **PASS** (no touched lib vs `a959dca`); fresh independent grade **9 A / 0 below A**; bs-20 suite green both modes (smoke 7/7, readout 6/6, settings 3/3); cross-feature green except the two bs-11 regressions (→ READOUT-9) and carried flakes (bs-06 palette AC-3/AC-5, bs-07 self_assessment AC-4 reproduced; bs-08 display AC-9 passed this run).
+- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart` (READOUT-9 touches `space_definition.dart`, not `build_app.dart`).
 - **Note P3:** this feature is intentionally left OPEN for further small enhancement batches (spec header) — a future plan upgrade can add phases after SIGNOFF-1.
 
 ## Token usage
@@ -176,7 +181,8 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | READOUT-6 | 41cb8a72 | 2026-10-25 05:14 EDT | 05:32 | 17m 37s | 17m 37s | claude-opus-4-8 | 114 | 200,065 | 5,994,129 | 41,030 | 6,235,338 | AC-5 green; tappable space name reveals plain-language definition + example; unit 1660/0, cov 100% 2 touched, grade 6 A; no viewport change |
 | READOUT-8 | 709c912c | 2026-10-25 05:35 EDT | 05:50 | 15m 01s | 15m 01s | claude-opus-4-8 | 112 | 177,132 | 5,804,391 | 36,342 | 6,017,977 | AC-9 un-pended & green: readout copy American 'Color' ('Displayed colour'→'Displayed color' + 4 space definitions); bs-10/unit label assertions reconciled; unit 1660/0, cov 100% on 2 touched, grade 7 A; readout+bs-10 regression green |
 | READOUT-7 | c0f161c2 | 2026-10-25 17:13 EDT | 17:40 | 26m 31s | 25m 09s | claude-opus-4-8 | 218 | 262,207 | 15,097,432 | 82,433 | 15,442,290 | AC-7/AC-8 un-pended (Speak gated on accessibilityFeatures); bs-01+bs-08 reconciled; unit 1663/0, cov 100% 1 touched, grade 9 A, fix 0/3; G-3 resolved |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 17:40** | **45h 24m** | **4h 12m** |  | **1,524** | **3,006,340** | **96,251,051** | **744,085** | **100,003,000** |  |
+| SIGNOFF-1 | ed6bf606 | 2026-10-25 17:53 EDT | 18:23 | 30m 26s | 28m 47s | claude-opus-4-8 | 130 | 262,551 | 8,047,611 | 63,662 | 8,373,954 | blocked: full cross-feature regression found bs-20 regressed signed-off bs-11 AC-4 (48dp) + AC-7 (eyes-free Speak) — green at merge-base 0551d5c, red at a959dca; verified bs-20-caused via merge-base worktree. unit 1663/0, cov PASS, grade 9 A, bs-20 suite green both modes. Owner-approved reshape: added READOUT-9 remediation before SIGNOFF-1 |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-25 18:23** | **45h 55m** | **4h 41m** |  | **1,654** | **3,268,891** | **104,298,662** | **807,747** | **108,376,954** |  |
 
 ## Sign-off
 
