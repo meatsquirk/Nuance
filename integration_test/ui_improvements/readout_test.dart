@@ -27,6 +27,16 @@ import 'package:paint_color_assistant/readout/space_selector.dart';
 
 import 'harness.dart';
 
+/// Sizes the test surface tall enough that the whole readout `ListView` — every
+/// colour-space row — is laid out, so a tap on a space name is not defeated by a
+/// row scrolled below the default 800×600 surface (the bs-01/bs-08 tall-viewport
+/// pattern READOUT-5 established). Reset after the test.
+void _useTallReadoutView(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -209,6 +219,11 @@ void main() {
   // the tap so the pending baseline fails cleanly (no zero-size tap panic).
   acTestWidgets('AC-5', 'Opening a colour space name reveals its definition and an example',
       (tester) async {
+    // READOUT-9 gave each tappable space name a ≥48dp tap target (bs-11 AC-4),
+    // so the four rows no longer all fit the default 800×600 surface; lay the
+    // whole readout out on a tall surface so every space name is on-screen to
+    // tap. Assertion-preserving — only the surface size changes.
+    _useTallReadoutView(tester);
     for (final space in ReadoutSpace.values) {
       final label = SpaceSelector.labelFor(space);
       // Given: the painter is reading a sample with all colour spaces shown — the

@@ -81,8 +81,13 @@ class _SpaceDefinitionState extends State<SpaceDefinition> {
         InkWell(
           key: SpaceDefinition.nameKey(widget.space),
           onTap: _toggle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+          // bs-20 READOUT-9 (restores bs-11 AC-4): reserve a ≥48dp tap target so
+          // this tappable space name clears the 48dp floor the accessibility
+          // sweep enforces — the bare `labelLarge` + 18px-icon row fell below it.
+          // The row stays left-aligned and vertically centred, so AC-5's
+          // tap-to-reveal and the all-spaces layout are unchanged.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -56,6 +56,22 @@ void main() {
     expect(find.byIcon(Icons.expand_more), findsOneWidget);
   });
 
+  testWidgets('the tappable name reserves a ≥48dp tap target (READOUT-9, '
+      'restores bs-11 AC-4)', (tester) async {
+    for (final space in ReadoutSpace.values) {
+      await _pump(tester, space);
+      final nameFinder = find.byKey(SpaceDefinition.nameKey(space));
+      expect(nameFinder, findsOneWidget);
+      // The tappable control's render box clears the 48dp floor in both axes,
+      // so the accessibility tap-target rule (Android 48×48) passes on it.
+      final size = tester.getSize(nameFinder);
+      expect(size.height, greaterThanOrEqualTo(48.0),
+          reason: '${space.name}: tap target height must be ≥ 48dp');
+      expect(size.width, greaterThanOrEqualTo(48.0),
+          reason: '${space.name}: tap target width must be ≥ 48dp');
+    }
+  });
+
   test('every space has a non-empty plain-language definition with an example',
       () {
     // Covers definitionFor for all four spaces (the AC-5 copy, D-4).

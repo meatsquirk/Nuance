@@ -1,6 +1,6 @@
 # Module READOUT — Readout re-composition
 
-**Status:** 🔄 In progress — all bs-20 ACs un-pended, but SIGNOFF-1's full cross-feature regression found bs-20 regressed the signed-off **bs-11 accessibility suite** (AC-4 48dp tap target; AC-7 eyes-free Speak). READOUT-9 remediates, then SIGNOFF-1.
+**Status:** 🔄 In progress — all bs-20 ACs un-pended; READOUT-9 restored the bs-11 accessibility regression (AC-4 + AC-7 now 19/19 green). Next & last: SIGNOFF-1.
 **Feature:** [MASTER_PLAN_FOR_FEATURE.md](../MASTER_PLAN_FOR_FEATURE.md)
 **Owns (files/areas):** `lib/readout/` (`readout_screen.dart`, `value_region.dart`, `space_selector.dart` → removed, new `all_spaces_region.dart`, `value_scale.dart`, `space_definition.dart`, `actions_bar.dart`), user-facing copy strings in `lib/readout/`. Holds the bs-20 scaffold (READOUT-1).
 **Depends on:** A11Y (READOUT-7 reads `DisplaySettings.accessibilityFeatures`) · **Blocks:** SIGNOFF-1
@@ -17,7 +17,7 @@
 | READOUT-6 | behavior | AC-5 | ✅ Done | 6,235,338 | 17m 37s |
 | READOUT-7 | behavior | AC-7, AC-8 | ✅ Done | 15,442,290 | 25m 09s |
 | READOUT-8 | behavior | AC-9 | ✅ Done | 6,017,977 | 15m 01s |
-| READOUT-9 | behavior (regression fix) | — (restores bs-11 AC-4/AC-7) | ⬜ Next | | |
+| READOUT-9 | behavior (regression fix) | — (restores bs-11 AC-4/AC-7) | ✅ Done | 6,266,264 | 37m 45s |
 
 ## Interface reconciliation
 
@@ -584,10 +584,76 @@ never rendered — out of AC-9's user-facing scope, left unchanged.
 
 ### Result — READOUT-9
 
-<!-- filled when the phase runs -->
+Restored both bs-11 accessibility ACs that bs-20 had regressed — **bs-11 suite
+19/19 green** (AC-4 + AC-7). No new bs-20 AC; every bs-20 AC stays delivered.
+
+Landed (one touched `lib/` file):
+- **`lib/readout/space_definition.dart`** — the tappable space-name `InkWell`'s
+  child is now `ConstrainedBox(minHeight: 48, minWidth: 48)` (was
+  `Padding(vertical: 2)`), reserving a ≥48dp tap target so the control clears the
+  48dp floor the bs-11 sweep enforces (`androidTapTargetGuideline`). The row stays
+  left-aligned / vertically centred; `nameKey`, the tap-to-toggle and the
+  all-spaces layout are unchanged.
+
+bs-11 AC-7 reconcile (D-3-style, **assertion-preserving** — recorded per the
+ground rule; never weakened):
+- **`integration_test/bs11/accessibility_harness.dart`** — new
+  `givenAccessibleReadout(tester)` launches the Readout through `buildApp` with
+  `accessibilityFeatures: true` (reusing bs-01's existing knob). `realScreens` and
+  `givenScreen` are untouched, so every other bs-11 AC is unaffected.
+- **`integration_test/bs11/accessibility_test.dart`** — AC-7's Given now calls
+  `givenAccessibleReadout` instead of `givenScreen(…Readout)`, so the gated "Speak
+  this readout" entry control is present for the eyes-free walkthrough (a
+  screen-reader user *is* the accessibility-on case). Only the Given's settings
+  changed; the When (eyes-free driver via semantic labels) and the Then
+  (completes eyes-free; the no-label control stays unreachable) are unchanged.
+
+bs-20 AC-5 test reconcile (forced by the taller rows; **assertion-preserving**):
+- **`integration_test/ui_improvements/readout_test.dart`** — AC-5 now sizes a tall
+  surface (`_useTallReadoutView`, 1200×3000, the READOUT-5/7 pattern) before the
+  loop, because the four ≥48dp rows no longer all fit the default 800×600 surface
+  and the sRGB/CIELAB names scrolled off (tap-missed). It still taps each name and
+  asserts the definition + example reveal — no assertion changed.
+
+Unit: new widget test in `test/readout/space_definition_test.dart` asserts each
+space's tappable name renders a ≥48dp box in both axes.
+
+Gates: `flutter analyze lib/readout integration_test/bs11 test/readout` clean.
+Unit **1664/0** (+1 new tap-target test). Coverage gate **100%** on the one touched
+`lib/` file (`space_definition.dart`; the `ConstrainedBox` wrapper adds no branch).
+Acceptance: **bs-11 accessibility 19/19** (AC-4 + AC-7 restored); bs-20 own suite
+green both modes (readout 6/6, smoke 7/7, settings 3/3); readout-touching
+cross-feature green (bs-01 readout 11/11, bs-08 display 21/21, bs-10 daltonization
+25/25). Grade gate: the only touched bs-20 AC test (AC-5) re-grades **A** (before
+/after hidden→shown pair, non-empty + example content check; unchanged by the
+surface sizing); the other 8 are unchanged from READOUT-7's 9-A grid; the bs-11
+AC-7 reconcile is assertion-preserving (noted, not a re-grade of bs-11). **Fix
+passes: 1/3** (first integration run red'd bs-20 AC-5 — sRGB name scrolled below
+the 800×600 fold; fixed by sizing a tall surface, re-run green).
+
+**Known gap:** none introduced. Carried off-lane flakes unchanged (not run this
+phase): bs-06 palette AC-3/AC-5, bs-07 self_assessment AC-4.
 
 ### Checkpoint / Handoff — READOUT-9
 
-<!-- filled when the phase runs; then SIGNOFF-1 re-runs the full cross-feature regression (must be green but
-     for the carried bs-06 palette AC-3/AC-5 and bs-07 self_assessment AC-4 off-lane flakes). -->
+- **Frozen interfaces:** the tappable space name (`SpaceDefinition.nameKey`)
+  reserves a ≥48dp tap target; `nameKey`, the tap-to-toggle and `definitionKey`
+  are unchanged. bs-11 AC-7 launches the Readout with accessibility on via
+  `givenAccessibleReadout`. Any readout-tapping test must size a tall surface
+  (1200×3000) if it taps a space name (the rows no longer fit 800×600).
+- **Verification commands (reuse):** `flutter test test/ --coverage`;
+  `dart run tool/coverage_gate.dart <BASE>`; per-file
+  `flutter test -d flutter-tester <path>` (`--dart-define=BS20_RUN_PENDING=true`
+  to run pending bs-20). `flutter` at `/Users/matthew.quirk/development/flutter/bin`
+  (prepend PATH); no `timeout` on macOS; integration under
+  `coord.sh with-lock <feature> <PHASE> -- …`. **Run integration files one at a
+  time** (whole dir won't launch at once).
+- **Known gaps:** none from this phase. The bs-11 regression is closed; the bs-20
+  pending gate stays empty (all 9 ACs delivered).
+- **Next:** SIGNOFF-1 — the only remaining phase, now unblocked (the bs-11
+  regression is fixed). It re-runs the full cross-feature regression (must be green
+  but for the carried bs-06 palette AC-3/AC-5 and bs-07 self_assessment AC-4
+  off-lane flakes), then builds the packet + summary + human decision. Carry D-1
+  (bs-19 still unmerged; it and these phases both edit `build_app.dart` — READOUT-9
+  did **not** touch it).
 
