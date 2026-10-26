@@ -1,7 +1,7 @@
 # Master Plan — UI improvements (bs-20)
 
 **Spec:** [bs-20-ui-improvements.feature](../bs-20-ui-improvements.feature)
-**Status:** ⏸ Awaiting sign-off — SIGNOFF-1 packet built at `46ea352`; all 9 ACs green, full regression green but for 3 carried off-lane flakes, fresh re-grade 9 A/0 B. Decision: `/feature-next-phase --signoff bs-20-ui-improvements approved | changes "<items>"`.
+**Status:** ✅ Done — signed off 2026-10-26 by Matt Quirk at `46ea352` (Round 1, all 9 ACs). Next action: merge `feat/bs-20-ui-improvements` → main via `clean-merged-branches`. The feature file is intentionally left OPEN for later enhancement batches (Round 1 closes this 9-AC batch, not the file).
 **Architecture:** Wireframe `Paint Color Assistant.dc.html` (Readout "value-first" + "spec sheet", merged); solution intent `docs/paint-color-app-solution-intent.md`; deferred/kept items [bs-20-ui-improvements.deferred.md](../bs-20-ui-improvements.deferred.md). Extends bs-01 Color readout (`lib/readout/`) and bs-08 Display & simulation settings (`lib/display/`).
 **Code home:** `/Users/matthew.quirk/Nuance` · origin remote · base `main` (`11944b6`) · extends existing (confirmed by Matt Quirk, 2026-10-24). Advisory: branch the scaffold off `main` **after bs-19 merges** — both touch `lib/app/build_app.dart` (see D-1).
 
@@ -146,28 +146,20 @@ Resolved: `✅ Resolved <date time>: <decision, one line> — <who>`.
 | 13 | READOUT-7 | AC-7 + AC-8 Speak gating; reconcile bs-01 AC-8 test (D-3); G-3 | ✅ Done | 15,442,290 | 25m 09s | G-3 resolved; Speak gated on `accessibilityFeatures` (hidden default, shown on); AC-7/AC-8 un-pended (gate now empty); bs-01+bs-08 harnesses boot accessibility on; unit 1663/0, cov 100% 1 touched, grade 9 A, fix 0/3 |
 | 14 | READOUT-8 | AC-9 "Color" copy | ✅ Done | 6,017,977 | 15m 01s | AC-9 green; `'Displayed colour'`→`'Displayed color'` + space-definition copy American; bs-10/unit label assertions reconciled; unit 1660/0, cov 100% 2 touched, grade 7 A |
 | 15 | READOUT-9 | regression fix: restore bs-11 AC-4 (48dp) + AC-7 (eyes-free Speak) | ✅ Done | 6,266,264 | 37m 45s | bs-11 **19/19** (AC-4 48dp `ConstrainedBox` on the space name; AC-7 D-3-style reconcile to accessibility-on). unit 1664/0, cov 100% (1 lib), bs-20 suite green both modes, cross-feature green. Fix passes 1/3 (AC-5 off-fold tap → tall surface) |
-| 16 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ⏸ Awaiting sign-off | 12,589,254 | 1h 03m (1h 05m) | packet [signoff/round-1.md](signoff/round-1.md); unit 1820/0, cov gate PASS (no lib touched), full regression green but for 3 carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-07 self_assessment AC-4 — reproduce at merge-base c00422f), bs-11 21/21, bs-20 suite green both modes, fresh re-grade 9 A/0 B; human decision pending |
+| 16 | SIGNOFF-1 | sign-off: packet + summary + manual approval | ✅ Done | 12,589,254 | 1h 03m (1h 05m) | packet [signoff/round-1.md](signoff/round-1.md); unit 1820/0, cov gate PASS (no lib touched), full regression green but for 3 carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-07 self_assessment AC-4 — reproduce at merge-base c00422f), bs-11 21/21, bs-20 suite green both modes, fresh re-grade 9 A/0 B; human decision pending |
 
 *Tokens* / *Time* = phase totals from the *Token usage* ledger (Time = active, wall in brackets), filled when the row is marked done.
 
 ## Next phase
 
-**SIGNOFF-1 packet is built (2026-10-26) — awaiting the human decision.** No startable phase remains; the
-feature is `⏸ Awaiting sign-off`.
-- **Decision:** `/feature-next-phase --signoff bs-20-ui-improvements approved` (or `changes "<items>"`).
-  Packet: [signoff/round-1.md](signoff/round-1.md); scorecard https://claude.ai/artifact/E7Ar4N3JpQNpsXWAxrDqus.
-- **SIGNOFF-1 verification (2026-10-26, at `46ea352`):** unit **1820/0** (machine reporter) with coverage;
-  coverage gate **PASS — N/A** (SIGNOFF-1 touched no `lib/`); full cross-feature regression over all 22
-  integration files **green but for 3 carried off-lane flakes** (bs-06 `palette_test` AC-3/AC-5, bs-07
-  `self_assessment_test` AC-4 — all in the Known-flakes table, reproduce at merge-base `c00422f`, own no
-  bs-20 file; bs-08 display AC-9 was green this run); **bs-11 accessibility 21/21** (READOUT-9 fix holds);
-  bs-20 suite green in **both** default and run-pending modes (readout 8/8, settings 5/5, smoke 9/9); fresh
-  independent whole-suite re-grade **9 A / 0 B**.
-- **If approved** → merge `feat/bs-20-ui-improvements` → main via `clean-merged-branches` (handles the
-  untracked `docs/`, `ios/` swiftpm, `.claude/` snapshots). Carried flakes do not block merge.
-- **Carry D-1** — bs-19 still unmerged; it and the READOUT phases both edit `build_app.dart` (watch merge
-  order). **Note P3:** the feature file is intentionally left OPEN for later enhancement batches — Round 1
-  closes this 9-AC batch, not the feature.
+**✅ Round 1 signed off 2026-10-26 by Matt Quirk at `46ea352`.** No build phase remains.
+- **Next action (not a feature phase):** merge `feat/bs-20-ui-improvements` → main via
+  `clean-merged-branches` — it handles the untracked `docs/`, `ios/` swiftpm and `.claude/` snapshots that
+  collide on the branch switch. The 3 carried off-lane flakes do not block the merge.
+- **Carry D-1** — bs-19 is still unmerged and both it and the READOUT phases edit `lib/app/build_app.dart`;
+  watch merge order (mostly disjoint — camera vs readout/settings).
+- **Note P3:** the feature file is intentionally left OPEN for later small enhancement batches; a future
+  plan upgrade can add phases after this round. Round 1 closes this 9-AC batch, not the feature.
 
 ## Token usage
 
@@ -194,10 +186,11 @@ feature is `⏸ Awaiting sign-off`.
 | SIGNOFF-1 | ed6bf606 | 2026-10-25 17:53 EDT | 18:23 | 30m 26s | 28m 47s | claude-opus-4-8 | 130 | 262,551 | 8,047,611 | 63,662 | 8,373,954 | blocked: full cross-feature regression found bs-20 regressed signed-off bs-11 AC-4 (48dp) + AC-7 (eyes-free Speak) — green at merge-base 0551d5c, red at a959dca; verified bs-20-caused via merge-base worktree. unit 1663/0, cov PASS, grade 9 A, bs-20 suite green both modes. Owner-approved reshape: added READOUT-9 remediation before SIGNOFF-1 |
 | READOUT-9 | 1308ecab | 2026-10-25 19:54 EDT | 20:31 | 37m 45s | 37m 45s | claude-opus-4-8 | 122 | 111,044 | 6,115,081 | 40,017 | 6,266,264 | bs-11 regression fixed: AC-4 (48dp space-name tap target) + AC-7 (eyes-free reconcile to accessibility-on); bs-11 19/19, bs-20 suite green both modes, cross-feature green; unit 1664/0, cov 100% 1 lib, fix passes 1/3 |
 | SIGNOFF-1 | c2bb9ea6 | 2026-10-25 23:28 EDT | 2026-10-26 00:03 | 34m 55s | 34m 55s | claude-opus-4-8 | 76 | 165,006 | 4,010,301 | 39,917 | 4,215,300 | sign-off packet built at 46ea352: unit 1820/0, cov gate N/A (no lib), full regression green but 3 carried off-lane flakes (bs-06 palette AC-3/AC-5, bs-07 self_assessment AC-4), bs-11 21/21, bs-20 suite green both modes, fresh re-grade 9 A/0 B; awaiting human decision |
-| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-26 00:03** | **47h 07m** | **5h 53m** |  | **1,852** | **3,544,941** | **114,424,044** | **887,681** | **118,858,518** |  |
+| SIGNOFF-DECISION | c2bb9ea6 | 2026-10-26 00:39 EDT | 00:40 | 1m 11s | 1m 11s | claude-opus-4-8 | 14 | 11,638 | 1,360,765 | 3,536 | 1,375,953 | SIGNOFF-1 approved by Matt Quirk 2026-10-26 at 46ea352 — feature Done; next merge via clean-merged-branches |
+| **Feature total** |  | **2026-10-23 05:35 EDT** | **2026-10-26 00:40** | **47h 09m** | **5h 54m** |  | **1,866** | **3,556,579** | **115,784,809** | **891,217** | **120,234,471** |  |
 
 ## Sign-off
 
 | Round | Packet | At code | Grades | Decision |
 |---|---|---|---|---|
-| 1 | [signoff/round-1.md](signoff/round-1.md) | `46ea352` | 9 A / 0 B | ⏸ Awaiting sign-off (built 2026-10-26) |
+| 1 | [signoff/round-1.md](signoff/round-1.md) | `46ea352` | 9 A / 0 B | ✅ Approved 2026-10-26 — Matt Quirk |

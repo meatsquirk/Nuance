@@ -4,7 +4,7 @@
 **Spec:** [bs-20-ui-improvements.feature](../../bs-20-ui-improvements.feature)
 **At code:** `46ea352` (branch `feat/bs-20-ui-improvements`)
 **Prepared:** 2026-10-26 (SIGNOFF-1)
-**Decision:** ⏸ Awaiting sign-off — `/feature-next-phase --signoff bs-20-ui-improvements approved | changes "<items>"`
+**Decision:** ✅ **APPROVED 2026-10-26 by Matt Quirk** (at reviewed code `46ea352`). Feature signed off; next action is merge to `main` via `clean-merged-branches`.
 
 All 9 ACs are delivered, un-pended and green; the pending gate is empty; no augmentation row is open;
 a fresh independent whole-suite re-grade is **9 A / 0 B**. The full cross-feature regression is green but
