@@ -507,8 +507,12 @@ void main() {
       // Given: the app is launched to a core task (Readout of a fixture sample)
       // with semantics active, and the task's entry control is present *by its
       // label* ("Speak this readout" — the label GATE-2's driver activates).
+      // READOUT-9 (bs-20) reconcile: launch the Readout with accessibility
+      // features on. An eyes-free screen-reader user is the accessibility-on
+      // case, and bs-20 gates the "Speak this readout" entry control on that
+      // setting; this changes only the Given's settings, never the assertion.
       final readout = realScreens.firstWhere((s) => s.name == 'Readout');
-      await givenScreen(tester, readout);
+      await givenAccessibleReadout(tester);
       expect(readout.screen, findsOneWidget,
           reason: 'Given: Readout opened through buildApp');
       expect(find.bySemanticsLabel('Speak this readout'), findsOneWidget,

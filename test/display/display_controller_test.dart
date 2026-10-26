@@ -178,5 +178,52 @@ void main() {
         controller.dispose();
       },
     );
+
+    // bs-20 A11Y-1: accessibility features is an independent display control.
+    test('setAccessibilityFeatures toggles the flag and notifies', () {
+      final controller = DisplayController();
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.setAccessibilityFeatures(true);
+      expect(controller.settings.accessibilityFeatures, isTrue);
+      expect(notifications, 1);
+
+      controller.setAccessibilityFeatures(false);
+      expect(controller.settings.accessibilityFeatures, isFalse);
+      expect(notifications, 2);
+      controller.dispose();
+    });
+
+    test('setAccessibilityFeatures is a no-op when unchanged', () {
+      final controller = DisplayController();
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+      controller.setAccessibilityFeatures(false); // already false
+      expect(notifications, 0);
+      controller.dispose();
+    });
+
+    test(
+      'accessibilityFeatures stands on its own axis — it does not clear '
+      'simulation or grayscale, and the other setters preserve it',
+      () {
+        final controller = DisplayController()..setAccessibilityFeatures(true);
+        // The other display controls leave the flag intact.
+        controller.setSimulationType(CvdType.protan);
+        expect(controller.settings.accessibilityFeatures, isTrue);
+        expect(controller.settings.simulationType, CvdType.protan,
+            reason: 'accessibility features does not clear a simulation');
+        controller.setSimulationSeverity(0.5);
+        expect(controller.settings.accessibilityFeatures, isTrue);
+        controller.setGrayscale(true);
+        expect(controller.settings.accessibilityFeatures, isTrue,
+            reason: 'turning grayscale on leaves accessibility features on');
+        controller.setDaltonization(true);
+        expect(controller.settings.accessibilityFeatures, isTrue,
+            reason: 'turning daltonization on leaves accessibility features on');
+        controller.dispose();
+      },
+    );
   });
 }

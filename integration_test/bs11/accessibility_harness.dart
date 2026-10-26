@@ -429,6 +429,20 @@ final List<ControlFixture> controlFixtures = <ControlFixture>[
 Future<void> givenScreen(WidgetTester tester, RealScreen realScreen) =>
     realScreen.launch(tester);
 
+/// Opens the Readout screen through the production `buildApp` entry with the
+/// accessibility-features setting **on** (D-3-style reconcile, READOUT-9).
+///
+/// bs-20 (READOUT-7) gates the readout's "Speak this readout" entry control on
+/// the accessibility-features setting — hidden by default, shown when the
+/// setting is on. AC-7's eyes-free walkthrough is precisely the accessibility-on
+/// case (a screen-reader user), so it launches the Readout with the setting on
+/// via the bs-01 readout launcher's existing `accessibilityFeatures` knob. Only
+/// the Given's settings change; the `realScreens` sweep (AC-4 etc.) is untouched
+/// and AC-7's assertion — the task completes eyes-free via semantic labels — is
+/// unchanged.
+Future<void> givenAccessibleReadout(WidgetTester tester) =>
+    ro.givenReadoutOf(tester, ro.SAMPLE_TERRACOTTA, accessibilityFeatures: true);
+
 /// Pumps a control [fixture]'s app and settles it, ready for a check over
 /// [ControlFixture.subtree].
 Future<void> givenControl(WidgetTester tester, ControlFixture fixture) async {

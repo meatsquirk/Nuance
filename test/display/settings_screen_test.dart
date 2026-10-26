@@ -192,6 +192,36 @@ void main() {
       expect(controller.settings.daltonization, isFalse);
     });
 
+    testWidgets(
+        'the accessibility-features toggle drives setAccessibilityFeatures '
+        '(both ways)', (tester) async {
+      final controller = DisplayController();
+      addTearDown(controller.dispose);
+      await _pumpPanel(tester, controller);
+
+      // The switch reflects the (default off) setting and is findable.
+      final tile = tester.widget<SwitchListTile>(
+        find.byKey(DisplaySettingsScreen.accessibilityFeaturesKey),
+      );
+      expect(tile.value, isFalse);
+
+      // On, then off — covers both branches of the setter's no-op guard.
+      expect(controller.settings.accessibilityFeatures, isFalse);
+      await tester.tap(
+          find.byKey(DisplaySettingsScreen.accessibilityFeaturesKey));
+      await tester.pump();
+      expect(controller.settings.accessibilityFeatures, isTrue);
+      // The other axes are untouched — the flag stands alone.
+      expect(controller.settings.simulationType, isNull);
+      expect(controller.settings.grayscale, isFalse);
+      expect(controller.settings.daltonization, isFalse);
+
+      await tester.tap(
+          find.byKey(DisplaySettingsScreen.accessibilityFeaturesKey));
+      await tester.pump();
+      expect(controller.settings.accessibilityFeatures, isFalse);
+    });
+
     testWidgets('the no-saved-profile region is reachable and, with no store '
         'mounted, shows no prompt', (tester) async {
       final controller = DisplayController();
@@ -345,6 +375,8 @@ void main() {
           const ValueKey('display-bs10-daltonization'));
       expect(DisplaySettingsScreen.noProfileRegionKey,
           const ValueKey('display-bs10-no-profile'));
+      expect(DisplaySettingsScreen.accessibilityFeaturesKey,
+          const ValueKey('display-bs20-accessibility-features'));
       expect(DisplaySettingsScreen.simulationOptionKey(CvdType.deutan),
           const ValueKey('display-e47-sim-deutan'));
       expect(DisplaySettingsScreen.simulationOptionKey(null),

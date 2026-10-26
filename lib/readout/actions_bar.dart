@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/router.dart';
+import '../display/display_scope.dart';
 import 'readout_controller.dart';
 
 /// The actions bar: speak the readout, carry it into a comparison, start a
@@ -13,6 +14,11 @@ import 'readout_controller.dart';
 /// reading is just-captured a "Just captured" marker shows and "Acknowledge"
 /// clears it via [ReadoutController.acknowledge] (AC-12) — otherwise acknowledge
 /// is disabled (A11Y-2).
+///
+/// The Speak control is an accessibility affordance (bs-20 AC-7/AC-8): it is
+/// shown only when the painter has turned on accessibility features, read live
+/// through [DisplayScope] so toggling the setting reveals or hides it in place.
+/// It is hidden by default — the shipped readout stays uncluttered until asked.
 class ActionsBar extends StatelessWidget {
   const ActionsBar({required this.controller, super.key});
 
@@ -44,16 +50,23 @@ class ActionsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Show Speak only while accessibility features are on (AC-7/AC-8). Read via
+    // DisplayScope so flipping the setting rebuilds the bar in place; outside the
+    // app assembly (no scope — standalone rendering) it defaults to hidden,
+    // mirroring the shipped `DisplaySettings` default (accessibility off).
+    final showSpeak =
+        DisplayScope.maybeOf(context)?.settings.accessibilityFeatures ?? false;
     return Wrap(
       key: barKey,
       spacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        OutlinedButton(
-          key: speakKey,
-          onPressed: () => controller.speak(),
-          child: const Text('Speak this readout'),
-        ),
+        if (showSpeak)
+          OutlinedButton(
+            key: speakKey,
+            onPressed: () => controller.speak(),
+            child: const Text('Speak this readout'),
+          ),
         OutlinedButton(
           key: compareAKey,
           onPressed: () => Navigator.of(context)

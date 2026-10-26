@@ -3,20 +3,22 @@ import 'package:flutter/material.dart';
 import '../app/build_app.dart';
 import '../domain/sample.dart';
 import 'actions_bar.dart';
+import 'all_spaces_region.dart';
 import 'name_header.dart';
 import 'provenance_region.dart';
 import 'readout_controller.dart';
-import 'space_selector.dart';
 import 'temperature_line.dart';
 import 'value_region.dart';
+import 'value_scale.dart';
 
 /// The Readout screen: the single surface the painter reads a sample through.
 ///
 /// It owns a [ReadoutController] built from the app-injected services
-/// ([AppScope]) and lays out every region — name, value + grayscale, temperature,
-/// colour-space selector, provenance and the actions bar — so the acceptance
-/// finders and the behaviour phases have stable anchors. This shell renders
-/// placeholders; each region's real reading lands in its behaviour phase.
+/// ([AppScope]) and lays out every region — name, value + grayscale, the 0–10
+/// value scale, temperature, the all-spaces region (every colour space at once),
+/// provenance and the actions bar — so the acceptance finders and the behaviour
+/// phases have stable anchors. [AllSpacesRegion] shows all four colour spaces
+/// together (AC-4); the one-at-a-time selector it replaced is gone.
 class ReadoutScreen extends StatefulWidget {
   const ReadoutScreen({required this.sample, super.key});
 
@@ -78,9 +80,16 @@ class _ReadoutScreenState extends State<ReadoutScreen> {
                 const SizedBox(height: 12),
                 ValueRegion(controller: controller),
                 const SizedBox(height: 12),
+                // The 0–10 Munsell value scale with the sample's value marked
+                // (AC-2).
+                ValueScale(value: controller.munsell.value),
+                const SizedBox(height: 12),
                 TemperatureLine(controller: controller),
                 const SizedBox(height: 12),
-                SpaceSelector(controller: controller),
+                // Every colour space shown together — CIELCh, Munsell, sRGB and
+                // CIELAB — with no one-at-a-time selector (AC-4). READOUT-6 makes
+                // each space name tappable to reveal its definition.
+                AllSpacesRegion(controller: controller),
                 const SizedBox(height: 12),
                 ProvenanceRegion(controller: controller),
                 const SizedBox(height: 16),

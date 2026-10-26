@@ -52,6 +52,14 @@ double _hueDeg(ColorCoordinates c) {
 /// injected services. The confirmed [sample] comes from the public save surface,
 /// so this is "the value is shown in a later readout", not a hand-built screen.
 Future<void> _showInLaterReadout(WidgetTester tester, Sample sample) async {
+  // The bs-20 readout grew taller than the default 800×600 surface (the 0–10
+  // value scale, READOUT-5), so the readout `ListView` lazily skips the bottom
+  // provenance region AC-10 reads. Size a tall viewport so every readout region
+  // is built (the bs-01/bs-08 pattern READOUT-3 established).
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
   final navigator = tester.state<NavigatorState>(find.byType(Navigator));
   // Push the readout route, but do not await the returned Future: it completes
   // only when the route is *popped*, so awaiting it would block the test forever

@@ -48,6 +48,7 @@ class DisplayController extends ChangeNotifier {
       simulationSeverity: _settings.simulationSeverity,
       grayscale: _settings.grayscale,
       daltonization: _settings.daltonization,
+      accessibilityFeatures: _settings.accessibilityFeatures,
     );
     notifyListeners();
   }
@@ -61,6 +62,7 @@ class DisplayController extends ChangeNotifier {
       simulationSeverity: severity,
       grayscale: _settings.grayscale,
       daltonization: _settings.daltonization,
+      accessibilityFeatures: _settings.accessibilityFeatures,
     );
     notifyListeners();
   }
@@ -79,6 +81,7 @@ class DisplayController extends ChangeNotifier {
       simulationSeverity: _settings.simulationSeverity,
       grayscale: grayscale,
       daltonization: _settings.daltonization,
+      accessibilityFeatures: _settings.accessibilityFeatures,
     );
     notifyListeners();
   }
@@ -98,6 +101,26 @@ class DisplayController extends ChangeNotifier {
       simulationSeverity: _settings.simulationSeverity,
       grayscale: _settings.grayscale,
       daltonization: daltonization,
+      accessibilityFeatures: _settings.accessibilityFeatures,
+    );
+    notifyListeners();
+  }
+
+  /// Turns the bs-20 accessibility-features set on or off and notifies
+  /// listeners. A no-op when unchanged.
+  ///
+  /// An independent control, like [setDaltonization]: it stands on its own axis
+  /// and leaves the other display fields untouched. Inert in this shell — the
+  /// rendering consequence (revealing the Speak control, bs-20 AC-7/AC-8) lands
+  /// in the READOUT behaviour phases, which read the flag through `DisplayScope`.
+  void setAccessibilityFeatures(bool accessibilityFeatures) {
+    if (accessibilityFeatures == _settings.accessibilityFeatures) return;
+    _settings = DisplaySettings(
+      simulationType: _settings.simulationType,
+      simulationSeverity: _settings.simulationSeverity,
+      grayscale: _settings.grayscale,
+      daltonization: _settings.daltonization,
+      accessibilityFeatures: accessibilityFeatures,
     );
     notifyListeners();
   }

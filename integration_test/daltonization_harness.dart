@@ -53,7 +53,7 @@ import 'package:paint_color_assistant/domain/paint.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/palette/palette_controller.dart';
-import 'package:paint_color_assistant/readout/space_selector.dart';
+import 'package:paint_color_assistant/readout/all_spaces_region.dart';
 import 'package:paint_color_assistant/recipes/palette.dart';
 import 'package:paint_color_assistant/recipes/palette_source.dart';
 import 'package:paint_color_assistant/store/cvd_profile_store.dart';
@@ -424,17 +424,23 @@ class DaltonizationHarness {
   /// Readout, carrying [screenSample]'s provenance label.
   Finder get provenanceBadge => find.byType(ProvenanceBadge);
 
-  /// The Readout's numeric colour reading for the selected space (AC-8) — a
-  /// public read of the sample's **stored** colour values as rendered text
-  /// (`SpaceSelector.valuesKey`).
+  /// The Readout's numeric colour readings (AC-8) — a public read of the
+  /// sample's **stored** colour values as rendered text, the joined values of
+  /// every colour space shown together in the all-spaces region
+  /// (`AllSpacesRegion.regionKey`; bs-20 READOUT-3 replaced the one-at-a-time
+  /// selector this used to read with that region).
   ///
-  /// It is derived from the stored `Sample.coordinates` only — never from the
-  /// display remap, which transforms the swatch colour alone — so a daltonized
-  /// render must leave it unchanged. AC-8 captures it off and asserts it holds
-  /// while the remap is on (the stored values are untouched) with the swatch as
-  /// the control that the display did change.
-  String get storedValuesText =>
-      tester.widget<Text>(find.byKey(SpaceSelector.valuesKey)).data!;
+  /// Every space's values are derived from the stored `Sample.coordinates` only
+  /// — never from the display remap, which transforms the swatch colour alone —
+  /// so a daltonized render must leave them unchanged. AC-8 captures them off and
+  /// asserts they hold while the remap is on (the stored values are untouched)
+  /// with the swatch as the control that the display did change.
+  String get storedValuesText => tester
+      .widgetList<Text>(find.descendant(
+          of: find.byKey(AllSpacesRegion.regionKey),
+          matching: find.byType(Text)))
+      .map((t) => t.data ?? '')
+      .join(' ');
 
   /// Opens the display and simulation settings panel from the current screen
   /// (the E2 entry the shared chrome shows on every screen).
@@ -570,6 +576,15 @@ Future<DaltonizationHarness> _assembleDaltonization(
   PaletteSource paletteSource = const InMemoryPaletteSource(),
   _SettleMode settle = _SettleMode.pumpAndSettle,
 }) async {
+  // The bs-20 readout grew taller than the default 800×600 test surface (the
+  // 0–10 value scale, READOUT-5), so the readout `ListView` lazily skips the
+  // bottom provenance region and AC-4's `find.byKey` misses it. Size a tall
+  // viewport so every readout region is built (the bs-01/bs-08 pattern
+  // READOUT-3 established; value here is harmless to the display-remap Thens).
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
   // Open a fresh app each time, so a repeated `given…` in one test does not
   // reuse the previous screen's State (mirrors the other bs harnesses).
   await tester.pumpWidget(const SizedBox());

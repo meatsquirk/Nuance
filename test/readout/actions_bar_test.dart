@@ -4,6 +4,9 @@ import 'package:paint_color_assistant/a11y/haptics.dart';
 import 'package:paint_color_assistant/a11y/speech.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/display/display_controller.dart';
+import 'package:paint_color_assistant/display/display_scope.dart';
+import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
@@ -35,25 +38,52 @@ ReadoutController _controller({Sample? sample, Speech? speech}) =>
     );
 
 // The bar needs a Navigator ancestor to push its handoff routes.
-Future<void> _pumpBar(WidgetTester tester, ReadoutController controller) =>
-    tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: ActionsBar(controller: controller))),
-    );
+//
+// The bar reads its accessibility state from an enclosing [DisplayScope] to gate
+// the Speak control (bs-20 AC-7/AC-8). [accessibility] seeds that scope: `true`
+// (the default) shows Speak so the handoff/speak tests find it; `false` exercises
+// the hidden branch; `null` pumps the bar with *no* DisplayScope above it — the
+// standalone default (Speak hidden), mirroring the production fallback.
+Future<void> _pumpBar(
+  WidgetTester tester,
+  ReadoutController controller, {
+  bool? accessibility = true,
+}) {
+  final app =
+      MaterialApp(home: Scaffold(body: ActionsBar(controller: controller)));
+  return tester.pumpWidget(_maybeScoped(app, accessibility));
+}
 
 // As [_pumpBar], but rebuilds the bar when the controller notifies — the real
 // screen wraps the bar in a ListenableBuilder, so acknowledging (which notifies)
 // must re-render the bar and drop the marker.
-Future<void> _pumpLiveBar(WidgetTester tester, ReadoutController controller) =>
-    tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ListenableBuilder(
-            listenable: controller,
-            builder: (context, _) => ActionsBar(controller: controller),
-          ),
-        ),
+Future<void> _pumpLiveBar(
+  WidgetTester tester,
+  ReadoutController controller, {
+  bool? accessibility = true,
+}) {
+  final app = MaterialApp(
+    home: Scaffold(
+      body: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => ActionsBar(controller: controller),
       ),
-    );
+    ),
+  );
+  return tester.pumpWidget(_maybeScoped(app, accessibility));
+}
+
+// Wraps [app] in a [DisplayScope] seeded with [accessibility], or returns it bare
+// when [accessibility] is null (no scope — the standalone default).
+Widget _maybeScoped(Widget app, bool? accessibility) => accessibility == null
+    ? app
+    : DisplayScope(
+        controller: DisplayController(
+          initialSettings:
+              DisplaySettings(accessibilityFeatures: accessibility),
+        ),
+        child: app,
+      );
 
 void main() {
   testWidgets('"Compare as A" pushes the Comparison screen with the reading '
@@ -101,6 +131,37 @@ void main() {
 
     expect(speech.utterances,
         [const ColorScienceImpl().decompose(_sample)]);
+  });
+
+  testWidgets('Speak is hidden while accessibility features are off (AC-7)',
+      (tester) async {
+    await _pumpBar(tester, _controller(), accessibility: false);
+
+    expect(find.byKey(ActionsBar.speakKey), findsNothing,
+        reason: 'Speak is gated on accessibility features (off here)');
+    // The other actions are not gated — they stay present regardless.
+    expect(find.byKey(ActionsBar.compareAKey), findsOneWidget);
+    expect(find.byKey(ActionsBar.recipesKey), findsOneWidget);
+    expect(find.byKey(ActionsBar.acknowledgeKey), findsOneWidget);
+  });
+
+  testWidgets('Speak is shown once accessibility features are on (AC-8)',
+      (tester) async {
+    await _pumpBar(tester, _controller(), accessibility: true);
+
+    expect(find.byKey(ActionsBar.speakKey), findsOneWidget,
+        reason: 'Speak appears when accessibility features are on');
+  });
+
+  testWidgets('Speak is hidden with no DisplayScope (standalone default)',
+      (tester) async {
+    await _pumpBar(tester, _controller(), accessibility: null);
+
+    expect(find.byKey(ActionsBar.speakKey), findsNothing,
+        reason: 'outside the app assembly the bar defaults to Speak hidden, '
+            'mirroring the shipped accessibility-off default');
+    expect(find.byKey(ActionsBar.barKey), findsOneWidget,
+        reason: 'the bar itself still renders without a DisplayScope');
   });
 
   testWidgets('a non-fresh reading shows no marker and disables Acknowledge '

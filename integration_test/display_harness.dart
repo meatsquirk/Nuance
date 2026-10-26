@@ -460,6 +460,18 @@ class DisplayHarness {
 /// so the app opens on bs-01's Readout for [sample] — the screen the simulation,
 /// grayscale and spoken-output views all act on. Returns a [DisplayHarness] over
 /// the booted app.
+/// Sizes the test surface tall enough to lay out the whole Readout body.
+///
+/// bs-20 READOUT-3 made the Readout show every colour space at once, so its
+/// scrollable body is taller than the default 800×600 surface and the actions
+/// bar (the "Speak this readout" control the spoken-output ACs tap) would sit
+/// below it. A tall surface lays out the whole readout without scrolling.
+void _useTallReadoutView(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+}
+
 Future<DisplayHarness> givenDisplay(
   WidgetTester tester, {
   Sample sample = displaySample,
@@ -468,14 +480,25 @@ Future<DisplayHarness> givenDisplay(
 }) async {
   // Open a fresh app each time, so a repeated `givenDisplay` in one test does
   // not reuse the previous screen's State (mirrors the other bs harnesses).
+  _useTallReadoutView(tester);
   await tester.pumpWidget(const SizedBox());
   await tester.pump();
 
   final speech = FakeSpeech();
   final haptics = FakeHaptics();
+  // bs-20 READOUT-7 gates the readout's "Speak this readout" control (the one
+  // the bs-08 spoken-output ACs tap) on the accessibility-features setting, off
+  // by default. Boot with it on so Speak is present, preserving any simulation /
+  // grayscale / daltonization the scenario seeded through [initialSettings].
   final controller = DisplayController(
     defaultSimulationType: cvdProfile.type,
-    initialSettings: initialSettings,
+    initialSettings: DisplaySettings(
+      simulationType: initialSettings.simulationType,
+      simulationSeverity: initialSettings.simulationSeverity,
+      grayscale: initialSettings.grayscale,
+      daltonization: initialSettings.daltonization,
+      accessibilityFeatures: true,
+    ),
   );
   final deps = AppDependencies(
     colorScience: const ColorScienceImpl(),
@@ -512,12 +535,19 @@ Future<DisplayHarness> givenComparison(
   List<Sample> savedSamples = const [displaySample, compareSampleB],
   CvdProfile cvdProfile = cvdProfileFixture,
 }) async {
+  _useTallReadoutView(tester);
   await tester.pumpWidget(const SizedBox());
   await tester.pump();
 
   final speech = FakeSpeech();
   final haptics = FakeHaptics();
-  final controller = DisplayController(defaultSimulationType: cvdProfile.type);
+  // Accessibility features on so the readout's Speak control is present when
+  // AC-9 opens a slot's readout and taps it (bs-20 READOUT-7 gates it on this
+  // setting, off by default).
+  final controller = DisplayController(
+    defaultSimulationType: cvdProfile.type,
+    initialSettings: const DisplaySettings(accessibilityFeatures: true),
+  );
   final deps = AppDependencies(
     colorScience: const ColorScienceImpl(),
     speech: speech,

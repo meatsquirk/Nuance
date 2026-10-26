@@ -29,8 +29,6 @@ import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/actions_bar.dart';
 import 'package:paint_color_assistant/readout/name_header.dart';
 import 'package:paint_color_assistant/readout/provenance_region.dart';
-import 'package:paint_color_assistant/readout/readout_controller.dart';
-import 'package:paint_color_assistant/readout/space_selector.dart';
 import 'package:paint_color_assistant/readout/temperature_line.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
 
@@ -234,67 +232,14 @@ void main() {
         reason: 'AC-4 control: a cool sample is not described as "warm"');
   });
 
-  // AC-5 — The readout is available in several colour spaces, one at a time:
-  // selecting a space shows that space's values and hides the other three.
-  acTestWidgets('AC-5', 'Selecting a colour space shows it and hides the others',
-      (tester) async {
-    // Given: reading the sample "Warm Terracotta".
-    await givenReadoutOf(tester, SAMPLE_TERRACOTTA);
-    expect(find.text('Warm Terracotta'), findsOneWidget,
-        reason: 'AC-5 Given: the terracotta sample is shown');
-
-    // Each space's expected values (`shown` from the spec's Examples) and a
-    // collision-safe signature used to prove exclusivity. The four signatures
-    // ('°', '10R', '#', '25.27') are mutually non-substring and none is a
-    // substring of an sRGB hex, so "space Y no longer shown" is unambiguous.
-    final spaces = <_SpaceCase>[
-      _SpaceCase(
-        space: ReadoutSpace.cielch,
-        present: [RegExp('58'), RegExp('34'), RegExp('42'), RegExp(r'°|deg')],
-        signature: RegExp(r'°|deg'),
-      ),
-      _SpaceCase(
-        space: ReadoutSpace.munsell,
-        present: [RegExp('10R'), RegExp(r'5\.5/6')],
-        signature: RegExp('10R'),
-      ),
-      _SpaceCase(
-        // AC-5 augmentation (READOUT-4): the spec's sRGB row is "a triplet AND
-        // a hex value". With the real per-space values rendered, assert both —
-        // the 8-bit r,g,b triplet as well as the hex — not the hex alone.
-        space: ReadoutSpace.srgb,
-        present: [
-          RegExp(r'\b\d{1,3},\s*\d{1,3},\s*\d{1,3}\b'),
-          RegExp(r'#[0-9a-fA-F]{6}'),
-        ],
-        signature: RegExp(r'#[0-9a-fA-F]{6}'),
-      ),
-      _SpaceCase(
-        space: ReadoutSpace.cielab,
-        present: [RegExp('58'), RegExp(r'25\.27'), RegExp(r'22\.75')],
-        signature: RegExp(r'25\.27'),
-      ),
-    ];
-
-    // When: the painter selects each space in turn.
-    // Then: that space's values are shown and the other three are not.
-    for (final sel in spaces) {
-      await (await givenReadoutOf(tester, SAMPLE_TERRACOTTA))
-          .whenSelectSpace(sel.space);
-      final shown = _plainTextUnder(tester, SpaceSelector.valuesKey);
-      for (final pattern in sel.present) {
-        expect(shown, matches(pattern),
-            reason: 'AC-5: ${SpaceSelector.labelFor(sel.space)} must show '
-                '${pattern.pattern} (READOUT-4)');
-      }
-      for (final other in spaces) {
-        if (other.space == sel.space) continue;
-        expect(shown, isNot(matches(other.signature)),
-            reason: 'AC-5: with ${SpaceSelector.labelFor(sel.space)} selected, '
-                '${SpaceSelector.labelFor(other.space)} must no longer be shown');
-      }
-    }
-  });
+  // AC-5 — RETIRED by bs-20 READOUT-3 (2026-10-25). bs-01 AC-5 asserted the
+  // one-at-a-time colour-space selector (select a space → that space's values
+  // shown, the other three hidden). bs-20 AC-4 supersedes it: every colour space
+  // is now shown together and the selector is removed, so the one-at-a-time
+  // behaviour this test exercised no longer exists. The "all spaces at once"
+  // behaviour is covered by bs-20 `TestAC04_AllSpaces`
+  // (integration_test/ui_improvements/readout_test.dart). Removed rather than
+  // weakened — there is no selector left to drive.
 
   // AC-6 — A measured value carries the provenance "Measured" (and not the
   // estimated badge/note — the control against AC-7).
@@ -364,7 +309,10 @@ void main() {
     //  - the sample is loaded: its name renders on the readout (public surface);
     //  - the FakeSpeech log is empty — the before state the When changes;
     //  - the fixture's inputs are the values the Then's substrings are about.
-    final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA);
+    // bs-20 READOUT-7 gates Speak on the accessibility-features setting; boot
+    // with it on so the Speak control the painter taps is present.
+    final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA,
+        accessibilityFeatures: true);
     expect(find.text('Warm Terracotta'), findsOneWidget,
         reason: 'AC-8 Given: the terracotta sample must be the one shown');
     expect(harness.speech.utterances, isEmpty,
@@ -507,10 +455,11 @@ void main() {
 
     // A rebuild while the reading is STILL just-captured fires no further haptic
     // — the confirmation is tied to the capture landing, not to every render.
-    // Force a rebuild (select another colour space) and re-assert the count is
-    // still one: this rejects a confirm() wired into build() rather than the
-    // capture (which would reach 2 here).
-    await harness.whenSelectSpace(ReadoutSpace.munsell);
+    // Force a rebuild (re-pump the same app, same sample — bs-20 READOUT-3
+    // removed the colour-space selector this step used to tap) and re-assert the
+    // count is still one: this rejects a confirm() wired into build() rather
+    // than the capture (which would reach 2 here).
+    await harness.whenForceRebuild();
     expect(harness.haptics.confirmations, 1,
         reason: 'AC-12: a rebuild while still fresh fires no further haptic '
             '(the confirmation is tied to the capture, not the render)');
@@ -569,14 +518,3 @@ double _hueDegrees(ColorCoordinates c) {
 
 /// The CIELCh chroma (C\*) of CIELAB [c] — `hypot(a*, b*)`.
 double _chroma(ColorCoordinates c) => math.sqrt(c.a * c.a + c.b * c.b);
-
-/// One colour-space row for the AC-5 selector test: the space, the value
-/// patterns that must be [present] once selected, and the collision-safe
-/// [signature] that must be absent while another space is selected.
-class _SpaceCase {
-  _SpaceCase({required this.space, required this.present, required this.signature});
-
-  final ReadoutSpace space;
-  final List<RegExp> present;
-  final RegExp signature;
-}

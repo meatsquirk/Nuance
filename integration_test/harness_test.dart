@@ -12,9 +12,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paint_color_assistant/readout/actions_bar.dart';
+import 'package:paint_color_assistant/readout/all_spaces_region.dart';
 import 'package:paint_color_assistant/readout/name_header.dart';
 import 'package:paint_color_assistant/readout/provenance_region.dart';
-import 'package:paint_color_assistant/readout/space_selector.dart';
 import 'package:paint_color_assistant/readout/temperature_line.dart';
 import 'package:paint_color_assistant/readout/value_region.dart';
 
@@ -26,7 +26,12 @@ void main() {
   testWidgets(
     'smoke: the assembled app boots to a Readout showing every region',
     (tester) async {
-      final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA);
+      // bs-20 READOUT-7 gates the readout's Speak control on the
+      // accessibility-features setting; boot with it on so the smoke test's
+      // "every action-bar control is rendered" check (which includes Speak)
+      // holds.
+      final harness = await givenReadoutOf(tester, SAMPLE_TERRACOTTA,
+          accessibilityFeatures: true);
 
       // Booted to the Readout route with the injected fixture loaded.
       expect(find.text('Readout'), findsOneWidget); // app-bar title
@@ -37,8 +42,7 @@ void main() {
       expect(find.byKey(ValueRegion.regionKey), findsOneWidget);
       expect(find.byKey(ValueRegion.grayscaleKey), findsOneWidget);
       expect(find.byKey(TemperatureLine.lineKey), findsOneWidget);
-      expect(find.byKey(SpaceSelector.selectorKey), findsOneWidget);
-      expect(find.byKey(SpaceSelector.valuesKey), findsOneWidget);
+      expect(find.byKey(AllSpacesRegion.regionKey), findsOneWidget);
       expect(find.byKey(ProvenanceRegion.regionKey), findsOneWidget);
       expect(find.byKey(ActionsBar.barKey), findsOneWidget);
       expect(find.byKey(ActionsBar.speakKey), findsOneWidget);

@@ -138,6 +138,13 @@ class _DisplayChromeState extends State<DisplayChrome> {
 ///     self-assessment when no profile has been saved, so daltonization does
 ///     not silently remap against the const default (AC-10).
 ///
+/// bs-20 adds, on its own independent axis:
+///
+///   * the accessibility-features toggle ([accessibilityFeaturesKey]), driving
+///     [DisplayController.setAccessibilityFeatures] — the presentation
+///     consequence (revealing the Speak control, AC-7/AC-8) lands in the
+///     READOUT behaviour phases.
+///
 /// This is the SETTINGS-1 shell: the controls are wired to the setters, but the
 /// *rendering* consequences (simulating swatches, greying the app) land in the
 /// DISPLAY behaviour phases. The selector reads
@@ -177,6 +184,12 @@ class DisplaySettingsScreen extends StatelessWidget {
   /// when a profile is saved it renders nothing and the remap applies (AC-10,
   /// CONTROL-2).
   static const Key noProfileRegionKey = ValueKey('display-bs10-no-profile');
+
+  /// Stable anchor for the bs-20 accessibility-features toggle, driving
+  /// [DisplayController.setAccessibilityFeatures]. An independent axis; its
+  /// presentation consequence (revealing Speak) lands in the READOUT phases.
+  static const Key accessibilityFeaturesKey =
+      ValueKey('display-bs20-accessibility-features');
 
   /// Stable per-option anchor under [simulationKey], one per selectable
   /// simulation ([type] null ⇔ the "off"/trichromat option).
@@ -298,6 +311,16 @@ class DisplaySettingsScreen extends StatelessWidget {
                 // self-assessment instead of remapping against the const
                 // default; with one saved, show nothing (the remap applies).
                 const _NoSavedProfileRegion(key: noProfileRegionKey),
+                // bs-20: the accessibility-features toggle, an independent axis,
+                // driving DisplayController.setAccessibilityFeatures. Toggling it
+                // changes no rendering yet; the READOUT phases read the flag to
+                // reveal the Speak control (AC-7/AC-8).
+                SwitchListTile(
+                  key: accessibilityFeaturesKey,
+                  title: const Text('Accessibility features'),
+                  value: settings.accessibilityFeatures,
+                  onChanged: controller.setAccessibilityFeatures,
+                ),
                 // The theme control — shown (AC-1) but presentation only (D-11).
                 const _ThemeControl(key: themeKey),
               ],

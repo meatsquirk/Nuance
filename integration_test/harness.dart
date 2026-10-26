@@ -13,17 +13,17 @@
 
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paint_color_assistant/app/build_app.dart';
 import 'package:paint_color_assistant/app/router.dart';
 import 'package:paint_color_assistant/color_science/color_science_impl.dart';
+import 'package:paint_color_assistant/display/display_controller.dart';
+import 'package:paint_color_assistant/display/display_settings.dart';
 import 'package:paint_color_assistant/domain/color_coordinates.dart';
 import 'package:paint_color_assistant/domain/provenance.dart';
 import 'package:paint_color_assistant/domain/sample.dart';
 import 'package:paint_color_assistant/readout/actions_bar.dart';
-import 'package:paint_color_assistant/readout/readout_controller.dart';
-import 'package:paint_color_assistant/readout/space_selector.dart';
 
 import 'fakes/fake_haptics.dart';
 import 'fakes/fake_speech.dart';
@@ -173,7 +173,12 @@ void acTestWidgets(
 /// the app drove them with (AC-8, AC-12), and exposes the `when…` actions the
 /// painter takes on the Readout screen.
 class ReadoutHarness {
-  ReadoutHarness(this.tester, {required this.speech, required this.haptics});
+  ReadoutHarness(
+    this.tester, {
+    required this.speech,
+    required this.haptics,
+    required this.deps,
+  });
 
   /// The widget tester driving the real UI surface.
   final WidgetTester tester;
@@ -184,15 +189,19 @@ class ReadoutHarness {
   /// The recording haptics sink injected into the app (AC-12).
   final FakeHaptics haptics;
 
-  /// Selects colour [space] in the selector.
-  Future<void> whenSelectSpace(ReadoutSpace space) async {
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(SpaceSelector.selectorKey),
-        matching:
-            find.widgetWithText(ChoiceChip, SpaceSelector.labelFor(space)),
-      ),
-    );
+  /// The dependencies the app was assembled from, re-used to force a rebuild
+  /// ([whenForceRebuild]).
+  final AppDependencies deps;
+
+  /// Forces a rebuild of the readout without changing the sample.
+  ///
+  /// Re-pumps a fresh assembly of the same app from the same [deps]: the screen
+  /// position is unchanged, so its `State` (and the `ReadoutController` it holds)
+  /// are reused and `build` runs again over the same, still-current sample.
+  /// Used by AC-12 to prove a per-build side effect does not re-fire — the
+  /// capture haptic is tied to the capture landing, not to every render.
+  Future<void> whenForceRebuild() async {
+    await tester.pumpWidget(buildApp(deps));
     await tester.pumpAndSettle();
   }
 
@@ -232,22 +241,40 @@ class ReadoutHarness {
 /// [ReadoutHarness] over the booted app.
 Future<ReadoutHarness> givenReadoutOf(
   WidgetTester tester,
-  Sample sample,
-) async {
+  Sample sample, {
+  bool accessibilityFeatures = false,
+}) async {
+  // The readout now shows every colour space at once (bs-20 READOUT-3), so its
+  // scrollable body is taller than the default 800×600 test surface and the
+  // actions bar would sit below it. Size the surface tall enough to lay out the
+  // whole readout, so the action controls (AC-8/9/10/11) and the just-captured
+  // marker (AC-12) are rendered without scrolling.
+  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
   final speech = FakeSpeech();
   final haptics = FakeHaptics();
-  await tester.pumpWidget(
-    buildApp(
-      AppDependencies(
-        colorScience: const ColorScienceImpl(),
-        speech: speech,
-        haptics: haptics,
-        initialSample: sample,
-      ),
-    ),
+  // bs-20 READOUT-7 gates the readout's "Speak this readout" control on the
+  // accessibility-features setting (default off → Speak hidden). A scenario that
+  // taps Speak (AC-8) boots the app with the setting on by passing
+  // [accessibilityFeatures]; the injected controller is the one the shipped
+  // panel also drives.
+  final deps = AppDependencies(
+    colorScience: const ColorScienceImpl(),
+    speech: speech,
+    haptics: haptics,
+    initialSample: sample,
+    displayController: accessibilityFeatures
+        ? DisplayController(
+            initialSettings:
+                const DisplaySettings(accessibilityFeatures: true),
+          )
+        : null,
   );
+  await tester.pumpWidget(buildApp(deps));
   await tester.pumpAndSettle();
-  return ReadoutHarness(tester, speech: speech, haptics: haptics);
+  return ReadoutHarness(tester, speech: speech, haptics: haptics, deps: deps);
 }
 
 /// Opens the Readout screen on [sample] as a *just-captured* reading (AC-12).
